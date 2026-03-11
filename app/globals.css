@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===================================================== */
+/* BASE GLOBAL                                           */
+/* ===================================================== */
+
+html, body {
+  height: 100%;
+}
+
+body {
+  @apply bg-[#FFFCF7] text-[#0F172A] antialiased;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ===================================================== */
+/* LAYOUT PRINCIPAL                                      */
+/* ===================================================== */
+
+.container-app {
+  @apply max-w-md mx-auto min-h-screen relative;
+}
+
+/* ===================================================== */
+/* CARDS — Blanco puro + sombra suave                    */
+/* ===================================================== */
+
+.card {
+  @apply bg-white rounded-3xl p-6;
+  box-shadow:
+    0 8px 24px rgba(15, 23, 42, 0.04),
+    0 2px 6px rgba(15, 23, 42, 0.03);
+  transition: all 0.2s ease;
+}
+
+/* Micro-interacción sutil */
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 12px 28px rgba(15, 23, 42, 0.06),
+    0 4px 8px rgba(15, 23, 42, 0.04);
+}
+
+/* ===================================================== */
+/* GRADIENTE HEADER ANIMADO                              */
+/* ===================================================== */
+
+.gradient-animate {
+  background-size: 200% 200%;
+  animation: gradientMove 14s ease infinite;
+}
+
+@keyframes gradientMove {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ===================================================== */
+/* UTILIDADES TIPOGRÁFICAS                               */
+/* ===================================================== */
+
+.text-muted {
+  color: #64748B;
+}
+
+.text-soft {
+  color: #94A3B8;
+}
+
+/* ===================================================== */
+/* TRANSICIONES SUAVES GLOBALES                          */
+/* ===================================================== */
+
+* {
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
