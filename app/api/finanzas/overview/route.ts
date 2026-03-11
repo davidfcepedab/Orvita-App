@@ -17,9 +17,11 @@ const SPREADSHEET_ID =
 
 export async function GET(req: NextRequest) {
   try {
-    const requestedMonth =
-      req.nextUrl.searchParams.get("month")
+    const requestedMonth = req.nextUrl.searchParams.get("month")
 
+    // =============================
+    // 1. BASE MENSUAL
+    // =============================
     const res = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
       range: "Base mensual CFO!A2:H1000",
@@ -63,6 +65,9 @@ export async function GET(req: NextRequest) {
       flujo: Number(r[6] || 0),
     }))
 
+    // =============================
+    // 2. LIQUIDEZ (CUENTAS)
+    // =============================
     const cuentas = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
       range: "Cuentas!A2:J200",
@@ -85,6 +90,9 @@ export async function GET(req: NextRequest) {
         ? Number((liquidezTotal / gastoMensualTotal).toFixed(1))
         : 0
 
+    // =============================
+    // 3. ENGINES
+    // =============================
     const score = financialScoreEngine({
       ingresos,
       gastoOp: gastoOperativo,
@@ -113,6 +121,9 @@ export async function GET(req: NextRequest) {
       liquidez: liquidezTotal,
     })
 
+    // =============================
+    // 4. RESPONSE
+    // =============================
     return NextResponse.json({
       ingresos,
       gasto_operativo: gastoOperativo,
