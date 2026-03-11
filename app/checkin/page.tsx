@@ -63,16 +63,14 @@ export default function CheckinPage() {
 return (
   <div className="space-y-10 pb-32">
 
-    {/* =========================
-        FECHA
-    ========================== */}
-    <div className="bg-gray-100 rounded-2xl p-6 space-y-4">
-      <h2 className="text-lg font-semibold text-gray-700">
+    {/* ========================= FECHA ========================== */}
+    <div className="bg-gradient-to-br from-indigo-50 to-slate-100 rounded-2xl p-6 space-y-4 shadow-sm">
+      <h2 className="text-lg font-semibold text-indigo-700">
         Fecha
       </h2>
 
-      <div className="flex gap-4 items-center">
-        <label className="flex items-center gap-2 text-sm">
+      <div className="flex gap-6 items-center text-sm">
+        <label className="flex items-center gap-2">
           <input
             type="checkbox"
             checked={form.hoy}
@@ -86,7 +84,7 @@ return (
           Hoy
         </label>
 
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex items-center gap-2">
           <input
             type="checkbox"
             checked={form.ayer}
@@ -114,11 +112,9 @@ return (
       />
     </div>
 
-    {/* =========================
-        ESTADO MENTAL
-    ========================== */}
-    <div className="bg-rose-50 rounded-2xl p-6 space-y-6">
-      <h2 className="text-lg font-semibold text-rose-600">
+    {/* ========================= ESTADO MENTAL ========================== */}
+    <div className="bg-indigo-50 rounded-2xl p-6 space-y-6">
+      <h2 className="text-lg font-semibold text-indigo-700">
         Estado Mental
       </h2>
 
@@ -136,11 +132,11 @@ return (
             type="range"
             min="1"
             max="10"
-            value={form[item.key] || 5}
+            value={form[item.key]}
             onChange={(e) =>
               handleChange(item.key, Number(e.target.value))
             }
-            className="w-full accent-rose-500"
+            className="w-full accent-indigo-500"
           />
 
           <div className="flex justify-between text-xs text-gray-400 px-1">
@@ -152,11 +148,42 @@ return (
       ))}
     </div>
 
-    {/* =========================
-        ENTRENAMIENTO
-    ========================== */}
+    {/* ========================= HÁBITOS ========================== */}
+    <div className="bg-amber-50 rounded-2xl p-6 space-y-6">
+      <h2 className="text-lg font-semibold text-amber-700">
+        Hábitos
+      </h2>
+
+      <div className="grid grid-cols-2 gap-4">
+        <input type="time" value={form.horaDespertar} onChange={(e)=>handleChange("horaDespertar", e.target.value)} className="p-2 rounded-lg border border-gray-300"/>
+        <input type="time" value={form.horaDormir} onChange={(e)=>handleChange("horaDormir", e.target.value)} className="p-2 rounded-lg border border-gray-300"/>
+        <input type="number" placeholder="Agua (L)" value={form.agua} onChange={(e)=>handleChange("agua", e.target.value)} className="p-2 rounded-lg border border-gray-300"/>
+        <input type="number" placeholder="Meditación (min)" value={form.meditacion} onChange={(e)=>handleChange("meditacion", e.target.value)} className="p-2 rounded-lg border border-gray-300"/>
+        <input type="number" placeholder="Lectura (pág)" value={form.lectura} onChange={(e)=>handleChange("lectura", e.target.value)} className="p-2 rounded-lg border border-gray-300"/>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 text-sm">
+        {[
+          ["dietaCumplida","Dieta cumplida"],
+          ["avanceProyecto","Avance proyecto"],
+          ["tiempoPareja","Tiempo pareja"],
+          ["interaccionSocial","Interacción social"]
+        ].map(([key,label])=>(
+          <label key={key} className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={form[key]}
+              onChange={(e)=>handleChange(key, e.target.checked ? 1 : 0)}
+            />
+            {label}
+          </label>
+        ))}
+      </div>
+    </div>
+
+    {/* ========================= ENTRENAMIENTO ========================== */}
     <div className="bg-blue-50 rounded-2xl p-6 space-y-6">
-      <h2 className="text-lg font-semibold text-blue-600">
+      <h2 className="text-lg font-semibold text-blue-700">
         Entrenamiento
       </h2>
 
@@ -164,9 +191,7 @@ return (
         <input
           type="checkbox"
           checked={form.entreno}
-          onChange={(e) =>
-            handleChange("entreno", e.target.checked)
-          }
+          onChange={(e)=>handleChange("entreno", e.target.checked)}
         />
         Hoy entrené
       </label>
@@ -175,14 +200,11 @@ return (
         <>
           <select
             value={form.tipoEntreno}
-            onChange={(e) => {
+            onChange={(e)=>{
               const value = e.target.value
               handleChange("tipoEntreno", value)
-
-              if (value === "Dia de descanso") {
+              if(value==="Dia de descanso"){
                 handleChange("minutosEntreno", 0)
-              } else if (form.tipoEntreno === "Dia de descanso") {
-                handleChange("minutosEntreno", "")
               }
             }}
             className="w-full p-2 rounded-lg border border-gray-300"
@@ -202,59 +224,47 @@ return (
             type="number"
             placeholder="Minutos entrenados"
             value={form.minutosEntreno}
-            disabled={form.tipoEntreno === "Dia de descanso"}
-            onChange={(e) =>
-              handleChange("minutosEntreno", e.target.value)
-            }
-            className={`w-full p-2 rounded-lg border ${
-              form.tipoEntreno === "Dia de descanso"
-                ? "bg-gray-100 text-gray-400 border-gray-200"
-                : "border-gray-300"
-            }`}
+            disabled={form.tipoEntreno==="Dia de descanso"}
+            onChange={(e)=>handleChange("minutosEntreno", e.target.value)}
+            className="w-full p-2 rounded-lg border border-gray-300"
           />
         </>
       )}
     </div>
 
-    {/* =========================
-        ANTROPOMETRÍA
-    ========================== */}
-    <div className="bg-emerald-50 rounded-2xl p-6 space-y-6">
-      <h2 className="text-lg font-semibold text-emerald-600">
+    {/* ========================= ANTROPOMETRÍA ========================== */}
+    <div className="bg-blue-50 rounded-2xl p-6 space-y-6">
+      <h2 className="text-lg font-semibold text-blue-700">
         Medidas Corporales
       </h2>
 
       <div className="grid grid-cols-2 gap-4">
         {[
-          ["peso", "Peso (kg)"],
-          ["cintura", "Cintura (cm)"],
-          ["pecho", "Pecho (cm)"],
-          ["hombros", "Ancho Hombros (cm)"],
-          ["bicepsDer", "Bíceps Derecho (cm)"],
-          ["bicepsIzq", "Bíceps Izquierdo (cm)"],
-          ["cuadricepsDer", "Cuádriceps Derecho (cm)"],
-          ["cuadricepsIzq", "Cuádriceps Izquierdo (cm)"],
-          ["gluteos", "Glúteos (cm)"],
-        ].map(([key, label]) => (
+          ["peso","Peso (kg)"],
+          ["cintura","Cintura (cm)"],
+          ["pecho","Pecho (cm)"],
+          ["hombros","Ancho Hombros (cm)"],
+          ["bicepsDer","Bíceps Derecho (cm)"],
+          ["bicepsIzq","Bíceps Izquierdo (cm)"],
+          ["cuadricepsDer","Cuádriceps Derecho (cm)"],
+          ["cuadricepsIzq","Cuádriceps Izquierdo (cm)"],
+          ["gluteos","Glúteos (cm)"],
+        ].map(([key,label])=>(
           <input
             key={key}
             type="number"
             placeholder={label}
-            value={form[key] || ""}
-            onChange={(e) =>
-              handleChange(key, e.target.value)
-            }
+            value={form[key]}
+            onChange={(e)=>handleChange(key, e.target.value)}
             className="p-2 rounded-lg border border-gray-300"
           />
         ))}
       </div>
     </div>
 
-    {/* =========================
-        PRODUCTIVIDAD
-    ========================== */}
-    <div className="bg-green-50 rounded-2xl p-6 space-y-6">
-      <h2 className="text-lg font-semibold text-green-600">
+    {/* ========================= PRODUCTIVIDAD ========================== */}
+    <div className="bg-emerald-50 rounded-2xl p-6 space-y-6">
+      <h2 className="text-lg font-semibold text-emerald-700">
         Productividad
       </h2>
 
@@ -262,44 +272,32 @@ return (
         type="number"
         placeholder="Deep Work (horas)"
         value={form.deepWork}
-        onChange={(e) =>
-          handleChange("deepWork", e.target.value)
-        }
+        onChange={(e)=>handleChange("deepWork", e.target.value)}
         className="w-full p-2 rounded-lg border border-gray-300"
       />
 
-      <div className="space-y-2">
-        <p className="text-sm text-gray-600">
-          Productividad (1-10)
-        </p>
+      <input
+        type="range"
+        min="1"
+        max="10"
+        value={form.productividad}
+        onChange={(e)=>handleChange("productividad", Number(e.target.value))}
+        className="w-full accent-emerald-500"
+      />
 
-        <input
-          type="range"
-          min="1"
-          max="10"
-          value={form.productividad || 5}
-          onChange={(e) =>
-            handleChange("productividad", Number(e.target.value))
-          }
-          className="w-full accent-green-500"
-        />
-
-        <div className="flex justify-between text-xs text-gray-400 px-1">
-          {scaleOptions.map((n) => (
-            <span key={n}>{n}</span>
-          ))}
-        </div>
+      <div className="flex justify-between text-xs text-gray-400 px-1">
+        {scaleOptions.map((n)=>(
+          <span key={n}>{n}</span>
+        ))}
       </div>
     </div>
 
-    {/* =========================
-        BOTÓN
-    ========================== */}
+    {/* ========================= BOTÓN ========================== */}
     <div className="fixed bottom-0 left-0 right-0 bg-white p-4 border-t">
       <button
         onClick={handleSubmit}
         disabled={loading}
-        className="w-full bg-black text-white py-3 rounded-xl font-medium"
+        className="w-full bg-gradient-to-r from-indigo-600 to-emerald-500 text-white py-3 rounded-xl font-medium shadow-md"
       >
         {loading ? "Guardando..." : "Guardar Check-in"}
       </button>
@@ -308,3 +306,4 @@ return (
   </div>
 )
 }
+
