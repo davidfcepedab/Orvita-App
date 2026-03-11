@@ -2,29 +2,25 @@
 
 export const dynamic = "force-dynamic"
 
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
+
 export default function FinanzasTransactions() {
   const searchParams = useSearchParams()
   const router = useRouter()
 
   const month = searchParams.get("month")
-  const category =
-    searchParams.get("category")
+  const category = searchParams.get("category")
 
-  const [data, setData] =
-    useState<any>(null)
+  const [data, setData] = useState<any>(null)
 
   useEffect(() => {
     if (!month) return
 
-    let url =
-      `/api/finanzas/transactions?month=${month}`
+    let url = `/api/finanzas/transactions?month=${month}`
 
     if (category) {
-      url += `&category=${encodeURIComponent(
-        category
-      )}`
+      url += `&category=${encodeURIComponent(category)}`
     }
 
     fetch(url)
@@ -53,9 +49,7 @@ export default function FinanzasTransactions() {
       <div className="flex items-center gap-2 text-sm text-gray-500">
         <button
           onClick={() =>
-            router.push(
-              `/finanzas/categories?month=${month}`
-            )
+            router.push(`/finanzas/categories?month=${month}`)
           }
           className="underline"
         >
