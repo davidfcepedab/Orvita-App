@@ -1,4 +1,5 @@
-import { google } from "googleapis"
+import { NextRequest, NextResponse } from "next/server"
+import { sheets } from "@/lib/googleAuth"
 import { NextRequest, NextResponse } from "next/server"
 import { financialAdvancedEngine } from "@/lib/engines/financialAdvancedEngine"
 import { financialBudgetEngine } from "@/lib/engines/financialBudgetEngine"

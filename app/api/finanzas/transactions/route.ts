@@ -1,5 +1,5 @@
-import { google } from "googleapis"
 import { NextRequest, NextResponse } from "next/server"
+import { sheets } from "@/lib/googleAuth"
 
 const auth = new google.auth.GoogleAuth({
   keyFile: "google-credentials.json",
