@@ -1,8 +1,9 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useSearchParams, useRouter } from "next/navigation"
+export const dynamic = "force-dynamic"
 
+import { useSearchParams } from "next/navigation"
+import { useEffect, useState } from "react"
 export default function FinanzasTransactions() {
   const searchParams = useSearchParams()
   const router = useRouter()
