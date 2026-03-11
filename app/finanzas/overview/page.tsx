@@ -14,44 +14,93 @@ import {
   ReferenceLine,
 } from "recharts"
 
+/* ================================
+   Types
+================================ */
+
+type MonthlyPoint = {
+  month: string
+  ingresos: number
+  gasto_operativo: number
+  flujo: number
+}
+
+type OverviewResponse = {
+  ingresos: number
+  flujo_total: number
+  liquidez: number
+  runway: number
+  monthlyData: MonthlyPoint[]
+}
+
+/* ================================
+   Component
+================================ */
+
 export default function FinanzasOverview() {
   const { month } = useFinance()
-  const [data, setData] = useState<any>(null)
+  const [data, setData] = useState<OverviewResponse | null>(null)
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     if (!month) return
 
-    fetch(`/api/finanzas/overview?month=${month}`)
-      .then((res) => res.json())
-      .then(setData)
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+        const res = await fetch(`/api/finanzas/overview?month=${month}`)
+        if (!res.ok) throw new Error("API error")
+        const json = await res.json()
+        setData(json)
+      } catch (err) {
+        console.error("Overview fetch error:", err)
+        setData(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
   }, [month])
 
+  if (loading) return null
   if (!data) return null
 
   const {
     ingresos = 0,
     flujo_total = 0,
-    monthlyData = [],
     liquidez = 0,
     runway = 0,
+    monthlyData = [],
   } = data
+
+  /* ================================
+     Formatters (Type-safe)
+  ================================ */
 
   const formatMoney = (value: number) =>
     new Intl.NumberFormat("es-CO", {
       maximumFractionDigits: 0,
-    }).format(Math.round(value || 0))
+    }).format(Math.round(value ?? 0))
 
   const formatMillions = (value: number) => {
+    if (typeof value !== "number") return ""
     const millions = value / 1_000_000
     return `${millions.toFixed(0)}M`
   }
 
-  const formatTooltip = (value: number) =>
-    `$${formatMoney(value)}`
+  // Recharts acepta ValueType (number | string | undefined)
+  const formatTooltip = (value: unknown) => {
+    if (typeof value !== "number") return value ?? ""
+    return `$${formatMoney(value)}`
+  }
+
+  /* ================================
+     Render
+  ================================ */
 
   return (
     <div className="space-y-8">
-
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-4">
         <div className="card p-4">
@@ -78,7 +127,7 @@ export default function FinanzasOverview() {
         <div className="card p-4">
           <p className="text-xs text-gray-500">Runway</p>
           <p className="text-lg font-semibold">
-            {runway} meses
+            {runway ?? 0} meses
           </p>
         </div>
       </div>
@@ -97,7 +146,6 @@ export default function FinanzasOverview() {
             <Tooltip formatter={formatTooltip} />
             <Legend />
 
-            {/* Línea base 0 */}
             <ReferenceLine y={0} stroke="#9CA3AF" strokeWidth={2} />
 
             <Line
@@ -130,7 +178,6 @@ export default function FinanzasOverview() {
           </LineChart>
         </ResponsiveContainer>
       </div>
-
     </div>
   )
 }
