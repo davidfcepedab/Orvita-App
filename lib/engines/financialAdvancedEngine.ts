@@ -28,9 +28,9 @@ export function financialAdvancedEngine({
     "Movimientos Financieros",
   ]
 
-  const currentMap: any = {}
-  const previousMap: any = {}
-  const financialMap: any = {}
+  const currentMap: Record<string, { total: number; subs: Record<string, number> }> = {}
+  const previousMap: Record<string, { total: number; subs: Record<string, number> }> = {}
+  const financialMap: Record<string, number> = {}
 
   const prevMonth = (() => {
     const [y, m] = month.split("-").map(Number)
@@ -39,89 +39,54 @@ export function financialAdvancedEngine({
   })()
 
   rows.forEach((row) => {
-    const rowMonth = row[12]       // Mes Y-M
-    const category = row[6]        // Categoria
-    const sub = row[7]             // Subcategoria
+    const rowMonth = row[12]
+    const category = row[6]
+    const sub = row[7] || "Sin subcategoria"
     const amount = Number(row[10]) || 0
 
     if (!category) return
 
     if (EXCLUDED.includes(category)) {
-      if (!financialMap[category]) financialMap[category] = 0
-      financialMap[category] += amount
+      financialMap[category] = (financialMap[category] || 0) + amount
       return
     }
 
     if (!currentMap[category]) {
-      currentMap[category] = {
-        total: 0,
-        subs: {},
-      }
+      currentMap[category] = { total: 0, subs: {} }
     }
 
     if (!previousMap[category]) {
-      previousMap[category] = {
-        total: 0,
-        subs: {},
-      }
+      previousMap[category] = { total: 0, subs: {} }
     }
 
     if (rowMonth === month) {
       currentMap[category].total += amount
-      if (!currentMap[category].subs[sub])
-        currentMap[category].subs[sub] = 0
-      currentMap[category].subs[sub] += amount
+      currentMap[category].subs[sub] =
+        (currentMap[category].subs[sub] || 0) + amount
     }
 
     if (rowMonth === prevMonth) {
       previousMap[category].total += amount
-      if (!previousMap[category].subs[sub])
-        previousMap[category].subs[sub] = 0
-      previousMap[category].subs[sub] += amount
+      previousMap[category].subs[sub] =
+        (previousMap[category].subs[sub] || 0) + amount
     }
   })
 
   const structuralCategories = Object.entries(currentMap).map(
-    ([name, data]: any) => {
-
-      const previous = previousMap[name]?.total || 0
-
-      const deltaCluster =
-        previous !== 0
-          ? ((data.total - previous) / Math.abs(previous)) * 100
-          : 0
-
-      const type = FIXED_CATEGORIES.includes(name)
-        ? "fixed"
-        : "variable"
-
-      const subcategories = Object.entries(data.subs).map(
-        ([subName, subTotal]: any) => {
-
-          const prevSub =
-            previousMap[name]?.subs[subName] || 0
-
-          const subDelta =
-            prevSub !== 0
-              ? ((subTotal - prevSub) /
-                  Math.abs(prevSub)) *
-                100
-              : 0
-
-          return {
-            name: subName,
-            total: subTotal,
-            delta: subDelta,
-          }
-        }
-      )
+    ([name, data]) => {
+      const previousTotal = previousMap[name]?.total || 0
+      const delta = data.total - previousTotal
 
       return {
         name,
         total: data.total,
-        type,
-        deltaCluster,
-        subcategories,
+        previousTotal,
+        delta,
+        type: FIXED_CATEGORIES.includes(name) ? "fixed" : "variable",
+        subs: Object.entries(data.subs).map(([sub, value]) => ({
+          name: sub,
+          total: value,
+        })),
       }
     }
   )
