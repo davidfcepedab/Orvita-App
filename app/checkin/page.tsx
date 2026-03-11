@@ -1,6 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import Section from "@/app/components/Section"
+import ScaleInput from "@/app/components/ScaleInput"
 
 export default function CheckinPage() {
   const today = new Date().toISOString().split("T")[0]
