@@ -59,162 +59,114 @@ export default function CheckinPage() {
 
   const scaleOptions = Array.from({ length: 10 }, (_, i) => i + 1)
 
-  return (
-    <div className="space-y-8">
-      <div className="card">
-        <h1 className="text-2xl font-semibold mb-6">
-          Check-In Diario
-        </h1>
+return (
+  <div className="space-y-8 pb-24">
 
-        {/* ==============================
-            ESTADO MENTAL
-        ============================== */}
+    {/* =========================
+        ESTADO MENTAL
+    ========================== */}
+    <div className="bg-rose-50 rounded-2xl p-6 space-y-6">
+      <h2 className="text-lg font-semibold text-rose-600">
+        Estado Mental
+      </h2>
 
-        <Section title="Estado Mental" color="#EE3A93">
-          <ScaleInput
-            label="Sueño"
-            value={form.calidadSueno}
-            onChange={(v: number) => handleChange("calidadSueno", v)}
-            options={scaleOptions}
+      {[
+        { label: "Sueño", key: "sueno" },
+        { label: "Energía", key: "energia" },
+        { label: "Ansiedad", key: "ansiedad" },
+        { label: "Estado ánimo", key: "estadoAnimo" },
+      ].map((item) => (
+        <div key={item.key} className="space-y-2">
+          <p className="text-sm text-gray-600">{item.label}</p>
+          <input
+            type="range"
+            min="1"
+            max="10"
+            className="w-full accent-rose-500"
           />
+        </div>
+      ))}
+    </div>
 
-          <ScaleInput
-            label="Energía"
-            value={form.energia}
-            onChange={(v: number) => handleChange("energia", v)}
-            options={scaleOptions}
-          />
+    {/* =========================
+        FÍSICO
+    ========================== */}
+    <div className="bg-emerald-50 rounded-2xl p-6 space-y-6">
+      <h2 className="text-lg font-semibold text-emerald-600">
+        Físico
+      </h2>
 
-          <ScaleInput
-            label="Ansiedad"
-            value={form.ansiedad}
-            onChange={(v: number) => handleChange("ansiedad", v)}
-            options={scaleOptions}
-          />
+      <div className="flex items-center gap-3">
+        <input type="checkbox" />
+        <span className="text-sm text-gray-600">
+          Hoy entrené
+        </span>
+      </div>
 
-          <ScaleInput
-            label="Estado ánimo"
-            value={form.estadoAnimo}
-            onChange={(v: number) => handleChange("estadoAnimo", v)}
-            options={scaleOptions}
-          />
-        </Section>
-
-        {/* ==============================
-            FÍSICO
-        ============================== */}
-
-        <Section title="Físico" color="#3FC5BB">
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={form.entreno}
-              onChange={(e) =>
-                handleChange("entreno", e.target.checked)
-              }
-            />
-            Hoy entrené
-          </label>
-
-          {form.entreno && (
-            <>
-              <input
-                placeholder="Tipo Entreno"
-                className="w-full border rounded-xl px-4 py-3"
-                value={form.tipoEntreno}
-                onChange={(e) =>
-                  handleChange("tipoEntreno", e.target.value)
-                }
-              />
-
-              <input
-                type="number"
-                placeholder="Minutos Entreno"
-                className="w-full border rounded-xl px-4 py-3"
-                value={form.minutosEntreno}
-                onChange={(e) =>
-                  handleChange("minutosEntreno", Number(e.target.value))
-                }
-              />
-            </>
-          )}
-
-          <div className="grid grid-cols-2 gap-4">
-            <input
-              type="number"
-              placeholder="Peso (kg)"
-              className="border rounded-xl px-4 py-3"
-              value={form.peso}
-              onChange={(e) =>
-                handleChange("peso", Number(e.target.value))
-              }
-            />
-
-            <input
-              type="number"
-              placeholder="Cintura (cm)"
-              className="border rounded-xl px-4 py-3"
-              value={form.cintura}
-              onChange={(e) =>
-                handleChange("cintura", Number(e.target.value))
-              }
-            />
-          </div>
-        </Section>
-
-        {/* ==============================
-            CONEXIÓN
-        ============================== */}
-
-        <Section title="Conexión" color="#6C4CE3">
-          <ScaleInput
-            label="Calidad conexión"
-            value={form.calidadConexion}
-            onChange={(v: number) =>
-              handleChange("calidadConexion", v)
-            }
-            options={scaleOptions}
-          />
-        </Section>
-
-        {/* ==============================
-            PROFESIONAL
-        ============================== */}
-
-        <Section title="Profesional" color="#FF8C42">
-          <ScaleInput
-            label="Deep Work"
-            value={form.deepWork}
-            onChange={(v: number) =>
-              handleChange("deepWork", v)
-            }
-            options={scaleOptions}
-          />
-
-          <ScaleInput
-            label="Productividad"
-            value={form.productividad}
-            onChange={(v: number) =>
-              handleChange("productividad", v)
-            }
-            options={scaleOptions}
-          />
-        </Section>
-
-        <button
-          onClick={handleSubmit}
-          disabled={loading}
-          className="w-full bg-black text-white py-3 rounded-xl mt-6"
-        >
-          {loading ? "Guardando..." : "Guardar Check-In"}
-        </button>
-
-        {success && (
-          <div className="text-green-600 text-sm mt-4">
-            Check-in guardado correctamente
-          </div>
-        )}
+      <div className="grid grid-cols-2 gap-4">
+        <input
+          type="number"
+          placeholder="Peso (kg)"
+          className="input"
+        />
+        <input
+          type="number"
+          placeholder="Cintura (cm)"
+          className="input"
+        />
       </div>
     </div>
-  )
-}
+
+    {/* =========================
+        PROFESIONAL
+    ========================== */}
+    <div className="bg-orange-50 rounded-2xl p-6 space-y-6">
+      <h2 className="text-lg font-semibold text-orange-500">
+        Profesional
+      </h2>
+
+      {[
+        { label: "Deep Work", key: "deepWork" },
+        { label: "Productividad", key: "productividad" },
+      ].map((item) => (
+        <div key={item.key} className="space-y-2">
+          <p className="text-sm text-gray-600">{item.label}</p>
+          <input
+            type="range"
+            min="1"
+            max="10"
+            className="w-full accent-orange-500"
+          />
+        </div>
+      ))}
+    </div>
+
+    {/* =========================
+        CONEXIÓN
+    ========================== */}
+    <div className="bg-indigo-50 rounded-2xl p-6 space-y-6">
+      <h2 className="text-lg font-semibold text-indigo-600">
+        Conexión
+      </h2>
+
+      <div className="space-y-2">
+        <p className="text-sm text-gray-600">
+          Calidad conexión
+        </p>
+        <input
+          type="range"
+          min="1"
+          max="10"
+          className="w-full accent-indigo-500"
+        />
+      </div>
+    </div>
+
+    {/* =========================
+        BOTÓN GUARDAR
+    ========================== */}
+    <button className="w-full py-4 rounded-2xl text-white font-medium bg-gradient-to-r from-teal-400 to-indigo-500 shadow-md">
+      Guardar Check-In
+    </button>
+  </div>
+)
