@@ -5,10 +5,21 @@ import { financialInsightEngine } from "@/lib/engines/financialInsightEngine"
 import { financialStabilityEngine } from "@/lib/engines/financialStabilityEngine"
 import { financialPredictionEngine } from "@/lib/engines/financialPredictionEngine"
 
-const auth = new google.auth.GoogleAuth({
-  credentials: JSON.parse(process.env.GOOGLE_CREDENTIALS!),
-  scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-})
+const credentialsString = process.env.GOOGLE_CREDENTIALS
+
+let auth
+
+if (credentialsString) {
+  auth = new google.auth.GoogleAuth({
+    credentials: JSON.parse(credentialsString),
+    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+  })
+} else {
+  console.warn("⚠ GOOGLE_CREDENTIALS not defined")
+  auth = new google.auth.GoogleAuth({
+    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+  })
+}
 
 const sheets = google.sheets({ version: "v4", auth })
 
