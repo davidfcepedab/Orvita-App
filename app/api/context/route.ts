@@ -4,13 +4,6 @@ import { sheets } from "@/lib/googleAuth"
 import { predictionEngine } from "@/lib/engines/predictionEngine"
 import { insightEngine } from "@/lib/engines/insightEngine"
 
-const auth = new google.auth.GoogleAuth({
-  keyFile: "google-credentials.json",
-  scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-})
-
-const sheets = google.sheets({ version: "v4", auth })
-
 const SPREADSHEET_ID = "1fEP_Em30-BTUhmeObzAE9zObQRc7CNkYXbVCecpCHO0"
 
 export async function GET() {
@@ -21,22 +14,24 @@ export async function GET() {
     const control = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
       range: "Control!B15:B30",
+      valueRenderOption: "UNFORMATTED_VALUE",
     })
 
     const controlValues = control.data.values || []
 
-    const scoreRecuperacion = Number(controlValues[0]?.[0] || 0) // B15
-    const scoreDisciplina = Number(controlValues[6]?.[0] || 0)   // B21
-    const scoreFisico = Number(controlValues[13]?.[0] || 0)      // B28
-    const scoreProfesional = Number(controlValues[14]?.[0] || 0) // B29
-    const scoreGlobal = Number(controlValues[15]?.[0] || 0)      // B30
+    const scoreRecuperacion = Number(controlValues[0]?.[0] || 0)
+    const scoreDisciplina = Number(controlValues[6]?.[0] || 0)
+    const scoreFisico = Number(controlValues[13]?.[0] || 0)
+    const scoreProfesional = Number(controlValues[14]?.[0] || 0)
+    const scoreGlobal = Number(controlValues[15]?.[0] || 0)
 
     // =====================================
-    // 2️⃣ HISTÓRICO BASE (DELTAS)
+    // 2️⃣ HISTÓRICO BASE
     // =====================================
     const historico = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
       range: "Historico Base!A2:F1000",
+      valueRenderOption: "UNFORMATTED_VALUE",
     })
 
     const rows = (historico.data.values || []).filter(
@@ -73,11 +68,12 @@ export async function GET() {
     }
 
     // =====================================
-    // 3️⃣ TENDENCIA DIARIA (Score Mental)
+    // 3️⃣ TENDENCIA DIARIA
     // =====================================
     const diario = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
       range: "Check In Diario!AB2:AB1000",
+      valueRenderOption: "UNFORMATTED_VALUE",
     })
 
     const diarioRows = (diario.data.values || [])
@@ -91,10 +87,9 @@ export async function GET() {
     }))
 
     // =====================================
-    // 4️⃣ DELTA TENDENCIA 7D
+    // 4️⃣ DELTA TENDENCIA
     // =====================================
     let delta_tendencia = 0
-
     const last14 = diarioRows.slice(-14)
 
     if (last14.length >= 14) {
@@ -117,7 +112,6 @@ export async function GET() {
     // =====================================
     // 5️⃣ PREDICCIÓN + INSIGHTS
     // =====================================
-
     const prediction = predictionEngine(last14)
 
     const insights = insightEngine({
@@ -128,7 +122,7 @@ export async function GET() {
     })
 
     // =====================================
-    // 6️⃣ RESPUESTA FINAL
+    // 6️⃣ RESPONSE
     // =====================================
     return NextResponse.json({
       score_global: scoreGlobal,
@@ -147,11 +141,11 @@ export async function GET() {
       insights,
     })
 
-  } catch (error) {
-    console.error(error)
+  } catch (error: any) {
+    console.error("CONTEXT ERROR:", error?.message)
 
     return NextResponse.json(
-      { error: "Error cargando contexto" },
+      { error: "Error cargando contexto", details: error?.message },
       { status: 500 }
     )
   }
