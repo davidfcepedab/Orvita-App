@@ -30,8 +30,8 @@ export function financialAdvancedEngine({
     "Movimientos Financieros",
   ]
 
-  const currentMap: Record<string, { total: number; subs: Record<string, number> }> = {}
-  const previousMap: Record<string, { total: number; subs: Record<string, number> }> = {}
+  const currentMap: Record<string, { total: number; subcategories: Record<string, number> }> = {}
+  const previousMap: Record<string, { total: number; subcategories: Record<string, number> }> = {}
   const financialMap: Record<string, number> = {}
 
   const prevMonth = (() => {
@@ -95,10 +95,11 @@ export function financialAdvancedEngine({
     })
 
   const financialCategories = Object.entries(financialMap).map(
-    ([name, total]) => ({
-      name,
-      total,
-    })
+    ([name, total]) => (
+      {
+        name,
+        total,
+      })
   )
 
   const totalFixed = structuralCategories

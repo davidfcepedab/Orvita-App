@@ -35,23 +35,25 @@ export async function GET(req: NextRequest) {
         return true
       })
 
-    const subtotal = transactions.reduce(
-      (acc, tx) => acc + tx.monto,
+    const total = transactions.reduce(
+      (acc, tx) => acc + tx.amount,
       0
     )
 
     return NextResponse.json({
+      success: true,
       transactions,
-      subtotal,
-      previousSubtotal: 0,
-      delta: 0,
+      total,
     })
 
   } catch (error: any) {
     console.error("TRANSACTIONS ERROR:", error?.message)
 
     return NextResponse.json(
-      { error: "Error cargando transacciones", details: error?.message },
+      {
+        success: false,
+        error: "Error cargando transacciones",
+      },
       { status: 500 }
     )
   }

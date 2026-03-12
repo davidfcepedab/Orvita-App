@@ -21,38 +21,30 @@ interface TransactionsResponse {
 export default function TransactionsClient() {
   const finance = useFinance()
   const searchParams = useSearchParams()
+  const month = finance?.month ?? ""
+  const category = searchParams.get("category")
+  const subcategory = searchParams.get("subcategory")
 
   const [data, setData] = useState<TransactionsResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  if (!finance) {
-    return (
-      <div className="p-6 text-center text-gray-500">
-        <p>Inicializando...</p>
-      </div>
-    )
-  }
-
-  const { month } = finance
+  const month = finance?.month
   const categoryFilter = searchParams.get("category")
   const subcategoryFilter = searchParams.get("subcategory")
 
   useEffect(() => {
-    if (!month) {
-      setData(null)
-      return
-    }
+    if (!month) return
 
-    const fetchTransactions = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true)
         setError(null)
 
         let url = `/api/finanzas/transactions?month=${encodeURIComponent(month)}`
 
-        if (categoryFilter) {
-          url += `&category=${encodeURIComponent(categoryFilter)}`
+        if (category) {
+          url += `&category=${encodeURIComponent(category)}`
         }
 
         if (subcategoryFilter) {
@@ -65,18 +57,17 @@ export default function TransactionsClient() {
           throw new Error(`Error ${response.status}: ${response.statusText}`)
         }
 
-        const json: TransactionsResponse = await response.json()
+        const res = await fetch(url)
+        const json = await res.json()
 
         if (json.error) {
           throw new Error(json.error)
         }
 
         setData(json)
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : "Error desconocido"
-        setError(errorMessage)
-        console.error("Error fetching transactions:", err)
-        setData(null)
+
+      } catch (err: any) {
+        setError(err.message)
       } finally {
         setLoading(false)
       }
@@ -84,6 +75,14 @@ export default function TransactionsClient() {
 
     fetchTransactions()
   }, [month, categoryFilter, subcategoryFilter])
+
+  if (!finance) {
+    return (
+      <div className="p-6 text-center text-gray-500">
+        <p>Inicializando...</p>
+      </div>
+    )
+  }
 
   // Estado de carga
   if (loading) {
@@ -94,27 +93,16 @@ export default function TransactionsClient() {
     )
   }
 
-  // Estado de error
-  if (error) {
-    return (
-      <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-        <p className="font-semibold">Error al cargar movimientos</p>
-        <p className="text-sm mt-1">{error}</p>
-      </div>
-    )
-  }
+  if (loading) return <p>Cargando...</p>
 
-  // Sin datos
-  if (!data) {
+  if (error)
     return (
       <div className="p-6 text-center text-gray-500">
         <p>Sin movimientos registrados para este período.</p>
       </div>
     )
-  }
 
-  const transactions = data.transactions || []
-  const hasTransactions = transactions.length > 0
+  if (!data) return null
 
   return (
     <div className="space-y-6">
@@ -175,6 +163,7 @@ export default function TransactionsClient() {
           </p>
         </div>
       )}
+
     </div>
   )
 }
