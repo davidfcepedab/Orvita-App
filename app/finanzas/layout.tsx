@@ -13,10 +13,11 @@ function FinanzasLayoutContent({
   const router = useRouter()
   const finance = useFinance()
 
+  // Mostrar loading mientras se carga el contexto
   if (!finance) {
     return (
-      <div className="p-6 text-center">
-        <p>Cargando contexto financiero...</p>
+      <div className="p-6 text-center text-gray-500">
+        <p>Inicializando finanzas...</p>
       </div>
     )
   }
@@ -29,13 +30,6 @@ function FinanzasLayoutContent({
     { name: "Categorías", path: "/finanzas/categories" },
     { name: "Insights", path: "/finanzas/insights" },
   ]
-
-  const handleMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    if (value) {
-      setMonth(value)
-    }
-  }
 
   return (
     <div className="space-y-6">
@@ -58,8 +52,8 @@ function FinanzasLayoutContent({
         <div className="mt-4">
           <input
             type="month"
-            value={month || ""}
-            onChange={handleMonthChange}
+            value={month}
+            onChange={(e) => setMonth(e.target.value)}
             className="px-4 py-2 rounded-xl text-black"
             aria-label="Seleccionar mes"
           />
