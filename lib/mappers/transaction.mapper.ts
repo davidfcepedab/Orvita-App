@@ -1,33 +1,24 @@
+import type { Transaction } from "@/lib/types"
+
+// Column indices for Movimientos!A2:U5000
+const COL_FECHA = 0
+const COL_DESCRIPCION = 5
+const COL_CATEGORIA = 6
+const COL_SUBCATEGORIA = 7
+const COL_MONTO = 10
+const COL_MES = 12
+
 /**
- * Maps a raw Google Sheets row (Movimientos!A2:U5000) to a typed Transaction.
- *
- * Column reference (0-indexed):
- *  0  = fecha (date)
- *  5  = descripcion (description)
- *  6  = categoria (category)
- *  7  = subcategoria (subcategory)
- * 10  = monto (amount)
- * 12  = mes (month, YYYY-MM)
+ * Maps a raw row from the Movimientos sheet to a typed Transaction.
+ * All magic indices are confined to this function.
  */
-
-export interface Transaction {
-  id: string
-  date: string
-  description: string
-  amount: number
-  category: string
-  subcategory: string
-  month: string
-}
-
-export function mapRowToTransaction(row: any[], index: number): Transaction {
+export function mapRowToTransaction(row: any[]): Transaction {
   return {
-    id: `${row?.[0] ?? ""}-${index}`,
-    date: String(row?.[0] ?? ""),
-    description: String(row?.[5] ?? ""),
-    amount: Number(row?.[10] ?? 0),
-    category: String(row?.[6] ?? ""),
-    subcategory: String(row?.[7] ?? ""),
-    month: String(row?.[12] ?? ""),
+    fecha: String(row[COL_FECHA] ?? ""),
+    descripcion: String(row[COL_DESCRIPCION] ?? ""),
+    categoria: String(row[COL_CATEGORIA] ?? ""),
+    subcategoria: String(row[COL_SUBCATEGORIA] ?? ""),
+    monto: Number(row[COL_MONTO] ?? 0),
+    mes: String(row[COL_MES] ?? ""),
   }
 }

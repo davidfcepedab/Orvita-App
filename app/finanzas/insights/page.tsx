@@ -3,40 +3,24 @@
 import { useEffect, useState } from "react"
 import { useFinance } from "../FinanceContext"
 
-interface InsightsData {
-  score: number
-  insight: {
-    fixedRatio: number
-    structuralRigidity: "low" | "medium" | "high"
-    topCategory: string | null
-    overBudgetCategories: string[]
-    riskLevel: "stable" | "warning" | "critical"
-    alerts: string[]
-  }
-  stability: {
+interface InsightsResponse {
+  score?: number
+  insight?: { type: string; message: string; all?: string[] }
+  stability?: {
+    stabilityIndex: number
+    status: "green" | "yellow" | "red"
     scoreOperativo: number
     scoreLiquidez: number
     scoreRiesgo: number
-    stabilityIndex: number
-    status: "green" | "yellow" | "red"
   }
-  prediction: {
-    dailyAverage: number
-    projectedEndOfMonth: number
-    warning: boolean
-  }
-}
-
-interface InsightsResponse {
-  success: boolean
-  data: InsightsData
+  prediction?: { projection: { month: string; projectedBalance: number }[] }
   error?: string
 }
 
 export default function FinanzasInsights() {
   const finance = useFinance()
 
-  const [data, setData] = useState<InsightsData | null>(null)
+  const [data, setData] = useState<InsightsResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -69,18 +53,16 @@ export default function FinanzasInsights() {
           throw new Error(`Error ${response.status}: ${response.statusText}`)
         }
 
-        const json: InsightsResponse = await response.json()
+        const json = await response.json()
 
-        if (!json.success && json.error) {
+        if (json.error) {
           throw new Error(json.error)
         }
 
-        setData(json.data)
+        setData(json.data as InsightsResponse)
       } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Error desconocido"
+        const errorMessage = err instanceof Error ? err.message : "Error desconocido"
         setError(errorMessage)
-        console.error("Error fetching insights:", err)
         setData(null)
       } finally {
         setLoading(false)
@@ -93,7 +75,7 @@ export default function FinanzasInsights() {
   if (loading) {
     return (
       <div className="p-6 text-center text-gray-500">
-        <p>Cargando datos...</p>
+        <p>Cargando insights...</p>
       </div>
     )
   }
@@ -110,141 +92,111 @@ export default function FinanzasInsights() {
   if (!data) {
     return (
       <div className="p-6 text-center text-gray-500">
-        <p>No hay datos disponibles para este mes</p>
+        <p>Sin insights disponibles para este período.</p>
       </div>
     )
   }
 
   const { score, insight, stability, prediction } = data
 
-  const getScoreColor = (s: number) => {
-    if (s >= 70) return "text-green-600"
-    if (s >= 40) return "text-amber-600"
-    return "text-red-600"
+  const stabilityColor = {
+    green: "text-emerald-600",
+    yellow: "text-amber-600",
+    red: "text-rose-600",
   }
 
-  const getStatusColor = (status: "green" | "yellow" | "red") => {
-    if (status === "green") return "text-green-600"
-    if (status === "yellow") return "text-amber-600"
-    return "text-red-600"
+  const stabilityBg = {
+    green: "bg-emerald-50 border-emerald-200",
+    yellow: "bg-amber-50 border-amber-200",
+    red: "bg-rose-50 border-rose-200",
   }
-
-  const getRiskColor = (risk: "stable" | "warning" | "critical") => {
-    if (risk === "stable") return "text-green-600"
-    if (risk === "warning") return "text-amber-600"
-    return "text-red-600"
-  }
-
-  const formatMoney = (value: number) =>
-    new Intl.NumberFormat("es-CO", {
-      maximumFractionDigits: 0,
-    }).format(Math.round(value || 0))
 
   return (
     <div className="space-y-6">
-      {/* Score */}
-      <div className="card p-4 bg-white border border-gray-200">
-        <p className="text-xs text-gray-500">Score Financiero</p>
-        <p className={`text-3xl font-bold mt-2 ${getScoreColor(score)}`}>
-          {score}
-          <span className="text-base font-normal text-gray-400"> / 100</span>
-        </p>
-      </div>
+      {/* SCORE FINANCIERO */}
+      {score !== undefined && (
+        <div className="card p-6 bg-white border border-gray-200 text-center">
+          <p className="text-xs uppercase text-gray-500 tracking-wide">
+            Score Financiero
+          </p>
+          <p className={`text-5xl font-bold mt-3 ${
+            score >= 70 ? "text-emerald-600" :
+            score >= 40 ? "text-amber-600" :
+            "text-rose-600"
+          }`}>
+            {score}
+          </p>
+          <p className="text-sm text-gray-500 mt-2">sobre 100</p>
+        </div>
+      )}
 
-      {/* Stability */}
-      <div className="card p-4 bg-white border border-gray-200 space-y-3">
-        <p className="text-sm font-semibold text-gray-700">Estabilidad</p>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <p className="text-xs text-gray-500">Índice</p>
-            <p className={`text-lg font-semibold mt-1 ${getScoreColor(stability.stabilityIndex)}`}>
+      {/* INSIGHT PRINCIPAL */}
+      {insight && (
+        <div className={`rounded-lg p-4 border ${
+          insight.type === "alert"
+            ? "bg-rose-50 border-rose-200 text-rose-700"
+            : "bg-blue-50 border-blue-200 text-blue-700"
+        }`}>
+          <p className="font-medium text-sm">{insight.message}</p>
+          {insight.all && insight.all.length > 1 && (
+            <ul className="mt-2 space-y-1">
+              {insight.all.slice(1).map((msg, i) => (
+                <li key={i} className="text-xs opacity-80">• {msg}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {/* ESTABILIDAD */}
+      {stability && (
+        <div className={`card p-4 border ${stabilityBg[stability.status]}`}>
+          <div className="flex justify-between items-center mb-3">
+            <p className="text-sm font-semibold text-gray-700">
+              Índice de Estabilidad
+            </p>
+            <p className={`text-2xl font-bold ${stabilityColor[stability.status]}`}>
               {stability.stabilityIndex}
             </p>
           </div>
-          <div>
-            <p className="text-xs text-gray-500">Estado</p>
-            <p className={`text-lg font-semibold mt-1 capitalize ${getStatusColor(stability.status)}`}>
-              {stability.status === "green"
-                ? "Estable"
-                : stability.status === "yellow"
-                ? "Precaución"
-                : "Riesgo"}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-500">Operativo</p>
-            <p className="text-base font-medium mt-1">{stability.scoreOperativo}</p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-500">Liquidez</p>
-            <p className="text-base font-medium mt-1">{stability.scoreLiquidez}</p>
-          </div>
-        </div>
-      </div>
 
-      {/* Insight estructural */}
-      <div className="card p-4 bg-white border border-gray-200 space-y-3">
-        <p className="text-sm font-semibold text-gray-700">Análisis Estructural</p>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <p className="text-xs text-gray-500">Rigidez</p>
-            <p className="text-base font-medium mt-1 capitalize">
-              {insight.structuralRigidity}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-500">Riesgo</p>
-            <p className={`text-base font-medium mt-1 capitalize ${getRiskColor(insight.riskLevel)}`}>
-              {insight.riskLevel === "stable"
-                ? "Estable"
-                : insight.riskLevel === "warning"
-                ? "Alerta"
-                : "Crítico"}
-            </p>
-          </div>
-          {insight.topCategory && (
-            <div className="col-span-2">
-              <p className="text-xs text-gray-500">Categoría principal</p>
-              <p className="text-base font-medium mt-1">{insight.topCategory}</p>
+          <div className="grid grid-cols-3 gap-3 text-center text-xs">
+            <div>
+              <p className="text-gray-500">Operativo</p>
+              <p className="font-semibold mt-1">{stability.scoreOperativo}</p>
             </div>
-          )}
+            <div>
+              <p className="text-gray-500">Liquidez</p>
+              <p className="font-semibold mt-1">{stability.scoreLiquidez}</p>
+            </div>
+            <div>
+              <p className="text-gray-500">Riesgo</p>
+              <p className="font-semibold mt-1">{stability.scoreRiesgo}</p>
+            </div>
+          </div>
         </div>
-        {insight.alerts.length > 0 && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-1">
-            {insight.alerts.map((alert, i) => (
-              <p key={i} className="text-xs text-amber-700">
-                ⚠ {alert}
-              </p>
+      )}
+
+      {/* PROYECCIÓN */}
+      {prediction?.projection && prediction.projection.length > 0 && (
+        <div className="card p-4 bg-white border border-gray-200">
+          <p className="text-xs uppercase text-gray-500 tracking-wide mb-3">
+            Proyección de Balance (3 meses)
+          </p>
+          <div className="space-y-2">
+            {prediction.projection.map((p) => (
+              <div key={p.month} className="flex justify-between items-center text-sm">
+                <span className="text-gray-600">Mes {p.month}</span>
+                <span className={`font-semibold ${
+                  p.projectedBalance >= 0 ? "text-emerald-600" : "text-rose-600"
+                }`}>
+                  ${Math.abs(p.projectedBalance).toLocaleString("es-CO")}
+                </span>
+              </div>
             ))}
           </div>
-        )}
-      </div>
-
-      {/* Prediction */}
-      <div className="card p-4 bg-white border border-gray-200 space-y-3">
-        <p className="text-sm font-semibold text-gray-700">Proyección del Mes</p>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <p className="text-xs text-gray-500">Promedio diario</p>
-            <p className="text-base font-medium mt-1">
-              ${formatMoney(prediction.dailyAverage)}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-500">Proyectado fin de mes</p>
-            <p className="text-base font-medium mt-1">
-              ${formatMoney(prediction.projectedEndOfMonth)}
-            </p>
-          </div>
         </div>
-        {prediction.warning && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-            <p className="text-xs text-red-700">
-              ⚠ Proyección de gasto elevada para este mes.
-            </p>
-          </div>
-        )}
-      </div>
+      )}
     </div>
   )
 }

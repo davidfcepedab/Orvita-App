@@ -2,10 +2,17 @@ import { NextRequest, NextResponse } from "next/server"
 import { sheets } from "@/lib/googleAuth"
 import { financialAdvancedEngine } from "@/lib/engines/financialAdvancedEngine"
 import { financialBudgetEngine } from "@/lib/engines/financialBudgetEngine"
-import { financialScoreEngine } from "@/lib/engines/financialScoreEngine"
 import { financialInsightEngine } from "@/lib/engines/financialInsightEngine"
 import { financialStabilityEngine } from "@/lib/engines/financialStabilityEngine"
 import { financialPredictionEngine } from "@/lib/engines/financialPredictionEngine"
+import { financialScoreEngine } from "@/lib/engines/financialScoreEngine"
+import {
+  mapRowToCategoryAggregation,
+  mapRowToBudget,
+  isValidCFORow,
+  mapRowToCFOMonthly,
+  mapRowToCuenta,
+} from "@/lib/mappers/category.mapper"
 
 const SPREADSHEET_ID = "1A8ucJUgSvxP2JLbPf1Z5PlB5UytbO4aKdJLf_ctaUz4"
 
@@ -15,6 +22,9 @@ export async function GET(req: NextRequest) {
       req.nextUrl.searchParams.get("month") ||
       new Date().toISOString().slice(0, 7)
 
+    // =========================
+    // MOVIMIENTOS + CATEGORÍAS
+    // =========================
     const [movimientosRes, presupuestoRes, cfoRes, cuentasRes] =
       await Promise.all([
         sheets.spreadsheets.values.get({
@@ -39,88 +49,102 @@ export async function GET(req: NextRequest) {
         }),
       ])
 
-    const movimientosRows = movimientosRes.data.values || []
-    const presupuestoRows = presupuestoRes.data.values || []
-    const cfoRows = cfoRes.data.values || []
-    const cuentasRows = cuentasRes.data.values || []
+    const transactions = (movimientosRes.data.values || []).map(
+      mapRowToCategoryAggregation
+    )
 
-    // Engine chain: advanced → budget
-    const structural = financialAdvancedEngine({ rows: movimientosRows, month })
-    const structuralWithBudget = financialBudgetEngine({
-      structuralCategories: structural.structuralCategories,
-      budgetRows: presupuestoRows,
+    const { structuralCategories } = financialAdvancedEngine({
+      transactions,
+      month,
     })
 
-    // Extract CFO month row
-    const cleanCfoRows = cfoRows.filter(
-      (r) => r && r.length > 6 && !isNaN(Number(r[1]))
-    )
-    const cfoRow =
-      cleanCfoRows.find((r) => r[0] === month) ||
-      cleanCfoRows[cleanCfoRows.length - 1] ||
-      []
+    const budgetRows = (presupuestoRes.data.values || []).map(mapRowToBudget)
 
-    const ingresos = Number(cfoRow[1] || 0)
-    const gastoOperativo = Number(cfoRow[2] || 0)
-    const gastoFinanciero = Number(cfoRow[3] || 0)
-    const flujo = Number(cfoRow[6] || 0)
+    const categories = financialBudgetEngine({
+      structuralCategories,
+      budgetRows,
+    })
 
-    // Compute liquidez and runway from Cuentas
-    let liquidez = 0
-    for (const row of cuentasRows) {
-      const disponible = Number(row?.[5] || 0)
-      if (!isNaN(disponible) && disponible > 0) {
-        liquidez += disponible
-      }
+    // =========================
+    // CFO — ingresos / gastos / flujo
+    // =========================
+    const cfoRows = (cfoRes.data.values || [])
+      .filter(isValidCFORow)
+      .map(mapRowToCFOMonthly)
+
+    if (!cfoRows.length) {
+      return NextResponse.json(
+        { error: "Sin datos financieros" },
+        { status: 404 }
+      )
     }
+
+    const targetRow =
+      cfoRows.find((r) => r.mes === month) ?? cfoRows[cfoRows.length - 1]
+
+    const { ingresos, gastoOperativo, gastoFinanciero, flujoTotal } = targetRow
 
     const gastoMensualTotal =
       Math.abs(gastoOperativo) + Math.abs(gastoFinanciero)
+
+    // =========================
+    // LIQUIDEZ + RUNWAY
+    // =========================
+    const liquidezTotal = (cuentasRes.data.values || [])
+      .map(mapRowToCuenta)
+      .reduce((acc, c) => (c.disponible > 0 ? acc + c.disponible : acc), 0)
+
     const runway =
       gastoMensualTotal > 0
-        ? Number((liquidez / gastoMensualTotal).toFixed(1))
+        ? Number((liquidezTotal / gastoMensualTotal).toFixed(1))
         : 0
 
+    // =========================
+    // ENGINES
+    // =========================
     const score = financialScoreEngine({
       ingresos,
       gastoOp: gastoOperativo,
       gastoFin: gastoFinanciero,
-      flujo,
+      flujo: flujoTotal,
     })
 
     const insight = financialInsightEngine({
-      structuralCategories: structuralWithBudget,
-      totalFixed: structural.totalFixed,
-      totalVariable: structural.totalVariable,
-      totalStructural: structural.totalStructural,
+      ingresos,
+      flujo: flujoTotal,
+      liquidez: liquidezTotal,
+      runway,
+      categories,
     })
 
     const stability = financialStabilityEngine({
       ingresos,
       gastoOperativo,
       gastoFinanciero,
-      flujo,
-      liquidez,
+      flujo: flujoTotal,
+      liquidez: liquidezTotal,
       runway,
     })
 
     const prediction = financialPredictionEngine({
-      totalStructural: structural.totalStructural,
+      monthlyHistory: cfoRows.slice(-6).map((r) => r.flujoTotal),
+      liquidez: liquidezTotal,
     })
 
     return NextResponse.json({
       success: true,
-      data: { score, insight, stability, prediction },
+      data: {
+        score,
+        insight,
+        stability,
+        prediction,
+      },
     })
   } catch (error: any) {
     console.error("INSIGHTS ERROR:", error?.message)
 
     return NextResponse.json(
-      {
-        success: false,
-        error: "Error cargando insights financieros",
-        details: error?.message,
-      },
+      { error: "Error cargando insights", details: error?.message },
       { status: 500 }
     )
   }

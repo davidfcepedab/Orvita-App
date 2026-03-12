@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { sheets } from "@/lib/googleAuth"
 import { financialAdvancedEngine } from "@/lib/engines/financialAdvancedEngine"
 import { financialBudgetEngine } from "@/lib/engines/financialBudgetEngine"
-import { financialInsightEngine } from "@/lib/engines/financialInsightEngine"
-import { financialPredictionEngine } from "@/lib/engines/financialPredictionEngine"
+import { mapRowToCategoryAggregation, mapRowToBudget } from "@/lib/mappers/category.mapper"
 
 const SPREADSHEET_ID = "1A8ucJUgSvxP2JLbPf1Z5PlB5UytbO4aKdJLf_ctaUz4"
 
@@ -20,10 +19,10 @@ export async function GET(req: NextRequest) {
         valueRenderOption: "UNFORMATTED_VALUE",
       })
 
-    const movimientosRows = movimientosRes.data.values || []
+    const transactions = (movimientosRes.data.values || []).map(mapRowToCategoryAggregation)
 
     const structural = financialAdvancedEngine({
-      rows: movimientosRows,
+      transactions,
       month,
     })
 
@@ -34,31 +33,21 @@ export async function GET(req: NextRequest) {
         valueRenderOption: "UNFORMATTED_VALUE",
       })
 
-    const presupuestoRows = presupuestoRes.data.values || []
+    const budgetRows = (presupuestoRes.data.values || []).map(mapRowToBudget)
 
-    const structuralWithBudget =
-      financialBudgetEngine({
-        structuralCategories:
-          structural?.structuralCategories || [],
-        budgetRows: presupuestoRows,
-      })
-
-    const insight = financialInsightEngine({
-      structuralCategories: structuralWithBudget,
-      totalFixed: structural.totalFixed,
-      totalVariable: structural.totalVariable,
-      totalStructural: structural.totalStructural,
-    })
-
-    const prediction = financialPredictionEngine({
-      totalStructural: structural.totalStructural,
+    const structuralWithBudget = financialBudgetEngine({
+      structuralCategories: structural?.structuralCategories || [],
+      budgetRows,
     })
 
     return NextResponse.json({
       ...structural,
-      structuralCategories: structuralWithBudget,
+      structuralCategories: structuralWithBudget.map((cat) => ({
+        ...cat,
+        subcategories: cat.subs || [],
+      })),
     })
-    
+
   } catch (error: any) {
     console.error("CATEGORIES ERROR:", error?.message)
 

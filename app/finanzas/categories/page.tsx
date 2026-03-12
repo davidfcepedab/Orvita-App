@@ -92,17 +92,24 @@ export default function FinanzasCategories() {
   const absVariable = Math.abs(totalVariable)
   const structuralTotal = absFixed + absVariable
 
-  // Compute global delta from individual category previousTotal values
-  const previousTotal = structuralCategories.reduce(
-    (acc, c) => acc + Math.abs(c.previousTotal ?? 0),
-    0
-  )
-  const globalDelta = structuralTotal - previousTotal
+  // Validar que hay datos
+  if (structuralTotal === 0) {
+    return (
+      <div className="p-6 text-center bg-gray-50 rounded-lg">
+        <p className="text-gray-600">
+          No hay movimientos categorizados para este mes.
+        </p>
+      </div>
+    )
+  }
 
-  const formatMoney = (value: number) =>
-    new Intl.NumberFormat("es-CO", {
-      maximumFractionDigits: 0,
-    }).format(Math.abs(value))
+  const fixedCategories = (structuralCategories || [])
+    .filter((c): c is Category => c?.type === "fixed" && Math.abs(c.total) > 0)
+    .sort((a, b) => Math.abs(b.total) - Math.abs(a.total))
+
+  const variableCategories = (structuralCategories || [])
+    .filter((c): c is Category => c?.type === "variable" && Math.abs(c.total) > 0)
+    .sort((a, b) => Math.abs(b.total) - Math.abs(a.total))
 
   const fixedPct =
     structuralTotal > 0
@@ -220,10 +227,11 @@ export default function FinanzasCategories() {
                   cat.subcategories.length > 0
 
                 // Delta comparison
+                const catDelta = cat.delta ?? 0
                 const hasDelta = cat.delta !== undefined && cat.delta !== 0
-                const isDeltaNegative = hasDelta && (cat.delta ?? 0) < 0
-                const deltaPercent = hasDelta
-                  ? Math.round((Math.abs(cat.delta ?? 0) / Math.abs(cat.total - (cat.delta ?? 0))) * 1000) / 10
+                const isDeltaNegative = hasDelta && catDelta < 0
+                const deltaPercent = hasDelta && Math.abs(cat.total - catDelta) > 0
+                  ? Number(((Math.abs(catDelta) / Math.abs(cat.total - catDelta)) * 100).toFixed(1))
                   : 0
 
                 // Budget

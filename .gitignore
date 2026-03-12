@@ -24,6 +24,8 @@ google-credentials.json
 # misc
 .DS_Store
 *.pem
+*.save
+nano
 
 # debug
 npm-debug.log*
