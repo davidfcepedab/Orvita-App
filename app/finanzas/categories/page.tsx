@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState } from "react"
 import { useFinance } from "../FinanceContext"
 import {
   ResponsiveContainer,
@@ -20,7 +20,6 @@ interface Category {
   type: "fixed" | "variable"
   total: number
   previousTotal?: number
-  delta?: number
   budget?: number
   budgetUsedPercent?: number
   budgetStatus?: "green" | "yellow" | "red"
@@ -33,8 +32,6 @@ interface CategoriesData {
   totalVariable?: number
   previousTotalFixed?: number
   previousTotalVariable?: number
-  success?: boolean
-  error?: string
 }
 
 export default function FinanzasCategories() {
@@ -46,7 +43,6 @@ export default function FinanzasCategories() {
   const [advanced, setAdvanced] = useState(false)
 
   if (!finance) return null
-
   const { month } = finance
 
   useEffect(() => {
@@ -70,7 +66,8 @@ export default function FinanzasCategories() {
   const absVariable = Math.abs(totalVariable)
   const structuralTotal = absFixed + absVariable
 
-  const previousTotal = Math.abs(previousTotalFixed) + Math.abs(previousTotalVariable)
+  const previousTotal =
+    Math.abs(previousTotalFixed) + Math.abs(previousTotalVariable)
 
   const globalDelta = structuralTotal - previousTotal
 
@@ -80,12 +77,14 @@ export default function FinanzasCategories() {
       : (globalDelta / previousTotal) * 100
 
   const formatMoney = (value: number) =>
-    new Intl.NumberFormat("es-CO", { maximumFractionDigits: 0 })
-      .format(Math.abs(value))
+    new Intl.NumberFormat("es-CO", {
+      maximumFractionDigits: 0,
+    }).format(Math.abs(value))
 
-  const fixedPct = structuralTotal > 0
-    ? Math.round((absFixed / structuralTotal) * 100)
-    : 0
+  const fixedPct =
+    structuralTotal > 0
+      ? Math.round((absFixed / structuralTotal) * 100)
+      : 0
 
   const variablePct = 100 - fixedPct
 
@@ -96,42 +95,72 @@ export default function FinanzasCategories() {
 
   const fixedCategories = structuralCategories
     .filter(c => c.type === "fixed")
-    .sort((a,b) => Math.abs(b.total) - Math.abs(a.total))
+    .sort((a, b) => Math.abs(b.total) - Math.abs(a.total))
 
   const variableCategories = structuralCategories
     .filter(c => c.type === "variable")
-    .sort((a,b) => Math.abs(b.total) - Math.abs(a.total))
+    .sort((a, b) => Math.abs(b.total) - Math.abs(a.total))
 
-  const navigateToTransactions = (name: string) => {
-    router.push(`/finanzas/transactions?month=${month}&category=${name}`)
+  const toggleCategory = (name: string) => {
+    setExpanded(prev => (prev === name ? null : name))
+  }
+
+  const navigateToTransactions = (categoryName: string) => {
+    router.push(
+      `/finanzas/transactions?month=${encodeURIComponent(month)}&category=${encodeURIComponent(categoryName)}`
+    )
   }
 
   return (
     <div className="space-y-10">
 
-      {/* TOTAL GLOBAL */}
+      {/* ===================== */}
+      {/* BLOQUE SUPERIOR      */}
+      {/* ===================== */}
+
       <div className="text-center space-y-2">
         <p className="text-3xl font-bold text-gray-900">
           ${formatMoney(structuralTotal)}
         </p>
 
-        {advanced && (
-          <p className={`text-sm font-medium ${
+        <p
+          className={`text-sm font-medium ${
             globalDelta === 0
               ? "text-gray-500"
               : globalDelta > 0
               ? "text-rose-500"
               : "text-blue-600"
-          }`}>
-            {globalDelta > 0 && "↑ "}
-            {globalDelta < 0 && "↓ "}
-            {globalDelta === 0 ? "" : `${Math.abs(globalDeltaPct).toFixed(1)}% `}
-            vs mes anterior
-          </p>
-        )}
+          }`}
+        >
+          {globalDelta > 0 && "↑ "}
+          {globalDelta < 0 && "↓ "}
+          {globalDelta === 0
+            ? "Sin variación vs mes anterior"
+            : `${Math.abs(globalDeltaPct).toFixed(1)}% vs mes anterior`}
+        </p>
       </div>
 
-      {/* DONUT */}
+      {/* Totales por cluster */}
+      <div className="flex justify-center gap-16 text-center">
+        <div>
+          <p className="text-xs uppercase text-gray-500 tracking-wide mb-1">
+            Movimientos Fijos
+          </p>
+          <p className="text-xl font-bold text-rose-500">
+            ${formatMoney(absFixed)}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs uppercase text-gray-500 tracking-wide mb-1">
+            Movimientos Variables
+          </p>
+          <p className="text-xl font-bold text-blue-600">
+            ${formatMoney(absVariable)}
+          </p>
+        </div>
+      </div>
+
+      {/* Donut */}
       <div className="card p-6 bg-white rounded-lg shadow">
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
@@ -150,7 +179,7 @@ export default function FinanzasCategories() {
         </div>
       </div>
 
-      {/* DISTRIBUCIÓN */}
+      {/* Distribución */}
       <div className="text-center text-sm font-semibold space-x-6">
         <span className="text-rose-500">
           Fijos {fixedPct}%
@@ -160,18 +189,31 @@ export default function FinanzasCategories() {
         </span>
       </div>
 
-      {/* INSIGHT ESTRUCTURAL */}
+      {/* Insight estructural */}
       {advanced && (
         <div className="max-w-md mx-auto text-center">
           {fixedPct > 70 && (
             <div className="bg-rose-50 rounded-lg p-4 text-rose-700 text-sm">
-              Alta rigidez estructural. 74% del gasto es fijo.
+              Alta rigidez estructural. {fixedPct}% del gasto es fijo.
+            </div>
+          )}
+          {fixedPct <= 70 && fixedPct > 50 && (
+            <div className="bg-amber-50 rounded-lg p-4 text-amber-700 text-sm">
+              Estructura equilibrada.
+            </div>
+          )}
+          {fixedPct <= 50 && (
+            <div className="bg-blue-50 rounded-lg p-4 text-blue-700 text-sm">
+              Buena flexibilidad estructural.
             </div>
           )}
         </div>
       )}
 
+      {/* ===================== */}
       {/* SECCIONES OPERATIVAS */}
+      {/* ===================== */}
+
       {[{
         title: "Movimientos Fijos",
         items: fixedCategories,
@@ -184,35 +226,60 @@ export default function FinanzasCategories() {
         barColor: "bg-blue-500",
       }].map(section => (
         <div key={section.title} className="space-y-4">
-          <h2 className="text-xl font-semibold">{section.title}</h2>
+
+          <h2 className="text-xl font-semibold">
+            {section.title}
+          </h2>
 
           {section.items.map(cat => {
 
-            const percent = section.clusterBase > 0
-              ? (Math.abs(cat.total) / section.clusterBase) * 100
-              : 0
+            const percent =
+              section.clusterBase > 0
+                ? (Math.abs(cat.total) / section.clusterBase) * 100
+                : 0
 
             const previous = cat.previousTotal ?? 0
             const delta = cat.total - previous
 
-            const deltaPct = previous === 0
-              ? cat.total > 0 ? 100 : 0
-              : (delta / previous) * 100
+            const deltaPct =
+              previous === 0
+                ? cat.total > 0 ? 100 : 0
+                : (delta / previous) * 100
+
+            const hasSubcategories =
+              Array.isArray(cat.subcategories) &&
+              cat.subcategories.length > 0
 
             return (
-              <div key={cat.name}
-                className="card p-4 bg-white rounded-lg border border-gray-200 space-y-3">
+              <div
+                key={cat.name}
+                className="card p-4 bg-white rounded-lg border border-gray-200 space-y-3"
+              >
 
-                <div className="flex justify-between">
+                {/* HEADER */}
+                <div className="flex justify-between items-center gap-4">
+
+                  {/* Nombre + toggle */}
                   <button
-                    onClick={() => navigateToTransactions(cat.name)}
-                    className="font-medium hover:underline"
+                    onClick={() => toggleCategory(cat.name)}
+                    className="flex items-center gap-2 text-left"
                   >
-                    {cat.name}
+                    <span className="font-medium">
+                      {cat.name}
+                    </span>
+                    {hasSubcategories && (
+                      <span className="text-xs text-gray-400">
+                        {expanded === cat.name ? "▴" : "▾"}
+                      </span>
+                    )}
                   </button>
 
-                  <div className="text-right">
-                    <p className="font-semibold">
+                  {/* Monto (navega) */}
+                  <button
+                    onClick={() => navigateToTransactions(cat.name)}
+                    className="text-right"
+                  >
+                    <p className="font-semibold hover:text-blue-600 hover:underline">
                       -${formatMoney(cat.total)}
                     </p>
 
@@ -223,19 +290,49 @@ export default function FinanzasCategories() {
                         {delta > 0 ? "↑" : "↓"} {Math.abs(deltaPct).toFixed(1)}%
                       </p>
                     )}
-                  </div>
+                  </button>
+
                 </div>
 
+                {/* Barra cluster */}
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
                     className={`${section.barColor} h-2 rounded-full`}
-                    style={{ width: `${Math.min(percent,100)}%` }}
+                    style={{ width: `${Math.min(percent, 100)}%` }}
                   />
                 </div>
 
-                {advanced && cat.budget && cat.total !== 0 && (
-                  <div className="p-3 bg-gray-50 rounded-lg text-sm">
+                {/* Presupuesto compacto */}
+                {cat.budget && (
+                  <div className="text-sm text-gray-600">
                     Presupuesto ${formatMoney(cat.budget)}
+                  </div>
+                )}
+
+                {/* Presupuesto expandido */}
+                {advanced && cat.budget && (
+                  <div className="text-xs text-gray-600">
+                    Uso {Math.round(cat.budgetUsedPercent ?? 0)}%
+                  </div>
+                )}
+
+                {/* Subcategorías */}
+                {expanded === cat.name && hasSubcategories && (
+                  <div className="mt-3 space-y-2 border-t pt-3">
+                    {cat.subcategories!.map(sub => (
+                      <button
+                        key={sub.name}
+                        onClick={() =>
+                          router.push(
+                            `/finanzas/transactions?month=${encodeURIComponent(month)}&category=${encodeURIComponent(cat.name)}&subcategory=${encodeURIComponent(sub.name)}`
+                          )
+                        }
+                        className="w-full flex justify-between text-sm hover:text-blue-600"
+                      >
+                        <span>• {sub.name}</span>
+                        <span>-${formatMoney(sub.total)}</span>
+                      </button>
+                    ))}
                   </div>
                 )}
 
@@ -245,7 +342,7 @@ export default function FinanzasCategories() {
         </div>
       ))}
 
-      {/* TOGGLE */}
+      {/* Toggle análisis */}
       <div className="flex justify-center">
         <button
           onClick={() => setAdvanced(!advanced)}
