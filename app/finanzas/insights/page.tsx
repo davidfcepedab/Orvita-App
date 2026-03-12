@@ -46,20 +46,20 @@ export default function FinanzasInsights() {
         setError(null)
 
         const response = await fetch(
-          `/api/finanzas/overview?month=${encodeURIComponent(month)}`
+          `/api/finanzas/insights?month=${encodeURIComponent(month)}`
         )
 
         if (!response.ok) {
           throw new Error(`Error ${response.status}: ${response.statusText}`)
         }
 
-        const json: InsightsResponse = await response.json()
+        const json = await response.json()
 
         if (json.error) {
           throw new Error(json.error)
         }
 
-        setData(json)
+        setData(json.data as InsightsResponse)
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Error desconocido"
         setError(errorMessage)
