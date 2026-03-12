@@ -51,7 +51,6 @@ export async function GET(req: NextRequest) {
     })
 
     const prediction = financialPredictionEngine({
-      structuralCategories: structuralWithBudget,
       totalStructural: structural.totalStructural,
     })
 

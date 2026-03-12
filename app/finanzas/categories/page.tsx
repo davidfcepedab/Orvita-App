@@ -15,6 +15,8 @@ interface Category {
   total: number
   previousTotal?: number
   budget?: number
+  budgetUsedPercent?: number
+  budgetStatus?: "green" | "yellow" | "red"
   subcategories?: Subcategory[]
 }
 
@@ -22,20 +24,16 @@ interface CategoriesData {
   structuralCategories?: Category[]
   totalFixed?: number
   totalVariable?: number
-  previousTotalFixed?: number
-  previousTotalVariable?: number
 }
 
 export default function FinanzasCategories() {
   const finance = useFinance()
   const router = useRouter()
+  const month = finance?.month ?? ""
 
   const [data, setData] = useState<CategoriesData | null>(null)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [advanced, setAdvanced] = useState(false)
-
-  if (!finance) return null
-  const { month } = finance
 
   useEffect(() => {
     if (!month) return
@@ -44,23 +42,24 @@ export default function FinanzasCategories() {
       .then(setData)
   }, [month])
 
+  if (!finance) return null
   if (!data) return null
 
   const {
     structuralCategories = [],
     totalFixed = 0,
     totalVariable = 0,
-    previousTotalFixed = 0,
-    previousTotalVariable = 0,
   } = data
 
   const absFixed = Math.abs(totalFixed)
   const absVariable = Math.abs(totalVariable)
   const structuralTotal = absFixed + absVariable
 
-  const previousTotal =
-    Math.abs(previousTotalFixed) + Math.abs(previousTotalVariable)
-
+  // Compute global delta from individual category previousTotal values
+  const previousTotal = structuralCategories.reduce(
+    (acc, c) => acc + Math.abs(c.previousTotal ?? 0),
+    0
+  )
   const globalDelta = structuralTotal - previousTotal
 
   const formatMoney = (value: number) =>
@@ -74,11 +73,11 @@ export default function FinanzasCategories() {
       : 0
 
   const fixedCategories = structuralCategories
-    .filter(c => c.type === "fixed")
+    .filter(c => c.type === "fixed" && Math.abs(c.total) !== 0)
     .sort((a, b) => Math.abs(b.total) - Math.abs(a.total))
 
   const variableCategories = structuralCategories
-    .filter(c => c.type === "variable")
+    .filter(c => c.type === "variable" && Math.abs(c.total) !== 0)
     .sort((a, b) => Math.abs(b.total) - Math.abs(a.total))
 
   const toggleCategory = (name: string) => {
@@ -90,8 +89,6 @@ export default function FinanzasCategories() {
       `/finanzas/transactions?month=${encodeURIComponent(month)}&category=${encodeURIComponent(categoryName)}`
     )
   }
-
-  const today = new Date().getDate()
 
   return (
     <div className="space-y-8">
@@ -124,6 +121,24 @@ export default function FinanzasCategories() {
             {Math.abs(globalDelta).toLocaleString("es-CO")}
           </p>
         )}
+      </div>
+
+      {/* TOTALS SUMMARY: Fijos / Variables */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-rose-50 rounded-2xl p-4 text-center">
+          <p className="text-xs text-rose-400 font-medium uppercase tracking-wide">Fijos</p>
+          <p className="text-xl font-bold text-rose-500 mt-1">${formatMoney(absFixed)}</p>
+          {structuralTotal > 0 && (
+            <p className="text-xs text-rose-400 mt-1">{Math.round((absFixed / structuralTotal) * 100)}%</p>
+          )}
+        </div>
+        <div className="bg-blue-50 rounded-2xl p-4 text-center">
+          <p className="text-xs text-blue-400 font-medium uppercase tracking-wide">Variables</p>
+          <p className="text-xl font-bold text-blue-600 mt-1">${formatMoney(absVariable)}</p>
+          {structuralTotal > 0 && (
+            <p className="text-xs text-blue-400 mt-1">{Math.round((absVariable / structuralTotal) * 100)}%</p>
+          )}
+        </div>
       </div>
 
       {/* INSIGHT ESTRUCTURAL */}
@@ -192,6 +207,35 @@ export default function FinanzasCategories() {
                     delta > 0 ? "text-rose-500" : "text-blue-600"
                   }`}>
                     {delta > 0 ? "↑" : "↓"} {formatMoney(Math.abs(delta))}
+                  </div>
+                )}
+
+                {advanced && cat.budget && cat.budget > 0 && (
+                  <div className="mt-2">
+                    <div className="flex justify-between text-xs text-gray-400 mb-1">
+                      <span>Presupuesto: ${formatMoney(cat.budget)}</span>
+                      <span className={
+                        cat.budgetStatus === "red"
+                          ? "text-red-500"
+                          : cat.budgetStatus === "yellow"
+                          ? "text-amber-500"
+                          : "text-green-600"
+                      }>
+                        {Math.round(cat.budgetUsedPercent ?? 0)}%
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${
+                          cat.budgetStatus === "red"
+                            ? "bg-red-500"
+                            : cat.budgetStatus === "yellow"
+                            ? "bg-amber-400"
+                            : "bg-green-500"
+                        }`}
+                        style={{ width: `${Math.min(cat.budgetUsedPercent ?? 0, 100)}%` }}
+                      />
+                    </div>
                   </div>
                 )}
 

@@ -22,16 +22,13 @@ interface TransactionsResponse {
 export default function TransactionsClient() {
   const finance = useFinance()
   const searchParams = useSearchParams()
+  const month = finance?.month ?? ""
+  const category = searchParams.get("category")
+  const subcategory = searchParams.get("subcategory")
 
   const [data, setData] = useState<TransactionsResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  if (!finance) return null
-
-  const { month } = finance
-  const category = searchParams.get("category")
-  const subcategory = searchParams.get("subcategory")
 
   useEffect(() => {
     if (!month) return
@@ -70,6 +67,8 @@ export default function TransactionsClient() {
     fetchData()
   }, [month, category, subcategory])
 
+  if (!finance) return null
+
   if (loading) return <p>Cargando...</p>
 
   if (error)
@@ -84,28 +83,36 @@ export default function TransactionsClient() {
   return (
     <div className="space-y-4">
 
-      {data.transactions.map(tx => (
-        <div
-          key={tx.id}
-          className="bg-white p-4 rounded-xl shadow"
-        >
-          <div className="flex justify-between">
-            <div>
-              <p className="font-medium">{tx.description}</p>
-              <p className="text-xs text-gray-500">
-                {new Date(tx.date).toLocaleDateString("es-CO")}
-              </p>
-            </div>
-            <p className="font-semibold">
-              ${Math.abs(tx.amount).toLocaleString("es-CO")}
-            </p>
-          </div>
+      {data.transactions.length === 0 ? (
+        <div className="p-6 text-center text-gray-500">
+          <p>Sin movimientos registrados para este período.</p>
         </div>
-      ))}
+      ) : (
+        <>
+          {data.transactions.map(tx => (
+            <div
+              key={tx.id}
+              className="bg-white p-4 rounded-xl shadow"
+            >
+              <div className="flex justify-between">
+                <div>
+                  <p className="font-medium">{tx.description}</p>
+                  <p className="text-xs text-gray-500">
+                    {new Date(tx.date).toLocaleDateString("es-CO")}
+                  </p>
+                </div>
+                <p className="font-semibold">
+                  ${Math.abs(tx.amount).toLocaleString("es-CO")}
+                </p>
+              </div>
+            </div>
+          ))}
 
-      <div className="bg-blue-50 p-4 rounded-lg text-blue-600 font-semibold">
-        Total: ${Math.abs(data.total).toLocaleString("es-CO")}
-      </div>
+          <div className="bg-blue-50 p-4 rounded-lg text-blue-600 font-semibold">
+            Total: ${Math.abs(data.total).toLocaleString("es-CO")}
+          </div>
+        </>
+      )}
 
     </div>
   )
