@@ -50,9 +50,12 @@ export async function GET(req: NextRequest) {
       totalStructural: structural.totalStructural,
     })
 
-    const prediction = financialPredictionEngine({
-      structuralCategories: structuralWithBudget,
-      totalStructural: structural.totalStructural,
+    return NextResponse.json({
+      ...structural,
+      structuralCategories: structuralWithBudget.map((cat) => ({
+        ...cat,
+        subcategories: cat.subs || [],
+      })),
     })
 
     return NextResponse.json({

@@ -151,26 +151,38 @@ export default function FinanzasCategories() {
             {section.title}
           </h2>
 
-          {section.items.map(cat => {
+          {section.isEmpty ? (
+            <div className="p-4 bg-gray-50 rounded-lg text-center text-gray-500 text-sm">
+              Sin categorías registradas
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {section.items.map((cat) => {
+                const percent =
+                  section.clusterBase > 0
+                    ? (Math.abs(cat.total) / section.clusterBase) * 100
+                    : 0
 
-            const spent = Math.abs(cat.total)
-            const previous = Math.abs(cat.previousTotal ?? 0)
-            const delta = spent - previous
+                const hasSubcategories =
+                  Array.isArray(cat.subcategories) &&
+                  cat.subcategories.length > 0
 
-            const hasSubcategories =
-              cat.subcategories && cat.subcategories.length > 0
+                // Delta comparison
+                const hasDelta = cat.delta !== undefined && cat.delta !== 0
+                const isDeltaNegative = hasDelta && (cat.delta ?? 0) < 0
+                const deltaPercent = hasDelta
+                  ? Math.round((Math.abs(cat.delta ?? 0) / Math.abs(cat.total - (cat.delta ?? 0))) * 1000) / 10
+                  : 0
 
-            return (
-              <div
-                key={cat.name}
-                className="bg-white p-4 rounded-2xl shadow border"
-              >
+                // Budget
+                const hasBudget = cat.budget !== undefined && cat.budget > 0
+                const budgetPercent = cat.budgetUsedPercent ?? 0
+                const budgetStatus = cat.budgetStatus ?? "green"
 
-                <div className="flex justify-between items-center">
-
-                  <button
-                    onClick={() => toggleCategory(cat.name)}
-                    className="flex items-center gap-2"
+                return (
+                  <div
+                    key={cat.name}
+                    className="card p-4 bg-white rounded-lg border border-gray-200 hover:shadow-md transition space-y-3"
                   >
                     <span className="font-medium">{cat.name}</span>
                     {hasSubcategories && (
@@ -210,7 +222,128 @@ export default function FinanzasCategories() {
                         <span>{sub.name}</span>
                         <span>-${formatMoney(sub.total)}</span>
                       </button>
-                    ))}
+
+                      {/* MONTO + DELTA */}
+                      <div className="flex flex-col items-end gap-0.5">
+                        <button
+                          onClick={() => navigateToTransactions(cat.name)}
+                          className="font-semibold text-gray-900 hover:text-blue-600 hover:underline transition whitespace-nowrap cursor-pointer"
+                          title="Ver transacciones de esta categoría"
+                        >
+                          -${formatMoney(cat.total)}
+                        </button>
+
+                        {/* DELTA INDICATOR */}
+                        {hasDelta && (
+                          <span
+                            className={`text-xs font-medium ${
+                              isDeltaNegative
+                                ? "text-blue-600"
+                                : "text-rose-500"
+                            }`}
+                            title="Comparado con mes anterior"
+                          >
+                            {isDeltaNegative ? "↓" : "↑"} {deltaPercent}%
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* BARRA DE PROGRESO */}
+                    <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                      <div
+                        className={`${section.barColor} h-2 rounded-full transition-all duration-300`}
+                        style={{ width: `${Math.min(percent, 100)}%` }}
+                        role="progressbar"
+                        aria-valuenow={Math.round(percent)}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                      />
+                    </div>
+
+                    {/* PRESUPUESTO - SOLO EN MODO AVANZADO */}
+                    {advanced && hasBudget && (
+                      <div
+                        className={`p-3 rounded-lg space-y-2 border ${
+                          budgetStatus === "red"
+                            ? "bg-rose-50 border-rose-200"
+                            : budgetStatus === "yellow"
+                            ? "bg-amber-50 border-amber-200"
+                            : "bg-emerald-50 border-emerald-200"
+                        }`}
+                      >
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="font-medium text-gray-700">Presupuesto</span>
+                          <span
+                            className={`font-semibold ${
+                              budgetStatus === "red"
+                                ? "text-rose-600"
+                                : budgetStatus === "yellow"
+                                ? "text-amber-600"
+                                : "text-emerald-600"
+                            }`}
+                          >
+                            ${formatMoney(cat.budget || 0)}
+                          </span>
+                        </div>
+
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-gray-600">Uso</span>
+                          <span
+                            className={`font-semibold ${
+                              budgetStatus === "red"
+                                ? "text-rose-600"
+                                : budgetStatus === "yellow"
+                                ? "text-amber-600"
+                                : "text-emerald-600"
+                            }`}
+                          >
+                            {Math.round(budgetPercent)}%
+                            {budgetStatus === "red" && " ⚠️"}
+                          </span>
+                        </div>
+
+                        <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                          <div
+                            className={`h-1.5 rounded-full transition-all duration-300 ${
+                              budgetStatus === "red"
+                                ? "bg-rose-500"
+                                : budgetStatus === "yellow"
+                                ? "bg-amber-500"
+                                : "bg-emerald-500"
+                            }`}
+                            style={{ width: `${Math.min(budgetPercent, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* SUBCATEGORÍAS */}
+                    {expanded === cat.name && hasSubcategories && (
+                      <div className="mt-4 space-y-2 border-t border-gray-200 pt-3">
+                        <p className="text-xs font-semibold text-gray-600 uppercase">
+                          Subcategorías
+                        </p>
+                        {cat.subcategories!.map((sub) => (
+                          <button
+                            key={sub.name}
+                            onClick={() => {
+                              if (!month) return
+                              router.push(
+                                `/finanzas/transactions?month=${encodeURIComponent(month)}&category=${encodeURIComponent(cat.name)}&subcategory=${encodeURIComponent(sub.name)}`
+                              )
+                            }}
+                            className="w-full flex justify-between text-sm text-gray-600 hover:text-blue-600 hover:bg-gray-50 transition cursor-pointer py-1 px-2 rounded"
+                            title="Ver transacciones de esta subcategoría"
+                          >
+                            <span>• {sub.name}</span>
+                            <span className="font-medium">
+                              -${formatMoney(sub.total)}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
 
