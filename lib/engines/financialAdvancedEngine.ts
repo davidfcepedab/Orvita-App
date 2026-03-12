@@ -46,10 +46,13 @@ export function financialAdvancedEngine({
 
     if (!category) return
 
-    if (EXCLUDED.includes(category)) {
-      financialMap[category] = (financialMap[category] || 0) + amount
-      return
-    }
+   if (EXCLUDED.includes(category)) {
+  if (rowMonth === month) {
+    financialMap[category] =
+      (financialMap[category] || 0) + amount
+  }
+  return
+}
 
     if (!currentMap[category]) {
       currentMap[category] = { total: 0, subs: {} }
