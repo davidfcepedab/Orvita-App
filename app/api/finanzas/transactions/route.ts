@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { sheets } from "@/lib/googleAuth"
 
-const SPREADSHEET_ID = "1fEP_Em30-BTUhmeObzAE9zObQRc7CNkYXbVCecpCHO0"
+const SPREADSHEET_ID = "1A8ucJUgSvxP2JLbPf1Z5PlB5UytbO4aKdJLf_ctaUz4"
 
 export async function GET(req: NextRequest) {
   try {
@@ -41,8 +41,9 @@ export async function GET(req: NextRequest) {
       id: `${r?.[0]}-${index}`,
       date: r?.[0] || "",
       description: r?.[5] || "",
-      category: r?.[6] || "",
       amount: Number(r?.[10] || 0),
+      category: r?.[6] || "",
+      subcategory: r?.[7] || "",
     }))
 
     const total = transactions.reduce(
