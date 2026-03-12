@@ -113,8 +113,8 @@ return (
     </div>
 
     {/* ========================= ESTADO MENTAL ========================== */}
-    <div className="bg-indigo-50 rounded-2xl p-6 space-y-6">
-      <h2 className="text-lg font-semibold text-indigo-700">
+    <div className="bg-[#F4E4ED] rounded-2xl p-6 space-y-6">
+      <h2 className="text-lg font-semibold text-[#D34A8C]">
         Estado Mental
       </h2>
 
@@ -181,9 +181,33 @@ return (
       </div>
     </div>
 
+<div className="space-y-2 pt-2">
+  <p className="text-sm text-gray-600">
+    Calidad Conexión (1-10)
+  </p>
+
+  <input
+    type="range"
+    min="1"
+    max="10"
+    value={form.calidadConexion}
+    onChange={(e) =>
+      handleChange("calidadConexion", Number(e.target.value))
+    }
+    className="w-full accent-[#D34A8C]"
+  />
+
+  <div className="flex justify-between text-xs text-gray-400 px-1">
+    {scaleOptions.map((n) => (
+      <span key={n}>{n}</span>
+    ))}
+  </div>
+</div>
+
+
     {/* ========================= ENTRENAMIENTO ========================== */}
-    <div className="bg-blue-50 rounded-2xl p-6 space-y-6">
-      <h2 className="text-lg font-semibold text-blue-700">
+    <div className="bg-[#E3F2EE] rounded-2xl p-6 space-y-6">
+      <h2 className="text-lg font-semibold text-[#4CA79C]">
         Entrenamiento
       </h2>
 
@@ -233,8 +257,8 @@ return (
     </div>
 
     {/* ========================= ANTROPOMETRÍA ========================== */}
-    <div className="bg-blue-50 rounded-2xl p-6 space-y-6">
-      <h2 className="text-lg font-semibold text-blue-700">
+    <div className="bg-[#EAF4F1] rounded-2xl p-6 space-y-6">
+      <h2 className="text-lg font-semibold text-[#4CA79C]">
         Medidas Corporales
       </h2>
 
@@ -292,18 +316,13 @@ return (
       </div>
     </div>
 
-    {/* ========================= BOTÓN ========================== */}
-    <div className="fixed bottom-0 left-0 right-0 bg-white p-4 border-t">
-      <button
-        onClick={handleSubmit}
-        disabled={loading}
-        className="w-full bg-gradient-to-r from-indigo-600 to-emerald-500 text-white py-3 rounded-xl font-medium shadow-md"
-      >
-        {loading ? "Guardando..." : "Guardar Check-in"}
-      </button>
-    </div>
-
-  </div>
-)
-}
-
+{/* ========================= BOTÓN ========================== */}
+<div className="pt-4">
+  <button
+    onClick={handleSubmit}
+    disabled={loading}
+    className="w-full bg-gradient-to-r from-[#6D6BCB] to-[#66B6A9] text-white py-3 rounded-xl font-medium shadow-md"
+  >
+    {loading ? "Guardando..." : "Guardar Check-in"}
+  </button>
+</div>
