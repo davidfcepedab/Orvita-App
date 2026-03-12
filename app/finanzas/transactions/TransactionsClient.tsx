@@ -1,14 +1,18 @@
 "use client"
 
-import { useSearchParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
+import { useFinance } from "../FinanceContext"
+import { useSearchParams } from "next/navigation"
 
 export default function TransactionsClient() {
-  const searchParams = useSearchParams()
-  const router = useRouter()
+  const finance = useFinance()
 
-  const month = searchParams.get("month")
-  const category = searchParams.get("category")
+  // Protección cuando context es null (SSR / build)
+  if (!finance) return null
+
+  const { month } = finance
+  const searchParams = useSearchParams()
+  const categoryFilter = searchParams.get("category")
 
   const [data, setData] = useState<any>(null)
 
@@ -17,65 +21,48 @@ export default function TransactionsClient() {
 
     let url = `/api/finanzas/transactions?month=${month}`
 
-    if (category) {
-      url += `&category=${encodeURIComponent(category)}`
+    if (categoryFilter) {
+      url += `&category=${encodeURIComponent(categoryFilter)}`
     }
 
     fetch(url)
-      .then((res) => res.json())
+      .then(res => res.json())
       .then(setData)
-  }, [month, category])
+
+  }, [month, categoryFilter])
 
   if (!data) return null
-
-  const {
-    transactions = [],
-    subtotal = 0,
-    previousSubtotal = 0,
-    delta = 0,
-  } = data
-
-  const formatMoney = (value: number) =>
-    new Intl.NumberFormat("es-CO", {
-      maximumFractionDigits: 0,
-    }).format(value || 0)
 
   return (
     <div className="space-y-6">
 
-      <div className="flex items-center gap-2 text-sm text-gray-500">
-        <button
-          onClick={() =>
-            router.push(`/finanzas/categories?month=${month}`)
-          }
-          className="underline"
-        >
-          Categorías
-        </button>
-        <span>›</span>
-        <span className="text-black font-medium">
-          {category || "Todos"}
-        </span>
-      </div>
+      {/* Breadcrumb cuando hay filtro */}
+      {categoryFilter && (
+        <div className="text-sm text-gray-500">
+          Categorías &gt; <span className="font-medium">{categoryFilter}</span>
+        </div>
+      )}
 
-      <div className="card p-4">
-        <p className="text-xs text-gray-500">Subtotal</p>
-        <p className="text-lg font-semibold">
-          ${formatMoney(subtotal)}
+      {/* Renderiza aquí tu tabla/lista de movimientos */}
+      {/* Ejemplo simple (adapta según tu table): */}
+      {data.transactions?.length > 0 ? (
+        <div className="space-y-4">
+          {data.transactions.map((tx: any) => (
+            <div key={tx.id} className="flex justify-between p-2 border rounded">
+              <span>{tx.date}</span>
+              <span>{tx.description}</span>
+              <span className="font-semibold">
+                -${tx.amount.toLocaleString("es-CO")}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-gray-500">
+          No hay movimientos para este filtro/mes.
         </p>
-      </div>
+      )}
 
-      <div className="space-y-2">
-        {transactions.map((t: any, i: number) => (
-          <div
-            key={i}
-            className="flex justify-between text-sm border-b py-2"
-          >
-            <span>{t.description}</span>
-            <span>${formatMoney(t.amount)}</span>
-          </div>
-        ))}
-      </div>
     </div>
   )
 }
