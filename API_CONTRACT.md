@@ -13,7 +13,7 @@ Every response from every route in this domain **must** conform to the following
 ```ts
 {
   success: boolean      // always present — true on success, false on error
-  data?:   object       // present only on success; never returned at the root level
+  data?:   object       // present only on success; all payload fields are nested under this key
   error?:  string       // present only on failure; human-readable, no stack traces
 }
 ```
