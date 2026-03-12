@@ -165,7 +165,7 @@ export default function TransactionsClient() {
           <p className="text-gray-600">
             {categoryFilter
               ? `No hay movimientos en la categoría "${categoryFilter}" para este mes.`
-              : "No hay movimientos registrados para este mes."}
+              : "Sin movimientos registrados para este período."}
           </p>
         </div>
       )}

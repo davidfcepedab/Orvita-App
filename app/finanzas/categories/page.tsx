@@ -192,6 +192,26 @@ export default function FinanzasCategories() {
         </button>
       </div>
 
+      {/* TOTALS SUMMARY */}
+      <div className="flex justify-center gap-10 mb-6 text-center">
+        <div>
+          <p className="text-xs uppercase text-gray-400 tracking-wide">
+            Fijos
+          </p>
+          <p className="text-xl font-semibold text-rose-500 mt-1">
+            ${formatMoney(absFixed)}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs uppercase text-gray-400 tracking-wide">
+            Variables
+          </p>
+          <p className="text-xl font-semibold text-blue-600 mt-1">
+            ${formatMoney(absVariable)}
+          </p>
+        </div>
+      </div>
+
       {/* DONUT CHART */}
       <div className="card p-6 bg-white rounded-lg shadow">
         <div className="h-64">
@@ -229,20 +249,23 @@ export default function FinanzasCategories() {
           </div>
 
           {fixedPct > 70 && (
-            <div className="p-3 bg-rose-100 border border-rose-300 rounded text-rose-700 text-sm">
-              ⚠️ <strong>Alta rigidez estructural.</strong> El gasto fijo limita tu flexibilidad financiera.
+            <div className="mt-3 bg-rose-50 rounded-lg p-3 text-sm text-rose-700">
+              <span className="font-semibold">Alta rigidez estructural.</span>{" "}
+              El gasto fijo limita tu flexibilidad financiera.
             </div>
           )}
 
           {fixedPct <= 70 && fixedPct > 50 && (
-            <div className="p-3 bg-amber-100 border border-amber-300 rounded text-amber-700 text-sm">
-              ⚡ <strong>Estructura equilibrada.</strong> Monitorea los gastos fijos.
+            <div className="mt-3 bg-amber-50 rounded-lg p-3 text-sm text-amber-700">
+              <span className="font-semibold">Estructura equilibrada.</span>{" "}
+              Monitorea los gastos fijos.
             </div>
           )}
 
           {fixedPct <= 50 && (
-            <div className="p-3 bg-green-100 border border-green-300 rounded text-green-700 text-sm">
-              ✓ <strong>Buena flexibilidad estructural.</strong> Tienes control sobre tus gastos.
+            <div className="mt-3 bg-green-50 rounded-lg p-3 text-sm text-green-700">
+              <span className="font-semibold">Buena flexibilidad estructural.</span>{" "}
+              Tienes control sobre tus gastos.
             </div>
           )}
         </div>
