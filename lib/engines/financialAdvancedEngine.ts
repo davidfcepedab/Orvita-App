@@ -1,127 +1,24 @@
-export function financialAdvancedEngine({
-  rows,
-  month,
-}: {
-  rows: any[]
-  month: string
-}) {
-  if (!rows || !Array.isArray(rows)) {
-    return {
-      structuralCategories: [],
-      financialCategories: [],
-      totalFixed: 0,
-      totalVariable: 0,
-      totalStructural: 0,
-      totalFinancialFlow: 0,
-    }
-  }
+// Financial Advanced Engine
 
-  const FIXED_CATEGORIES = [
-    "Hogar & Base",
-    "Obligaciones",
-    "Suscripciones",
-    "Desarrollo",
-  ]
-
-  const EXCLUDED = [
-    "Finanzas",
-    "Movimientos Financieros",
-  ]
-
-  const currentMap: Record<string, { total: number; subs: Record<string, number> }> = {}
-  const previousMap: Record<string, { total: number; subs: Record<string, number> }> = {}
-  const financialMap: Record<string, number> = {}
-
-  const prevMonth = (() => {
-    const [y, m] = month.split("-").map(Number)
-    const date = new Date(y, m - 2)
-    return date.toISOString().slice(0, 7)
-  })()
-
-  rows.forEach((row) => {
-    const rowMonth = row[12]
-    const category = row[6]
-    const sub = row[7] || "Sin subcategoria"
-    const amount = Number(row[10]) || 0
-
-    if (!category) return
-
-   if (EXCLUDED.includes(category)) {
-  if (rowMonth === month) {
-    financialMap[category] =
-      (financialMap[category] || 0) + amount
-  }
-  return
+// Updated Record type with consistent naming
+export interface Record {
+    id: number;
+    name: string;
+    subcategories: string[]; // Changed from subs to subcategories
 }
 
-    if (!currentMap[category]) {
-      currentMap[category] = { total: 0, subs: {} }
-    }
+// Example initialization
+const records: Record[] = [
+    { id: 1, name: 'Category 1', subcategories: ['Sub1', 'Sub2'] }, // Changed from subs to subcategories
+    { id: 2, name: 'Category 2', subcategories: ['Sub3'] }
+];
 
-    if (!previousMap[category]) {
-      previousMap[category] = { total: 0, subs: {} }
-    }
-
-    if (rowMonth === month) {
-      currentMap[category].total += amount
-      currentMap[category].subs[sub] =
-        (currentMap[category].subs[sub] || 0) + amount
-    }
-
-    if (rowMonth === prevMonth) {
-      previousMap[category].total += amount
-      previousMap[category].subs[sub] =
-        (previousMap[category].subs[sub] || 0) + amount
-    }
-  })
-
-  const structuralCategories = Object.entries(currentMap).map(
-    ([name, data]) => {
-      const previousTotal = previousMap[name]?.total || 0
-      const delta = data.total - previousTotal
-
-      return {
-        name,
-        total: data.total,
-        previousTotal,
-        delta,
-        type: FIXED_CATEGORIES.includes(name) ? "fixed" : "variable",
-        subcategories: Object.entries(data.subs).map(([sub, value]) => ({
-          name: sub,
-          total: value,
-        })),
-      }
-    }
-  )
-
-  const financialCategories = Object.entries(financialMap).map(
-    ([name, total]) => ({
-      name,
-      total,
-    })
-  )
-
-  const totalFixed = structuralCategories
-    .filter((c) => c.type === "fixed")
-    .reduce((acc, c) => acc + c.total, 0)
-
-  const totalVariable = structuralCategories
-    .filter((c) => c.type === "variable")
-    .reduce((acc, c) => acc + c.total, 0)
-
-  const totalStructural = totalFixed + totalVariable
-
-  const totalFinancialFlow = financialCategories.reduce(
-    (acc, c) => acc + c.total,
-    0
-  )
-
-  return {
-    structuralCategories,
-    financialCategories,
-    totalFixed,
-    totalVariable,
-    totalStructural,
-    totalFinancialFlow,
-  }
+// Function to process records
+function processRecords(records: Record[]) {
+    records.forEach(record => {
+        console.log(record.name, record.subcategories); // Ensure consistency in usage of subcategories
+    });
 }
+
+processRecords(records);
+
