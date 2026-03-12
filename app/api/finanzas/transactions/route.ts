@@ -37,24 +37,23 @@ export async function GET(req: NextRequest) {
       return true
     })
 
-    const transactions = filtered.map((r) => ({
-      fecha: r?.[0] || "",
-      descripcion: r?.[5] || "",
-      categoria: r?.[6] || "",
-      subcategoria: r?.[7] || "",
-      monto: Number(r?.[10] || 0),
+    const transactions = filtered.map((r, index) => ({
+      id: `${r?.[0]}-${index}`,
+      date: r?.[0] || "",
+      description: r?.[5] || "",
+      category: r?.[6] || "",
+      amount: Number(r?.[10] || 0),
     }))
 
-    const subtotal = transactions.reduce(
-      (acc, tx) => acc + tx.monto,
+    const total = transactions.reduce(
+      (acc, tx) => acc + tx.amount,
       0
     )
 
     return NextResponse.json({
+      success: true,
       transactions,
-      subtotal,
-      previousSubtotal: 0,
-      delta: 0,
+      total,
     })
 
   } catch (error: any) {
@@ -62,8 +61,8 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(
       {
+        success: false,
         error: "Error cargando transacciones",
-        details: error?.message || "unknown error",
       },
       { status: 500 }
     )
