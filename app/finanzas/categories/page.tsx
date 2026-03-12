@@ -79,18 +79,6 @@ export default function FinanzasCategories() {
       maximumFractionDigits: 0,
     }).format(Math.abs(value))
 
-  const fixedPct =
-    structuralTotal > 0
-      ? Math.round((absFixed / structuralTotal) * 100)
-      : 0
-
-  const variablePct = 100 - fixedPct
-
-  const donutData = [
-    { name: "Fijos", value: absFixed },
-    { name: "Variables", value: absVariable },
-  ]
-
   const fixedCategories = structuralCategories
     .filter(c => c.type === "fixed")
     .sort((a, b) => Math.abs(b.total) - Math.abs(a.total))
@@ -109,12 +97,30 @@ export default function FinanzasCategories() {
     )
   }
 
-  return (
-    <div className="space-y-10">
+  const today = new Date().getDate()
 
-      {/* ===================== */}
-      {/* BLOQUE SUPERIOR      */}
-      {/* ===================== */}
+  return (
+    <div className="space-y-8">
+
+      {/* ================= */}
+      {/* BOTÓN MODO ANÁLISIS */}
+      {/* ================= */}
+      <div className="flex justify-end">
+        <button
+          onClick={() => setAdvanced(!advanced)}
+          className={`px-4 py-2 rounded-full text-sm font-medium transition ${
+            advanced
+              ? "bg-indigo-600 text-white"
+              : "bg-gray-200 text-gray-700"
+          }`}
+        >
+          {advanced ? "✓ Modo análisis" : "Modo análisis"}
+        </button>
+      </div>
+
+      {/* ================= */}
+      {/* BLOQUE SUPERIOR  */}
+      {/* ================= */}
 
       <div className="text-center space-y-2">
         <p className="text-3xl font-bold text-gray-900">
@@ -138,58 +144,9 @@ export default function FinanzasCategories() {
         </p>
       </div>
 
-      {/* Totales cluster */}
-      <div className="flex justify-center gap-16 text-center">
-        <div>
-          <p className="text-xs uppercase text-gray-500 tracking-wide mb-1">
-            Movimientos Fijos
-          </p>
-          <p className="text-xl font-bold text-rose-500">
-            ${formatMoney(absFixed)}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs uppercase text-gray-500 tracking-wide mb-1">
-            Movimientos Variables
-          </p>
-          <p className="text-xl font-bold text-blue-600">
-            ${formatMoney(absVariable)}
-          </p>
-        </div>
-      </div>
-
-      {/* Donut */}
-      <div className="card p-6 bg-white rounded-lg shadow">
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={donutData}
-                dataKey="value"
-                innerRadius={60}
-                outerRadius={85}
-              >
-                <Cell fill="#FDA4AF" />
-                <Cell fill="#3B82F6" />
-              </Pie>
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Distribución */}
-      <div className="text-center text-sm font-semibold space-x-6">
-        <span className="text-rose-500">
-          Fijos {fixedPct}%
-        </span>
-        <span className="text-blue-600">
-          Variables {variablePct}%
-        </span>
-      </div>
-
-      {/* ===================== */}
-      {/* SECCIONES OPERATIVAS */}
-      {/* ===================== */}
+      {/* ================= */}
+      {/* SECCIONES         */}
+      {/* ================= */}
 
       {[{
         title: "Movimientos Fijos",
@@ -212,26 +169,33 @@ export default function FinanzasCategories() {
 
             const spent = Math.abs(cat.total)
             const budget = cat.budget ?? 0
-            const hasBudget = budget > 0
+            const previous = Math.abs(cat.previousTotal ?? 0)
 
-            const difference = spent - budget
-            const differenceAbs = Math.abs(difference)
+            const delta = spent - previous
+            const deltaPct =
+              previous === 0
+                ? spent > 0 ? 100 : 0
+                : (delta / previous) * 100
 
-            const usagePercent =
-              budget === 0 ? 0 : (spent / budget) * 100
-
-            let budgetStatus: "green" | "yellow" | "red" = "green"
-            if (usagePercent > 100) budgetStatus = "red"
-            else if (usagePercent > 80) budgetStatus = "yellow"
+            const hasSubcategories =
+              Array.isArray(cat.subcategories) &&
+              cat.subcategories.length > 0
 
             const percent =
               section.clusterBase > 0
                 ? (spent / section.clusterBase) * 100
                 : 0
 
-            const hasSubcategories =
-              Array.isArray(cat.subcategories) &&
-              cat.subcategories.length > 0
+            const usagePercent =
+              budget === 0 ? 0 : (spent / budget) * 100
+
+            const difference = spent - budget
+
+            const alertOverExecution =
+              advanced && usagePercent > 120
+
+            const alertEarlyMonth =
+              advanced && today < 15 && usagePercent > 50
 
             return (
               <div
@@ -249,9 +213,14 @@ export default function FinanzasCategories() {
                     <span className="font-medium">
                       {cat.name}
                     </span>
+
                     {hasSubcategories && (
-                      <span className="text-xs text-gray-400">
-                        {expanded === cat.name ? "▴" : "▾"}
+                      <span
+                        className={`text-sm transition-transform ${
+                          expanded === cat.name ? "rotate-180" : ""
+                        }`}
+                      >
+                        ▼
                       </span>
                     )}
                   </button>
@@ -265,6 +234,16 @@ export default function FinanzasCategories() {
 
                 </div>
 
+                {/* DELTA (solo análisis) */}
+                {advanced && delta !== 0 && (
+                  <div className={`text-xs ${
+                    delta > 0 ? "text-rose-500" : "text-blue-600"
+                  }`}>
+                    {delta > 0 ? "↑" : "↓"} {Math.abs(deltaPct).toFixed(1)}%
+                    {" "}(${formatMoney(Math.abs(delta))})
+                  </div>
+                )}
+
                 {/* Barra cluster */}
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
@@ -273,63 +252,42 @@ export default function FinanzasCategories() {
                   />
                 </div>
 
-                {/* Presupuesto compacto + diferencia */}
-                {hasBudget && (
-                  <div
-                    className={`p-3 rounded-lg border text-sm space-y-1 ${
-                      budgetStatus === "red"
-                        ? "bg-rose-50 border-rose-200"
-                        : budgetStatus === "yellow"
-                        ? "bg-amber-50 border-amber-200"
-                        : "bg-emerald-50 border-emerald-200"
-                    }`}
-                  >
+                {/* Presupuesto */}
+                {budget > 0 && (
+                  <div className="text-sm space-y-1">
 
-                    <div className="flex justify-between font-medium">
+                    <div className="flex justify-between">
                       <span>Presupuesto</span>
                       <span>${formatMoney(budget)}</span>
                     </div>
 
-                    <div
-                      className={`flex justify-between ${
-                        budgetStatus === "red"
-                          ? "text-rose-600"
-                          : budgetStatus === "yellow"
-                          ? "text-amber-600"
-                          : "text-emerald-600"
-                      }`}
-                    >
+                    <div className="flex justify-between">
                       <span>
-                        {difference > 0
-                          ? "Sobre ejecución"
-                          : difference < 0
-                          ? "Sub ejecución"
-                          : "En línea"}
+                        {difference > 0 ? "Sobre ejecución" : "Sub ejecución"}
                       </span>
-                      <span>
-                        {difference === 0
-                          ? "$0"
-                          : `${difference > 0 ? "+" : "-"}$${formatMoney(differenceAbs)}`}
+                      <span className={
+                        difference > 0 ? "text-rose-600" : "text-emerald-600"
+                      }>
+                        {difference > 0 ? "+" : "-"}
+                        ${formatMoney(Math.abs(difference))}
                       </span>
-                    </div>
-
-                    <div className="flex justify-between text-xs text-gray-600">
-                      <span>Uso</span>
-                      <span>{usagePercent.toFixed(0)}%</span>
                     </div>
 
                     {advanced && (
-                      <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
-                        <div
-                          className={`h-1.5 rounded-full ${
-                            budgetStatus === "red"
-                              ? "bg-rose-500"
-                              : budgetStatus === "yellow"
-                              ? "bg-amber-500"
-                              : "bg-emerald-500"
-                          }`}
-                          style={{ width: `${Math.min(usagePercent, 100)}%` }}
-                        />
+                      <div className="text-xs text-gray-600">
+                        Uso {usagePercent.toFixed(0)}%
+                      </div>
+                    )}
+
+                    {alertOverExecution && (
+                      <div className="text-xs text-rose-600">
+                        ⚠ Sobre ejecución crítica (+20%)
+                      </div>
+                    )}
+
+                    {alertEarlyMonth && (
+                      <div className="text-xs text-amber-600">
+                        ⚠ 50% consumido antes del día 15
                       </div>
                     )}
 
@@ -361,16 +319,6 @@ export default function FinanzasCategories() {
           })}
         </div>
       ))}
-
-      {/* Toggle análisis */}
-      <div className="flex justify-center">
-        <button
-          onClick={() => setAdvanced(!advanced)}
-          className="px-4 py-2 rounded-full bg-indigo-600 text-white"
-        >
-          {advanced ? "Ocultar análisis" : "Modo análisis"}
-        </button>
-      </div>
 
     </div>
   )
