@@ -13,7 +13,13 @@ function FinanzasLayoutContent({
   const router = useRouter()
   const finance = useFinance()
 
-  if (!finance) return null
+  if (!finance) {
+    return (
+      <div className="p-6 text-center">
+        <p>Cargando contexto financiero...</p>
+      </div>
+    )
+  }
 
   const { month, setMonth } = finance
 
@@ -24,9 +30,15 @@ function FinanzasLayoutContent({
     { name: "Insights", path: "/finanzas/insights" },
   ]
 
+  const handleMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    if (value) {
+      setMonth(value)
+    }
+  }
+
   return (
     <div className="space-y-6">
-
       {/* HEADER */}
       <div
         className="rounded-3xl p-6 text-white"
@@ -46,9 +58,10 @@ function FinanzasLayoutContent({
         <div className="mt-4">
           <input
             type="month"
-            value={month}
-            onChange={(e) => setMonth(e.target.value)}
+            value={month || ""}
+            onChange={handleMonthChange}
             className="px-4 py-2 rounded-xl text-black"
+            aria-label="Seleccionar mes"
           />
         </div>
       </div>
@@ -62,11 +75,12 @@ function FinanzasLayoutContent({
             <button
               key={tab.name}
               onClick={() => router.push(tab.path)}
-              className={`px-4 py-2 rounded-full text-sm transition ${
+              className={`px-4 py-2 rounded-full text-sm transition whitespace-nowrap ${
                 active
                   ? "bg-white shadow text-[#166534]"
                   : "bg-white/40 text-[#166534]"
               }`}
+              aria-current={active ? "page" : undefined}
             >
               {tab.name}
             </button>
