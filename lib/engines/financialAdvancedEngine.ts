@@ -72,8 +72,9 @@ export function financialAdvancedEngine({
     }
   })
 
-  const structuralCategories = Object.entries(currentMap).map(
-    ([name, data]) => {
+  const structuralCategories = Object.entries(currentMap)
+    .filter(([, data]) => Math.abs(data.total) > 0)
+    .map(([name, data]) => {
       const previousTotal = previousMap[name]?.total || 0
       const delta = data.total - previousTotal
 

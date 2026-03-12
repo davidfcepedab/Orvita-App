@@ -149,11 +149,11 @@ export default function FinanzasCategories() {
   }
 
   const fixedCategories = (structuralCategories || [])
-    .filter((c): c is Category => c?.type === "fixed")
+    .filter((c): c is Category => c?.type === "fixed" && Math.abs(c.total) > 0)
     .sort((a, b) => Math.abs(b.total) - Math.abs(a.total))
 
   const variableCategories = (structuralCategories || [])
-    .filter((c): c is Category => c?.type === "variable")
+    .filter((c): c is Category => c?.type === "variable" && Math.abs(c.total) > 0)
     .sort((a, b) => Math.abs(b.total) - Math.abs(a.total))
 
   const fixedPct =
@@ -312,10 +312,11 @@ export default function FinanzasCategories() {
                   cat.subcategories.length > 0
 
                 // Delta comparison
+                const catDelta = cat.delta ?? 0
                 const hasDelta = cat.delta !== undefined && cat.delta !== 0
-                const isDeltaNegative = hasDelta && cat.delta < 0
-                const deltaPercent = hasDelta
-                  ? Math.abs(((Math.abs(cat.delta) / Math.abs(cat.total - (cat.delta || 0))) * 100).toFixed(1))
+                const isDeltaNegative = hasDelta && catDelta < 0
+                const deltaPercent = hasDelta && Math.abs(cat.total - catDelta) > 0
+                  ? Number(((Math.abs(catDelta) / Math.abs(cat.total - catDelta)) * 100).toFixed(1))
                   : 0
 
                 // Budget
@@ -404,7 +405,7 @@ export default function FinanzasCategories() {
                                 : budgetStatus === "yellow"
                                 ? "text-amber-600"
                                 : "text-emerald-600"
-                            }`
+                            }`}
                           >
                             ${formatMoney(cat.budget || 0)}
                           </span>
@@ -419,7 +420,7 @@ export default function FinanzasCategories() {
                                 : budgetStatus === "yellow"
                                 ? "text-amber-600"
                                 : "text-emerald-600"
-                            }`
+                            }`}
                           >
                             {Math.round(budgetPercent)}%
                             {budgetStatus === "red" && " ⚠️"}
