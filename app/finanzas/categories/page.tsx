@@ -313,9 +313,9 @@ export default function FinanzasCategories() {
 
                 // Delta comparison
                 const hasDelta = cat.delta !== undefined && cat.delta !== 0
-                const isDeltaNegative = hasDelta && cat.delta < 0
+                const isDeltaNegative = hasDelta && (cat.delta ?? 0) < 0
                 const deltaPercent = hasDelta
-                  ? Math.abs(((Math.abs(cat.delta) / Math.abs(cat.total - (cat.delta || 0))) * 100).toFixed(1))
+                  ? Math.round((Math.abs(cat.delta ?? 0) / Math.abs(cat.total - (cat.delta ?? 0))) * 1000) / 10
                   : 0
 
                 // Budget
@@ -404,7 +404,7 @@ export default function FinanzasCategories() {
                                 : budgetStatus === "yellow"
                                 ? "text-amber-600"
                                 : "text-emerald-600"
-                            }`
+                            }`}
                           >
                             ${formatMoney(cat.budget || 0)}
                           </span>
@@ -419,7 +419,7 @@ export default function FinanzasCategories() {
                                 : budgetStatus === "yellow"
                                 ? "text-amber-600"
                                 : "text-emerald-600"
-                            }`
+                            }`}
                           >
                             {Math.round(budgetPercent)}%
                             {budgetStatus === "red" && " ⚠️"}
