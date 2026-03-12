@@ -28,8 +28,8 @@ export function financialAdvancedEngine({
     "Movimientos Financieros",
   ]
 
-  const currentMap: Record<string, { total: number; subs: Record<string, number> }> = {}
-  const previousMap: Record<string, { total: number; subs: Record<string, number> }> = {}
+  const currentMap: Record<string, { total: number; subcategories: Record<string, number> }> = {}
+  const previousMap: Record<string, { total: number; subcategories: Record<string, number> }> = {}
   const financialMap: Record<string, number> = {}
 
   const prevMonth = (() => {
@@ -47,28 +47,31 @@ export function financialAdvancedEngine({
     if (!category) return
 
     if (EXCLUDED.includes(category)) {
-      financialMap[category] = (financialMap[category] || 0) + amount
+      if (rowMonth === month) {
+        financialMap[category] =
+          (financialMap[category] || 0) + amount
+      }
       return
     }
 
     if (!currentMap[category]) {
-      currentMap[category] = { total: 0, subs: {} }
+      currentMap[category] = { total: 0, subcategories: {} }
     }
 
     if (!previousMap[category]) {
-      previousMap[category] = { total: 0, subs: {} }
+      previousMap[category] = { total: 0, subcategories: {} }
     }
 
     if (rowMonth === month) {
       currentMap[category].total += amount
-      currentMap[category].subs[sub] =
-        (currentMap[category].subs[sub] || 0) + amount
+      currentMap[category].subcategories[sub] =
+        (currentMap[category].subcategories[sub] || 0) + amount
     }
 
     if (rowMonth === prevMonth) {
       previousMap[category].total += amount
-      previousMap[category].subs[sub] =
-        (previousMap[category].subs[sub] || 0) + amount
+      previousMap[category].subcategories[sub] =
+        (previousMap[category].subcategories[sub] || 0) + amount
     }
   })
 
@@ -92,10 +95,11 @@ export function financialAdvancedEngine({
   )
 
   const financialCategories = Object.entries(financialMap).map(
-    ([name, total]) => ({
-      name,
-      total,
-    })
+    ([name, total]) => (
+      {
+        name,
+        total,
+      })
   )
 
   const totalFixed = structuralCategories

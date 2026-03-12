@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { sheets } from "@/lib/googleAuth"
 
-const SPREADSHEET_ID = "1fEP_Em30-BTUhmeObzAE9zObQRc7CNkYXbVCecpCHO0"
+const SPREADSHEET_ID = "1A8ucJUgSvxP2JLbPf1Z5PlB5UytbO4aKdJLf_ctaUz4"
 
 export async function GET(req: NextRequest) {
   try {
@@ -11,6 +11,9 @@ export async function GET(req: NextRequest) {
 
     const category =
       req.nextUrl.searchParams.get("category")
+
+    const subcategory =
+      req.nextUrl.searchParams.get("subcategory")
 
     const movimientosRes =
       await sheets.spreadsheets.values.get({
@@ -24,39 +27,44 @@ export async function GET(req: NextRequest) {
     const filtered = rows.filter((r) => {
       const rowMonth = r?.[12]
       const rowCategory = r?.[6]
+      const rowSubcategory = r?.[7]
 
       if (!rowMonth) return false
       if (rowMonth !== month) return false
       if (category && rowCategory !== category) return false
+      if (subcategory && rowSubcategory !== subcategory) return false
 
       return true
     })
 
-    const transactions = filtered.map((r) => ({
-      fecha: r?.[0] || "",
-      descripcion: r?.[5] || "",
-      categoria: r?.[6] || "",
-      subcategoria: r?.[7] || "",
-      monto: Number(r?.[10] || 0),
+    const transactions = filtered.map((r, index) => ({
+      id: `${r?.[0]}-${index}`,
+      date: r?.[0] || "",
+      description: r?.[5] || "",
+      amount: Number(r?.[10] || 0),
+      category: r?.[6] || "",
+      subcategory: r?.[7] || "",
     }))
 
-    const subtotal = transactions.reduce(
-      (acc, tx) => acc + tx.monto,
+    const total = transactions.reduce(
+      (acc, tx) => acc + tx.amount,
       0
     )
 
     return NextResponse.json({
+      success: true,
       transactions,
-      subtotal,
-      previousSubtotal: 0,
-      delta: 0,
+      total,
     })
 
   } catch (error: any) {
     console.error("TRANSACTIONS ERROR:", error?.message)
 
     return NextResponse.json(
-      { error: "Error cargando transacciones", details: error?.message },
+      {
+        success: false,
+        error: "Error cargando transacciones",
+      },
       { status: 500 }
     )
   }

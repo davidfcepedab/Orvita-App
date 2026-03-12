@@ -1,28 +1,40 @@
 export function financialPredictionEngine({
-  monthlyHistory,
-  liquidez,
+  totalStructural,
 }: {
-  monthlyHistory: number[]
-  liquidez: number
+  totalStructural: number
 }) {
-  if (monthlyHistory.length < 3)
-    return { projection: [] }
+  const absTotal = Math.abs(totalStructural)
 
-  const avg =
-    monthlyHistory.reduce((a, b) => a + b, 0) /
-    monthlyHistory.length
-
-  const projection = []
-
-  let remaining = liquidez
-
-  for (let i = 1; i <= 3; i++) {
-    remaining -= avg
-    projection.push({
-      month: `+${i}`,
-      projectedBalance: Math.round(remaining),
-    })
+  if (absTotal === 0) {
+    return {
+      dailyAverage: 0,
+      projectedEndOfMonth: 0,
+      warning: false,
+    }
   }
 
-  return { projection }
+  const today = new Date()
+  const currentDay = today.getDate()
+
+  const daysInMonth = new Date(
+    today.getFullYear(),
+    today.getMonth() + 1,
+    0
+  ).getDate()
+
+  const dailyAverage = absTotal / currentDay
+
+  const projectedEndOfMonth = Math.round(
+    dailyAverage * daysInMonth
+  )
+
+  const warning =
+    currentDay < 15 &&
+    projectedEndOfMonth > absTotal * 1.3
+
+  return {
+    dailyAverage: Math.round(dailyAverage),
+    projectedEndOfMonth,
+    warning,
+  }
 }

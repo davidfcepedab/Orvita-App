@@ -14,14 +14,17 @@ interface Transaction {
 
 interface TransactionsResponse {
   transactions: Transaction[]
-  total?: number
-  success?: boolean
+  total: number
+  success: boolean
   error?: string
 }
 
 export default function TransactionsClient() {
   const finance = useFinance()
   const searchParams = useSearchParams()
+  const month = finance?.month ?? ""
+  const category = searchParams.get("category")
+  const subcategory = searchParams.get("subcategory")
 
   const [data, setData] = useState<TransactionsResponse | null>(null)
   const [loading, setLoading] = useState(false)
@@ -31,47 +34,41 @@ export default function TransactionsClient() {
   const categoryFilter = searchParams.get("category")
 
   useEffect(() => {
-    if (!month) {
-      setData(null)
-      return
-    }
+    if (!month) return
 
-    const fetchTransactions = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true)
         setError(null)
 
         let url = `/api/finanzas/transactions?month=${encodeURIComponent(month)}`
 
-        if (categoryFilter) {
-          url += `&category=${encodeURIComponent(categoryFilter)}`
+        if (category) {
+          url += `&category=${encodeURIComponent(category)}`
         }
 
-        const response = await fetch(url)
-
-        if (!response.ok) {
-          throw new Error(`Error ${response.status}: ${response.statusText}`)
+        if (subcategory) {
+          url += `&subcategory=${encodeURIComponent(subcategory)}`
         }
 
-        const json: TransactionsResponse = await response.json()
+        const res = await fetch(url)
+        const json = await res.json()
 
-        if (!json.success && json.error) {
-          throw new Error(json.error)
+        if (!res.ok || json.success === false) {
+          throw new Error(json.error || "Error desconocido")
         }
 
         setData(json)
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : "Error desconocido"
-        setError(errorMessage)
-        console.error("Error fetching transactions:", err)
-        setData(null)
+
+      } catch (err: any) {
+        setError(err.message)
       } finally {
         setLoading(false)
       }
     }
 
-    fetchTransactions()
-  }, [month, categoryFilter])
+    fetchData()
+  }, [month, category, subcategory])
 
   if (!finance) {
     return (
@@ -90,85 +87,51 @@ export default function TransactionsClient() {
     )
   }
 
-  // Estado de error
-  if (error) {
+  if (loading) return <p>Cargando...</p>
+
+  if (error)
     return (
-      <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-        <p className="font-semibold">Error al cargar movimientos</p>
-        <p className="text-sm mt-1">{error}</p>
+      <div className="bg-red-50 p-4 rounded-lg text-red-600">
+        {error}
       </div>
     )
-  }
 
-  // Sin datos
-  if (!data) {
-    return (
-      <div className="p-6 text-center text-gray-500">
-        <p>No hay datos disponibles</p>
-      </div>
-    )
-  }
-
-  const transactions = data.transactions || []
-  const hasTransactions = transactions.length > 0
+  if (!data) return null
 
   return (
-    <div className="space-y-6">
-      {/* Breadcrumb de categoría */}
-      {categoryFilter && (
-        <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
-          <span className="text-gray-500">Filtro: </span>
-          <span className="font-medium text-gray-800">{categoryFilter}</span>
-        </div>
-      )}
+    <div className="space-y-4">
 
-      {/* Resumen */}
-      {hasTransactions && data.total !== undefined && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p className="text-sm text-gray-600">Total de movimientos</p>
-          <p className="text-2xl font-bold text-blue-600">
-            ${Math.abs(data.total).toLocaleString("es-CO")}
-          </p>
+      {data.transactions.length === 0 ? (
+        <div className="p-6 text-center text-gray-500">
+          <p>Sin movimientos registrados para este período.</p>
         </div>
-      )}
-
-      {/* Transacciones */}
-      {hasTransactions ? (
-        <div className="space-y-3">
-          {transactions.map((tx) => (
+      ) : (
+        <>
+          {data.transactions.map(tx => (
             <div
               key={tx.id}
-              className="flex justify-between items-center p-4 border border-gray-200 rounded-lg hover:shadow-md transition"
+              className="bg-white p-4 rounded-xl shadow"
             >
-              <div className="flex-1">
-                <p className="font-medium text-gray-900">{tx.description}</p>
-                <p className="text-xs text-gray-500 mt-1">
-                  {new Date(tx.date).toLocaleDateString("es-CO")}
-                </p>
-                {tx.category && (
-                  <p className="text-xs text-gray-400 mt-1">{tx.category}</p>
-                )}
-              </div>
-
-              <div className="text-right">
-                <p className={`font-semibold text-lg ${
-                  tx.amount < 0 ? "text-red-600" : "text-green-600"
-                }`}>
-                  {tx.amount < 0 ? "-" : "+"}${Math.abs(tx.amount).toLocaleString("es-CO")}
+              <div className="flex justify-between">
+                <div>
+                  <p className="font-medium">{tx.description}</p>
+                  <p className="text-xs text-gray-500">
+                    {new Date(tx.date).toLocaleDateString("es-CO")}
+                  </p>
+                </div>
+                <p className="font-semibold">
+                  ${Math.abs(tx.amount).toLocaleString("es-CO")}
                 </p>
               </div>
             </div>
           ))}
-        </div>
-      ) : (
-        <div className="p-6 text-center bg-gray-50 rounded-lg">
-          <p className="text-gray-600">
-            {categoryFilter
-              ? `No hay movimientos en la categoría "${categoryFilter}" para este mes.`
-              : "No hay movimientos registrados para este mes."}
-          </p>
-        </div>
+
+          <div className="bg-blue-50 p-4 rounded-lg text-blue-600 font-semibold">
+            Total: ${Math.abs(data.total).toLocaleString("es-CO")}
+          </div>
+        </>
       )}
+
     </div>
   )
 }
