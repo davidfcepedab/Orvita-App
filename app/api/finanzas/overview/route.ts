@@ -4,6 +4,11 @@ import { financialScoreEngine } from "@/lib/engines/financialScoreEngine"
 import { financialInsightEngine } from "@/lib/engines/financialInsightEngine"
 import { financialStabilityEngine } from "@/lib/engines/financialStabilityEngine"
 import { financialPredictionEngine } from "@/lib/engines/financialPredictionEngine"
+import {
+  isValidCFORow,
+  mapRowToCFOMonthly,
+  mapRowToCuenta,
+} from "@/lib/mappers/category.mapper"
 
 const SPREADSHEET_ID =
   "1A8ucJUgSvxP2JLbPf1Z5PlB5UytbO4aKdJLf_ctaUz4"
@@ -19,60 +24,47 @@ export async function GET(req: NextRequest) {
       valueRenderOption: "UNFORMATTED_VALUE",
     })
 
-    const rows = res.data.values || []
+    const cfoRows = (res.data.values || [])
+      .filter(isValidCFORow)
+      .map(mapRowToCFOMonthly)
 
-    const cleanRows = rows.filter(
-      (r) => r && r.length > 6 && !isNaN(Number(r[1]))
-    )
-
-    if (!cleanRows.length) {
+    if (!cfoRows.length) {
       return NextResponse.json(
         { error: "Sin datos financieros" },
         { status: 404 }
       )
     }
 
-    let monthRow = requestedMonth
-      ? cleanRows.find((r) => r[0] === requestedMonth)
-      : null
+    const targetRow = requestedMonth
+      ? (cfoRows.find((r) => r.mes === requestedMonth) ?? cfoRows[cfoRows.length - 1])
+      : cfoRows[cfoRows.length - 1]
 
-    if (!monthRow) {
-      monthRow = cleanRows[cleanRows.length - 1]
-    }
-
-    const ingresos = Number(monthRow[1] || 0)
-    const gastoOperativo = Number(monthRow[2] || 0)
-    const gastoFinanciero = Number(monthRow[3] || 0)
-    const flujoTotal = Number(monthRow[6] || 0)
+    const { ingresos, gastoOperativo, gastoFinanciero, flujoTotal } = targetRow
 
     const gastoMensualTotal =
       Math.abs(gastoOperativo) +
       Math.abs(gastoFinanciero)
 
-    const monthlyData = cleanRows.slice(-6).map((r) => ({
-      month: r[0],
-      ingresos: Number(r[1] || 0),
-      gasto_operativo: Math.abs(Number(r[2] || 0)),
-      gasto_financiero: Math.abs(Number(r[3] || 0)),
-      flujo: Number(r[6] || 0),
+    const monthlyData = cfoRows.slice(-6).map((r) => ({
+      month: r.mes,
+      ingresos: r.ingresos,
+      gasto_operativo: Math.abs(r.gastoOperativo),
+      gasto_financiero: Math.abs(r.gastoFinanciero),
+      flujo: r.flujoTotal,
     }))
 
-    const cuentas = await sheets.spreadsheets.values.get({
+    const cuentasRes = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
       range: "Cuentas!A2:J200",
       valueRenderOption: "UNFORMATTED_VALUE",
     })
 
-    const cuentasRows = cuentas.data.values || []
+    const cuentas = (cuentasRes.data.values || []).map(mapRowToCuenta)
 
-    let liquidezTotal = 0
-
-    for (const row of cuentasRows) {
-      const disponible = Number(row?.[5] || 0)
-      if (!isNaN(disponible) && disponible > 0) {
-        liquidezTotal += disponible
-      }
-    }
+    const liquidezTotal = cuentas.reduce(
+      (acc, c) => (c.disponible > 0 ? acc + c.disponible : acc),
+      0
+    )
 
     const runway =
       gastoMensualTotal > 0
@@ -103,9 +95,7 @@ export async function GET(req: NextRequest) {
     })
 
     const prediction = financialPredictionEngine({
-      monthlyHistory: cleanRows
-        .slice(-6)
-        .map((r) => Number(r[6] || 0)),
+      monthlyHistory: cfoRows.slice(-6).map((r) => r.flujoTotal),
       liquidez: liquidezTotal,
     })
 

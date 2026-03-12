@@ -1,14 +1,16 @@
+import type { Transaction, Category, Subcategory } from "@/lib/types"
+
 export function financialAdvancedEngine({
-  rows,
+  transactions,
   month,
 }: {
-  rows: any[]
+  transactions: Transaction[]
   month: string
 }) {
-  if (!rows || !Array.isArray(rows)) {
+  if (!transactions || !Array.isArray(transactions)) {
     return {
-      structuralCategories: [],
-      financialCategories: [],
+      structuralCategories: [] as Category[],
+      financialCategories: [] as { name: string; total: number }[],
       totalFixed: 0,
       totalVariable: 0,
       totalStructural: 0,
@@ -38,59 +40,59 @@ export function financialAdvancedEngine({
     return date.toISOString().slice(0, 7)
   })()
 
-  rows.forEach((row) => {
-    const rowMonth = row[12]
-    const category = row[6]
-    const sub = row[7] || "Sin subcategoria"
-    const amount = Number(row[10]) || 0
+  transactions.forEach((tx) => {
+    const { mes, categoria, monto } = tx
+    const sub = tx.subcategoria || "Sin subcategoria"
 
-    if (!category) return
+    if (!categoria) return
 
-    if (EXCLUDED.includes(category)) {
-      financialMap[category] = (financialMap[category] || 0) + amount
+    if (EXCLUDED.includes(categoria)) {
+      if (mes === month) {
+        financialMap[categoria] = (financialMap[categoria] || 0) + monto
+      }
       return
     }
 
-    if (!currentMap[category]) {
-      currentMap[category] = { total: 0, subs: {} }
+    if (!currentMap[categoria]) {
+      currentMap[categoria] = { total: 0, subs: {} }
     }
 
-    if (!previousMap[category]) {
-      previousMap[category] = { total: 0, subs: {} }
+    if (!previousMap[categoria]) {
+      previousMap[categoria] = { total: 0, subs: {} }
     }
 
-    if (rowMonth === month) {
-      currentMap[category].total += amount
-      currentMap[category].subs[sub] =
-        (currentMap[category].subs[sub] || 0) + amount
+    if (mes === month) {
+      currentMap[categoria].total += monto
+      currentMap[categoria].subs[sub] =
+        (currentMap[categoria].subs[sub] || 0) + monto
     }
 
-    if (rowMonth === prevMonth) {
-      previousMap[category].total += amount
-      previousMap[category].subs[sub] =
-        (previousMap[category].subs[sub] || 0) + amount
+    if (mes === prevMonth) {
+      previousMap[categoria].total += monto
+      previousMap[categoria].subs[sub] =
+        (previousMap[categoria].subs[sub] || 0) + monto
     }
   })
 
-  const structuralCategories = Object.entries(currentMap)
+  const structuralCategories: Category[] = Object.entries(currentMap)
     .filter(([, data]) => Math.abs(data.total) > 0)
     .map(([name, data]) => {
       const previousTotal = previousMap[name]?.total || 0
       const delta = data.total - previousTotal
+      const subs: Subcategory[] = Object.entries(data.subs).map(([subName, value]) => ({
+        name: subName,
+        total: value,
+      }))
 
       return {
         name,
         total: data.total,
         previousTotal,
         delta,
-        type: FIXED_CATEGORIES.includes(name) ? "fixed" : "variable",
-        subs: Object.entries(data.subs).map(([sub, value]) => ({
-          name: sub,
-          total: value,
-        })),
+        type: (FIXED_CATEGORIES.includes(name) ? "fixed" : "variable") as "fixed" | "variable",
+        subs,
       }
-    }
-  )
+    })
 
   const financialCategories = Object.entries(financialMap).map(
     ([name, total]) => ({

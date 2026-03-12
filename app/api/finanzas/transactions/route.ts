@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { sheets } from "@/lib/googleAuth"
+import { mapRowToTransaction } from "@/lib/mappers/transaction.mapper"
 
 const SPREADSHEET_ID = "1A8ucJUgSvxP2JLbPf1Z5PlB5UytbO4aKdJLf_ctaUz4"
 
@@ -22,28 +23,17 @@ export async function GET(req: NextRequest) {
         valueRenderOption: "UNFORMATTED_VALUE",
       })
 
-    const rows = movimientosRes.data.values || []
+    const rawRows = movimientosRes.data.values || []
 
-    const filtered = rows.filter((r) => {
-      const rowMonth = r?.[12]
-      const rowCategory = r?.[6]
-      const rowSubcategory = r?.[7]
-
-      if (!rowMonth) return false
-      if (rowMonth !== month) return false
-      if (category && rowCategory !== category) return false
-      if (subcategory && rowSubcategory !== subcategory) return false
-
-      return true
-    })
-
-    const transactions = filtered.map((r) => ({
-      fecha: r?.[0] || "",
-      descripcion: r?.[5] || "",
-      categoria: r?.[6] || "",
-      subcategoria: r?.[7] || "",
-      monto: Number(r?.[10] || 0),
-    }))
+    const transactions = rawRows
+      .map(mapRowToTransaction)
+      .filter((tx) => {
+        if (!tx.mes) return false
+        if (tx.mes !== month) return false
+        if (category && tx.categoria !== category) return false
+        if (subcategory && tx.subcategoria !== subcategory) return false
+        return true
+      })
 
     const subtotal = transactions.reduce(
       (acc, tx) => acc + tx.monto,

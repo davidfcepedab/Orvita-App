@@ -1,10 +1,12 @@
+import type { Category, BudgetRow } from "@/lib/types"
+
 export function financialBudgetEngine({
   structuralCategories,
   budgetRows,
 }: {
-  structuralCategories: any[]
-  budgetRows: any[]
-}) {
+  structuralCategories: Category[]
+  budgetRows: BudgetRow[]
+}): Category[] {
   if (!budgetRows || !Array.isArray(budgetRows)) {
     return structuralCategories
   }
@@ -12,10 +14,8 @@ export function financialBudgetEngine({
   const budgetMap: Record<string, number> = {}
 
   budgetRows.forEach((row) => {
-    const category = row[0]
-    const amount = Number(row[2]) || 0
-    if (!category) return
-    budgetMap[category] = amount
+    if (!row.categoria) return
+    budgetMap[row.categoria] = row.monto
   })
 
   return structuralCategories.map((cat) => {
@@ -25,7 +25,7 @@ export function financialBudgetEngine({
     const budgetUsedPercent =
       budget > 0 ? (used / budget) * 100 : 0
 
-    let budgetStatus = "green"
+    let budgetStatus: "green" | "yellow" | "red" = "green"
 
     if (budgetUsedPercent >= 100) {
       budgetStatus = "red"
