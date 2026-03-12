@@ -9,7 +9,10 @@ export function financialInsightEngine({
   totalVariable: number
   totalStructural: number
 }) {
-  if (!structuralCategories || totalStructural === 0) {
+  const absTotal = Math.abs(totalStructural)
+  const absFixed = Math.abs(totalFixed)
+
+  if (!structuralCategories || absTotal === 0) {
     return {
       fixedRatio: 0,
       structuralRigidity: "low",
@@ -18,10 +21,9 @@ export function financialInsightEngine({
     }
   }
 
-  const fixedRatio = totalFixed / totalStructural
+  const fixedRatio = absFixed / absTotal
 
   let structuralRigidity: "low" | "medium" | "high" = "low"
-
   if (fixedRatio > 0.7) structuralRigidity = "high"
   else if (fixedRatio > 0.5) structuralRigidity = "medium"
 
@@ -29,9 +31,13 @@ export function financialInsightEngine({
     (c) => c.budget && c.budgetUsedPercent >= 100
   )
 
+  const extremeBudgetCategories = structuralCategories.filter(
+    (c) => c.budget && c.budgetUsedPercent >= 200
+  )
+
   let riskLevel: "stable" | "warning" | "critical" = "stable"
 
-  if (overBudgetCategories.length > 2) riskLevel = "critical"
+  if (extremeBudgetCategories.length > 0) riskLevel = "critical"
   else if (overBudgetCategories.length > 0) riskLevel = "warning"
 
   const topCategory = structuralCategories.sort(
@@ -44,7 +50,9 @@ export function financialInsightEngine({
     alerts.push("Alta rigidez estructural.")
   }
 
-  if (overBudgetCategories.length > 0) {
+  if (extremeBudgetCategories.length > 0) {
+    alerts.push("Presupuestos severamente desbordados (>200%).")
+  } else if (overBudgetCategories.length > 0) {
     alerts.push("Existen categorías sobre presupuesto.")
   }
 
