@@ -2,12 +2,6 @@
 
 import { useEffect, useState } from "react"
 import { useFinance } from "../FinanceContext"
-import {
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts"
 import { useRouter } from "next/navigation"
 
 interface Subcategory {
@@ -69,15 +63,15 @@ export default function FinanzasCategories() {
 
   const globalDelta = structuralTotal - previousTotal
 
-  const globalDeltaPct =
-    previousTotal === 0
-      ? structuralTotal > 0 ? 100 : 0
-      : (globalDelta / previousTotal) * 100
-
   const formatMoney = (value: number) =>
     new Intl.NumberFormat("es-CO", {
       maximumFractionDigits: 0,
     }).format(Math.abs(value))
+
+  const fixedPct =
+    structuralTotal > 0
+      ? Math.round((absFixed / structuralTotal) * 100)
+      : 0
 
   const fixedCategories = structuralCategories
     .filter(c => c.type === "fixed")
@@ -102,82 +96,54 @@ export default function FinanzasCategories() {
   return (
     <div className="space-y-8">
 
-      {/* ================= */}
-      {/* BOTÓN MODO ANÁLISIS */}
-      {/* ================= */}
+      {/* BOTÓN ANÁLISIS */}
       <div className="flex justify-end">
-  <button
-    onClick={() => setAdvanced(!advanced)}
-    className={`px-4 py-2 rounded-full text-sm font-medium transition ${
-      advanced
-        ? "bg-indigo-600 text-white"
-        : "bg-gray-200 text-gray-700"
-    }`}
-  >
-    {advanced ? "✓ Análisis activo" : "Modo análisis"}
-  </button>
-</div>
+        <button
+          onClick={() => setAdvanced(!advanced)}
+          className={`px-4 py-2 rounded-full text-sm font-medium transition ${
+            advanced
+              ? "bg-indigo-600 text-white"
+              : "bg-gray-200 text-gray-700"
+          }`}
+        >
+          {advanced ? "✓ Análisis activo" : "Modo análisis"}
+        </button>
+      </div>
 
-      {/* ================= */}
-      {/* BLOQUE SUPERIOR  */}
-      {/* ================= */}
-
+      {/* TOTAL GLOBAL */}
       <div className="text-center space-y-2">
-        <p className="text-3xl font-bold text-gray-900">
+        <p className="text-3xl font-bold">
           ${formatMoney(structuralTotal)}
         </p>
 
-        <p
-          className={`text-sm font-medium ${
-            globalDelta === 0
-              ? "text-gray-500"
-              : globalDelta > 0
-              ? "text-rose-500"
-              : "text-blue-600"
-          }`}
-        >
-          {globalDelta > 0 && "↑ "}
-          {globalDelta < 0 && "↓ "}
-          {globalDelta === 0
-            ? "Sin variación vs mes anterior"
-            : `${Math.abs(globalDeltaPct).toFixed(1)}% vs mes anterior`}
-        </p>
+        {globalDelta !== 0 && (
+          <p className={`text-sm font-medium ${
+            globalDelta > 0 ? "text-rose-500" : "text-blue-600"
+          }`}>
+            {globalDelta > 0 ? "↑" : "↓"}{" "}
+            {Math.abs(globalDelta).toLocaleString("es-CO")}
+          </p>
+        )}
       </div>
 
+      {/* INSIGHT ESTRUCTURAL */}
       {advanced && (
-  <div className="max-w-md mx-auto text-center mt-4">
-    {fixedPct > 70 && (
-      <div className="bg-rose-50 rounded-lg p-4 text-rose-700 text-sm">
-        Alta rigidez estructural. {fixedPct}% del gasto es fijo.
-      </div>
-    )}
-    {fixedPct <= 70 && fixedPct > 50 && (
-      <div className="bg-amber-50 rounded-lg p-4 text-amber-700 text-sm">
-        Estructura equilibrada.
-      </div>
-    )}
-    {fixedPct <= 50 && (
-      <div className="bg-blue-50 rounded-lg p-4 text-blue-700 text-sm">
-        Buena flexibilidad estructural.
-      </div>
-    )}
-  </div>
-)}
+        <div className="text-center">
+          {fixedPct > 70 && (
+            <div className="bg-rose-50 p-3 rounded-lg text-rose-600 text-sm">
+              Alta rigidez estructural ({fixedPct}% fijo)
+            </div>
+          )}
+        </div>
+      )}
 
-      {/* ================= */}
-      {/* SECCIONES         */}
-      {/* ================= */}
-
+      {/* SECCIONES */}
       {[{
         title: "Movimientos Fijos",
         items: fixedCategories,
-        clusterBase: absFixed,
-        barColor: "bg-rose-400",
       },{
         title: "Movimientos Variables",
         items: variableCategories,
-        clusterBase: absVariable,
-        barColor: "bg-blue-500",
       }].map(section => (
         <div key={section.title} className="space-y-4">
 
@@ -188,156 +154,60 @@ export default function FinanzasCategories() {
           {section.items.map(cat => {
 
             const spent = Math.abs(cat.total)
-            const budget = cat.budget ?? 0
             const previous = Math.abs(cat.previousTotal ?? 0)
-
             const delta = spent - previous
-            const deltaPct =
-              previous === 0
-                ? spent > 0 ? 100 : 0
-                : (delta / previous) * 100
 
             const hasSubcategories =
-              Array.isArray(cat.subcategories) &&
-              cat.subcategories.length > 0
-
-            const percent =
-              section.clusterBase > 0
-                ? (spent / section.clusterBase) * 100
-                : 0
-
-            const usagePercent =
-              budget === 0 ? 0 : (spent / budget) * 100
-
-            const difference = spent - budget
-
-            const alertOverExecution =
-              advanced && usagePercent > 120
-
-            const alertEarlyMonth =
-              advanced && today < 15 && usagePercent > 50
+              cat.subcategories && cat.subcategories.length > 0
 
             return (
               <div
                 key={cat.name}
-                className="card p-4 bg-white rounded-lg border border-gray-200 space-y-3"
+                className="bg-white p-4 rounded-2xl shadow border"
               >
 
-                {/* HEADER */}
-                <div className="flex justify-between items-center gap-4">
+                <div className="flex justify-between items-center">
 
-  <button
-    onClick={() => toggleCategory(cat.name)}
-    className="flex items-center gap-2 text-left"
-  >
-    <span className="font-medium">{cat.name}</span>
-    {hasSubcategories && (
-      <span className="text-sm">
-        {expanded === cat.name ? "▲" : "▼"}
-      </span>
-    )}
-  </button>
+                  <button
+                    onClick={() => toggleCategory(cat.name)}
+                    className="flex items-center gap-2"
+                  >
+                    <span className="font-medium">{cat.name}</span>
+                    {hasSubcategories && (
+                      <span>{expanded === cat.name ? "▲" : "▼"}</span>
+                    )}
+                  </button>
 
-  <div className="text-right">
-    <button
-      onClick={() => navigateToTransactions(cat.name)}
-      className="font-semibold hover:text-blue-600 hover:underline"
-    >
-      -${formatMoney(cat.total)}
-    </button>
+                  <button
+                    onClick={() => navigateToTransactions(cat.name)}
+                    className="font-semibold"
+                  >
+                    -${formatMoney(cat.total)}
+                  </button>
 
-    {advanced && cat.previousTotal !== undefined && (
-      <div className={`text-xs ${
-        cat.total - cat.previousTotal > 0
-          ? "text-rose-500"
-          : "text-blue-600"
-      }`}>
-        {(cat.total - cat.previousTotal) > 0 ? "↑" : "↓"}{" "}
-        {Math.abs(
-          ((cat.total - cat.previousTotal) /
-            (cat.previousTotal || 1)) *
-            100
-        ).toFixed(1)}%
-      </div>
-    )}
-  </div>
-
-</div>
-
-                {/* DELTA (solo análisis) */}
-                {advanced && delta !== 0 && (
-                  <div className={`text-xs ${
-                    delta > 0 ? "text-rose-500" : "text-blue-600"
-                  }`}>
-                    {delta > 0 ? "↑" : "↓"} {Math.abs(deltaPct).toFixed(1)}%
-                    {" "}(${formatMoney(Math.abs(delta))})
-                  </div>
-                )}
-
-                {/* Barra cluster */}
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className={`${section.barColor} h-2 rounded-full`}
-                    style={{ width: `${Math.min(percent, 100)}%` }}
-                  />
                 </div>
 
-                {/* Presupuesto */}
-                {budget > 0 && (
-                  <div className="text-sm space-y-1">
-
-                    <div className="flex justify-between">
-                      <span>Presupuesto</span>
-                      <span>${formatMoney(budget)}</span>
-                    </div>
-
-                    <div className="flex justify-between">
-                      <span>
-                        {difference > 0 ? "Sobre ejecución" : "Sub ejecución"}
-                      </span>
-                      <span className={
-                        difference > 0 ? "text-rose-600" : "text-emerald-600"
-                      }>
-                        {difference > 0 ? "+" : "-"}
-                        ${formatMoney(Math.abs(difference))}
-                      </span>
-                    </div>
-
-                    {advanced && (
-                      <div className="text-xs text-gray-600">
-                        Uso {usagePercent.toFixed(0)}%
-                      </div>
-                    )}
-
-                    {alertOverExecution && (
-                      <div className="text-xs text-rose-600">
-                        ⚠ Sobre ejecución crítica (+20%)
-                      </div>
-                    )}
-
-                    {alertEarlyMonth && (
-                      <div className="text-xs text-amber-600">
-                        ⚠ 50% consumido antes del día 15
-                      </div>
-                    )}
-
+                {advanced && delta !== 0 && (
+                  <div className={`text-xs mt-1 ${
+                    delta > 0 ? "text-rose-500" : "text-blue-600"
+                  }`}>
+                    {delta > 0 ? "↑" : "↓"} {formatMoney(Math.abs(delta))}
                   </div>
                 )}
 
-                {/* Subcategorías */}
                 {expanded === cat.name && hasSubcategories && (
-                  <div className="mt-3 space-y-2 border-t pt-3">
+                  <div className="mt-3 border-t pt-3 space-y-2">
                     {cat.subcategories!.map(sub => (
                       <button
                         key={sub.name}
                         onClick={() =>
                           router.push(
-                            `/finanzas/transactions?month=${encodeURIComponent(month)}&category=${encodeURIComponent(cat.name)}&subcategory=${encodeURIComponent(sub.name)}`
+                            `/finanzas/transactions?month=${month}&category=${cat.name}&subcategory=${sub.name}`
                           )
                         }
-                        className="w-full flex justify-between text-sm hover:text-blue-600"
+                        className="w-full flex justify-between text-sm"
                       >
-                        <span>• {sub.name}</span>
+                        <span>{sub.name}</span>
                         <span>-${formatMoney(sub.total)}</span>
                       </button>
                     ))}
