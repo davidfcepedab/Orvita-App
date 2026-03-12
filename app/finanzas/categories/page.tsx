@@ -62,46 +62,13 @@ export default function FinanzasCategories() {
   const variablePct =
     structuralTotal > 0 ? 100 - fixedPct : 0
 
-  const rigidezColor =
-    fixedPct > 75
-      ? "text-rose-500"
-      : fixedPct > 60
-      ? "text-amber-500"
-      : "text-blue-600"
-
-  const budgetValues = structuralCategories
-    .filter((c: any) => c.budget > 0)
-    .map((c: any) => c.budgetUsedPercent)
-
-  const avgBudget =
-    budgetValues.length > 0
-      ? budgetValues.reduce(
-          (a: number, b: number) => a + b,
-          0
-        ) / budgetValues.length
-      : 0
-
-  const presionEstado =
-    avgBudget > 100
-      ? "Crítica"
-      : avgBudget > 80
-      ? "Tensión"
-      : "Saludable"
-
-  const presionColor =
-    avgBudget > 100
-      ? "text-rose-500"
-      : avgBudget > 80
-      ? "text-amber-500"
-      : "text-blue-600"
-
   const donutData = [
     { name: "Fijos", value: absFixed },
     { name: "Variables", value: absVariable },
   ]
 
-  const handleClickCategory = (name: string) => {
-    setExpanded(expanded === name ? null : name)
+  const toggleCategory = (name: string) => {
+    setExpanded(prev => prev === name ? null : name)
   }
 
   return (
@@ -109,51 +76,16 @@ export default function FinanzasCategories() {
 
       {/* TOGGLE */}
       <div className="flex justify-end">
-        <label className="flex items-center gap-2 text-sm cursor-pointer">
-          <span className="text-gray-500">Modo análisis</span>
-          <div
-            onClick={() => setAdvanced(!advanced)}
-            className={`w-10 h-5 flex items-center rounded-full p-1 transition ${
-              advanced ? "bg-indigo-600" : "bg-gray-300"
-            }`}
-          >
-            <div
-              className={`bg-white w-4 h-4 rounded-full shadow-md transform transition ${
-                advanced ? "translate-x-5" : ""
-              }`}
-            />
-          </div>
-        </label>
-      </div>
-
-      {/* INDICES */}
-      <div className="card p-4 text-sm space-y-2">
-        <div className="flex justify-between">
-          <span>Rigidez estructural</span>
-          <span className={rigidezColor}>{fixedPct}%</span>
-        </div>
-        <div className="flex justify-between">
-          <span>Presión presupuestal</span>
-          <span className={presionColor}>
-            {presionEstado} ({avgBudget.toFixed(0)}%)
-          </span>
-        </div>
-      </div>
-
-      {/* TOTALES */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="card p-6 text-center">
-          <p className="text-sm text-gray-500">Fijos</p>
-          <p className="text-2xl font-semibold text-rose-400 mt-2">
-            -${formatMoney(totalFixed)}
-          </p>
-        </div>
-        <div className="card p-6 text-center">
-          <p className="text-sm text-gray-500">Variables</p>
-          <p className="text-2xl font-semibold text-blue-600 mt-2">
-            -${formatMoney(totalVariable)}
-          </p>
-        </div>
+        <button
+          onClick={() => setAdvanced(!advanced)}
+          className={`px-3 py-1 rounded-full text-sm transition ${
+            advanced
+              ? "bg-indigo-600 text-white"
+              : "bg-gray-200 text-gray-600"
+          }`}
+        >
+          Modo análisis
+        </button>
       </div>
 
       {/* DONUT */}
@@ -171,23 +103,6 @@ export default function FinanzasCategories() {
             </Pie>
           </PieChart>
         </ResponsiveContainer>
-
-        <div className="flex justify-between mt-4 text-lg font-semibold">
-          <div className="text-rose-400">
-            Fijos {fixedPct}%
-          </div>
-          <div className="text-blue-600">
-            Variables {variablePct}%
-          </div>
-        </div>
-
-        {advanced && (
-          <div className="mt-3 text-sm text-gray-500 text-center">
-            {fixedPct > 70 && "Alta rigidez estructural."}
-            {fixedPct <= 70 && fixedPct > 50 && "Estructura equilibrada."}
-            {fixedPct <= 50 && "Buena flexibilidad estructural."}
-          </div>
-        )}
       </div>
 
       {/* SECCIONES */}
@@ -204,6 +119,7 @@ export default function FinanzasCategories() {
         barColor: "bg-blue-500"
       }].map((section) => (
         <div key={section.title} className="space-y-4">
+
           <h2 className="text-xl font-semibold">
             {section.title}
           </h2>
@@ -213,124 +129,77 @@ export default function FinanzasCategories() {
             const percent =
               section.clusterBase > 0
                 ? (Math.abs(cat.total) /
-                    section.clusterBase) *
-                  100
+                    section.clusterBase) * 100
                 : 0
-
-            const delta = cat.deltaCluster ?? 0
-            const budgetUsed =
-              cat.budgetUsedPercent ?? 0
 
             return (
               <div
                 key={cat.name}
-                className="card p-4 transition-all duration-200"
+                className="card p-4 space-y-2"
               >
+                {/* HEADER */}
                 <div className="flex justify-between items-center">
-                  <p
-                    className="font-medium flex items-center gap-2 cursor-pointer"
-                    onClick={() =>
-                      handleClickCategory(cat.name)
-                    }
+
+                  {/* NOMBRE EXPANDE */}
+                  <div
+                    onClick={() => toggleCategory(cat.name)}
+                    className="flex items-center gap-2 cursor-pointer"
                   >
-                    {cat.name}
+                    <span className="font-medium">
+                      {cat.name}
+                    </span>
                     <span className="text-xs text-gray-400">
                       {expanded === cat.name ? "▴" : "▾"}
                     </span>
-                  </p>
+                  </div>
 
-                  <p
-                    className="font-semibold cursor-pointer hover:underline"
+                  {/* MONTO NAVEGA */}
+                  <div
                     onClick={(e) => {
                       e.stopPropagation()
                       router.push(
-                        `/finanzas/movimientos?month=${month}&category=${cat.name}`
+                        `/finanzas/transactions?month=${month}&category=${encodeURIComponent(cat.name)}`
                       )
                     }}
+                    className="font-semibold cursor-pointer hover:underline"
                   >
                     -${formatMoney(cat.total)}
-                  </p>
+                  </div>
+
                 </div>
 
-                <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                {/* BARRA */}
+                <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
-                    className={`h-2 rounded-full ${section.barColor}`}
+                    className={`${section.barColor} h-2 rounded-full`}
                     style={{ width: `${percent}%` }}
                   />
                 </div>
 
-                {advanced && (
-                  <div className="flex justify-between text-xs mt-2">
-                    <span>{percent.toFixed(1)}%</span>
-                    <span
-                      className={
-                        delta > 0
-                          ? "text-rose-400"
-                          : "text-blue-600"
-                      }
-                    >
-                      {delta > 0 ? "↑" : "↓"}{" "}
-                      {Math.abs(delta).toFixed(1)}%
-                    </span>
-                  </div>
-                )}
-
-                {advanced && cat.budget > 0 && (
-                  <div className="mt-3 text-xs text-gray-500">
-                    Presupuesto: ${formatMoney(cat.budget)}
-                    <div>
-                      {budgetUsed.toFixed(0)}% usado
-                    </div>
-                  </div>
-                )}
-
+                {/* SUBCATEGORIAS */}
                 {expanded === cat.name &&
                   cat.subcategories?.length > 0 && (
                     <div className="mt-3 space-y-2 border-t pt-3">
-                      {cat.subcategories
-                        .sort(
-                          (a: any, b: any) =>
-                            Math.abs(b.total) -
-                            Math.abs(a.total)
-                        )
-                        .map((sub: any) => {
-
-                          const subPct =
-                            Math.abs(cat.total) > 0
-                              ? (Math.abs(sub.total) /
-                                  Math.abs(cat.total)) *
-                                100
-                              : 0
-
-                          return (
-                            <div key={sub.name} className="text-xs">
-                              <div className="flex justify-between text-gray-500">
-                                <span>• {sub.name}</span>
-                                <span>
-                                  -${formatMoney(sub.total)}
-                                </span>
-                              </div>
-
-                              {advanced && (
-                                <div className="w-full bg-gray-200 rounded-full h-1 mt-1">
-                                  <div
-                                    className="bg-gray-400 h-1 rounded-full"
-                                    style={{
-                                      width: `${subPct}%`,
-                                    }}
-                                  />
-                                </div>
-                              )}
-                            </div>
-                          )
-                        })}
+                      {cat.subcategories.map((sub: any) => (
+                        <div
+                          key={sub.name}
+                          className="flex justify-between text-sm text-gray-600"
+                        >
+                          <span>• {sub.name}</span>
+                          <span>
+                            -${formatMoney(sub.total)}
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   )}
+
               </div>
             )
           })}
         </div>
       ))}
+
     </div>
   )
 }
