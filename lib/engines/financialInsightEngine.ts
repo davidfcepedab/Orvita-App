@@ -1,48 +1,59 @@
 export function financialInsightEngine({
-  ingresos,
-  flujo,
-  liquidez,
-  runway,
-  categories = [], // ← fallback defensivo
+  structuralCategories,
+  totalFixed,
+  totalVariable,
+  totalStructural,
 }: {
-  ingresos: number
-  flujo: number
-  liquidez?: number
-  runway?: number
-  categories?: any[]
+  structuralCategories: any[]
+  totalFixed: number
+  totalVariable: number
+  totalStructural: number
 }) {
-  const insights: string[] = []
-
-  // 🔹 Déficit
-  if (flujo < 0) {
-    insights.push("Estás en déficit este mes.")
-  }
-
-  // 🔹 Liquidez crítica
-  if (runway !== undefined && runway < 2) {
-    insights.push("Riesgo de liquidez en corto plazo.")
-  }
-
-  // 🔹 Categoría con fuerte variación
-  if (Array.isArray(categories) && categories.length > 0) {
-    const alertCategory = categories.find(
-      (c) => c.delta && c.delta > 25
-    )
-
-    if (alertCategory) {
-      insights.push(
-        `Incremento fuerte en ${alertCategory.name}.`
-      )
+  if (!structuralCategories || totalStructural === 0) {
+    return {
+      fixedRatio: 0,
+      structuralRigidity: "low",
+      riskLevel: "stable",
+      alerts: [],
     }
   }
 
-  if (insights.length === 0) {
-    insights.push("Situación financiera estable.")
+  const fixedRatio = totalFixed / totalStructural
+
+  let structuralRigidity: "low" | "medium" | "high" = "low"
+
+  if (fixedRatio > 0.7) structuralRigidity = "high"
+  else if (fixedRatio > 0.5) structuralRigidity = "medium"
+
+  const overBudgetCategories = structuralCategories.filter(
+    (c) => c.budget && c.budgetUsedPercent >= 100
+  )
+
+  let riskLevel: "stable" | "warning" | "critical" = "stable"
+
+  if (overBudgetCategories.length > 2) riskLevel = "critical"
+  else if (overBudgetCategories.length > 0) riskLevel = "warning"
+
+  const topCategory = structuralCategories.sort(
+    (a, b) => Math.abs(b.total) - Math.abs(a.total)
+  )[0]
+
+  const alerts: string[] = []
+
+  if (structuralRigidity === "high") {
+    alerts.push("Alta rigidez estructural.")
+  }
+
+  if (overBudgetCategories.length > 0) {
+    alerts.push("Existen categorías sobre presupuesto.")
   }
 
   return {
-    type: flujo < 0 ? "alert" : "info",
-    message: insights[0],
-    all: insights,
+    fixedRatio,
+    structuralRigidity,
+    topCategory: topCategory?.name || null,
+    overBudgetCategories: overBudgetCategories.map((c) => c.name),
+    riskLevel,
+    alerts,
   }
 }
