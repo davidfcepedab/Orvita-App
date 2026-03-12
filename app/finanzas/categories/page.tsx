@@ -19,7 +19,12 @@ interface Category {
   name: string
   type: "fixed" | "variable"
   total: number
-  subcategories?: Subcategory[]
+  previousTotal?: number
+  delta?: number
+  budget?: number
+  budgetUsedPercent?: number
+  budgetStatus?: "green" | "yellow" | "red"
+  subs?: Subcategory[]
 }
 
 interface CategoriesData {
@@ -192,6 +197,26 @@ export default function FinanzasCategories() {
         </button>
       </div>
 
+      {/* TOTALS SUMMARY */}
+      <div className="flex justify-center gap-12">
+        <div className="text-center">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+            Movimientos Fijos
+          </p>
+          <p className="text-2xl font-bold text-rose-500">
+            ${formatMoney(absFixed)}
+          </p>
+        </div>
+        <div className="text-center">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+            Movimientos Variables
+          </p>
+          <p className="text-2xl font-bold text-blue-600">
+            ${formatMoney(absVariable)}
+          </p>
+        </div>
+      </div>
+
       {/* DONUT CHART */}
       <div className="card p-6 bg-white rounded-lg shadow">
         <div className="h-64">
@@ -218,145 +243,233 @@ export default function FinanzasCategories() {
 
       {/* ANÁLISIS AVANZADO */}
       {advanced && (
-        <div className="card p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-3">
-          <div className="flex justify-center gap-8 font-semibold text-sm">
-            <span className="text-rose-500">
-              Fijos: {fixedPct}%
-            </span>
-            <span className="text-blue-600">
-              Variables: {variablePct}%
-            </span>
+        <div className="space-y-3 max-w-md mx-auto">
+          <div className="flex justify-center gap-12 font-semibold text-sm">
+            <span className="text-rose-500">Fijos: {fixedPct}%</span>
+            <span className="text-blue-600">Variables: {variablePct}%</span>
           </div>
 
           {fixedPct > 70 && (
-            <div className="p-3 bg-rose-100 border border-rose-300 rounded text-rose-700 text-sm">
-              ⚠️ <strong>Alta rigidez estructural.</strong> El gasto fijo limita tu flexibilidad financiera.
+            <div className="p-4 bg-rose-50 rounded-lg text-rose-700 text-sm leading-relaxed">
+              <strong>Alta rigidez estructural.</strong> El gasto fijo limita tu flexibilidad financiera. Considera revisar suscripciones y servicios recurrentes.
             </div>
           )}
 
           {fixedPct <= 70 && fixedPct > 50 && (
-            <div className="p-3 bg-amber-100 border border-amber-300 rounded text-amber-700 text-sm">
-              ⚡ <strong>Estructura equilibrada.</strong> Monitorea los gastos fijos.
+            <div className="p-4 bg-amber-50 rounded-lg text-amber-700 text-sm leading-relaxed">
+              <strong>Estructura equilibrada.</strong> Mantén control sobre tus gastos fijos para mejorar flexibilidad.
             </div>
           )}
 
           {fixedPct <= 50 && (
-            <div className="p-3 bg-green-100 border border-green-300 rounded text-green-700 text-sm">
-              ✓ <strong>Buena flexibilidad estructural.</strong> Tienes control sobre tus gastos.
+            <div className="p-4 bg-blue-50 rounded-lg text-blue-700 text-sm leading-relaxed">
+              <strong>Excelente flexibilidad estructural.</strong> Tu distribución de gastos te permite adaptarte a cambios financieros.
             </div>
           )}
         </div>
       )}
 
       {/* SECCIONES DE CATEGORÍAS */}
-      {[
-        {
-          title: "Movimientos Fijos",
-          items: fixedCategories,
-          clusterBase: absFixed,
-          barColor: "bg-rose-400",
-          isEmpty: fixedCategories.length === 0,
-        },
-        {
-          title: "Movimientos Variables",
-          items: variableCategories,
-          clusterBase: absVariable,
-          barColor: "bg-blue-500",
-          isEmpty: variableCategories.length === 0,
-        },
-      ].map((section) => (
-        <div key={section.title} className="space-y-4">
-          <h2 className="text-xl font-semibold text-gray-800">
-            {section.title}
-          </h2>
+      <div className="space-y-8">
+        {[
+          {
+            title: "Movimientos Fijos",
+            items: fixedCategories,
+            clusterBase: absFixed,
+            barColor: "bg-rose-400",
+            isEmpty: fixedCategories.length === 0,
+          },
+          {
+            title: "Movimientos Variables",
+            items: variableCategories,
+            clusterBase: absVariable,
+            barColor: "bg-blue-500",
+            isEmpty: variableCategories.length === 0,
+          },
+        ].map((section) => (
+          <div key={section.title} className="space-y-4">
+            <h2 className="text-xl font-semibold text-gray-800">
+              {section.title}
+            </h2>
 
-          {section.isEmpty ? (
-            <div className="p-4 bg-gray-50 rounded-lg text-center text-gray-500 text-sm">
-              Sin categorías registradas
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {section.items.map((cat) => {
-                const percent =
-                  section.clusterBase > 0
-                    ? (Math.abs(cat.total) / section.clusterBase) * 100
+            {section.isEmpty ? (
+              <div className="p-4 bg-gray-50 rounded-lg text-center text-gray-500 text-sm">
+                Sin categorías registradas
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {section.items.map((cat) => {
+                  const percent =
+                    section.clusterBase > 0
+                      ? (Math.abs(cat.total) / section.clusterBase) * 100
+                      : 0
+
+                  const hasSubs =
+                    Array.isArray(cat.subs) && cat.subs.length > 0
+
+                  // Delta comparative indicator
+                  const hasDelta =
+                    cat.delta !== undefined &&
+                    cat.previousTotal !== undefined &&
+                    Math.abs(cat.previousTotal) > 0
+                  const expenseIncreased = hasDelta && (cat.delta ?? 0) < 0
+                  const deltaPercent = hasDelta
+                    ? Math.round(
+                        (Math.abs(cat.delta ?? 0) /
+                          Math.abs(cat.previousTotal!)) *
+                          100
+                      )
                     : 0
 
-                const hasSubcategories =
-                  Array.isArray(cat.subcategories) &&
-                  cat.subcategories.length > 0
+                  // Budget logic
+                  const hasBudget =
+                    cat.budget !== undefined && cat.budget > 0
+                  const budgetPct = cat.budgetUsedPercent ?? 0
+                  const isBudgetOverrun = budgetPct >= 100
+                  const isBudgetWarning = budgetPct >= 85 && budgetPct < 100
 
-                return (
-                  <div
-                    key={cat.name}
-                    className="card p-4 bg-white rounded-lg border border-gray-200 hover:shadow-md transition space-y-3"
-                  >
-                    {/* HEADER */}
-                    <div className="flex justify-between items-center gap-4">
-                      {/* NOMBRE + TOGGLE */}
-                      <button
-                        onClick={() => toggleCategory(cat.name)}
-                        className="flex items-center gap-2 cursor-pointer hover:opacity-70 transition flex-1 text-left"
-                        aria-expanded={expanded === cat.name}
-                      >
-                        <span className="font-medium text-gray-900">
-                          {cat.name}
-                        </span>
-                        {hasSubcategories && (
-                          <span className="text-xs text-gray-400 ml-auto">
-                            {expanded === cat.name ? "▴" : "▾"}
+                  return (
+                    <div
+                      key={cat.name}
+                      className="card p-4 bg-white rounded-lg border border-gray-200 hover:shadow-md transition space-y-3"
+                    >
+                      {/* HEADER */}
+                      <div className="flex justify-between items-center gap-4">
+                        {/* NOMBRE + TOGGLE */}
+                        <button
+                          onClick={() => toggleCategory(cat.name)}
+                          className="flex items-center gap-2 cursor-pointer hover:opacity-70 transition flex-1 text-left"
+                          aria-expanded={expanded === cat.name}
+                        >
+                          <span className="font-medium text-gray-900">
+                            {cat.name}
                           </span>
-                        )}
-                      </button>
+                          {hasSubs && (
+                            <span className="text-xs text-gray-400 ml-auto">
+                              {expanded === cat.name ? "▴" : "▾"}
+                            </span>
+                          )}
+                        </button>
 
-                      {/* MONTO - CLICKEABLE */}
-                      <button
-                        onClick={() => navigateToTransactions(cat.name)}
-                        className="font-semibold text-gray-900 hover:text-blue-600 hover:underline transition whitespace-nowrap"
-                        title="Ver transacciones de esta categoría"
-                      >
-                        -${formatMoney(cat.total)}
-                      </button>
-                    </div>
-
-                    {/* BARRA DE PROGRESO */}
-                    <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                      <div
-                        className={`${section.barColor} h-2 rounded-full transition-all duration-300`}
-                        style={{ width: `${Math.min(percent, 100)}%` }}
-                        role="progressbar"
-                        aria-valuenow={Math.round(percent)}
-                        aria-valuemin={0}
-                        aria-valuemax={100}
-                      />
-                    </div>
-
-                    {/* SUBCATEGORÍAS */}
-                    {expanded === cat.name && hasSubcategories && (
-                      <div className="mt-4 space-y-2 border-t border-gray-200 pt-3">
-                        <p className="text-xs font-semibold text-gray-600 uppercase">
-                          Subcategorías
-                        </p>
-                        {cat.subcategories!.map((sub) => (
-                          <div
-                            key={sub.name}
-                            className="flex justify-between text-sm text-gray-600 hover:text-gray-900 transition"
+                        {/* MONTO + DELTA */}
+                        <div className="flex flex-col items-end gap-1">
+                          <button
+                            onClick={() => navigateToTransactions(cat.name)}
+                            className="font-semibold text-gray-900 hover:text-blue-600 hover:underline transition whitespace-nowrap cursor-pointer"
+                            title="Ver transacciones de esta categoría"
                           >
-                            <span>• {sub.name}</span>
-                            <span className="font-medium">
-                              -${formatMoney(sub.total)}
+                            -${formatMoney(cat.total)}
+                          </button>
+
+                          {hasDelta && deltaPercent > 0 && (
+                            <span
+                              className={`text-xs font-medium ${
+                                expenseIncreased
+                                  ? "text-rose-500"
+                                  : "text-blue-600"
+                              }`}
+                            >
+                              {expenseIncreased ? "↑" : "↓"} {deltaPercent}% vs mes anterior
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* BARRA DE PROGRESO */}
+                      <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                        <div
+                          className={`${section.barColor} h-2 rounded-full transition-all duration-300`}
+                          style={{ width: `${Math.min(percent, 100)}%` }}
+                          role="progressbar"
+                          aria-valuenow={Math.round(percent)}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                        />
+                      </div>
+
+                      {/* PRESUPUESTO - SOLO EN MODO AVANZADO */}
+                      {advanced && hasBudget && (
+                        <div
+                          className={`p-3 rounded-lg space-y-2 ${
+                            isBudgetOverrun
+                              ? "bg-rose-50"
+                              : isBudgetWarning
+                              ? "bg-amber-50"
+                              : "bg-emerald-50"
+                          }`}
+                        >
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-600">Presupuesto</span>
+                            <span className="font-semibold text-gray-800">
+                              ${formatMoney(cat.budget ?? 0)}
                             </span>
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      ))}
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-gray-500">Uso</span>
+                            <span
+                              className={`font-semibold ${
+                                isBudgetOverrun
+                                  ? "text-rose-500"
+                                  : isBudgetWarning
+                                  ? "text-amber-600"
+                                  : "text-emerald-600"
+                              }`}
+                            >
+                              {Math.round(budgetPct)}%
+                              {isBudgetOverrun && " ⚠️"}
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className={`h-1.5 rounded-full transition-all duration-300 ${
+                                isBudgetOverrun
+                                  ? "bg-rose-500"
+                                  : isBudgetWarning
+                                  ? "bg-amber-400"
+                                  : "bg-emerald-500"
+                              }`}
+                              style={{
+                                width: `${Math.min(budgetPct, 100)}%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* SUBCATEGORÍAS */}
+                      {expanded === cat.name && hasSubs && (
+                        <div className="space-y-1 border-t border-gray-200 pt-3">
+                          <p className="text-xs font-semibold text-gray-500 uppercase mb-2">
+                            Subcategorías
+                          </p>
+                          {cat.subs!.map((sub) => (
+                            <button
+                              key={sub.name}
+                              onClick={() => {
+                                if (!month) return
+                                router.push(
+                                  `/finanzas/transactions?month=${encodeURIComponent(month)}&category=${encodeURIComponent(cat.name)}&subcategory=${encodeURIComponent(sub.name)}`
+                                )
+                              }}
+                              className="w-full flex justify-between text-sm text-gray-600 hover:text-blue-600 hover:bg-gray-50 transition cursor-pointer py-1 px-2 rounded"
+                              title="Ver transacciones de esta subcategoría"
+                            >
+                              <span>• {sub.name}</span>
+                              <span className="font-medium">
+                                -${formatMoney(sub.total)}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

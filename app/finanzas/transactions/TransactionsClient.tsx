@@ -5,16 +5,16 @@ import { useFinance } from "../FinanceContext"
 import { useSearchParams } from "next/navigation"
 
 interface Transaction {
-  id: string
-  date: string
-  description: string
-  amount: number
-  category?: string
+  fecha: string
+  descripcion: string
+  categoria: string
+  subcategoria: string
+  monto: number
 }
 
 interface TransactionsResponse {
   transactions: Transaction[]
-  total?: number
+  subtotal?: number
   success?: boolean
   error?: string
 }
@@ -37,6 +37,7 @@ export default function TransactionsClient() {
 
   const { month } = finance
   const categoryFilter = searchParams.get("category")
+  const subcategoryFilter = searchParams.get("subcategory")
 
   useEffect(() => {
     if (!month) {
@@ -53,6 +54,10 @@ export default function TransactionsClient() {
 
         if (categoryFilter) {
           url += `&category=${encodeURIComponent(categoryFilter)}`
+        }
+
+        if (subcategoryFilter) {
+          url += `&subcategory=${encodeURIComponent(subcategoryFilter)}`
         }
 
         const response = await fetch(url)
@@ -79,7 +84,7 @@ export default function TransactionsClient() {
     }
 
     fetchTransactions()
-  }, [month, categoryFilter])
+  }, [month, categoryFilter, subcategoryFilter])
 
   // Estado de carga
   if (loading) {
@@ -119,15 +124,21 @@ export default function TransactionsClient() {
         <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
           <span className="text-gray-500">Filtro: </span>
           <span className="font-medium text-gray-800">{categoryFilter}</span>
+          {subcategoryFilter && (
+            <>
+              <span className="text-gray-400 mx-1">›</span>
+              <span className="font-medium text-gray-800">{subcategoryFilter}</span>
+            </>
+          )}
         </div>
       )}
 
       {/* Resumen */}
-      {hasTransactions && data.total !== undefined && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+      {hasTransactions && data.subtotal !== undefined && (
+        <div className="bg-blue-50 rounded-lg p-4">
           <p className="text-sm text-gray-600">Total de movimientos</p>
           <p className="text-2xl font-bold text-blue-600">
-            ${Math.abs(data.total).toLocaleString("es-CO")}
+            ${Math.abs(data.subtotal).toLocaleString("es-CO")}
           </p>
         </div>
       )}
@@ -135,26 +146,29 @@ export default function TransactionsClient() {
       {/* Transacciones */}
       {hasTransactions ? (
         <div className="space-y-3">
-          {transactions.map((tx) => (
+          {transactions.map((tx, index) => (
             <div
-              key={tx.id}
+              key={`${tx.fecha}-${tx.descripcion}-${index}`}
               className="flex justify-between items-center p-4 border border-gray-200 rounded-lg hover:shadow-md transition"
             >
               <div className="flex-1">
-                <p className="font-medium text-gray-900">{tx.description}</p>
-                <p className="text-xs text-gray-500 mt-1">
-                  {new Date(tx.date).toLocaleDateString("es-CO")}
-                </p>
-                {tx.category && (
-                  <p className="text-xs text-gray-400 mt-1">{tx.category}</p>
+                <p className="font-medium text-gray-900">{tx.descripcion}</p>
+                <p className="text-xs text-gray-500 mt-1">{tx.fecha}</p>
+                {tx.categoria && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    {tx.categoria}
+                    {tx.subcategoria && tx.subcategoria !== "Sin subcategoria" && (
+                      <span> › {tx.subcategoria}</span>
+                    )}
+                  </p>
                 )}
               </div>
 
               <div className="text-right">
                 <p className={`font-semibold text-lg ${
-                  tx.amount < 0 ? "text-red-600" : "text-green-600"
+                  tx.monto < 0 ? "text-red-600" : "text-green-600"
                 }`}>
-                  {tx.amount < 0 ? "-" : "+"}${Math.abs(tx.amount).toLocaleString("es-CO")}
+                  {tx.monto < 0 ? "-" : "+"}${Math.abs(tx.monto).toLocaleString("es-CO")}
                 </p>
               </div>
             </div>
@@ -163,9 +177,7 @@ export default function TransactionsClient() {
       ) : (
         <div className="p-6 text-center bg-gray-50 rounded-lg">
           <p className="text-gray-600">
-            {categoryFilter
-              ? `No hay movimientos en la categoría "${categoryFilter}" para este mes.`
-              : "No hay movimientos registrados para este mes."}
+            Sin movimientos registrados para este período.
           </p>
         </div>
       )}

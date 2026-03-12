@@ -12,6 +12,9 @@ export async function GET(req: NextRequest) {
     const category =
       req.nextUrl.searchParams.get("category")
 
+    const subcategory =
+      req.nextUrl.searchParams.get("subcategory")
+
     const movimientosRes =
       await sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
@@ -28,6 +31,7 @@ export async function GET(req: NextRequest) {
       if (!rowMonth) return false
       if (rowMonth !== month) return false
       if (category && rowCategory !== category) return false
+      if (subcategory && (r?.[7] || "Sin subcategoria") !== subcategory) return false
 
       return true
     })
