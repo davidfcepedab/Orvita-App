@@ -8,17 +8,15 @@ import {
   Pie,
   Cell,
 } from "recharts"
-import { useRouter } from "next/navigation"
 
 export default function FinanzasCategories() {
   const { month } = useFinance()
-  const router = useRouter()
   const [data, setData] = useState<any>(null)
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [advanced, setAdvanced] = useState(false)
 
   useEffect(() => {
     if (!month) return
-
     fetch(`/api/finanzas/categories?month=${month}`)
       .then((res) => res.json())
       .then(setData)
@@ -59,13 +57,8 @@ export default function FinanzasCategories() {
       : 0
 
   const variablePct =
-    structuralTotal > 0
-      ? 100 - fixedPct
-      : 0
+    structuralTotal > 0 ? 100 - fixedPct : 0
 
-  // =========================
-  // ÍNDICE RIGIDEZ ESTRUCTURAL
-  // =========================
   const rigidez = fixedPct
 
   const rigidezColor =
@@ -73,11 +66,8 @@ export default function FinanzasCategories() {
       ? "text-rose-500"
       : rigidez > 60
       ? "text-amber-500"
-      : "text-emerald-600"
+      : "text-blue-600"
 
-  // =========================
-  // ÍNDICE PRESIÓN PRESUPUESTAL
-  // =========================
   const budgetValues = structuralCategories
     .filter((c: any) => c.budget > 0)
     .map((c: any) => c.budgetUsedPercent)
@@ -102,7 +92,7 @@ export default function FinanzasCategories() {
       ? "text-rose-500"
       : avgBudget > 80
       ? "text-amber-500"
-      : "text-emerald-600"
+      : "text-blue-600"
 
   const donutData = [
     { name: "Fijos", value: absFixed },
@@ -116,49 +106,33 @@ export default function FinanzasCategories() {
   return (
     <div className="space-y-8">
 
-
-{/* HEATMAP 6 MESES */}
-<div className="card p-6">
-  <h3 className="text-sm text-gray-500 mb-4">
-    Intensidad estructural 6 meses
-  </h3>
-
-  <div className="space-y-3">
-    {data.heatmap6m?.map((row: any) => (
-      <div key={row.name} className="flex items-center gap-3">
-
-        <div className="w-28 text-xs text-gray-600">
-          {row.name}
-        </div>
-
-        <div className="flex gap-1 flex-1">
-          {row.months.map((m: any) => {
-            let bg = "bg-emerald-200"
-
-            if (m.percent > 100) bg = "bg-red-300"
-            else if (m.percent > 80) bg = "bg-yellow-300"
-
-            return (
-              <div
-                key={m.month}
-                className={`h-6 flex-1 rounded ${bg}`}
-                title={`${m.month} - ${m.percent}%`}
-              />
-            )
-          })}
-        </div>
+      {/* ===== TOGGLE ANALISIS ===== */}
+      <div className="flex justify-end">
+        <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <span className="text-gray-500">
+            Modo análisis
+          </span>
+          <div
+            onClick={() => setAdvanced(!advanced)}
+            className={`w-10 h-5 flex items-center rounded-full p-1 transition ${
+              advanced ? "bg-indigo-600" : "bg-gray-300"
+            }`}
+          >
+            <div
+              className={`bg-white w-4 h-4 rounded-full shadow-md transform transition ${
+                advanced ? "translate-x-5" : ""
+              }`}
+            />
+          </div>
+        </label>
       </div>
-    ))}
-  </div>
-</div>
 
-
-      {/* ===== INDICES ESTRATÉGICOS ===== */}
+      {/* ===== INDICES ===== */}
       <div className="card p-4 text-sm space-y-2">
         <div className="flex justify-between">
           <span>Rigidez estructural</span>
           <span className={rigidezColor}>
-            {rigidez}% 
+            {rigidez}%
           </span>
         </div>
 
@@ -181,7 +155,7 @@ export default function FinanzasCategories() {
 
         <div className="card p-6 text-center">
           <p className="text-sm text-gray-500">Variables</p>
-          <p className="text-2xl font-semibold text-emerald-600 mt-2">
+          <p className="text-2xl font-semibold text-blue-600 mt-2">
             -${formatMoney(totalVariable)}
           </p>
         </div>
@@ -189,16 +163,16 @@ export default function FinanzasCategories() {
 
       {/* ===== DONUT ===== */}
       <div className="card p-6">
-        <ResponsiveContainer width="100%" height={260}>
+        <ResponsiveContainer width="100%" height={220}>
           <PieChart>
             <Pie
               data={donutData}
               dataKey="value"
-              innerRadius={70}
-              outerRadius={100}
+              innerRadius={60}
+              outerRadius={85}
             >
               <Cell fill="#FDA4AF" />
-              <Cell fill="#16A34A" />
+              <Cell fill="#3B82F6" />
             </Pie>
           </PieChart>
         </ResponsiveContainer>
@@ -207,10 +181,31 @@ export default function FinanzasCategories() {
           <div className="text-rose-400">
             Fijos {fixedPct}%
           </div>
-          <div className="text-emerald-600">
+          <div className="text-blue-600">
             Variables {variablePct}%
           </div>
         </div>
+
+        {advanced && (
+          <div className="mt-3 text-sm text-gray-500 text-center">
+            {fixedPct > 70 && (
+              <span>
+                Alta rigidez estructural. 
+                El gasto fijo limita flexibilidad.
+              </span>
+            )}
+            {fixedPct <= 70 && fixedPct > 50 && (
+              <span>
+                Estructura equilibrada, monitorear.
+              </span>
+            )}
+            {fixedPct <= 50 && (
+              <span>
+                Buena flexibilidad estructural.
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ===== SECCIONES ===== */}
@@ -224,7 +219,7 @@ export default function FinanzasCategories() {
         title: "Movimientos Variables",
         items: variableCategories,
         clusterBase: absVariable,
-        barColor: "bg-emerald-500"
+        barColor: "bg-blue-500"
       }].map((section) => (
         <div key={section.title} className="space-y-4">
 
@@ -245,99 +240,67 @@ export default function FinanzasCategories() {
             const budgetUsed =
               cat.budgetUsedPercent ?? 0
 
-            const exceso =
-              cat.budget > 0
-                ? Math.abs(cat.total) -
-                  cat.budget
-                : 0
-
-            const insight =
-              percent > 60
-                ? `Concentra ${percent.toFixed(
-                    0
-                  )}% del cluster`
-                : null
-
             return (
               <div
                 key={cat.name}
-                className="card p-4 transition"
+                className="card p-4 transition-all duration-200"
               >
                 <div
-                  className="flex justify-between cursor-pointer"
+                  className="flex justify-between items-center cursor-pointer"
                   onClick={() =>
                     handleClickCategory(cat.name)
                   }
                 >
-                  <p className="font-medium">
+                  <p className="font-medium flex items-center gap-2">
                     {cat.name}
+                    <span className="text-xs text-gray-400">
+                      {expanded === cat.name ? "▴" : "▾"}
+                    </span>
                   </p>
                   <p className="font-semibold">
                     -${formatMoney(cat.total)}
                   </p>
                 </div>
 
-                {/* CLUSTER BAR */}
                 <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
                   <div
                     className={`h-2 rounded-full ${section.barColor}`}
-                    style={{
-                      width: `${percent}%`,
-                    }}
+                    style={{ width: `${percent}%` }}
                   />
                 </div>
 
-                <div className="flex justify-between text-xs mt-2">
-                  <span>
-                    {percent.toFixed(
-                      1
-                    )}% del cluster
-                  </span>
+                {advanced && (
+                  <div className="flex justify-between text-xs mt-2">
+                    <span>
+                      {percent.toFixed(1)}% del cluster
+                    </span>
 
-                  <span
-                    className={
-                      delta > 0
-                        ? "text-rose-400"
-                        : "text-emerald-600"
-                    }
-                  >
-                    {delta > 0 ? "↑" : "↓"}{" "}
-                    {Math.abs(
-                      delta
-                    ).toFixed(1)}% vs mes anterior
-                  </span>
-                </div>
+                    <span
+                      className={
+                        delta > 0
+                          ? "text-rose-400"
+                          : "text-blue-600"
+                      }
+                    >
+                      {delta > 0 ? "↑" : "↓"}{" "}
+                      {Math.abs(delta).toFixed(1)}%
+                    </span>
+                  </div>
+                )}
 
-                {/* PRESUPUESTO HÍBRIDO */}
-                {cat.budget > 0 && (
+                {advanced && cat.budget > 0 && (
                   <div className="mt-3 text-xs text-gray-500">
                     Presupuesto: $
                     {formatMoney(cat.budget)}{" "}
-                    ({exceso > 0
-                      ? `+${formatMoney(
-                          exceso
-                        )}`
-                      : "OK"})
                     <div>
-                      {budgetUsed.toFixed(
-                        0
-                      )}% usado
+                      {budgetUsed.toFixed(0)}% usado
                     </div>
                   </div>
                 )}
 
-                {/* INSIGHT */}
-                {insight && (
-                  <div className="mt-2 text-xs text-gray-400">
-                    {insight}
-                  </div>
-                )}
-
-                {/* SUBCATEGORÍAS EXPANDIBLES */}
                 {expanded === cat.name &&
-                  cat.subcategories?.length >
-                    0 && (
-                    <div className="mt-3 space-y-2">
+                  cat.subcategories?.length > 0 && (
+                    <div className="mt-3 space-y-2 border-t pt-3">
                       {cat.subcategories
                         .sort(
                           (a: any, b: any) =>
@@ -347,9 +310,11 @@ export default function FinanzasCategories() {
                         .map((sub: any) => {
 
                           const subPct =
-                            Math.abs(sub.total) /
-                            Math.abs(cat.total) *
-                            100
+                            Math.abs(cat.total) > 0
+                              ? (Math.abs(sub.total) /
+                                  Math.abs(cat.total)) *
+                                100
+                              : 0
 
                           return (
                             <div
@@ -368,25 +333,61 @@ export default function FinanzasCategories() {
                                 </span>
                               </div>
 
-                              <div className="w-full bg-gray-200 rounded-full h-1 mt-1">
-                                <div
-                                  className="bg-gray-400 h-1 rounded-full"
-                                  style={{
-                                    width: `${subPct}%`,
-                                  }}
-                                />
-                              </div>
+                              {advanced && (
+                                <div className="w-full bg-gray-200 rounded-full h-1 mt-1">
+                                  <div
+                                    className="bg-gray-400 h-1 rounded-full"
+                                    style={{
+                                      width: `${subPct}%`,
+                                    }}
+                                  />
+                                </div>
+                              )}
                             </div>
                           )
                         })}
                     </div>
                   )}
-
               </div>
             )
           })}
         </div>
       ))}
+
+      {/* ===== HEATMAP ===== */}
+      {advanced && (
+        <div className="card p-6">
+          <h3 className="text-sm text-gray-500 mb-4">
+            Intensidad estructural 6 meses
+          </h3>
+
+          <div className="space-y-3">
+            {data.heatmap6m?.map((row: any) => (
+              <div key={row.name} className="flex items-center gap-3">
+                <div className="w-28 text-xs text-gray-600">
+                  {row.name}
+                </div>
+
+                <div className="flex gap-1 flex-1">
+                  {row.months.map((m: any) => {
+                    let bg = "bg-blue-200"
+                    if (m.percent > 100) bg = "bg-red-300"
+                    else if (m.percent > 80) bg = "bg-yellow-300"
+
+                    return (
+                      <div
+                        key={m.month}
+                        className={`h-6 flex-1 rounded ${bg}`}
+                        title={`${m.month} - ${m.percent}%`}
+                      />
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
     </div>
   )
