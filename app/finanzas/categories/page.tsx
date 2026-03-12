@@ -45,15 +45,7 @@ export default function FinanzasCategories() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  if (!finance) {
-    return (
-      <div className="p-6 text-center text-gray-500">
-        <p>Inicializando...</p>
-      </div>
-    )
-  }
-
-  const { month } = finance
+  const month = finance?.month
 
   useEffect(() => {
     if (!month) {
@@ -93,6 +85,14 @@ export default function FinanzasCategories() {
 
     fetchCategories()
   }, [month])
+
+  if (!finance) {
+    return (
+      <div className="p-6 text-center text-gray-500">
+        <p>Inicializando...</p>
+      </div>
+    )
+  }
 
   // Estado de carga
   if (loading) {
