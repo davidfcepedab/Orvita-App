@@ -150,11 +150,13 @@ export default function FinanzasCategories() {
 
   // FILTRO: Ocultar categorías con total = 0
   const fixedCategories = (structuralCategories || [])
-    .filter((c): c is Category => c?.type === "fixed" && Math.abs(c.total) > 0)
+    .filter((c): c is Category => c?.type === "fixed")
+    .filter((c) => Math.abs(c.total) > 0)
     .sort((a, b) => Math.abs(b.total) - Math.abs(a.total))
 
   const variableCategories = (structuralCategories || [])
-    .filter((c): c is Category => c?.type === "variable" && Math.abs(c.total) > 0)
+    .filter((c): c is Category => c?.type === "variable")
+    .filter((c) => Math.abs(c.total) > 0)
     .sort((a, b) => Math.abs(b.total) - Math.abs(a.total))
 
   const fixedPct =
