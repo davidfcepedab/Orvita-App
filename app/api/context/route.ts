@@ -4,22 +4,52 @@ import { predictionEngine } from "@/lib/engines/predictionEngine"
 
 const SPREADSHEET_ID = "1fEP_Em30-BTUhmeObzAE9zObQRc7CNkYXbVCecpCHO0"
 
+// Mapeo de índices para mejor legibilidad
+const CONTROL_SCORES = {
+  RECUPERACION: 0,      // B15
+  DISCIPLINA: 6,        // B21
+  FISICO: 12,           // B27
+  PROFESIONAL: 13,      // B28
+  GLOBAL: 14,           // B29
+} as const
+
+// Mapeo de columnas en Histórico
+const HISTORICO_COLS = {
+  DATE: 0,
+  CAMPO_1: 1,
+  CAMPO_2: 2,
+  RECUPERACION: 3,
+  DISCIPLINA: 4,
+  GLOBAL: 5,
+} as const
+
 export async function GET() {
   try {
+    // =====================================
+    // 1️⃣ SCORES DESDE CONTROL
+    // =====================================
     const control = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: "Control!B15:B30",
+      range: "Control!B15:B29",  // Ajustado para B29
       valueRenderOption: "UNFORMATTED_VALUE",
     })
 
     const controlValues = control.data.values || []
 
-    const scoreRecuperacion = Number(controlValues[0]?.[0] || 0)
-    const scoreDisciplina = Number(controlValues[6]?.[0] || 0)
-    const scoreFisico = Number(controlValues[13]?.[0] || 0)
-    const scoreProfesional = Number(controlValues[14]?.[0] || 0)
-    const scoreGlobal = Number(controlValues[15]?.[0] || 0)
+    // Validación de datos
+    if (controlValues.length === 0) {
+      console.warn("No control values found")
+    }
 
+    const scoreRecuperacion = Number(controlValues[CONTROL_SCORES.RECUPERACION]?.[0] || 0)
+    const scoreDisciplina = Number(controlValues[CONTROL_SCORES.DISCIPLINA]?.[0] || 0)
+    const scoreFisico = Number(controlValues[CONTROL_SCORES.FISICO]?.[0] || 0)
+    const scoreProfesional = Number(controlValues[CONTROL_SCORES.PROFESIONAL]?.[0] || 0)
+    const scoreGlobal = Number(controlValues[CONTROL_SCORES.GLOBAL]?.[0] || 0)
+
+    // =====================================
+    // 2️⃣ HISTÓRICO BASE
+    // =====================================
     const historico = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
       range: "Historico Base!A2:F1000",
@@ -27,7 +57,7 @@ export async function GET() {
     })
 
     const rows = (historico.data.values || []).filter(
-      (r) => r[0] && r[5]
+      (r) => Array.isArray(r) && r.length > HISTORICO_COLS.GLOBAL && r[HISTORICO_COLS.DATE] && r[HISTORICO_COLS.GLOBAL]
     )
 
     let deltaGlobal = 0
@@ -44,21 +74,24 @@ export async function GET() {
       const previous = rows[rows.length - 2]
 
       deltaGlobal = safeDelta(
-        Number(current[5] || 0),
-        Number(previous[5] || 0)
+        Number(current[HISTORICO_COLS.GLOBAL] || 0),
+        Number(previous[HISTORICO_COLS.GLOBAL] || 0)
       )
 
       deltaDisciplina = safeDelta(
-        Number(current[4] || 0),
-        Number(previous[4] || 0)
+        Number(current[HISTORICO_COLS.DISCIPLINA] || 0),
+        Number(previous[HISTORICO_COLS.DISCIPLINA] || 0)
       )
 
       deltaRecuperacion = safeDelta(
-        Number(current[3] || 0),
-        Number(previous[3] || 0)
+        Number(current[HISTORICO_COLS.RECUPERACION] || 0),
+        Number(previous[HISTORICO_COLS.RECUPERACION] || 0)
       )
     }
 
+    // =====================================
+    // 3️⃣ TENDENCIA DIARIA
+    // =====================================
     const diario = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
       range: "Check In Diario!AB2:AB1000",
@@ -67,11 +100,17 @@ export async function GET() {
 
     const diarioRows = (diario.data.values || [])
       .map((r) => Number(r[0]))
-      .filter((v) => !isNaN(v))
+      .filter((v) => !isNaN(v) && isFinite(v))  // Agregado isFinite
 
     const last7 = diarioRows.slice(-7)
-    const tendencia_7d = last7.map((v) => ({ value: v }))
 
+    const tendencia_7d = last7.map((v) => ({
+      value: v,
+    }))
+
+    // =====================================
+    // 4️⃣ DELTA TENDENCIA
+    // =====================================
     let delta_tendencia = 0
     const last14 = diarioRows.slice(-14)
 
@@ -92,23 +131,36 @@ export async function GET() {
       }
     }
 
+    // =====================================
+    // 5️⃣ PREDICCIÓN
+    // =====================================
     const prediction = predictionEngine(last14)
+
+    // =====================================
+    // 6️⃣ INSIGHTS
+    // =====================================
     const insights: string[] = []
 
+    // =====================================
+    // 7️⃣ RESPONSE
+    // =====================================
     return NextResponse.json({
       score_global: scoreGlobal,
       score_fisico: scoreFisico,
       score_profesional: scoreProfesional,
       score_disciplina: scoreDisciplina,
       score_recuperacion: scoreRecuperacion,
+
       delta_global: deltaGlobal,
       delta_disciplina: deltaDisciplina,
       delta_recuperacion: deltaRecuperacion,
       delta_tendencia,
+
       tendencia_7d,
       prediction,
       insights,
     })
+
   } catch (error: any) {
     console.error("CONTEXT ERROR:", error?.message)
 
