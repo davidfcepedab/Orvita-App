@@ -33,7 +33,7 @@ export interface Category {
   total: number
   previousTotal?: number
   delta?: number
-  subs?: Subcategory[]
+subcategories?: Subcategory[]
   budget?: number
   budgetUsedPercent?: number
   budgetStatus?: "green" | "yellow" | "red"
