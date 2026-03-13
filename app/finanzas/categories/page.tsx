@@ -223,6 +223,7 @@ export default function FinanzasCategories() {
             totalVariable={totalVariable}
             fixedCategories={fixedCategories.length}
             variableCategories={variableCategories.length}
+            month={month_value}
           />
 
           {/* RESUMEN OPERATIVO - NUEVO */}

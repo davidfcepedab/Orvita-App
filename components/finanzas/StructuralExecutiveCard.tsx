@@ -1,5 +1,6 @@
 "use client"
 
+import { useMemo } from "react"
 import { calcularMetricasEstructurales } from "@/lib/testing/financialMetrics"
 import DonutCompact from "./DonutCompact"
 
@@ -9,6 +10,7 @@ interface Props {
   totalVariable: number
   fixedCategories: number
   variableCategories: number
+  month?: string
 }
 
 export default function StructuralExecutiveCard({
@@ -17,6 +19,7 @@ export default function StructuralExecutiveCard({
   totalVariable,
   fixedCategories,
   variableCategories,
+  month,
 }: Props) {
   const metricas = calcularMetricasEstructurales(
     totalStructural,
@@ -26,6 +29,13 @@ export default function StructuralExecutiveCard({
     variableCategories
   )
 
+  const formattedMonth = useMemo(() => {
+    if (!month) return null
+    const date = new Date(`${month}-01`)
+    if (isNaN(date.getTime())) return null
+    return date.toLocaleString("es-CO", { month: "long", year: "numeric" })
+  }, [month])
+
   return (
     <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-3xl p-8 border border-slate-200 shadow-sm">
       <div className="flex items-center justify-between mb-6">
@@ -33,6 +43,11 @@ export default function StructuralExecutiveCard({
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">
             📊 Resultado Estructural
           </p>
+          {month && (
+            <p className="text-xs text-slate-400 mt-1">
+              {formattedMonth}
+            </p>
+          )}
           <h1 className="text-4xl font-bold text-slate-900 mt-2">
             ${metricas.totalFormatted}
           </h1>
