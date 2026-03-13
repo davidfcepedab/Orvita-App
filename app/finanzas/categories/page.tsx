@@ -221,8 +221,8 @@ export default function FinanzasCategories() {
             totalStructural={totalStructural}
             totalFixed={totalFixed}
             totalVariable={totalVariable}
-            fixedCategories={fixedCategories.length}
-            variableCategories={variableCategories.length}
+            fixedCategoriesCount={fixedCategories.length}
+            variableCategoriesCount={variableCategories.length}
             month={month_value}
           />
 

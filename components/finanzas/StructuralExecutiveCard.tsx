@@ -8,8 +8,8 @@ interface Props {
   totalStructural: number
   totalFixed: number
   totalVariable: number
-  fixedCategories: number
-  variableCategories: number
+  fixedCategoriesCount: number
+  variableCategoriesCount: number
   month?: string
 }
 
@@ -17,8 +17,8 @@ export default function StructuralExecutiveCard({
   totalStructural,
   totalFixed,
   totalVariable,
-  fixedCategories,
-  variableCategories,
+  fixedCategoriesCount,
+  variableCategoriesCount,
   month,
 }: Props) {
   const metricas = calcularMetricasEstructurales(
@@ -26,7 +26,7 @@ export default function StructuralExecutiveCard({
     totalFixed,
     totalVariable,
     fixedCategoriesCount,
-    variableCategoriesCount
+    variableCategoriesCount,
   )
 
   const formattedMonth = useMemo(() => {
