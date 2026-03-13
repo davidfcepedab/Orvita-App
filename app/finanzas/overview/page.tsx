@@ -38,7 +38,6 @@ interface OverviewResponse {
 export default function FinanzasOverview() {
   export default function FinanzasOverview() {
   const finance = useFinance()
-  const month = finance?.month ?? ""
 
   const [data, setData] = useState<OverviewData | null>(null)
   const [loading, setLoading] = useState(false)
