@@ -1,40 +1,56 @@
 export function financialPredictionEngine({
-  totalStructural,
+  monthlyHistory,
+  liquidez,
 }: {
-  totalStructural: number
+  monthlyHistory: number[]
+  liquidez: number
 }) {
-  const absTotal = Math.abs(totalStructural)
-
-  if (absTotal === 0) {
+  // Validaciones
+  if (!monthlyHistory || monthlyHistory.length === 0) {
     return {
-      dailyAverage: 0,
-      projectedEndOfMonth: 0,
+      averageMonthlyFlow: 0,
+      projectedNextMonth: 0,
+      runwayMonths: 0,
+      trend: "neutral" as const,
       warning: false,
     }
   }
 
-  const today = new Date()
-  const currentDay = today.getDate()
+  // Calcular promedio del flujo de los últimos meses
+  const averageMonthlyFlow =
+    monthlyHistory.reduce((a, b) => a + b, 0) / monthlyHistory.length
 
-  const daysInMonth = new Date(
-    today.getFullYear(),
-    today.getMonth() + 1,
-    0
-  ).getDate()
+  // Proyectar flujo del próximo mes
+  const projectedNextMonth = Math.round(averageMonthlyFlow)
 
-  const dailyAverage = absTotal / currentDay
+  // Calcular cuántos meses de liquidez quedan
+  const runwayMonths =
+    averageMonthlyFlow > 0 ? liquidez / averageMonthlyFlow : Infinity
 
-  const projectedEndOfMonth = Math.round(
-    dailyAverage * daysInMonth
-  )
+  // Determinar tendencia basada en últimos meses
+  let trend: "positive" | "negative" | "neutral" = "neutral"
+  if (monthlyHistory.length >= 2) {
+    const recent = monthlyHistory.slice(-3)
+    const older =
+      monthlyHistory.slice(0, -3).length > 0
+        ? monthlyHistory.slice(0, -3)
+        : recent
 
-  const warning =
-    currentDay < 15 &&
-    projectedEndOfMonth > absTotal * 1.3
+    const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length
+    const olderAvg = older.reduce((a, b) => a + b, 0) / older.length
+
+    if (recentAvg > olderAvg * 1.1) trend = "positive"
+    else if (recentAvg < olderAvg * 0.9) trend = "negative"
+  }
+
+  // Alertas
+  const warning = runwayMonths < 3 && averageMonthlyFlow < 0
 
   return {
-    dailyAverage: Math.round(dailyAverage),
-    projectedEndOfMonth,
+    averageMonthlyFlow: Math.round(averageMonthlyFlow),
+    projectedNextMonth,
+    runwayMonths: Number(runwayMonths.toFixed(1)),
+    trend,
     warning,
   }
 }
