@@ -221,8 +221,9 @@ export default function FinanzasCategories() {
             totalStructural={totalStructural}
             totalFixed={totalFixed}
             totalVariable={totalVariable}
-            fixedCategoriesCount={fixedCategories.length}
-            variableCategoriesCount={variableCategories.length}
+            fixedCategories={fixedCategories.length}
+            variableCategories={variableCategories.length}
+            month={month_value}
           />
 
           {/* RESUMEN OPERATIVO - NUEVO */}

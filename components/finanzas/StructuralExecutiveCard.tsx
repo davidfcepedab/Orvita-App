@@ -7,16 +7,18 @@ interface Props {
   totalStructural: number
   totalFixed: number
   totalVariable: number
-  fixedCategoriesCount: number
-  variableCategoriesCount: number
+  fixedCategories: number
+  variableCategories: number
+  month?: string
 }
 
 export default function StructuralExecutiveCard({
   totalStructural,
   totalFixed,
   totalVariable,
-  fixedCategoriesCount,
-  variableCategoriesCount,
+  fixedCategories,
+  variableCategories,
+  month,
 }: Props) {
   const metricas = calcularMetricasEstructurales(
     totalStructural,
@@ -33,6 +35,15 @@ export default function StructuralExecutiveCard({
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">
             📊 Resultado Estructural
           </p>
+          {month && (
+            <p className="text-xs text-slate-400 mt-1">
+              {new Date(`${month}-01`).toLocaleString("es-CO", {
+                month: "long",
+                year: "numeric",
+                timeZone: "UTC",
+              })}
+            </p>
+          )}
           <h1 className="text-4xl font-bold text-slate-900 mt-2">
             ${metricas.totalFormatted}
           </h1>
