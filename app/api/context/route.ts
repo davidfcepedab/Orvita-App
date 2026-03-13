@@ -114,12 +114,7 @@ export async function GET() {
     // =====================================
     const prediction = predictionEngine(last14)
 
-    const insights = financialInsightEngine({
-      score_recuperacion: scoreRecuperacion,
-      delta_tendencia,
-      delta_disciplina: deltaDisciplina,
-      delta_global: deltaGlobal,
-    })
+    const insights = []
 
     // =====================================
     // 6️⃣ RESPONSE
