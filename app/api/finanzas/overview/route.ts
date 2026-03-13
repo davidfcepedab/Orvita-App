@@ -81,9 +81,9 @@ export async function GET(req: NextRequest) {
     })
 
     const insight = financialInsightEngine({
-      ingresos,
-      flujo: flujoTotal,
-    })
+  ingresos,
+  flujo: flujoTotal,
+})
 
     const stability = financialStabilityEngine({
       ingresos,
