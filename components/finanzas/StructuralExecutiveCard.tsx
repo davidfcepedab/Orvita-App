@@ -25,8 +25,8 @@ export default function StructuralExecutiveCard({
     totalStructural,
     totalFixed,
     totalVariable,
-    fixedCategories,
-    variableCategories
+    fixedCategoriesCount,
+    variableCategoriesCount
   )
 
   const formattedMonth = useMemo(() => {
