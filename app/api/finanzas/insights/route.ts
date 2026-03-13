@@ -1,37 +1,36 @@
-import { NextRequest, NextResponse } from "next/server"
-import { sheets } from "@/lib/googleAuth"
-import { financialAdvancedEngine } from "@/lib/engines/financialAdvancedEngine"
+import { NextResponse } from "next/server"
 import { financialInsightsEngine } from "@/lib/engines/financialInsightsEngine"
 
-const SPREADSHEET_ID = "1A8ucJUgSvxP2JLbPf1Z5PlB5UytbO4aKdJLf_ctaUz4"
-
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
-    const month =
-      req.nextUrl.searchParams.get("month") ||
-      new Date().toISOString().slice(0, 7)
+    // En producción NO se debe llamar a localhost
+    const baseUrl =
+      process.env.NODE_ENV === "production"
+        ? process.env.VERCEL_URL
+          ? `https://${process.env.VERCEL_URL}`
+          : ""
+        : "http://localhost:3000"
 
-    const movimientosRes = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: "Movimientos!A2:U5000",
-      valueRenderOption: "UNFORMATTED_VALUE",
-    })
+    const res = await fetch(`${baseUrl}/api/finanzas/categories`)
+    const data = await res.json()
 
-    const rows = movimientosRes.data.values || []
-
-    const structural = financialAdvancedEngine({ rows, month })
+    if (!data?.data) {
+      return NextResponse.json({ insights: [] })
+    }
 
     const insights = financialInsightsEngine({
-      categories: structural.structuralCategories,
-      flujo: structural.totalFinancialFlow,
+      categories: data.data.structuralCategories || [],
+      flujo: data.data.totalStructural || 0,
     })
 
-    return NextResponse.json({ success: true, data: { insights } })
-  } catch (error) {
+    return NextResponse.json({ insights })
+
+  } catch (error: any) {
+    console.error("INSIGHTS ERROR:", error?.message)
+
     return NextResponse.json(
-      { success: false, error: "Error cargando insights" },
+      { error: "Error cargando insights" },
       { status: 500 }
     )
   }
 }
-
