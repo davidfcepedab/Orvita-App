@@ -54,23 +54,23 @@ export function financialAdvancedEngine({
     }
 
     if (!currentMap[categoria]) {
-      currentMap[categoria] = { total: 0, subs: {} }
+      currentMap[categoria] = { total: 0, subcategories: {} }
     }
 
     if (!previousMap[categoria]) {
-      previousMap[categoria] = { total: 0, subs: {} }
+      previousMap[categoria] = { total: 0, subcategories: {} }
     }
 
     if (mes === month) {
       currentMap[categoria].total += monto
-      currentMap[categoria].subs[sub] =
-        (currentMap[categoria].subs[sub] || 0) + monto
+      currentMap[categoria].subcategories[sub] =
+        (currentMap[categoria].subcategories[sub] || 0) + monto
     }
 
     if (mes === prevMonth) {
       previousMap[categoria].total += monto
-      previousMap[categoria].subs[sub] =
-        (previousMap[categoria].subs[sub] || 0) + monto
+      previousMap[categoria].subcategories[sub] =
+        (previousMap[categoria].subcategories[sub] || 0) + monto
     }
   })
 
@@ -78,7 +78,7 @@ export function financialAdvancedEngine({
     .map(([name, data]) => {
       const previousTotal = previousMap[name]?.total || 0
       const delta = data.total - previousTotal
-      const subs: Subcategory[] = Object.entries(data.subs).map(([subName, value]) => ({
+      const subs: Subcategory[] = Object.entries(data.subcategories).map(([subName, value]) => ({
         name: subName,
         total: value,
       }))
@@ -95,11 +95,10 @@ export function financialAdvancedEngine({
     .filter((c) => Math.abs(c.total) > 0)
 
   const financialCategories = Object.entries(financialMap).map(
-    ([name, total]) => (
-      {
-        name,
-        total,
-      })
+    ([name, total]) => ({
+      name,
+      total,
+    })
   )
 
   const totalFixed = structuralCategories
