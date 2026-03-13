@@ -10,7 +10,7 @@ interface Props {
 export default function ImpactIndicator({ total, totalStructural }: Props) {
   const impactPct = calcularImpacto(total, totalStructural)
 
-  if (impactPct === 0) return null
+  if (impactPct < 5) return null
 
   let colorClass = "text-slate-500"
   if (impactPct >= 20) colorClass = "text-rose-600"
