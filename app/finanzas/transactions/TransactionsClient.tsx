@@ -13,163 +13,131 @@ interface Transaction {
   subcategory?: string
 }
 
-interface TransactionsData {
-  transactions: Transaction[]
-  subtotal?: number
-}
-
 interface TransactionsResponse {
   success: boolean
-  data?: TransactionsData
+  data?: {
+    transactions: Transaction[]
+    subtotal: number
+  }
   error?: string
 }
 
 export default function TransactionsClient() {
   const finance = useFinance()
   const searchParams = useSearchParams()
-  const month = finance?.month ?? ""
-  const category = searchParams.get("category")
-  const subcategory = searchParams.get("subcategory")
 
-  const [data, setData] = useState<TransactionsData | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  if (!finance) return null
 
-  const month = finance?.month
+  const month = finance.month
   const categoryFilter = searchParams.get("category")
-  const subcategoryFilter = searchParams.get("subcategory")
+
+  const [data, setData] = useState<Transaction[] | null>(null)
+  const [total, setTotal] = useState<number>(0)
 
   useEffect(() => {
     if (!month) return
 
-    const fetchData = async () => {
-      try {
-        setLoading(true)
-        setError(null)
+    let url = `/api/finanzas/transactions?month=${encodeURIComponent(month)}`
 
-        let url = `/api/finanzas/transactions?month=${encodeURIComponent(month)}`
-
-        if (category) {
-          url += `&category=${encodeURIComponent(category)}`
-        }
-
-        if (subcategoryFilter) {
-          url += `&subcategory=${encodeURIComponent(subcategoryFilter)}`
-        }
-
-        const response = await fetch(url)
-
-        if (!response.ok) {
-          throw new Error(`Error ${response.status}: ${response.statusText}`)
-        }
-
-        const res = await fetch(url)
-        const json = await res.json()
-
-        if (!json.success) {
-          throw new Error(json.error || "Error desconocido")
-        }
-
-        setData(json.data ?? null)
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : "Error desconocido"
-        setError(errorMessage)
-        console.error("Error fetching transactions:", err)
-        setData(null)
-      } finally {
-        setLoading(false)
-      }
+    if (categoryFilter) {
+      url += `&category=${encodeURIComponent(categoryFilter)}`
     }
 
-    fetchTransactions()
-  }, [month, categoryFilter, subcategoryFilter])
+    fetch(url)
+      .then(res => res.json())
+      .then((json: TransactionsResponse) => {
+        if (!json.success) return
 
-  if (!finance) {
-    return (
-      <div className="p-6 text-center text-gray-500">
-        <p>Inicializando...</p>
-      </div>
-    )
-  }
+        setData(json.data?.transactions ?? [])
+        setTotal(json.data?.subtotal ?? 0)
+      })
+      .catch(() => {
+        setData([])
+        setTotal(0)
+      })
 
-  // Estado de carga
-  if (loading) {
-    return (
-      <div className="p-6 text-center text-gray-500">
-        <p>Cargando movimientos...</p>
-      </div>
-    )
-  }
-
-  if (loading) return <p>Cargando...</p>
-
-  if (error)
-    return (
-      <div className="p-6 text-center text-gray-500">
-        <p>Sin movimientos registrados para este período.</p>
-      </div>
-    )
+  }, [month, categoryFilter])
 
   if (!data) return null
 
+  const formatMoney = (value: number) =>
+    Math.round(value).toLocaleString("es-CO", {
+      maximumFractionDigits: 0,
+    })
+
+  const formatDate = (raw: string) => {
+    const date = new Date(raw)
+    if (isNaN(date.getTime())) return raw
+
+    return date.toLocaleDateString("es-CO", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    })
+  }
+
   return (
     <div className="space-y-6">
-      {/* Breadcrumb de categoría */}
+
+      {/* Filtro activo */}
       {categoryFilter && (
-        <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
-          <span className="text-gray-500">Filtro: </span>
-          <span className="font-medium text-gray-800">
-            {categoryFilter}
-            {subcategoryFilter && ` › ${subcategoryFilter}`}
-          </span>
+        <div className="text-sm text-gray-500">
+          Filtro: <span className="font-medium">{categoryFilter}</span>
         </div>
       )}
 
-      {/* Resumen */}
-      {hasTransactions && data.subtotal !== undefined && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p className="text-sm text-gray-600">Total de movimientos</p>
-          <p className="text-2xl font-bold text-blue-600">
-            ${Math.abs(data.subtotal).toLocaleString("es-CO")}
-          </p>
-        </div>
-      )}
+      {/* Total */}
+      <div>
+        <p className="text-sm text-gray-500">Total de movimientos</p>
+        <p className="text-2xl font-bold">
+          ${formatMoney(total)}
+        </p>
+      </div>
 
-      {/* Transacciones */}
-      {hasTransactions ? (
-        <div className="space-y-3">
-          {transactions.map((tx, index) => (
-            <div
-              key={index}
-              className="flex justify-between items-center p-4 border border-gray-200 rounded-lg hover:shadow-md transition"
-            >
-              <div className="flex-1">
-                <p className="font-medium text-gray-900">{tx.descripcion}</p>
-                <p className="text-xs text-gray-500 mt-1">{tx.fecha}</p>
-                {tx.categoria && (
-                  <p className="text-xs text-gray-400 mt-1">
-                    {tx.categoria}
-                    {tx.subcategoria && ` › ${tx.subcategoria}`}
+      {/* Lista */}
+      {data.length > 0 ? (
+        <div className="space-y-6">
+          {data.map((tx) => {
+            const isIngreso = tx.amount > 0
+
+            return (
+              <div key={tx.id} className="border-b pb-4">
+
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="font-medium">
+                      {tx.description}
+                    </p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {formatDate(tx.date)}
+                    </p>
+
+                    {tx.category && (
+                      <p className="text-xs text-gray-400 mt-1">
+                        {tx.category}
+                        {tx.subcategory ? ` › ${tx.subcategory}` : ""}
+                      </p>
+                    )}
+                  </div>
+
+                  <p
+                    className={`font-semibold ${
+                      isIngreso ? "text-green-600" : "text-red-600"
+                    }`}
+                  >
+                    {isIngreso ? "+" : "-"}$
+                    {formatMoney(Math.abs(tx.amount))}
                   </p>
-                )}
-              </div>
+                </div>
 
-              <div className="text-right">
-                <p className={`font-semibold text-lg ${
-                  tx.monto < 0 ? "text-red-600" : "text-green-600"
-                }`}>
-                  {tx.monto < 0 ? "-" : "+"}${Math.abs(tx.monto).toLocaleString("es-CO")}
-                </p>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       ) : (
-        <div className="p-6 text-center bg-gray-50 rounded-lg">
-          <p className="text-gray-600">
-            Sin movimientos registrados para este período.
-          </p>
-        </div>
+        <p className="text-sm text-gray-500">
+          No hay movimientos para este mes.
+        </p>
       )}
 
     </div>
