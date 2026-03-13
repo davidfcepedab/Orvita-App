@@ -44,10 +44,7 @@ export async function GET(req: NextRequest) {
       success: true,
       data: {
         ...structural,
-        structuralCategories: structuralWithBudget.map(cat => ({
-          ...cat,
-          subcategories: cat.subs || [],
-        })),
+        structuralCategories: structuralWithBudget,
       },
     })
 
