@@ -81,9 +81,11 @@ export async function GET(req: NextRequest) {
     })
 
     const insight = financialInsightEngine({
-  ingresos,
-  flujo: flujoTotal,
-})
+      structuralCategories: [],
+      totalFixed: 0,
+      totalVariable: 0,
+      totalStructural: 0,
+    })
 
     const stability = financialStabilityEngine({
       ingresos,
@@ -95,9 +97,9 @@ export async function GET(req: NextRequest) {
     })
 
     const prediction = financialPredictionEngine({
-  monthlyHistory: cfoRows.slice(-6).map((r) => r.flujoTotal),
-  liquidez: liquidezTotal,
-})
+      monthlyHistory: cfoRows.slice(-6).map((r) => r.flujoTotal),
+      liquidez: liquidezTotal,
+    })
 
     return NextResponse.json({
       success: true,
