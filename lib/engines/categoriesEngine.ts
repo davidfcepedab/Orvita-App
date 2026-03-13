@@ -1,14 +1,30 @@
 // Centralized tree building logic
 
-const FIXED_CATEGORIES = [/* your fixed categories here */];
-const EXCLUDED = [/* your excluded items here */];
+const FIXED_CATEGORIES = [/* Fixed Categories data */];
+const EXCLUDED = [/* Excluded categories data */];
 
-// Build structural tree by eliminating duplicates
-const buildStructuralTree = (categories) => {
-    // Your logic to build the tree
-    return categories;
-};
+/**
+ * Builds a structural tree from the categories.
+ * @param {Array} categories - The categories to build the tree from.
+ * @returns {Object} The structural tree.
+ */
+function buildStructuralTree(categories) {
+    const root = { children: [] };
+    const lookup = {};
 
-const consolidatedCategories = buildStructuralTree(FIXED_CATEGORIES.concat(EXCLUDED));
+    // Create a lookup table for categories by ID
+    categories.forEach(category => {
+        lookup[category.id] = { ...category, children: [] };
+    });
 
-export { consolidatedCategories, buildStructuralTree };
+    // Build the tree structure
+    categories.forEach(category => {
+        if (category.parentId) {
+            lookup[category.parentId].children.push(lookup[category.id]);
+        } else {
+            root.children.push(lookup[category.id]);
+        }
+    });
+
+    return root;
+}
