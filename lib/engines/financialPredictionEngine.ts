@@ -1,56 +1,127 @@
-export function financialPredictionEngine({
-  monthlyHistory,
-  liquidez,
+import type { Transaction, Category, Subcategory } from "@/lib/types"
+
+export function financialAdvancedEngine({
+  transactions,
+  month,
 }: {
-  monthlyHistory: number[]
-  liquidez: number
+  transactions: Transaction[]
+  month: string
 }) {
-  // Validaciones
-  if (!monthlyHistory || monthlyHistory.length === 0) {
+  if (!transactions || !Array.isArray(transactions)) {
     return {
-      averageMonthlyFlow: 0,
-      projectedNextMonth: 0,
-      runwayMonths: 0,
-      trend: "neutral" as const,
-      warning: false,
+      structuralCategories: [] as Category[],
+      financialCategories: [] as { name: string; total: number }[],
+      totalFixed: 0,
+      totalVariable: 0,
+      totalStructural: 0,
+      totalFinancialFlow: 0,
     }
   }
 
-  // Calcular promedio del flujo de los últimos meses
-  const averageMonthlyFlow =
-    monthlyHistory.reduce((a, b) => a + b, 0) / monthlyHistory.length
+  const FIXED_CATEGORIES = [
+    "Hogar & Base",
+    "Obligaciones",
+    "Suscripciones",
+    "Desarrollo",
+  ]
 
-  // Proyectar flujo del próximo mes
-  const projectedNextMonth = Math.round(averageMonthlyFlow)
+  const EXCLUDED = [
+    "Finanzas",
+    "Movimientos Financieros",
+  ]
 
-  // Calcular cuántos meses de liquidez quedan
-  const runwayMonths =
-    averageMonthlyFlow > 0 ? liquidez / averageMonthlyFlow : Infinity
+  const currentMap: Record<string, { total: number; subcategories: Record<string, number> }> = {}
+  const previousMap: Record<string, { total: number; subcategories: Record<string, number> }> = {}
+  const financialMap: Record<string, number> = {}
 
-  // Determinar tendencia basada en últimos meses
-  let trend: "positive" | "negative" | "neutral" = "neutral"
-  if (monthlyHistory.length >= 2) {
-    const recent = monthlyHistory.slice(-3)
-    const older =
-      monthlyHistory.slice(0, -3).length > 0
-        ? monthlyHistory.slice(0, -3)
-        : recent
+  const prevMonth = (() => {
+    const [y, m] = month.split("-").map(Number)
+    const date = new Date(y, m - 2)
+    return date.toISOString().slice(0, 7)
+  })()
 
-    const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length
-    const olderAvg = older.reduce((a, b) => a + b, 0) / older.length
+  transactions.forEach((tx) => {
+    const { mes, categoria, monto } = tx
+    const sub = tx.subcategoria || "Sin subcategoria"
 
-    if (recentAvg > olderAvg * 1.1) trend = "positive"
-    else if (recentAvg < olderAvg * 0.9) trend = "negative"
-  }
+    if (!categoria) return
 
-  // Alertas
-  const warning = runwayMonths < 3 && averageMonthlyFlow < 0
+    if (EXCLUDED.includes(categoria)) {
+      if (mes === month) {
+        financialMap[categoria] = (financialMap[categoria] || 0) + monto
+      }
+      return
+    }
+
+    if (!currentMap[categoria]) {
+      currentMap[categoria] = { total: 0, subcategories: {} }
+    }
+
+    if (!previousMap[categoria]) {
+      previousMap[categoria] = { total: 0, subcategories: {} }
+    }
+
+    if (mes === month) {
+      currentMap[categoria].total += monto
+      currentMap[categoria].subcategories[sub] =
+        (currentMap[categoria].subcategories[sub] || 0) + monto
+    }
+
+    if (mes === prevMonth) {
+      previousMap[categoria].total += monto
+      previousMap[categoria].subcategories[sub] =
+        (previousMap[categoria].subcategories[sub] || 0) + monto
+    }
+  })
+
+  const structuralCategories = Object.entries(currentMap)
+    .map(([name, data]) => {
+      const previousTotal = previousMap[name]?.total || 0
+      const delta = data.total - previousTotal
+      const subs: Subcategory[] = Object.entries(data.subcategories).map(([subName, value]) => ({
+        name: subName,
+        total: value,
+      }))
+
+      return {
+        name,
+        total: data.total,
+        previousTotal,
+        delta,
+        type: (FIXED_CATEGORIES.includes(name) ? "fixed" : "variable") as "fixed" | "variable",
+        subcategories: subs,
+      }
+    })
+    .filter((c) => Math.abs(c.total) > 0)
+
+  const financialCategories = Object.entries(financialMap).map(
+    ([name, total]) => ({
+      name,
+      total,
+    })
+  )
+
+  const totalFixed = structuralCategories
+    .filter((c) => c.type === "fixed")
+    .reduce((acc, c) => acc + c.total, 0)
+
+  const totalVariable = structuralCategories
+    .filter((c) => c.type === "variable")
+    .reduce((acc, c) => acc + c.total, 0)
+
+  const totalStructural = totalFixed + totalVariable
+
+  const totalFinancialFlow = financialCategories.reduce(
+    (acc, c) => acc + c.total,
+    0
+  )
 
   return {
-    averageMonthlyFlow: Math.round(averageMonthlyFlow),
-    projectedNextMonth,
-    runwayMonths: Number(runwayMonths.toFixed(1)),
-    trend,
-    warning,
+    structuralCategories,
+    financialCategories,
+    totalFixed,
+    totalVariable,
+    totalStructural,
+    totalFinancialFlow,
   }
 }
