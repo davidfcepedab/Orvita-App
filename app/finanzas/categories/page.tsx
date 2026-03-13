@@ -212,7 +212,7 @@ export default function FinanzasCategories() {
                   : "bg-gray-200 text-gray-700"
               }`}
             >
-              {advanced ? "✓ Análisis activo" : "Modo análisis"}
+              {advanced ? "✓ Análisis activado" : "🔍 Ver análisis"}
             </button>
           </div>
 
