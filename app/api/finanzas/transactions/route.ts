@@ -4,8 +4,7 @@ import {
   filterTransactionRows,
   mapRowToTransaction,
 } from "@/lib/mappers/transaction.mapper"
-
-const SPREADSHEET_ID = "1A8ucJUgSvxP2JLbPf1Z5PlB5UytbO4aKdJLf_ctaUz4"
+import { FINANZAS_SPREADSHEET_ID } from "@/lib/config/sheets"
 
 export async function GET(req: NextRequest) {
   try {
@@ -21,7 +20,7 @@ export async function GET(req: NextRequest) {
 
     const movimientosRes =
       await sheets.spreadsheets.values.get({
-        spreadsheetId: SPREADSHEET_ID,
+        spreadsheetId: FINANZAS_SPREADSHEET_ID,
         range: "Movimientos!A2:U5000",
         valueRenderOption: "UNFORMATTED_VALUE",
       })

@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { sheets } from "@/lib/googleAuth"
 import { financialAdvancedEngine } from "@/lib/engines/financialAdvancedEngine"
 import { financialBudgetEngine } from "@/lib/engines/financialBudgetEngine"
-import { mapRowToCategoryAggregation, mapRowToBudget } from "@/lib/mappers/category.mapper"
-
-const SPREADSHEET_ID = "1A8ucJUgSvxP2JLbPf1Z5PlB5UytbO4aKdJLf_ctaUz4"
+import { mapRowToBudget } from "@/lib/mappers/category.mapper"
+import { FINANZAS_SPREADSHEET_ID } from "@/lib/config/sheets"
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,21 +13,18 @@ export async function GET(req: NextRequest) {
 
     const movimientosRes =
       await sheets.spreadsheets.values.get({
-        spreadsheetId: SPREADSHEET_ID,
+        spreadsheetId: FINANZAS_SPREADSHEET_ID,
         range: "Movimientos!A2:U5000",
         valueRenderOption: "UNFORMATTED_VALUE",
       })
 
-    const transactions = (movimientosRes.data.values || []).map(mapRowToCategoryAggregation)
+    const rows = movimientosRes.data.values || []
 
-    const structural = financialAdvancedEngine({
-      transactions,
-      month,
-    })
+    const structural = financialAdvancedEngine({ rows, month })
 
     const presupuestoRes =
       await sheets.spreadsheets.values.get({
-        spreadsheetId: SPREADSHEET_ID,
+        spreadsheetId: FINANZAS_SPREADSHEET_ID,
         range: "Presupuesto!A2:C200",
         valueRenderOption: "UNFORMATTED_VALUE",
       })

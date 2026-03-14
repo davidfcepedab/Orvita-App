@@ -9,9 +9,7 @@ import {
   mapRowToCFOMonthly,
   mapRowToCuenta,
 } from "@/lib/mappers/category.mapper"
-
-const SPREADSHEET_ID =
-  "1A8ucJUgSvxP2JLbPf1Z5PlB5UytbO4aKdJLf_ctaUz4"
+import { FINANZAS_SPREADSHEET_ID } from "@/lib/config/sheets"
 
 export async function GET(req: NextRequest) {
   try {
@@ -19,7 +17,7 @@ export async function GET(req: NextRequest) {
       req.nextUrl.searchParams.get("month")
 
     const res = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
+      spreadsheetId: FINANZAS_SPREADSHEET_ID,
       range: "Base mensual CFO!A2:H1000",
       valueRenderOption: "UNFORMATTED_VALUE",
     })
@@ -54,7 +52,7 @@ export async function GET(req: NextRequest) {
     }))
 
     const cuentasRes = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
+      spreadsheetId: FINANZAS_SPREADSHEET_ID,
       range: "Cuentas!A2:J200",
       valueRenderOption: "UNFORMATTED_VALUE",
     })

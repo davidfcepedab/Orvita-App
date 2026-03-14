@@ -2,8 +2,8 @@
 
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
-import { directionEngine } from "@/lib/PersonaldirectionEngine"
-import { getContext } from "@/lib/getContext"
+import { directionEngine } from "@/lib/engines/personalDirectionEngine"
+import { getContext } from "@/lib/utils/getContext"
 
 export default function GlobalHeader() {
   const [data, setData] = useState<any>(null)

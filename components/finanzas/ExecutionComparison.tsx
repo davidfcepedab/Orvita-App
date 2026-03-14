@@ -1,6 +1,6 @@
 "use client"
 
-import { calcularEjecucion, formatMoneda } from "@/lib/testing/financialMetrics"
+import { calcularEjecucion, formatMoneda } from "@/lib/utils/financialMetrics"
 
 interface Props {
   total: number

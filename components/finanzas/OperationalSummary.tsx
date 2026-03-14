@@ -1,6 +1,6 @@
 "use client"
 
-import { detectarAnomalias, OperationalCategory } from "@/lib/testing/financialMetrics"
+import { detectarAnomalias, OperationalCategory } from "@/lib/utils/financialMetrics"
 
 interface Props {
   categories: OperationalCategory[]

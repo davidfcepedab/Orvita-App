@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
-import { calcularMetricasEstructurales } from "@/lib/testing/financialMetrics"
+import { calcularMetricasEstructurales } from "@/lib/utils/financialMetrics"
 import DonutCompact from "./DonutCompact"
 
 interface Props {

@@ -1,6 +1,6 @@
 "use client"
 
-import { calcularImpacto } from "@/lib/testing/financialMetrics"
+import { calcularImpacto } from "@/lib/utils/financialMetrics"
 
 interface Props {
   total: number

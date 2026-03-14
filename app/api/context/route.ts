@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server"
 import { sheets } from "@/lib/googleAuth"
 import { predictionEngine } from "@/lib/engines/predictionEngine"
-
-const SPREADSHEET_ID = "1fEP_Em30-BTUhmeObzAE9zObQRc7CNkYXbVCecpCHO0"
+import { PERSONAL_SPREADSHEET_ID } from "@/lib/config/sheets"
 
 // Mapeo de índices para mejor legibilidad
 const CONTROL_SCORES = {
@@ -29,7 +28,7 @@ export async function GET() {
     // 1️⃣ SCORES DESDE CONTROL
     // =====================================
     const control = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
+      spreadsheetId: PERSONAL_SPREADSHEET_ID,
       range: "Control!B15:B29",  // Ajustado para B29
       valueRenderOption: "UNFORMATTED_VALUE",
     })
@@ -51,7 +50,7 @@ export async function GET() {
     // 2️⃣ HISTÓRICO BASE
     // =====================================
     const historico = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
+      spreadsheetId: PERSONAL_SPREADSHEET_ID,
       range: "Historico Base!A2:F1000",
       valueRenderOption: "UNFORMATTED_VALUE",
     })
@@ -93,7 +92,7 @@ export async function GET() {
     // 3️⃣ TENDENCIA DIARIA
     // =====================================
     const diario = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
+      spreadsheetId: PERSONAL_SPREADSHEET_ID,
       range: "Check In Diario!AB2:AB1000",
       valueRenderOption: "UNFORMATTED_VALUE",
     })

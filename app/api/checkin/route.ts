@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server"
 import { sheets } from "@/lib/googleAuth"
-
-const SPREADSHEET_ID = "1fEP_Em30-BTUhmeObzAE9zObQRc7CNkYXbVCecpCHO0"
+import { PERSONAL_SPREADSHEET_ID } from "@/lib/config/sheets"
 
 export async function POST(req: Request) {
   try {
@@ -55,7 +54,7 @@ const newRow = [
 ]
 
     await sheets.spreadsheets.values.append({
-      spreadsheetId: SPREADSHEET_ID,
+      spreadsheetId: PERSONAL_SPREADSHEET_ID,
       range: "Check In Diario!A2",
       valueInputOption: "USER_ENTERED",
       insertDataOption: "INSERT_ROWS",

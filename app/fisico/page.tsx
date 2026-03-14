@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { getContext } from "@/lib/getContext"
+import { getContext } from "@/lib/utils/getContext"
 import {
   CircularProgressbar,
   buildStyles,

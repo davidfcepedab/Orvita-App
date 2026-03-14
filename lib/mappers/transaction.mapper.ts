@@ -21,7 +21,7 @@ export function filterTransactionRows(
 
 /**
  * Maps a single raw Movimientos row to a typed Transaction object.
- * Column positions: [0] date/fecha, [5] description/descripcion, [6] category/categoria, [7] subcategory/subcategoria, [10] amount/monto.
+ * Column positions: [0] fecha, [5] descripcion, [6] categoria, [7] subcategoria, [10] monto, [12] mes.
  */
 export function mapRowToTransaction(row: any[]): Transaction {
   return {
@@ -30,5 +30,6 @@ export function mapRowToTransaction(row: any[]): Transaction {
     categoria: row?.[6] || "",
     subcategoria: row?.[7] || "",
     monto: Number(row?.[10] || 0),
+    mes: String(row?.[12] || ""),
   }
 }

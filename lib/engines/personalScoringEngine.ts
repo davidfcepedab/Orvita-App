@@ -1,4 +1,4 @@
-// lib/scoringEngine.ts
+// lib/engines/personalScoringEngine.ts
 
 type CheckInInput = {
   energia: number           // 1–10
