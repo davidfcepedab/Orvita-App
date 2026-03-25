@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+# local caches / runtime state
+.data/
+
 # production
 google-credentials.json
 /build
