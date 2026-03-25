@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server"
-import { sheets } from "@/lib/googleAuth"
+import { getSheets } from "@/lib/googleAuth"
 
 const SPREADSHEET_ID = "1fEP_Em30-BTUhmeObzAE9zObQRc7CNkYXbVCecpCHO0"
 
 export async function POST(req: Request) {
   try {
+    const sheets = getSheets()
     const body = await req.json()
 
 const entreno = body.entreno ? 1 : 0

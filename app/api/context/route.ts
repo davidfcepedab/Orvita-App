@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { sheets } from "@/lib/googleAuth"
+import { getSheets } from "@/lib/googleAuth"
 import { predictionEngine } from "@/lib/engines/predictionEngine"
 
 const SPREADSHEET_ID = "1fEP_Em30-BTUhmeObzAE9zObQRc7CNkYXbVCecpCHO0"
@@ -25,6 +25,7 @@ const HISTORICO_COLS = {
 
 export async function GET() {
   try {
+    const sheets = getSheets()
     // =====================================
     // 1️⃣ SCORES DESDE CONTROL
     // =====================================

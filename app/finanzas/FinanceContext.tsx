@@ -11,20 +11,13 @@ const FinanceContext = createContext<FinanceContextType | null>(null)
 
 export function FinanceProvider({ children }: { children: ReactNode }) {
   const [month, setMonth] = useState<string>("")
-  const [isHydrated, setIsHydrated] = useState(false)
 
   // Inicializar con el mes actual
   useEffect(() => {
     const today = new Date()
     const currentMonth = today.toISOString().slice(0, 7) // Formato: YYYY-MM
     setMonth(currentMonth)
-    setIsHydrated(true)
   }, [])
-
-  // Evitar renderizar antes de la hidratación
-  if (!isHydrated) {
-    return <>{children}</>
-  }
 
   return (
     <FinanceContext.Provider value={{ month, setMonth }}>

@@ -1,5 +1,9 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## V3 productivo
+
+La guia operativa de rutas V3, aliases de compatibilidad y checklist de despliegue esta en `V3_PRODUCTION.md`.
+
 ## Getting Started
 
 First, run the development server:

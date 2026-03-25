@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { sheets } from "@/lib/googleAuth"
+import { getSheets } from "@/lib/googleAuth"
 import { financialScoreEngine } from "@/lib/engines/financialScoreEngine"
 import { financialInsightEngine } from "@/lib/engines/financialInsightEngine"
 import { financialStabilityEngine } from "@/lib/engines/financialStabilityEngine"
@@ -15,6 +15,7 @@ const SPREADSHEET_ID =
 
 export async function GET(req: NextRequest) {
   try {
+    const sheets = getSheets()
     const requestedMonth =
       req.nextUrl.searchParams.get("month")
 

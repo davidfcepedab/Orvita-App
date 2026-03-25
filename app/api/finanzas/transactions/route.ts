@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { sheets } from "@/lib/googleAuth"
+import { getSheets } from "@/lib/googleAuth"
 import {
   filterTransactionRows,
   mapRowToTransaction,
@@ -9,6 +9,7 @@ const SPREADSHEET_ID = "1A8ucJUgSvxP2JLbPf1Z5PlB5UytbO4aKdJLf_ctaUz4"
 
 export async function GET(req: NextRequest) {
   try {
+    const sheets = getSheets()
     const month =
       req.nextUrl.searchParams.get("month") ||
       new Date().toISOString().slice(0, 7)
