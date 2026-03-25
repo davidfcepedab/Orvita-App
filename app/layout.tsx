@@ -1,5 +1,5 @@
 import "./globals.css"
-import Link from "next/link"
+import BottomNav from "@/app/components/BottomNav"
 
 export default function RootLayout({
   children,
@@ -8,28 +8,25 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body className="min-h-screen flex flex-col bg-[#F5F1EB]">
+      <body className="min-h-screen flex flex-col bg-[var(--bg-app)]">
 
-        <header className="bg-gradient-to-r from-emerald-400 to-emerald-500 rounded-b-3xl p-6 shadow-md">
-          <div className="max-w-5xl mx-auto">
-            <p className="text-sm text-white/80">FINANZAS</p>
-            <h1 className="text-2xl font-semibold text-white">
-              Control Estratégico
+        <header className="border-b border-white/60 bg-[linear-gradient(135deg,rgba(167,243,208,0.45),rgba(186,230,253,0.45),rgba(199,210,254,0.35))] px-6 py-6 shadow-[0_10px_28px_rgba(15,23,42,0.04)] backdrop-blur-xl">
+          <div className="mx-auto max-w-5xl">
+            <p className="text-xs uppercase tracking-[0.24em] text-[var(--text-muted)]">Orbit Control</p>
+            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--text-primary)]">
+              Orvita Personal Operating System
             </h1>
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">
+              Fresh Strategic Minimalism para energia, capital y direccion operativa.
+            </p>
           </div>
         </header>
 
-        <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-6 pb-24">
+        <main className="mx-auto flex-1 w-full max-w-6xl px-4 py-6 pb-28 sm:px-6">
           {children}
         </main>
 
-        <footer className="fixed bottom-0 left-0 right-0 bg-white border-t h-16 flex justify-around items-center shadow-sm">
-          <Link href="/">Inicio</Link>
-          <Link href="/fisico">Físico</Link>
-          <Link href="/finanzas/overview">Finanzas</Link>
-          <Link href="/profesional">Profesional</Link>
-          <Link href="/sistema">Sistema</Link>
-        </footer>
+        <BottomNav />
 
       </body>
     </html>

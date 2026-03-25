@@ -2,6 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --bg-app: #F9FAFB;
+  --surface-card: #FFFFFF;
+  --surface-muted: #F3F4F6;
+  --border-soft: #E5E7EB;
+  --text-primary: #111827;
+  --text-secondary: #6B7280;
+  --text-muted: #94A3B8;
+  --accent-health: #A7F3D0;
+  --accent-health-strong: #34D399;
+  --accent-finance: #BAE6FD;
+  --accent-finance-strong: #38BDF8;
+  --accent-agenda: #C7D2FE;
+  --accent-agenda-strong: #6366F1;
+  --accent-warning: #F59E0B;
+  --accent-danger: #EF4444;
+}
+
 /* ===================================================== */
 /* BASE GLOBAL                                           */
 /* ===================================================== */
@@ -11,7 +29,9 @@ html, body {
 }
 
 body {
-  @apply bg-[#FFFCF7] text-[#0F172A] antialiased;
+  @apply antialiased;
+  background: var(--bg-app);
+  color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -29,7 +49,9 @@ body {
 /* ===================================================== */
 
 .card {
-  @apply bg-white rounded-3xl p-6;
+  @apply rounded-3xl p-6;
+  background: var(--surface-card);
+  border: 1px solid rgba(229, 231, 235, 0.9);
   box-shadow:
     0 8px 24px rgba(15, 23, 42, 0.04),
     0 2px 6px rgba(15, 23, 42, 0.03);
@@ -64,11 +86,11 @@ body {
 /* ===================================================== */
 
 .text-muted {
-  color: #64748B;
+  color: var(--text-secondary);
 }
 
 .text-soft {
-  color: #94A3B8;
+  color: var(--text-muted);
 }
 
 /* ===================================================== */
