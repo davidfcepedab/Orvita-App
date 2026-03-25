@@ -24,11 +24,13 @@ export function filterTransactionRows(
  * Column positions: [0] date/fecha, [5] description/descripcion, [6] category/categoria, [7] subcategory/subcategoria, [10] amount/monto.
  */
 export function mapRowToTransaction(row: any[]): Transaction {
+  const fecha = row?.[0] || ""
   return {
-    fecha: row?.[0] || "",
+    fecha,
     descripcion: row?.[5] || "",
     categoria: row?.[6] || "",
     subcategoria: row?.[7] || "",
     monto: Number(row?.[10] || 0),
+    mes: row?.[12] || (typeof fecha === "string" ? fecha.slice(0, 7) : ""),
   }
 }
