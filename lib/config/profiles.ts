@@ -33,3 +33,24 @@ export function resolvePersonalSpreadsheetId(profileId: AppProfileId) {
   )
 }
 
+export function resolveAgendaSpreadsheetId(profileId: AppProfileId) {
+  if (profileId === "esposo") {
+    const fromEnv =
+      process.env.ESPOSO_AGENDA_SPREADSHEET_ID?.trim() ||
+      process.env.AGENDA_SPREADSHEET_ID?.trim()
+    if (!fromEnv) {
+      throw new Error("ESPOSO_AGENDA_SPREADSHEET_ID is not configured")
+    }
+    return fromEnv
+  }
+
+  const fromEnv = (
+    process.env.DAVID_AGENDA_SPREADSHEET_ID?.trim() ||
+    process.env.AGENDA_SPREADSHEET_ID?.trim() ||
+    ""
+  )
+  if (!fromEnv) {
+    throw new Error("DAVID_AGENDA_SPREADSHEET_ID is not configured")
+  }
+  return fromEnv
+}
