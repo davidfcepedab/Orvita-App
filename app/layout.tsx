@@ -1,5 +1,23 @@
 import "./globals.css"
+import type { Metadata } from "next"
 import Link from "next/link"
+
+export const metadata: Metadata = {
+  metadataBase: new URL("https://orvita.app"),
+  title: "Orvita",
+  description: "Framework integrado para dirección estratégica personal.",
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: "Orvita",
+    description: "Framework integrado para dirección estratégica personal.",
+    url: "https://orvita.app",
+    siteName: "Orvita",
+    locale: "es_ES",
+    type: "website",
+  },
+}
 
 export default function RootLayout({
   children,
