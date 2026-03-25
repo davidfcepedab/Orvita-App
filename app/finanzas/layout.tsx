@@ -2,7 +2,7 @@
 
 import { ReactNode } from "react"
 import { usePathname, useRouter } from "next/navigation"
-import { FinanceProvider, useFinance } from "./FinanceContext"
+import { FinanceProvider, useFinance } from "./_hooks/useFinance"
 
 function FinanzasLayoutContent({
   children,

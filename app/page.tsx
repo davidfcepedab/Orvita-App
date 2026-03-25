@@ -6,9 +6,9 @@ export default function Home() {
   const router = useRouter()
 
   const modules = [
-    { name: "Físico", route: "/fisico", color: "#3FC5BB" },
-    { name: "Finanzas", route: "/finanzas/overview", color: "#6BCF93" },
-    { name: "Profesional", route: "/profesional", color: "#3B82F6" },
+    { name: "Salud", route: "/salud", color: "#34D399" },
+    { name: "Finanzas", route: "/finanzas/overview", color: "#38BDF8" },
+    { name: "Coach", route: "/coach", color: "#6366F1" },
     { name: "Sistema", route: "/sistema", color: "#8B7CF6" },
   ]
 

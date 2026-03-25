@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useFinance } from "../FinanceContext"
+import { useFinance } from "../_hooks/useFinance"
 
 interface Transaction {
   fecha: string

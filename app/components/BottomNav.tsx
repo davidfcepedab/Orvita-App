@@ -8,9 +8,9 @@ export default function BottomNav() {
 
   const tabs = [
     { name: "Inicio", route: "/" },
-    { name: "Físico", route: "/fisico" },
+    { name: "Salud", route: "/salud" },
     { name: "Finanzas", route: "/finanzas" },
-    { name: "Profesional", route: "/profesional" },
+    { name: "Coach", route: "/coach" },
     { name: "Sistema", route: "/sistema" },
   ]
 

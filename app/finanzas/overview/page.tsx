@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useFinance } from "../FinanceContext"
+import { useFinance } from "../_hooks/useFinance"
 import {
   ResponsiveContainer,
   LineChart,
