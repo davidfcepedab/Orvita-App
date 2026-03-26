@@ -44,6 +44,11 @@ alter table public.operational_tasks enable row level security;
 alter table public.operational_habits enable row level security;
 alter table public.checkins enable row level security;
 
+drop policy if exists "Users can manage their profile" on public.users;
+drop policy if exists "Users can manage their own tasks" on public.operational_tasks;
+drop policy if exists "Users can manage their own habits" on public.operational_habits;
+drop policy if exists "Users can manage their own checkins" on public.checkins;
+
 create policy "Users can manage their profile"
 on public.users
 for all
