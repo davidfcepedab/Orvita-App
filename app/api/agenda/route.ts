@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createSupabaseServerClient } from "@/lib/supabase/server"
-
-const CURRENT_USER_ID = "david"
-const CURRENT_USER_NAME = "Commander"
+import { requireUser } from "@/lib/api/requireUser"
+import type { OperationalDomain } from "@/lib/operational/types"
+import { getHouseholdId } from "@/lib/households/getHouseholdId"
 
 type AgendaRow = {
   id: string
+  user_id: string | null
   title: string
   status: "pending" | "in-progress" | "completed"
   priority: "Alta" | "Media" | "Baja"
@@ -13,17 +13,18 @@ type AgendaRow = {
   due_date: string | null
   assignee_id: string | null
   assignee_name: string | null
-  created_by: string
+  created_by: string | null
   created_at: string
+  domain: OperationalDomain
 }
 
-function mapType(row: AgendaRow) {
-  if (!row.assignee_id || row.assignee_id === CURRENT_USER_ID) return "personal"
-  if (row.created_by === CURRENT_USER_ID) return "assigned"
+function mapType(row: AgendaRow, currentUserId: string) {
+  if (!row.assignee_id || row.assignee_id === currentUserId) return "personal"
+  if (row.created_by === currentUserId || row.user_id === currentUserId) return "assigned"
   return "received"
 }
 
-function mapTask(row: AgendaRow) {
+function mapTask(row: AgendaRow, currentUserId: string) {
   return {
     id: row.id,
     title: row.title,
@@ -33,18 +34,29 @@ function mapTask(row: AgendaRow) {
     dueDate: row.due_date,
     assigneeId: row.assignee_id,
     assigneeName: row.assignee_name,
-    createdBy: row.created_by,
+    createdBy: row.created_by ?? row.user_id,
     createdAt: row.created_at,
-    type: mapType(row),
+    type: mapType(row, currentUserId),
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const supabase = createSupabaseServerClient()
+    const auth = await requireUser(req)
+    if (auth instanceof NextResponse) return auth
+    const { supabase, userId } = auth
+    const householdId = await getHouseholdId(supabase, userId)
+    if (!householdId) {
+      return NextResponse.json(
+        { success: false, error: "Usuario sin hogar asignado" },
+        { status: 403 }
+      )
+    }
     const result = await supabase
-      .from("orbita_agenda_tasks")
+      .from("operational_tasks")
       .select("*")
+      .eq("domain", "agenda")
+      .eq("household_id", householdId)
       .order("created_at", { ascending: false })
 
     if (result.error) {
@@ -54,7 +66,7 @@ export async function GET() {
     const rows = (result.data || []) as AgendaRow[]
     return NextResponse.json({
       success: true,
-      data: rows.map(mapTask),
+      data: rows.map((row) => mapTask(row, userId)),
     })
   } catch (error: unknown) {
     const detail = error instanceof Error ? error.message : "Error desconocido"
@@ -67,6 +79,16 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireUser(req)
+    if (auth instanceof NextResponse) return auth
+    const { supabase, userId } = auth
+    const householdId = await getHouseholdId(supabase, userId)
+    if (!householdId) {
+      return NextResponse.json(
+        { success: false, error: "Usuario sin hogar asignado" },
+        { status: 403 }
+      )
+    }
     const body = await req.json()
     const title = String(body?.title || "").trim()
     const priority = body?.priority === "Alta" || body?.priority === "Media" || body?.priority === "Baja"
@@ -84,11 +106,11 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const supabase = createSupabaseServerClient()
     const insert = await supabase
-      .from("orbita_agenda_tasks")
+      .from("operational_tasks")
       .insert({
-        id: crypto.randomUUID(),
+        user_id: userId,
+        household_id: householdId,
         title,
         status: "pending",
         priority,
@@ -96,7 +118,8 @@ export async function POST(req: NextRequest) {
         due_date: dueDate,
         assignee_id: assigneeId,
         assignee_name: assigneeName,
-        created_by: CURRENT_USER_ID,
+        created_by: userId,
+        domain: "agenda",
       })
 
     if (insert.error) {
@@ -115,6 +138,16 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
+    const auth = await requireUser(req)
+    if (auth instanceof NextResponse) return auth
+    const { supabase, userId } = auth
+    const householdId = await getHouseholdId(supabase, userId)
+    if (!householdId) {
+      return NextResponse.json(
+        { success: false, error: "Usuario sin hogar asignado" },
+        { status: 403 }
+      )
+    }
     const body = await req.json()
     const id = String(body?.id || "").trim()
     if (!id) {
@@ -152,11 +185,12 @@ export async function PATCH(req: NextRequest) {
       )
     }
 
-    const supabase = createSupabaseServerClient()
     const update = await supabase
-      .from("orbita_agenda_tasks")
+      .from("operational_tasks")
       .update(patch)
       .eq("id", id)
+      .eq("domain", "agenda")
+      .eq("household_id", householdId)
 
     if (update.error) {
       throw update.error

@@ -21,7 +21,7 @@ export default function Profesional() {
       <div className="grid gap-4 md:grid-cols-2">
         <div className="card">
           <p className="text-sm text-gray-500">Disciplina</p>
-          <p className="text-4xl font-bold">{data?.score_disciplina ?? 0}</p>
+          <p className="text-4xl font-bold">{data?.score_profesional ?? 0}</p>
         </div>
         <div className="card">
           <p className="text-sm text-gray-500">Score Profesional</p>

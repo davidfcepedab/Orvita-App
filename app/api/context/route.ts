@@ -1,70 +1,62 @@
-import { NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { NextRequest, NextResponse } from "next/server"
+import { requireUser } from "@/lib/api/requireUser"
+import { buildOperationalContext } from "@/lib/operational/context"
+import {
+  mapCheckin,
+  mapOperationalHabit,
+  mapOperationalTask,
+  type CheckinRow,
+  type OperationalHabitRow,
+  type OperationalTaskRow,
+} from "@/lib/operational/mappers"
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const supabase = createClient()
+    const auth = await requireUser(req)
+    if (auth instanceof NextResponse) return auth
+    const { supabase, userId } = auth
 
-    // =============================
-    // 1️⃣ Load profile-scoped data
-    // =============================
+    const { data: tasks, error: taskError } = await supabase
+      .from("operational_tasks")
+      .select("id,title,completed,domain,created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
 
-    const { data: tasks } = await supabase
-      .from("orbita_tasks")
-      .select("id,title,priority,due_at,status")
-      .eq("status", "pending")
-      .order("due_at", { ascending: true })
+    if (taskError) throw taskError
 
-    const { data: habits } = await supabase
-      .from("orbita_habits")
-      .select("id,title,scheduled_days,current_streak,best_streak,archived_at")
-      .is("archived_at", null)
+    const { data: habits, error: habitError } = await supabase
+      .from("operational_habits")
+      .select("id,name,completed,domain,created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
 
-    const { data: latestCheckin } = await supabase
-      .from("orbita_daily_checkins_summary")
-      .select("energy,focus,mood,updated_at")
-      .order("day", { ascending: false })
+    if (habitError) throw habitError
+
+    const { data: latestCheckin, error: checkinError } = await supabase
+      .from("checkins")
+      .select("id,score_global,score_fisico,score_salud,score_profesional,created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle()
 
-    // =============================
-    // 2️⃣ Derive scores safely
-    // =============================
+    if (checkinError) throw checkinError
 
-    const score_recuperacion = latestCheckin?.energy ?? 0
-    const score_disciplina = latestCheckin?.focus ?? 0
-    const score_global =
-      typeof latestCheckin?.energy === "number" &&
-      typeof latestCheckin?.focus === "number"
-        ? Math.round((latestCheckin.energy + latestCheckin.focus) / 2)
-        : 0
-
-    // =============================
-    // 3️⃣ Response (clean contract)
-    // =============================
-
-    return NextResponse.json({
-      today_tasks: tasks ?? [],
-      habits: habits ?? [],
-
-      score_global,
-      score_disciplina,
-      score_recuperacion,
-
-      delta_global: 0,
-      delta_disciplina: 0,
-      delta_recuperacion: 0,
-      delta_tendencia: 0,
-
-      tendencia_7d: [],
-      prediction: null,
-      insights: [],
+    const context = buildOperationalContext({
+      tasks: (tasks ?? []).map((row) => mapOperationalTask(row as OperationalTaskRow)),
+      habits: (habits ?? []).map((row) => mapOperationalHabit(row as OperationalHabitRow)),
+      latestCheckin: latestCheckin
+        ? mapCheckin(latestCheckin as CheckinRow)
+        : null,
     })
-  } catch (error: any) {
-    console.error("CONTEXT ERROR:", error?.message)
+
+    return NextResponse.json({ success: true, data: context })
+  } catch (error: unknown) {
+    const detail = error instanceof Error ? error.message : "Error desconocido"
+    console.error("CONTEXT ERROR:", detail)
 
     return NextResponse.json(
-      { error: "Error cargando contexto" },
+      { success: false, error: "Error cargando contexto" },
       { status: 500 }
     )
   }

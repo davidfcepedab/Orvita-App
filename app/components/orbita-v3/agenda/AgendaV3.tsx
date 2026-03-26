@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useApp, themes } from "@/app/contexts/AppContext"
 import { Calendar, ChevronRight, KanbanSquare, LayoutList, Plus } from "lucide-react"
 import { useOperationalContext } from "@/app/hooks/useOperationalContext"
+import type { OperationalTask } from "@/lib/operational/types"
 
 export default function AgendaV3() {
   const { colorTheme } = useApp()
@@ -20,9 +21,9 @@ export default function AgendaV3() {
           <p className="text-sm" style={{ color: theme.textMuted }}>
             Proximo punto de decision: 14:30 - Revision Q2
           </p>
-          {typeof data?.score_disciplina === "number" && (
+          {typeof data?.score_profesional === "number" && (
             <p className="mt-2 text-xs" style={{ color: theme.textMuted }}>
-              Score disciplina: {data.score_disciplina}
+              Score profesional: {data.score_profesional}
             </p>
           )}
         </div>
@@ -73,14 +74,14 @@ export default function AgendaV3() {
 
       {view === "list" ? (
         <div className="space-y-3">
-          {(data?.today_tasks ?? []).map((task: any) => (
+          {(data?.today_tasks ?? []).map((task: OperationalTask) => (
             <div key={task.id} className="flex items-center justify-between rounded-xl border p-4" style={{ backgroundColor: theme.surface, borderColor: theme.border }}>
               <div className="flex items-center gap-4">
                 <div className="h-8 w-1.5 rounded-full" style={{ backgroundColor: theme.accent.agenda }} />
                 <div>
                   <p className="text-sm font-medium">{task.title}</p>
                   <p className="text-xs" style={{ color: theme.textMuted }}>
-                    Prioridad: {task.priority} • {task.estimated_time} min
+                    Dominio: {task.domain} • {task.completed ? "completada" : "pendiente"}
                   </p>
                 </div>
               </div>
@@ -108,7 +109,7 @@ export default function AgendaV3() {
               </p>
               {column === "Por Hacer" && (
                 <div className="space-y-3">
-                  {(data?.today_tasks ?? []).map((task: any) => (
+                  {(data?.today_tasks ?? []).map((task: OperationalTask) => (
                     <div key={task.id} className="rounded-xl border p-3 shadow-sm" style={{ backgroundColor: theme.surface, borderColor: theme.border }}>
                       <div className="mb-3 h-1 w-6 rounded-full" style={{ backgroundColor: theme.accent.agenda }} />
                       <p className="text-sm">{task.title}</p>

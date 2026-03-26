@@ -19,6 +19,7 @@
 
 # local caches / runtime state
 .data/
+supabase/.temp/
 
 # production
 google-credentials.json

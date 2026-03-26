@@ -4,17 +4,18 @@ import { useState } from "react"
 import { useApp, themes } from "@/app/contexts/AppContext"
 import { Calendar, CheckCircle2, Circle, Clock, Flame } from "lucide-react"
 import { useOperationalContext } from "@/app/hooks/useOperationalContext"
+import type { OperationalTask } from "@/lib/operational/types"
 
 export default function HoyV3() {
   const { colorTheme } = useApp()
   const theme = themes[colorTheme]
-  const [completed, setCompleted] = useState<number[]>([])
+  const [completed, setCompleted] = useState<string[]>([])
   const { data } = useOperationalContext()
 
-  const tasks = data?.today_tasks ?? []
+  const tasks: OperationalTask[] = data?.today_tasks ?? []
   const nextTask = tasks.find((task) => !completed.includes(task.id))
 
-  const toggle = (id: number) => {
+  const toggle = (id: string) => {
     setCompleted((previous) =>
       previous.includes(id) ? previous.filter((item) => item !== id) : [...previous, id]
     )
@@ -50,10 +51,10 @@ export default function HoyV3() {
               Foco Actual Inmediato
             </span>
           </div>
-          <h3 className="mb-3 text-2xl">{nextTask.task}</h3>
+          <h3 className="mb-3 text-2xl">{nextTask.title}</h3>
           <p className="mb-6 flex items-center gap-2 text-sm" style={{ color: theme.textMuted }}>
             <Clock className="h-4 w-4" />
-            {nextTask.estimatedTime} min
+            {nextTask.domain}
           </p>
           <button
             onClick={() => toggle(nextTask.id)}
@@ -86,9 +87,9 @@ export default function HoyV3() {
                 <Circle className="h-5 w-5" style={{ color: theme.textMuted }} />
               )}
               <div className="flex-1">
-                <p className={isDone ? "line-through" : ""}>{task.task}</p>
+                <p className={isDone ? "line-through" : ""}>{task.title}</p>
               </div>
-              <span className="text-xs" style={{ color: theme.textMuted }}>{task.estimatedTime}m</span>
+              <span className="text-xs" style={{ color: theme.textMuted }}>{task.domain}</span>
             </button>
           )
         })}
