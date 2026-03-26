@@ -56,7 +56,7 @@ export default function TransactionsPageClient() {
         setLoading(true)
         setError(null)
 
-        let url = `/api/finanzas/transactions?month=${encodeURIComponent(month)}`
+        let url = `/api/orbita/finanzas/transactions?month=${encodeURIComponent(month)}`
         if (category) {
           url += `&category=${encodeURIComponent(category)}`
         }

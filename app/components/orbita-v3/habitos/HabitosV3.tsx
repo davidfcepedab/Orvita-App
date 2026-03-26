@@ -1,7 +1,6 @@
 "use client"
 
 import { useApp, themes } from "@/app/contexts/AppContext"
-import { systemData } from "@/app/data/mockData"
 import { Activity, CheckCircle2, Circle, Flame, Plus, Target, TrendingDown } from "lucide-react"
 import { useOperationalContext } from "@/app/hooks/useOperationalContext"
 
@@ -53,7 +52,7 @@ export default function HabitosV3() {
       </div>
 
       <div className="space-y-4">
-        {systemData.agenda.atomicHabits.map((habit, index) => {
+        {(data?.habits ?? []).map((habit: any, index: number) => {
           const isRisk = index === 2
           return (
             <div key={habit.id} className="flex flex-col gap-5 rounded-2xl border p-6 md:flex-row md:items-center" style={{ backgroundColor: theme.surface, borderColor: isRisk ? "#ef444466" : theme.border }}>

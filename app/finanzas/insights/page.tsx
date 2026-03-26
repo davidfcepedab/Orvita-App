@@ -46,7 +46,7 @@ export default function FinanzasInsights() {
         setError(null)
 
         const response = await fetch(
-          `/api/finanzas/insights?month=${encodeURIComponent(month)}`
+          `/api/orbita/finanzas/insights?month=${encodeURIComponent(month)}`
         )
 
         if (!response.ok) {

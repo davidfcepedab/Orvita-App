@@ -22,11 +22,13 @@ interface MonthlyRow {
 }
 
 interface OverviewData {
-  ingresos: number
-  flujo_total: number
-  liquidez: number
+  income: number
+  expense: number
+  net: number
+  savingsRate: number
+  previousNet: number | null
+  deltaNet: number | null
   runway: number
-  monthlyData: MonthlyRow[]
 }
 
 interface OverviewResponse {
@@ -55,7 +57,7 @@ export default function FinanzasOverview() {
         setError(null)
 
         const response = await fetch(
-          `/api/finanzas/overview?month=${encodeURIComponent(month)}`
+          `/api/orbita/finanzas/overview?month=${encodeURIComponent(month)}`
         )
 
         if (!response.ok) {
@@ -115,7 +117,13 @@ export default function FinanzasOverview() {
     )
   }
 
-  const { ingresos, flujo_total, liquidez, runway, monthlyData } = data
+  const { income, net, savingsRate, runway } = data
+
+  // Adaptación temporal UI → nuevo contrato backend
+  const ingresos = income ?? 0
+  const flujo_total = net ?? 0
+  const liquidez = savingsRate ?? 0
+  const monthlyData: MonthlyRow[] = []
 
   const formatMoney = (value: number) =>
     new Intl.NumberFormat("es-CO", {

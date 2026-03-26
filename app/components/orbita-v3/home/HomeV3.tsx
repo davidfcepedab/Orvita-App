@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { useApp, themes } from "@/app/contexts/AppContext"
-import { systemData } from "@/app/data/mockData"
 import { Activity, AlertCircle, CheckCircle2, Wind } from "lucide-react"
 import { useOperationalContext } from "@/app/hooks/useOperationalContext"
 
@@ -19,6 +18,12 @@ export default function HomeV3() {
     { id: "checkin", title: "Check-in Narrativo" },
   ]
 
+  const nextAction = data?.next_action ?? "Sin accion prioritaria definida"
+  const nextImpact = data?.next_impact ?? "-"
+  const nextTimeRequired = data?.next_time_required ?? "-"
+  const habits = data?.habits ?? []
+  const energy = data?.score_recuperacion ?? 0
+
   return (
     <div className="mx-auto max-w-5xl space-y-8">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -31,14 +36,28 @@ export default function HomeV3() {
 
         <div
           className="inline-flex items-center gap-2 rounded-full border px-4 py-2"
-          style={{ backgroundColor: theme.surfaceAlt, borderColor: `${theme.accent.health}66` }}
+          style={{
+            backgroundColor: theme.surfaceAlt,
+            borderColor: `${theme.accent.health}66`,
+          }}
         >
-          <Wind className="h-4 w-4 animate-pulse" style={{ color: theme.accent.health }} />
-          <span className="text-xs uppercase tracking-wider">Orbita adapto tu dia por energia</span>
+          <Wind
+            className="h-4 w-4 animate-pulse"
+            style={{ color: theme.accent.health }}
+          />
+          <span className="text-xs uppercase tracking-wider">
+            Orbita adapta tu dia segun energia
+          </span>
         </div>
       </div>
 
-      <div className="flex w-max items-center rounded-xl border p-1" style={{ backgroundColor: theme.surfaceAlt, borderColor: theme.border }}>
+      <div
+        className="flex w-max items-center rounded-xl border p-1"
+        style={{
+          backgroundColor: theme.surfaceAlt,
+          borderColor: theme.border,
+        }}
+      >
         {["Dia", "Semana", "Mes"].map((tab) => (
           <button
             key={tab}
@@ -55,24 +74,45 @@ export default function HomeV3() {
 
       <div className="space-y-4">
         {clusters.map((cluster) => (
-          <div key={cluster.id} className="rounded-2xl border p-6 shadow-sm" style={{ backgroundColor: theme.surface, borderColor: theme.border }}>
-            <p className="mb-4 text-xs uppercase tracking-wider" style={{ color: theme.textMuted }}>
+          <div
+            key={cluster.id}
+            className="rounded-2xl border p-6 shadow-sm"
+            style={{
+              backgroundColor: theme.surface,
+              borderColor: theme.border,
+            }}
+          >
+            <p
+              className="mb-4 text-xs uppercase tracking-wider"
+              style={{ color: theme.textMuted }}
+            >
               {cluster.title}
             </p>
 
             {cluster.id === "hoy" && (
               <div className="flex items-center gap-4">
-                <div className="rounded-full p-3" style={{ backgroundColor: `${theme.accent.agenda}22` }}>
-                  <AlertCircle className="h-6 w-6" style={{ color: theme.accent.agenda }} />
+                <div
+                  className="rounded-full p-3"
+                  style={{
+                    backgroundColor: `${theme.accent.agenda}22`,
+                  }}
+                >
+                  <AlertCircle
+                    className="h-6 w-6"
+                    style={{ color: theme.accent.agenda }}
+                  />
                 </div>
                 <div>
                   <p className="text-lg font-medium">
                     {data?.delta_global && data.delta_global < 0
                       ? "Recuperar foco operativo y bajar carga reactiva"
-                      : systemData.nextActions[0].action}
+                      : nextAction}
                   </p>
-                  <p className="text-sm" style={{ color: theme.textMuted }}>
-                    Impacto: {systemData.nextActions[0].impact} • {systemData.nextActions[0].timeRequired}
+                  <p
+                    className="text-sm"
+                    style={{ color: theme.textMuted }}
+                  >
+                    Impacto: {nextImpact} • {nextTimeRequired}
                   </p>
                 </div>
               </div>
@@ -80,17 +120,37 @@ export default function HomeV3() {
 
             {cluster.id === "habitos" && (
               <div className="grid gap-3 md:grid-cols-3">
-                {systemData.agenda.atomicHabits.slice(0, 3).map((habit) => (
-                  <div key={habit.id} className="rounded-xl border p-3" style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt }}>
+                {habits.slice(0, 3).map((habit: any) => (
+                  <div
+                    key={habit.id}
+                    className="rounded-xl border p-3"
+                    style={{
+                      borderColor: theme.border,
+                      backgroundColor: theme.surfaceAlt,
+                    }}
+                  >
                     <div className="mb-2 flex items-center justify-between">
-                      <span className="truncate text-sm">{habit.habit}</span>
+                      <span className="truncate text-sm">
+                        {habit.name}
+                      </span>
                       {habit.completed ? (
-                        <CheckCircle2 className="h-4 w-4" style={{ color: theme.accent.health }} />
+                        <CheckCircle2
+                          className="h-4 w-4"
+                          style={{ color: theme.accent.health }}
+                        />
                       ) : (
-                        <Activity className="h-4 w-4" style={{ color: theme.textMuted }} />
+                        <Activity
+                          className="h-4 w-4"
+                          style={{ color: theme.textMuted }}
+                        />
                       )}
                     </div>
-                    <p className="text-xs" style={{ color: theme.textMuted }}>{habit.streak} dias</p>
+                    <p
+                      className="text-xs"
+                      style={{ color: theme.textMuted }}
+                    >
+                      {habit.streak ?? 0} dias
+                    </p>
                   </div>
                 ))}
               </div>
@@ -98,14 +158,35 @@ export default function HomeV3() {
 
             {cluster.id === "foco" && (
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="rounded-xl p-4" style={{ backgroundColor: theme.surfaceAlt }}>
-                  <p className="text-xs" style={{ color: theme.textMuted }}>Work Block (Actual)</p>
-                  <p className="text-lg">Deep Work (90m)</p>
+                <div
+                  className="rounded-xl p-4"
+                  style={{ backgroundColor: theme.surfaceAlt }}
+                >
+                  <p
+                    className="text-xs"
+                    style={{ color: theme.textMuted }}
+                  >
+                    Work Block (Actual)
+                  </p>
+                  <p className="text-lg">
+                    {data?.current_block ?? "Sin bloque activo"}
+                  </p>
                 </div>
-                <div className="rounded-xl p-4" style={{ backgroundColor: theme.surfaceAlt }}>
-                  <p className="text-xs" style={{ color: theme.textMuted }}>Energia</p>
-                  <p className="text-lg" style={{ color: theme.accent.health }}>
-                    {data?.score_recuperacion ?? systemData.health.bioTelemetry.bodyBattery}%
+                <div
+                  className="rounded-xl p-4"
+                  style={{ backgroundColor: theme.surfaceAlt }}
+                >
+                  <p
+                    className="text-xs"
+                    style={{ color: theme.textMuted }}
+                  >
+                    Energia
+                  </p>
+                  <p
+                    className="text-lg"
+                    style={{ color: theme.accent.health }}
+                  >
+                    {energy}%
                   </p>
                 </div>
               </div>

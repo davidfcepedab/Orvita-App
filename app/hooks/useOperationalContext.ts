@@ -15,6 +15,12 @@ export interface OperationalContextData {
   tendencia_7d: { value: number }[]
   prediction: unknown
   insights: string[]
+  today_tasks?: any[]
+  habits?: any[]
+  next_action?: string
+  next_impact?: string
+  next_time_required?: string
+  current_block?: string
 }
 
 export function useOperationalContext() {

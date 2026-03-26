@@ -65,7 +65,7 @@ export default function FinanzasCategories() {
         setError(null)
 
         const response = await fetch(
-          `/api/finanzas/categories?month=${encodeURIComponent(month_value)}`
+          `/api/orbita/finanzas/categories?month=${encodeURIComponent(month_value)}`
         )
 
         if (!response.ok) {

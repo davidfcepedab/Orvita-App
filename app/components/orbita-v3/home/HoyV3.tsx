@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { useApp, themes } from "@/app/contexts/AppContext"
-import { systemData } from "@/app/data/mockData"
 import { Calendar, CheckCircle2, Circle, Clock, Flame } from "lucide-react"
 import { useOperationalContext } from "@/app/hooks/useOperationalContext"
 
@@ -12,7 +11,7 @@ export default function HoyV3() {
   const [completed, setCompleted] = useState<number[]>([])
   const { data } = useOperationalContext()
 
-  const tasks = systemData.agenda.todayHighImpact
+  const tasks = data?.today_tasks ?? []
   const nextTask = tasks.find((task) => !completed.includes(task.id))
 
   const toggle = (id: number) => {

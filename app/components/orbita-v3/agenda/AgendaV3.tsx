@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { useApp, themes } from "@/app/contexts/AppContext"
-import { systemData } from "@/app/data/mockData"
 import { Calendar, ChevronRight, KanbanSquare, LayoutList, Plus } from "lucide-react"
 import { useOperationalContext } from "@/app/hooks/useOperationalContext"
 
@@ -74,14 +73,14 @@ export default function AgendaV3() {
 
       {view === "list" ? (
         <div className="space-y-3">
-          {systemData.agenda.todayHighImpact.map((task) => (
+          {(data?.today_tasks ?? []).map((task: any) => (
             <div key={task.id} className="flex items-center justify-between rounded-xl border p-4" style={{ backgroundColor: theme.surface, borderColor: theme.border }}>
               <div className="flex items-center gap-4">
                 <div className="h-8 w-1.5 rounded-full" style={{ backgroundColor: theme.accent.agenda }} />
                 <div>
-                  <p className="text-sm font-medium">{task.task}</p>
+                  <p className="text-sm font-medium">{task.title}</p>
                   <p className="text-xs" style={{ color: theme.textMuted }}>
-                    Prioridad: {task.priority} • {task.estimatedTime} min
+                    Prioridad: {task.priority} • {task.estimated_time} min
                   </p>
                 </div>
               </div>
@@ -109,10 +108,10 @@ export default function AgendaV3() {
               </p>
               {column === "Por Hacer" && (
                 <div className="space-y-3">
-                  {systemData.agenda.todayHighImpact.map((task) => (
+                  {(data?.today_tasks ?? []).map((task: any) => (
                     <div key={task.id} className="rounded-xl border p-3 shadow-sm" style={{ backgroundColor: theme.surface, borderColor: theme.border }}>
                       <div className="mb-3 h-1 w-6 rounded-full" style={{ backgroundColor: theme.accent.agenda }} />
-                      <p className="text-sm">{task.task}</p>
+                      <p className="text-sm">{task.title}</p>
                     </div>
                   ))}
                 </div>
