@@ -1,6 +1,6 @@
 import type { OperationalDomain } from "@/lib/operational/types"
 
-const DOMAIN_VALUES: OperationalDomain[] = ["salud", "fisico", "profesional"]
+const DOMAIN_VALUES: OperationalDomain[] = ["salud", "fisico", "profesional", "agenda"]
 
 function isDomain(value: unknown): value is OperationalDomain {
   return typeof value === "string" && DOMAIN_VALUES.includes(value as OperationalDomain)

@@ -31,6 +31,24 @@ type RawContextData = {
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value))
 
+function isRawContextData(value: unknown): value is RawContextData {
+  if (!value || typeof value !== "object") return false
+  const obj = value as Record<string, unknown>
+  const numbers =
+    typeof obj.score_fisico === "number" &&
+    typeof obj.score_disciplina === "number" &&
+    typeof obj.score_recuperacion === "number" &&
+    typeof obj.delta_disciplina === "number" &&
+    typeof obj.delta_recuperacion === "number"
+  if (!numbers) return false
+  if (!Array.isArray(obj.tendencia_7d)) return false
+  return obj.tendencia_7d.every((item) => {
+    if (!item || typeof item !== "object") return false
+    const record = item as Record<string, unknown>
+    return typeof record.value === "number"
+  })
+}
+
 export function useSaludContext() {
   const [data, setData] = useState<RawContextData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -47,7 +65,7 @@ export function useSaludContext() {
           return
         }
 
-        if (!response) {
+        if (!response || !isRawContextData(response)) {
           setError("No pude cargar el contexto de salud.")
           return
         }

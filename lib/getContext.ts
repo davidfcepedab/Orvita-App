@@ -1,4 +1,14 @@
-export async function getContext() {
+type ContextEnvelope = {
+  success?: boolean
+  data?: unknown
+  error?: string
+}
+
+function isContextEnvelope(value: unknown): value is ContextEnvelope {
+  return !!value && typeof value === "object"
+}
+
+export async function getContext(): Promise<unknown | null> {
   try {
     const res = await fetch("/api/context", {
       cache: "no-store",
@@ -9,18 +19,15 @@ export async function getContext() {
       return null
     }
 
-    const payload = (await res.json()) as {
-      success?: boolean
-      data?: unknown
-      error?: string
-    }
+    const payload = (await res.json()) as unknown
 
-    if (payload && payload.success && payload.data) {
-      return payload.data
-    }
-
-    if (payload && payload.success === false) {
-      return null
+    if (isContextEnvelope(payload)) {
+      if (payload.success && payload.data) {
+        return payload.data
+      }
+      if (payload.success === false) {
+        return null
+      }
     }
 
     return payload

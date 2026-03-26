@@ -1,4 +1,4 @@
-export type OperationalDomain = "salud" | "fisico" | "profesional"
+export type OperationalDomain = "salud" | "fisico" | "profesional" | "agenda"
 
 export interface OperationalTask {
   id: string
