@@ -2,6 +2,20 @@
 
 import { useEffect, useState } from "react"
 
+export interface OperationalTask {
+  id: string
+  title?: string
+  completed?: boolean
+  [key: string]: unknown
+}
+
+export interface OperationalHabit {
+  id: string
+  name?: string
+  completed?: boolean
+  [key: string]: unknown
+}
+
 export interface OperationalContextData {
   score_global: number
   score_fisico: number
@@ -15,8 +29,8 @@ export interface OperationalContextData {
   tendencia_7d: { value: number }[]
   prediction: unknown
   insights: string[]
-  today_tasks?: any[]
-  habits?: any[]
+  today_tasks?: OperationalTask[]
+  habits?: OperationalHabit[]
   next_action?: string
   next_impact?: string
   next_time_required?: string
