@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useApp, themes } from "@/app/contexts/AppContext"
 import { Activity, AlertCircle, CheckCircle2, Wind } from "lucide-react"
 import { useOperationalContext } from "@/app/hooks/useOperationalContext"
+import type { OperationalHabit } from "@/lib/operational/types"
 
 export default function HomeV3() {
   const { colorTheme } = useApp()
@@ -22,7 +23,7 @@ export default function HomeV3() {
   const nextImpact = data?.next_impact ?? "-"
   const nextTimeRequired = data?.next_time_required ?? "-"
   const habits = data?.habits ?? []
-  const energy = data?.score_recuperacion ?? 0
+  const energy = data?.score_salud ?? 0
 
   return (
     <div className="mx-auto max-w-5xl space-y-8">
@@ -120,7 +121,7 @@ export default function HomeV3() {
 
             {cluster.id === "habitos" && (
               <div className="grid gap-3 md:grid-cols-3">
-                {habits.slice(0, 3).map((habit: any) => (
+                {habits.slice(0, 3).map((habit: OperationalHabit) => (
                   <div
                     key={habit.id}
                     className="rounded-xl border p-3"
@@ -149,7 +150,7 @@ export default function HomeV3() {
                       className="text-xs"
                       style={{ color: theme.textMuted }}
                     >
-                      {habit.streak ?? 0} dias
+                      Dominio: {habit.domain}
                     </p>
                   </div>
                 ))}

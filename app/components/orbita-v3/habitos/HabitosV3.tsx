@@ -3,6 +3,7 @@
 import { useApp, themes } from "@/app/contexts/AppContext"
 import { Activity, CheckCircle2, Circle, Flame, Plus, Target, TrendingDown } from "lucide-react"
 import { useOperationalContext } from "@/app/hooks/useOperationalContext"
+import type { OperationalHabit } from "@/lib/operational/types"
 
 export default function HabitosV3() {
   const { colorTheme } = useApp()
@@ -33,7 +34,7 @@ export default function HabitosV3() {
             <Activity className="h-4 w-4" />
             Consistencia 30D
           </p>
-          <p className="text-4xl">{data?.score_disciplina ?? 84}%</p>
+          <p className="text-4xl">{data?.score_profesional ?? 0}%</p>
         </div>
         <div className="rounded-2xl border p-6" style={{ backgroundColor: theme.surface, borderColor: theme.border }}>
           <p className="mb-2 flex items-center gap-2 text-xs uppercase tracking-wider" style={{ color: theme.textMuted }}>
@@ -52,13 +53,13 @@ export default function HabitosV3() {
       </div>
 
       <div className="space-y-4">
-        {(data?.habits ?? []).map((habit: any, index: number) => {
-          const isRisk = index === 2
+        {(data?.habits ?? []).map((habit: OperationalHabit, index: number) => {
+          const isRisk = index === 2 && !habit.completed
           return (
             <div key={habit.id} className="flex flex-col gap-5 rounded-2xl border p-6 md:flex-row md:items-center" style={{ backgroundColor: theme.surface, borderColor: isRisk ? "#ef444466" : theme.border }}>
               <div className="flex-1">
                 <div className="mb-2 flex items-center gap-3">
-                  <h3 className="text-base">{habit.habit}</h3>
+                  <h3 className="text-base">{habit.name}</h3>
                   {isRisk && (
                     <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] uppercase tracking-wider text-red-600">
                       Riesgo Ruptura
@@ -68,11 +69,11 @@ export default function HabitosV3() {
                 <p className="flex items-center gap-4 text-xs" style={{ color: theme.textMuted }}>
                   <span className="flex items-center gap-1">
                     <Target className="h-3 w-3" />
-                    {habit.time}
+                    Dominio: {habit.domain}
                   </span>
                   <span className="flex items-center gap-1">
                     <Flame className="h-3 w-3 text-amber-500" />
-                    {habit.streak} dias seguidos
+                    Estado: {habit.completed ? "completado" : "pendiente"}
                   </span>
                 </p>
               </div>

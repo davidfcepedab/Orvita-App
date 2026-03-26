@@ -33,8 +33,8 @@ export default function Sistema() {
           <p className="text-3xl font-bold">{data?.score_fisico ?? 0}</p>
         </div>
         <div className="card">
-          <p className="text-xs text-gray-500">Recuperacion</p>
-          <p className="text-3xl font-bold">{data?.score_recuperacion ?? 0}</p>
+          <p className="text-xs text-gray-500">Salud</p>
+          <p className="text-3xl font-bold">{data?.score_salud ?? 0}</p>
         </div>
       </div>
 

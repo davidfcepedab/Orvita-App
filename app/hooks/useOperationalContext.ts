@@ -1,41 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-
-export interface OperationalTask {
-  id: string
-  title?: string
-  completed?: boolean
-  [key: string]: unknown
-}
-
-export interface OperationalHabit {
-  id: string
-  name?: string
-  completed?: boolean
-  [key: string]: unknown
-}
-
-export interface OperationalContextData {
-  score_global: number
-  score_fisico: number
-  score_profesional: number
-  score_disciplina: number
-  score_recuperacion: number
-  delta_global: number
-  delta_disciplina: number
-  delta_recuperacion: number
-  delta_tendencia: number
-  tendencia_7d: { value: number }[]
-  prediction: unknown
-  insights: string[]
-  today_tasks?: OperationalTask[]
-  habits?: OperationalHabit[]
-  next_action?: string
-  next_impact?: string
-  next_time_required?: string
-  current_block?: string
-}
+import type { OperationalContextData } from "@/lib/operational/types"
 
 export function useOperationalContext() {
   const [data, setData] = useState<OperationalContextData | null>(null)
@@ -53,9 +19,16 @@ export function useOperationalContext() {
         if (!response.ok) {
           throw new Error(`Error ${response.status}`)
         }
-        const json = (await response.json()) as OperationalContextData
+        const payload = (await response.json()) as {
+          success: boolean
+          data?: OperationalContextData
+          error?: string
+        }
+        if (!payload.success || !payload.data) {
+          throw new Error(payload.error || "Error cargando contexto")
+        }
         if (!cancelled) {
-          setData(json)
+          setData(payload.data)
         }
       } catch (err) {
         if (!cancelled) {
