@@ -1,6 +1,5 @@
 import "./globals.css"
 import Providers from "@/app/providers"
-import V3Shell from "@/app/components/orbita-v3/V3Shell"
 import { ThemeProvider } from "@/src/theme/ThemeProvider"
 
 export default function RootLayout({
@@ -13,7 +12,7 @@ export default function RootLayout({
       <body>
         <ThemeProvider>
           <Providers>
-            <V3Shell>{children}</V3Shell>
+            {children}
           </Providers>
         </ThemeProvider>
       </body>
