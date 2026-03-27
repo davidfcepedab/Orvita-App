@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react"
 import { useFinance } from "../FinanceContext"
+import { AppShell } from "@/src/components/layout/AppShell"
+import { Card } from "@/src/components/ui/Card"
+import { SectionHeader } from "@/src/components/ui/SectionHeader"
 import {
   ResponsiveContainer,
   LineChart,
@@ -86,7 +89,7 @@ export default function FinanzasOverview() {
 
   if (!finance) {
     return (
-      <div className="p-6 text-center text-gray-500">
+      <div style={{ padding: "var(--spacing-lg)", textAlign: "center", color: "var(--color-text-secondary)" }}>
         Inicializando...
       </div>
     )
@@ -94,7 +97,7 @@ export default function FinanzasOverview() {
 
   if (loading) {
     return (
-      <div className="p-6 text-center text-gray-500">
+      <div style={{ padding: "var(--spacing-lg)", textAlign: "center", color: "var(--color-text-secondary)" }}>
         Cargando datos...
       </div>
     )
@@ -102,16 +105,23 @@ export default function FinanzasOverview() {
 
   if (error) {
     return (
-      <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-        <p className="font-semibold">Error al cargar datos</p>
-        <p className="text-sm mt-1">{error}</p>
+      <div
+        style={{
+          padding: "var(--spacing-md)",
+          borderRadius: "var(--radius-card)",
+          border: "0.5px solid var(--color-border)",
+          color: "var(--color-accent-danger)",
+        }}
+      >
+        <p style={{ margin: 0, fontWeight: 600 }}>Error al cargar datos</p>
+        <p style={{ margin: "4px 0 0", fontSize: "12px" }}>{error}</p>
       </div>
     )
   }
 
   if (!data) {
     return (
-      <div className="p-6 text-center text-gray-500">
+      <div style={{ padding: "var(--spacing-lg)", textAlign: "center", color: "var(--color-text-secondary)" }}>
         No hay datos disponibles para este mes
       </div>
     )
@@ -119,7 +129,6 @@ export default function FinanzasOverview() {
 
   const { income, net, savingsRate, runway } = data
 
-  // Adaptación temporal UI → nuevo contrato backend
   const ingresos = income ?? 0
   const flujo_total = net ?? 0
   const liquidez = savingsRate ?? 0
@@ -133,110 +142,74 @@ export default function FinanzasOverview() {
   const formatMillions = (value: number) =>
     `${Math.round(value / 1_000_000)}M`
 
-  const getRunwayColor = (value: number) => {
-    if (value < 3) return "text-red-600"
-    if (value < 6) return "text-amber-600"
-    return "text-green-600"
+  const getTone = (value: number) => {
+    if (value < 3) return "var(--color-accent-danger)"
+    if (value < 6) return "var(--color-accent-warning)"
+    return "var(--color-accent-health)"
   }
 
-  const getRunwayBg = (value: number) => {
-    if (value < 3) return "bg-red-50 border-red-200"
-    if (value < 6) return "bg-amber-50 border-amber-200"
-    return "bg-green-50 border-green-200"
-  }
-
-  const getFlujoColor = (value: number) =>
-    value >= 0 ? "text-green-600" : "text-red-600"
-
-  const getFlujoBg = (value: number) =>
-    value >= 0
-      ? "bg-green-50 border-green-200"
-      : "bg-red-50 border-red-200"
+  const getFlowTone = (value: number) =>
+    value >= 0 ? "var(--color-accent-health)" : "var(--color-accent-danger)"
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-3">
-        <div className="p-4 bg-white border border-gray-200 rounded-lg">
-          <p className="text-xs text-gray-500">Ingresos</p>
-          <p className="text-lg font-semibold text-green-600 mt-2">
-            ${formatMoney(ingresos)}
-          </p>
-        </div>
+    <AppShell moduleLabel="Finance Module" moduleTitle="Capital Operations" metaInfo={`Mes: ${month}`}>
+      <SectionHeader
+        title="Capital Operations"
+        description="Liquidez, flujo de caja y decisiones financieras estratégicas."
+        gradient
+      />
 
-        <div className={`p-4 border rounded-lg ${getFlujoBg(flujo_total)}`}>
-          <p className="text-xs text-gray-500">Flujo Total</p>
-          <p className={`text-lg font-semibold mt-2 ${getFlujoColor(flujo_total)}`}>
-            ${formatMoney(flujo_total)}
-          </p>
-        </div>
-
-        <div className="p-4 bg-white border border-gray-200 rounded-lg">
-          <p className="text-xs text-gray-500">Liquidez</p>
-          <p className="text-lg font-semibold text-blue-600 mt-2">
-            ${formatMoney(liquidez)}
-          </p>
-        </div>
-
-        <div className={`p-4 border rounded-lg ${getRunwayBg(runway)}`}>
-          <p className="text-xs text-gray-500">Runway</p>
-          <p className={`text-lg font-semibold mt-2 ${getRunwayColor(runway)}`}>
-            {runway.toFixed(1)} meses
-          </p>
-        </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(12, minmax(0, 1fr))", gap: "var(--layout-gap)" }}>
+        {[
+          { label: "Ingresos", value: `$${formatMoney(ingresos)}`, tone: "var(--color-accent-health)" },
+          { label: "Flujo Total", value: `$${formatMoney(flujo_total)}`, tone: getFlowTone(flujo_total) },
+          { label: "Liquidez", value: `$${formatMoney(liquidez)}`, tone: "var(--color-accent-primary)" },
+          { label: "Runway", value: `${runway.toFixed(1)} meses`, tone: getTone(runway) },
+        ].map((metric) => (
+          <div key={metric.label} style={{ gridColumn: "span 3" }}>
+            <Card hover>
+              <div style={{ padding: "var(--spacing-lg)", display: "grid", gap: "var(--spacing-sm)" }}>
+                <p style={{ margin: 0, fontSize: "12px", color: "var(--color-text-secondary)", textTransform: "uppercase", letterSpacing: "0.12em" }}>
+                  {metric.label}
+                </p>
+                <p style={{ margin: 0, fontSize: "24px", fontWeight: 600, color: metric.tone }}>{metric.value}</p>
+              </div>
+            </Card>
+          </div>
+        ))}
       </div>
 
       {monthlyData?.length > 0 ? (
-        <div className="p-4 bg-white border border-gray-200 rounded-lg">
-          <h3 className="text-sm text-gray-500 mb-4">
-            Ingresos vs Gasto Operativo vs Flujo (6 meses)
-          </h3>
+        <Card>
+          <div style={{ padding: "var(--spacing-lg)", display: "grid", gap: "var(--spacing-md)" }}>
+            <h3 style={{ margin: 0, fontSize: "14px", color: "var(--color-text-secondary)" }}>
+              Ingresos vs Gasto Operativo vs Flujo (6 meses)
+            </h3>
 
-          <div className="w-full h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={monthlyData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-                <XAxis dataKey="month" />
-                <YAxis tickFormatter={formatMillions} />
-                <Tooltip />
-                <Legend />
-                <ReferenceLine y={0} stroke="#9CA3AF" strokeWidth={2} />
-
-                <Line
-                  type="monotone"
-                  dataKey="ingresos"
-                  stroke="#16A34A"
-                  strokeWidth={3}
-                  dot={false}
-                  name="Ingresos"
-                />
-
-                <Line
-                  type="monotone"
-                  dataKey="gasto_operativo"
-                  stroke="#DC2626"
-                  strokeWidth={3}
-                  dot={false}
-                  name="Gasto Operativo"
-                />
-
-                <Line
-                  type="monotone"
-                  dataKey="flujo"
-                  stroke="#6B7280"
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  dot={false}
-                  name="Flujo"
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            <div style={{ width: "100%", height: "280px" }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={monthlyData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                  <XAxis dataKey="month" />
+                  <YAxis tickFormatter={formatMillions} />
+                  <Tooltip />
+                  <Legend />
+                  <ReferenceLine y={0} stroke="var(--color-border)" />
+                  <Line type="monotone" dataKey="ingresos" stroke="var(--color-accent-health)" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="gasto_operativo" stroke="var(--color-accent-danger)" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="flujo" stroke="var(--color-accent-primary)" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </div>
-        </div>
+        </Card>
       ) : (
-        <div className="p-6 bg-gray-50 border border-gray-200 rounded-lg text-center text-gray-500">
-          No hay datos de histórico disponibles
-        </div>
+        <Card>
+          <div style={{ padding: "var(--spacing-lg)", textAlign: "center", color: "var(--color-text-secondary)" }}>
+            No hay datos de histórico disponibles
+          </div>
+        </Card>
       )}
-    </div>
+    </AppShell>
   )
 }

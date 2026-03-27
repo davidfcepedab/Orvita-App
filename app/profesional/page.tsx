@@ -1,48 +1,88 @@
 "use client"
 
 import Link from "next/link"
+import { AppShell } from "@/src/components/layout/AppShell"
+import { Card } from "@/src/components/ui/Card"
+import { SectionHeader } from "@/src/components/ui/SectionHeader"
 import { useOperationalContext } from "@/app/hooks/useOperationalContext"
+import { useLayoutMode } from "@/src/theme/ThemeProvider"
+import { designTokens } from "@/src/theme/design-tokens"
 
 export default function Profesional() {
   const { data, loading, error } = useOperationalContext()
+  const { layoutMode } = useLayoutMode()
 
   if (loading) {
-    return <div className="p-6 text-center text-gray-500">Cargando coach...</div>
+    return <div style={{ padding: "var(--spacing-lg)", textAlign: "center", color: "var(--color-text-secondary)" }}>Cargando coach...</div>
   }
 
   if (error) {
-    return <div className="p-6 text-center text-red-600">Error: {error}</div>
+    return <div style={{ padding: "var(--spacing-lg)", textAlign: "center", color: "var(--color-accent-danger)" }}>Error: {error}</div>
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Profesional</h1>
+    <AppShell moduleLabel="Coach Module" moduleTitle="Profesional" metaInfo={`Layout: ${layoutMode}`}>
+      <SectionHeader
+        title="Profesional"
+        description="Disciplina, ejecución y consistencia operativa."
+        gradient
+      />
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="card">
-          <p className="text-sm text-gray-500">Disciplina</p>
-          <p className="text-4xl font-bold">{data?.score_profesional ?? 0}</p>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(12, minmax(0, 1fr))", gap: "var(--layout-gap)" }}>
+        <div style={{ gridColumn: "span 6" }}>
+          <Card hover>
+            <div style={{ padding: "var(--spacing-lg)", display: "grid", gap: "var(--spacing-sm)" }}>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: designTokens.typography.scale.caption["font-size"],
+                  letterSpacing: designTokens.typography.scale.caption["letter-spacing"],
+                  textTransform: "uppercase",
+                  color: "var(--color-text-secondary)",
+                }}
+              >
+                Disciplina
+              </p>
+              <p style={{ margin: 0, fontSize: "40px", fontWeight: 500 }}>{data?.score_profesional ?? 0}</p>
+            </div>
+          </Card>
         </div>
-        <div className="card">
-          <p className="text-sm text-gray-500">Score Profesional</p>
-          <p className="text-4xl font-bold">{data?.score_profesional ?? 0}</p>
+        <div style={{ gridColumn: "span 6" }}>
+          <Card hover>
+            <div style={{ padding: "var(--spacing-lg)", display: "grid", gap: "var(--spacing-sm)" }}>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: designTokens.typography.scale.caption["font-size"],
+                  letterSpacing: designTokens.typography.scale.caption["letter-spacing"],
+                  textTransform: "uppercase",
+                  color: "var(--color-text-secondary)",
+                }}
+              >
+                Score Profesional
+              </p>
+              <p style={{ margin: 0, fontSize: "40px", fontWeight: 500 }}>{data?.score_profesional ?? 0}</p>
+            </div>
+          </Card>
         </div>
       </div>
 
-      <div className="card">
-        <p className="text-sm text-gray-500">Tendencia</p>
-        <p className="mt-2 text-lg font-semibold">
-          {typeof data?.delta_disciplina === "number"
-            ? `${data.delta_disciplina > 0 ? "+" : ""}${data.delta_disciplina}%`
-            : "Sin datos"}
-        </p>
-        <p className="mt-3 text-sm text-gray-500">
-          Usa finanzas y salud para balancear ejecucion semanal.
-        </p>
-        <Link href="/agenda" className="mt-4 inline-block text-sm font-medium text-indigo-600">
-          Ir a agenda V3
-        </Link>
-      </div>
-    </div>
+      <Card hover>
+        <div style={{ padding: "var(--spacing-lg)", display: "grid", gap: "var(--spacing-sm)" }}>
+          <p style={{ margin: 0, color: "var(--color-text-secondary)" }}>Tendencia</p>
+          <p style={{ margin: 0, fontSize: "24px", fontWeight: 500 }}>
+            {typeof data?.delta_disciplina === "number"
+              ? `${data.delta_disciplina > 0 ? "+" : ""}${data.delta_disciplina}%`
+              : "Sin datos"}
+          </p>
+          <p style={{ margin: 0, color: "var(--color-text-secondary)" }}>
+            Usa finanzas y salud para balancear ejecución semanal.
+          </p>
+          <Link href="/agenda" style={{ fontSize: "14px", fontWeight: 500, color: "var(--color-accent-primary)" }}>
+            Ir a agenda
+          </Link>
+        </div>
+      </Card>
+    </AppShell>
   )
 }

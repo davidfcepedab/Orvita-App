@@ -58,8 +58,8 @@ export default function TrainingPage() {
 
   const showManual = !today || today.source !== "hevy"
   const sectionGradientStyle = {
-    "--section-gradient-start": "var(--color-accent-finance)",
-    "--section-gradient-end": "var(--color-accent-agenda)",
+    "--section-gradient-start": "var(--color-accent-agenda)",
+    "--section-gradient-end": "var(--color-accent-primary)",
   } as CSSProperties
 
   return (
@@ -79,16 +79,28 @@ export default function TrainingPage() {
         <div style={{ display: "grid", gap: "var(--layout-gap)" }}>
           <div style={sectionGradientStyle}>
             <SectionHeader
-              title="Training Overview"
-              description="Estado diario y carga de entrenamiento"
+              title="Training Operations"
+              description="Hardware maintenance, carga física y objetivos de performance."
               gradient
             />
           </div>
           <div style={{ display: "grid", gridTemplateColumns: gridColumns, gap: "var(--layout-gap)" }}>
             <div style={{ gridColumn: isCompact ? "span 4" : "span 6" }}>
               <Card hover>
-                <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-sm)" }}>
-                  <p style={{ margin: 0, color: "var(--color-text-secondary)" }}>Today Status</p>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "var(--spacing-sm)",
+                    padding: "var(--spacing-lg)",
+                    borderRadius: "var(--radius-card)",
+                    background:
+                      "linear-gradient(135deg, color-mix(in srgb, var(--color-accent-agenda) 12%, transparent), color-mix(in srgb, var(--color-accent-primary) 12%, transparent))",
+                  }}
+                >
+                  <p style={{ margin: 0, color: "var(--color-text-secondary)", textTransform: "uppercase", letterSpacing: "0.12em", fontSize: "12px" }}>
+                    Daily Capacity
+                  </p>
                   <p style={{ margin: 0, fontSize: "56px", fontWeight: 500 }}>
                     {loading ? "Cargando..." : formatStatus(today?.status ?? manualStatus ?? "rest")}
                   </p>

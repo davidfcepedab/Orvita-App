@@ -2,10 +2,11 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useTheme, useLayoutMode } from "@/src/theme/ThemeProvider"
 import { designTokens } from "@/src/theme/design-tokens"
 import { Button } from "@/src/components/ui/Button"
+import { createBrowserClient } from "@/lib/supabase/browser"
 import {
   Activity,
   Calendar,
@@ -36,6 +37,21 @@ export function AppShell({ moduleLabel, moduleTitle, primaryAction, metaInfo, ch
   const { theme, setTheme } = useTheme()
   const { layoutMode, setLayoutMode } = useLayoutMode()
   const [open, setOpen] = useState(false)
+  const [userName, setUserName] = useState<string | null>(null)
+
+  useEffect(() => {
+    const supabase = createBrowserClient()
+    supabase.auth.getUser().then(({ data }) => {
+      const rawName =
+        data.user?.user_metadata?.full_name ??
+        data.user?.user_metadata?.name ??
+        data.user?.email?.split("@")[0]
+      if (rawName) {
+        const firstName = rawName.trim().split(" ")[0]
+        setUserName(firstName)
+      }
+    })
+  }, [])
 
   const cycleTheme = () => {
     const next = theme === "arctic" ? "carbon" : theme === "carbon" ? "sand" : "arctic"
@@ -75,33 +91,16 @@ export function AppShell({ moduleLabel, moduleTitle, primaryAction, metaInfo, ch
           background: "var(--color-surface)",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-md)" }}>
-          <div
-            style={{
-              width: "40px",
-              height: "40px",
-              borderRadius: "var(--radius-button)",
-              background: "var(--color-surface-alt)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontWeight: designTokens.typography.scale.label["font-weight"],
-            }}
-          >
-            O3
-          </div>
-          <div>
-            <p
+        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <span
               style={{
-                margin: 0,
-                fontSize: designTokens.typography.scale.caption["font-size"],
-                letterSpacing: designTokens.typography.scale.caption["letter-spacing"],
-                textTransform: "uppercase",
-                color: "var(--color-text-secondary)",
+                width: "8px",
+                height: "8px",
+                borderRadius: "999px",
+                background: "var(--color-accent-health)",
               }}
-            >
-              ORVITA V3
-            </p>
+            />
             <h1
               style={{
                 margin: 0,
@@ -109,17 +108,55 @@ export function AppShell({ moduleLabel, moduleTitle, primaryAction, metaInfo, ch
                 fontWeight: designTokens.typography.scale.h3["font-weight"],
               }}
             >
-              Strategic Operating System
+              ÓRVITA
             </h1>
+            <span
+              style={{
+                fontSize: designTokens.typography.scale.caption["font-size"],
+                textTransform: "uppercase",
+                letterSpacing: designTokens.typography.scale.caption["letter-spacing"],
+                color: "var(--color-text-secondary)",
+              }}
+            >
+              Strategic Operating System
+            </span>
           </div>
+          <span
+            style={{
+              fontSize: designTokens.typography.scale["body-sm"]["font-size"],
+              color: "var(--color-text-primary)",
+            }}
+          >
+            Hola {userName ?? "Commander"}!
+          </span>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-sm)" }}>
+          <div
+            style={{
+              fontSize: designTokens.typography.scale["body-sm"]["font-size"],
+              color: "var(--color-text-secondary)",
+              textAlign: "right",
+            }}
+          >
+            {new Date().toLocaleDateString("en-US", {
+              weekday: "short",
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })}
+          </div>
           <Button onClick={cycleTheme}>
             <SunMoon size={16} />
+            <span style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.12em" }}>
+              Theme
+            </span>
           </Button>
           <Button onClick={cycleLayout}>
             <PanelLeft size={16} />
+            <span style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.12em" }}>
+              Layout
+            </span>
           </Button>
           <div style={{ position: "relative" }}>
             <button
