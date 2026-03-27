@@ -16,7 +16,7 @@ export function BiohackingStack() {
   ])
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-sm)" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-md)" }}>
       {items.map((item) => (
         <div
           key={`${item.name}-${item.time}`}
@@ -32,8 +32,8 @@ export function BiohackingStack() {
           <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-sm)" }}>
             <span
               style={{
-                width: "8px",
-                height: "8px",
+                width: "10px",
+                height: "10px",
                 borderRadius: designTokens.radius.full,
                 background: item.completed ? "var(--color-accent-health)" : "var(--color-border)",
                 transform: "scale(0.95)",
@@ -41,8 +41,15 @@ export function BiohackingStack() {
               }}
             />
             <div>
-              <p style={{ margin: 0, fontWeight: 500 }}>{item.name}</p>
-              <p style={{ margin: 0, color: "var(--color-text-secondary)", fontSize: designTokens.typography.scale.caption["font-size"] }}>
+              <p style={{ margin: 0, fontWeight: 500, fontSize: "16px" }}>{item.name}</p>
+              <p
+                style={{
+                  margin: 0,
+                  color: "var(--color-text-secondary)",
+                  fontSize: "12px",
+                  opacity: 0.6,
+                }}
+              >
                 {item.time}
               </p>
             </div>
@@ -50,7 +57,13 @@ export function BiohackingStack() {
           <span
             style={{
               color: item.completed ? "var(--color-accent-health)" : "var(--color-text-secondary)",
-              fontSize: designTokens.typography.scale.caption["font-size"],
+              fontSize: "12px",
+              fontWeight: 500,
+              padding: "4px 10px",
+              borderRadius: "999px",
+              background: item.completed
+                ? "color-mix(in srgb, var(--color-accent-health) 10%, transparent)"
+                : "color-mix(in srgb, var(--color-text-secondary) 10%, transparent)",
             }}
           >
             {item.completed ? "Completado" : "Pendiente"}

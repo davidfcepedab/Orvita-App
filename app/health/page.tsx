@@ -47,21 +47,31 @@ export default function HealthPage() {
           }}
         >
           <Card hover shadow={designTokens.elevation["arctic-soft"]}>
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-md)" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "var(--spacing-md)",
+                padding: "var(--spacing-xl)",
+              }}
+            >
               <span
                 style={{
-                  width: "12px",
-                  height: "12px",
+                  width: "10px",
+                  height: "10px",
                   borderRadius: designTokens.radius.full,
                   background: statusColor(recovery.status),
+                  boxShadow: `0 0 8px ${statusColor(recovery.status)}`,
                 }}
               />
               <div>
                 <p
                   style={{
                     margin: 0,
-                    fontSize: "56px",
+                    fontSize: "64px",
                     fontWeight: 500,
+                    letterSpacing: "-1px",
+                    marginBottom: "var(--spacing-md)",
                     lineHeight: 1,
                     transition: `all ${designTokens.animation.duration.normal} ${designTokens.animation.easing.default}`,
                   }}
@@ -87,25 +97,43 @@ export default function HealthPage() {
               gap: "var(--layout-gap)",
             }}
           >
-            <div style={{ gridColumn: isCompact ? "span 4" : "span 6" }}>
-              <Card hover shadow={designTokens.elevation["arctic-soft"]}>
-                <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-md)" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <div>
-                      <p style={{ margin: 0, color: "var(--color-text-secondary)" }}>Recovery</p>
-                      <p style={{ margin: 0, fontSize: "56px", fontWeight: 500 }}>{recovery.score}</p>
-                    </div>
-                    <span
+          <div style={{ gridColumn: isCompact ? "span 4" : "span 6" }}>
+            <Card hover shadow={designTokens.elevation["arctic-soft"]}>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "var(--spacing-md)",
+                  padding: "var(--spacing-xl)",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div>
+                    <p style={{ margin: 0, color: "var(--color-text-secondary)" }}>Recovery</p>
+                    <p
                       style={{
-                        width: "10px",
-                        height: "10px",
-                        borderRadius: designTokens.radius.full,
-                        background: statusColor(recovery.status),
+                        margin: 0,
+                        fontSize: "64px",
+                        fontWeight: 500,
+                        letterSpacing: "-1px",
+                        marginBottom: "var(--spacing-md)",
                       }}
-                    />
+                    >
+                      {recovery.score}
+                    </p>
                   </div>
-                  <div
-                    style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "var(--spacing-sm)" }}
+                  <span
+                    style={{
+                      width: "10px",
+                      height: "10px",
+                      borderRadius: designTokens.radius.full,
+                      background: statusColor(recovery.status),
+                      boxShadow: `0 0 8px ${statusColor(recovery.status)}`,
+                    }}
+                  />
+                </div>
+                <div
+                  style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "var(--spacing-sm)" }}
                   >
                     <div>
                       <p style={{ margin: 0, color: "var(--color-text-secondary)" }}>Sleep Hours</p>
@@ -137,70 +165,82 @@ export default function HealthPage() {
               </Card>
             </div>
 
-            <div style={{ gridColumn: isCompact ? "span 4" : "span 6" }}>
-              <Card hover>
-                <h3 style={{ marginTop: 0, fontSize: designTokens.typography.scale.h3["font-size"], fontWeight: 500 }}>
-                  Hydration + Mental
-                </h3>
-                <div
-                  style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "var(--spacing-sm)" }}
-                >
-                  <div>
-                    <p style={{ margin: 0, color: "var(--color-text-secondary)" }}>Agua</p>
-                    <p style={{ margin: 0, fontWeight: 500 }}>{data.hydrationLiters}L</p>
+          <div style={{ gridColumn: isCompact ? "span 4" : "span 6" }}>
+            <Card hover>
+              <h3 style={{ marginTop: 0, fontSize: designTokens.typography.scale.h3["font-size"], fontWeight: 500 }}>
+                Hydration + Mental
+              </h3>
+              <div
+                style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "var(--spacing-lg)" }}
+              >
+                {[
+                  { label: "Agua", value: `${data.hydrationLiters}L` },
+                  { label: "Meditación", value: `${data.meditationMinutes} min` },
+                  { label: "Lectura", value: `${data.readingMinutes} min` },
+                  { label: "Ansiedad", value: `${data.anxietyLevel}/5` },
+                ].map((item) => (
+                  <div key={item.label} style={{ display: "grid", gap: "4px" }}>
+                    <p
+                      style={{
+                        margin: 0,
+                        color: "var(--color-text-secondary)",
+                        textTransform: "uppercase",
+                        fontSize: designTokens.typography.scale.caption["font-size"],
+                        letterSpacing: designTokens.typography.scale.caption["letter-spacing"],
+                        opacity: 0.5,
+                      }}
+                    >
+                      {item.label}
+                    </p>
+                    <p style={{ margin: 0, fontWeight: 500, fontSize: "18px" }}>{item.value}</p>
                   </div>
-                  <div>
-                    <p style={{ margin: 0, color: "var(--color-text-secondary)" }}>Meditación</p>
-                    <p style={{ margin: 0, fontWeight: 500 }}>{data.meditationMinutes} min</p>
-                  </div>
-                  <div>
-                    <p style={{ margin: 0, color: "var(--color-text-secondary)" }}>Lectura</p>
-                    <p style={{ margin: 0, fontWeight: 500 }}>{data.readingMinutes} min</p>
-                  </div>
-                  <div>
-                    <p style={{ margin: 0, color: "var(--color-text-secondary)" }}>Ansiedad</p>
-                    <p style={{ margin: 0, fontWeight: 500 }}>{data.anxietyLevel}/5</p>
-                  </div>
-                </div>
-              </Card>
-            </div>
+                ))}
+              </div>
+            </Card>
+          </div>
 
-            <div style={{ gridColumn: isCompact ? "span 4" : "span 6" }}>
-              <Card hover>
-                <h3 style={{ marginTop: 0, fontSize: designTokens.typography.scale.h3["font-size"], fontWeight: 500 }}>
-                  Social
-                </h3>
-                <div style={{ display: "grid", gap: "var(--spacing-sm)" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span>Tiempo en pareja</span>
-                    <span style={{ fontWeight: 500 }}>{data.partnerTimeMinutes} min</span>
+          <div style={{ gridColumn: isCompact ? "span 4" : "span 6" }}>
+            <Card hover>
+              <h3 style={{ marginTop: 0, fontSize: designTokens.typography.scale.h3["font-size"], fontWeight: 500 }}>
+                Social
+              </h3>
+              <div style={{ display: "grid", gap: "var(--spacing-md)" }}>
+                {[
+                  { label: "Tiempo en pareja", value: `${data.partnerTimeMinutes} min` },
+                  { label: "Calidad conexión", value: `${data.connectionQuality}/5` },
+                  { label: "Interacción social", value: `${data.socialInteractions}` },
+                ].map((item) => (
+                  <div key={item.label} style={{ display: "flex", justifyContent: "space-between", gap: "var(--spacing-md)" }}>
+                    <span>{item.label}</span>
+                    <span style={{ fontWeight: 500, fontSize: "18px", textAlign: "right", minWidth: "64px" }}>
+                      {item.value}
+                    </span>
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span>Calidad conexión</span>
-                    <span style={{ fontWeight: 500 }}>{data.connectionQuality}/5</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span>Interacción social</span>
-                    <span style={{ fontWeight: 500 }}>{data.socialInteractions}</span>
-                  </div>
-                </div>
-              </Card>
-            </div>
+                ))}
+              </div>
+            </Card>
+          </div>
 
-            <div style={{ gridColumn: isCompact ? "span 4" : "span 12" }}>
-              <Card>
-                <h3 style={{ marginTop: 0, fontSize: designTokens.typography.scale.h3["font-size"], fontWeight: 500 }}>
-                  Correlation Preview
-                </h3>
-                <div
-                  style={{
-                    height: "120px",
-                    borderBottom: "1px solid var(--color-border)",
-                    opacity: 0.4,
-                  }}
-                />
-              </Card>
-            </div>
+          <div style={{ gridColumn: isCompact ? "span 4" : "span 12" }}>
+            <Card>
+              <h3 style={{ marginTop: 0, fontSize: designTokens.typography.scale.h3["font-size"], fontWeight: 500 }}>
+                Correlation Preview
+              </h3>
+              <div
+                style={{
+                  minHeight: "160px",
+                  borderTop: "1px dashed var(--color-border)",
+                  paddingTop: "var(--spacing-lg)",
+                  background: "color-mix(in srgb, var(--color-text-secondary) 2%, transparent)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <span style={{ color: "var(--color-text-secondary)", opacity: 0.6 }}>Tendencia biométrica</span>
+              </div>
+            </Card>
+          </div>
           </div>
         </div>
       )}
