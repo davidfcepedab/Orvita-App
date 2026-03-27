@@ -1,114 +1,201 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo } from "react"
 import { AppShell } from "@/src/components/layout/AppShell"
 import { Card } from "@/src/components/ui/Card"
 import { Button } from "@/src/components/ui/Button"
-import { SectionHeader } from "@/src/components/ui/SectionHeader"
 import { useOperationalContext } from "@/app/hooks/useOperationalContext"
-import { useLayoutMode } from "@/src/theme/ThemeProvider"
-import { designTokens } from "@/src/theme/design-tokens"
+import { ArrowRight, CheckCircle2, Circle, Clock, Plus, UserPlus } from "lucide-react"
+
+const teamMembers = [
+  { id: "AG", name: "Ana García", color: "var(--color-accent-primary)" },
+  { id: "CR", name: "Carlos Ruiz", color: "var(--color-accent-health)" },
+  { id: "ML", name: "María López", color: "var(--color-accent-warning)" },
+  { id: "CM", name: "Commander (Tú)", color: "var(--color-accent-agenda)" },
+]
 
 export default function AgendaPage() {
   const { data } = useOperationalContext()
-  const { layoutMode } = useLayoutMode()
-  const [tab, setTab] = useState("Hoy")
-  const [view, setView] = useState<"list" | "kanban">("list")
   const tasks = data?.today_tasks ?? []
+
+  const grouped = useMemo(() => {
+    const received = tasks.slice(0, 2)
+    const assigned = tasks.slice(2, 4)
+    const personal = tasks.slice(4, 6)
+    return { received, assigned, personal }
+  }, [tasks])
 
   return (
     <AppShell
       moduleLabel="Agenda Module"
       moduleTitle="Tareas Compartidas"
       primaryAction={{ label: "Nueva Tarea" }}
-      metaInfo={`Layout: ${layoutMode}`}
+      showSidebar={false}
     >
-      <SectionHeader
-        title="Tareas Compartidas"
-        description="Vista de ejecución compartida y prioridades diarias."
-        gradient
-      />
-
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--spacing-sm)", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ display: "flex", gap: "var(--spacing-sm)", flexWrap: "wrap" }}>
-          {["Hoy", "Proximos 7 dias", "Semana", "Mes"].map((value) => (
-            <button
-              key={value}
-              onClick={() => setTab(value)}
-              style={{
-                padding: "8px 16px",
-                borderRadius: "999px",
-                border: "0.5px solid var(--color-border)",
-                background: tab === value ? "var(--color-surface)" : "var(--color-surface-alt)",
-                color: tab === value ? "var(--color-text-primary)" : "var(--color-text-secondary)",
-                fontSize: "12px",
-                fontWeight: 500,
-              }}
-            >
-              {value}
-            </button>
-          ))}
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-lg)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--spacing-lg)" }}>
+          <div>
+            <h1 style={{ margin: 0, fontSize: "28px", fontWeight: 500 }}>Tareas Compartidas</h1>
+            <p style={{ margin: "6px 0 0", fontSize: "13px", color: "var(--color-text-secondary)" }}>
+              Vista de columnas: Mis tareas • Asignadas por mí • Personales
+            </p>
+          </div>
+          <div style={{ display: "flex", gap: "var(--spacing-sm)" }}>
+            <Button>
+              <Plus size={14} />
+              Nueva Tarea
+            </Button>
+            <Button>
+              <UserPlus size={14} />
+              Asignar
+            </Button>
+          </div>
         </div>
 
-        <div style={{ display: "flex", gap: "var(--spacing-sm)" }}>
-          <Button onClick={() => setView("list")}>Lista</Button>
-          <Button onClick={() => setView("kanban")}>Kanban</Button>
-        </div>
-      </div>
-
-      {view === "list" ? (
-        <div style={{ display: "grid", gap: "var(--spacing-sm)" }}>
-          {tasks.map((task) => (
-            <Card key={task.id} hover>
-              <div style={{ padding: "var(--spacing-md)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--spacing-md)" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-md)" }}>
-                  <div style={{ width: "6px", height: "32px", borderRadius: "999px", background: "var(--color-accent-agenda)" }} />
-                  <div style={{ display: "grid", gap: "4px" }}>
-                    <p style={{ margin: 0, fontWeight: 500 }}>{task.title}</p>
-                    <p style={{ margin: 0, fontSize: "12px", color: "var(--color-text-secondary)" }}>
-                      Dominio: {task.domain} • {task.completed ? "completada" : "pendiente"}
-                    </p>
-                  </div>
-                </div>
-                <span style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>{tab}</span>
-              </div>
-            </Card>
-          ))}
-        </div>
-      ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "var(--layout-gap)" }}>
-          {["Por Hacer", "En Progreso", "Completado"].map((column) => (
-            <Card key={column}>
-              <div style={{ padding: "var(--spacing-md)", display: "grid", gap: "var(--spacing-sm)" }}>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: designTokens.typography.scale.caption["font-size"],
-                    letterSpacing: designTokens.typography.scale.caption["letter-spacing"],
-                    textTransform: "uppercase",
-                    color: "var(--color-text-secondary)",
-                  }}
-                >
-                  {column}
-                </p>
-                {tasks.slice(0, 3).map((task) => (
+          {[
+            { label: "Tareas Recibidas", value: grouped.received.length, icon: ArrowRight, accent: "var(--color-accent-agenda)" },
+            { label: "Asignadas por Mí", value: grouped.assigned.length, icon: UserPlus, accent: "var(--color-accent-health)" },
+            { label: "Tareas Personales", value: grouped.personal.length, icon: Circle, accent: "var(--color-accent-primary)" },
+          ].map((stat) => {
+            const Icon = stat.icon
+            return (
+              <Card key={stat.label} hover>
+                <div style={{ padding: "var(--spacing-md)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div>
+                    <p style={{ margin: 0, fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--color-text-secondary)" }}>
+                      {stat.label}
+                    </p>
+                    <p style={{ margin: "6px 0 0", fontSize: "22px", fontWeight: 600 }}>{stat.value}</p>
+                  </div>
                   <div
-                    key={`${column}-${task.id}`}
                     style={{
-                      padding: "var(--spacing-sm)",
-                      borderRadius: "var(--radius-card)",
-                      border: "0.5px solid var(--color-border)",
-                      background: "var(--color-surface)",
+                      width: "36px",
+                      height: "36px",
+                      borderRadius: "999px",
+                      background: `color-mix(in srgb, ${stat.accent} 12%, transparent)`,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
                     }}
                   >
-                    <p style={{ margin: 0, fontSize: "14px" }}>{task.title}</p>
+                    <Icon size={16} style={{ color: stat.accent }} />
                   </div>
-                ))}
+                </div>
+              </Card>
+            )
+          })}
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "var(--layout-gap)" }}>
+          {[
+            { label: "Tareas Recibidas", accent: "var(--color-accent-agenda)", items: grouped.received },
+            { label: "Asignadas por Mí", accent: "var(--color-accent-health)", items: grouped.assigned },
+            { label: "Tareas Personales", accent: "var(--color-accent-primary)", items: grouped.personal },
+          ].map((column) => (
+            <div key={column.label} style={{ display: "grid", gap: "var(--spacing-sm)" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <h2 style={{ margin: 0, fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.14em" }}>{column.label}</h2>
+                <span style={{ width: "6px", height: "6px", borderRadius: "999px", background: column.accent }} />
               </div>
-            </Card>
+              {column.items.map((task) => (
+                <Card key={task.id} hover>
+                  <div style={{ padding: "var(--spacing-md)", display: "grid", gap: "var(--spacing-sm)" }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+                      <div>
+                        <p style={{ margin: 0, fontSize: "14px", fontWeight: 500 }}>{task.title}</p>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "6px", color: "var(--color-text-secondary)", fontSize: "11px" }}>
+                          <Clock size={12} />
+                          30 min
+                        </div>
+                      </div>
+                      {task.completed ? (
+                        <CheckCircle2 size={16} style={{ color: "var(--color-accent-health)" }} />
+                      ) : (
+                        <Circle size={16} style={{ color: "var(--color-text-secondary)" }} />
+                      )}
+                    </div>
+                    <div style={{ display: "flex", gap: "6px" }}>
+                      <span
+                        style={{
+                          padding: "2px 8px",
+                          borderRadius: "6px",
+                          fontSize: "10px",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.12em",
+                          background: "var(--color-surface-alt)",
+                          color: "var(--color-text-secondary)",
+                        }}
+                      >
+                        Alta
+                      </span>
+                      {!task.completed && (
+                        <span
+                          style={{
+                            padding: "2px 8px",
+                            borderRadius: "6px",
+                            fontSize: "10px",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.12em",
+                            background: `color-mix(in srgb, ${column.accent} 12%, transparent)`,
+                            color: column.accent,
+                          }}
+                        >
+                          En Progreso
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
           ))}
         </div>
-      )}
+
+        <Card>
+          <div style={{ padding: "var(--spacing-md)", display: "grid", gap: "var(--spacing-sm)" }}>
+            <p style={{ margin: 0, fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--color-text-secondary)" }}>
+              Miembros del equipo
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "var(--spacing-sm)" }}>
+              {teamMembers.map((member) => (
+                <div
+                  key={member.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    padding: "10px",
+                    borderRadius: "12px",
+                    background: "var(--color-surface-alt)",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "32px",
+                      height: "32px",
+                      borderRadius: "999px",
+                      background: member.color,
+                      color: "var(--color-surface)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "11px",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {member.id}
+                  </div>
+                  <div>
+                    <p style={{ margin: 0, fontSize: "13px", fontWeight: 500 }}>{member.name}</p>
+                    <p style={{ margin: 0, fontSize: "11px", color: "var(--color-text-secondary)" }}>Activo</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Card>
+      </div>
     </AppShell>
   )
 }

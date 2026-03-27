@@ -28,11 +28,12 @@ type AppShellProps = {
   moduleTitle?: string
   primaryAction?: { label: string; onClick?: () => void }
   metaInfo?: string
+  showSidebar?: boolean
   children: React.ReactNode
   sidebar?: React.ReactNode
 }
 
-export function AppShell({ moduleLabel, moduleTitle, primaryAction, metaInfo, children, sidebar }: AppShellProps) {
+export function AppShell({ moduleLabel, moduleTitle, primaryAction, metaInfo, showSidebar = true, children, sidebar }: AppShellProps) {
   const pathname = usePathname()
   const { theme, setTheme } = useTheme()
   const { layoutMode, setLayoutMode } = useLayoutMode()
@@ -83,231 +84,268 @@ export function AppShell({ moduleLabel, moduleTitle, primaryAction, metaInfo, ch
     <div style={{ background: "var(--color-background)", minHeight: "100vh" }}>
       <header
         style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "var(--layout-padding)",
           borderBottom: "0.5px solid var(--color-border)",
-          background: "var(--color-surface)",
+          background: "color-mix(in srgb, var(--color-surface) 95%, transparent)",
+          backdropFilter: "blur(6px)",
+          position: "sticky",
+          top: 0,
+          zIndex: 20,
         }}
       >
-        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <span
-              style={{
-                width: "8px",
-                height: "8px",
-                borderRadius: "999px",
-                background: "var(--color-accent-health)",
-              }}
-            />
-            <h1
-              style={{
-                margin: 0,
-                fontSize: designTokens.typography.scale.h3["font-size"],
-                fontWeight: designTokens.typography.scale.h3["font-weight"],
-              }}
-            >
-              ÓRVITA
-            </h1>
-            <span
-              style={{
-                fontSize: designTokens.typography.scale.caption["font-size"],
-                textTransform: "uppercase",
-                letterSpacing: designTokens.typography.scale.caption["letter-spacing"],
-                color: "var(--color-text-secondary)",
-              }}
-            >
-              Strategic Operating System
-            </span>
-          </div>
-          <span
-            style={{
-              fontSize: designTokens.typography.scale["body-sm"]["font-size"],
-              color: "var(--color-text-primary)",
-            }}
-          >
-            Hola {userName ?? "Commander"}!
-          </span>
-        </div>
+        <div style={{ maxWidth: "1800px", margin: "0 auto", padding: "16px 32px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--spacing-lg)" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <span
+                  style={{
+                    width: "8px",
+                    height: "8px",
+                    borderRadius: "999px",
+                    background: "var(--color-accent-health)",
+                  }}
+                />
+                <h1 style={{ margin: 0, fontSize: "18px", fontWeight: 500 }}>ÓRVITA V3</h1>
+                <span
+                  style={{
+                    fontSize: "11px",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.18em",
+                    color: "var(--color-text-secondary)",
+                  }}
+                >
+                  Strategic Operating System
+                </span>
+              </div>
+              <span style={{ fontSize: "13px", color: "var(--color-text-primary)", paddingLeft: "18px" }}>
+                Hola, {userName ?? "Commander"}
+              </span>
+            </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-sm)" }}>
-          <div
-            style={{
-              fontSize: designTokens.typography.scale["body-sm"]["font-size"],
-              color: "var(--color-text-secondary)",
-              textAlign: "right",
-            }}
-          >
-            {new Date().toLocaleDateString("en-US", {
-              weekday: "short",
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            })}
-          </div>
-          <Button onClick={cycleTheme}>
-            <SunMoon size={16} />
-            <span style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.12em" }}>
-              Theme
-            </span>
-          </Button>
-          <Button onClick={cycleLayout}>
-            <PanelLeft size={16} />
-            <span style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.12em" }}>
-              Layout
-            </span>
-          </Button>
-          <div style={{ position: "relative" }}>
-            <button
-              onClick={() => setOpen((prev) => !prev)}
-              style={{
-                width: "40px",
-                height: "40px",
-                borderRadius: "50%",
-                border: "0.5px solid var(--color-border)",
-                background: "var(--color-surface-alt)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <User size={18} />
-            </button>
-            {open && (
-              <div
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-md)" }}>
+              <span style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>
+                {new Date().toLocaleDateString("en-US", {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </span>
+
+              <button
+                onClick={cycleTheme}
                 style={{
-                  position: "absolute",
-                  right: 0,
-                  top: "48px",
-                  minWidth: "160px",
-                  background: "var(--color-surface)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "6px 12px",
+                  borderRadius: "10px",
                   border: "0.5px solid var(--color-border)",
-                  borderRadius: "var(--radius-card)",
-                  boxShadow: designTokens.elevation.card,
-                  padding: "var(--spacing-sm)",
+                  background: "var(--color-surface-alt)",
+                  fontSize: "11px",
+                  fontWeight: 600,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.16em",
                 }}
               >
-                {[
-                  { label: "Perfil" },
-                  { label: "Settings" },
-                  { label: "Sign out" },
-                ].map((item) => (
+                <SunMoon size={14} />
+                Theme
+              </button>
+
+              <button
+                onClick={cycleLayout}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "6px 12px",
+                  borderRadius: "10px",
+                  border: "0.5px solid var(--color-border)",
+                  background: "var(--color-surface-alt)",
+                  fontSize: "11px",
+                  fontWeight: 600,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.16em",
+                }}
+              >
+                <PanelLeft size={14} />
+                Layout
+              </button>
+
+              <button
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "6px 12px",
+                  borderRadius: "10px",
+                  border: "0.5px solid var(--color-border)",
+                  background: "var(--color-surface-alt)",
+                  fontSize: "11px",
+                  fontWeight: 600,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.16em",
+                  color: "var(--color-text-secondary)",
+                }}
+              >
+                Exportando...
+              </button>
+
+              <div style={{ position: "relative" }}>
+                <button
+                  onClick={() => setOpen((prev) => !prev)}
+                  style={{
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "50%",
+                    border: "0.5px solid var(--color-border)",
+                    background: "var(--color-surface-alt)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <User size={16} />
+                </button>
+                {open && (
                   <div
-                    key={item.label}
                     style={{
+                      position: "absolute",
+                      right: 0,
+                      top: "44px",
+                      minWidth: "160px",
+                      background: "var(--color-surface)",
+                      border: "0.5px solid var(--color-border)",
+                      borderRadius: "var(--radius-card)",
+                      boxShadow: designTokens.elevation.card,
                       padding: "var(--spacing-sm)",
-                      borderRadius: "var(--radius-button)",
-                      color: "var(--color-text-secondary)",
                     }}
                   >
-                    {item.label}
+                    {[
+                      { label: "Perfil" },
+                      { label: "Settings" },
+                      { label: "Sign out" },
+                    ].map((item) => (
+                      <div
+                        key={item.label}
+                        style={{
+                          padding: "var(--spacing-sm)",
+                          borderRadius: "var(--radius-button)",
+                          color: "var(--color-text-secondary)",
+                        }}
+                      >
+                        {item.label}
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
-            )}
+            </div>
           </div>
         </div>
       </header>
 
       <nav
         style={{
-          display: "flex",
-          gap: "var(--spacing-sm)",
-          padding: "0 var(--layout-padding)",
           borderBottom: "0.5px solid var(--color-border)",
-          background: "var(--color-surface)",
+          background: "var(--color-surface-alt)",
+          overflowX: "auto",
         }}
       >
-        {navItems.map((item) => {
-          const isActive =
-            pathname === item.path ||
-            (item.path === "/finanzas/overview" && pathname.startsWith("/finanzas"))
-          const Icon = item.icon
-          return (
-            <Link
-              key={item.path}
-              href={item.path}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "var(--spacing-md) var(--spacing-sm)",
-                borderBottom: isActive ? "2px solid var(--color-accent-primary)" : "2px solid transparent",
-                color: isActive ? "var(--color-text-primary)" : "var(--color-text-secondary)",
-                fontSize: designTokens.typography.scale["body-sm"]["font-size"],
-                textDecoration: "none",
-              }}
-            >
-              <Icon size={16} />
-              {item.label}
-            </Link>
-          )
-        })}
+        <div style={{ maxWidth: "1800px", margin: "0 auto", padding: "0 24px" }}>
+          <div style={{ display: "flex", gap: "6px" }}>
+            {navItems.map((item) => {
+              const isActive =
+                pathname === item.path ||
+                (item.path === "/finanzas/overview" && pathname.startsWith("/finanzas"))
+              const Icon = item.icon
+              return (
+                <Link
+                  key={item.path}
+                  href={item.path}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    padding: "12px 20px",
+                    borderBottom: isActive ? "2px solid var(--color-text-primary)" : "2px solid transparent",
+                    color: isActive ? "var(--color-text-primary)" : "var(--color-text-secondary)",
+                    fontSize: "13px",
+                    textDecoration: "none",
+                  }}
+                >
+                  <Icon size={14} />
+                  {item.label}
+                </Link>
+              )
+            })}
+          </div>
+        </div>
       </nav>
 
       <div
         style={{
-          maxWidth: designTokens.layout["container-max-width"],
+          maxWidth: "1800px",
           margin: "0 auto",
-          padding: "var(--layout-padding)",
+          padding: "32px",
           display: "grid",
-          gridTemplateColumns: `280px 1fr`,
+          gridTemplateColumns: showSidebar ? "280px 1fr" : "1fr",
           gap: "var(--layout-gap)",
         }}
       >
-        <aside
-          style={{
-            background: "var(--color-surface)",
-            borderRight: "0.5px solid var(--color-border)",
-            borderRadius: "var(--radius-card)",
-            padding: "var(--spacing-lg)",
-            display: "flex",
-            flexDirection: "column",
-            gap: "var(--spacing-md)",
-          }}
-        >
-          {sidebar ?? (
-            <>
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: designTokens.typography.scale.caption["font-size"],
-                  textTransform: "uppercase",
-                  letterSpacing: designTokens.typography.scale.caption["letter-spacing"],
-                  color: "var(--color-text-secondary)",
-                }}
-              >
-                {moduleLabel ?? "Module"}
-              </p>
-              <h2
-                style={{
-                  margin: 0,
-                  fontSize: designTokens.typography.scale.h1["font-size"],
-                  fontWeight: designTokens.typography.scale.h1["font-weight"],
-                }}
-              >
-                {moduleTitle ?? "Overview"}
-              </h2>
-              {primaryAction && (
-                <Button onClick={primaryAction.onClick}>
-                  {primaryAction.label}
-                </Button>
-              )}
-              {metaInfo && (
+        {showSidebar && (
+          <aside
+            style={{
+              background: "var(--color-surface)",
+              borderRight: "0.5px solid var(--color-border)",
+              borderRadius: "var(--radius-card)",
+              padding: "var(--spacing-lg)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "var(--spacing-md)",
+            }}
+          >
+            {sidebar ?? (
+              <>
                 <p
                   style={{
                     margin: 0,
-                    fontSize: designTokens.typography.scale["body-sm"]["font-size"],
+                    fontSize: designTokens.typography.scale.caption["font-size"],
+                    textTransform: "uppercase",
+                    letterSpacing: designTokens.typography.scale.caption["letter-spacing"],
                     color: "var(--color-text-secondary)",
                   }}
                 >
-                  {metaInfo}
+                  {moduleLabel ?? "Module"}
                 </p>
-              )}
-            </>
-          )}
-        </aside>
+                <h2
+                  style={{
+                    margin: 0,
+                    fontSize: designTokens.typography.scale.h1["font-size"],
+                    fontWeight: designTokens.typography.scale.h1["font-weight"],
+                  }}
+                >
+                  {moduleTitle ?? "Overview"}
+                </h2>
+                {primaryAction && (
+                  <Button onClick={primaryAction.onClick}>
+                    {primaryAction.label}
+                  </Button>
+                )}
+                {metaInfo && (
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: designTokens.typography.scale["body-sm"]["font-size"],
+                      color: "var(--color-text-secondary)",
+                    }}
+                  >
+                    {metaInfo}
+                  </p>
+                )}
+              </>
+            )}
+          </aside>
+        )}
         <main style={{ display: "grid", gap: "var(--layout-gap)" }}>{children}</main>
       </div>
     </div>
