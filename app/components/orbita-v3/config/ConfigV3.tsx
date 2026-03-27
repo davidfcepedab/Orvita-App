@@ -1,13 +1,108 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { type ColorTheme, type LayoutMode, useApp, themes } from "@/app/contexts/AppContext"
+import { createBrowserClient } from "@/lib/supabase/browser"
 import { Monitor, Palette, Sliders } from "lucide-react"
 
 export default function ConfigV3() {
   const { colorTheme, setColorTheme, layoutMode, setLayoutMode } = useApp()
   const theme = themes[colorTheme]
   const [intensity, setIntensity] = useState(50)
+  const searchParams = useSearchParams()
+  const connectedFromParam = searchParams.get("connected") === "google"
+  const [googleConnected, setGoogleConnected] = useState(connectedFromParam)
+  const [googleError, setGoogleError] = useState<string | null>(null)
+  const [googleSync, setGoogleSync] = useState<string | null>(null)
+  const [connecting, setConnecting] = useState(false)
+  const [syncingCalendar, setSyncingCalendar] = useState(false)
+  const [syncingTasks, setSyncingTasks] = useState(false)
+  const [loggingOut, setLoggingOut] = useState(false)
+
+  useEffect(() => {
+    if (connectedFromParam) {
+      setGoogleConnected(true)
+    }
+  }, [connectedFromParam])
+
+  const getAccessToken = async () => {
+    const supabase = createBrowserClient()
+    const { data, error } = await supabase.auth.getSession()
+    if (error) throw error
+    const token = data.session?.access_token
+    if (!token) throw new Error("Sesión no válida")
+    return token
+  }
+
+  const handleConnectGoogle = async () => {
+    try {
+      setGoogleError(null)
+      setConnecting(true)
+      const token = await getAccessToken()
+      const res = await fetch("/api/auth/google/start", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const payload = (await res.json()) as { success?: boolean; url?: string; error?: string }
+      if (!res.ok || !payload.url) {
+        throw new Error(payload.error ?? "No se pudo iniciar Google OAuth")
+      }
+      window.location.href = payload.url
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Error conectando Google"
+      setGoogleError(message)
+    } finally {
+      setConnecting(false)
+    }
+  }
+
+  const handleSync = async (kind: "calendar" | "tasks") => {
+    try {
+      setGoogleError(null)
+      setGoogleSync(null)
+      if (kind === "calendar") setSyncingCalendar(true)
+      if (kind === "tasks") setSyncingTasks(true)
+      const token = await getAccessToken()
+      const res = await fetch(`/api/integrations/google/${kind}/sync`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const payload = (await res.json()) as {
+        success?: boolean
+        imported?: number
+        updated?: number
+        error?: string
+      }
+      if (!res.ok || !payload.success) {
+        throw new Error(payload.error ?? "No se pudo sincronizar")
+      }
+      const imported = payload.imported ?? 0
+      const updated = payload.updated ?? 0
+      setGoogleSync(`${kind === "calendar" ? "Calendar" : "Tasks"}: ${imported} importados, ${updated} actualizados`)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Error sincronizando"
+      setGoogleError(message)
+    } finally {
+      setSyncingCalendar(false)
+      setSyncingTasks(false)
+    }
+  }
+
+  const handleLogout = async () => {
+    try {
+      setLoggingOut(true)
+      const supabase = createBrowserClient()
+      await supabase.auth.signOut()
+      await fetch("/api/auth/session", { method: "DELETE" })
+      window.location.href = "/auth"
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "No se pudo cerrar sesión"
+      setGoogleError(message)
+    } finally {
+      setLoggingOut(false)
+    }
+  }
 
   const themeOptions: { id: ColorTheme; label: string; colors: string[] }[] = [
     { id: "arctic", label: "Arctic (Light)", colors: ["#F4F7F9", "#10B981", "#38BDF8"] },
@@ -102,13 +197,73 @@ export default function ConfigV3() {
               />
             </div>
           </div>
+
+          <div className="space-y-4">
+            <h3 className="text-xs uppercase tracking-wider" style={{ color: theme.textMuted }}>
+              Integraciones
+            </h3>
+            <div className="rounded-xl border p-6" style={{ backgroundColor: theme.surface, borderColor: theme.border }}>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm">Google (Calendar + Tasks)</p>
+                  <p className="text-xs" style={{ color: theme.textMuted }}>
+                    Conecta tu cuenta para sincronizar agenda y tareas.
+                  </p>
+                </div>
+                {googleConnected ? (
+                  <span className="text-xs">Google Connected ✅</span>
+                ) : (
+                  <button
+                    onClick={handleConnectGoogle}
+                    className="rounded-lg border px-3 py-2 text-xs"
+                    style={{ borderColor: theme.border }}
+                    disabled={connecting}
+                  >
+                    {connecting ? "Conectando..." : "Connect Google"}
+                  </button>
+                )}
+              </div>
+
+              {googleConnected && (
+                <div className="mt-4 flex flex-col gap-2">
+                  <button
+                    onClick={() => handleSync("calendar")}
+                    className="rounded-lg border px-3 py-2 text-xs"
+                    style={{ borderColor: theme.border }}
+                    disabled={syncingCalendar}
+                  >
+                    {syncingCalendar ? "Sincronizando..." : "Sync Calendar"}
+                  </button>
+                  <button
+                    onClick={() => handleSync("tasks")}
+                    className="rounded-lg border px-3 py-2 text-xs"
+                    style={{ borderColor: theme.border }}
+                    disabled={syncingTasks}
+                  >
+                    {syncingTasks ? "Sincronizando..." : "Sync Tasks"}
+                  </button>
+                </div>
+              )}
+
+              {googleSync && (
+                <p className="mt-3 text-xs" style={{ color: theme.textMuted }}>
+                  {googleSync}
+                </p>
+              )}
+              {googleError && (
+                <p className="mt-3 text-xs" style={{ color: theme.accent.finance }}>
+                  {googleError}
+                </p>
+              )}
+            </div>
+          </div>
         </div>
 
-        <div className="space-y-4">
-          <h3 className="text-xs uppercase tracking-wider" style={{ color: theme.textMuted }}>
-            Live Preview
-          </h3>
-          <div className="flex h-[500px] flex-col gap-6 rounded-3xl border-2 p-8" style={{ backgroundColor: theme.bg, borderColor: theme.border }}>
+          <div className="space-y-4">
+            <h3 className="text-xs uppercase tracking-wider" style={{ color: theme.textMuted }}>
+              Live Preview
+            </h3>
+            <div className="flex h-[500px] flex-col gap-6 rounded-3xl border-2 p-8" style={{ backgroundColor: theme.bg, borderColor: theme.border }}>
             <div className="flex items-center justify-between">
               <div className="h-6 w-24 rounded-md" style={{ backgroundColor: theme.surfaceAlt }} />
               <div className="h-8 w-8 rounded-full" style={{ backgroundColor: theme.surfaceAlt }} />
@@ -137,6 +292,22 @@ export default function ConfigV3() {
               {[1, 2, 3, 4].map((item) => (
                 <div key={item} className="h-6 w-6 rounded" style={{ backgroundColor: theme.textMuted, opacity: item === 1 ? 0.8 : 0.2 }} />
               ))}
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-xs uppercase tracking-wider" style={{ color: theme.textMuted }}>
+              Sesión
+            </h3>
+            <div className="rounded-xl border p-6" style={{ backgroundColor: theme.surface, borderColor: theme.border }}>
+              <button
+                onClick={handleLogout}
+                disabled={loggingOut}
+                className="rounded-lg border px-3 py-2 text-xs"
+                style={{ borderColor: theme.border }}
+              >
+                {loggingOut ? "Cerrando sesión..." : "Cerrar sesión"}
+              </button>
             </div>
           </div>
         </div>

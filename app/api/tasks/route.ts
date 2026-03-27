@@ -137,7 +137,7 @@ export async function DELETE(req: NextRequest) {
 
     const { error } = await supabase
       .from("operational_tasks")
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .eq("id", id)
       .eq("user_id", userId)
 

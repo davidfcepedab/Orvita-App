@@ -85,7 +85,7 @@ export default function HouseholdInvitePage() {
       )}
 
       <a
-        href="/auth/login"
+        href="/auth"
         className="text-sm font-medium text-gray-600 underline"
       >
         Ir a login

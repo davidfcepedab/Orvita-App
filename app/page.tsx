@@ -1,5 +1,5 @@
-import HomeV3 from "@/app/components/orbita-v3/home/HomeV3"
+import { redirect } from "next/navigation"
 
 export default function HomePage() {
-  return <HomeV3 />
+  redirect("/hoy")
 }
