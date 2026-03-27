@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
+import { designTokens } from "@/src/theme/design-tokens"
 
 export type ColorTheme = "carbon" | "arctic" | "sand"
 export type LayoutMode = "compact" | "balanced" | "zen"
@@ -58,42 +59,42 @@ export function useApp() {
 
 export const themes = {
   carbon: {
-    bg: "#0F0F10",
-    surface: "#1A1A1B",
-    surfaceAlt: "#171719",
-    border: "#262626",
-    text: "#E5E5E5",
-    textMuted: "#A3A3A3",
+    bg: designTokens.colors.carbon.background,
+    surface: designTokens.colors.carbon.surface,
+    surfaceAlt: designTokens.colors.carbon["surface-alt"],
+    border: designTokens.colors.carbon.border,
+    text: designTokens.colors.carbon["text-primary"],
+    textMuted: designTokens.colors.carbon["text-secondary"],
     accent: {
-      health: "#34D399",
-      finance: "#60A5FA",
-      agenda: "#818CF8",
+      health: designTokens.colors.carbon["accent-health"],
+      finance: designTokens.colors.carbon["accent-finance"],
+      agenda: designTokens.colors.carbon["accent-agenda"],
     },
   },
   arctic: {
-    bg: "#F4F7F9",
-    surface: "#FFFFFF",
-    surfaceAlt: "#EDF1F5",
-    border: "#E2E8F0",
-    text: "#1E293B",
-    textMuted: "#64748B",
+    bg: designTokens.colors.arctic.background,
+    surface: designTokens.colors.arctic.surface,
+    surfaceAlt: designTokens.colors.arctic["surface-alt"],
+    border: designTokens.colors.arctic.border,
+    text: designTokens.colors.arctic["text-primary"],
+    textMuted: designTokens.colors.arctic["text-secondary"],
     accent: {
-      health: "#10B981",
-      finance: "#38BDF8",
-      agenda: "#6366F1",
+      health: designTokens.colors.arctic["accent-health"],
+      finance: designTokens.colors.arctic["accent-finance"],
+      agenda: designTokens.colors.arctic["accent-agenda"],
     },
   },
   sand: {
-    bg: "#FAF8F5",
-    surface: "#FFFCF7",
-    surfaceAlt: "#F5F1EA",
-    border: "#E8E2D8",
-    text: "#292524",
-    textMuted: "#78716C",
+    bg: designTokens.colors.sand.background,
+    surface: designTokens.colors.sand.surface,
+    surfaceAlt: designTokens.colors.sand["surface-alt"],
+    border: designTokens.colors.sand.border,
+    text: designTokens.colors.sand["text-primary"],
+    textMuted: designTokens.colors.sand["text-secondary"],
     accent: {
-      health: "#FCD34D",
-      finance: "#FDBA74",
-      agenda: "#FCA5A5",
+      health: designTokens.colors.sand["accent-health"],
+      finance: designTokens.colors.sand["accent-finance"],
+      agenda: designTokens.colors.sand["accent-agenda"],
     },
   },
 } as const

@@ -3,21 +3,84 @@
 @tailwind utilities;
 
 :root {
-  --bg-app: #F9FAFB;
-  --surface-card: #FFFFFF;
-  --surface-muted: #F3F4F6;
-  --border-soft: #E5E7EB;
-  --text-primary: #111827;
-  --text-secondary: #6B7280;
-  --text-muted: #94A3B8;
-  --accent-health: #A7F3D0;
-  --accent-health-strong: #34D399;
-  --accent-finance: #BAE6FD;
-  --accent-finance-strong: #38BDF8;
-  --accent-agenda: #C7D2FE;
-  --accent-agenda-strong: #6366F1;
-  --accent-warning: #F59E0B;
-  --accent-danger: #EF4444;
+  --color-background: #F4F7F9;
+  --color-surface: #FFFFFF;
+  --color-surface-alt: #EDF1F5;
+  --color-border: #E2E8F0;
+  --color-text-primary: #1E293B;
+  --color-text-secondary: #64748B;
+  --color-accent-primary: #6366F1;
+  --color-accent-health: #10B981;
+  --color-accent-finance: #38BDF8;
+  --color-accent-agenda: #6366F1;
+  --color-accent-warning: #F97316;
+  --color-accent-danger: #EF4444;
+  --radius-card: 16px;
+  --radius-button: 10px;
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.02);
+  --shadow-hover: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.03);
+  --layout-padding: var(--spacing-md);
+  --layout-gap: var(--spacing-md);
+
+  --bg-app: var(--color-background);
+  --surface-card: var(--color-surface);
+  --surface-muted: var(--color-surface-alt);
+  --border-soft: var(--color-border);
+  --text-primary: var(--color-text-primary);
+  --text-secondary: var(--color-text-secondary);
+  --text-muted: var(--color-text-secondary);
+  --accent-health: var(--color-accent-health);
+  --accent-health-strong: var(--color-accent-health);
+  --accent-finance: var(--color-accent-finance);
+  --accent-finance-strong: var(--color-accent-finance);
+  --accent-agenda: var(--color-accent-agenda);
+  --accent-agenda-strong: var(--color-accent-agenda);
+  --accent-warning: var(--color-accent-warning);
+  --accent-danger: var(--color-accent-danger);
+}
+
+[data-theme="carbon"] {
+  --color-background: #0F0F10;
+  --color-surface: #1A1A1B;
+  --color-surface-alt: #0F0F10;
+  --color-border: #262626;
+  --color-text-primary: #E5E5E5;
+  --color-text-secondary: #A3A3A3;
+  --color-accent-primary: #818CF8;
+  --color-accent-health: #34D399;
+  --color-accent-finance: #60A5FA;
+  --color-accent-agenda: #818CF8;
+  --color-accent-warning: #FBBF24;
+  --color-accent-danger: #F87171;
+}
+
+[data-theme="sand"] {
+  --color-background: #FAF8F5;
+  --color-surface: #FFFCF7;
+  --color-surface-alt: #F5F1EA;
+  --color-border: #E8E2D8;
+  --color-text-primary: #292524;
+  --color-text-secondary: #78716C;
+  --color-accent-primary: #FCA5A5;
+  --color-accent-health: #FCD34D;
+  --color-accent-finance: #FDBA74;
+  --color-accent-agenda: #FCA5A5;
+  --color-accent-warning: #FDBA74;
+  --color-accent-danger: #FCA5A5;
+}
+
+[data-layout="compact"] {
+  --layout-padding: var(--spacing-sm);
+  --layout-gap: var(--spacing-sm);
+}
+
+[data-layout="zen"] {
+  --layout-padding: var(--spacing-lg);
+  --layout-gap: var(--spacing-lg);
 }
 
 /* ===================================================== */
@@ -30,7 +93,7 @@ html, body {
 
 body {
   @apply antialiased;
-  background: var(--bg-app);
+  background: var(--color-background);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -51,19 +114,15 @@ body {
 .card {
   @apply rounded-3xl p-6;
   background: var(--surface-card);
-  border: 1px solid rgba(229, 231, 235, 0.9);
-  box-shadow:
-    0 8px 24px rgba(15, 23, 42, 0.04),
-    0 2px 6px rgba(15, 23, 42, 0.03);
+  border: var(--border-soft) solid 0.5px;
+  box-shadow: var(--shadow-card);
   transition: all 0.2s ease;
 }
 
 /* Micro-interacción sutil */
 .card:hover {
   transform: translateY(-2px);
-  box-shadow:
-    0 12px 28px rgba(15, 23, 42, 0.06),
-    0 4px 8px rgba(15, 23, 42, 0.04);
+  box-shadow: var(--shadow-hover);
 }
 
 /* ===================================================== */

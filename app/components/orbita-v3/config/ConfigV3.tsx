@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { type ColorTheme, type LayoutMode, useApp, themes } from "@/app/contexts/AppContext"
+import { designTokens } from "@/src/theme/design-tokens"
 import { createBrowserClient } from "@/lib/supabase/browser"
 import { Monitor, Palette, Sliders } from "lucide-react"
 
@@ -105,9 +106,33 @@ export default function ConfigV3() {
   }
 
   const themeOptions: { id: ColorTheme; label: string; colors: string[] }[] = [
-    { id: "arctic", label: "Arctic (Light)", colors: ["#F4F7F9", "#10B981", "#38BDF8"] },
-    { id: "carbon", label: "Carbon (Dark)", colors: ["#0F0F10", "#34D399", "#60A5FA"] },
-    { id: "sand", label: "Sand (Warm)", colors: ["#FAF8F5", "#FCD34D", "#FDBA74"] },
+    {
+      id: "arctic",
+      label: "Arctic (Light)",
+      colors: [
+        designTokens.colors.arctic.background,
+        designTokens.colors.arctic["accent-health"],
+        designTokens.colors.arctic["accent-finance"],
+      ],
+    },
+    {
+      id: "carbon",
+      label: "Carbon (Dark)",
+      colors: [
+        designTokens.colors.carbon.background,
+        designTokens.colors.carbon["accent-health"],
+        designTokens.colors.carbon["accent-finance"],
+      ],
+    },
+    {
+      id: "sand",
+      label: "Sand (Warm)",
+      colors: [
+        designTokens.colors.sand.background,
+        designTokens.colors.sand["accent-health"],
+        designTokens.colors.sand["accent-finance"],
+      ],
+    },
   ]
 
   const layoutOptions: { id: LayoutMode; label: string }[] = [
