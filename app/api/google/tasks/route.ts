@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
-import { isAppMockMode, isSupabaseEnabled } from "@/lib/checkins/flags"
+import {
+  API_GOOGLE_MUTATION_NO_SYNC,
+  isAppMockMode,
+  isSupabaseEnabled,
+  UI_GOOGLE_TASKS_OFF,
+} from "@/lib/checkins/flags"
 import { fetchDefaultTaskList, insertDefaultListTask, mapGoogleTask } from "@/lib/google/googleTasksApi"
 import { getGoogleAccessTokenForUser } from "@/lib/google/loadAccessToken"
 import { MOCK_GOOGLE_TASKS } from "@/lib/google/mockGoogleData"
@@ -22,8 +27,7 @@ export async function GET(req: NextRequest) {
       success: true,
       connected: false,
       tasks: [],
-      notice:
-        "Integración Google usa Supabase para tokens. Activa NEXT_PUBLIC_SUPABASE_ENABLED=true para datos reales.",
+      notice: UI_GOOGLE_TASKS_OFF,
     })
   }
 
@@ -68,7 +72,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: "NEXT_PUBLIC_SUPABASE_ENABLED distinto de true: no se puede crear en Google con persistencia de tokens.",
+        error: API_GOOGLE_MUTATION_NO_SYNC,
       },
       { status: 403 },
     )

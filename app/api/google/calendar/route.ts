@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
-import { isAppMockMode, isSupabaseEnabled } from "@/lib/checkins/flags"
+import { isAppMockMode, isSupabaseEnabled, UI_GOOGLE_CALENDAR_OFF } from "@/lib/checkins/flags"
 import { fetchPrimaryCalendarWindow } from "@/lib/google/googleCalendarApi"
 import { getGoogleAccessTokenForUser } from "@/lib/google/loadAccessToken"
 import { MOCK_GOOGLE_CALENDAR_EVENTS } from "@/lib/google/mockGoogleData"
@@ -30,8 +30,7 @@ export async function GET(req: NextRequest) {
       success: true,
       connected: false,
       events: [],
-      notice:
-        "Integración Google usa Supabase para tokens. Activa NEXT_PUBLIC_SUPABASE_ENABLED=true para datos reales.",
+      notice: UI_GOOGLE_CALENDAR_OFF,
     })
   }
 

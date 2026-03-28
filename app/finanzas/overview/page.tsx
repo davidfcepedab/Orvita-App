@@ -5,6 +5,7 @@ import { useFinance } from "../FinanceContext"
 import { Card } from "@/src/components/ui/Card"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { rechartsDefaultMargin, rechartsTooltipContentStyle } from "@/lib/charts/rechartsShared"
+import { UI_FINANCE_DEMO_MONTH } from "@/lib/checkins/flags"
 import { financeApiGet } from "@/lib/finanzas/financeClientFetch"
 import {
   ResponsiveContainer,
@@ -165,7 +166,7 @@ export default function FinanzasOverview() {
   if (!data) {
     return (
       <div className="space-y-2 p-6 text-center text-slate-600">
-        <p>No hay datos financieros para este mes.</p>
+        <p>{UI_FINANCE_DEMO_MONTH}</p>
         {notice && <p className="text-xs text-slate-500">{notice}</p>}
       </div>
     )

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
-import { isSupabaseEnabled } from "@/lib/checkins/flags"
+import { API_NOTICE_MANUAL_ITEMS_LOCAL, isSupabaseEnabled } from "@/lib/checkins/flags"
 import { getHouseholdId } from "@/lib/households/getHouseholdId"
 
 export const runtime = "nodejs"
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     if (!isSupabaseEnabled()) {
       return NextResponse.json({
         success: true,
-        notice: "NEXT_PUBLIC_SUPABASE_ENABLED≠true: ítems manuales solo en localStorage.",
+        notice: API_NOTICE_MANUAL_ITEMS_LOCAL,
         data: { items: [] },
       })
     }

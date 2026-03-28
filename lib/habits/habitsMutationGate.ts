@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { isAppMockMode, isSupabaseEnabled } from "@/lib/checkins/flags"
+import { isAppMockMode, isSupabaseEnabled, UI_HABITS_MUTATIONS_OFF } from "@/lib/checkins/flags"
 
 /**
  * Mutaciones de hábitos (CRUD + completado diario) requieren Supabase habilitado,
@@ -12,8 +12,7 @@ export function habitsMutationBlockedResponse(): NextResponse | null {
     {
       success: false,
       code: "SUPABASE_PERSISTENCE_DISABLED",
-      error:
-        "Mutaciones de hábitos desactivadas: establece NEXT_PUBLIC_SUPABASE_ENABLED=true y reconstruye la app.",
+      error: UI_HABITS_MUTATIONS_OFF,
     },
     { status: 403 }
   )

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
-import { isAppMockMode, isSupabaseEnabled } from "@/lib/checkins/flags"
+import { isAppMockMode, isSupabaseEnabled, UI_SYNC_OFF_SHORT } from "@/lib/checkins/flags"
 import { buildInsightsFromHistory } from "@/lib/finanzas/deriveFromTransactions"
 import { mockTransactionsForMonth } from "@/lib/finanzas/mockFinancePayloads"
 import { monthBounds } from "@/lib/finanzas/monthRange"
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
     if (!isSupabaseEnabled()) {
       return NextResponse.json({
         success: true,
-        notice: "NEXT_PUBLIC_SUPABASE_ENABLED≠true.",
+        notice: UI_SYNC_OFF_SHORT,
         data: null,
       })
     }

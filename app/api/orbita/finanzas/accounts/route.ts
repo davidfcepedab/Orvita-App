@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
-import { isAppMockMode, isSupabaseEnabled } from "@/lib/checkins/flags"
+import { isAppMockMode, isSupabaseEnabled, UI_SYNC_OFF_SHORT } from "@/lib/checkins/flags"
 import { buildCuentasDashboard } from "@/lib/finanzas/cuentasDashboard"
 import { mockTransactionsForMonth } from "@/lib/finanzas/mockFinancePayloads"
 import { monthBounds } from "@/lib/finanzas/monthRange"
@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
       const dashboard = buildCuentasDashboard(month, null, [], [], false)
       return NextResponse.json({
         success: true,
-        notice: "NEXT_PUBLIC_SUPABASE_ENABLED≠true.",
+        notice: UI_SYNC_OFF_SHORT,
         data: { accounts: [], dashboard },
       })
     }

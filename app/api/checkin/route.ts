@@ -6,6 +6,7 @@ import {
   parseCheckinFormBody,
 } from "@/lib/checkins/checkinPayload"
 import {
+  API_CHECKIN_MOCK_SUCCESS_DETAIL,
   CHECKIN_SUPABASE_DISABLED_CODE,
   CHECKIN_SUPABASE_DISABLED_HINT,
   CHECKIN_SUPABASE_DISABLED_MESSAGE,
@@ -29,8 +30,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         success: true,
         mock: true,
-        message:
-          "Modo mock (NEXT_PUBLIC_APP_MODE=mock): respuesta simulada; no se escribió en Supabase.",
+        message: API_CHECKIN_MOCK_SUCCESS_DETAIL,
         received: { fecha: parsed.data.fecha },
         flags: {
           appMode: "mock",

@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Ban, ChevronDown, Pause, Pencil, Plus } from "lucide-react"
-import { financeApiGet, financeApiJson } from "@/lib/finanzas/financeClientFetch"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
+import { UI_SUBSCRIPTIONS_LOCAL_STORAGE } from "@/lib/checkins/flags"
+import { financeApiGet, financeApiJson } from "@/lib/finanzas/financeClientFetch"
 import {
   ensureLocalSubscriptionsSeeded,
   readSubscriptionsFromLocalStorage,
@@ -381,9 +382,7 @@ export function SubscriptionsBurnSection({
 
             {!supabaseEnabled ? (
               <div className="rounded-2xl border-[0.5px] border-amber-200/90 bg-amber-50/60 px-4 py-3 text-sm text-amber-900">
-                <span className="font-medium">Almacenamiento local.</span>{" "}
-                <code className="rounded bg-white/80 px-1 text-xs">NEXT_PUBLIC_SUPABASE_ENABLED=true</code> sincroniza
-                en Supabase (tabla <code className="text-xs">user_subscriptions</code>).
+                <span className="font-medium">Almacenamiento en este navegador.</span> {UI_SUBSCRIPTIONS_LOCAL_STORAGE}
               </div>
             ) : null}
 

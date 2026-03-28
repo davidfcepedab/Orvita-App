@@ -3,6 +3,7 @@
 import { useMemo, useState, type FormEvent } from "react"
 import { Card } from "@/src/components/ui/Card"
 import { Activity, Check, CheckCircle2, Circle, Flame, Loader2, Plus, TrendingDown } from "lucide-react"
+import { UI_HABITS_MUTATIONS_OFF, UI_HABITS_SAVE_OFF } from "@/lib/checkins/flags"
 import { lettersToWeekdays, weekdaysToLetters } from "@/lib/habits/habitMetrics"
 import { useHabits } from "@/app/hooks/useHabits"
 import type { HabitWeekDayMark } from "@/lib/habits/habitMetrics"
@@ -34,7 +35,6 @@ function rewardMessage(days: number) {
   return null
 }
 
-// ← V3 RECONSTRUIDO: fiel a captura + navegación preservada
 export default function HabitosPage() {
   const {
     habits,
@@ -70,7 +70,7 @@ export default function HabitosPage() {
     if (form.superhabit && !editing && superhabitCount >= 2) return
 
     if (!persistenceEnabled && !mock) {
-      alert("Activa NEXT_PUBLIC_SUPABASE_ENABLED=true para crear o editar hábitos.")
+      alert(UI_HABITS_SAVE_OFF)
       return
     }
 
@@ -136,8 +136,7 @@ export default function HabitosPage() {
             color: "var(--color-text-primary)",
           }}
         >
-          Mutaciones desactivadas: define <code style={{ fontSize: "12px" }}>NEXT_PUBLIC_SUPABASE_ENABLED=true</code>{" "}
-          y reconstruye la app para crear hábitos o marcar &quot;Hecho hoy&quot; en base real.
+          {UI_HABITS_MUTATIONS_OFF}
         </p>
       )}
 

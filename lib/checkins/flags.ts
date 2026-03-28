@@ -38,10 +38,85 @@ export function getCheckinApiFlagsSnapshot() {
 
 export const CHECKIN_SUPABASE_DISABLED_CODE = "SUPABASE_PERSISTENCE_DISABLED" as const
 
+/** Respuesta API / mensajes de error: sin nombres de variables de entorno. */
 export const CHECKIN_SUPABASE_DISABLED_MESSAGE =
-  "Persistencia en Supabase desactivada. Establece NEXT_PUBLIC_SUPABASE_ENABLED=true en el entorno, reconstruye la app (Next inlining) y vuelve a cargar."
+  "El check-in no se puede guardar en la nube con la configuración actual. Activa la sincronización con base de datos en el panel de alojamiento y vuelve a publicar la app, o usa el modo demostración si está disponible."
 
 export const CHECKIN_SUPABASE_DISABLED_HINT =
-  "Sin este flag, POST /api/checkin no escribirá filas en public.checkins (salvo modo mock, que solo simula la respuesta)."
+  "Mientras la sincronización con base de datos esté desactivada, el guardado permanente no está disponible (salvo en modo demostración, que solo simula la respuesta)."
+
+/**
+ * Texto para UI y avisos de API: lenguaje de producto (deploy / administrador), no nombres de .env.
+ */
+export const UI_SYNC_OFF_SHORT =
+  "La sincronización con la nube no está activa; parte de los datos son locales o de demostración."
+
+export const UI_HABITS_MUTATIONS_OFF =
+  "No puedes crear hábitos ni guardar «Hecho hoy» en la nube hasta que quien administra el servidor active la sincronización con base de datos y vuelva a publicar la app."
+
+export const UI_HABITS_SAVE_OFF = "No se puede guardar en la nube con la configuración actual."
+
+export const UI_FINANCE_DEMO_MONTH = "No hay resumen financiero real para este mes."
+
+export const UI_FINANCE_DEMO_NOTICE =
+  "Se muestran datos de ejemplo. Con la sincronización activa verás tus movimientos reales."
+
+export const UI_GOOGLE_CALENDAR_OFF =
+  "Para ver tus eventos reales de Google Calendar hace falta tener la sincronización con cuenta activada en el servidor."
+
+export const UI_GOOGLE_TASKS_OFF =
+  "Para sincronizar tareas con Google hace falta tener la sincronización con cuenta activada en el servidor."
+
+export const UI_HEALTH_SUPPLEMENTS_LOCAL =
+  "Los suplementos se guardan en este navegador. Con la sincronización activa podrán asociarse a tu cuenta."
+
+export const UI_TRAINING_PREFS_LOCAL =
+  "Las preferencias de entreno se guardan en este navegador. Con la sincronización activa podrán asociarse a tu cuenta."
+
+export const UI_SUBSCRIPTIONS_LOCAL_STORAGE =
+  "Los datos se guardan en este navegador. Con la sincronización activa se replican en tu cuenta."
+
+export const UI_AGENDA_SYNC_OFF =
+  "Activa la sincronización con cuenta en el servidor para poder sincronizar con la nube desde aquí."
+
+export const UI_HEALTH_CONTEXT_ERROR =
+  "No pudimos cargar el panel de bienestar. Inicia sesión si aplica, comprueba tu conexión o inténtalo más tarde."
+
+/** Avisos JSON en rutas API (breves). */
+export const API_NOTICE_MANUAL_ITEMS_LOCAL =
+  "Ítems manuales solo en este dispositivo hasta activar la sincronización con cuenta."
+
+export const API_NOTICE_SUBSCRIPTIONS_LOCAL =
+  "Suscripciones en este dispositivo hasta activar la sincronización con cuenta."
+
+export const API_CHECKIN_MOCK_SUCCESS_DETAIL =
+  "Modo demostración: respuesta simulada; no se escribió en la base de datos."
+
+export const API_CHECKIN_PRELOAD_MOCK_NO_SYNC =
+  "Precarga simulada. El guardado permanente en base de datos no está disponible con la configuración actual."
+
+export const API_CHECKIN_PRELOAD_EMPTY_NO_SYNC =
+  "Precarga vacía; el guardado en base de datos no está disponible con la configuración actual."
+
+export const API_CHECKIN_PRELOAD_SHEETS_NO_ROWS_NO_SYNC =
+  "Sin filas para precargar en Sheets. El guardado en base de datos requiere sincronización activa en el servidor."
+
+export const API_CHECKIN_PRELOAD_NO_ROW_NO_SYNC =
+  "No hay fila útil para precargar; el guardado en base de datos sigue desactivado."
+
+export const API_CHECKIN_PRELOAD_SHEETS_OK_NO_SYNC =
+  "Precarga desde Sheets lista. Para persistir en base de datos, activa la sincronización en el servidor y vuelve a publicar la app."
+
+export const API_GOOGLE_MUTATION_NO_SYNC =
+  "No se puede crear en Google sin sincronización de cuenta en el servidor."
+
+export const UI_CHECKIN_BANNER_MOCK =
+  "Modo demostración activo: el guardado es simulado; no se escribe en la base de datos real."
+
+export const UI_CHECKIN_BANNER_NO_CLOUD =
+  "El check-in no se guardará en la nube con la configuración actual. Activa la sincronización en el panel de alojamiento y vuelve a publicar la app, o usa el modo demostración si está disponible."
+
+export const UI_CHECKIN_SAVE_DISABLED_FOOTER =
+  "Usa modo demostración o activa la sincronización en la nube para poder guardar."
 
 

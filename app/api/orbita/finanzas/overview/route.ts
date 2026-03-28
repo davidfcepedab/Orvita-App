@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
-import { isAppMockMode, isSupabaseEnabled } from "@/lib/checkins/flags"
+import { isAppMockMode, isSupabaseEnabled, UI_FINANCE_DEMO_NOTICE } from "@/lib/checkins/flags"
 import { calculateOverview } from "@/lib/finanzas/calculations/overview"
 import { expenseAmount } from "@/lib/finanzas/calculations/txMath"
 import {
@@ -82,8 +82,7 @@ export async function GET(req: NextRequest) {
     if (!isSupabaseEnabled()) {
       return NextResponse.json({
         success: true,
-        notice:
-          "NEXT_PUBLIC_SUPABASE_ENABLED≠true: sin lectura de transacciones. Activa el flag y reconstruye la app.",
+        notice: UI_FINANCE_DEMO_NOTICE,
         data: null,
       })
     }

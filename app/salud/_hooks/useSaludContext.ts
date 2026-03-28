@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { isAppMockMode } from "@/lib/checkins/flags"
+import { isAppMockMode, UI_HEALTH_CONTEXT_ERROR } from "@/lib/checkins/flags"
 import { getContext } from "@/lib/getContext"
 import {
   HEALTH_ENERGY_PROFILE,
@@ -83,14 +83,14 @@ export function useSaludContext() {
         }
 
         if (!response || !isRawContextData(response)) {
-          setError("No pude cargar el contexto de salud.")
+          setError(UI_HEALTH_CONTEXT_ERROR)
           return
         }
 
         setData(response)
       } catch {
         if (active) {
-          setError("No pude cargar el contexto de salud.")
+          setError(UI_HEALTH_CONTEXT_ERROR)
         }
       } finally {
         if (active) {

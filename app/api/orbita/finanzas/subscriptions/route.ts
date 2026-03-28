@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
-import { isSupabaseEnabled } from "@/lib/checkins/flags"
+import { API_NOTICE_SUBSCRIPTIONS_LOCAL, isSupabaseEnabled } from "@/lib/checkins/flags"
 import { getHouseholdId } from "@/lib/households/getHouseholdId"
 import type { SubscriptionStatus, UserSubscription } from "@/lib/finanzas/userSubscriptionsTypes"
 import { SUBSCRIPTION_CATEGORIES } from "@/lib/finanzas/userSubscriptionsTypes"
@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
     if (!isSupabaseEnabled()) {
       return NextResponse.json({
         success: true,
-        notice: "NEXT_PUBLIC_SUPABASE_ENABLED≠true: usa almacenamiento local en Cuentas.",
+        notice: API_NOTICE_SUBSCRIPTIONS_LOCAL,
         data: { subscriptions: [] as UserSubscription[] },
       })
     }

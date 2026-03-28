@@ -6,7 +6,7 @@ import { Card } from "@/src/components/ui/Card"
 import { useGoogleTasks } from "@/app/hooks/useGoogleTasks"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
-import { isAppMockMode, isSupabaseEnabled } from "@/lib/checkins/flags"
+import { isAppMockMode, isSupabaseEnabled, UI_AGENDA_SYNC_OFF } from "@/lib/checkins/flags"
 
 export function GoogleAgendaPanel() {
   const { tasks, loading, error, connected, notice, creating, refresh, createTask } = useGoogleTasks()
@@ -21,7 +21,7 @@ export function GoogleAgendaPanel() {
       return
     }
     if (!isSupabaseEnabled()) {
-      setSyncMsg("Activa NEXT_PUBLIC_SUPABASE_ENABLED para sincronizar con Supabase.")
+      setSyncMsg(UI_AGENDA_SYNC_OFF)
       return
     }
     try {

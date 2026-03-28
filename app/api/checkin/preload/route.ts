@@ -1,7 +1,16 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
 import { mergeSheetRowIntoPreload } from "@/lib/checkins/checkinSheetPreload"
-import { getCheckinApiFlagsSnapshot, isAppMockMode, isSupabaseEnabled } from "@/lib/checkins/flags"
+import {
+  API_CHECKIN_PRELOAD_EMPTY_NO_SYNC,
+  API_CHECKIN_PRELOAD_MOCK_NO_SYNC,
+  API_CHECKIN_PRELOAD_NO_ROW_NO_SYNC,
+  API_CHECKIN_PRELOAD_SHEETS_NO_ROWS_NO_SYNC,
+  API_CHECKIN_PRELOAD_SHEETS_OK_NO_SYNC,
+  getCheckinApiFlagsSnapshot,
+  isAppMockMode,
+  isSupabaseEnabled,
+} from "@/lib/checkins/flags"
 import {
   fetchSpreadsheetValues,
   pickLastNonEmptyRow,
@@ -36,9 +45,7 @@ export async function GET(req: NextRequest) {
         source: "mock",
         data: mockPreloadPayload(),
         flags: getCheckinApiFlagsSnapshot(),
-        notice: isSupabaseEnabled()
-          ? undefined
-          : "Modo mock: precarga simulada. Con NEXT_PUBLIC_SUPABASE_ENABLED distinto de true, el guardado real en BD sigue desactivado en entorno estándar.",
+        notice: isSupabaseEnabled() ? undefined : API_CHECKIN_PRELOAD_MOCK_NO_SYNC,
       })
     }
 
@@ -54,9 +61,7 @@ export async function GET(req: NextRequest) {
           data: {},
           message: "Sin CHECKIN_MEASURES_SPREADSHEET_ID ni PERSONAL_SPREADSHEET_ID configurados.",
           flags: getCheckinApiFlagsSnapshot(),
-          notice: !isSupabaseEnabled()
-            ? "Precarga vacía: además, NEXT_PUBLIC_SUPABASE_ENABLED no está en true — el botón Guardar no persistirá en Supabase hasta activarlo."
-            : undefined,
+          notice: !isSupabaseEnabled() ? API_CHECKIN_PRELOAD_EMPTY_NO_SYNC : undefined,
         },
         { status: 200 }
       )
@@ -73,9 +78,7 @@ export async function GET(req: NextRequest) {
         data: {},
         message: "La hoja no devolvió filas para el rango configurado.",
         flags: getCheckinApiFlagsSnapshot(),
-        notice: !isSupabaseEnabled()
-          ? "Sin filas en Sheets para precargar. Recuerda: guardar en Supabase requiere NEXT_PUBLIC_SUPABASE_ENABLED=true."
-          : undefined,
+        notice: !isSupabaseEnabled() ? API_CHECKIN_PRELOAD_SHEETS_NO_ROWS_NO_SYNC : undefined,
       })
     }
 
@@ -87,9 +90,7 @@ export async function GET(req: NextRequest) {
         data: {},
         message: "No se encontró una fila con datos.",
         flags: getCheckinApiFlagsSnapshot(),
-        notice: !isSupabaseEnabled()
-          ? "No hay fila útil para precargar. El guardado en base real sigue desactivado (NEXT_PUBLIC_SUPABASE_ENABLED≠true)."
-          : undefined,
+        notice: !isSupabaseEnabled() ? API_CHECKIN_PRELOAD_NO_ROW_NO_SYNC : undefined,
       })
     }
 
@@ -102,9 +103,7 @@ export async function GET(req: NextRequest) {
       data,
       summary: _summary,
       flags: getCheckinApiFlagsSnapshot(),
-      notice: !isSupabaseEnabled()
-        ? "Precarga desde Google Sheets lista. Para persistir el formulario en Supabase, activa NEXT_PUBLIC_SUPABASE_ENABLED=true y redespliega."
-        : undefined,
+      notice: !isSupabaseEnabled() ? API_CHECKIN_PRELOAD_SHEETS_OK_NO_SYNC : undefined,
     })
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Error desconocido"

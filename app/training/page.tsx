@@ -24,7 +24,7 @@ import {
   weeklyVolumeSum,
 } from "@/lib/training/deriveFromHevyDays"
 import { rechartsDefaultMargin, rechartsTooltipContentStyle } from "@/lib/charts/rechartsShared"
-import { isAppMockMode, isSupabaseEnabled } from "@/lib/checkins/flags"
+import { isAppMockMode, isSupabaseEnabled, UI_TRAINING_PREFS_LOCAL } from "@/lib/checkins/flags"
 import { TrainingVisualBodySection } from "./TrainingVisualBodySection"
 
 function formatStatus(status: TrainingStatus) {
@@ -100,8 +100,7 @@ export default function TrainingPage() {
         </p>
         {!remotePrefs && !isAppMockMode() && (
           <p style={{ margin: "8px 0 0", fontSize: "11px", color: "var(--color-text-secondary)" }}>
-            Objetivo visual, medidas y plan nutricional se guardan en este navegador. Con{" "}
-            <code style={{ fontSize: "10px" }}>NEXT_PUBLIC_SUPABASE_ENABLED=true</code> se sincronizan en tu cuenta.
+            {UI_TRAINING_PREFS_LOCAL}
           </p>
         )}
         {isAppMockMode() && (

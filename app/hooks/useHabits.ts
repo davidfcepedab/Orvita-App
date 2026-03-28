@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { createBrowserClient } from "@/lib/supabase/browser"
-import { isAppMockMode, isSupabaseEnabled } from "@/lib/checkins/flags"
+import { isAppMockMode, isSupabaseEnabled, UI_HABITS_SAVE_OFF } from "@/lib/checkins/flags"
 import {
   aggregateHabitsSummary,
   computeHabitCompletionMetrics,
@@ -179,7 +179,7 @@ export function useHabits() {
       }
 
       if (!persistenceEnabled) {
-        return { ok: false as const, error: "Activa NEXT_PUBLIC_SUPABASE_ENABLED=true para guardar completados." }
+        return { ok: false as const, error: UI_HABITS_SAVE_OFF }
       }
 
       try {
@@ -230,7 +230,7 @@ export function useHabits() {
         return { ok: true as const }
       }
       if (!persistenceEnabled) {
-        return { ok: false as const, error: "Mutaciones desactivadas (Supabase OFF)." }
+        return { ok: false as const, error: UI_HABITS_SAVE_OFF }
       }
       try {
         const headers = await buildJsonHeaders()
@@ -284,7 +284,7 @@ export function useHabits() {
         return { ok: true as const }
       }
       if (!persistenceEnabled) {
-        return { ok: false as const, error: "Mutaciones desactivadas (Supabase OFF)." }
+        return { ok: false as const, error: UI_HABITS_SAVE_OFF }
       }
       try {
         const headers = await buildJsonHeaders()

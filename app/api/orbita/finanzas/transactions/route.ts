@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
-import { isAppMockMode, isSupabaseEnabled } from "@/lib/checkins/flags"
+import { isAppMockMode, isSupabaseEnabled, UI_SYNC_OFF_SHORT } from "@/lib/checkins/flags"
 import { calculateSubtotal } from "@/lib/finanzas/calculations"
 import { signedDisplayAmount } from "@/lib/finanzas/calculations/txMath"
 import { mockTransactionsForMonth } from "@/lib/finanzas/mockFinancePayloads"
@@ -73,7 +73,7 @@ export async function GET(req: NextRequest) {
     if (!isSupabaseEnabled()) {
       return NextResponse.json({
         success: true,
-        notice: "NEXT_PUBLIC_SUPABASE_ENABLED≠true: sin movimientos.",
+        notice: UI_SYNC_OFF_SHORT,
         data: { transactions: [], subtotal: 0, previousSubtotal: 0, delta: null },
       })
     }

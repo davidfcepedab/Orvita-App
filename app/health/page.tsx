@@ -20,7 +20,7 @@ import { calculateRecovery } from "@/src/modules/health/recoveryEngine"
 import { buildRecoveryInputs } from "@/lib/health/recoveryFromContext"
 import { buildBiometricCorrelationChartSeries } from "@/lib/health/sleepEnergyCorrelation"
 import { rechartsTooltipContentStyle } from "@/lib/charts/rechartsShared"
-import { isAppMockMode, isSupabaseEnabled } from "@/lib/checkins/flags"
+import { isAppMockMode, isSupabaseEnabled, UI_HEALTH_SUPPLEMENTS_LOCAL } from "@/lib/checkins/flags"
 import { useHealthSummaryNarrative } from "@/app/health/useHealthSummaryNarrative"
 
 /** Alineado con mock “biometric correlation” (área lavanda + línea verde). */
@@ -132,8 +132,7 @@ export default function HealthPage() {
         )}
         {!remotePrefs && !isAppMockMode() && (
           <p style={{ margin: "8px 0 0", fontSize: "11px", color: "var(--color-text-secondary)" }}>
-            Stack de suplementos en este navegador. Con <code style={{ fontSize: "10px" }}>NEXT_PUBLIC_SUPABASE_ENABLED=true</code>{" "}
-            se sincroniza en tu cuenta.
+            {UI_HEALTH_SUPPLEMENTS_LOCAL}
           </p>
         )}
         {isAppMockMode() && (

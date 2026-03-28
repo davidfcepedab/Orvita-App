@@ -22,7 +22,15 @@ import {
 } from "lucide-react"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { createBrowserClient } from "@/lib/supabase/browser"
-import { getAppMode, isAppMockMode, isSupabaseEnabled } from "@/lib/checkins/flags"
+import {
+  CHECKIN_SUPABASE_DISABLED_MESSAGE,
+  getAppMode,
+  isAppMockMode,
+  isSupabaseEnabled,
+  UI_CHECKIN_BANNER_MOCK,
+  UI_CHECKIN_BANNER_NO_CLOUD,
+  UI_CHECKIN_SAVE_DISABLED_FOOTER,
+} from "@/lib/checkins/flags"
 import {
   NumberUnitField,
   SelectField,
@@ -243,9 +251,7 @@ export default function CheckinPage() {
 
   const handleSubmit = async () => {
     if (saveDisabled) {
-      alert(
-        "No se puede guardar: activa NEXT_PUBLIC_SUPABASE_ENABLED=true en el entorno y reconstruye la app, o usa modo mock para simulación.",
-      )
+      alert(CHECKIN_SUPABASE_DISABLED_MESSAGE)
       return
     }
     if (!form.calidadSueno || !form.energia || !form.estadoAnimo) {
@@ -304,15 +310,12 @@ export default function CheckinPage() {
               role="alert"
               className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-2 text-sm text-violet-900"
             >
-              Modo mock activo (NEXT_PUBLIC_APP_MODE=mock) — el guardado es solo simulación; no hay persistencia en
-              base real.
+              {UI_CHECKIN_BANNER_MOCK}
             </p>
           )}
           {!mockOn && !supabaseOn && (
             <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-900">
-              Persistencia Supabase desactivada — los datos no se guardan en la base. Activa{" "}
-              <span className="font-mono text-xs">NEXT_PUBLIC_SUPABASE_ENABLED=true</span> y reconstruye la app para
-              guardar en Supabase.
+              {UI_CHECKIN_BANNER_NO_CLOUD}
             </p>
           )}
           {apiNotice && (
@@ -634,7 +637,7 @@ export default function CheckinPage() {
           {loading ? "Guardando…" : saveDisabled ? "Guardar desactivado" : "Guardar check-in completo"}
         </button>
         {saveDisabled && (
-          <p className="mt-2 text-center text-xs text-rose-700">Activa Supabase o modo mock para persistir.</p>
+          <p className="mt-2 text-center text-xs text-rose-700">{UI_CHECKIN_SAVE_DISABLED_FOOTER}</p>
         )}
       </div>
     </div>
