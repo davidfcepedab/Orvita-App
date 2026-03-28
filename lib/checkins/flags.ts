@@ -52,9 +52,9 @@ export const UI_SYNC_OFF_SHORT =
   "La sincronización con la nube no está activa; parte de los datos son locales o de demostración."
 
 export const UI_HABITS_MUTATIONS_OFF =
-  "No puedes crear hábitos ni guardar «Hecho hoy» en la nube hasta que quien administra el servidor active la sincronización con base de datos y vuelva a publicar la app."
+  "La sincronización con tu cuenta no está activa: no puedes crear hábitos ni guardar «Hecho hoy» en la nube."
 
-export const UI_HABITS_SAVE_OFF = "No se puede guardar en la nube con la configuración actual."
+export const UI_HABITS_SAVE_OFF = "No se puede guardar en la nube sin sincronización con tu cuenta activa."
 
 export const UI_FINANCE_DEMO_MONTH = "No hay resumen financiero real para este mes."
 
