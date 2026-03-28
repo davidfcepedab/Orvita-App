@@ -9,6 +9,7 @@ type CardProps = {
   hover?: boolean
   shadow?: string
   hoverShadow?: string
+  style?: React.CSSProperties
 }
 
 export function Card({
@@ -17,6 +18,7 @@ export function Card({
   hover = false,
   shadow = designTokens.elevation.card,
   hoverShadow = designTokens.elevation.hover,
+  style,
 }: CardProps) {
   const [isHovering, setIsHovering] = useState(false)
 
@@ -35,7 +37,9 @@ export function Card({
         border: "0.5px solid var(--color-border)",
         borderRadius: "var(--radius-card)",
         boxShadow: resolvedShadow,
-        transition: "box-shadow 300ms ease, transform 300ms ease",
+        transition:
+          "box-shadow calc(300ms * var(--motion-factor, 1)) ease, transform calc(300ms * var(--motion-factor, 1)) ease",
+        ...style,
       }}
     >
       {children}

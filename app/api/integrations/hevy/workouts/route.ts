@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
+import { isAppMockMode } from "@/lib/checkins/flags"
+import { buildMockTrainingDays } from "@/lib/training/mockTrainingDays"
 import { fetchHevyWorkouts } from "@/src/lib/integrations/hevy"
 import { normalizeHevyWorkout } from "@/src/modules/training/hevyNormalizer"
 
@@ -21,6 +23,10 @@ function extractWorkouts(payload: HevyResponse): unknown[] {
 export async function GET(req: NextRequest) {
   const auth = await requireUser(req)
   if (auth instanceof NextResponse) return auth
+
+  if (isAppMockMode()) {
+    return NextResponse.json({ success: true, trainingDays: buildMockTrainingDays() })
+  }
 
   try {
     const payload = (await fetchHevyWorkouts()) as HevyResponse

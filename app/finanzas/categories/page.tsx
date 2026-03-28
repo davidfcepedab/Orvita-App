@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react"
 import { useFinance } from "../FinanceContext"
 import { useRouter } from "next/navigation"
+import { Card } from "@/src/components/ui/Card"
+import { messageForHttpError } from "@/lib/api/friendlyHttpError"
+import { financeApiGet } from "@/lib/finanzas/financeClientFetch"
 
 interface Subcategory {
   name: string
@@ -34,6 +37,68 @@ interface CategoriesResponse {
   error?: string
 }
 
+const mockCategories: CategoriesData = {
+  totalFixed: 6200000,
+  totalVariable: 3800000,
+  totalStructural: 10000000,
+  structuralCategories: [
+    {
+      name: "Vivienda",
+      type: "fixed",
+      total: -3200000,
+      delta: -4,
+      budget: 3400000,
+      budgetUsedPercent: 94,
+      budgetStatus: "yellow",
+      subcategories: [
+        { name: "Arriendo", total: -2600000 },
+        { name: "Servicios", total: -600000 },
+      ],
+    },
+    {
+      name: "Seguro & Salud",
+      type: "fixed",
+      total: -1800000,
+      delta: 2,
+      budget: 2000000,
+      budgetUsedPercent: 90,
+      budgetStatus: "green",
+      subcategories: [
+        { name: "Seguro médico", total: -1200000 },
+        { name: "Suplementos", total: -600000 },
+      ],
+    },
+    {
+      name: "Operación",
+      type: "variable",
+      total: -2100000,
+      delta: 8,
+      budget: 2200000,
+      budgetUsedPercent: 96,
+      budgetStatus: "red",
+      subcategories: [
+        { name: "Software", total: -900000 },
+        { name: "Servicios", total: -700000 },
+        { name: "Freelance", total: -500000 },
+      ],
+    },
+    {
+      name: "Estilo de vida",
+      type: "variable",
+      total: -1700000,
+      delta: -6,
+      budget: 2000000,
+      budgetUsedPercent: 85,
+      budgetStatus: "green",
+      subcategories: [
+        { name: "Movilidad", total: -500000 },
+        { name: "Entrenamiento", total: -400000 },
+        { name: "Alimentación", total: -800000 },
+      ],
+    },
+  ],
+}
+
 export default function FinanzasCategories() {
   const finance = useFinance()
   const router = useRouter()
@@ -42,17 +107,9 @@ export default function FinanzasCategories() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<"operativa" | "estrategica" | "predictiva">("operativa")
+  const [notice, setNotice] = useState<string | null>(null)
 
   const month_value = finance?.month
-
-  if (!finance) {
-    return (
-      <div className="p-6 text-center text-gray-500">
-        <p>Inicializando...</p>
-      </div>
-    )
-  }
-
   useEffect(() => {
     if (!month_value) {
       setData(null)
@@ -64,20 +121,17 @@ export default function FinanzasCategories() {
         setLoading(true)
         setError(null)
 
-        const response = await fetch(
-          `/api/orbita/finanzas/categories?month=${encodeURIComponent(month_value)}`
+        const response = await financeApiGet(
+          `/api/orbita/finanzas/categories?month=${encodeURIComponent(month_value)}`,
         )
 
-        if (!response.ok) {
-          throw new Error(`Error ${response.status}: ${response.statusText}`)
+        const json = (await response.json()) as CategoriesResponse & { notice?: string }
+
+        if (!response.ok || !json.success) {
+          throw new Error(messageForHttpError(response.status, json.error, response.statusText))
         }
 
-        const json: CategoriesResponse = await response.json()
-
-        if (!json.success) {
-          throw new Error(json.error || "Error desconocido")
-        }
-
+        setNotice(json.notice ?? null)
         setData(json.data ?? null)
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Error desconocido"
@@ -91,6 +145,14 @@ export default function FinanzasCategories() {
 
     fetchCategories()
   }, [month_value])
+
+  if (!finance) {
+    return (
+      <div className="p-6 text-center text-gray-500">
+        <p>Inicializando...</p>
+      </div>
+    )
+  }
 
   if (loading) {
     return (
@@ -109,27 +171,16 @@ export default function FinanzasCategories() {
     )
   }
 
-  if (!data) {
-    return (
-      <div className="p-6 text-center text-gray-500">
-        <p>No hay datos disponibles</p>
-      </div>
-    )
-  }
+  const structuralCategories = data?.structuralCategories ?? []
+  const totalFixed = data?.totalFixed ?? 0
+  const totalVariable = data?.totalVariable ?? 0
+  const totalStructural = data?.totalStructural ?? 0
 
-  const {
-    structuralCategories = [],
-    totalFixed = 0,
-    totalVariable = 0,
-    totalStructural = 0,
-  } = data
-
-  if (totalStructural === 0) {
+  if (structuralCategories.length === 0 || totalStructural === 0) {
     return (
-      <div className="p-6 text-center bg-gray-50 rounded-lg">
-        <p className="text-gray-600">
-          No hay movimientos categorizados para este mes.
-        </p>
+      <div className="space-y-2 p-6 text-center bg-slate-50 rounded-lg">
+        <p className="text-slate-600">No hay gastos categorizados para este mes.</p>
+        {notice && <p className="text-xs text-slate-500">{notice}</p>}
       </div>
     )
   }
@@ -157,128 +208,195 @@ export default function FinanzasCategories() {
 
   return (
     <div className="space-y-8">
-      <div className="flex gap-2 justify-between items-center">
-        <div className="flex gap-2">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Categorías</p>
+          <p className="text-lg font-semibold text-slate-900">Mapa estructural del gasto</p>
+          <p className="mt-1 text-sm text-slate-500">
+            Lectura operativa y control de presupuesto por bloque.
+          </p>
+        </div>
+        {notice && (
+          <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-amber-800">
+            {notice}
+          </span>
+        )}
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-2">
           {(["operativa", "estrategica", "predictiva"] as const).map((mode) => (
             <button
               key={mode}
               onClick={() => setViewMode(mode)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition ${
+              className={`rounded-full border px-4 py-2 text-[11px] uppercase tracking-[0.16em] transition ${
                 viewMode === mode
-                  ? "bg-indigo-600 text-white"
-                  : "bg-slate-200 text-slate-700 hover:bg-slate-300"
+                  ? "border-slate-300 bg-white text-slate-900 shadow"
+                  : "border-transparent bg-slate-100 text-slate-500 hover:text-slate-700"
               }`}
             >
               {mode === "operativa" && "Operativa"}
-              {mode === "estrategica" && "Estrategica"}
+              {mode === "estrategica" && "Estratégica"}
               {mode === "predictiva" && "Predictiva"}
             </button>
           ))}
         </div>
+        <span className="text-xs text-slate-400">Lectura mensual</span>
       </div>
 
       {viewMode === "estrategica" && (
-        <div className="p-6 text-center bg-blue-50 rounded-lg border border-blue-200">
-          <p className="text-blue-700 font-semibold">Vista Estrategica</p>
-          <p className="text-sm text-blue-600 mt-2">En desarrollo...</p>
-        </div>
+        <Card className="p-8">
+          <div className="grid gap-2 text-center">
+            <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Vista estratégica</p>
+            <p className="text-sm text-slate-600">En desarrollo…</p>
+          </div>
+        </Card>
       )}
 
       {viewMode === "predictiva" && (
-        <div className="p-6 text-center bg-purple-50 rounded-lg border border-purple-200">
-          <p className="text-purple-700 font-semibold">Vista Predictiva</p>
-          <p className="text-sm text-purple-600 mt-2">En desarrollo...</p>
-        </div>
+        <Card className="p-8">
+          <div className="grid gap-2 text-center">
+            <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Vista predictiva</p>
+            <p className="text-sm text-slate-600">En desarrollo…</p>
+          </div>
+        </Card>
       )}
 
       {viewMode === "operativa" && (
-        <>
-          <div className="space-y-4">
-            <h2 className="text-lg font-bold text-slate-900">Desglose por Categoria</h2>
+        <div className="space-y-4">
+          <div className="grid gap-6 md:grid-cols-3">
+            <Card hover className="p-8">
+              <div className="grid gap-2">
+                <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Total estructural</p>
+                <p className="text-3xl font-semibold text-slate-900">
+                  ${Math.abs(totalStructural).toLocaleString("es-CO", {
+                    maximumFractionDigits: 0,
+                  })}
+                </p>
+                <p className="text-xs text-slate-500">
+                  {fixedPct}% fijo / {100 - fixedPct}% variable
+                </p>
+              </div>
+            </Card>
+            <Card hover className="p-8">
+              <div className="grid gap-2">
+                <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Total fijo</p>
+                <p className="text-3xl font-semibold text-slate-900">
+                  ${Math.abs(totalFixed).toLocaleString("es-CO", {
+                    maximumFractionDigits: 0,
+                  })}
+                </p>
+                <p className="text-xs text-slate-500">Base operativa</p>
+              </div>
+            </Card>
+            <Card hover className="p-8">
+              <div className="grid gap-2">
+                <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Total variable</p>
+                <p className="text-3xl font-semibold text-slate-900">
+                  ${Math.abs(totalVariable).toLocaleString("es-CO", {
+                    maximumFractionDigits: 0,
+                  })}
+                </p>
+                <p className="text-xs text-slate-500">Espacio de ajuste</p>
+              </div>
+            </Card>
+          </div>
 
-            <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-              <p className="text-xs text-slate-600 uppercase tracking-wide">Total Estructural</p>
-              <p className="text-3xl font-bold text-slate-900 mt-1">
-                ${Math.abs(totalStructural).toLocaleString("es-CO", {
-                  maximumFractionDigits: 0,
-                })}
-              </p>
-              <p className="text-xs text-slate-500 mt-2">
-                {fixedPct}% fijo / {100 - fixedPct}% variable
-              </p>
-            </div>
-
-            {structuralCategories.map((cat) => (
-              <div
-                key={cat.name}
-                className="bg-white border border-slate-200 rounded-lg p-4 cursor-pointer hover:shadow-md transition"
-                onClick={() => setExpanded(expanded === cat.name ? null : cat.name)}
-              >
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <p className="font-semibold text-slate-900">{cat.name}</p>
-                    <p className="text-xs text-slate-500 uppercase tracking-wide mt-1">
-                      {cat.type === "fixed" ? "Fijo" : "Variable"}
-                    </p>
-                    {cat.delta !== undefined && (
-                      <p className={`text-xs mt-2 ${cat.delta > 0 ? "text-green-600" : "text-red-600"}`}>
-                        {cat.delta > 0 ? "+" : ""}{cat.delta.toFixed(0)} vs mes anterior
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="text-right">
-                    <p className="text-lg font-bold text-slate-900">
-                      ${Math.abs(cat.total).toLocaleString("es-CO", {
-                        maximumFractionDigits: 0,
-                      })}
-                    </p>
-                  </div>
-                </div>
-
-                {cat.budget && cat.budget > 0 && (
-                  <div className="mt-3">
-                    <div className="flex justify-between items-center mb-1">
-                      <p className="text-xs font-medium text-slate-600">Presupuesto</p>
-                      <p className="text-xs font-bold text-slate-700">
-                        {cat.budgetUsedPercent?.toFixed(0)}%
-                      </p>
-                    </div>
-                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full ${
-                          cat.budgetStatus === "red"
-                            ? "bg-red-500"
-                            : cat.budgetStatus === "yellow"
-                            ? "bg-yellow-500"
-                            : "bg-green-500"
-                        }`}
-                        style={{
-                          width: `${Math.min(cat.budgetUsedPercent || 0, 100)}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {expanded === cat.name && cat.subcategories && cat.subcategories.length > 0 && (
-                  <div className="mt-4 pt-4 border-t border-slate-100 space-y-2">
-                    {cat.subcategories.map((sub, idx) => (
-                      <div key={idx} className="flex justify-between items-center text-sm">
-                        <span className="text-slate-600">{sub.name}</span>
-                        <span className="font-semibold text-slate-700">
-                          ${Math.abs(sub.total).toLocaleString("es-CO", {
-                            maximumFractionDigits: 0,
-                          })}
-                        </span>
+          <div className="grid gap-6 lg:grid-cols-2">
+            {[{ label: "Fijo", items: fixedCategories }, { label: "Variable", items: variableCategories }].map((group) => (
+              <div key={group.label} className="space-y-3">
+                <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{group.label}</p>
+                {group.items.map((cat) => (
+                  <Card key={cat.name} hover className="p-6">
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      className="grid gap-3 text-left"
+                      onClick={() => {
+                        setExpanded(expanded === cat.name ? null : cat.name)
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault()
+                          setExpanded(expanded === cat.name ? null : cat.name)
+                        }
+                      }}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <p className="font-semibold text-slate-900">{cat.name}</p>
+                          <p className="text-xs text-slate-500 uppercase tracking-[0.14em] mt-1">
+                            {cat.type === "fixed" ? "Fijo" : "Variable"}
+                          </p>
+                          {cat.delta !== undefined && (
+                            <p className={`text-xs mt-2 ${cat.delta > 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                              {cat.delta > 0 ? "+" : ""}{cat.delta.toFixed(0)} vs mes anterior
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-semibold text-slate-900">
+                            ${Math.abs(cat.total).toLocaleString("es-CO", {
+                              maximumFractionDigits: 0,
+                            })}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              navigateToTransactions(cat.name)
+                            }}
+                            className="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500 hover:text-slate-700"
+                          >
+                            Ver movimientos
+                          </button>
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                )}
+
+                      {cat.budget && cat.budget > 0 && (
+                        <div className="grid gap-2">
+                          <div className="flex justify-between items-center text-xs text-slate-500">
+                            <span>Presupuesto</span>
+                            <span className="font-semibold text-slate-700">
+                              {cat.budgetUsedPercent?.toFixed(0)}%
+                            </span>
+                          </div>
+                          <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                            <div
+                              className={`${
+                                cat.budgetStatus === "red"
+                                  ? "bg-rose-500"
+                                  : cat.budgetStatus === "yellow"
+                                  ? "bg-amber-500"
+                                  : "bg-emerald-500"
+                              } h-full`}
+                              style={{ width: `${Math.min(cat.budgetUsedPercent || 0, 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {expanded === cat.name && cat.subcategories && cat.subcategories.length > 0 && (
+                        <div className="mt-2 grid gap-2 border-t border-slate-100 pt-3">
+                          {cat.subcategories.map((sub, idx) => (
+                            <div key={idx} className="flex justify-between items-center text-sm">
+                              <span className="text-slate-600">{sub.name}</span>
+                              <span className="font-semibold text-slate-700">
+                                ${Math.abs(sub.total).toLocaleString("es-CO", {
+                                  maximumFractionDigits: 0,
+                                })}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                ))}
               </div>
             ))}
           </div>
-        </>
+        </div>
       )}
     </div>
   )

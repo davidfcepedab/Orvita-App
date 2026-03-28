@@ -55,3 +55,6 @@ export function parseCheckinRowToSummary(row: unknown[]): OrvitaDailyCheckinSumm
   return { day, energy, focus, mood, notes }
 }
 
+// Sheet → form preload helpers live in lib/checkins/checkinSheetPreload.ts (additive).
+
+

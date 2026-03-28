@@ -1,6 +1,8 @@
 import "./globals.css"
 import Providers from "@/app/providers"
 import { ThemeProvider } from "@/src/theme/ThemeProvider"
+import { AppShell } from "@/src/components/layout/AppShell"
+import BottomNav from "@/app/components/BottomNav"
 
 export default function RootLayout({
   children,
@@ -12,10 +14,15 @@ export default function RootLayout({
       <body>
         <ThemeProvider>
           <Providers>
-            {children}
+            <AppShell showSidebar={false}>
+              {/* ← V3 RECONSTRUIDO: fiel a captura + navegación preservada */}
+              <div className="pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))]">{children}</div>
+            </AppShell>
+            <BottomNav />
           </Providers>
         </ThemeProvider>
       </body>
     </html>
   )
 }
+

@@ -1,147 +1,463 @@
 "use client"
 
-import { AppShell } from "@/src/components/layout/AppShell"
+import { useId, useMemo } from "react"
+import {
+  Area,
+  CartesianGrid,
+  ComposedChart,
+  Legend,
+  Line,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts"
 import { Card } from "@/src/components/ui/Card"
-import { useHealthMock } from "@/src/modules/health/useHealthMock"
+import { useSaludContext } from "@/app/salud/_hooks/useSaludContext"
+import { useTraining } from "@/src/modules/training/useTraining"
+import { useHealthSupplements } from "@/app/hooks/useHealthSupplements"
 import { calculateRecovery } from "@/src/modules/health/recoveryEngine"
+import { buildRecoveryInputs } from "@/lib/health/recoveryFromContext"
+import { buildBiometricCorrelationChartSeries } from "@/lib/health/sleepEnergyCorrelation"
+import { rechartsTooltipContentStyle } from "@/lib/charts/rechartsShared"
+import { isAppMockMode, isSupabaseEnabled } from "@/lib/checkins/flags"
+import { useHealthSummaryNarrative } from "@/app/health/useHealthSummaryNarrative"
 
-const supplements = [
-  { name: "Creatine Monohydrate", amount: "5g", active: true },
-  { name: "Vitamin D3 + K2", amount: "5000 IU", active: true },
-  { name: "Omega-3 (EPA/DHA)", amount: "2g", active: true },
-  { name: "Magnesium L-Threonate", amount: "200mg", active: false },
-  { name: "Zinc + Magnesium (ZMA)", amount: "1 capsule", active: false },
-  { name: "Ashwagandha", amount: "300mg", active: false },
-]
+/** Alineado con mock “biometric correlation” (área lavanda + línea verde). */
+const BIOMETRIC_AREA_TOP = "#E8EAF6"
+const BIOMETRIC_AREA_BOTTOM = "#E8EAF6"
+const BIOMETRIC_ENERGY_STROKE = "#22B455"
+
+const biometricChartMargin = { top: 14, right: 42, left: 4, bottom: 28 } as const
+
+function BiometricCorrelationLegend() {
+  return (
+    <div
+      className="flex flex-wrap items-center justify-center gap-x-8 gap-y-2"
+      style={{
+        marginTop: 4,
+        paddingTop: 8,
+        fontSize: 11,
+        color: "var(--color-text-secondary)",
+      }}
+    >
+      <span className="inline-flex items-center gap-2">
+        <span
+          aria-hidden
+          className="inline-block shrink-0 rounded-[3px]"
+          style={{ width: 12, height: 12, background: BIOMETRIC_AREA_TOP }}
+        />
+        Sleep debt / fatigue
+      </span>
+      <span className="inline-flex items-center gap-2">
+        <span
+          aria-hidden
+          className="inline-block shrink-0 rounded-full"
+          style={{ width: 16, height: 3, background: BIOMETRIC_ENERGY_STROKE }}
+        />
+        Energy level
+      </span>
+    </div>
+  )
+}
 
 export default function HealthPage() {
-  const data = useHealthMock()
-  const recovery = calculateRecovery({
-    sleepHours: data.sleepHours,
-    sleepQuality: data.sleepQuality,
-    anxietyLevel: data.anxietyLevel,
-    trainedToday: data.trainedToday,
+  const salud = useSaludContext()
+  const { today } = useTraining()
+  const {
+    supplements,
+    activeCount,
+    toggleActive,
+    editMode,
+    setEditMode,
+    updateSupplement,
+    loading: suppLoading,
+    error: suppError,
+  } = useHealthSupplements()
+
+  const trainedToday = today?.status === "trained"
+  const recoveryInput = useMemo(
+    () => buildRecoveryInputs(salud.scoreRecuperacion, trainedToday),
+    [salud.scoreRecuperacion, trainedToday],
+  )
+  const recovery = useMemo(() => calculateRecovery(recoveryInput), [recoveryInput])
+
+  const correlationChartId = useId().replace(/:/g, "")
+  const correlationData = useMemo(
+    () => buildBiometricCorrelationChartSeries(salud.tendencia, salud.scoreRecuperacion),
+    [salud.tendencia, salud.scoreRecuperacion],
+  )
+
+  const remotePrefs = isSupabaseEnabled() && !isAppMockMode()
+
+  const topMetrics = useMemo(
+    () => [
+      { label: "HRV", value: String(salud.hrv), unit: "ms", accent: "var(--color-accent-warning)" },
+      { label: "FC en reposo", value: String(salud.restingHR), unit: "bpm", accent: "var(--color-accent-danger)" },
+      { label: "Score de sueño", value: String(salud.sleepScore), unit: "", accent: "var(--color-accent-health)" },
+      { label: "Recuperación", value: String(recovery.score), unit: "%", accent: "var(--color-accent-warning)" },
+      { label: "Batería corporal", value: String(salud.bodyBattery), unit: "%", accent: "var(--color-accent-warning)" },
+    ],
+    [salud.hrv, salud.restingHR, salud.sleepScore, salud.bodyBattery, recovery.score],
+  )
+
+  const hydrationTarget = salud.hydrationTarget
+  const hydrationPct = Math.min(100, Math.round((salud.hydrationCurrent / Math.max(0.1, hydrationTarget)) * 100))
+
+  const healthSummary = useHealthSummaryNarrative({
+    loading: salud.loading,
+    bodyBattery: salud.bodyBattery,
+    sleepScore: salud.sleepScore,
+    recoveryStatus: recovery.status,
+    hrv: salud.hrv,
+    restingHR: salud.restingHR,
+    hydrationCurrent: salud.hydrationCurrent,
+    hydrationTarget: salud.hydrationTarget,
+    trainedToday,
+    activeSupplements: activeCount,
+    supplementsLoading: suppLoading,
+    tendencia: salud.tendencia,
+    macros: salud.macros.map((m) => ({ label: m.label, current: m.current, target: m.target })),
   })
 
-  const sleepScore = Math.round((data.sleepQuality / 5) * 100)
-  const recoveryScore = recovery.score
-
   return (
-    <AppShell moduleLabel="Health Module" moduleTitle="Health Operations" showSidebar={false}>
-      <div style={{ display: "grid", gap: "var(--spacing-lg)" }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: "28px", fontWeight: 500 }}>Health Operations</h1>
-          <p style={{ margin: "6px 0 0", fontSize: "13px", color: "var(--color-text-secondary)" }}>
-            Bio-telemetry, fuel management, and energy optimization
+    <div style={{ display: "grid", gap: "var(--spacing-lg)" }}>
+      <div>
+        <h1 style={{ margin: 0, fontSize: "28px", fontWeight: 500 }}>Operaciones de Salud</h1>
+        <p style={{ margin: "6px 0 0", fontSize: "13px", color: "var(--color-text-secondary)" }}>
+          Biotelemetría, gestión de energía y optimización operativa
+        </p>
+        {salud.error && (
+          <p style={{ margin: "8px 0 0", fontSize: "11px", color: "var(--color-accent-danger)" }}>{salud.error}</p>
+        )}
+        {!remotePrefs && !isAppMockMode() && (
+          <p style={{ margin: "8px 0 0", fontSize: "11px", color: "var(--color-text-secondary)" }}>
+            Stack de suplementos en este navegador. Con <code style={{ fontSize: "10px" }}>NEXT_PUBLIC_SUPABASE_ENABLED=true</code>{" "}
+            se sincroniza en tu cuenta.
           </p>
-        </div>
+        )}
+        {isAppMockMode() && (
+          <p style={{ margin: "8px 0 0", fontSize: "11px", color: "var(--color-text-secondary)" }}>
+            Modo mock: contexto de salud simulado; suplementos solo en localStorage.
+          </p>
+        )}
+      </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: "var(--layout-gap)" }}>
-          {[
-            { label: "HRV", value: "68", unit: "ms", accent: "var(--color-accent-warning)" },
-            { label: "Resting HR", value: "52", unit: "bpm", accent: "var(--color-accent-danger)" },
-            { label: "Sleep Score", value: `${sleepScore}`, unit: "", accent: "var(--color-accent-health)" },
-            { label: "Recovery", value: `${recoveryScore}`, unit: "%", accent: "var(--color-accent-warning)" },
-            { label: "Body Battery", value: "71", unit: "%", accent: "var(--color-accent-warning)" },
-          ].map((metric) => (
-            <Card key={metric.label} hover>
-              <div style={{ padding: "var(--spacing-md)", display: "grid", gap: "6px" }}>
-                <p style={{ margin: 0, fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--color-text-secondary)" }}>
-                  {metric.label}
-                </p>
-                <p style={{ margin: 0, fontSize: "22px", fontWeight: 600, color: metric.accent }}>
-                  {metric.value}
-                  <span style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}> {metric.unit}</span>
-                </p>
-              </div>
-            </Card>
-          ))}
+      <Card>
+        <div style={{ padding: "var(--spacing-lg)", display: "grid", gap: "10px" }}>
+          <p
+            style={{
+              margin: 0,
+              fontSize: "11px",
+              textTransform: "uppercase",
+              letterSpacing: "0.14em",
+              color: "var(--color-text-secondary)",
+            }}
+          >
+            Cómo te lee el día
+          </p>
+          {salud.loading ? (
+            <p style={{ margin: 0, fontSize: "14px", lineHeight: 1.55, color: "var(--color-text-secondary)" }}>
+              Preparando tu lectura…
+            </p>
+          ) : (
+            <p style={{ margin: 0, fontSize: "14px", lineHeight: 1.6, color: "var(--color-text-primary)" }}>
+              {healthSummary.paragraph}
+            </p>
+          )}
+          {!salud.loading && (
+            <p style={{ margin: 0, fontSize: "10px", lineHeight: 1.45, color: "var(--color-text-secondary)" }}>
+              {healthSummary.usedAi
+                ? "Texto redactado con inteligencia artificial a partir de lo mismo que ves en esta pantalla, en lenguaje cotidiano. No sustituye consejo médico."
+                : "Resumen automático en palabras sencillas, a partir de lo que ya ves en tus tarjetas. No sustituye consejo médico."}
+            </p>
+          )}
         </div>
+      </Card>
 
-        <Card>
-          <div style={{ padding: "var(--spacing-md)", display: "grid", gap: "var(--spacing-md)" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div>
-                <p style={{ margin: 0, fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--color-text-secondary)" }}>
-                  Fuel Dashboard (Bio-hacking Stack)
-                </p>
-                <p style={{ margin: "4px 0 0", fontSize: "12px", color: "var(--color-text-secondary)" }}>3/6 Protocols</p>
-              </div>
-              <button style={{ padding: "6px 10px", borderRadius: "10px", border: "0.5px solid var(--color-border)", background: "var(--color-surface-alt)", fontSize: "11px" }}>
-                Editar Stack
-              </button>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: "var(--spacing-md)" }}>
-              {supplements.map((item) => (
-                <div key={item.name} style={{ textAlign: "center", display: "grid", gap: "6px" }}>
-                  <div
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: "var(--layout-gap)" }}>
+        {salud.loading
+          ? Array.from({ length: 5 }).map((_, i) => (
+              <Card key={i}>
+                <div style={{ padding: "var(--spacing-md)", minHeight: "72px" }}>
+                  <p style={{ margin: 0, fontSize: "11px", color: "var(--color-text-secondary)" }}>…</p>
+                </div>
+              </Card>
+            ))
+          : topMetrics.map((metric) => (
+              <Card key={metric.label} hover>
+                <div style={{ padding: "var(--spacing-md)", display: "grid", gap: "6px" }}>
+                  <p
                     style={{
-                      width: "36px",
-                      height: "36px",
-                      margin: "0 auto",
-                      borderRadius: "999px",
-                      border: `2px solid ${item.active ? "var(--color-accent-health)" : "var(--color-border)"}`,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: item.active ? "var(--color-accent-health)" : "var(--color-text-secondary)",
+                      margin: 0,
+                      fontSize: "11px",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.14em",
+                      color: "var(--color-text-secondary)",
                     }}
                   >
-                    ●
-                  </div>
-                  <p style={{ margin: 0, fontSize: "11px", fontWeight: 500 }}>{item.name}</p>
-                  <p style={{ margin: 0, fontSize: "10px", color: "var(--color-text-secondary)" }}>{item.amount}</p>
+                    {metric.label}
+                  </p>
+                  <p style={{ margin: 0, fontSize: "22px", fontWeight: 600, color: metric.accent }}>
+                    {metric.value}
+                    <span style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}> {metric.unit}</span>
+                  </p>
                 </div>
-              ))}
-            </div>
-          </div>
-        </Card>
+              </Card>
+            ))}
+      </div>
 
-        <Card>
-          <div style={{ padding: "var(--spacing-lg)", display: "grid", gap: "var(--spacing-md)" }}>
-            <p style={{ margin: 0, fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--color-text-secondary)" }}>
-              Biometric Correlation: Sleep vs Daily Energy
-            </p>
-            <div style={{ height: "220px", borderRadius: "12px", background: "var(--color-surface-alt)", border: "0.5px solid var(--color-border)" }} />
-          </div>
-        </Card>
-
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "var(--layout-gap)" }}>
-          <Card>
-            <div style={{ padding: "var(--spacing-md)", display: "grid", gap: "6px" }}>
-              <p style={{ margin: 0, fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--color-text-secondary)" }}>
-                Hydration
+      <Card>
+        <div style={{ padding: "var(--spacing-md)", display: "grid", gap: "var(--spacing-md)" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
+            <div>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: "11px",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.14em",
+                  color: "var(--color-text-secondary)",
+                }}
+              >
+                Stack de suplementación
               </p>
-              <p style={{ margin: 0, fontSize: "22px", fontWeight: 600 }}>{data.hydrationLiters} / 3.2L</p>
-              <div style={{ height: "6px", borderRadius: "999px", background: "var(--color-border)" }}>
-                <div style={{ height: "6px", borderRadius: "999px", width: "70%", background: "var(--color-accent-primary)" }} />
+              <p style={{ margin: "4px 0 0", fontSize: "12px", color: "var(--color-text-secondary)" }}>
+                {activeCount}/{supplements.length} protocolos activos
+                {suppLoading ? " · guardando…" : ""}
+              </p>
+              {suppError && (
+                <p style={{ margin: "4px 0 0", fontSize: "11px", color: "var(--color-accent-danger)" }}>{suppError}</p>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setEditMode(!editMode)}
+              style={{
+                padding: "6px 10px",
+                borderRadius: "10px",
+                border: "0.5px solid var(--color-border)",
+                background: editMode ? "var(--color-accent-health)" : "var(--color-surface-alt)",
+                fontSize: "11px",
+                color: editMode ? "white" : "inherit",
+              }}
+            >
+              {editMode ? "Listo" : "Editar stack"}
+            </button>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: "var(--spacing-md)" }}>
+            {supplements.map((item) => (
+              <div key={item.id} style={{ textAlign: "center", display: "grid", gap: "6px" }}>
+                <button
+                  type="button"
+                  onClick={() => toggleActive(item.id)}
+                  title="Pulsa para activar o desactivar en tu stack"
+                  style={{
+                    width: "36px",
+                    height: "36px",
+                    margin: "0 auto",
+                    borderRadius: "999px",
+                    border: `2px solid ${item.active ? "var(--color-accent-health)" : "var(--color-border)"}`,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: item.active ? "var(--color-accent-health)" : "var(--color-text-secondary)",
+                    background: "transparent",
+                    cursor: "pointer",
+                  }}
+                >
+                  ●
+                </button>
+                {editMode ? (
+                  <>
+                    <input
+                      value={item.name}
+                      onChange={(e) => updateSupplement(item.id, { name: e.target.value })}
+                      style={{
+                        fontSize: "10px",
+                        padding: "4px",
+                        borderRadius: "8px",
+                        border: "0.5px solid var(--color-border)",
+                        width: "100%",
+                      }}
+                    />
+                    <input
+                      value={item.amount}
+                      onChange={(e) => updateSupplement(item.id, { amount: e.target.value })}
+                      style={{
+                        fontSize: "10px",
+                        padding: "4px",
+                        borderRadius: "8px",
+                        border: "0.5px solid var(--color-border)",
+                        width: "100%",
+                      }}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <p style={{ margin: 0, fontSize: "11px", fontWeight: 500 }}>{item.name}</p>
+                    <p style={{ margin: 0, fontSize: "10px", color: "var(--color-text-secondary)" }}>{item.amount}</p>
+                  </>
+                )}
               </div>
+            ))}
+          </div>
+        </div>
+      </Card>
+
+      <Card>
+        <div style={{ padding: "var(--spacing-lg)", display: "grid", gap: "var(--spacing-sm)" }}>
+          <p
+            style={{
+              margin: 0,
+              fontSize: "10px",
+              fontWeight: 600,
+              textTransform: "uppercase",
+              letterSpacing: "0.12em",
+              color: "var(--color-text-secondary)",
+            }}
+          >
+            Biometric correlation: sleep vs daily energy
+          </p>
+          <p style={{ margin: 0, fontSize: "11px", lineHeight: 1.45, color: "var(--color-text-secondary)" }}>
+            Misma correlación de 7 puntos que tus datos (tendencia + recuperación), mostrada en franjas horarias tipo jornada.
+          </p>
+          <div className="w-full min-w-0 overflow-x-auto overscroll-x-contain">
+            <div style={{ height: "240px", width: "100%", minWidth: "280px" }}>
+              {salud.loading ? (
+                <div
+                  style={{
+                    height: "100%",
+                    borderRadius: "12px",
+                    background: "var(--color-surface-alt)",
+                    border: "0.5px solid var(--color-border)",
+                  }}
+                />
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={correlationData} margin={biometricChartMargin}>
+                    <defs>
+                      <linearGradient id={`${correlationChartId}-fatigue`} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={BIOMETRIC_AREA_TOP} stopOpacity={0.92} />
+                        <stop offset="100%" stopColor={BIOMETRIC_AREA_BOTTOM} stopOpacity={0.08} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="4 4" stroke="var(--color-border)" strokeOpacity={0.65} vertical={false} />
+                    <XAxis
+                      dataKey="hour"
+                      tick={{ fontSize: 11, fill: "var(--color-text-secondary)" }}
+                      tickLine={false}
+                      axisLine={{ stroke: "var(--color-border)" }}
+                      interval={0}
+                    />
+                    <YAxis yAxisId="scale" orientation="right" width={36} domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} tick={{ fontSize: 11, fill: "var(--color-text-secondary)" }} axisLine={false} tickLine={false} />
+                    <Tooltip
+                      contentStyle={rechartsTooltipContentStyle}
+                      formatter={(value, name) => {
+                        const n = String(name)
+                        if (n === "fatigue") return [value, "Sleep debt / fatigue"]
+                        if (n === "energy") return [value, "Energy level"]
+                        return [value, n]
+                      }}
+                      labelFormatter={(label) => label}
+                    />
+                    <Legend content={() => <BiometricCorrelationLegend />} verticalAlign="bottom" />
+                    <Area
+                      yAxisId="scale"
+                      type="natural"
+                      dataKey="fatigue"
+                      name="fatigue"
+                      stroke="none"
+                      fill={`url(#${correlationChartId}-fatigue)`}
+                      fillOpacity={1}
+                      isAnimationActive={false}
+                    />
+                    <Line
+                      yAxisId="scale"
+                      type="natural"
+                      dataKey="energy"
+                      name="energy"
+                      stroke={BIOMETRIC_ENERGY_STROKE}
+                      strokeWidth={2.25}
+                      dot={{ r: 4, fill: "#ffffff", stroke: BIOMETRIC_ENERGY_STROKE, strokeWidth: 2 }}
+                      activeDot={{ r: 5, fill: "#ffffff", stroke: BIOMETRIC_ENERGY_STROKE, strokeWidth: 2 }}
+                      isAnimationActive={false}
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              )}
             </div>
-          </Card>
-          <Card>
-            <div style={{ padding: "var(--spacing-md)", display: "grid", gap: "6px" }}>
-              <p style={{ margin: 0, fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--color-text-secondary)" }}>
-                Macronutrients
-              </p>
-              {[
-                { label: "Protein", value: "142 / 165g", color: "var(--color-accent-warning)" },
-                { label: "Carbs", value: "218 / 240g", color: "var(--color-accent-primary)" },
-                { label: "Fats", value: "68 / 75g", color: "var(--color-accent-health)" },
-              ].map((macro) => (
+          </div>
+        </div>
+      </Card>
+
+      <div className="grid grid-cols-1 gap-[var(--layout-gap)] sm:grid-cols-2">
+        <Card>
+          <div style={{ padding: "var(--spacing-md)", display: "grid", gap: "6px" }}>
+            <p
+              style={{
+                margin: 0,
+                fontSize: "11px",
+                textTransform: "uppercase",
+                letterSpacing: "0.14em",
+                color: "var(--color-text-secondary)",
+              }}
+            >
+              Hidratación
+            </p>
+            <p style={{ margin: 0, fontSize: "22px", fontWeight: 600, color: "#3B82F6" }}>
+              {salud.hydrationCurrent} / {hydrationTarget}L
+            </p>
+            <div style={{ height: "6px", borderRadius: "999px", background: "var(--color-border)" }}>
+              <div style={{ height: "6px", borderRadius: "999px", width: `${hydrationPct}%`, background: "#3B82F6" }} />
+            </div>
+          </div>
+        </Card>
+        <Card>
+          <div style={{ padding: "var(--spacing-md)", display: "grid", gap: "10px" }}>
+            <p
+              style={{
+                margin: 0,
+                fontSize: "11px",
+                textTransform: "uppercase",
+                letterSpacing: "0.14em",
+                color: "var(--color-text-secondary)",
+              }}
+            >
+              Macronutrientes
+            </p>
+            {salud.macros.map((macro) => {
+              const pct = Math.min(100, Math.round((macro.current / Math.max(1, macro.target)) * 100))
+              return (
                 <div key={macro.label} style={{ display: "grid", gap: "6px" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <span style={{ fontSize: "12px" }}>{macro.label}</span>
-                    <span style={{ fontSize: "11px", color: "var(--color-text-secondary)" }}>{macro.value}</span>
+                    <span style={{ fontSize: "11px", color: "var(--color-text-secondary)" }}>
+                      {macro.current} / {macro.target}
+                      {macro.unit}
+                    </span>
                   </div>
                   <div style={{ height: "6px", borderRadius: "999px", background: "var(--color-border)" }}>
-                    <div style={{ height: "6px", borderRadius: "999px", width: "70%", background: macro.color }} />
+                    <div
+                      style={{
+                        height: "6px",
+                        borderRadius: "999px",
+                        width: `${pct}%`,
+                        background:
+                          macro.label.toLowerCase().includes("prote")
+                            ? "var(--color-accent-warning)"
+                            : macro.label.toLowerCase().includes("carb")
+                              ? "var(--color-accent-primary)"
+                              : "var(--color-accent-health)",
+                      }}
+                    />
                   </div>
                 </div>
-              ))}
-            </div>
-          </Card>
-        </div>
+              )
+            })}
+          </div>
+        </Card>
       </div>
-    </AppShell>
+    </div>
   )
 }

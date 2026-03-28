@@ -33,7 +33,7 @@ export function Button({ children, className, onClick, disabled, type = "button"
         padding: "12px 24px",
         borderRadius: "var(--radius-button)",
         background,
-        color: "var(--color-text-primary)",
+        color: "var(--color-surface)",
         border: "0.5px solid var(--color-border)",
         transition: "background-color 300ms ease, color 300ms ease",
         cursor: disabled ? "not-allowed" : "pointer",

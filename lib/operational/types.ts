@@ -1,4 +1,16 @@
+import type { HabitCompletionMetrics } from "@/lib/habits/habitMetrics"
+
 export type OperationalDomain = "salud" | "fisico" | "profesional" | "agenda"
+
+/** Configuración additive en operational_habits.metadata (jsonb). */
+export type HabitMetadata = {
+  frequency?: "diario" | "semanal"
+  /** Día UTC 0–6 (getUTCDay): 0 dom … 6 sáb */
+  weekdays?: number[]
+  is_superhabit?: boolean
+  /** Letras UI para mostrar (L…D) */
+  display_days?: string[]
+}
 
 export interface OperationalTask {
   id: string
@@ -14,6 +26,12 @@ export interface OperationalHabit {
   completed: boolean
   domain: OperationalDomain
   created_at: string
+  metadata?: HabitMetadata
+}
+
+/** Hábito operacional + métricas derivadas de habit_completions (API /habits enriquecido). */
+export interface HabitWithMetrics extends OperationalHabit {
+  metrics: HabitCompletionMetrics
 }
 
 export interface Checkin {
@@ -46,3 +64,5 @@ export interface OperationalContextData {
   next_time_required?: string
   current_block?: string
 }
+
+

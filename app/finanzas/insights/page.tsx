@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react"
 import { useFinance } from "../FinanceContext"
+import { Card } from "@/src/components/ui/Card"
+import { messageForHttpError } from "@/lib/api/friendlyHttpError"
+import { financeApiGet } from "@/lib/finanzas/financeClientFetch"
 
 interface InsightsResponse {
   score?: number
@@ -17,12 +20,40 @@ interface InsightsResponse {
   error?: string
 }
 
+const mockInsights: InsightsResponse = {
+  score: 74,
+  insight: {
+    type: "alert",
+    message: "Liquidez controlada, pero el gasto variable subió 12%.",
+    all: [
+      "Liquidez controlada, pero el gasto variable subió 12%.",
+      "Reducir gastos discrecionales durante 2 semanas.",
+      "Priorizar ingresos recurrentes vs puntuales.",
+    ],
+  },
+  stability: {
+    stabilityIndex: 68,
+    status: "yellow",
+    scoreOperativo: 72,
+    scoreLiquidez: 64,
+    scoreRiesgo: 56,
+  },
+  prediction: {
+    projection: [
+      { month: "Abr", projectedBalance: 4200000 },
+      { month: "May", projectedBalance: 3800000 },
+      { month: "Jun", projectedBalance: 4500000 },
+    ],
+  },
+}
+
 export default function FinanzasInsights() {
   const finance = useFinance()
 
   const [data, setData] = useState<InsightsResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
 
   if (!finance) {
     return (
@@ -45,21 +76,23 @@ export default function FinanzasInsights() {
         setLoading(true)
         setError(null)
 
-        const response = await fetch(
-          `/api/orbita/finanzas/insights?month=${encodeURIComponent(month)}`
+        const response = await financeApiGet(
+          `/api/orbita/finanzas/insights?month=${encodeURIComponent(month)}`,
         )
 
-        if (!response.ok) {
-          throw new Error(`Error ${response.status}: ${response.statusText}`)
+        const json = (await response.json()) as {
+          success?: boolean
+          data?: InsightsResponse | null
+          error?: string
+          notice?: string
         }
 
-        const json = await response.json()
-
-        if (json.error) {
-          throw new Error(json.error)
+        if (!response.ok || !json.success) {
+          throw new Error(messageForHttpError(response.status, json.error, response.statusText))
         }
 
-        setData(json.data as InsightsResponse)
+        setNotice(json.notice ?? null)
+        setData((json.data as InsightsResponse) ?? null)
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Error desconocido"
         setError(errorMessage)
@@ -91,8 +124,9 @@ export default function FinanzasInsights() {
 
   if (!data) {
     return (
-      <div className="p-6 text-center text-gray-500">
+      <div className="space-y-2 p-6 text-center text-gray-500">
         <p>Sin insights disponibles para este período.</p>
+        {notice && <p className="text-xs text-slate-500">{notice}</p>}
       </div>
     )
   }
@@ -112,91 +146,172 @@ export default function FinanzasInsights() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* SCORE FINANCIERO */}
-      {score !== undefined && (
-        <div className="card p-6 bg-white border border-gray-200 text-center">
-          <p className="text-xs uppercase text-gray-500 tracking-wide">
-            Score Financiero
+    <div className="space-y-8">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Insights</p>
+          <p className="text-lg font-semibold text-slate-900">Lectura estratégica</p>
+          <p className="mt-1 text-sm text-slate-500">
+            Señales de estabilidad, riesgo operativo y proyección táctica.
           </p>
-          <p className={`text-5xl font-bold mt-3 ${
-            score >= 70 ? "text-emerald-600" :
-            score >= 40 ? "text-amber-600" :
-            "text-rose-600"
-          }`}>
-            {score}
-          </p>
-          <p className="text-sm text-gray-500 mt-2">sobre 100</p>
         </div>
-      )}
+        {notice && (
+          <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-amber-800">
+            {notice}
+          </span>
+        )}
+      </div>
 
-      {/* INSIGHT PRINCIPAL */}
-      {insight && (
-        <div className={`rounded-lg p-4 border ${
-          insight.type === "alert"
-            ? "bg-rose-50 border-rose-200 text-rose-700"
-            : "bg-blue-50 border-blue-200 text-blue-700"
-        }`}>
-          <p className="font-medium text-sm">{insight.message}</p>
-          {insight.all && insight.all.length > 1 && (
-            <ul className="mt-2 space-y-1">
-              {insight.all.slice(1).map((msg, i) => (
-                <li key={i} className="text-xs opacity-80">• {msg}</li>
-              ))}
-            </ul>
+      <div className="grid gap-6 lg:grid-cols-[1.15fr_1fr]">
+        <div className="grid gap-6">
+          {score !== undefined && (
+            <Card hover className="p-8">
+              <div className="grid gap-3 text-center">
+                <p className="text-xs uppercase tracking-[0.14em] text-slate-500">
+                  Score financiero
+                </p>
+                <p
+                  className={`text-5xl font-semibold ${
+                    score >= 70
+                      ? "text-emerald-600"
+                      : score >= 40
+                      ? "text-amber-600"
+                      : "text-rose-600"
+                  }`}
+                >
+                  {score}
+                </p>
+                <p className="text-xs text-slate-500">sobre 100</p>
+              </div>
+            </Card>
           )}
+
+          <Card hover className="p-8">
+            <div className="grid gap-4">
+              <p className="text-xs uppercase tracking-[0.14em] text-slate-500">
+                Índice de estabilidad
+              </p>
+              {stability ? (
+                <>
+                  <div className="flex items-end justify-between">
+                    <p
+                      className={`text-3xl font-semibold ${
+                        stability.status === "green"
+                          ? "text-emerald-600"
+                          : stability.status === "yellow"
+                          ? "text-amber-600"
+                          : "text-rose-600"
+                      }`}
+                    >
+                      {stability.stabilityIndex}
+                    </p>
+                    <span
+                      className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.16em] ${stabilityBg[stability.status]} ${stabilityColor[stability.status]}`}
+                    >
+                      {stability.status === "green"
+                        ? "estable"
+                        : stability.status === "yellow"
+                        ? "presión"
+                        : "riesgo"}
+                    </span>
+                  </div>
+                  <div className="grid gap-2 text-xs text-slate-500">
+                    <div className="flex items-center justify-between">
+                      <span>Operativo</span>
+                      <span className="font-semibold text-slate-700">{stability.scoreOperativo}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Liquidez</span>
+                      <span className="font-semibold text-slate-700">{stability.scoreLiquidez}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Riesgo</span>
+                      <span className="font-semibold text-slate-700">{stability.scoreRiesgo}</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-slate-500">Sin datos</p>
+              )}
+            </div>
+          </Card>
         </div>
-      )}
 
-      {/* ESTABILIDAD */}
-      {stability && (
-        <div className={`card p-4 border ${stabilityBg[stability.status]}`}>
-          <div className="flex justify-between items-center mb-3">
-            <p className="text-sm font-semibold text-gray-700">
-              Índice de Estabilidad
-            </p>
-            <p className={`text-2xl font-bold ${stabilityColor[stability.status]}`}>
-              {stability.stabilityIndex}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3 text-center text-xs">
-            <div>
-              <p className="text-gray-500">Operativo</p>
-              <p className="font-semibold mt-1">{stability.scoreOperativo}</p>
-            </div>
-            <div>
-              <p className="text-gray-500">Liquidez</p>
-              <p className="font-semibold mt-1">{stability.scoreLiquidez}</p>
-            </div>
-            <div>
-              <p className="text-gray-500">Riesgo</p>
-              <p className="font-semibold mt-1">{stability.scoreRiesgo}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* PROYECCIÓN */}
-      {prediction?.projection && prediction.projection.length > 0 && (
-        <div className="card p-4 bg-white border border-gray-200">
-          <p className="text-xs uppercase text-gray-500 tracking-wide mb-3">
-            Proyección de Balance (3 meses)
-          </p>
-          <div className="space-y-2">
-            {prediction.projection.map((p) => (
-              <div key={p.month} className="flex justify-between items-center text-sm">
-                <span className="text-gray-600">Mes {p.month}</span>
-                <span className={`font-semibold ${
-                  p.projectedBalance >= 0 ? "text-emerald-600" : "text-rose-600"
-                }`}>
-                  ${Math.abs(p.projectedBalance).toLocaleString("es-CO")}
+        <div className="grid gap-6">
+          {insight && (
+            <Card hover className="p-8">
+              <div className="grid gap-3">
+                <p className="text-xs uppercase tracking-[0.14em] text-slate-500">
+                  Insight principal
+                </p>
+                <p className="text-sm font-medium text-slate-800">{insight.message}</p>
+                {insight.all && insight.all.length > 1 && (
+                  <ul className="mt-2 space-y-1 text-xs text-slate-500">
+                    {insight.all.slice(1).map((msg, i) => (
+                      <li key={i}>• {msg}</li>
+                    ))}
+                  </ul>
+                )}
+                <span
+                  className={`mt-2 inline-flex w-fit rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.16em] ${
+                    insight.type === "alert"
+                      ? "border-rose-200 bg-rose-50 text-rose-700"
+                      : "border-sky-200 bg-sky-50 text-sky-700"
+                  }`}
+                >
+                  {insight.type === "alert" ? "Riesgo activo" : "Señal positiva"}
                 </span>
               </div>
-            ))}
+            </Card>
+          )}
+
+          {prediction?.projection && (
+            <Card hover className="p-8">
+              <div className="grid gap-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs uppercase tracking-[0.14em] text-slate-500">
+                    Proyección 3 meses
+                  </p>
+                  <span className="text-xs text-slate-400">Escenario base</span>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  {prediction.projection.slice(0, 3).map((p, i) => (
+                    <div key={i} className="rounded-xl bg-slate-50 px-3 py-3 text-center">
+                      <p className="text-xs text-slate-500">{p.month}</p>
+                      <p className="mt-2 text-sm font-semibold text-slate-900">
+                        ${p.projectedBalance.toLocaleString("es-CO", {
+                          maximumFractionDigits: 0,
+                        })}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Card>
+          )}
+        </div>
+      </div>
+
+      <Card className="p-8">
+        <div className="grid gap-3">
+          <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Lectura ejecutiva</p>
+          <p className="text-sm text-slate-600">
+            {insight?.message ??
+              "Resumen basado en los últimos 6 meses de transacciones del hogar (proyección lineal simple)."}
+          </p>
+          <div className="flex flex-wrap gap-2 text-[11px] text-slate-500">
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1">
+              Estabilidad: {stability?.status ?? "—"}
+            </span>
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1">
+              Score {score ?? "—"}
+            </span>
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1">
+              Proyección 3m activa
+            </span>
           </div>
         </div>
-      )}
+      </Card>
     </div>
   )
 }

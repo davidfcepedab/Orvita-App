@@ -1,7 +1,25 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { messageForHttpError } from "@/lib/api/friendlyHttpError"
+import { isAppMockMode } from "@/lib/checkins/flags"
+import { createBrowserClient } from "@/lib/supabase/browser"
 import type { OperationalContextData } from "@/lib/operational/types"
+
+async function contextHeaders(): Promise<HeadersInit> {
+  if (isAppMockMode()) return {}
+  try {
+    const supabase = createBrowserClient() as {
+      auth: { getSession: () => Promise<{ data: { session?: { access_token?: string } | null } }> }
+    }
+    const { data } = await supabase.auth.getSession()
+    const token = data.session?.access_token
+    if (!token) return {}
+    return { Authorization: `Bearer ${token}` }
+  } catch {
+    return {}
+  }
+}
 
 export function useOperationalContext() {
   const [data, setData] = useState<OperationalContextData | null>(null)
@@ -15,17 +33,15 @@ export function useOperationalContext() {
       try {
         setLoading(true)
         setError(null)
-        const response = await fetch("/api/context", { cache: "no-store" })
-        if (!response.ok) {
-          throw new Error(`Error ${response.status}`)
-        }
+        const headers = await contextHeaders()
+        const response = await fetch("/api/context", { cache: "no-store", headers })
         const payload = (await response.json()) as {
-          success: boolean
+          success?: boolean
           data?: OperationalContextData
           error?: string
         }
-        if (!payload.success || !payload.data) {
-          throw new Error(payload.error || "Error cargando contexto")
+        if (!response.ok || !payload.success || !payload.data) {
+          throw new Error(messageForHttpError(response.status, payload.error, response.statusText))
         }
         if (!cancelled) {
           setData(payload.data)

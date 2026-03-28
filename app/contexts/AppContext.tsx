@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
 import { designTokens } from "@/src/theme/design-tokens"
 
-export type ColorTheme = "carbon" | "arctic" | "sand"
+export type ColorTheme = "carbon" | "arctic" | "sand" | "midnight"
 export type LayoutMode = "compact" | "balanced" | "zen"
 
 interface AppContextType {
@@ -17,6 +17,8 @@ const AppContext = createContext<AppContextType | undefined>(undefined)
 
 const THEME_KEY = "orbita:v3:theme"
 const LAYOUT_KEY = "orbita:v3:layout"
+const LEGACY_THEME_KEY = "orbita:theme"
+const LEGACY_LAYOUT_KEY = "orbita:layout"
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [colorTheme, setColorTheme] = useState<ColorTheme>("arctic")
@@ -35,10 +37,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     window.localStorage.setItem(THEME_KEY, colorTheme)
+    window.localStorage.setItem(LEGACY_THEME_KEY, colorTheme)
+    document.documentElement.dataset.theme = colorTheme
   }, [colorTheme])
 
   useEffect(() => {
     window.localStorage.setItem(LAYOUT_KEY, layoutMode)
+    window.localStorage.setItem(LEGACY_LAYOUT_KEY, layoutMode)
+    document.documentElement.dataset.layout = layoutMode
   }, [layoutMode])
 
   const value = useMemo(
@@ -95,6 +101,19 @@ export const themes = {
       health: designTokens.colors.sand["accent-health"],
       finance: designTokens.colors.sand["accent-finance"],
       agenda: designTokens.colors.sand["accent-agenda"],
+    },
+  },
+  midnight: {
+    bg: "#0B1120",
+    surface: "#111827",
+    surfaceAlt: "#0B1120",
+    border: "#1F2937",
+    text: "#E5E7EB",
+    textMuted: "#94A3B8",
+    accent: {
+      health: "#22C55E",
+      finance: "#60A5FA",
+      agenda: "#818CF8",
     },
   },
 } as const

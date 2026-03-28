@@ -1,9 +1,24 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
+import { messageForHttpError } from "@/lib/api/friendlyHttpError"
+import { isAppMockMode } from "@/lib/checkins/flags"
+import { buildMockTrainingDays } from "@/lib/training/mockTrainingDays"
+import { createBrowserClient } from "@/lib/supabase/browser"
 import type { TrainingDay, TrainingStatus } from "@/src/modules/training/types"
 
 const todayKey = () => new Date().toISOString().slice(0, 10)
+
+async function buildAuthHeaders(): Promise<HeadersInit> {
+  if (isAppMockMode()) return {}
+  const supabase = createBrowserClient() as {
+    auth: { getSession: () => Promise<{ data: { session?: { access_token?: string } | null } }> }
+  }
+  const { data } = await supabase.auth.getSession()
+  const token = data.session?.access_token
+  if (!token) return {}
+  return { Authorization: `Bearer ${token}` }
+}
 
 type TrainingState = {
   days: TrainingDay[]
@@ -24,10 +39,18 @@ export function useTraining(): TrainingState {
     let active = true
 
     const load = async () => {
+      if (isAppMockMode()) {
+        setLoading(false)
+        setError(null)
+        setDays(buildMockTrainingDays())
+        return
+      }
+
       try {
         setLoading(true)
         setError(null)
-        const response = await fetch("/api/integrations/hevy/workouts", { cache: "no-store" })
+        const headers = await buildAuthHeaders()
+        const response = await fetch("/api/integrations/hevy/workouts", { cache: "no-store", headers })
         const payload = (await response.json()) as {
           success?: boolean
           trainingDays?: TrainingDay[]
@@ -35,7 +58,7 @@ export function useTraining(): TrainingState {
         }
 
         if (!response.ok || !payload.success) {
-          throw new Error(payload.error ?? "No se pudo cargar Hevy")
+          throw new Error(messageForHttpError(response.status, payload.error, response.statusText))
         }
 
         if (active) {

@@ -1,7 +1,11 @@
+import { randomUUID } from "crypto"
 import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
+import { isAppMockMode, isSupabaseEnabled } from "@/lib/checkins/flags"
 import type { OperationalDomain } from "@/lib/operational/types"
 import { getHouseholdId } from "@/lib/households/getHouseholdId"
+import { getGoogleAccessTokenForUser } from "@/lib/google/loadAccessToken"
+import { insertDefaultListTask, mapGoogleTask } from "@/lib/google/googleTasksApi"
 
 type AgendaRow = {
   id: string
@@ -24,6 +28,45 @@ function mapType(row: AgendaRow, currentUserId: string) {
   return "received"
 }
 
+const MOCK_AGENDA_USER_ID = "00000000-0000-0000-0000-0000000000aa"
+
+function seedMockAgendaRows(): AgendaRow[] {
+  const now = new Date().toISOString()
+  const today = now.slice(0, 10)
+  return [
+    {
+      id: "mock-agenda-1",
+      user_id: MOCK_AGENDA_USER_ID,
+      title: "Revisar dashboard financiero",
+      status: "pending",
+      priority: "Alta",
+      estimated_minutes: 25,
+      due_date: today,
+      assignee_id: null,
+      assignee_name: null,
+      created_by: MOCK_AGENDA_USER_ID,
+      created_at: now,
+      domain: "agenda",
+    },
+    {
+      id: "mock-agenda-2",
+      user_id: MOCK_AGENDA_USER_ID,
+      title: "Preparar update semanal",
+      status: "in-progress",
+      priority: "Media",
+      estimated_minutes: 40,
+      due_date: today,
+      assignee_id: null,
+      assignee_name: null,
+      created_by: MOCK_AGENDA_USER_ID,
+      created_at: now,
+      domain: "agenda",
+    },
+  ]
+}
+
+let mockAgendaRows: AgendaRow[] = seedMockAgendaRows()
+
 function mapTask(row: AgendaRow, currentUserId: string) {
   return {
     id: row.id,
@@ -42,6 +85,13 @@ function mapTask(row: AgendaRow, currentUserId: string) {
 
 export async function GET(req: NextRequest) {
   try {
+    if (isAppMockMode()) {
+      return NextResponse.json({
+        success: true,
+        data: mockAgendaRows.map((row) => mapTask(row, MOCK_AGENDA_USER_ID)),
+      })
+    }
+
     const auth = await requireUser(req)
     if (auth instanceof NextResponse) return auth
     const { supabase, userId } = auth
@@ -79,6 +129,40 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    if (isAppMockMode()) {
+      const body = await req.json()
+      const title = String(body?.title || "").trim()
+      const priority = body?.priority === "Alta" || body?.priority === "Media" || body?.priority === "Baja"
+        ? body.priority
+        : "Media"
+      const estimatedMinutes = Number(body?.estimatedMinutes || 30)
+      const dueDate = body?.dueDate ? String(body.dueDate) : null
+      const assigneeId = body?.assigneeId ? String(body.assigneeId) : null
+      const assigneeName = body?.assigneeName ? String(body.assigneeName) : null
+
+      if (!title) {
+        return NextResponse.json({ success: false, error: "title es obligatorio" }, { status: 400 })
+      }
+
+      const now = new Date().toISOString()
+      mockAgendaRows.unshift({
+        id: `mock-agenda-${randomUUID()}`,
+        user_id: MOCK_AGENDA_USER_ID,
+        title,
+        status: "pending",
+        priority,
+        estimated_minutes: Number.isFinite(estimatedMinutes) ? estimatedMinutes : 30,
+        due_date: dueDate,
+        assignee_id: assigneeId,
+        assignee_name: assigneeName,
+        created_by: MOCK_AGENDA_USER_ID,
+        created_at: now,
+        domain: "agenda",
+      })
+
+      return NextResponse.json({ success: true, googleTask: null, googleSyncError: undefined })
+    }
+
     const auth = await requireUser(req)
     if (auth instanceof NextResponse) return auth
     const { supabase, userId } = auth
@@ -90,6 +174,7 @@ export async function POST(req: NextRequest) {
       )
     }
     const body = await req.json()
+    const syncToGoogle = body?.syncToGoogle === true
     const title = String(body?.title || "").trim()
     const priority = body?.priority === "Alta" || body?.priority === "Media" || body?.priority === "Baja"
       ? body.priority
@@ -126,7 +211,48 @@ export async function POST(req: NextRequest) {
       throw insert.error
     }
 
-    return NextResponse.json({ success: true })
+    let googleTask: { id: string; title: string } | null = null
+    let googleSyncError: string | null = null
+
+    if (syncToGoogle && isSupabaseEnabled()) {
+      const tokenResult = await getGoogleAccessTokenForUser(supabase, userId)
+      if ("error" in tokenResult) {
+        googleSyncError = tokenResult.error
+      } else {
+        try {
+          const created = await insertDefaultListTask(tokenResult.token, {
+            title,
+            due: dueDate,
+          })
+          const mapped = mapGoogleTask(created)
+          if (mapped) {
+            googleTask = { id: mapped.id, title: mapped.title }
+            const now = new Date().toISOString()
+            await supabase.from("external_tasks").upsert(
+              {
+                user_id: userId,
+                google_task_id: mapped.id,
+                title: mapped.title,
+                status: mapped.status,
+                due_date: mapped.due,
+                raw: created as Record<string, unknown>,
+                synced_at: now,
+                deleted_at: null,
+              },
+              { onConflict: "user_id,google_task_id" },
+            )
+          }
+        } catch (e) {
+          googleSyncError = e instanceof Error ? e.message : "Google sync failed"
+        }
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      googleTask,
+      googleSyncError: googleSyncError ?? undefined,
+    })
   } catch (error: unknown) {
     const detail = error instanceof Error ? error.message : "Error desconocido"
     return NextResponse.json(
@@ -138,6 +264,42 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
+    if (isAppMockMode()) {
+      const body = await req.json()
+      const id = String(body?.id || "").trim()
+      if (!id) {
+        return NextResponse.json({ success: false, error: "id es obligatorio" }, { status: 400 })
+      }
+
+      const idx = mockAgendaRows.findIndex((r) => r.id === id)
+      if (idx === -1) {
+        return NextResponse.json({ success: false, error: "Tarea no encontrada" }, { status: 404 })
+      }
+
+      const row = mockAgendaRows[idx]
+      if (typeof body.title === "string") row.title = body.title.trim()
+      if (body.status === "pending" || body.status === "in-progress" || body.status === "completed") {
+        row.status = body.status
+      }
+      if (body.priority === "Alta" || body.priority === "Media" || body.priority === "Baja") {
+        row.priority = body.priority
+      }
+      if (typeof body.estimatedMinutes === "number") {
+        row.estimated_minutes = body.estimatedMinutes
+      }
+      if (body.dueDate === null || typeof body.dueDate === "string") {
+        row.due_date = body.dueDate
+      }
+      if (body.assigneeId === null || typeof body.assigneeId === "string") {
+        row.assignee_id = body.assigneeId
+      }
+      if (body.assigneeName === null || typeof body.assigneeName === "string") {
+        row.assignee_name = body.assigneeName
+      }
+
+      return NextResponse.json({ success: true })
+    }
+
     const auth = await requireUser(req)
     if (auth instanceof NextResponse) return auth
     const { supabase, userId } = auth

@@ -28,6 +28,17 @@ async function isAuthenticated(req: NextRequest): Promise<boolean> {
 
 export default async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl
+  const isMock = process.env.NEXT_PUBLIC_APP_MODE === "mock"
+
+  if (isMock) {
+    if (pathname === "/") {
+      const url = req.nextUrl.clone()
+      url.pathname = "/hoy"
+      return NextResponse.redirect(url)
+    }
+
+    return NextResponse.next()
+  }
 
   if (pathname.startsWith("/auth")) {
     const authed = await isAuthenticated(req)

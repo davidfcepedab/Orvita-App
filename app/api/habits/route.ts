@@ -1,13 +1,23 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
 import {
+  addDaysIso,
+  aggregateHabitsSummary,
+  computeHabitCompletionMetrics,
+  utcTodayIso,
+} from "@/lib/habits/habitMetrics"
+import { habitsMutationBlockedResponse } from "@/lib/habits/habitsMutationGate"
+import {
   mapOperationalHabit,
   type OperationalHabitRow,
 } from "@/lib/operational/mappers"
+import type { HabitWithMetrics } from "@/lib/operational/types"
 import {
   parseHabitCreate,
   parseHabitPatch,
 } from "@/lib/operational/validators"
+
+export const runtime = "nodejs"
 
 export async function GET(req: NextRequest) {
   try {
@@ -15,20 +25,68 @@ export async function GET(req: NextRequest) {
     if (auth instanceof NextResponse) return auth
     const { supabase, userId } = auth
 
+    const legacy = req.nextUrl.searchParams.get("legacy") === "1"
     const domain = req.nextUrl.searchParams.get("domain")
+
     const query = supabase
       .from("operational_habits")
-      .select("id,name,completed,domain,created_at")
+      .select("id,name,completed,domain,created_at,metadata")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
 
     if (domain) query.eq("domain", domain)
 
-    const { data, error } = await query
+    const { data: rows, error } = await query
     if (error) throw error
 
-    const habits = (data ?? []).map((row) => mapOperationalHabit(row as OperationalHabitRow))
-    return NextResponse.json({ success: true, data: habits })
+    const list = rows ?? []
+
+    if (legacy) {
+      const habits = list.map((row) => mapOperationalHabit(row as OperationalHabitRow))
+      return NextResponse.json({ success: true, data: habits, legacy: true })
+    }
+
+    const todayIso = utcTodayIso()
+    const cutoff = addDaysIso(todayIso, -400)
+    const habitIds = list.map((r) => r.id)
+
+    type CompletionRow = { habit_id: string; completed_on: string }
+    let completions: CompletionRow[] = []
+    if (habitIds.length > 0) {
+      const { data: comp, error: compError } = await supabase
+        .from("habit_completions")
+        .select("habit_id,completed_on")
+        .eq("user_id", userId)
+        .in("habit_id", habitIds)
+        .gte("completed_on", cutoff)
+
+      if (compError) throw compError
+      completions = (comp ?? []) as CompletionRow[]
+    }
+
+    const byHabit = new Map<string, string[]>()
+    for (const row of completions) {
+      const on = typeof row.completed_on === "string" ? row.completed_on.slice(0, 10) : ""
+      if (!on) continue
+      const arr = byHabit.get(row.habit_id) ?? []
+      arr.push(on)
+      byHabit.set(row.habit_id, arr)
+    }
+
+    const habits: HabitWithMetrics[] = list.map((row) => {
+      const habit = mapOperationalHabit(row as OperationalHabitRow)
+      const dates = byHabit.get(row.id) ?? []
+      const metrics = computeHabitCompletionMetrics(dates, todayIso, habit.metadata ?? null)
+      return { ...habit, metrics }
+    })
+
+    const summary = aggregateHabitsSummary(habits.map((h) => h.metrics))
+
+    return NextResponse.json({
+      success: true,
+      data: { habits, summary },
+      legacy: false,
+    })
   } catch (error: unknown) {
     const detail = error instanceof Error ? error.message : "Error desconocido"
     console.error("HABITS GET ERROR:", detail)
@@ -41,6 +99,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const blocked = habitsMutationBlockedResponse()
+    if (blocked) return blocked
+
     const auth = await requireUser(req)
     if (auth instanceof NextResponse) return auth
     const { supabase, userId } = auth
@@ -61,8 +122,9 @@ export async function POST(req: NextRequest) {
         name: parsed.name,
         completed: parsed.completed,
         domain: parsed.domain,
+        metadata: parsed.metadata,
       })
-      .select("id,name,completed,domain,created_at")
+      .select("id,name,completed,domain,created_at,metadata")
       .single()
 
     if (error) throw error
@@ -83,6 +145,9 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
+    const blocked = habitsMutationBlockedResponse()
+    if (blocked) return blocked
+
     const auth = await requireUser(req)
     if (auth instanceof NextResponse) return auth
     const { supabase, userId } = auth
@@ -101,7 +166,7 @@ export async function PATCH(req: NextRequest) {
       .update(parsed.patch)
       .eq("id", parsed.id)
       .eq("user_id", userId)
-      .select("id,name,completed,domain,created_at")
+      .select("id,name,completed,domain,created_at,metadata")
       .single()
 
     if (error) throw error
@@ -122,6 +187,9 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    const blocked = habitsMutationBlockedResponse()
+    if (blocked) return blocked
+
     const auth = await requireUser(req)
     if (auth instanceof NextResponse) return auth
     const { supabase, userId } = auth
@@ -153,3 +221,4 @@ export async function DELETE(req: NextRequest) {
     )
   }
 }
+

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
+import { isAppMockMode } from "@/lib/checkins/flags"
 import { buildOperationalContext } from "@/lib/operational/context"
 import {
   mapCheckin,
@@ -12,6 +13,48 @@ import {
 
 export async function GET(req: NextRequest) {
   try {
+    if (isAppMockMode()) {
+      const now = new Date().toISOString()
+      const data = buildOperationalContext({
+        tasks: [
+          {
+            id: "mock-ctx-task-1",
+            title: "Bloque de trabajo profundo",
+            completed: false,
+            domain: "profesional",
+            created_at: now,
+          },
+          {
+            id: "mock-ctx-task-2",
+            title: "Sincronización con equipo",
+            completed: false,
+            domain: "agenda",
+            created_at: now,
+          },
+        ],
+        habits: [
+          {
+            id: "mock-ctx-habit-1",
+            name: "Movilidad matutina",
+            completed: false,
+            domain: "fisico",
+            created_at: now,
+          },
+        ],
+        latestCheckin: null,
+      })
+      return NextResponse.json({
+        success: true,
+        data: {
+          ...data,
+          next_action: "Completar propuesta para cliente",
+          next_impact: "Alto impacto en pipeline",
+          next_time_required: "120 min",
+          current_block: "Profesional",
+        },
+      })
+    }
+
     const auth = await requireUser(req)
     if (auth instanceof NextResponse) return auth
     const { supabase, userId } = auth
@@ -26,7 +69,7 @@ export async function GET(req: NextRequest) {
 
     const { data: habits, error: habitError } = await supabase
       .from("operational_habits")
-      .select("id,name,completed,domain,created_at")
+      .select("id,name,completed,domain,created_at,metadata")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
 
@@ -61,3 +104,4 @@ export async function GET(req: NextRequest) {
     )
   }
 }
+

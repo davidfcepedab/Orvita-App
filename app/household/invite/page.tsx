@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { createBrowserClient } from "@/lib/supabase/browser"
 
 type InvitePayload = {
@@ -38,7 +39,7 @@ export default function HouseholdInvitePage() {
         }
 
         if (!response.ok || !payload.success || !payload.data) {
-          throw new Error(payload.error || "No se pudo cargar invite code")
+          throw new Error(messageForHttpError(response.status, payload.error, response.statusText))
         }
 
         if (active) {

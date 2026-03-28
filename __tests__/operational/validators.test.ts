@@ -29,6 +29,7 @@ describe("operational validators", () => {
       name: "Hidratacion",
       domain: "fisico",
       completed: false,
+      metadata: {},
     })
   })
 

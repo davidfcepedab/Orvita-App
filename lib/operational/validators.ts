@@ -1,9 +1,32 @@
-import type { OperationalDomain } from "@/lib/operational/types"
+import type { HabitMetadata, OperationalDomain } from "@/lib/operational/types"
 
 const DOMAIN_VALUES: OperationalDomain[] = ["salud", "fisico", "profesional", "agenda"]
 
 function isDomain(value: unknown): value is OperationalDomain {
   return typeof value === "string" && DOMAIN_VALUES.includes(value as OperationalDomain)
+}
+
+function coerceHabitMetadataPayload(raw: unknown): HabitMetadata {
+  if (raw == null || typeof raw !== "object" || Array.isArray(raw)) {
+    return {}
+  }
+  const o = raw as Record<string, unknown>
+  const out: HabitMetadata = {}
+  if (o.frequency === "diario" || o.frequency === "semanal") {
+    out.frequency = o.frequency
+  }
+  if (Array.isArray(o.weekdays)) {
+    out.weekdays = o.weekdays.filter(
+      (x): x is number => typeof x === "number" && x >= 0 && x <= 6
+    )
+  }
+  if (typeof o.is_superhabit === "boolean") {
+    out.is_superhabit = o.is_superhabit
+  }
+  if (Array.isArray(o.display_days)) {
+    out.display_days = o.display_days.filter((x): x is string => typeof x === "string")
+  }
+  return out
 }
 
 export function parseTaskCreate(payload: unknown) {
@@ -46,7 +69,9 @@ export function parseHabitCreate(payload: unknown) {
     return { error: "name and domain are required" } as const
   }
 
-  return { name, completed, domain } as const
+  const metadata = coerceHabitMetadataPayload(body.metadata)
+
+  return { name, completed, domain, metadata } as const
 }
 
 export function parseHabitPatch(payload: unknown) {
@@ -58,6 +83,9 @@ export function parseHabitPatch(payload: unknown) {
   if (typeof body?.name === "string") patch.name = body.name.trim()
   if (typeof body?.completed === "boolean") patch.completed = body.completed
   if (isDomain(body?.domain)) patch.domain = body.domain
+  if (body && "metadata" in body) {
+    patch.metadata = coerceHabitMetadataPayload(body.metadata)
+  }
 
   if (Object.keys(patch).length === 0) {
     return { error: "no changes provided" } as const
@@ -90,3 +118,5 @@ export function parseCheckinCreate(payload: unknown) {
     score_profesional,
   } as const
 }
+
+

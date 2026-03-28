@@ -1,6 +1,8 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
+import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 
 export type AgendaTaskStatus = "pending" | "in-progress" | "completed"
 export type AgendaTaskPriority = "Alta" | "Media" | "Baja"
@@ -35,10 +37,11 @@ export function useAgendaTasks() {
     try {
       setLoading(true)
       setError(null)
-      const response = await fetch("/api/agenda", { cache: "no-store" })
+      const headers = await browserBearerHeaders()
+      const response = await fetch("/api/agenda", { cache: "no-store", headers })
       const json = (await response.json()) as AgendaResponse
       if (!response.ok || !json.success) {
-        throw new Error(json.error || `Error ${response.status}`)
+        throw new Error(messageForHttpError(response.status, json.error, response.statusText))
       }
       setTasks(json.data || [])
     } catch (err) {
@@ -63,14 +66,15 @@ export function useAgendaTasks() {
       assigneeId?: string | null
       assigneeName?: string | null
     }) => {
+      const headers = await browserBearerHeaders(true)
       const response = await fetch("/api/agenda", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers,
         body: JSON.stringify(input),
       })
       const json = (await response.json()) as AgendaResponse
       if (!response.ok || !json.success) {
-        throw new Error(json.error || `Error ${response.status}`)
+        throw new Error(messageForHttpError(response.status, json.error, response.statusText))
       }
       await refresh()
     },
@@ -90,14 +94,15 @@ export function useAgendaTasks() {
         assigneeName: string | null
       }>
     ) => {
+      const headers = await browserBearerHeaders(true)
       const response = await fetch("/api/agenda", {
         method: "PATCH",
-        headers: { "content-type": "application/json" },
+        headers,
         body: JSON.stringify({ id, ...patch }),
       })
       const json = (await response.json()) as AgendaResponse
       if (!response.ok || !json.success) {
-        throw new Error(json.error || `Error ${response.status}`)
+        throw new Error(messageForHttpError(response.status, json.error, response.statusText))
       }
       await refresh()
     },

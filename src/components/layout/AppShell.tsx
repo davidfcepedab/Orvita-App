@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
-import { useTheme, useLayoutMode } from "@/src/theme/ThemeProvider"
+import { useTheme } from "@/src/theme/ThemeProvider"
 import { designTokens } from "@/src/theme/design-tokens"
 import { Button } from "@/src/components/ui/Button"
 import { createBrowserClient } from "@/lib/supabase/browser"
@@ -11,16 +11,15 @@ import {
   Activity,
   Calendar,
   HeartPulse,
-  Landmark,
+  DollarSign,
   LayoutDashboard,
   Settings,
   SlidersHorizontal,
   Target,
-  BriefcaseBusiness,
   Dumbbell,
   SunMoon,
-  PanelLeft,
   User,
+  LogOut,
 } from "lucide-react"
 
 type AppShellProps = {
@@ -33,49 +32,98 @@ type AppShellProps = {
   sidebar?: React.ReactNode
 }
 
-export function AppShell({ moduleLabel, moduleTitle, primaryAction, metaInfo, showSidebar = true, children, sidebar }: AppShellProps) {
+export function AppShell({
+  moduleLabel,
+  moduleTitle,
+  primaryAction,
+  metaInfo,
+  showSidebar = true,
+  children,
+  sidebar,
+}: AppShellProps) {
   const pathname = usePathname()
   const { theme, setTheme } = useTheme()
-  const { layoutMode, setLayoutMode } = useLayoutMode()
   const [open, setOpen] = useState(false)
   const [userName, setUserName] = useState<string | null>(null)
+  const [loggingOut, setLoggingOut] = useState(false)
 
   useEffect(() => {
-    const supabase = createBrowserClient()
-    supabase.auth.getUser().then(({ data }) => {
-      const rawName =
-        data.user?.user_metadata?.full_name ??
-        data.user?.user_metadata?.name ??
-        data.user?.email?.split("@")[0]
-      if (rawName) {
-        const firstName = rawName.trim().split(" ")[0]
-        setUserName(firstName)
+    const supabase = createBrowserClient() as {
+      auth?: {
+        getUser?: () => Promise<{
+          data?: {
+            user?: {
+              user_metadata?: {
+                full_name?: string
+                name?: string
+              }
+              email?: string
+            }
+          }
+        }>
       }
-    })
+    }
+
+    if (!supabase?.auth?.getUser) {
+      setUserName("Demo User")
+      return
+    }
+
+    supabase.auth
+      .getUser()
+      .then(({ data }) => {
+        const rawName =
+          data?.user?.user_metadata?.full_name ??
+          data?.user?.user_metadata?.name ??
+          data?.user?.email ??
+          null
+
+        if (!rawName) {
+          setUserName("Demo User")
+          return
+        }
+
+        const firstName = rawName.trim().split(/\s+/)[0]
+        setUserName(firstName || "Demo User")
+      })
+      .catch(() => {
+        setUserName("Demo User")
+      })
   }, [])
 
   const cycleTheme = () => {
-    const next = theme === "arctic" ? "carbon" : theme === "carbon" ? "sand" : "arctic"
+    const order = ["arctic", "carbon", "sand", "midnight"] as const
+    const currentIndex = order.indexOf(theme)
+    const next = order[(currentIndex + 1) % order.length]
     setTheme(next)
   }
 
-  const cycleLayout = () => {
-    const next = layoutMode === "balanced" ? "compact" : layoutMode === "compact" ? "zen" : "balanced"
-    setLayoutMode(next)
+  const handleLogout = async () => {
+    try {
+      setLoggingOut(true)
+      const supabase = createBrowserClient() as {
+        auth?: { signOut?: () => Promise<{ error?: unknown }> }
+      }
+      if (supabase?.auth?.signOut) {
+        await supabase.auth.signOut()
+      }
+      window.location.href = "/auth"
+    } finally {
+      setLoggingOut(false)
+    }
   }
 
   const navItems = useMemo(
     () => [
-      { path: "/", label: "Control", icon: LayoutDashboard },
+      { path: "/", label: "Inicio", icon: LayoutDashboard },
       { path: "/hoy", label: "Hoy", icon: Target },
       { path: "/agenda", label: "Agenda", icon: Calendar },
-      { path: "/habitos", label: "Habitos", icon: Activity },
-      { path: "/health", label: "Health", icon: HeartPulse },
-      { path: "/training", label: "Training", icon: Dumbbell },
-      { path: "/finanzas/overview", label: "Finanzas", icon: Landmark },
-      { path: "/profesional", label: "Coach", icon: BriefcaseBusiness },
-      { path: "/sistema", label: "Sistema", icon: SlidersHorizontal },
-      { path: "/configuracion", label: "Config", icon: Settings },
+      { path: "/habitos", label: "Hábitos", icon: Activity },
+      { path: "/finanzas/overview", label: "Capital", icon: DollarSign },
+      { path: "/health", label: "Salud", icon: HeartPulse },
+      { path: "/training", label: "Entrenamiento", icon: Dumbbell },
+      { path: "/decision", label: "Decisión", icon: SlidersHorizontal },
+      { path: "/configuracion", label: "Configuración", icon: Settings },
     ],
     []
   )
@@ -92,10 +140,10 @@ export function AppShell({ moduleLabel, moduleTitle, primaryAction, metaInfo, sh
           zIndex: 20,
         }}
       >
-        <div style={{ maxWidth: "1800px", margin: "0 auto", padding: "16px 32px" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--spacing-lg)" }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <div className="mx-auto max-w-[1400px] px-4 py-3 sm:px-6 sm:py-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-[var(--spacing-lg)]">
+            <div className="flex min-w-0 flex-col gap-1">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
                 <span
                   style={{
                     width: "8px",
@@ -104,26 +152,19 @@ export function AppShell({ moduleLabel, moduleTitle, primaryAction, metaInfo, sh
                     background: "var(--color-accent-health)",
                   }}
                 />
-                <h1 style={{ margin: 0, fontSize: "18px", fontWeight: 500 }}>ÓRVITA V3</h1>
-                <span
-                  style={{
-                    fontSize: "11px",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.18em",
-                    color: "var(--color-text-secondary)",
-                  }}
-                >
-                  Strategic Operating System
+                <h1 className="m-0 text-base font-medium sm:text-lg">ÓRVITA</h1>
+                <span className="hidden text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-secondary)] sm:inline">
+                  Sistema Operativo Estratégico
                 </span>
               </div>
-              <span style={{ fontSize: "13px", color: "var(--color-text-primary)", paddingLeft: "18px" }}>
+              <span className="pl-[18px] text-sm text-[var(--color-text-primary)]">
                 Hola, {userName ?? "Commander"}
               </span>
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-md)" }}>
-              <span style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>
-                {new Date().toLocaleDateString("en-US", {
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end sm:gap-[var(--spacing-md)]">
+              <span className="w-full shrink-0 text-[11px] text-[var(--color-text-secondary)] sm:w-auto sm:text-xs">
+                {new Date().toLocaleDateString("es-CO", {
                   weekday: "short",
                   month: "short",
                   day: "numeric",
@@ -132,77 +173,36 @@ export function AppShell({ moduleLabel, moduleTitle, primaryAction, metaInfo, sh
               </span>
 
               <button
+                className="inline-flex min-h-[40px] items-center gap-2 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] sm:min-h-0 sm:px-3 sm:py-1.5"
                 onClick={cycleTheme}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  padding: "6px 12px",
-                  borderRadius: "10px",
-                  border: "0.5px solid var(--color-border)",
-                  background: "var(--color-surface-alt)",
-                  fontSize: "11px",
-                  fontWeight: 600,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.16em",
-                }}
+                type="button"
               >
                 <SunMoon size={14} />
-                Theme
+                Tema
               </button>
 
               <button
-                onClick={cycleLayout}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  padding: "6px 12px",
-                  borderRadius: "10px",
-                  border: "0.5px solid var(--color-border)",
-                  background: "var(--color-surface-alt)",
-                  fontSize: "11px",
-                  fontWeight: 600,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.16em",
-                }}
-              >
-                <PanelLeft size={14} />
-                Layout
-              </button>
-
-              <button
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  padding: "6px 12px",
-                  borderRadius: "10px",
-                  border: "0.5px solid var(--color-border)",
-                  background: "var(--color-surface-alt)",
-                  fontSize: "11px",
-                  fontWeight: 600,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.16em",
-                  color: "var(--color-text-secondary)",
-                }}
+                type="button"
+                className="hidden min-h-[40px] items-center gap-2 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--color-text-secondary)] md:inline-flex md:min-h-0 md:py-1.5"
               >
                 Exportando...
+              </button>
+              <button
+                type="button"
+                onClick={handleLogout}
+                disabled={loggingOut}
+                className="inline-flex min-h-[40px] items-center gap-2 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--color-text-primary)] sm:min-h-0 sm:py-1.5"
+              >
+                <LogOut size={14} />
+                {loggingOut ? "Saliendo..." : "Salir"}
               </button>
 
               <div style={{ position: "relative" }}>
                 <button
+                  type="button"
                   onClick={() => setOpen((prev) => !prev)}
-                  style={{
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "50%",
-                    border: "0.5px solid var(--color-border)",
-                    background: "var(--color-surface-alt)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
+                  className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface-alt)] sm:h-9 sm:w-9"
+                  aria-label="Menú de usuario"
                 >
                   <User size={16} />
                 </button>
@@ -222,8 +222,8 @@ export function AppShell({ moduleLabel, moduleTitle, primaryAction, metaInfo, sh
                   >
                     {[
                       { label: "Perfil" },
-                      { label: "Settings" },
-                      { label: "Sign out" },
+                      { label: "Configuración" },
+                      { label: "Cerrar sesión" },
                     ].map((item) => (
                       <div
                         key={item.label}
@@ -247,11 +247,11 @@ export function AppShell({ moduleLabel, moduleTitle, primaryAction, metaInfo, sh
       <nav
         style={{
           borderBottom: "0.5px solid var(--color-border)",
-          background: "var(--color-surface-alt)",
+          background: "var(--color-surface)",
           overflowX: "auto",
         }}
       >
-        <div style={{ maxWidth: "1800px", margin: "0 auto", padding: "0 24px" }}>
+        <div className="mx-auto max-w-[1400px] px-3 sm:px-4 md:px-6">
           <div style={{ display: "flex", gap: "6px" }}>
             {navItems.map((item) => {
               const isActive =
@@ -283,13 +283,9 @@ export function AppShell({ moduleLabel, moduleTitle, primaryAction, metaInfo, sh
       </nav>
 
       <div
+        className="mx-auto grid max-w-[1400px] gap-[var(--layout-gap)] px-4 pb-10 pt-5 sm:px-6 sm:pt-7 md:px-8"
         style={{
-          maxWidth: "1800px",
-          margin: "0 auto",
-          padding: "32px",
-          display: "grid",
           gridTemplateColumns: showSidebar ? "280px 1fr" : "1fr",
-          gap: "var(--layout-gap)",
         }}
       >
         {showSidebar && (
@@ -315,7 +311,7 @@ export function AppShell({ moduleLabel, moduleTitle, primaryAction, metaInfo, sh
                     color: "var(--color-text-secondary)",
                   }}
                 >
-                  {moduleLabel ?? "Module"}
+                  {moduleLabel ?? "Módulo"}
                 </p>
                 <h2
                   style={{
@@ -324,13 +320,9 @@ export function AppShell({ moduleLabel, moduleTitle, primaryAction, metaInfo, sh
                     fontWeight: designTokens.typography.scale.h1["font-weight"],
                   }}
                 >
-                  {moduleTitle ?? "Overview"}
+                  {moduleTitle ?? "Resumen"}
                 </h2>
-                {primaryAction && (
-                  <Button onClick={primaryAction.onClick}>
-                    {primaryAction.label}
-                  </Button>
-                )}
+                {primaryAction && <Button onClick={primaryAction.onClick}>{primaryAction.label}</Button>}
                 {metaInfo && (
                   <p
                     style={{

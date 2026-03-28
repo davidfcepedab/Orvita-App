@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { type ColorTheme, type LayoutMode, useApp, themes } from "@/app/contexts/AppContext"
 import { designTokens } from "@/src/theme/design-tokens"
+import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { createBrowserClient } from "@/lib/supabase/browser"
 import { Monitor, Palette, Sliders } from "lucide-react"
 
@@ -27,6 +28,11 @@ export default function ConfigV3() {
     }
   }, [connectedFromParam])
 
+  useEffect(() => {
+    const factor = 0.6 + (intensity / 100) * 0.8
+    document.documentElement.style.setProperty("--motion-factor", factor.toFixed(2))
+  }, [intensity])
+
   const getAccessToken = async () => {
     const supabase = createBrowserClient()
     const { data, error } = await supabase.auth.getSession()
@@ -47,7 +53,7 @@ export default function ConfigV3() {
       })
       const payload = (await res.json()) as { success?: boolean; url?: string; error?: string }
       if (!res.ok || !payload.url) {
-        throw new Error(payload.error ?? "No se pudo iniciar Google OAuth")
+        throw new Error(messageForHttpError(res.status, payload.error, res.statusText))
       }
       window.location.href = payload.url
     } catch (error: unknown) {
@@ -76,11 +82,11 @@ export default function ConfigV3() {
         error?: string
       }
       if (!res.ok || !payload.success) {
-        throw new Error(payload.error ?? "No se pudo sincronizar")
+        throw new Error(messageForHttpError(res.status, payload.error, res.statusText))
       }
       const imported = payload.imported ?? 0
       const updated = payload.updated ?? 0
-      setGoogleSync(`${kind === "calendar" ? "Calendar" : "Tasks"}: ${imported} importados, ${updated} actualizados`)
+      setGoogleSync(`${kind === "calendar" ? "Calendario" : "Tareas"}: ${imported} importados, ${updated} actualizados`)
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Error sincronizando"
       setGoogleError(message)
@@ -108,7 +114,7 @@ export default function ConfigV3() {
   const themeOptions: { id: ColorTheme; label: string; colors: string[] }[] = [
     {
       id: "arctic",
-      label: "Arctic (Light)",
+      label: "Arctic (Claro)",
       colors: [
         designTokens.colors.arctic.background,
         designTokens.colors.arctic["accent-health"],
@@ -117,7 +123,7 @@ export default function ConfigV3() {
     },
     {
       id: "carbon",
-      label: "Carbon (Dark)",
+      label: "Carbon (Oscuro)",
       colors: [
         designTokens.colors.carbon.background,
         designTokens.colors.carbon["accent-health"],
@@ -126,27 +132,32 @@ export default function ConfigV3() {
     },
     {
       id: "sand",
-      label: "Sand (Warm)",
+      label: "Sand (Cálido)",
       colors: [
         designTokens.colors.sand.background,
         designTokens.colors.sand["accent-health"],
         designTokens.colors.sand["accent-finance"],
       ],
     },
+    {
+      id: "midnight",
+      label: "Midnight (Profundo)",
+      colors: [themes.midnight.bg, themes.midnight.accent.health, themes.midnight.accent.finance],
+    },
   ]
 
   const layoutOptions: { id: LayoutMode; label: string }[] = [
-    { id: "balanced", label: "Balanceado (Default)" },
-    { id: "compact", label: "Alta Densidad (Pro)" },
-    { id: "zen", label: "Focus Mode (Zen)" },
+    { id: "balanced", label: "Balanceado (Estándar)" },
+    { id: "compact", label: "Alta densidad (Pro)" },
+    { id: "zen", label: "Modo foco (Zen)" },
   ]
 
   return (
     <div className="mx-auto max-w-4xl space-y-12">
       <div>
-        <h2 className="text-3xl tracking-tight">Engine Settings</h2>
+        <h2 className="text-3xl tracking-tight">Configuración del sistema</h2>
         <p className="text-sm" style={{ color: theme.textMuted }}>
-          Control parametrico de la interfaz Orbita OS
+          Control paramétrico de la interfaz Órbita
         </p>
       </div>
 
@@ -155,7 +166,7 @@ export default function ConfigV3() {
           <div className="space-y-4">
             <h3 className="flex items-center gap-2 text-xs uppercase tracking-wider" style={{ color: theme.textMuted }}>
               <Palette className="h-4 w-4" />
-              Entorno de Color
+              Entorno de color
             </h3>
             <div className="grid gap-3">
               {themeOptions.map((option) => (
@@ -182,7 +193,7 @@ export default function ConfigV3() {
           <div className="space-y-4">
             <h3 className="flex items-center gap-2 text-xs uppercase tracking-wider" style={{ color: theme.textMuted }}>
               <Monitor className="h-4 w-4" />
-              Densidad de Datos
+              Densidad de datos
             </h3>
             <div className="grid gap-3">
               {layoutOptions.map((option) => (
@@ -205,7 +216,7 @@ export default function ConfigV3() {
           <div className="space-y-4">
             <h3 className="flex items-center gap-2 text-xs uppercase tracking-wider" style={{ color: theme.textMuted }}>
               <Sliders className="h-4 w-4" />
-              Intensidad Haptica / Animaciones
+              Intensidad háptica / animaciones
             </h3>
             <div className="rounded-xl border p-6" style={{ backgroundColor: theme.surface, borderColor: theme.border }}>
               <div className="mb-4 flex justify-between text-xs" style={{ color: theme.textMuted }}>
@@ -230,13 +241,13 @@ export default function ConfigV3() {
             <div className="rounded-xl border p-6" style={{ backgroundColor: theme.surface, borderColor: theme.border }}>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm">Google (Calendar + Tasks)</p>
-                  <p className="text-xs" style={{ color: theme.textMuted }}>
-                    Conecta tu cuenta para sincronizar agenda y tareas.
-                  </p>
+              <p className="text-sm">Google (Calendario + Tareas)</p>
+              <p className="text-xs" style={{ color: theme.textMuted }}>
+                Conecta tu cuenta para sincronizar agenda y tareas.
+              </p>
                 </div>
                 {googleConnected ? (
-                  <span className="text-xs">Google Connected ✅</span>
+                  <span className="text-xs">Google conectado ✅</span>
                 ) : (
                   <button
                     onClick={handleConnectGoogle}
@@ -244,7 +255,7 @@ export default function ConfigV3() {
                     style={{ borderColor: theme.border }}
                     disabled={connecting}
                   >
-                    {connecting ? "Conectando..." : "Connect Google"}
+                    {connecting ? "Conectando..." : "Conectar Google"}
                   </button>
                 )}
               </div>
@@ -257,7 +268,7 @@ export default function ConfigV3() {
                     style={{ borderColor: theme.border }}
                     disabled={syncingCalendar}
                   >
-                    {syncingCalendar ? "Sincronizando..." : "Sync Calendar"}
+                    {syncingCalendar ? "Sincronizando..." : "Sincronizar calendario"}
                   </button>
                   <button
                     onClick={() => handleSync("tasks")}
@@ -265,7 +276,7 @@ export default function ConfigV3() {
                     style={{ borderColor: theme.border }}
                     disabled={syncingTasks}
                   >
-                    {syncingTasks ? "Sincronizando..." : "Sync Tasks"}
+                    {syncingTasks ? "Sincronizando..." : "Sincronizar tareas"}
                   </button>
                 </div>
               )}
@@ -286,7 +297,7 @@ export default function ConfigV3() {
 
           <div className="space-y-4">
             <h3 className="text-xs uppercase tracking-wider" style={{ color: theme.textMuted }}>
-              Live Preview
+              Vista previa
             </h3>
             <div className="flex h-[500px] flex-col gap-6 rounded-3xl border-2 p-8" style={{ backgroundColor: theme.bg, borderColor: theme.border }}>
             <div className="flex items-center justify-between">

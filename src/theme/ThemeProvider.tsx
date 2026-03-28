@@ -1,10 +1,12 @@
 "use client"
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react"
-import type { LayoutMode, ThemeName } from "@/src/theme/design-tokens"
+import type { LayoutMode } from "@/src/theme/design-tokens"
 
 const THEME_KEY = "orbita:theme"
 const LAYOUT_KEY = "orbita:layout"
+
+type ThemeName = "arctic" | "carbon" | "sand" | "midnight"
 
 type ThemeContextValue = {
   theme: ThemeName
@@ -20,7 +22,7 @@ const ThemeContext = createContext<ThemeContextValue | undefined>(undefined)
 const LayoutContext = createContext<LayoutContextValue | undefined>(undefined)
 
 function isThemeName(value: string): value is ThemeName {
-  return value === "arctic" || value === "carbon" || value === "sand"
+  return value === "arctic" || value === "carbon" || value === "sand" || value === "midnight"
 }
 
 function isLayoutMode(value: string): value is LayoutMode {

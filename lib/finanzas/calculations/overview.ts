@@ -1,39 +1,24 @@
 import type { FinanceTransaction } from "../types"
+import { expenseAmount, incomeAmount, netCashFlow } from "./txMath"
 
 export function calculateOverview(
   currentRows: FinanceTransaction[],
-  previousRows: FinanceTransaction[]
+  previousRows: FinanceTransaction[],
 ) {
-  const income = currentRows
-    .filter((r) => Number(r.amount) > 0)
-    .reduce((a, b) => a + Number(b.amount), 0)
+  const income = currentRows.reduce((a, b) => a + incomeAmount(b), 0)
+  const expense = currentRows.reduce((a, b) => a + expenseAmount(b), 0)
+  const net = netCashFlow(currentRows)
 
-  const expense = Math.abs(
-    currentRows
-      .filter((r) => Number(r.amount) < 0)
-      .reduce((a, b) => a + Number(b.amount), 0)
-  )
-
-  const net = currentRows.reduce((a, b) => a + Number(b.amount), 0)
-
-  const previousNet =
-    previousRows.length > 0
-      ? previousRows.reduce((a, b) => a + Number(b.amount), 0)
-      : null
+  const previousNet = previousRows.length > 0 ? netCashFlow(previousRows) : null
 
   const deltaNet =
-    previousNet !== null && previousNet !== 0
+    previousNet !== null && Math.abs(previousNet) > 1e-6
       ? ((net - previousNet) / Math.abs(previousNet)) * 100
       : null
 
-  const savingsRate =
-    income !== 0 ? (net / income) * 100 : 0
+  const savingsRate = income !== 0 ? (net / income) * 100 : 0
 
-  // Runway mensual (cuántos meses podrías cubrir gasto actual con el net actual)
-  const runway =
-    expense > 0 && net > 0
-      ? net / expense
-      : 0
+  const runway = expense > 0 && net > 0 ? net / expense : 0
 
   return {
     income,

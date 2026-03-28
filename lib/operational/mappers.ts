@@ -1,5 +1,6 @@
 import type {
   Checkin,
+  HabitMetadata,
   OperationalHabit,
   OperationalTask,
   OperationalDomain,
@@ -19,6 +20,13 @@ export type OperationalHabitRow = {
   completed: boolean
   domain: OperationalDomain
   created_at: string
+  metadata?: unknown
+}
+
+function coerceHabitMetadata(raw: unknown): HabitMetadata | undefined {
+  if (raw == null) return undefined
+  if (typeof raw !== "object" || Array.isArray(raw)) return undefined
+  return raw as HabitMetadata
 }
 
 export type CheckinRow = {
@@ -41,12 +49,14 @@ export function mapOperationalTask(row: OperationalTaskRow): OperationalTask {
 }
 
 export function mapOperationalHabit(row: OperationalHabitRow): OperationalHabit {
+  const metadata = coerceHabitMetadata(row.metadata)
   return {
     id: row.id,
     name: row.name,
     completed: row.completed,
     domain: row.domain,
     created_at: row.created_at,
+    ...(metadata && Object.keys(metadata).length > 0 ? { metadata } : {}),
   }
 }
 
@@ -60,3 +70,5 @@ export function mapCheckin(row: CheckinRow): Checkin {
     created_at: row.created_at,
   }
 }
+
+

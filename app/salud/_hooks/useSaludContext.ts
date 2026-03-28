@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { isAppMockMode } from "@/lib/checkins/flags"
 import { getContext } from "@/lib/getContext"
 import {
   HEALTH_ENERGY_PROFILE,
@@ -49,6 +50,15 @@ function isRawContextData(value: unknown): value is RawContextData {
   })
 }
 
+const MOCK_CONTEXT_RAW: RawContextData = {
+  score_fisico: 72,
+  score_disciplina: 68,
+  score_recuperacion: 74,
+  delta_disciplina: 0,
+  delta_recuperacion: 0,
+  tendencia_7d: [58, 62, 55, 67, 63, 70, 64].map((v) => ({ value: v })),
+}
+
 export function useSaludContext() {
   const [data, setData] = useState<RawContextData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -58,6 +68,13 @@ export function useSaludContext() {
     let active = true
 
     const load = async () => {
+      if (isAppMockMode()) {
+        setData(MOCK_CONTEXT_RAW)
+        setError(null)
+        setLoading(false)
+        return
+      }
+
       try {
         const response = await getContext()
 
