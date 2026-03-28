@@ -10,6 +10,7 @@ export default function HomeV3() {
   const { colorTheme } = useApp()
   const theme = themes[colorTheme]
   const [note, setNote] = useState("")
+  const [period, setPeriod] = useState<"Dia" | "Semana" | "Mes">("Dia")
   const { data } = useOperationalContext()
 
   const clusters = [
@@ -59,13 +60,15 @@ export default function HomeV3() {
           borderColor: theme.border,
         }}
       >
-        {["Dia", "Semana", "Mes"].map((tab) => (
+        {(["Dia", "Semana", "Mes"] as const).map((tab) => (
           <button
             key={tab}
+            type="button"
+            onClick={() => setPeriod(tab)}
             className="rounded-lg px-6 py-1.5 text-xs font-medium shadow-sm"
             style={{
-              backgroundColor: tab === "Dia" ? theme.surface : "transparent",
-              color: tab === "Dia" ? theme.text : theme.textMuted,
+              backgroundColor: tab === period ? theme.surface : "transparent",
+              color: tab === period ? theme.text : theme.textMuted,
             }}
           >
             {tab}

@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
-import { refreshAccessTokenIfNeeded, type GoogleIntegrationRecord } from "@/lib/integrations/google"
+import {
+  mapGoogleSyncErrorToUserMessage,
+  refreshAccessTokenIfNeeded,
+  type GoogleIntegrationRecord,
+} from "@/lib/integrations/google"
 
 export const runtime = "nodejs"
 
@@ -23,6 +27,30 @@ type GoogleCalendarEvent = {
 type CalendarApiResponse = {
   items?: GoogleCalendarEvent[]
   nextPageToken?: string
+}
+
+function summarizeGoogleCalendarError(status: number, bodyText: string): string {
+  try {
+    const j = JSON.parse(bodyText) as {
+      error?: { message?: string; errors?: { reason?: string; message?: string }[] }
+    }
+    const reasons = j.error?.errors?.map((e) => e.reason || e.message).filter(Boolean).join(", ")
+    const msg = j.error?.message
+    const parts = [String(status), reasons, msg].filter(Boolean)
+    if (parts.length) return `Google Calendar ${parts.join(" — ")}`
+  } catch {
+    /* ignore */
+  }
+  return `Google Calendar ${status}: ${bodyText.slice(0, 400)}`
+}
+
+/** Ventana acotada: evita listados sin límite y reduce errores con parámetros incrementales. */
+function calendarListTimeBounds() {
+  const timeMin = new Date()
+  timeMin.setUTCDate(timeMin.getUTCDate() - 120)
+  const timeMax = new Date()
+  timeMax.setUTCDate(timeMax.getUTCDate() + 450)
+  return { timeMin: timeMin.toISOString(), timeMax: timeMax.toISOString() }
 }
 
 function normalizeDateTime(value?: GoogleCalendarDate): string | null {
@@ -50,25 +78,22 @@ export async function POST(req: NextRequest) {
       .eq("provider", "google")
       .maybeSingle()
 
-    if (integrationError) throw integrationError
+    if (integrationError) {
+      throw new Error(integrationError.message || "Error leyendo integración Google")
+    }
     if (!integration) {
       return NextResponse.json(
-        { success: false, error: "Google integration not found" },
-        { status: 404 }
+        {
+          success: false,
+          error: "No hay cuenta de Google vinculada. Conéctala desde Configuración.",
+        },
+        { status: 404 },
       )
     }
 
     const accessToken = await refreshAccessTokenIfNeeded(integration as GoogleIntegrationRecord)
 
-    const { data: lastSync } = await supabase
-      .from("external_calendar_events")
-      .select("synced_at")
-      .eq("user_id", userId)
-      .order("synced_at", { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    const updatedMin = lastSync?.synced_at ? new Date(lastSync.synced_at).toISOString() : null
+    const bounds = calendarListTimeBounds()
 
     let pageToken: string | undefined
     let imported = 0
@@ -79,8 +104,10 @@ export async function POST(req: NextRequest) {
         singleEvents: "true",
         showDeleted: "true",
         maxResults: "250",
+        orderBy: "startTime",
       })
-      if (updatedMin) params.set("updatedMin", updatedMin)
+      params.set("timeMin", bounds.timeMin)
+      params.set("timeMax", bounds.timeMax)
       if (pageToken) params.set("pageToken", pageToken)
 
       const response = await fetch(
@@ -92,7 +119,7 @@ export async function POST(req: NextRequest) {
 
       if (!response.ok) {
         const detail = await response.text()
-        throw new Error(`Google Calendar API error: ${detail}`)
+        throw new Error(summarizeGoogleCalendarError(response.status, detail))
       }
 
       const payload = (await response.json()) as CalendarApiResponse
@@ -141,7 +168,7 @@ export async function POST(req: NextRequest) {
           const { error: upsertError } = await supabase
             .from("external_calendar_events")
             .upsert(rows, { onConflict: "user_id,google_event_id" })
-          if (upsertError) throw upsertError
+          if (upsertError) throw new Error(upsertError.message || "Error guardando eventos")
         }
       }
 
@@ -153,8 +180,8 @@ export async function POST(req: NextRequest) {
     const detail = error instanceof Error ? error.message : "Unknown error"
     console.error("GOOGLE CALENDAR SYNC ERROR:", detail)
     return NextResponse.json(
-      { success: false, error: "No se pudo sincronizar calendario" },
-      { status: 500 }
+      { success: false, error: mapGoogleSyncErrorToUserMessage("calendar", detail) },
+      { status: 500 },
     )
   }
 }

@@ -7,8 +7,8 @@ export default function Tabs() {
   const pathname = usePathname()
 
   const tabs = [
-    { name: "Físico", href: "/fisico" },
-    { name: "Finanzas", href: "/finanzas" },
+    { name: "Físico", href: "/salud" },
+    { name: "Finanzas", href: "/finanzas/overview" },
     { name: "Profesional", href: "/profesional" },
     { name: "Sistema", href: "/sistema" },
   ]
@@ -20,7 +20,8 @@ export default function Tabs() {
           key={tab.href}
           href={tab.href}
           className={`transition ${
-            pathname === tab.href
+            pathname === tab.href ||
+            (tab.href === "/finanzas/overview" && pathname.startsWith("/finanzas"))
               ? "text-[#FF2D8E]"
               : "text-gray-400"
           }`}

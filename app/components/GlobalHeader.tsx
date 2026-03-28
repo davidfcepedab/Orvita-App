@@ -1,13 +1,11 @@
 "use client"
 
-import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { directionEngine } from "@/lib/PersonaldirectionEngine"
 import { getContext } from "@/lib/getContext"
 
 export default function GlobalHeader() {
   const [data, setData] = useState<any>(null)
-  const router = useRouter()
 
   useEffect(() => {
     getContext().then(setData)

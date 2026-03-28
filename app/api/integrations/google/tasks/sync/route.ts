@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
-import { refreshAccessTokenIfNeeded, type GoogleIntegrationRecord } from "@/lib/integrations/google"
+import {
+  mapGoogleSyncErrorToUserMessage,
+  refreshAccessTokenIfNeeded,
+  type GoogleIntegrationRecord,
+} from "@/lib/integrations/google"
 
 export const runtime = "nodejs"
 
@@ -41,8 +45,11 @@ export async function POST(req: NextRequest) {
     if (integrationError) throw integrationError
     if (!integration) {
       return NextResponse.json(
-        { success: false, error: "Google integration not found" },
-        { status: 404 }
+        {
+          success: false,
+          error: "No hay cuenta de Google vinculada. Conéctala desde Configuración.",
+        },
+        { status: 404 },
       )
     }
 
@@ -139,8 +146,8 @@ export async function POST(req: NextRequest) {
     const detail = error instanceof Error ? error.message : "Unknown error"
     console.error("GOOGLE TASKS SYNC ERROR:", detail)
     return NextResponse.json(
-      { success: false, error: "No se pudo sincronizar tareas" },
-      { status: 500 }
+      { success: false, error: mapGoogleSyncErrorToUserMessage("tasks", detail) },
+      { status: 500 },
     )
   }
 }

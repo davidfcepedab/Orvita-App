@@ -40,6 +40,11 @@ export default async function proxy(req: NextRequest) {
     return NextResponse.next()
   }
 
+  const { url: supabaseUrl, anonKey } = getSupabaseEnv()
+  if (!supabaseUrl || !anonKey) {
+    return NextResponse.next()
+  }
+
   if (pathname.startsWith("/auth")) {
     const authed = await isAuthenticated(req)
     if (authed) {

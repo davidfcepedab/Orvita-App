@@ -107,6 +107,7 @@ export function AppShell({
       if (supabase?.auth?.signOut) {
         await supabase.auth.signOut()
       }
+      await fetch("/api/auth/session", { method: "DELETE" })
       window.location.href = "/auth"
     } finally {
       setLoggingOut(false)
@@ -183,9 +184,12 @@ export function AppShell({
 
               <button
                 type="button"
-                className="hidden min-h-[40px] items-center gap-2 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--color-text-secondary)] md:inline-flex md:min-h-0 md:py-1.5"
+                disabled
+                title="Próximamente"
+                aria-disabled="true"
+                className="hidden min-h-[40px] cursor-not-allowed items-center gap-2 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--color-text-secondary)] opacity-60 md:inline-flex md:min-h-0 md:py-1.5"
               >
-                Exportando...
+                Exportar
               </button>
               <button
                 type="button"
@@ -220,22 +224,55 @@ export function AppShell({
                       padding: "var(--spacing-sm)",
                     }}
                   >
-                    {[
-                      { label: "Perfil" },
-                      { label: "Configuración" },
-                      { label: "Cerrar sesión" },
-                    ].map((item) => (
-                      <div
-                        key={item.label}
-                        style={{
-                          padding: "var(--spacing-sm)",
-                          borderRadius: "var(--radius-button)",
-                          color: "var(--color-text-secondary)",
-                        }}
-                      >
-                        {item.label}
-                      </div>
-                    ))}
+                    <Link
+                      href="/health"
+                      onClick={() => setOpen(false)}
+                      style={{
+                        display: "block",
+                        padding: "var(--spacing-sm)",
+                        borderRadius: "var(--radius-button)",
+                        color: "var(--color-text-secondary)",
+                        textDecoration: "none",
+                        fontSize: "13px",
+                      }}
+                    >
+                      Perfil
+                    </Link>
+                    <Link
+                      href="/configuracion"
+                      onClick={() => setOpen(false)}
+                      style={{
+                        display: "block",
+                        padding: "var(--spacing-sm)",
+                        borderRadius: "var(--radius-button)",
+                        color: "var(--color-text-secondary)",
+                        textDecoration: "none",
+                        fontSize: "13px",
+                      }}
+                    >
+                      Configuración
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpen(false)
+                        void handleLogout()
+                      }}
+                      disabled={loggingOut}
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "var(--spacing-sm)",
+                        borderRadius: "var(--radius-button)",
+                        border: "none",
+                        background: "transparent",
+                        color: "var(--color-text-secondary)",
+                        fontSize: "13px",
+                        cursor: loggingOut ? "wait" : "pointer",
+                      }}
+                    >
+                      {loggingOut ? "Cerrando sesión..." : "Cerrar sesión"}
+                    </button>
                   </div>
                 )}
               </div>

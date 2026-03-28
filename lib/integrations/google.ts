@@ -163,4 +163,48 @@ export async function refreshAccessTokenIfNeeded(
   return payload.access_token
 }
 
+/**
+ * Mensajes breves para UI cuando falla el sync (no exponer cuerpos JSON de Google).
+ */
+export function mapGoogleSyncErrorToUserMessage(context: "calendar" | "tasks", detail: string): string {
+  const d = detail.toLowerCase()
+  if (d.includes("refresh token missing") || d.includes("invalid_grant") || d.includes("google refresh failed")) {
+    return "La conexión con Google caducó o fue revocada. Vuelve a conectar Google en Configuración."
+  }
+  if (d.includes("google integration not found") || d.includes("integration not found")) {
+    return "No hay cuenta de Google vinculada. Usa «Conectar Google» primero."
+  }
+  if (d.includes("401") || d.includes("unauthorized")) {
+    return "Google no autorizó la operación. Vuelve a conectar tu cuenta."
+  }
+  if (d.includes("403") || d.includes("forbidden")) {
+    return context === "calendar"
+      ? "Google Calendar no permitió el acceso. Comprueba permisos del calendario."
+      : "Google Tasks no permitió el acceso."
+  }
+  if (d.includes(" 400:") || d.includes("bad request") || d.includes("badrequest")) {
+    return context === "calendar"
+      ? "Google rechazó la consulta al calendario (solicitud inválida). Prueba de nuevo o vuelve a conectar Google."
+      : "Google rechazó la consulta de tareas. Prueba de nuevo o vuelve a conectar Google."
+  }
+  if (d.includes("not found") || d.includes("notfound")) {
+    return "No se encontró el recurso en Google (calendario o lista). Revisa tu cuenta de Google."
+  }
+  if (d.includes("ratelimit") || d.includes("rate limit") || d.includes("quota")) {
+    return "Google limitó temporalmente las peticiones. Espera un minuto e inténtalo de nuevo."
+  }
+  if (d.includes("row-level security") || d.includes("rls") || d.includes("permission denied")) {
+    return "No se pudo guardar en la base de datos. Aplica la migración de Google en Supabase o revisa políticas RLS."
+  }
+  if (d.includes("does not exist") || d.includes("pgrst") || d.includes("schema cache")) {
+    return "Falta una tabla en la base de datos. Ejecuta las migraciones de integración Google en Supabase."
+  }
+  if (d.includes("duplicate key") || d.includes("unique constraint")) {
+    return "Conflicto al guardar eventos duplicados. Vuelve a sincronizar; si sigue fallando, contacta soporte."
+  }
+  return context === "calendar"
+    ? "No se pudo sincronizar el calendario. Vuelve a conectar Google en Configuración o revisa los logs del servidor."
+    : "No se pudo sincronizar las tareas. Vuelve a conectar Google en Configuración o revisa los logs del servidor."
+}
+
 export type { GoogleIntegrationRecord, GoogleProfile, GoogleTokenResponse }

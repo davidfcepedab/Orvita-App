@@ -29,6 +29,31 @@ export default function ConfigV3() {
   }, [connectedFromParam])
 
   useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const supabase = createBrowserClient()
+        const { data } = await supabase.auth.getSession()
+        const token = data.session?.access_token
+        if (!token || cancelled) return
+        const res = await fetch("/api/google/calendar", {
+          cache: "no-store",
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const payload = (await res.json()) as { success?: boolean; connected?: boolean }
+        if (!cancelled && res.ok && payload.success && payload.connected) {
+          setGoogleConnected(true)
+        }
+      } catch {
+        /* sin sesión o red: no cambiar estado */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
     const factor = 0.6 + (intensity / 100) * 0.8
     document.documentElement.style.setProperty("--motion-factor", factor.toFixed(2))
   }, [intensity])

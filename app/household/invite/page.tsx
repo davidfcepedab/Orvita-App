@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useEffect, useState } from "react"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { createBrowserClient } from "@/lib/supabase/browser"
@@ -85,12 +86,9 @@ export default function HouseholdInvitePage() {
         </div>
       )}
 
-      <a
-        href="/auth"
-        className="text-sm font-medium text-gray-600 underline"
-      >
+      <Link href="/auth" className="text-sm font-medium text-gray-600 underline">
         Ir a login
-      </a>
+      </Link>
     </div>
   )
 }
