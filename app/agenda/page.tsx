@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react"
 import { Card } from "@/src/components/ui/Card"
 import { CalendarDays, CalendarRange, LayoutGrid, ListChecks, Plus, Search } from "lucide-react"
 
@@ -26,6 +26,7 @@ import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import { isAppMockMode, isSupabaseEnabled } from "@/lib/checkins/flags"
 import { createBrowserClient } from "@/lib/supabase/browser"
 import { buildGoogleByDayIndex } from "@/lib/agenda/googleAgendaByDay"
+import { formatLocalDateKey } from "@/lib/agenda/localDateKey"
 
 function pickViewerFirstName(
   user: { user_metadata?: Record<string, unknown>; email?: string | null } | null | undefined
@@ -70,7 +71,7 @@ function formatDayLabel(date: Date) {
 }
 
 function formatDateKey(date: Date) {
-  return date.toISOString().slice(0, 10)
+  return formatLocalDateKey(date)
 }
 
 function buildMonthGrid(date: Date) {
@@ -182,6 +183,10 @@ export default function AgendaPage() {
   const [view, setView] = useState<AgendaMainView>("list")
   const [query, setQuery] = useState("")
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
+  const [monthViewDate, setMonthViewDate] = useState(() => {
+    const n = new Date()
+    return new Date(n.getFullYear(), n.getMonth(), 1)
+  })
   const [formOpen, setFormOpen] = useState(false)
   const [formSubmitError, setFormSubmitError] = useState<string | null>(null)
   const [form, setForm] = useState({
@@ -195,6 +200,27 @@ export default function AgendaPage() {
     source: "",
     notes: "",
   })
+
+  useEffect(() => {
+    if (view !== "month") return
+    const y = monthViewDate.getFullYear()
+    const m = monthViewDate.getMonth()
+    const start = new Date(y, m, 1)
+    start.setDate(start.getDate() - 7)
+    start.setHours(0, 0, 0, 0)
+    const end = new Date(y, m + 1, 0)
+    end.setDate(end.getDate() + 14)
+    end.setHours(23, 59, 59, 999)
+    void googleCalendar.refreshRange({ timeMin: start.toISOString(), timeMax: end.toISOString() })
+  }, [view, monthViewDate, googleCalendar.refreshRange])
+
+  const prevViewRef = useRef(view)
+  useEffect(() => {
+    if (prevViewRef.current === "month" && view !== "month") {
+      void googleCalendar.refresh()
+    }
+    prevViewRef.current = view
+  }, [view, googleCalendar.refresh])
 
   const filtered = useMemo(() => {
     return tasks.filter((task) => {
@@ -240,11 +266,11 @@ export default function AgendaPage() {
   )
   const totalWeeklyPending = totalWeeklyTasks - totalWeeklyCompleted
 
-  const monthGrid = buildMonthGrid(new Date())
+  const monthGrid = useMemo(() => buildMonthGrid(monthViewDate), [monthViewDate])
   const monthLabel = useMemo(() => {
-    const raw = new Date().toLocaleDateString("es-CO", { month: "long", year: "numeric" })
+    const raw = monthViewDate.toLocaleDateString("es-CO", { month: "long", year: "numeric" })
     return raw.charAt(0).toUpperCase() + raw.slice(1)
-  }, [])
+  }, [monthViewDate])
   const monthSummary = useMemo(() => {
     const total = filtered.length
     const completed = filtered.filter((t) => t.status === "completada").length
@@ -287,11 +313,20 @@ export default function AgendaPage() {
   const saveTaskComplete = (taskId: string, completed: boolean) =>
     updateTask(taskId, { status: completed ? "completed" : "pending" })
 
+  const onGoogleTaskSetDue = useCallback(
+    async (taskId: string, dueYmd: string) => {
+      const result = await googleTasksFeed.patchTask(taskId, { due: dueYmd })
+      if (!result) throw new Error("No se pudo guardar en Google Tasks")
+      setGoogleLivePullKey((k) => k + 1)
+    },
+    [googleTasksFeed],
+  )
+
   return (
     <>
       <section
         aria-label="Agenda unificada"
-        className="overflow-hidden rounded-3xl border border-[var(--color-border)] shadow-sm"
+        className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] shadow-card"
         style={{ borderWidth: "0.5px", background: "var(--agenda-shell-bg)" }}
       >
         <header
@@ -463,6 +498,7 @@ export default function AgendaPage() {
                   calendarFeed={googleCalendar}
                   googleTasksFeed={googleTasksFeed}
                   onSaveComplete={(task, completed) => saveTaskComplete(task.id, completed)}
+                  onGoogleTaskSetDue={googleTasksFeed.connected ? onGoogleTaskSetDue : undefined}
                 />
               )}
               {view === "list" && (
@@ -472,6 +508,7 @@ export default function AgendaPage() {
                   googleTasksFeed={googleTasksFeed}
                   agendaLoading={loading}
                   onSaveComplete={(task, completed) => saveTaskComplete(task.id, completed)}
+                  onGoogleTaskSetDue={googleTasksFeed.connected ? onGoogleTaskSetDue : undefined}
                 />
               )}
               {view === "week" && (
@@ -498,6 +535,16 @@ export default function AgendaPage() {
                   dayDetails={dayDetails}
                   formatDateKey={formatDateKey}
                   googleByDay={googleByDay}
+                  onPrevMonth={() =>
+                    setMonthViewDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))
+                  }
+                  onNextMonth={() =>
+                    setMonthViewDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))
+                  }
+                  onGoThisMonth={() => {
+                    const n = new Date()
+                    setMonthViewDate(new Date(n.getFullYear(), n.getMonth(), 1))
+                  }}
                 />
               )}
             </div>

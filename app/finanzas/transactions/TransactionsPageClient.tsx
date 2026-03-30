@@ -81,7 +81,7 @@ export default function TransactionsPageClient() {
 
   if (!finance) {
     return (
-      <div className="p-6 text-center text-gray-500">
+      <div className="p-6 text-center text-orbita-secondary">
         <p>Inicializando...</p>
       </div>
     )
@@ -89,7 +89,7 @@ export default function TransactionsPageClient() {
 
   if (loading) {
     return (
-      <div className="p-6 text-center text-gray-500">
+      <div className="p-6 text-center text-orbita-secondary">
         <p>Cargando movimientos...</p>
       </div>
     )
@@ -97,16 +97,23 @@ export default function TransactionsPageClient() {
 
   if (error) {
     return (
-      <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+      <div
+        className="rounded-[var(--radius-card)] border p-4"
+        style={{
+          background: "color-mix(in srgb, var(--color-accent-danger) 10%, var(--color-surface))",
+          borderColor: "color-mix(in srgb, var(--color-accent-danger) 32%, var(--color-border))",
+          color: "var(--color-accent-danger)",
+        }}
+      >
         <p className="font-semibold">Error al cargar movimientos</p>
-        <p className="text-sm mt-1">{error}</p>
+        <p className="mt-1 text-sm opacity-90">{error}</p>
       </div>
     )
   }
 
   if (!data) {
     return (
-      <div className="p-6 text-center text-gray-500">
+      <div className="p-6 text-center text-orbita-secondary">
         <p>No hay movimientos disponibles</p>
       </div>
     )
@@ -120,19 +127,19 @@ export default function TransactionsPageClient() {
       <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <button
           onClick={() => router.back()}
-          className="order-2 w-full min-h-[44px] rounded-full border border-slate-200 bg-white px-4 py-2 text-[11px] uppercase tracking-[0.16em] text-slate-600 sm:order-none sm:w-auto sm:min-h-0"
+          className="order-2 w-full min-h-[44px] rounded-full border border-orbita-border bg-orbita-surface px-4 py-2 text-[11px] uppercase tracking-[0.16em] text-orbita-secondary sm:order-none sm:w-auto sm:min-h-0"
         >
           Volver
         </button>
         <div className="order-1 min-w-0 flex-1 text-center sm:order-none sm:flex-none sm:text-left">
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Movimientos</p>
-          <h1 className="break-words text-xl font-semibold text-slate-900 sm:text-2xl">
+          <p className="text-xs uppercase tracking-[0.18em] text-orbita-secondary">Movimientos</p>
+          <h1 className="break-words text-xl font-semibold text-orbita-primary sm:text-2xl">
             {category || "Consolidado mensual"}
           </h1>
-          <p className="text-xs text-slate-500">Periodo: {month || "Actual"}</p>
+          <p className="text-xs text-orbita-secondary">Periodo: {month || "Actual"}</p>
         </div>
         <div className="order-3 flex justify-center sm:order-none sm:justify-end">
-          <div className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-center text-[11px] uppercase tracking-[0.16em] text-slate-500">
+          <div className="rounded-full border border-orbita-border bg-orbita-surface-alt px-4 py-2 text-center text-[11px] uppercase tracking-[0.16em] text-orbita-secondary">
             {transactions.length} registros
           </div>
         </div>
@@ -141,73 +148,128 @@ export default function TransactionsPageClient() {
       <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3">
         <Card hover className="min-w-0 p-4 sm:p-8">
           <div className="grid min-w-0 gap-2">
-            <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Total movimientos</p>
-            <p className="break-words text-2xl font-semibold tabular-nums text-slate-900">
+            <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Total movimientos</p>
+            <p className="break-words text-2xl font-semibold tabular-nums text-orbita-primary">
               ${Math.abs(subtotal).toLocaleString("es-CO", {
                 maximumFractionDigits: 0,
               })}
             </p>
-            <p className="text-xs text-slate-500">Balance del periodo</p>
+            <p className="text-xs text-orbita-secondary">Balance del periodo</p>
           </div>
         </Card>
         <Card hover className="min-w-0 p-4 sm:p-8">
           <div className="grid min-w-0 gap-2">
-            <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Variación mensual</p>
+            <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Variación mensual</p>
             <p className={`break-words text-2xl font-semibold tabular-nums ${deltaValue >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
               {deltaValue >= 0 ? "+" : "-"}${Math.abs(deltaValue).toLocaleString("es-CO", {
                 maximumFractionDigits: 0,
               })}
             </p>
-            <p className="text-xs text-slate-500">vs mes anterior</p>
+            <p className="text-xs text-orbita-secondary">vs mes anterior</p>
           </div>
         </Card>
         <Card hover className="min-w-0 p-4 sm:p-8">
           <div className="grid min-w-0 gap-2">
-            <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Transacciones</p>
-            <p className="text-2xl font-semibold tabular-nums text-slate-900">{transactions.length}</p>
-            <p className="text-xs text-slate-500">Total del periodo</p>
+            <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Transacciones</p>
+            <p className="text-2xl font-semibold tabular-nums text-orbita-primary">{transactions.length}</p>
+            <p className="text-xs text-orbita-secondary">Total del periodo</p>
           </div>
         </Card>
       </div>
 
       {transactions.length === 0 ? (
-        <div className="p-6 text-center text-gray-500">
+        <div className="p-6 text-center text-orbita-secondary">
           <p>No hay movimientos para esta seleccion</p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {transactions.map((tx, idx) => (
-            <Card key={idx} hover className="p-4 sm:p-6">
-              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-4">
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-semibold text-slate-900">{tx.categoria}</p>
-                    {tx.subcategoria && (
-                      <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-slate-500">
-                        {tx.subcategoria}
-                      </span>
-                    )}
-                  </div>
-                  <p className="mt-2 break-words text-sm text-slate-700">{tx.descripcion}</p>
-                  <p className="mt-2 text-xs text-slate-500">{tx.fecha}</p>
-                </div>
-                <div className="shrink-0 text-left sm:text-right">
-                  <p className="tabular-nums text-lg font-semibold text-slate-900">
-                    ${Math.abs(tx.monto).toLocaleString("es-CO", {
-                      maximumFractionDigits: 0,
-                    })}
-                  </p>
-                  <p
-                    className={`text-[11px] uppercase tracking-[0.14em] mt-1 ${
-                      tx.monto > 0 ? "text-emerald-600" : "text-rose-600"
-                    }`}
-                  >
-                    {tx.monto > 0 ? "Ingreso" : "Egreso"}
-                  </p>
-                </div>
-              </div>
-            </Card>
-          ))}
+        <div className="min-w-0 max-w-full overflow-hidden rounded-lg border border-orbita-border bg-[var(--color-surface)]">
+          <div className="max-h-[min(70vh,56rem)] min-w-0 overflow-auto overscroll-contain [-webkit-overflow-scrolling:touch] touch-pan-x touch-pan-y">
+            <table className="w-full min-w-0 table-fixed border-collapse text-left text-[10px] sm:text-[11px]">
+              <colgroup>
+                <col style={{ width: "17%" }} />
+                <col style={{ width: "7%" }} />
+                <col style={{ width: "24%" }} />
+                <col style={{ width: "36%" }} />
+                <col style={{ width: "16%" }} />
+              </colgroup>
+              <thead className="sticky top-0 z-[1] border-b border-orbita-border bg-orbita-surface-alt text-[9px] font-semibold uppercase tracking-[0.08em] text-orbita-secondary sm:text-[10px]">
+                <tr>
+                  <th scope="col" className="whitespace-nowrap px-1.5 py-1.5 text-left sm:px-2 sm:py-2">
+                    Fecha
+                  </th>
+                  <th scope="col" className="px-0.5 py-1.5 text-center sm:py-2" title="Tipo">
+                    T
+                  </th>
+                  <th scope="col" className="px-1.5 py-1.5 text-left sm:px-2 sm:py-2">
+                    Categoría
+                  </th>
+                  <th scope="col" className="px-1.5 py-1.5 text-left sm:px-2 sm:py-2">
+                    Concepto
+                  </th>
+                  <th scope="col" className="whitespace-nowrap px-1.5 py-1.5 text-right tabular-nums sm:px-2 sm:py-2">
+                    Monto
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {transactions.map((tx, idx) => {
+                  const catLine = [tx.categoria, tx.subcategoria].filter(Boolean).join(" · ")
+                  const tipoLabel = tx.monto > 0 ? "Ingreso" : "Egreso"
+                  const montoStr = `$${Math.abs(tx.monto).toLocaleString("es-CO", {
+                    maximumFractionDigits: 0,
+                  })}`
+                  const isIngreso = tx.monto > 0
+                  const rowBg = isIngreso
+                    ? "hover:opacity-95"
+                    : "hover:opacity-95"
+                  const rowBorder = "border-b border-orbita-border/60"
+                  const rowStyle = isIngreso
+                    ? {
+                        background:
+                          "color-mix(in srgb, var(--color-accent-health) 14%, var(--color-surface))",
+                      }
+                    : {
+                        background:
+                          "color-mix(in srgb, var(--color-accent-danger) 12%, var(--color-surface))",
+                      }
+                  return (
+                    <tr
+                      key={idx}
+                      className={`${rowBg} ${rowBorder} last:border-b-0 transition-opacity`}
+                      style={rowStyle}
+                    >
+                      <td className="whitespace-nowrap px-1.5 py-1 align-middle tabular-nums text-orbita-primary sm:px-2 sm:py-1.5">
+                        {tx.fecha}
+                      </td>
+                      <td
+                        className={`px-0.5 py-1 align-middle text-center text-[9px] font-bold sm:py-1.5 ${
+                          isIngreso ? "text-[var(--color-accent-health)]" : "text-[var(--color-accent-danger)]"
+                        }`}
+                        title={tipoLabel}
+                      >
+                        {isIngreso ? "IN" : "EG"}
+                      </td>
+                      <td
+                        className="truncate px-1.5 py-1 align-middle text-orbita-primary sm:px-2 sm:py-1.5"
+                        title={catLine}
+                      >
+                        {catLine}
+                      </td>
+                      <td
+                        className="truncate px-1.5 py-1 align-middle text-orbita-secondary sm:px-2 sm:py-1.5"
+                        title={tx.descripcion}
+                      >
+                        {tx.descripcion}
+                      </td>
+                      <td className="whitespace-nowrap px-1.5 py-1 align-middle text-right tabular-nums font-semibold text-orbita-primary sm:px-2 sm:py-1.5">
+                        {montoStr}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

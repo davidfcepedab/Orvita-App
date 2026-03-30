@@ -13,6 +13,8 @@ export type GoogleCalendarFeedState = {
   connected: boolean
   notice: string | null
   refresh: () => Promise<void>
+  /** Ventana explícita (p. ej. al navegar meses en la agenda). */
+  refreshRange: (range: { timeMin: string; timeMax: string }) => Promise<void>
 }
 
 export function useGoogleCalendar(): GoogleCalendarFeedState {
@@ -22,13 +24,22 @@ export function useGoogleCalendar(): GoogleCalendarFeedState {
   const [connected, setConnected] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (range?: { timeMin: string; timeMax: string }) => {
     try {
       setLoading(true)
       setError(null)
       setNotice(null)
       const headers = await browserBearerHeaders()
-      const res = await fetch("/api/google/calendar", { cache: "no-store", headers })
+      const now = new Date()
+      const dMin = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+      dMin.setDate(dMin.getDate() - 45)
+      const dMax = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+      dMax.setDate(dMax.getDate() + 400)
+      dMax.setHours(23, 59, 59, 999)
+      const timeMin = range?.timeMin ?? dMin.toISOString()
+      const timeMax = range?.timeMax ?? dMax.toISOString()
+      const qs = `timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}`
+      const res = await fetch(`/api/google/calendar?${qs}`, { cache: "no-store", headers })
       const payload = (await res.json()) as {
         success?: boolean
         events?: GoogleCalendarEventDTO[]
@@ -55,5 +66,13 @@ export function useGoogleCalendar(): GoogleCalendarFeedState {
     void load()
   }, [load])
 
-  return { events, loading, error, connected, notice, refresh: load }
+  return {
+    events,
+    loading,
+    error,
+    connected,
+    notice,
+    refresh: () => load(),
+    refreshRange: (range: { timeMin: string; timeMax: string }) => load(range),
+  }
 }

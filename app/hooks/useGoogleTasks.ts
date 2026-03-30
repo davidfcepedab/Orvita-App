@@ -15,6 +15,8 @@ export type GoogleTasksFeedState = {
   creating: boolean
   refresh: () => Promise<void>
   createTask: (input: { title: string; notes?: string; due?: string | null }) => Promise<GoogleTaskDTO | null>
+  /** Actualiza vencimiento (YYYY-MM-DD) u otros campos en Google Tasks. */
+  patchTask: (id: string, patch: { due?: string | null; title?: string; status?: string }) => Promise<GoogleTaskDTO | null>
 }
 
 export function useGoogleTasks(): GoogleTasksFeedState {
@@ -58,6 +60,31 @@ export function useGoogleTasks(): GoogleTasksFeedState {
     void load()
   }, [load])
 
+  const patchTask = useCallback(
+    async (id: string, patch: { due?: string | null; title?: string; status?: string }) => {
+      try {
+        setError(null)
+        const headers = await browserBearerHeaders(true)
+        const res = await fetch("/api/google/tasks", {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify({ id, ...patch }),
+        })
+        const payload = (await res.json()) as { success?: boolean; task?: GoogleTaskDTO; error?: string }
+        if (!res.ok || !payload.success) {
+          throw new Error(messageForHttpError(res.status, payload.error, res.statusText))
+        }
+        await load()
+        return payload.task ?? null
+      } catch (e) {
+        const m = e instanceof Error ? e.message : "Error"
+        setError(m)
+        return null
+      }
+    },
+    [load],
+  )
+
   const createTask = useCallback(
     async (input: { title: string; notes?: string; due?: string | null }) => {
       try {
@@ -86,5 +113,5 @@ export function useGoogleTasks(): GoogleTasksFeedState {
     [load],
   )
 
-  return { tasks, loading, error, connected, notice, creating, refresh: load, createTask }
+  return { tasks, loading, error, connected, notice, creating, refresh: load, createTask, patchTask }
 }

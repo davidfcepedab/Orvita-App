@@ -10,8 +10,10 @@ export const runtime = "nodejs"
 function defaultWindow() {
   const timeMin = new Date()
   timeMin.setHours(0, 0, 0, 0)
-  const timeMax = new Date(timeMin)
-  timeMax.setDate(timeMax.getDate() + 14)
+  timeMin.setDate(timeMin.getDate() - 45)
+  const timeMax = new Date()
+  timeMax.setHours(23, 59, 59, 999)
+  timeMax.setDate(timeMax.getDate() + 400)
   return { timeMin: timeMin.toISOString(), timeMax: timeMax.toISOString() }
 }
 

@@ -55,7 +55,7 @@ function flowTypeBadgeClass(t: CommitmentFlowType) {
   if (t === "income") return "border-emerald-200 bg-emerald-50 text-emerald-800"
   if (t === "recurring") return "border-sky-200 bg-sky-50 text-sky-900"
   if (t === "one-time") return "border-amber-200 bg-amber-50 text-amber-900"
-  return "border-slate-200 bg-white text-slate-700"
+  return "border-orbita-border bg-orbita-surface text-orbita-primary"
 }
 
 function addMonthsYm(ym: string, add: number): string {
@@ -259,10 +259,10 @@ export function CashFlowSimulatorSection({
     <section className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-400">
+          <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
             Simulador de cash flow
           </h2>
-          <p className="mt-1 max-w-xl text-xs text-slate-500 sm:text-sm">
+          <p className="mt-1 max-w-xl text-xs text-orbita-secondary sm:text-sm">
             What-if en vivo: ajusta palancas y observa el tubo de ingresos vs egresos (mes actual + 6 meses).
           </p>
         </div>
@@ -276,7 +276,7 @@ export function CashFlowSimulatorSection({
       </div>
 
       {loading ? (
-        <p className="text-sm text-slate-500">Cargando contexto de flujo…</p>
+        <p className="text-sm text-orbita-secondary">Cargando contexto de flujo…</p>
       ) : null}
       {err ? <p className="text-sm text-amber-800">Vista limitada: {err}</p> : null}
 
@@ -288,16 +288,16 @@ export function CashFlowSimulatorSection({
           aria-expanded={simulatorExpanded}
         >
           <div className="min-w-0">
-            <p className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-400">
+            <p className="text-sm font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
               Parámetros y proyección de flujo
             </p>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-orbita-secondary">
               {simulatorExpanded
                 ? "Toca para ocultar ajustes y la vista por mes."
                 : "Ingresos estimados, gastos del escenario y horizonte de 7 meses."}
             </p>
             {!simulatorExpanded ? (
-              <p className="mt-2 text-sm text-slate-700">
+              <p className="mt-2 text-sm text-orbita-primary">
                 Ingresos est.{" "}
                 <span className="font-semibold tabular-nums">${formatMoney(ingresosEstimados)}</span>
                 {" · "}
@@ -311,34 +311,34 @@ export function CashFlowSimulatorSection({
             ) : null}
           </div>
           <ChevronDown
-            className={`mt-0.5 h-5 w-5 shrink-0 text-slate-400 transition-transform duration-200 ${simulatorExpanded ? "rotate-180" : ""}`}
+            className={`mt-0.5 h-5 w-5 shrink-0 text-orbita-secondary transition-transform duration-200 ${simulatorExpanded ? "rotate-180" : ""}`}
             aria-hidden
           />
         </button>
 
         {simulatorExpanded ? (
-          <div className="border-t border-slate-100 p-4 sm:p-6">
+          <div className="border-t border-orbita-border p-4 sm:p-6">
             <div className="grid gap-5 lg:grid-cols-2">
         <div className="order-2 space-y-4 touch-manipulation lg:order-1">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Parámetros</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">Parámetros</p>
           <div className="rounded-2xl border-[0.5px] border-emerald-100 bg-emerald-50/40 p-4">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <div>
                 <p className="text-[10px] font-semibold uppercase text-emerald-800">Ingresos base (mes)</p>
-                <p className="text-xl font-bold text-slate-900">${formatMoney(incomeBase)}</p>
+                <p className="text-xl font-bold text-orbita-primary">${formatMoney(incomeBase)}</p>
               </div>
-              <div className="text-right text-xs text-slate-600">
+              <div className="text-right text-xs text-orbita-secondary">
                 <p>Prom. histórico (12m)</p>
-                <p className="font-semibold text-slate-900">${formatMoney(incomeHistoricalAvg)}</p>
+                <p className="font-semibold text-orbita-primary">${formatMoney(incomeHistoricalAvg)}</p>
               </div>
             </div>
-            <p className="mt-2 text-xs text-slate-600">
+            <p className="mt-2 text-xs text-orbita-secondary">
               Tendencia histórica ~{trendFromHistory >= 0 ? "+" : ""}
               {Math.round(trendFromHistory * 10) / 10}% en ventana
             </p>
           </div>
           <div className="py-1">
-            <div className="flex justify-between text-sm font-medium text-slate-700">
+            <div className="flex justify-between text-sm font-medium text-orbita-primary">
               <span>Ajuste escenario ingresos</span>
               <span className="tabular-nums text-emerald-700">
                 {ingresosAdjustPct >= 0 ? "+" : ""}
@@ -356,41 +356,41 @@ export function CashFlowSimulatorSection({
           </div>
           <div className="rounded-2xl border-[0.5px] border-sky-100 bg-sky-50/50 p-4">
             <p className="text-[10px] font-semibold uppercase text-sky-800">Ingresos estimados</p>
-            <p className="mt-1 text-2xl font-bold text-slate-900">${formatMoney(ingresosEstimados)}</p>
-            <p className="mt-1 text-xs text-slate-600">
+            <p className="mt-1 text-2xl font-bold text-orbita-primary">${formatMoney(ingresosEstimados)}</p>
+            <p className="mt-1 text-xs text-orbita-secondary">
               vs base {variacionVsBasePct >= 0 ? "+" : ""}
               {variacionVsBasePct}% (tendencia + slider)
             </p>
           </div>
-          <label className="block text-sm text-slate-700">
+          <label className="block text-sm text-orbita-primary">
             Gastos fijos (sin contar suscripciones del simulador duplicadas)
             <input
               type="number"
               inputMode="numeric"
-              className="mt-1 min-h-[44px] w-full rounded-xl border border-slate-200 px-3 py-2 text-base sm:text-sm"
+              className="mt-1 min-h-[44px] w-full rounded-xl border border-orbita-border px-3 py-2 text-base sm:text-sm"
               value={gastosFijos || ""}
               onChange={(e) => setGastosFijos(Number(e.target.value))}
             />
-            <span className="mt-1 block text-[11px] text-slate-500">
+            <span className="mt-1 block text-[11px] text-orbita-secondary">
               + Suscripciones en simulador: ${formatMoney(subscriptionFixedMonthly)}
             </span>
           </label>
-          <label className="block text-sm text-slate-700">
+          <label className="block text-sm text-orbita-primary">
             Gastos variables
             <input
               type="number"
               inputMode="numeric"
-              className="mt-1 min-h-[44px] w-full rounded-xl border border-slate-200 px-3 py-2 text-base sm:text-sm"
+              className="mt-1 min-h-[44px] w-full rounded-xl border border-orbita-border px-3 py-2 text-base sm:text-sm"
               value={gastosVariables || ""}
               onChange={(e) => setGastosVariables(Number(e.target.value))}
             />
           </label>
-          <label className="block text-sm text-slate-700">
+          <label className="block text-sm text-orbita-primary">
             Ahorro objetivo
             <input
               type="number"
               inputMode="numeric"
-              className="mt-1 min-h-[44px] w-full rounded-xl border border-slate-200 px-3 py-2 text-base sm:text-sm"
+              className="mt-1 min-h-[44px] w-full rounded-xl border border-orbita-border px-3 py-2 text-base sm:text-sm"
               value={ahorroObjetivo || ""}
               onChange={(e) => setAhorroObjetivo(Number(e.target.value))}
             />
@@ -400,32 +400,37 @@ export function CashFlowSimulatorSection({
         <div className="order-1 space-y-3 lg:order-2">
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
                 Vista por mes (7 meses)
               </p>
-              <p className="mt-0.5 text-xs text-slate-500">
+              <p className="mt-0.5 text-xs text-orbita-secondary">
                 Números del escenario: entradas estimadas vs salidas (fijas + variables + ahorro + suscripciones en simulador).
               </p>
             </div>
-            <div className="flex rounded-full border border-slate-200 bg-slate-50/80 p-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
+            <div className="flex rounded-full border border-orbita-border bg-orbita-surface-alt/80 p-0.5 text-[10px] font-semibold uppercase tracking-wide text-orbita-secondary">
               <button
                 type="button"
                 onClick={() => setFlowViz("table")}
-                className={`rounded-full px-3 py-1.5 transition ${flowViz === "table" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}
+                className={`rounded-full px-3 py-1.5 transition ${flowViz === "table" ? "bg-orbita-surface text-orbita-primary shadow-sm" : "text-orbita-secondary"}`}
               >
                 Tabla clara
               </button>
               <button
                 type="button"
                 onClick={() => setFlowViz("bars")}
-                className={`rounded-full px-3 py-1.5 transition ${flowViz === "bars" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}
+                className={`rounded-full px-3 py-1.5 transition ${flowViz === "bars" ? "bg-orbita-surface text-orbita-primary shadow-sm" : "text-orbita-secondary"}`}
               >
                 Barras comparadas
               </button>
             </div>
           </div>
 
-          <div className="rounded-2xl border-[0.5px] border-slate-200/90 bg-gradient-to-b from-white to-slate-50/80 p-3 shadow-inner sm:p-4">
+          <div
+            className="rounded-2xl border-[0.5px] border-orbita-border/90 p-3 shadow-inner sm:p-4"
+            style={{
+              background: `linear-gradient(to bottom, var(--color-surface), color-mix(in srgb, var(--color-surface-alt) 88%, var(--color-border)))`,
+            }}
+          >
             {flowViz === "table" ? (
               <div className="max-h-[min(72vh,560px)] space-y-3 overflow-y-auto overscroll-contain pr-1 sm:max-h-none sm:overflow-visible sm:pr-0">
                 {pipelineMonths.map((row) => {
@@ -436,10 +441,13 @@ export function CashFlowSimulatorSection({
                   return (
                     <div
                       key={row.ym}
-                      className="rounded-xl border border-slate-100 bg-white/90 px-3 py-3 shadow-sm sm:px-4"
+                      className="rounded-xl border border-orbita-border px-3 py-3 shadow-sm sm:px-4"
+                      style={{
+                        background: "color-mix(in srgb, var(--color-surface) 90%, transparent)",
+                      }}
                     >
                       <div className="flex flex-wrap items-baseline justify-between gap-2">
-                        <span className="text-sm font-bold text-slate-900">{row.label}</span>
+                        <span className="text-sm font-bold text-orbita-primary">{row.label}</span>
                         <span className={`text-sm font-bold tabular-nums ${netPos ? "text-emerald-600" : "text-rose-600"}`}>
                           Neto {netPos ? "+" : ""}${formatMoney(row.net)}
                         </span>
@@ -455,10 +463,10 @@ export function CashFlowSimulatorSection({
                         </div>
                       </dl>
                       <div className="mt-3">
-                        <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                        <p className="text-[10px] font-medium uppercase tracking-wide text-orbita-secondary">
                           Reparto del mes (solo proporción, no escala de pesos)
                         </p>
-                        <div className="mt-1 flex h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
+                        <div className="mt-1 flex h-2.5 w-full overflow-hidden rounded-full bg-orbita-surface-alt">
                           <div
                             className="h-full bg-gradient-to-r from-emerald-400 to-emerald-600 transition-all duration-500"
                             style={{ width: `${wIng}%` }}
@@ -477,7 +485,7 @@ export function CashFlowSimulatorSection({
               </div>
             ) : (
               <>
-                <p className="mb-3 text-xs leading-relaxed text-slate-600">
+                <p className="mb-3 text-xs leading-relaxed text-orbita-secondary">
                   Cada barra verde y roja mide el mes frente al <strong>mes más alto</strong> del período (para comparar meses entre sí).
                   El recuadro central es el <strong>neto</strong> (entradas − salidas).
                 </p>
@@ -488,7 +496,7 @@ export function CashFlowSimulatorSection({
                     const netPos = row.net >= 0
                     return (
                       <div key={row.ym} className="space-y-2">
-                        <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
+                        <div className="flex items-center justify-between text-xs font-semibold text-orbita-primary">
                           <span>{row.label}</span>
                           <span className={netPos ? "text-emerald-600" : "text-rose-600"}>
                             Neto {netPos ? "+" : ""}${formatMoney(row.net)}
@@ -505,7 +513,7 @@ export function CashFlowSimulatorSection({
                             />
                           </div>
                           <div
-                            className="flex w-[3.25rem] flex-shrink-0 flex-col items-center justify-center rounded-xl border border-slate-200 bg-white px-0.5 py-1 text-[9px] font-bold leading-tight text-slate-800 shadow-sm sm:w-14 sm:px-1 sm:text-[10px]"
+                            className="flex w-[3.25rem] flex-shrink-0 flex-col items-center justify-center rounded-xl border border-orbita-border bg-orbita-surface px-0.5 py-1 text-[9px] font-bold leading-tight text-orbita-primary shadow-sm sm:w-14 sm:px-1 sm:text-[10px]"
                             title={`Flujo neto ${formatMoney(row.net)}`}
                           >
                             <TrendingUp
@@ -523,7 +531,7 @@ export function CashFlowSimulatorSection({
                             />
                           </div>
                         </div>
-                        <div className="flex justify-between gap-2 text-[10px] font-medium text-slate-500">
+                        <div className="flex justify-between gap-2 text-[10px] font-medium text-orbita-secondary">
                           <span className="text-emerald-700">Entradas ${formatMoney(row.ing)}</span>
                           <span className="text-rose-600">Salidas ${formatMoney(row.egr)}</span>
                         </div>
@@ -557,19 +565,19 @@ export function CashFlowSimulatorSection({
             tone: netImpact30 >= 0 ? "text-emerald-700" : "text-rose-600",
           },
         ].map((c) => (
-          <div key={c.k} className={`rounded-2xl border-[0.5px] border-slate-200/90 bg-white p-4 shadow-sm ${arcticPanel}`}>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">{c.k}</p>
-            <p className={`mt-2 text-lg font-bold ${c.tone ?? "text-slate-900"}`}>${c.v}</p>
-            <p className="mt-1 text-[11px] text-slate-500">{c.sub}</p>
+          <div key={c.k} className={`rounded-2xl border-[0.5px] border-orbita-border/90 bg-orbita-surface p-4 shadow-sm ${arcticPanel}`}>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">{c.k}</p>
+            <p className={`mt-2 text-lg font-bold ${c.tone ?? "text-orbita-primary"}`}>${c.v}</p>
+            <p className="mt-1 text-[11px] text-orbita-secondary">{c.sub}</p>
           </div>
         ))}
       </div>
 
       <div className={`${arcticPanel} p-4 sm:p-5`}>
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2 text-slate-700">
+          <div className="flex items-center gap-2 text-orbita-primary">
             <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" aria-hidden />
-            <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+            <span className="text-xs font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
               Próximos compromisos (30 días)
             </span>
           </div>
@@ -590,11 +598,11 @@ export function CashFlowSimulatorSection({
             return (
               <li
                 key={c.id}
-                className="rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-3 sm:flex sm:items-start sm:gap-4 sm:px-4 sm:py-3.5"
+                className="rounded-xl border border-orbita-border bg-orbita-surface-alt/80 px-3 py-3 sm:flex sm:items-start sm:gap-4 sm:px-4 sm:py-3.5"
               >
                 <div className="flex gap-3 sm:min-w-0 sm:flex-1 sm:items-start sm:gap-4">
                   <div
-                    className="w-[3.25rem] shrink-0 text-sm font-bold tabular-nums text-slate-800 sm:w-[4.25rem] sm:pt-0.5"
+                    className="w-[3.25rem] shrink-0 text-sm font-bold tabular-nums text-orbita-primary sm:w-[4.25rem] sm:pt-0.5"
                     title={c.date}
                   >
                     {formatCommitmentDayEn(c.date)}
@@ -602,13 +610,13 @@ export function CashFlowSimulatorSection({
                   <div className="min-w-0 flex-1">
                     {showCat ? (
                       <>
-                        <p className="text-sm font-semibold leading-snug text-slate-900">{cat}</p>
+                        <p className="text-sm font-semibold leading-snug text-orbita-primary">{cat}</p>
                         {titleDiffers ? (
-                          <p className="mt-1 text-xs leading-snug text-slate-500">{c.title}</p>
+                          <p className="mt-1 text-xs leading-snug text-orbita-secondary">{c.title}</p>
                         ) : null}
                       </>
                     ) : (
-                      <p className="text-sm font-semibold leading-snug text-slate-900">{c.title}</p>
+                      <p className="text-sm font-semibold leading-snug text-orbita-primary">{c.title}</p>
                     )}
                     <span
                       className={`mt-2 inline-flex rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${flowTypeBadgeClass(c.flowType)}`}
@@ -618,7 +626,7 @@ export function CashFlowSimulatorSection({
                   </div>
                 </div>
                 <div
-                  className={`mt-2 text-right sm:mt-0 sm:shrink-0 sm:self-center sm:pl-2 ${inc ? "text-emerald-600" : "text-slate-900"}`}
+                  className={`mt-2 text-right sm:mt-0 sm:shrink-0 sm:self-center sm:pl-2 ${inc ? "text-emerald-600" : "text-orbita-primary"}`}
                 >
                   <p className="text-base font-bold tabular-nums sm:text-lg">
                     {inc ? "+" : "-"}${formatMoney(c.amount)}
@@ -638,39 +646,39 @@ export function CashFlowSimulatorSection({
         wide
       >
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="block text-xs font-medium text-slate-600">
+          <label className="block text-xs font-medium text-orbita-secondary">
             Título
             <input
-              className="mt-1 min-h-[44px] w-full rounded-xl border border-slate-200 px-3 py-2 text-base sm:text-sm"
+              className="mt-1 min-h-[44px] w-full rounded-xl border border-orbita-border px-3 py-2 text-base sm:text-sm"
               placeholder="p. ej. Client Invoice Due"
               value={draftC.title}
               onChange={(e) => setDraftC((d) => ({ ...d, title: e.target.value }))}
             />
           </label>
-          <label className="block text-xs font-medium text-slate-600">
+          <label className="block text-xs font-medium text-orbita-secondary">
             Categoría (opcional)
             <input
-              className="mt-1 min-h-[44px] w-full rounded-xl border border-slate-200 px-3 py-2 text-base sm:text-sm"
+              className="mt-1 min-h-[44px] w-full rounded-xl border border-orbita-border px-3 py-2 text-base sm:text-sm"
               placeholder="p. ej. Rent Payment"
               value={draftC.category}
               onChange={(e) => setDraftC((d) => ({ ...d, category: e.target.value }))}
             />
           </label>
-          <label className="block text-xs font-medium text-slate-600">
+          <label className="block text-xs font-medium text-orbita-secondary">
             Fecha
             <input
               type="date"
-              className="mt-1 min-h-[44px] w-full rounded-xl border border-slate-200 px-3 py-2 text-base sm:text-sm"
+              className="mt-1 min-h-[44px] w-full rounded-xl border border-orbita-border px-3 py-2 text-base sm:text-sm"
               value={draftC.date || month + "-01"}
               onChange={(e) => setDraftC((d) => ({ ...d, date: e.target.value }))}
             />
           </label>
-          <label className="block text-xs font-medium text-slate-600">
+          <label className="block text-xs font-medium text-orbita-secondary">
             Monto (COP)
             <input
               type="number"
               inputMode="numeric"
-              className="mt-1 min-h-[44px] w-full rounded-xl border border-slate-200 px-3 py-2 text-base sm:text-sm"
+              className="mt-1 min-h-[44px] w-full rounded-xl border border-orbita-border px-3 py-2 text-base sm:text-sm"
               placeholder="Monto"
               value={draftC.amount || ""}
               onChange={(e) => setDraftC((d) => ({ ...d, amount: Number(e.target.value) }))}
@@ -678,10 +686,10 @@ export function CashFlowSimulatorSection({
           </label>
         </div>
         <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-          <label className="block w-full text-xs font-medium text-slate-600 sm:w-auto sm:min-w-[200px]">
+          <label className="block w-full text-xs font-medium text-orbita-secondary sm:w-auto sm:min-w-[200px]">
             Tipo
             <select
-              className="mt-1 min-h-[44px] w-full rounded-xl border border-slate-200 px-3 py-2 text-base sm:text-sm"
+              className="mt-1 min-h-[44px] w-full rounded-xl border border-orbita-border px-3 py-2 text-base sm:text-sm"
               value={draftC.flowType}
               onChange={(e) => setDraftC((d) => ({ ...d, flowType: e.target.value as CommitmentFlowType }))}
             >
@@ -700,7 +708,7 @@ export function CashFlowSimulatorSection({
             Agregar
           </button>
         </div>
-        <p className="mt-4 text-xs text-slate-500">
+        <p className="mt-4 text-xs text-orbita-secondary">
           Net impact (30 días) se recalcula al instante con la lista actual (${formatMoney(netImpact30)}).
         </p>
       </CuentasModalShell>

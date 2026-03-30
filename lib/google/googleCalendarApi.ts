@@ -52,7 +52,7 @@ export async function fetchPrimaryCalendarWindow(
     timeMax: timeMaxIso,
     singleEvents: "true",
     orderBy: "startTime",
-    maxResults: "50",
+    maxResults: "250",
   })
 
   const response = await fetch(

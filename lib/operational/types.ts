@@ -2,6 +2,8 @@ import type { HabitCompletionMetrics } from "@/lib/habits/habitMetrics"
 
 export type OperationalDomain = "salud" | "fisico" | "profesional" | "agenda"
 
+export type HabitSuccessMetricType = "duracion" | "repeticiones" | "cantidad" | "si_no"
+
 /** Configuración additive en operational_habits.metadata (jsonb). */
 export type HabitMetadata = {
   frequency?: "diario" | "semanal"
@@ -10,6 +12,15 @@ export type HabitMetadata = {
   is_superhabit?: boolean
   /** Letras UI para mostrar (L…D) */
   display_days?: string[]
+  /** Por qué existe el hábito; ancla motivacional */
+  intention?: string
+  success_metric_type?: HabitSuccessMetricType
+  /** Meta numérica o texto según tipo (p. ej. min, reps, unidades) */
+  success_metric_target?: string
+  /** Tiempo de bloque estimado por sesión (minutos) */
+  estimated_session_minutes?: number
+  /** Disparador u horario preferido (texto libre) */
+  trigger_or_time?: string
 }
 
 export interface OperationalTask {

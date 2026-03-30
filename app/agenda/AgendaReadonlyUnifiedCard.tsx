@@ -1,5 +1,6 @@
 "use client"
 
+import type { ReactNode } from "react"
 import type { LucideIcon } from "lucide-react"
 import { Card } from "@/src/components/ui/Card"
 import {
@@ -27,6 +28,8 @@ type Props = {
   badgeColorVar: string
   /** Sin `Card`: para rejillas semana/mes */
   embedded?: boolean
+  /** Acciones bajo la nota (p. ej. asignar fecha a Google Task) */
+  footer?: ReactNode
 }
 
 export function AgendaReadonlyUnifiedCard({
@@ -43,6 +46,7 @@ export function AgendaReadonlyUnifiedCard({
   badgeLetter,
   badgeColorVar,
   embedded = false,
+  footer,
 }: Props) {
   const pad = variant === "list" ? "p-3" : variant === "kanban" ? "p-2.5" : "p-2"
   const titleCls =
@@ -98,6 +102,7 @@ export function AgendaReadonlyUnifiedCard({
         {footNote ? (
           <p className={`m-0 text-[var(--color-text-secondary)] ${fuenteCls}`}>{footNote}</p>
         ) : null}
+        {footer ? <div className={`mt-1.5 ${fuenteCls}`}>{footer}</div> : null}
       </div>
       {showBadge ? (
         <div

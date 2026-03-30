@@ -227,13 +227,9 @@ export function AppShell({
                     <Link
                       href="/health"
                       onClick={() => setOpen(false)}
+                      className="block rounded-[var(--radius-button)] px-2 py-2 text-[13px] no-underline transition-colors hover:bg-[var(--color-surface-alt)] hover:text-[var(--color-text-primary)]"
                       style={{
-                        display: "block",
-                        padding: "var(--spacing-sm)",
-                        borderRadius: "var(--radius-button)",
                         color: "var(--color-text-secondary)",
-                        textDecoration: "none",
-                        fontSize: "13px",
                       }}
                     >
                       Perfil
@@ -241,13 +237,9 @@ export function AppShell({
                     <Link
                       href="/configuracion"
                       onClick={() => setOpen(false)}
+                      className="block rounded-[var(--radius-button)] px-2 py-2 text-[13px] no-underline transition-colors hover:bg-[var(--color-surface-alt)] hover:text-[var(--color-text-primary)]"
                       style={{
-                        display: "block",
-                        padding: "var(--spacing-sm)",
-                        borderRadius: "var(--radius-button)",
                         color: "var(--color-text-secondary)",
-                        textDecoration: "none",
-                        fontSize: "13px",
                       }}
                     >
                       Configuración
@@ -259,15 +251,11 @@ export function AppShell({
                         void handleLogout()
                       }}
                       disabled={loggingOut}
+                      className="w-full rounded-[var(--radius-button)] px-2 py-2 text-left text-[13px] transition-colors hover:bg-[var(--color-surface-alt)] hover:text-[var(--color-text-primary)] disabled:opacity-60"
                       style={{
-                        width: "100%",
-                        textAlign: "left",
-                        padding: "var(--spacing-sm)",
-                        borderRadius: "var(--radius-button)",
                         border: "none",
                         background: "transparent",
                         color: "var(--color-text-secondary)",
-                        fontSize: "13px",
                         cursor: loggingOut ? "wait" : "pointer",
                       }}
                     >
@@ -289,7 +277,7 @@ export function AppShell({
         }}
       >
         <div className="mx-auto max-w-[1400px] px-3 sm:px-4 md:px-6">
-          <div style={{ display: "flex", gap: "6px" }}>
+          <div className="flex gap-[var(--spacing-xs)]">
             {navItems.map((item) => {
               const isActive =
                 pathname === item.path ||
@@ -299,18 +287,13 @@ export function AppShell({
                 <Link
                   key={item.path}
                   href={item.path}
+                  className="flex items-center gap-2 whitespace-nowrap px-4 py-3 text-[13px] no-underline sm:px-5"
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    padding: "12px 20px",
                     borderBottom: isActive ? "2px solid var(--color-text-primary)" : "2px solid transparent",
                     color: isActive ? "var(--color-text-primary)" : "var(--color-text-secondary)",
-                    fontSize: "13px",
-                    textDecoration: "none",
                   }}
                 >
-                  <Icon size={14} />
+                  <Icon size={16} strokeWidth={isActive ? 2.25 : 2} aria-hidden />
                   {item.label}
                 </Link>
               )
@@ -320,9 +303,9 @@ export function AppShell({
       </nav>
 
       <div
-        className="mx-auto grid max-w-[1400px] gap-[var(--layout-gap)] px-4 pb-10 pt-5 sm:px-6 sm:pt-7 md:px-8"
+        className="mx-auto grid min-w-0 max-w-[1400px] gap-[var(--layout-gap)] px-3 pb-10 pt-5 sm:px-6 sm:pt-7 md:px-8"
         style={{
-          gridTemplateColumns: showSidebar ? "280px 1fr" : "1fr",
+          gridTemplateColumns: showSidebar ? "280px minmax(0, 1fr)" : "minmax(0, 1fr)",
         }}
       >
         {showSidebar && (
@@ -375,7 +358,9 @@ export function AppShell({
             )}
           </aside>
         )}
-        <main style={{ display: "grid", gap: "var(--layout-gap)" }}>{children}</main>
+        <main className="min-w-0" style={{ display: "grid", gap: "var(--layout-gap)" }}>
+          {children}
+        </main>
       </div>
     </div>
   )

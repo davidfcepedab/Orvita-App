@@ -43,7 +43,7 @@ function impactLabel(amount: number, baselineIncome: number) {
 function impactTone(label: string) {
   if (label === "Alto") return "text-rose-600 bg-rose-50 border-rose-100"
   if (label === "Medio") return "text-amber-700 bg-amber-50 border-amber-100"
-  return "text-slate-600 bg-slate-50 border-slate-100"
+  return "text-orbita-secondary bg-orbita-surface-alt border-orbita-border"
 }
 
 function subscriptionInitials(name: string) {
@@ -297,10 +297,10 @@ export function SubscriptionsBurnSection({
           aria-expanded={subscriptionsExpanded}
         >
           <div className="min-w-0 flex-1">
-            <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-400">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
               Monthly subscriptions burn
             </h2>
-            <p className="mt-1 text-xs text-slate-500 sm:text-sm">
+            <p className="mt-1 text-xs text-orbita-secondary sm:text-sm">
               {subscriptionsExpanded
                 ? "Toca para colapsar el detalle."
                 : "Renovaciones recurrentes y ahorro potencial al pausar o cancelar."}
@@ -309,11 +309,11 @@ export function SubscriptionsBurnSection({
             {!subscriptionsExpanded ? (
               <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Total mensual</p>
-                  <p className="mt-0.5 text-2xl font-bold tabular-nums text-slate-900 sm:text-3xl">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">Total mensual</p>
+                  <p className="mt-0.5 text-2xl font-bold tabular-nums text-orbita-primary sm:text-3xl">
                     ${formatMoney(monthlyBurn)}
                   </p>
-                  <p className="mt-1 text-[11px] text-slate-500">
+                  <p className="mt-1 text-[11px] text-orbita-secondary">
                     {activeSubscriptions.length === 0
                       ? "Ninguna suscripción activa"
                       : `${activeSubscriptions.length} activa${activeSubscriptions.length === 1 ? "" : "s"}`}
@@ -327,7 +327,7 @@ export function SubscriptionsBurnSection({
                         {topBurnSubscriptions.map((s) => (
                           <div
                             key={s.id}
-                            className="flex h-11 w-11 items-center justify-center rounded-full border-[2.5px] border-white text-[11px] font-bold text-white shadow-md ring-1 ring-slate-200/40"
+                            className="flex h-11 w-11 items-center justify-center rounded-full border-[2.5px] border-white text-[11px] font-bold text-white shadow-md ring-1 ring-orbita-border/50"
                             style={{ background: avatarGradientForLabel(s.name) }}
                             title={s.name}
                           >
@@ -337,7 +337,7 @@ export function SubscriptionsBurnSection({
                       </div>
                       {moreActiveThanTop > 0 ? (
                         <span
-                          className="-ml-1 flex h-11 min-w-[2.75rem] items-center justify-center rounded-full border-[2.5px] border-white bg-slate-200 px-2 text-[11px] font-bold tabular-nums text-slate-700 shadow-sm ring-1 ring-slate-200/50"
+                          className="-ml-1 flex h-11 min-w-[2.75rem] items-center justify-center rounded-full border-[2.5px] border-white bg-orbita-surface-alt px-2 text-[11px] font-bold tabular-nums text-orbita-primary shadow-sm ring-1 ring-orbita-border/50"
                           title={`${moreActiveThanTop} más`}
                         >
                           +{moreActiveThanTop}
@@ -345,7 +345,7 @@ export function SubscriptionsBurnSection({
                       ) : null}
                     </div>
                   ) : (
-                    <span className="rounded-full border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+                    <span className="rounded-full border border-dashed border-orbita-border bg-orbita-surface-alt px-3 py-2 text-xs text-orbita-secondary">
                       Sin cargos recurrentes
                     </span>
                   )}
@@ -361,20 +361,20 @@ export function SubscriptionsBurnSection({
             ) : null}
           </div>
           <ChevronDown
-            className={`mt-0.5 h-5 w-5 shrink-0 text-slate-400 transition-transform duration-200 ${subscriptionsExpanded ? "rotate-180" : ""}`}
+            className={`mt-0.5 h-5 w-5 shrink-0 text-orbita-secondary transition-transform duration-200 ${subscriptionsExpanded ? "rotate-180" : ""}`}
             aria-hidden
           />
         </button>
 
         {subscriptionsExpanded ? (
-          <div className="space-y-4 border-t border-slate-100 p-4 sm:p-5">
+          <div className="space-y-4 border-t border-orbita-border p-4 sm:p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
-              <p className="max-w-xl text-xs text-slate-500 sm:text-sm">
+              <p className="max-w-xl text-xs text-orbita-secondary sm:text-sm">
                 Renovaciones recurrentes y ahorro potencial al pausar o cancelar.
               </p>
               <div className="shrink-0 text-left sm:text-right">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Total mensual</p>
-                <p className="text-2xl font-semibold tabular-nums text-slate-900 sm:text-3xl">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">Total mensual</p>
+                <p className="text-2xl font-semibold tabular-nums text-orbita-primary sm:text-3xl">
                   ${formatMoney(monthlyBurn)}
                 </p>
               </div>
@@ -386,11 +386,11 @@ export function SubscriptionsBurnSection({
               </div>
             ) : null}
 
-            <div className="overflow-hidden rounded-2xl border-[0.5px] border-slate-200/80 bg-white shadow-sm">
+            <div className="overflow-hidden rounded-2xl border-[0.5px] border-orbita-border/80 bg-orbita-surface shadow-sm">
               {loading ? (
-                <p className="p-6 text-center text-sm text-slate-500">Cargando suscripciones…</p>
+                <p className="p-6 text-center text-sm text-orbita-secondary">Cargando suscripciones…</p>
               ) : (
-                <div className="divide-y divide-slate-100">
+                <div className="divide-y divide-orbita-border/80">
                   {rows.map((s) => {
                     const active = subscriptionActiveBurn(s)
                     const imp = impactLabel(s.amount_monthly, baselineMonthlyIncome)
@@ -398,12 +398,12 @@ export function SubscriptionsBurnSection({
                       <div
                         key={s.id}
                         className={`flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3 ${
-                          !active ? "bg-slate-50/50" : ""
+                          !active ? "bg-orbita-surface-alt/50" : ""
                         }`}
                       >
                         <div className="min-w-0 flex-1">
-                          <p className="text-base font-semibold text-slate-900">{s.name}</p>
-                          <p className="mt-0.5 text-xs text-slate-500 sm:text-sm">
+                          <p className="text-base font-semibold text-orbita-primary">{s.name}</p>
+                          <p className="mt-0.5 text-xs text-orbita-secondary sm:text-sm">
                             {s.category}
                             {s.include_in_simulator ? " · En simulador" : " · Fuera del simulador"}
                             {!active ? ` · ${s.status === "paused" ? "Pausada" : "Cancelada"}` : ""}
@@ -412,10 +412,10 @@ export function SubscriptionsBurnSection({
                         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
                           <div className="flex flex-wrap items-center justify-between gap-2 sm:justify-end">
                             <div className="text-left sm:text-right">
-                              <p className="text-base font-semibold tabular-nums text-slate-900">
+                              <p className="text-base font-semibold tabular-nums text-orbita-primary">
                                 ${formatMoney(s.amount_monthly)}
                               </p>
-                              <p className="text-[11px] text-slate-500 sm:text-xs">
+                              <p className="text-[11px] text-orbita-secondary sm:text-xs">
                                 Renov. {renewalLabel(s.renewal_date)}
                               </p>
                             </div>
@@ -429,7 +429,7 @@ export function SubscriptionsBurnSection({
                             <button
                               type="button"
                               onClick={() => openEdit(s)}
-                              className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 touch-manipulation hover:bg-slate-50 active:bg-slate-100 sm:min-h-0 sm:rounded-full sm:py-2"
+                              className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-orbita-border bg-orbita-surface px-3 text-xs font-medium text-orbita-primary touch-manipulation hover:bg-orbita-surface-alt active:bg-orbita-surface-alt sm:min-h-0 sm:rounded-full sm:py-2"
                             >
                               <Pencil className="mr-1.5 h-4 w-4 shrink-0 sm:h-3.5 sm:w-3.5" aria-hidden />
                               Editar
@@ -438,7 +438,7 @@ export function SubscriptionsBurnSection({
                               <button
                                 type="button"
                                 onClick={() => void setStatus(s, "paused")}
-                                className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 touch-manipulation hover:bg-slate-50 active:bg-slate-100 sm:min-h-0 sm:rounded-full sm:py-2"
+                                className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-orbita-border bg-orbita-surface px-3 text-xs font-medium text-orbita-primary touch-manipulation hover:bg-orbita-surface-alt active:bg-orbita-surface-alt sm:min-h-0 sm:rounded-full sm:py-2"
                               >
                                 <Pause className="mr-1.5 h-4 w-4 shrink-0 sm:h-3.5 sm:w-3.5" aria-hidden />
                                 Pausar
@@ -469,7 +469,7 @@ export function SubscriptionsBurnSection({
                   })}
                 </div>
               )}
-              <div className="border-t border-slate-100 p-4">
+              <div className="border-t border-orbita-border p-4">
                 <button
                   type="button"
                   onClick={openAdd}
@@ -485,23 +485,23 @@ export function SubscriptionsBurnSection({
               className={`flex flex-col gap-3 rounded-2xl border-[0.5px] p-5 sm:flex-row sm:items-center sm:justify-between ${
                 significantSaving
                   ? "border-emerald-200/90 bg-gradient-to-br from-emerald-50/90 to-white"
-                  : "border-slate-200/80 bg-slate-50/50"
+                  : "border-orbita-border/80 bg-orbita-surface-alt/50"
               }`}
               aria-live="polite"
               aria-atomic="true"
             >
               <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-orbita-secondary">
                   Ahorro potencial mensual
                 </p>
                 <p
                   className={`mt-1 text-2xl font-bold tabular-nums tracking-tight sm:text-3xl ${
-                    significantSaving ? "text-emerald-700" : "text-slate-800"
+                    significantSaving ? "text-emerald-700" : "text-orbita-primary"
                   }`}
                 >
                   +${formatMoney(potentialSaving)}
                 </p>
-                <p className="mt-1 text-xs text-slate-500 sm:text-sm">
+                <p className="mt-1 text-xs text-orbita-secondary sm:text-sm">
                   Suma mensual de lo que ya no pagas en suscripciones pausadas o canceladas (se actualiza al instante).
                 </p>
               </div>
@@ -524,18 +524,18 @@ export function SubscriptionsBurnSection({
         subtitle="Incluye solo cargos recurrentes mensuales."
       >
         <div className="space-y-4">
-          <label className="block text-sm font-medium text-slate-700">
+          <label className="block text-sm font-medium text-orbita-primary">
             Nombre
             <input
-              className="mt-1.5 min-h-[44px] w-full rounded-xl border-[0.5px] border-slate-200 px-3 py-2.5 text-base text-slate-900 sm:text-sm"
+              className="mt-1.5 min-h-[44px] w-full rounded-xl border-[0.5px] border-orbita-border px-3 py-2.5 text-base text-orbita-primary sm:text-sm"
               value={draft.name}
               onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
             />
           </label>
-          <label className="block text-sm font-medium text-slate-700">
+          <label className="block text-sm font-medium text-orbita-primary">
             Categoría
             <select
-              className="mt-1.5 min-h-[44px] w-full rounded-xl border-[0.5px] border-slate-200 px-3 py-2.5 text-base text-slate-900 sm:text-sm"
+              className="mt-1.5 min-h-[44px] w-full rounded-xl border-[0.5px] border-orbita-border px-3 py-2.5 text-base text-orbita-primary sm:text-sm"
               value={draft.category}
               onChange={(e) => setDraft((d) => ({ ...d, category: e.target.value }))}
             >
@@ -546,33 +546,33 @@ export function SubscriptionsBurnSection({
               ))}
             </select>
           </label>
-          <label className="block text-sm font-medium text-slate-700">
+          <label className="block text-sm font-medium text-orbita-primary">
             Monto mensual (COP)
             <input
               type="number"
               min={0}
-              className="mt-1.5 min-h-[44px] w-full rounded-xl border-[0.5px] border-slate-200 px-3 py-2.5 text-base text-slate-900 sm:text-sm"
+              className="mt-1.5 min-h-[44px] w-full rounded-xl border-[0.5px] border-orbita-border px-3 py-2.5 text-base text-orbita-primary sm:text-sm"
               value={draft.amount_monthly || ""}
               onChange={(e) => setDraft((d) => ({ ...d, amount_monthly: Number(e.target.value) }))}
             />
           </label>
-          <label className="block text-sm font-medium text-slate-700">
+          <label className="block text-sm font-medium text-orbita-primary">
             Próxima renovación
             <input
               type="date"
-              className="mt-1.5 min-h-[44px] w-full rounded-xl border-[0.5px] border-slate-200 px-3 py-2.5 text-base text-slate-900 sm:text-sm"
+              className="mt-1.5 min-h-[44px] w-full rounded-xl border-[0.5px] border-orbita-border px-3 py-2.5 text-base text-orbita-primary sm:text-sm"
               value={draft.renewal_date}
               onChange={(e) => setDraft((d) => ({ ...d, renewal_date: e.target.value }))}
             />
           </label>
-          <label className="flex min-h-[48px] cursor-pointer touch-manipulation items-center gap-3 rounded-xl border-[0.5px] border-slate-200 bg-slate-50/80 px-4 py-3 active:bg-slate-100">
+          <label className="flex min-h-[48px] cursor-pointer touch-manipulation items-center gap-3 rounded-xl border-[0.5px] border-orbita-border bg-orbita-surface-alt/80 px-4 py-3 active:bg-orbita-surface-alt">
             <input
               type="checkbox"
               checked={draft.include_in_simulator}
               onChange={(e) => setDraft((d) => ({ ...d, include_in_simulator: e.target.checked }))}
-              className="h-5 w-5 shrink-0 rounded border-slate-300"
+              className="h-5 w-5 shrink-0 rounded border-orbita-border"
             />
-            <span className="text-sm leading-snug text-slate-700">
+            <span className="text-sm leading-snug text-orbita-primary">
               Incluir en simulador de flujo (gasto fijo recurrente)
             </span>
           </label>
@@ -581,14 +581,14 @@ export function SubscriptionsBurnSection({
             <button
               type="button"
               onClick={() => setFormOpen(false)}
-              className="min-h-[48px] touch-manipulation rounded-xl border border-slate-200 bg-slate-100 py-3 text-sm font-semibold text-slate-700 active:bg-slate-200"
+              className="min-h-[48px] touch-manipulation rounded-xl border border-orbita-border bg-orbita-surface-alt py-3 text-sm font-semibold text-orbita-primary active:opacity-80"
             >
               Cerrar
             </button>
             <button
               type="button"
               onClick={() => void submitForm()}
-              className="min-h-[48px] touch-manipulation rounded-xl bg-slate-900 py-3 text-sm font-semibold text-white active:bg-slate-800"
+              className="min-h-[48px] touch-manipulation rounded-[var(--radius-button)] bg-[var(--color-text-primary)] py-3 text-sm font-semibold text-[var(--color-surface)] active:opacity-90"
             >
               Guardar
             </button>

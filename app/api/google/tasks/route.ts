@@ -6,7 +6,12 @@ import {
   isSupabaseEnabled,
   UI_GOOGLE_TASKS_OFF,
 } from "@/lib/checkins/flags"
-import { fetchDefaultTaskList, insertDefaultListTask, mapGoogleTask } from "@/lib/google/googleTasksApi"
+import {
+  fetchDefaultTaskList,
+  insertDefaultListTask,
+  mapGoogleTask,
+  patchDefaultListTask,
+} from "@/lib/google/googleTasksApi"
 import { getGoogleAccessTokenForUser } from "@/lib/google/loadAccessToken"
 import { MOCK_GOOGLE_TASKS } from "@/lib/google/mockGoogleData"
 
@@ -129,5 +134,72 @@ export async function POST(req: NextRequest) {
     const msg = e instanceof Error ? e.message : "Error creando tarea"
     console.error("GOOGLE TASKS POST:", msg)
     return NextResponse.json({ success: false, error: "No se pudo crear la tarea en Google" }, { status: 502 })
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  if (isAppMockMode()) {
+    return NextResponse.json({ success: true, task: MOCK_GOOGLE_TASKS[0] })
+  }
+
+  if (!isSupabaseEnabled()) {
+    return NextResponse.json({ success: false, error: API_GOOGLE_MUTATION_NO_SYNC }, { status: 403 })
+  }
+
+  const auth = await requireUser(req)
+  if (auth instanceof NextResponse) return auth
+
+  let body: { id?: string; due?: string | null; title?: string; status?: string }
+  try {
+    body = (await req.json()) as { id?: string; due?: string | null; title?: string; status?: string }
+  } catch {
+    return NextResponse.json({ success: false, error: "JSON inválido" }, { status: 400 })
+  }
+
+  const id = String(body?.id ?? "").trim()
+  if (!id) {
+    return NextResponse.json({ success: false, error: "id es obligatorio" }, { status: 400 })
+  }
+
+  if (body.due === undefined && body.title === undefined && body.status === undefined) {
+    return NextResponse.json({ success: false, error: "Nada que actualizar" }, { status: 400 })
+  }
+
+  const tokenResult = await getGoogleAccessTokenForUser(auth.supabase, auth.userId)
+  if ("error" in tokenResult) {
+    return NextResponse.json(
+      { success: false, error: tokenResult.error },
+      { status: tokenResult.status === 404 ? 400 : tokenResult.status },
+    )
+  }
+
+  try {
+    const updated = await patchDefaultListTask(tokenResult.token, id, {
+      due: body.due,
+      title: body.title,
+      status: body.status,
+    })
+    const mapped = mapGoogleTask(updated)
+    if (mapped) {
+      const now = new Date().toISOString()
+      await auth.supabase.from("external_tasks").upsert(
+        {
+          user_id: auth.userId,
+          google_task_id: mapped.id,
+          title: mapped.title,
+          status: mapped.status,
+          due_date: mapped.due,
+          raw: updated as Record<string, unknown>,
+          synced_at: now,
+          deleted_at: null,
+        },
+        { onConflict: "user_id,google_task_id" },
+      )
+    }
+    return NextResponse.json({ success: true, task: mapped ?? updated })
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Error actualizando tarea"
+    console.error("GOOGLE TASKS PATCH:", msg)
+    return NextResponse.json({ success: false, error: "No se pudo actualizar la tarea en Google" }, { status: 502 })
   }
 }

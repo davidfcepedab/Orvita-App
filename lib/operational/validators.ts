@@ -1,6 +1,12 @@
-import type { HabitMetadata, OperationalDomain } from "@/lib/operational/types"
+import type { HabitMetadata, HabitSuccessMetricType, OperationalDomain } from "@/lib/operational/types"
 
 const DOMAIN_VALUES: OperationalDomain[] = ["salud", "fisico", "profesional", "agenda"]
+
+const SUCCESS_METRIC_TYPES: HabitSuccessMetricType[] = ["duracion", "repeticiones", "cantidad", "si_no"]
+
+function isSuccessMetricType(value: unknown): value is HabitSuccessMetricType {
+  return typeof value === "string" && SUCCESS_METRIC_TYPES.includes(value as HabitSuccessMetricType)
+}
 
 function isDomain(value: unknown): value is OperationalDomain {
   return typeof value === "string" && DOMAIN_VALUES.includes(value as OperationalDomain)
@@ -25,6 +31,22 @@ function coerceHabitMetadataPayload(raw: unknown): HabitMetadata {
   }
   if (Array.isArray(o.display_days)) {
     out.display_days = o.display_days.filter((x): x is string => typeof x === "string")
+  }
+  if (typeof o.intention === "string") {
+    out.intention = o.intention.trim().slice(0, 500)
+  }
+  if (isSuccessMetricType(o.success_metric_type)) {
+    out.success_metric_type = o.success_metric_type
+  }
+  if (typeof o.success_metric_target === "string") {
+    out.success_metric_target = o.success_metric_target.trim().slice(0, 120)
+  }
+  if (typeof o.estimated_session_minutes === "number" && Number.isFinite(o.estimated_session_minutes)) {
+    const n = Math.round(o.estimated_session_minutes)
+    if (n >= 0 && n <= 24 * 60) out.estimated_session_minutes = n
+  }
+  if (typeof o.trigger_or_time === "string") {
+    out.trigger_or_time = o.trigger_or_time.trim().slice(0, 120)
   }
   return out
 }
