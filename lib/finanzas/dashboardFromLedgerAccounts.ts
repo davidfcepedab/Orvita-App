@@ -2,7 +2,6 @@ import { filterMonth } from "@/lib/finanzas/deriveFromTransactions"
 import { incomeAmount, expenseAmount, netCashFlow } from "@/lib/finanzas/calculations/txMath"
 import {
   accountMonthExpenseIncome,
-  normalizeFinanceAccountLabel,
   transactionMatchesLedgerAccount,
 } from "@/lib/finanzas/ledgerAccountTxRollup"
 import type { FinanceTransaction } from "@/lib/finanzas/types"
@@ -75,8 +74,7 @@ function ledgerRowToSaving(
   const parts = row.label.split("|").map((p) => p.trim()).filter(Boolean)
   const institution = parts[1] ?? parts[0] ?? "Ahorros"
   const cur = filterMonth(monthRows, month)
-  const nl = normalizeFinanceAccountLabel(row.label)
-  const matched = cur.filter((t) => transactionMatchesLedgerAccount(t, row.id, nl))
+  const matched = cur.filter((t) => transactionMatchesLedgerAccount(t, row.id, row.label))
   const acctNet = matched.reduce((a, t) => a + incomeAmount(t) - expenseAmount(t), 0)
   const householdNet = netCashFlow(cur)
   const trendUp = matched.length > 0 ? acctNet >= 0 : householdNet >= 0

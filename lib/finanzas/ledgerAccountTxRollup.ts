@@ -13,15 +13,50 @@ export function normalizeFinanceAccountLabel(label: string): string {
     .trim()
 }
 
+/** Últimos 4 dígitos reconocibles en el label del catálogo (coherente con parseTcLabel en cuentas). */
+export function lastFourFromLedgerLabel(ledgerLabel: string): string | null {
+  const t = ledgerLabel.trim()
+  const parts = t.split("|").map((p) => p.trim()).filter(Boolean)
+  const last = parts[parts.length - 1] ?? ""
+  if (/^\d{4}$/.test(last)) return last
+  const m = /\b(\d{4})\b/.exec(t)
+  return m ? m[1]! : null
+}
+
+function descriptionSuggestsLast4(description: string, last4: string): boolean {
+  if (!last4 || !/^\d{4}$/.test(last4)) return false
+  const d = description.trim()
+  if (!d) return false
+  try {
+    const re = new RegExp(`(^|\\D)${last4}(\\D|$)`)
+    return re.test(d)
+  } catch {
+    return d.includes(last4)
+  }
+}
+
+/**
+ * Enlaza movimiento ↔ cuenta ledger por FK, por etiqueta normalizada, o (fallback) por últimos 4 del label
+ * en la descripción cuando el movimiento no trae cuenta (importes previos a account_label / finance_account_id).
+ */
 export function transactionMatchesLedgerAccount(
   t: FinanceTransaction,
   accountId: string,
-  normalizedAccountLabel: string,
+  ledgerLabel: string,
 ): boolean {
   const tid = t.finance_account_id?.trim()
   if (tid && tid === accountId) return true
+
+  const normalizedLedger = normalizeFinanceAccountLabel(ledgerLabel)
   const tl = normalizeFinanceAccountLabel(t.account_label ?? "")
-  return tl.length > 0 && tl === normalizedAccountLabel
+  if (tl.length > 0 && tl === normalizedLedger) return true
+
+  if (tl.length === 0 && !tid) {
+    const last4 = lastFourFromLedgerLabel(ledgerLabel)
+    if (last4 && descriptionSuggestsLast4(t.description ?? "", last4)) return true
+  }
+
+  return false
 }
 
 /** Ingresos y gastos del mes vinculados a la cuenta (FK o etiqueta). */
@@ -32,11 +67,10 @@ export function accountMonthExpenseIncome(
   accountLabel: string,
 ): { expense: number; income: number } {
   const cur = filterMonth(monthRows, month)
-  const nl = normalizeFinanceAccountLabel(accountLabel)
   let expense = 0
   let income = 0
   for (const t of cur) {
-    if (!transactionMatchesLedgerAccount(t, accountId, nl)) continue
+    if (!transactionMatchesLedgerAccount(t, accountId, accountLabel)) continue
     expense += expenseAmount(t)
     income += incomeAmount(t)
   }

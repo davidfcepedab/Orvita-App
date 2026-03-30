@@ -135,4 +135,34 @@ describe("mergeLiveDashboardWithLedger", () => {
     expect(out.creditCards[0]!.balance).toBe(150_000)
     expect(out.creditCards[0]!.usagePct).toBe(1)
   })
+
+  test("derives TC balance via last4 in description when cuenta columns empty", () => {
+    const ledger: LedgerAccountSortable[] = [
+      {
+        id: "c1",
+        label: "TC | Visa Villas | Juan | 5419",
+        account_class: "tarjeta_credito",
+        nature: "pasivo_rotativo",
+        credit_limit: 25_000_000,
+        balance_used: 0,
+        sort_order: 0,
+      },
+    ]
+    const rows: FinanceTransaction[] = [
+      {
+        id: "t1",
+        date: "2026-03-10",
+        description: "Supermercado · TC 5419",
+        amount: 220_000,
+        type: "expense",
+        category: "Otros",
+        created_at: "2026-03-10T00:00:00Z",
+        updated_at: "2026-03-10T00:00:00Z",
+        account_label: "",
+        finance_account_id: null,
+      },
+    ]
+    const out = mergeLiveDashboardWithLedger(live, "2026-03", ledger, rows)
+    expect(out.creditCards[0]!.balance).toBe(220_000)
+  })
 })

@@ -1,4 +1,5 @@
 import type { FinanceTransaction } from "@/lib/finanzas/types"
+import { normalizeFinanceAccountLabel } from "@/lib/finanzas/ledgerAccountTxRollup"
 
 /** Fila mínima de `orbita_finance_accounts` para ordenar en UI/API. */
 export type LedgerAccountSortable = {
@@ -51,7 +52,7 @@ export function buildLedgerTxCounts(rows: FinanceTransaction[]): {
     if (id) {
       byId.set(id, (byId.get(id) ?? 0) + 1)
     } else {
-      const lab = (r.account_label ?? "").trim().toLowerCase()
+      const lab = normalizeFinanceAccountLabel(r.account_label ?? "")
       if (lab) {
         byLabel.set(lab, (byLabel.get(lab) ?? 0) + 1)
       }
@@ -66,7 +67,7 @@ function txCountForAccount(
   byLabel: Map<string, number>,
 ): number {
   const idC = byId.get(a.id) ?? 0
-  const labelC = byLabel.get(a.label.trim().toLowerCase()) ?? 0
+  const labelC = byLabel.get(normalizeFinanceAccountLabel(a.label)) ?? 0
   return Math.max(idC, labelC)
 }
 
