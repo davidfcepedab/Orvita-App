@@ -68,11 +68,15 @@ function labelMonth(ym: string): string {
   return `${name} '${String(y).slice(-2)}`
 }
 
-export function buildMonthlyFlowBuckets(months: string[], rows: FinanceTransaction[]): FlowEvolutionRow[] {
+export function buildMonthlyFlowBuckets(
+  months: string[],
+  rows: FinanceTransaction[],
+  expenseFn: (tx: FinanceTransaction) => number = expenseAmount,
+): FlowEvolutionRow[] {
   return months.map((mm) => {
     const inM = filterMonth(rows, mm)
     const ing = inM.reduce((a, t) => a + incomeAmount(t), 0)
-    const exp = inM.reduce((a, t) => a + expenseAmount(t), 0)
+    const exp = inM.reduce((a, t) => a + expenseFn(t), 0)
     return {
       month: labelMonth(mm),
       ingresos: ing,
@@ -90,7 +94,9 @@ export function fillMonthlyFlowFromSnapshots(
   monthsYm: string[],
   buckets: FlowEvolutionRow[],
   snapByYm: ReadonlyMap<string, { income: number; expense: number }>,
+  options?: { fillExpenseFromSnapshots?: boolean },
 ): FlowEvolutionRow[] {
+  const fillExpense = options?.fillExpenseFromSnapshots !== false
   return buckets.map((row, i) => {
     const ym = monthsYm[i]
     if (!ym) return row
@@ -99,7 +105,7 @@ export function fillMonthlyFlowFromSnapshots(
     const s = snapByYm.get(ym)
     if (!s) return row
     const ing = s.income
-    const exp = s.expense
+    const exp = fillExpense ? s.expense : 0
     if (ing < 1e-6 && exp < 1e-6) return row
     return {
       ...row,

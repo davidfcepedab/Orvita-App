@@ -49,7 +49,11 @@ export function filterMonth(rows: FinanceTransaction[], month: string) {
   return rows.filter((r) => r.date >= b.startStr && r.date <= b.endStr)
 }
 
-export function buildWeeklyBuckets(month: string, rows: FinanceTransaction[]): WeeklyBucketRow[] {
+export function buildWeeklyBuckets(
+  month: string,
+  rows: FinanceTransaction[],
+  expenseFn: (tx: FinanceTransaction) => number = expenseAmount,
+): WeeklyBucketRow[] {
   const inMonth = filterMonth(rows, month)
   const bucketTotals = new Map<number, { ing: number; exp: number }>()
   for (let w = 1; w <= 5; w += 1) bucketTotals.set(w, { ing: 0, exp: 0 })
@@ -60,7 +64,7 @@ export function buildWeeklyBuckets(month: string, rows: FinanceTransaction[]): W
     const w = Math.min(5, Math.ceil(day / 7))
     const b = bucketTotals.get(w)!
     b.ing += incomeAmount(tx)
-    b.exp += expenseAmount(tx)
+    b.exp += expenseFn(tx)
   }
 
   return [1, 2, 3, 4, 5].map((w) => {
@@ -287,15 +291,25 @@ export function recomputeStructuralTotals(structuralCategories: StructuralCatego
 
 const SUBS_RE = /suscrip|saas|software|spotify|netflix|chatgpt|figma|copilot|github|notion|slack|openai|apple music/i
 
-export function pickSubscriptionExpenses(rows: FinanceTransaction[]) {
-  return rows.filter((r) => expenseAmount(r) > 0 && SUBS_RE.test(`${r.category} ${r.subcategory} ${r.description}`))
+export function pickSubscriptionExpenses(
+  rows: FinanceTransaction[],
+  expenseFn: (tx: FinanceTransaction) => number = expenseAmount,
+) {
+  return rows.filter(
+    (r) => expenseFn(r) > 0 && SUBS_RE.test(`${r.category} ${r.subcategory} ${r.description}`),
+  )
 }
 
 const OBL_RE = /arriend|rent|hipotec|seguro oblig|internet|utilities|luz|agua|gas|car insurance/i
 
-export function pickObligationExpenses(rows: FinanceTransaction[]) {
-  const list = rows.filter((r) => expenseAmount(r) > 0 && (isFixedCategoryName(r.category) || OBL_RE.test(r.description)))
-  return list.sort((a, b) => expenseAmount(b) - expenseAmount(a)).slice(0, 8)
+export function pickObligationExpenses(
+  rows: FinanceTransaction[],
+  expenseFn: (tx: FinanceTransaction) => number = expenseAmount,
+) {
+  const list = rows.filter(
+    (r) => expenseFn(r) > 0 && (isFixedCategoryName(r.category) || OBL_RE.test(r.description)),
+  )
+  return list.sort((a, b) => expenseFn(b) - expenseFn(a)).slice(0, 8)
 }
 
 export type InsightPayload = {

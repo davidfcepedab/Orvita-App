@@ -3,6 +3,8 @@ import { requireUser } from "@/lib/api/requireUser"
 import { isAppMockMode, isSupabaseEnabled, UI_FINANCE_DEMO_NOTICE } from "@/lib/checkins/flags"
 import { calculateOverview } from "@/lib/finanzas/calculations/overview"
 import { expenseAmount } from "@/lib/finanzas/calculations/txMath"
+import { createOperativoExpenseFn } from "@/lib/finanzas/operativoExpense"
+import { fetchSubcategoryCatalogMerged } from "@/lib/finanzas/subcategoryCatalog"
 import {
   buildMonthlyFlowBuckets,
   calendarQuarterMonthsThrough,

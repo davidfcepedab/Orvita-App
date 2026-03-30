@@ -1,15 +1,26 @@
 import type { FinanceTransaction } from "../types"
-import { expenseAmount, incomeAmount, netCashFlow } from "./txMath"
+import { expenseAmount, incomeAmount } from "./txMath"
+
+export type OverviewExpenseMode = {
+  /** Por defecto: todo gasto marcado como expense en TX. */
+  expenseAmount?: (tx: FinanceTransaction) => number
+}
 
 export function calculateOverview(
   currentRows: FinanceTransaction[],
   previousRows: FinanceTransaction[],
+  options?: OverviewExpenseMode,
 ) {
+  const expFn = options?.expenseAmount ?? expenseAmount
   const income = currentRows.reduce((a, b) => a + incomeAmount(b), 0)
-  const expense = currentRows.reduce((a, b) => a + expenseAmount(b), 0)
-  const net = netCashFlow(currentRows)
+  const expense = currentRows.reduce((a, b) => a + expFn(b), 0)
+  const net = income - expense
 
-  const previousNet = previousRows.length > 0 ? netCashFlow(previousRows) : null
+  const previousNet =
+    previousRows.length > 0
+      ? previousRows.reduce((a, b) => a + incomeAmount(b), 0) -
+        previousRows.reduce((a, b) => a + expFn(b), 0)
+      : null
 
   const deltaNet =
     previousNet !== null && Math.abs(previousNet) > 1e-6

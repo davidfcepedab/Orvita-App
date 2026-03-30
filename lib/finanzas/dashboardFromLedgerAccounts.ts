@@ -1,5 +1,10 @@
 import { filterMonth } from "@/lib/finanzas/deriveFromTransactions"
-import { netCashFlow } from "@/lib/finanzas/calculations/txMath"
+import { incomeAmount, expenseAmount, netCashFlow } from "@/lib/finanzas/calculations/txMath"
+import {
+  accountMonthExpenseIncome,
+  normalizeFinanceAccountLabel,
+  transactionMatchesLedgerAccount,
+} from "@/lib/finanzas/ledgerAccountTxRollup"
 import type { FinanceTransaction } from "@/lib/finanzas/types"
 import type {
   CuentasCreditCard,
@@ -52,31 +57,52 @@ function ledgerRowToSaving(
 ): CuentasSavingsCard {
   const manualRaw = row.manual_balance != null ? Number(row.manual_balance) : NaN
   const availRaw = row.balance_available != null ? Number(row.balance_available) : NaN
-  const amount =
-    row.manual_balance != null && Number.isFinite(manualRaw)
-      ? manualRaw
-      : Number.isFinite(availRaw)
-        ? availRaw
-        : 0
+  const manualExplicit =
+    row.manual_balance != null &&
+    Number.isFinite(manualRaw) &&
+    (manualRaw !== 0 || Boolean(row.manual_balance_on?.trim()))
+  let amount = 0
+  if (manualExplicit) {
+    amount = Math.max(0, manualRaw)
+  } else if (Number.isFinite(availRaw)) {
+    amount = Math.max(0, availRaw)
+  } else {
+    const { expense, income } = accountMonthExpenseIncome(monthRows, month, row.id, row.label)
+    const netOnAccount = income - expense
+    amount = netOnAccount > 0 ? Math.round(netOnAccount) : 0
+  }
 
   const parts = row.label.split("|").map((p) => p.trim()).filter(Boolean)
   const institution = parts[1] ?? parts[0] ?? "Ahorros"
   const cur = filterMonth(monthRows, month)
-  const net = netCashFlow(cur)
-  const ratio = cur.length ? Math.min(1.2, cur.reduce((a, t) => a + Math.abs(t.amount), 0) / Math.max(1, cur.length * 500_000)) : 0.4
+  const nl = normalizeFinanceAccountLabel(row.label)
+  const matched = cur.filter((t) => transactionMatchesLedgerAccount(t, row.id, nl))
+  const acctNet = matched.reduce((a, t) => a + incomeAmount(t) - expenseAmount(t), 0)
+  const householdNet = netCashFlow(cur)
+  const trendUp = matched.length > 0 ? acctNet >= 0 : householdNet >= 0
+  const activity = matched.reduce((a, t) => a + Math.abs(Number(t.amount)), 0)
+  const ratio = matched.length
+    ? Math.min(1.2, activity / Math.max(1, matched.length * 500_000))
+    : cur.length
+      ? Math.min(1.2, cur.reduce((a, t) => a + Math.abs(t.amount), 0) / Math.max(1, cur.length * 500_000))
+      : 0.4
+  const netForHealth = matched.length > 0 ? acctNet : householdNet
 
   return {
     id: `ledger-${row.id}`,
     institution,
     label: row.label.trim(),
     amount,
-    healthPct: Math.min(96, Math.max(52, Math.round(74 - ratio * 22 + (net >= 0 ? 10 : -8)))),
-    trendUp: net >= 0,
+    healthPct: Math.min(96, Math.max(52, Math.round(74 - ratio * 22 + (netForHealth >= 0 ? 10 : -8)))),
+    trendUp,
   }
 }
 
-function ledgerRowToCreditCard(row: LedgerAccountSortable, month: string): CuentasCreditCard {
-  const balance = Math.max(0, Number(row.balance_used ?? 0))
+function ledgerRowToCreditCard(row: LedgerAccountSortable, month: string, monthRows: FinanceTransaction[]): CuentasCreditCard {
+  const dbBalance = Math.max(0, Number(row.balance_used ?? 0))
+  const { expense, income } = accountMonthExpenseIncome(monthRows, month, row.id, row.label)
+  const txNetDebt = Math.max(0, Math.round(expense - income))
+  const balance = dbBalance > 0 ? dbBalance : txNetDebt
   let limit = Math.max(0, Number(row.credit_limit ?? 0))
   if (limit < 1 && balance > 0) limit = Math.max(balance * 2, 1)
   const usagePct = limit > 0 ? Math.min(100, Math.round((balance / limit) * 100)) : balance > 0 ? 100 : 0
@@ -98,8 +124,12 @@ function ledgerRowToCreditCard(row: LedgerAccountSortable, month: string): Cuent
   }
 }
 
-function ledgerRowToLoan(row: LedgerAccountSortable): CuentasLoanCard {
-  const saldoPendiente = Math.round(Math.max(0, Number(row.balance_used ?? row.manual_balance ?? 0)))
+function ledgerRowToLoan(row: LedgerAccountSortable, month: string, monthRows: FinanceTransaction[]): CuentasLoanCard {
+  let saldoPendiente = Math.round(Math.max(0, Number(row.balance_used ?? row.manual_balance ?? 0)))
+  if (saldoPendiente < 1) {
+    const { expense, income } = accountMonthExpenseIncome(monthRows, month, row.id, row.label)
+    saldoPendiente = Math.max(0, Math.round(expense - income))
+  }
   const original = Number(row.credit_limit ?? 0)
   const hasOrig = original > saldoPendiente && original > 0
   const pctPagado = hasOrig
@@ -184,8 +214,9 @@ export function mergeLiveDashboardWithLedger(
 
   for (const row of ledgerSorted) {
     if (row.account_class === "ahorro") savings.push(ledgerRowToSaving(row, month, monthRows))
-    else if (row.account_class === "tarjeta_credito") creditCards.push(ledgerRowToCreditCard(row, month))
-    else if (row.account_class === "credito") loans.push(ledgerRowToLoan(row))
+    else if (row.account_class === "tarjeta_credito")
+      creditCards.push(ledgerRowToCreditCard(row, month, monthRows))
+    else if (row.account_class === "credito") loans.push(ledgerRowToLoan(row, month, monthRows))
   }
 
   /** Con catálogo en BD: no mezclar tarjetas sintéticas; secciones vacías si aún no hay ese tipo. */
