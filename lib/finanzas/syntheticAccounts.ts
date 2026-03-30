@@ -1,5 +1,6 @@
 import type { FinanceTransaction } from "@/lib/finanzas/types"
 import { expenseAmount, incomeAmount, netCashFlow } from "@/lib/finanzas/calculations/txMath"
+import { householdLiquidityRawFromSnapshot } from "@/lib/finanzas/householdLiquidityFromSnapshot"
 import { pickObligationExpenses } from "@/lib/finanzas/deriveFromTransactions"
 
 export type FinanceAccountCard = {
@@ -30,7 +31,7 @@ export function buildSyntheticAccounts(
   const expense = inMonth.reduce((a, t) => a + expenseAmount(t), 0)
   const net = netCashFlow(inMonth)
 
-  const balance = typeof snapshotBalance === "number" && Number.isFinite(snapshotBalance) ? snapshotBalance : net
+  const balance = householdLiquidityRawFromSnapshot(snapshotBalance, inMonth)
 
   const utilization = income > 0 ? Math.min(1.2, expense / income) : expense > 0 ? 1 : 0
   const scoreLiquidity = Math.max(0, Math.min(100, Math.round(100 - utilization * 55 + (net > 0 ? 12 : -18))))

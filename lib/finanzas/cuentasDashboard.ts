@@ -1,5 +1,11 @@
+/**
+ * Dashboard heurístico de la hoja Cuentas (Capital): KPI y tarjetas derivados de movimientos del mes +
+ * balance del snapshot mensual (`householdLiquidezDisplayRounded`). Es independiente del cálculo de KPI
+ * del Overview (transacciones + fallback snapshot en la ruta `/api/orbita/finanzas/overview`).
+ */
 import type { FinanceTransaction } from "@/lib/finanzas/types"
 import { expenseAmount, incomeAmount, netCashFlow } from "@/lib/finanzas/calculations/txMath"
+import { householdLiquidezDisplayRounded, householdLiquidityRawFromSnapshot } from "@/lib/finanzas/householdLiquidityFromSnapshot"
 import { filterMonth, pickObligationExpenses } from "@/lib/finanzas/deriveFromTransactions"
 
 export type CuentasKpis = {
@@ -195,8 +201,7 @@ function liveDashboard(
   const income = cur.reduce((a, t) => a + incomeAmount(t), 0)
   const expense = cur.reduce((a, t) => a + expenseAmount(t), 0)
   const net = netCashFlow(cur)
-  const balance =
-    typeof snapshotBalance === "number" && Number.isFinite(snapshotBalance) ? snapshotBalance : net
+  const balance = householdLiquidityRawFromSnapshot(snapshotBalance, cur)
 
   const prevNet = netCashFlow(previousRows)
   const liquidezTrendPct =
@@ -211,7 +216,7 @@ function liveDashboard(
   const obligations = pickObligationExpenses(cur)
   const obligationSum = obligations.reduce((a, t) => a + expenseAmount(t), 0)
 
-  const totalLiquidez = Math.max(0, Math.round(balance))
+  const totalLiquidez = householdLiquidezDisplayRounded(snapshotBalance, cur)
   const ratio = income > 0 ? Math.min(1.15, expense / income) : expense > 0 ? 0.85 : 0.35
 
   const limits = [0.3, 0.26, 0.24, 0.2].map((w) => Math.round(Math.max(800_000, income * w * 1.15)))

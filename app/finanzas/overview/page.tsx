@@ -122,6 +122,7 @@ const FLOW_TABS: { id: FlowEvolutionKey; label: string; subtitle: string }[] = [
 
 export default function FinanzasOverview() {
   const finance = useFinance()
+  /** Periodo activo (FinanceContext). Datos: GET overview (TX + fallback snapshot) y GET summary (snapshots BD). */
   const month = finance?.month ?? ""
 
   const [data, setData] = useState<OverviewData | null>(null)

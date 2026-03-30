@@ -1,7 +1,11 @@
 import type { CuentasDashboardPayload } from "@/lib/finanzas/cuentasDashboard"
 import type { ManualFinanceBundle } from "@/lib/finanzas/manualFinanceLocal"
 
-/** Fusiona ítems manuales (local o Supabase) con el dashboard sintético sin eliminar filas base innecesariamente. */
+/**
+ * Capa de presentación sobre `buildCuentasDashboard`: añade/reemplaza tarjetas de ahorro, TC y créditos
+ * definidas por el usuario (`household_finance_manual_items` o localStorage). No altera snapshots ni TX en BD.
+ * Los montos $0 en ahorros suelen ser ítems manuales sin monto o reparto sintético cuando liquidez base es 0.
+ */
 export function mergeCuentasDashboard(
   base: CuentasDashboardPayload,
   manual: ManualFinanceBundle,

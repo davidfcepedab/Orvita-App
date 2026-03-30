@@ -23,6 +23,11 @@ import { getTransactionsByRange } from "@/lib/services/finanzasService"
 
 export const runtime = "nodejs"
 
+/**
+ * KPI y series: primero desde movimientos del mes (fechas normalizadas en getTransactionsByRange);
+ * si ingresos+gastos suman ~0 y existe fila en finance_monthly_snapshots, los KPI numéricos usan el snapshot.
+ * Distinto de `/api/orbita/finanzas/accounts` (dashboard heurístico + merge manual para tarjetas Capital).
+ */
 export async function GET(req: NextRequest) {
   try {
     const month = req.nextUrl.searchParams.get("month")

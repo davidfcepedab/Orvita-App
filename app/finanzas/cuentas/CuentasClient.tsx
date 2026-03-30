@@ -18,6 +18,7 @@ import {
 } from "lucide-react"
 import { Card } from "@/src/components/ui/Card"
 import { useFinance } from "../FinanceContext"
+import { useLedgerAccounts } from "../useLedgerAccounts"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { financeApiGet, financeApiJson } from "@/lib/finanzas/financeClientFetch"
 import { mergeCuentasDashboard } from "@/lib/finanzas/mergeCuentasManual"
@@ -132,12 +133,19 @@ function StatKpiCard({
 }
 
 function SavingsPlank({ item, onEdit }: { item: CuentasSavingsCard; onEdit?: () => void }) {
+  const raw = Number(item.amount)
+  const hasAmount = Number.isFinite(raw) && raw !== 0
+  const fromManual = Boolean(item.manualRowId)
+  const tipManual =
+    "Monto de esta tarjeta: datos manuales (guardados en el dispositivo o en Supabase según tu configuración). Edita para actualizar."
+
   return (
     <div
       className={`relative overflow-hidden p-6 sm:p-8 ${arcticPanel}`}
       style={{
         background: "linear-gradient(120deg, rgba(240,253,250,0.95) 0%, rgba(255,255,255,0.98) 55%, rgba(236,254,255,0.88) 100%)",
       }}
+      title={fromManual ? tipManual : undefined}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -148,7 +156,24 @@ function SavingsPlank({ item, onEdit }: { item: CuentasSavingsCard; onEdit?: () 
           {item.healthPct}% {item.trendUp ? <ArrowUpRight className="h-3.5 w-3.5" aria-hidden /> : null}
         </span>
       </div>
-      <p className="mt-6 text-3xl font-semibold tracking-tight text-orbita-primary">${formatMoney(item.amount)}</p>
+      {hasAmount ? (
+        <p className="mt-6 text-3xl font-semibold tracking-tight text-orbita-primary">${formatMoney(raw)}</p>
+      ) : (
+        <div className="mt-6 grid gap-2">
+          <p className="text-lg font-semibold text-orbita-secondary">Sin saldo registrado</p>
+          <p className="text-sm leading-snug text-orbita-secondary">
+            Pendiente de completar.
+            {fromManual
+              ? " Edita la tarjeta para fijar el monto manual."
+              : " Si usas datos manuales, edita la tarjeta; si no, la liquidez del mes puede ser 0 o aún no repartida en estas tarjetas."}
+          </p>
+          {fromManual ? (
+            <p className="text-[11px] text-orbita-secondary" title={tipManual}>
+              Origen: datos manuales · Pasa el cursor para más info
+            </p>
+          ) : null}
+        </div>
+      )}
       {onEdit ? (
         <button
           type="button"
@@ -332,21 +357,22 @@ export default function CuentasClient() {
   const finance = useFinance()
   const month = finance?.month ?? ""
 
+  const {
+    accounts: ledgerAccounts,
+    refetch: refetchLedger,
+    loading: ledgerLoading,
+    error: ledgerError,
+  } = useLedgerAccounts({ enabled: supabaseEnabled })
+  const [ledgerReorderMessage, setLedgerReorderMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!ledgerReorderMessage) return
+    const t = window.setTimeout(() => setLedgerReorderMessage(null), 4200)
+    return () => window.clearTimeout(t)
+  }, [ledgerReorderMessage])
+
   const [dashboard, setDashboard] = useState<CuentasDashboardPayload | null>(null)
   const [accountsLegacy, setAccountsLegacy] = useState<AccountLegacy[]>([])
-  const [ledgerAccounts, setLedgerAccounts] = useState<
-    {
-      id: string
-      label: string
-      account_class: string
-      nature: string
-      credit_limit: number | null
-      balance_used: number | null
-      balance_available: number | null
-      manual_balance: number | null
-      sort_order?: number | null
-    }[]
-  >([])
   const [ledgerReorderBusy, setLedgerReorderBusy] = useState(false)
   const [loading, setLoading] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
@@ -421,17 +447,6 @@ export default function CuentasClient() {
           data?: {
             accounts?: AccountLegacy[]
             dashboard?: CuentasDashboardPayload | null
-            ledgerAccounts?: {
-              id: string
-              label: string
-              account_class: string
-              nature: string
-              credit_limit: number | null
-              balance_used: number | null
-              balance_available: number | null
-              manual_balance: number | null
-              sort_order?: number | null
-            }[]
           }
           error?: string
           notice?: string
@@ -442,7 +457,6 @@ export default function CuentasClient() {
         if (!cancelled) {
           setAccountsLegacy(json.data?.accounts ?? [])
           setDashboard(json.data?.dashboard ?? null)
-          setLedgerAccounts(json.data?.ledgerAccounts ?? [])
           setNotice(json.notice ?? null)
         }
       } catch (e) {
@@ -450,7 +464,6 @@ export default function CuentasClient() {
           setLoadError(e instanceof Error ? e.message : "Error")
           setDashboard(null)
           setAccountsLegacy([])
-          setLedgerAccounts([])
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -483,15 +496,15 @@ export default function CuentasClient() {
           setNotice(messageForHttpError(res.status, json.error, res.statusText))
           return
         }
-        setLedgerAccounts(next.map((row, i) => ({ ...row, sort_order: i })))
-        setNotice("Orden de cuentas guardado en Supabase.")
+        await refetchLedger()
+        setLedgerReorderMessage("Orden de cuentas guardado.")
       } catch {
         setNotice("No se pudo guardar el orden de cuentas.")
       } finally {
         setLedgerReorderBusy(false)
       }
     },
-    [ledgerAccounts],
+    [ledgerAccounts, refetchLedger],
   )
 
   const reloadManualFromApi = useCallback(async () => {
@@ -1010,7 +1023,7 @@ export default function CuentasClient() {
         </div>
       </div>
 
-      {ledgerAccounts.length > 0 ? (
+      {supabaseEnabled && (ledgerLoading || ledgerAccounts.length > 0 || ledgerError) ? (
         <Card className={`p-4 sm:p-6 ${arcticPanel}`}>
           <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
             Cuentas desde movimientos (Supabase)
@@ -1020,57 +1033,79 @@ export default function CuentasClient() {
             completarlos desde la hoja Cuentas o editando aquí más adelante. El orden por defecto prioriza tipo de
             cuenta, saldo y uso en el mes; usa las flechas para fijar un orden personal (persistente para el hogar).
           </p>
-          <ul className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-            {ledgerAccounts.map((a, idx) => (
-              <li
-                key={a.id}
-                className="flex gap-2 rounded-xl border border-orbita-border/80 bg-orbita-surface px-3 py-2.5 [overflow-wrap:anywhere]"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-orbita-primary">{a.label}</p>
-                  <p className="mt-0.5 text-[11px] uppercase tracking-wide text-orbita-secondary">
-                    {a.account_class.replace(/_/g, " ")} · {a.nature.replace(/_/g, " ")}
-                  </p>
-                  {(() => {
-                    const bits: string[] = []
-                    if (a.manual_balance != null && Number(a.manual_balance) !== 0) {
-                      bits.push(`Manual $${formatMoney(Number(a.manual_balance))}`)
-                    }
-                    if (a.account_class === "ahorro" && a.balance_available != null) {
-                      bits.push(`Disp. $${formatMoney(Number(a.balance_available))}`)
-                    }
-                    if (a.account_class !== "ahorro" && a.balance_used != null) {
-                      bits.push(`Usado $${formatMoney(Number(a.balance_used))}`)
-                    }
-                    if (bits.length === 0) return null
-                    return (
-                      <p className="mt-1 text-[11px] tabular-nums text-orbita-secondary">{bits.join(" · ")}</p>
-                    )
-                  })()}
-                </div>
-                <div className="flex shrink-0 flex-col justify-center gap-0.5 border-l border-orbita-border/60 pl-2">
-                  <button
-                    type="button"
-                    disabled={ledgerReorderBusy || idx === 0}
-                    onClick={() => void moveLedgerAccount(idx, -1)}
-                    className="rounded-md p-1 text-orbita-secondary hover:bg-orbita-surface-alt hover:text-orbita-primary disabled:opacity-30"
-                    aria-label={`Subir ${a.label}`}
-                  >
-                    <ChevronUp className="h-4 w-4" aria-hidden />
-                  </button>
-                  <button
-                    type="button"
-                    disabled={ledgerReorderBusy || idx === ledgerAccounts.length - 1}
-                    onClick={() => void moveLedgerAccount(idx, 1)}
-                    className="rounded-md p-1 text-orbita-secondary hover:bg-orbita-surface-alt hover:text-orbita-primary disabled:opacity-30"
-                    aria-label={`Bajar ${a.label}`}
-                  >
-                    <ChevronDown className="h-4 w-4" aria-hidden />
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
+          {ledgerReorderMessage ? (
+            <p
+              className="mt-2 rounded-lg border border-emerald-200/80 bg-emerald-50/90 px-3 py-2 text-xs font-medium text-emerald-900"
+              role="status"
+            >
+              {ledgerReorderMessage}
+            </p>
+          ) : null}
+          {ledgerError ? (
+            <p className="mt-2 text-xs text-amber-800 dark:text-amber-300">{ledgerError}</p>
+          ) : null}
+          {ledgerLoading && ledgerAccounts.length === 0 ? (
+            <p className="mt-3 text-sm text-orbita-secondary">Cargando cuentas ledger…</p>
+          ) : null}
+          {!ledgerLoading && ledgerAccounts.length === 0 && !ledgerError ? (
+            <p className="mt-3 text-sm text-orbita-secondary">
+              No hay filas en orbita_finance_accounts para este hogar (importa movimientos con columna Cuenta o crea
+              cuentas en BD).
+            </p>
+          ) : null}
+          {ledgerAccounts.length > 0 ? (
+            <ul className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+              {ledgerAccounts.map((a, idx) => (
+                <li
+                  key={a.id}
+                  className="flex gap-2 rounded-xl border border-orbita-border/80 bg-orbita-surface px-3 py-2.5 [overflow-wrap:anywhere]"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-orbita-primary">{a.label}</p>
+                    <p className="mt-0.5 text-[11px] uppercase tracking-wide text-orbita-secondary">
+                      {a.account_class.replace(/_/g, " ")} · {a.nature.replace(/_/g, " ")}
+                    </p>
+                    {(() => {
+                      const bits: string[] = []
+                      if (a.manual_balance != null && Number(a.manual_balance) !== 0) {
+                        bits.push(`Manual $${formatMoney(Number(a.manual_balance))}`)
+                      }
+                      if (a.account_class === "ahorro" && a.balance_available != null) {
+                        bits.push(`Disp. $${formatMoney(Number(a.balance_available))}`)
+                      }
+                      if (a.account_class !== "ahorro" && a.balance_used != null) {
+                        bits.push(`Usado $${formatMoney(Number(a.balance_used))}`)
+                      }
+                      if (bits.length === 0) return null
+                      return (
+                        <p className="mt-1 text-[11px] tabular-nums text-orbita-secondary">{bits.join(" · ")}</p>
+                      )
+                    })()}
+                  </div>
+                  <div className="flex shrink-0 flex-col justify-center gap-0.5 border-l border-orbita-border/60 pl-2">
+                    <button
+                      type="button"
+                      disabled={ledgerReorderBusy || idx === 0}
+                      onClick={() => void moveLedgerAccount(idx, -1)}
+                      className="rounded-md p-1 text-orbita-secondary hover:bg-orbita-surface-alt hover:text-orbita-primary disabled:opacity-30"
+                      aria-label={`Subir ${a.label}`}
+                    >
+                      <ChevronUp className="h-4 w-4" aria-hidden />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={ledgerReorderBusy || idx === ledgerAccounts.length - 1}
+                      onClick={() => void moveLedgerAccount(idx, 1)}
+                      className="rounded-md p-1 text-orbita-secondary hover:bg-orbita-surface-alt hover:text-orbita-primary disabled:opacity-30"
+                      aria-label={`Bajar ${a.label}`}
+                    >
+                      <ChevronDown className="h-4 w-4" aria-hidden />
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </Card>
       ) : null}
 
