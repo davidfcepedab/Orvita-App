@@ -19,9 +19,12 @@ function shiftMonth(m: string, delta: number) {
 
 export async function GET(req: NextRequest) {
   try {
-    const month = req.nextUrl.searchParams.get("month") || new Date().toISOString().slice(0, 7)
-    if (!/^\d{4}-\d{2}$/.test(month)) {
-      return NextResponse.json({ success: false, error: "month inválido" }, { status: 400 })
+    const month = req.nextUrl.searchParams.get("month")
+    if (!month || !/^\d{4}-\d{2}$/.test(month)) {
+      return NextResponse.json(
+        { success: false, error: "month requerido (YYYY-MM)" },
+        { status: 400 },
+      )
     }
 
     const slices: { month: string; rows: FinanceTransaction[] }[] = []

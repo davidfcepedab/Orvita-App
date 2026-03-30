@@ -484,7 +484,7 @@ export default function CuentasClient() {
           return
         }
         setLedgerAccounts(next.map((row, i) => ({ ...row, sort_order: i })))
-        setNotice(null)
+        setNotice("Orden de cuentas guardado en Supabase.")
       } catch {
         setNotice("No se pudo guardar el orden de cuentas.")
       } finally {
