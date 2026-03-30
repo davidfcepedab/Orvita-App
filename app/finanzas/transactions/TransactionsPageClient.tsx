@@ -116,31 +116,33 @@ export default function TransactionsPageClient() {
   const deltaValue = delta ?? (previousSubtotal ? subtotal - previousSubtotal : 0)
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="min-w-0 space-y-6 sm:space-y-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <button
           onClick={() => router.back()}
-          className="rounded-full border border-slate-200 bg-white px-4 py-2 text-[11px] uppercase tracking-[0.16em] text-slate-600"
+          className="order-2 w-full min-h-[44px] rounded-full border border-slate-200 bg-white px-4 py-2 text-[11px] uppercase tracking-[0.16em] text-slate-600 sm:order-none sm:w-auto sm:min-h-0"
         >
           Volver
         </button>
-        <div className="text-center">
+        <div className="order-1 min-w-0 flex-1 text-center sm:order-none sm:flex-none sm:text-left">
           <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Movimientos</p>
-          <h1 className="text-2xl font-semibold text-slate-900">
+          <h1 className="break-words text-xl font-semibold text-slate-900 sm:text-2xl">
             {category || "Consolidado mensual"}
           </h1>
           <p className="text-xs text-slate-500">Periodo: {month || "Actual"}</p>
         </div>
-        <div className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-[11px] uppercase tracking-[0.16em] text-slate-500">
-          {transactions.length} registros
+        <div className="order-3 flex justify-center sm:order-none sm:justify-end">
+          <div className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-center text-[11px] uppercase tracking-[0.16em] text-slate-500">
+            {transactions.length} registros
+          </div>
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
-        <Card hover className="p-8">
-          <div className="grid gap-2">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3">
+        <Card hover className="min-w-0 p-4 sm:p-8">
+          <div className="grid min-w-0 gap-2">
             <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Total movimientos</p>
-            <p className="text-2xl font-semibold text-slate-900">
+            <p className="break-words text-2xl font-semibold tabular-nums text-slate-900">
               ${Math.abs(subtotal).toLocaleString("es-CO", {
                 maximumFractionDigits: 0,
               })}
@@ -148,10 +150,10 @@ export default function TransactionsPageClient() {
             <p className="text-xs text-slate-500">Balance del periodo</p>
           </div>
         </Card>
-        <Card hover className="p-8">
-          <div className="grid gap-2">
+        <Card hover className="min-w-0 p-4 sm:p-8">
+          <div className="grid min-w-0 gap-2">
             <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Variación mensual</p>
-            <p className={`text-2xl font-semibold ${deltaValue >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+            <p className={`break-words text-2xl font-semibold tabular-nums ${deltaValue >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
               {deltaValue >= 0 ? "+" : "-"}${Math.abs(deltaValue).toLocaleString("es-CO", {
                 maximumFractionDigits: 0,
               })}
@@ -159,10 +161,10 @@ export default function TransactionsPageClient() {
             <p className="text-xs text-slate-500">vs mes anterior</p>
           </div>
         </Card>
-        <Card hover className="p-8">
-          <div className="grid gap-2">
+        <Card hover className="min-w-0 p-4 sm:p-8">
+          <div className="grid min-w-0 gap-2">
             <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Transacciones</p>
-            <p className="text-2xl font-semibold text-slate-900">{transactions.length}</p>
+            <p className="text-2xl font-semibold tabular-nums text-slate-900">{transactions.length}</p>
             <p className="text-xs text-slate-500">Total del periodo</p>
           </div>
         </Card>
@@ -175,10 +177,10 @@ export default function TransactionsPageClient() {
       ) : (
         <div className="space-y-4">
           {transactions.map((tx, idx) => (
-            <Card key={idx} hover className="p-6">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
+            <Card key={idx} hover className="p-4 sm:p-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-4">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
                     <p className="font-semibold text-slate-900">{tx.categoria}</p>
                     {tx.subcategoria && (
                       <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-slate-500">
@@ -186,11 +188,11 @@ export default function TransactionsPageClient() {
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-slate-700 mt-2">{tx.descripcion}</p>
-                  <p className="text-xs text-slate-500 mt-2">{tx.fecha}</p>
+                  <p className="mt-2 break-words text-sm text-slate-700">{tx.descripcion}</p>
+                  <p className="mt-2 text-xs text-slate-500">{tx.fecha}</p>
                 </div>
-                <div className="text-right">
-                  <p className="text-lg font-semibold text-slate-900">
+                <div className="shrink-0 text-left sm:text-right">
+                  <p className="tabular-nums text-lg font-semibold text-slate-900">
                     ${Math.abs(tx.monto).toLocaleString("es-CO", {
                       maximumFractionDigits: 0,
                     })}

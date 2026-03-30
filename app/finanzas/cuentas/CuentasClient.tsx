@@ -921,9 +921,9 @@ export default function CuentasClient() {
   }
 
   return (
-    <div className="space-y-10 pb-10">
+    <div className="min-w-0 space-y-8 pb-10 sm:space-y-10">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
+        <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-[28px]">Cuentas</h1>
           <p className="mt-1 text-sm text-slate-500 sm:text-[15px]">
             Liquidez, exposición y disponibilidad por cuenta
@@ -962,12 +962,12 @@ export default function CuentasClient() {
       ) : null}
 
       {!kpis ? (
-        <div className={`rounded-[20px] p-8 text-center text-sm text-slate-500 ${arcticPanel}`}>
+        <div className={`rounded-[20px] p-4 text-center text-sm text-slate-500 sm:p-8 ${arcticPanel}`}>
           Sin panel de cuentas (activa Supabase o modo mock para datos).
         </div>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <StatKpiCard
               title="Total liquidez"
               value={`$${formatMoney(kpis.totalLiquidez)}`}
@@ -1098,7 +1098,7 @@ export default function CuentasClient() {
         title="Movimientos del mes"
         subtitle={activeCard ? `${activeCard.network} ${activeCard.bankLabel} ···· ${activeCard.last4}` : undefined}
       >
-        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
           {[
             { label: "Gastos", value: `$${formatMoney(movementSummary.gastos)}`, tone: "text-rose-600" },
             { label: "Ingresos", value: `$${formatMoney(movementSummary.ingresos)}`, tone: "text-emerald-600" },
@@ -1109,7 +1109,7 @@ export default function CuentasClient() {
               className="rounded-xl border-[0.5px] border-slate-200/90 bg-slate-50/80 p-3 text-center shadow-sm"
             >
               <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">{b.label}</p>
-              <p className={`mt-1 text-lg font-semibold ${b.tone}`}>{b.value}</p>
+              <p className={`mt-1 break-all text-base font-semibold sm:text-lg ${b.tone}`}>{b.value}</p>
             </div>
           ))}
         </div>
@@ -1195,13 +1195,13 @@ export default function CuentasClient() {
         headerTint="linear-gradient(180deg, rgba(254,226,226,0.35) 0%, rgba(255,255,255,0) 100%)"
       >
         <p className="text-sm text-slate-700">Selecciona el día del mes para tu pago</p>
-        <div className="mt-4 grid grid-cols-7 gap-2">
+        <div className="mt-4 grid grid-cols-4 gap-1.5 sm:grid-cols-7 sm:gap-2">
           {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
             <button
               key={d}
               type="button"
               onClick={() => setPayDay(d)}
-              className={`aspect-square rounded-lg text-sm font-semibold transition ${
+              className={`aspect-square min-h-[40px] rounded-lg text-xs font-semibold transition sm:min-h-0 sm:text-sm ${
                 payDay === d
                   ? "bg-[#DE5E52] text-white shadow-md"
                   : "border border-slate-200/80 bg-slate-50 text-slate-700 hover:bg-slate-100"

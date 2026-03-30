@@ -212,9 +212,9 @@ export default function FinanzasOverview() {
   const runwayLabel = runway > 0 && net > 0 ? `${runway.toFixed(1)}×` : net <= 0 ? "En déficit" : "—"
 
   return (
-    <div className="space-y-6 sm:space-y-8">
+    <div className="min-w-0 space-y-6 sm:space-y-8">
       {notice && <p className="text-xs text-slate-500">{notice}</p>}
-      <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-4">
         {[
           {
             label: "Capacidad de ahorro",
@@ -241,22 +241,22 @@ export default function FinanzasOverview() {
             accent: "var(--color-accent-finance)",
           },
         ].map((metric) => (
-          <Card key={metric.label} hover className="p-4 sm:p-8">
-            <div className="grid gap-2">
+          <Card key={metric.label} hover className="min-w-0 p-4 sm:p-8">
+            <div className="grid min-w-0 gap-2">
               <p className="text-xs uppercase tracking-[0.14em] text-slate-500">{metric.label}</p>
-              <p className="text-2xl font-semibold" style={{ color: metric.accent }}>
+              <p className="break-words text-2xl font-semibold tabular-nums" style={{ color: metric.accent }}>
                 {metric.value}
               </p>
-              <p className="text-xs text-slate-500">{metric.sub}</p>
+              <p className="break-words text-xs leading-snug text-slate-500">{metric.sub}</p>
             </div>
           </Card>
         ))}
       </div>
 
-      <Card className="p-4 sm:p-8">
-        <div className="grid gap-4">
+      <Card className="min-w-0 p-4 sm:p-8">
+        <div className="grid min-w-0 gap-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="grid gap-1">
+            <div className="grid min-w-0 gap-1">
               <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Evolución de flujo</p>
               <span className="text-xs text-slate-400">{flowSubtitle}</span>
             </div>
@@ -291,8 +291,8 @@ export default function FinanzasOverview() {
               })}
             </div>
           </div>
-          <div className="w-full min-w-0 overflow-x-auto overscroll-x-contain">
-            <div className="h-[220px] w-full min-w-[300px] sm:h-[260px]">
+          <div className="w-full min-w-0 overflow-x-auto overscroll-x-contain touch-pan-x">
+            <div className="h-[200px] w-full min-w-0 sm:h-[260px]">
             {chartData.length > 0 ? (
               <ResponsiveContainer key={`flow-${flowView}-${month}`} width="100%" height="100%">
                 <LineChart data={chartData} margin={rechartsDefaultMargin}>
@@ -338,9 +338,9 @@ export default function FinanzasOverview() {
         </div>
       </Card>
 
-      <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
-        <Card className="p-4 sm:p-8">
-          <div className="grid gap-3">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2">
+        <Card className="min-w-0 p-4 sm:p-8">
+          <div className="grid min-w-0 gap-3">
             <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Suscripciones / SaaS (heurística)</p>
             {subs.length === 0 ? (
               <p className="text-sm text-slate-500">Sin partidas detectadas con patrón de suscripción.</p>
@@ -348,38 +348,41 @@ export default function FinanzasOverview() {
               subs.map((item) => (
                 <div
                   key={item.name}
-                  className="flex min-w-0 flex-col gap-1 rounded-xl bg-slate-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex min-w-0 flex-col gap-1 rounded-xl bg-slate-50 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4"
                 >
                   <span className="min-w-0 break-words text-sm text-slate-700">{item.name}</span>
-                  <span className="shrink-0 text-xs text-slate-500 sm:text-right">${formatMoney(item.amount)}</span>
+                  <span className="shrink-0 tabular-nums text-xs text-slate-500 sm:text-right">${formatMoney(item.amount)}</span>
                 </div>
               ))
             )}
-            <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-3 sm:px-4">
               <span className="text-xs uppercase tracking-[0.14em] text-slate-500">Total</span>
-              <span className="text-sm font-semibold text-slate-900">${formatMoney(subsTotal)}</span>
+              <span className="tabular-nums text-sm font-semibold text-slate-900">${formatMoney(subsTotal)}</span>
             </div>
           </div>
         </Card>
-        <Card className="p-4 sm:p-8">
-          <div className="grid gap-3">
+        <Card className="min-w-0 p-4 sm:p-8">
+          <div className="grid min-w-0 gap-3">
             <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Obligaciones fijas (heurística)</p>
             {obls.length === 0 ? (
               <p className="text-sm text-slate-500">Sin obligaciones detectadas por categoría / descripción.</p>
             ) : (
               obls.map((item) => (
-                <div key={item.name + item.due} className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-slate-700">{item.name}</p>
+                <div
+                  key={item.name + item.due}
+                  className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
+                >
+                  <div className="min-w-0">
+                    <p className="break-words text-sm text-slate-700">{item.name}</p>
                     <p className="text-xs text-slate-400">Fecha {item.due}</p>
                   </div>
-                  <span className="text-xs text-slate-500">${formatMoney(item.amount)}</span>
+                  <span className="shrink-0 tabular-nums text-xs text-slate-500 sm:text-right">${formatMoney(item.amount)}</span>
                 </div>
               ))
             )}
-            <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-3 sm:px-4">
               <span className="text-xs uppercase tracking-[0.14em] text-slate-500">Total</span>
-              <span className="text-sm font-semibold text-slate-900">${formatMoney(oblsTotal)}</span>
+              <span className="tabular-nums text-sm font-semibold text-slate-900">${formatMoney(oblsTotal)}</span>
             </div>
           </div>
         </Card>

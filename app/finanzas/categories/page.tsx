@@ -207,9 +207,9 @@ export default function FinanzasCategories() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="min-w-0 space-y-6 sm:space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+        <div className="min-w-0 flex-1">
           <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Categorías</p>
           <p className="text-lg font-semibold text-slate-900">Mapa estructural del gasto</p>
           <p className="mt-1 text-sm text-slate-500">
@@ -223,13 +223,13 @@ export default function FinanzasCategories() {
         )}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div className="flex flex-wrap gap-2">
           {(["operativa", "estrategica", "predictiva"] as const).map((mode) => (
             <button
               key={mode}
               onClick={() => setViewMode(mode)}
-              className={`rounded-full border px-4 py-2 text-[11px] uppercase tracking-[0.16em] transition ${
+              className={`min-h-11 rounded-full border px-4 py-2 text-[11px] uppercase tracking-[0.16em] transition sm:min-h-0 ${
                 viewMode === mode
                   ? "border-slate-300 bg-white text-slate-900 shadow"
                   : "border-transparent bg-slate-100 text-slate-500 hover:text-slate-700"
@@ -241,11 +241,11 @@ export default function FinanzasCategories() {
             </button>
           ))}
         </div>
-        <span className="text-xs text-slate-400">Lectura mensual</span>
+        <span className="text-xs text-slate-400 sm:shrink-0">Lectura mensual</span>
       </div>
 
       {viewMode === "estrategica" && (
-        <Card className="p-8">
+        <Card className="p-4 sm:p-8">
           <div className="grid gap-2 text-center">
             <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Vista estratégica</p>
             <p className="text-sm text-slate-600">En desarrollo…</p>
@@ -254,7 +254,7 @@ export default function FinanzasCategories() {
       )}
 
       {viewMode === "predictiva" && (
-        <Card className="p-8">
+        <Card className="p-4 sm:p-8">
           <div className="grid gap-2 text-center">
             <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Vista predictiva</p>
             <p className="text-sm text-slate-600">En desarrollo…</p>
@@ -264,8 +264,8 @@ export default function FinanzasCategories() {
 
       {viewMode === "operativa" && (
         <div className="space-y-4">
-          <div className="grid gap-6 md:grid-cols-3">
-            <Card hover className="p-8">
+          <div className="grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <Card hover className="p-4 sm:p-8">
               <div className="grid gap-2">
                 <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Total estructural</p>
                 <p className="text-3xl font-semibold text-slate-900">
@@ -278,7 +278,7 @@ export default function FinanzasCategories() {
                 </p>
               </div>
             </Card>
-            <Card hover className="p-8">
+            <Card hover className="p-4 sm:p-8">
               <div className="grid gap-2">
                 <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Total fijo</p>
                 <p className="text-3xl font-semibold text-slate-900">
@@ -289,7 +289,7 @@ export default function FinanzasCategories() {
                 <p className="text-xs text-slate-500">Base operativa</p>
               </div>
             </Card>
-            <Card hover className="p-8">
+            <Card hover className="p-4 sm:p-8">
               <div className="grid gap-2">
                 <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Total variable</p>
                 <p className="text-3xl font-semibold text-slate-900">
@@ -302,12 +302,12 @@ export default function FinanzasCategories() {
             </Card>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
             {[{ label: "Fijo", items: fixedCategories }, { label: "Variable", items: variableCategories }].map((group) => (
               <div key={group.label} className="space-y-3">
                 <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{group.label}</p>
                 {group.items.map((cat) => (
-                  <Card key={cat.name} hover className="p-6">
+                  <Card key={cat.name} hover className="p-4 sm:p-6">
                     <div
                       role="button"
                       tabIndex={0}
@@ -322,9 +322,9 @@ export default function FinanzasCategories() {
                         }
                       }}
                     >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <p className="font-semibold text-slate-900">{cat.name}</p>
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                        <div className="min-w-0 flex-1">
+                          <p className="break-words font-semibold text-slate-900">{cat.name}</p>
                           <p className="text-xs text-slate-500 uppercase tracking-[0.14em] mt-1">
                             {cat.type === "fixed" ? "Fijo" : "Variable"}
                           </p>
@@ -334,8 +334,8 @@ export default function FinanzasCategories() {
                             </p>
                           )}
                         </div>
-                        <div className="text-right">
-                          <p className="text-lg font-semibold text-slate-900">
+                        <div className="w-full shrink-0 sm:w-auto sm:text-right">
+                          <p className="tabular-nums text-lg font-semibold text-slate-900">
                             ${Math.abs(cat.total).toLocaleString("es-CO", {
                               maximumFractionDigits: 0,
                             })}
@@ -379,9 +379,9 @@ export default function FinanzasCategories() {
                       {expanded === cat.name && cat.subcategories && cat.subcategories.length > 0 && (
                         <div className="mt-2 grid gap-2 border-t border-slate-100 pt-3">
                           {cat.subcategories.map((sub, idx) => (
-                            <div key={idx} className="flex justify-between items-center text-sm">
-                              <span className="text-slate-600">{sub.name}</span>
-                              <span className="font-semibold text-slate-700">
+                            <div key={idx} className="flex min-w-0 flex-col gap-0.5 text-sm sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+                              <span className="min-w-0 break-words text-slate-600">{sub.name}</span>
+                              <span className="shrink-0 font-semibold text-slate-700 sm:text-right">
                                 ${Math.abs(sub.total).toLocaleString("es-CO", {
                                   maximumFractionDigits: 0,
                                 })}

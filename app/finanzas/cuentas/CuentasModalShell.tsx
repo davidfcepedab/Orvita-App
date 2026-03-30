@@ -30,7 +30,7 @@ export function CuentasModalShell({
         onClick={onClose}
       />
       <div
-        className={`relative z-[81] max-h-[92vh] w-full overflow-y-auto rounded-t-[20px] border-[0.5px] border-slate-200/90 bg-white shadow-[0_24px_64px_-20px_rgba(15,23,42,0.35)] sm:rounded-[20px] ${
+        className={`relative z-[81] min-w-0 max-h-[92vh] w-full overflow-y-auto rounded-t-[20px] border-[0.5px] border-slate-200/90 bg-white shadow-[0_24px_64px_-20px_rgba(15,23,42,0.35)] sm:rounded-[20px] ${
           wide ? "max-w-5xl" : "max-w-lg"
         }`}
       >

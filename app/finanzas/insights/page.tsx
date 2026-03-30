@@ -146,9 +146,9 @@ export default function FinanzasInsights() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="min-w-0 space-y-6 sm:space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+        <div className="min-w-0 flex-1">
           <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Insights</p>
           <p className="text-lg font-semibold text-slate-900">Lectura estratégica</p>
           <p className="mt-1 text-sm text-slate-500">
@@ -162,16 +162,16 @@ export default function FinanzasInsights() {
         )}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1.15fr_1fr]">
-        <div className="grid gap-6">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-[1.15fr_1fr]">
+        <div className="grid gap-4 sm:gap-6">
           {score !== undefined && (
-            <Card hover className="p-8">
+            <Card hover className="p-4 sm:p-8">
               <div className="grid gap-3 text-center">
                 <p className="text-xs uppercase tracking-[0.14em] text-slate-500">
                   Score financiero
                 </p>
                 <p
-                  className={`text-5xl font-semibold ${
+                  className={`text-4xl font-semibold sm:text-5xl ${
                     score >= 70
                       ? "text-emerald-600"
                       : score >= 40
@@ -186,14 +186,14 @@ export default function FinanzasInsights() {
             </Card>
           )}
 
-          <Card hover className="p-8">
+          <Card hover className="p-4 sm:p-8">
             <div className="grid gap-4">
               <p className="text-xs uppercase tracking-[0.14em] text-slate-500">
                 Índice de estabilidad
               </p>
               {stability ? (
                 <>
-                  <div className="flex items-end justify-between">
+                  <div className="flex flex-wrap items-end justify-between gap-2">
                     <p
                       className={`text-3xl font-semibold ${
                         stability.status === "green"
@@ -237,14 +237,14 @@ export default function FinanzasInsights() {
           </Card>
         </div>
 
-        <div className="grid gap-6">
+        <div className="grid gap-4 sm:gap-6">
           {insight && (
-            <Card hover className="p-8">
+            <Card hover className="p-4 sm:p-8">
               <div className="grid gap-3">
                 <p className="text-xs uppercase tracking-[0.14em] text-slate-500">
                   Insight principal
                 </p>
-                <p className="text-sm font-medium text-slate-800">{insight.message}</p>
+                <p className="break-words text-sm font-medium text-slate-800">{insight.message}</p>
                 {insight.all && insight.all.length > 1 && (
                   <ul className="mt-2 space-y-1 text-xs text-slate-500">
                     {insight.all.slice(1).map((msg, i) => (
@@ -266,19 +266,19 @@ export default function FinanzasInsights() {
           )}
 
           {prediction?.projection && (
-            <Card hover className="p-8">
+            <Card hover className="p-4 sm:p-8">
               <div className="grid gap-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-xs uppercase tracking-[0.14em] text-slate-500">
                     Proyección 3 meses
                   </p>
                   <span className="text-xs text-slate-400">Escenario base</span>
                 </div>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
                   {prediction.projection.slice(0, 3).map((p, i) => (
                     <div key={i} className="rounded-xl bg-slate-50 px-3 py-3 text-center">
                       <p className="text-xs text-slate-500">{p.month}</p>
-                      <p className="mt-2 text-sm font-semibold text-slate-900">
+                      <p className="mt-2 break-all text-sm font-semibold text-slate-900 sm:break-normal">
                         ${p.projectedBalance.toLocaleString("es-CO", {
                           maximumFractionDigits: 0,
                         })}
@@ -292,7 +292,7 @@ export default function FinanzasInsights() {
         </div>
       </div>
 
-      <Card className="p-8">
+      <Card className="p-4 sm:p-8">
         <div className="grid gap-3">
           <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Lectura ejecutiva</p>
           <p className="text-sm text-slate-600">

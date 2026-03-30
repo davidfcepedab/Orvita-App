@@ -33,7 +33,7 @@ function FinanzasLayoutContent({
   ]
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="min-w-0 space-y-4 sm:space-y-6">
       <Card className="p-4 sm:p-8">
         <div className="flex flex-col gap-5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-6">
           <div className="min-w-0">
@@ -58,7 +58,7 @@ function FinanzasLayoutContent({
         </div>
       </Card>
 
-      <div className="-mx-1 flex gap-1.5 overflow-x-auto overflow-y-hidden rounded-full border border-slate-200 bg-white/80 p-1.5 sm:mx-0 sm:flex-wrap sm:overflow-x-visible">
+      <div className="-mx-1 flex touch-pan-x snap-x snap-mandatory gap-1.5 overflow-x-auto overflow-y-hidden rounded-full border border-slate-200 bg-white/80 p-1.5 [-webkit-overflow-scrolling:touch] sm:mx-0 sm:flex-wrap sm:overflow-x-visible sm:snap-none">
         {tabs.map((tab) => {
           const active = pathname === tab.path
 
@@ -66,7 +66,7 @@ function FinanzasLayoutContent({
             <button
               key={tab.name}
               onClick={() => router.push(tab.path)}
-              className={`min-h-[44px] flex-shrink-0 px-4 py-2.5 text-xs uppercase tracking-[0.16em] transition sm:min-h-0 sm:py-2 rounded-full whitespace-nowrap ${
+              className={`min-h-[44px] flex-shrink-0 snap-start px-4 py-2.5 text-xs uppercase tracking-[0.16em] transition sm:min-h-0 sm:py-2 rounded-full whitespace-nowrap ${
                 active
                   ? "bg-white shadow text-slate-900"
                   : "text-slate-500 hover:text-slate-900"
@@ -79,7 +79,7 @@ function FinanzasLayoutContent({
         })}
       </div>
 
-      {children}
+      <div className="min-w-0">{children}</div>
     </div>
   )
 }
