@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
 import { isAppMockMode, isSupabaseEnabled, UI_SYNC_OFF_SHORT } from "@/lib/checkins/flags"
-import { buildStructuralCategories } from "@/lib/finanzas/deriveFromTransactions"
+import {
+  attachCatalogToStructuralCategories,
+  buildStructuralCategories,
+} from "@/lib/finanzas/deriveFromTransactions"
 import { mockTransactionsForMonth } from "@/lib/finanzas/mockFinancePayloads"
 import { monthBounds } from "@/lib/finanzas/monthRange"
+import { fetchSubcategoryCatalogMerged } from "@/lib/finanzas/subcategoryCatalog"
+import { getHouseholdId } from "@/lib/households/getHouseholdId"
 import { getTransactionsByRange } from "@/lib/services/finanzasService"
 
 export const runtime = "nodejs"
@@ -26,8 +31,16 @@ export async function GET(req: NextRequest) {
       const all = mockTransactionsForMonth(month)
       const current = all.filter((r) => r.date >= startStr && r.date <= endStr)
       const previous = all.filter((r) => r.date >= prevStartStr && r.date <= prevEndStr)
-      const data = buildStructuralCategories(current, previous)
-      return NextResponse.json({ success: true, source: "mock", data })
+      const base = buildStructuralCategories(current, previous)
+      return NextResponse.json({
+        success: true,
+        source: "mock",
+        data: {
+          ...base,
+          subcategoryCatalog: [],
+          unknownSubcategories: [],
+        },
+      })
     }
 
     if (!isSupabaseEnabled()) {
@@ -39,6 +52,8 @@ export async function GET(req: NextRequest) {
           totalFixed: 0,
           totalVariable: 0,
           totalStructural: 0,
+          subcategoryCatalog: [],
+          unknownSubcategories: [],
         },
       })
     }
@@ -46,11 +61,32 @@ export async function GET(req: NextRequest) {
     const auth = await requireUser(req)
     if (auth instanceof NextResponse) return auth
 
+    const householdId = await getHouseholdId(auth.supabase, auth.userId)
+    if (!householdId) {
+      return NextResponse.json({ success: false, error: "Usuario sin hogar asignado" }, { status: 403 })
+    }
+
     const rangeRows = await getTransactionsByRange(auth.supabase, prevStartStr, endStr)
     const current = rangeRows.filter((r) => r.date >= startStr && r.date <= endStr)
     const previous = rangeRows.filter((r) => r.date >= prevStartStr && r.date <= prevEndStr)
 
-    const data = buildStructuralCategories(current, previous)
+    const base = buildStructuralCategories(current, previous)
+    let catalog: Awaited<ReturnType<typeof fetchSubcategoryCatalogMerged>> = []
+    try {
+      catalog = await fetchSubcategoryCatalogMerged(auth.supabase, householdId)
+    } catch (e) {
+      console.warn("CATEGORIES: catalog fetch skipped:", e instanceof Error ? e.message : e)
+    }
+    const { structuralCategories, unknownSubcategories } = attachCatalogToStructuralCategories(
+      base.structuralCategories,
+      catalog,
+    )
+    const data = {
+      ...base,
+      structuralCategories,
+      subcategoryCatalog: catalog,
+      unknownSubcategories,
+    }
     return NextResponse.json({ success: true, data })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Error"

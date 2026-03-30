@@ -10,6 +10,11 @@ import { financeApiGet } from "@/lib/finanzas/financeClientFetch"
 interface Subcategory {
   name: string
   total: number
+  sheetTipo?: "fijo" | "variable"
+  financialImpact?: string
+  budgetable?: boolean
+  catalogCategory?: string
+  categoryMismatch?: boolean
 }
 
 interface Category {
@@ -29,6 +34,7 @@ interface CategoriesData {
   totalFixed?: number
   totalVariable?: number
   totalStructural?: number
+  unknownSubcategories?: string[]
 }
 
 interface CategoriesResponse {
@@ -182,6 +188,7 @@ export default function FinanzasCategories() {
   const totalFixed = data?.totalFixed ?? 0
   const totalVariable = data?.totalVariable ?? 0
   const totalStructural = data?.totalStructural ?? 0
+  const unknownSubcategories = data?.unknownSubcategories ?? []
 
   if (structuralCategories.length === 0 || totalStructural === 0) {
     return (
@@ -271,6 +278,23 @@ export default function FinanzasCategories() {
 
       {viewMode === "operativa" && (
         <div className="space-y-4">
+          {unknownSubcategories.length > 0 && (
+            <div
+              className="rounded-xl border px-4 py-3 text-sm"
+              style={{
+                borderColor: "color-mix(in srgb, var(--color-accent-finance) 35%, var(--color-border))",
+                background: "color-mix(in srgb, var(--color-accent-finance) 8%, var(--color-surface))",
+              }}
+            >
+              <p className="font-medium text-orbita-primary">
+                Subcategorías sin fila en el catálogo (hoja Categorías / Supabase)
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-orbita-secondary">
+                {unknownSubcategories.slice(0, 12).join(" · ")}
+                {unknownSubcategories.length > 12 ? ` · +${unknownSubcategories.length - 12} más` : ""}
+              </p>
+            </div>
+          )}
           <div className="grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
             <Card hover className="p-4 sm:p-8">
               <div className="grid gap-2">
@@ -386,8 +410,40 @@ export default function FinanzasCategories() {
                       {expanded === cat.name && cat.subcategories && cat.subcategories.length > 0 && (
                         <div className="mt-2 grid gap-2 border-t border-orbita-border pt-3">
                           {cat.subcategories.map((sub, idx) => (
-                            <div key={idx} className="flex min-w-0 flex-col gap-0.5 text-sm sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-                              <span className="min-w-0 break-words text-orbita-secondary">{sub.name}</span>
+                            <div
+                              key={idx}
+                              className="flex min-w-0 flex-col gap-1 text-sm sm:flex-row sm:items-start sm:justify-between sm:gap-2"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <span className="break-words text-orbita-secondary">{sub.name}</span>
+                                {(sub.sheetTipo || sub.financialImpact != null) && (
+                                  <div className="mt-1 flex flex-wrap gap-1">
+                                    {sub.sheetTipo && (
+                                      <span className="rounded-md bg-orbita-surface-alt px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-orbita-secondary">
+                                        {sub.sheetTipo === "fijo" ? "Fijo" : "Variable"}
+                                      </span>
+                                    )}
+                                    {sub.financialImpact && (
+                                      <span className="rounded-md border border-orbita-border px-1.5 py-0.5 text-[10px] text-orbita-secondary">
+                                        {sub.financialImpact}
+                                      </span>
+                                    )}
+                                    {sub.budgetable === false && (
+                                      <span className="rounded-md border border-dashed border-orbita-border px-1.5 py-0.5 text-[10px] text-orbita-secondary">
+                                        No presupuestable
+                                      </span>
+                                    )}
+                                    {sub.categoryMismatch && sub.catalogCategory && (
+                                      <span
+                                        className="rounded-md px-1.5 py-0.5 text-[10px] text-amber-800 dark:text-amber-300"
+                                        title="La categoría del movimiento no coincide con la del catálogo"
+                                      >
+                                        Cat. catálogo: {sub.catalogCategory}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                               <span className="shrink-0 font-semibold text-orbita-primary sm:text-right">
                                 ${Math.abs(sub.total).toLocaleString("es-CO", {
                                   maximumFractionDigits: 0,

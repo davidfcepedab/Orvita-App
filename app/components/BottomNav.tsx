@@ -26,9 +26,14 @@ export default function BottomNav() {
 
         {tabs.map((tab) => {
           const Icon = tab.icon
+          const saludActive =
+            pathname === "/health" ||
+            pathname === "/fisico" ||
+            pathname === "/salud" ||
+            pathname.startsWith("/salud/")
           const active =
             pathname === tab.route ||
-            (tab.route === "/health" && pathname === "/fisico") ||
+            (tab.route === "/health" && saludActive) ||
             (tab.route === "/finanzas/overview" && pathname.startsWith("/finanzas"))
 
           return (

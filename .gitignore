@@ -23,6 +23,8 @@ supabase/.temp/
 
 # production
 google-credentials.json
+# Service account JSON (never commit)
+secrets/
 /build
 
 # misc

@@ -1,19 +1,29 @@
 "use client"
 
 import Link from "next/link"
-import { useMemo, useState, useCallback } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { Check, Loader2 } from "lucide-react"
 import { Card } from "@/src/components/ui/Card"
 import { useOperationalContext } from "@/app/hooks/useOperationalContext"
 import { useGoogleCalendar } from "@/app/hooks/useGoogleCalendar"
 import { formatLocalDateKey, localDateKeyFromIso } from "@/lib/agenda/localDateKey"
 
-const timeline = [
+/** Plantilla solo cuando no hay calendario conectado o aún no hay eventos (etiquetada en UI). */
+const TIMELINE_FALLBACK_EXAMPLE = [
   { time: "08:00", label: "Bloque de Trabajo Profundo" },
   { time: "10:30", label: "Sincronización Equipo" },
   { time: "13:00", label: "Recuperación (Pausa)" },
   { time: "14:30", label: "Trabajo Reactivo" },
-]
+] as const
+
+type OperationalTimelineRow = {
+  key: string
+  time: string
+  label: string
+  sub?: string
+  /** Evento de calendario en curso (hora local). */
+  highlighted?: boolean
+}
 
 const reminders = [
   "Enviar update diario a finanzas",
@@ -60,11 +70,76 @@ export default function HoyPage() {
       .filter((e) => localDateKeyFromIso(e.startAt) === todayKey)
       .map((e) => ({
         key: e.id,
+        startAt: e.startAt,
+        endAt: e.endAt,
         time: formatEventTime(e.startAt),
         label: e.summary,
         duration: eventDurationLabel(e.startAt, e.endAt),
       }))
+      .sort((a, b) => {
+        const ta = a.startAt ? Date.parse(a.startAt) : 0
+        const tb = b.startAt ? Date.parse(b.startAt) : 0
+        return ta - tb
+      })
   }, [calendarEvents])
+
+  const [timelineNow, setTimelineNow] = useState(() => Date.now())
+  useEffect(() => {
+    const id = window.setInterval(() => setTimelineNow(Date.now()), 60_000)
+    return () => window.clearInterval(id)
+  }, [])
+
+  const activeMeetingIndex = useMemo(() => {
+    const now = timelineNow
+    for (let i = 0; i < meetings.length; i++) {
+      const m = meetings[i]
+      if (!m.startAt) continue
+      const t0 = Date.parse(m.startAt)
+      if (!Number.isFinite(t0)) continue
+      const t1 = m.endAt ? Date.parse(m.endAt) : t0 + 60 * 60 * 1000
+      if (Number.isFinite(t1) && now >= t0 && now < t1) return i
+    }
+    return -1
+  }, [meetings, timelineNow])
+
+  const operationalTimeline = useMemo((): {
+    rows: OperationalTimelineRow[]
+    source: "calendar" | "example" | "loading" | "empty"
+  } => {
+    if (calLoading) {
+      return { rows: [], source: "loading" }
+    }
+
+    const block = data?.current_block?.trim()
+    const prefix: OperationalTimelineRow[] = block
+      ? [{ key: "ctx-block", time: "Ahora", label: "Bloque operativo", sub: block }]
+      : []
+
+    if (meetings.length > 0) {
+      const fromCal: OperationalTimelineRow[] = meetings.map((m, idx) => ({
+        key: m.key,
+        time: m.time,
+        label: m.label,
+        sub: m.duration !== "—" ? m.duration : undefined,
+        highlighted: idx === activeMeetingIndex,
+      }))
+      return { rows: [...prefix, ...fromCal], source: "calendar" }
+    }
+
+    if (calConnected) {
+      if (prefix.length > 0) {
+        return { rows: prefix, source: "empty" }
+      }
+      return { rows: [], source: "empty" }
+    }
+
+    const exampleRows: OperationalTimelineRow[] = TIMELINE_FALLBACK_EXAMPLE.map((row, i) => ({
+      key: `example-${i}`,
+      time: row.time,
+      label: row.label,
+    }))
+    return { rows: [...prefix, ...exampleRows], source: "example" }
+  }, [activeMeetingIndex, calLoading, calConnected, data?.current_block, meetings])
 
   const focusTask = data?.next_action ?? "Completar propuesta para cliente"
   const focusTime = data?.next_time_required ?? "120 min"
@@ -111,31 +186,61 @@ export default function HoyPage() {
       <div className="grid grid-cols-1 gap-[var(--layout-gap)] lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
         <Card className="p-5">
           <div style={{ display: "grid", gap: "var(--spacing-sm)" }}>
-            <p style={{ margin: 0, fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--color-text-secondary)" }}>
-              Timeline Operativo
-            </p>
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <p style={{ margin: 0, fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--color-text-secondary)" }}>
+                Timeline Operativo
+              </p>
+              <button
+                type="button"
+                disabled={calLoading}
+                onClick={() => void refreshCal()}
+                className="shrink-0 text-[10px] font-medium uppercase tracking-[0.12em] text-[var(--color-accent-primary)] underline-offset-2 hover:underline disabled:opacity-50"
+              >
+                {calLoading ? "Sincronizando…" : "Actualizar"}
+              </button>
+            </div>
+            {operationalTimeline.source === "loading" && (
+              <p className="m-0 text-xs text-[var(--color-text-secondary)]">Cargando eventos del día…</p>
+            )}
+            {operationalTimeline.source === "empty" && operationalTimeline.rows.length === 0 && (
+              <div className="grid gap-2 text-xs text-[var(--color-text-secondary)]">
+                <p className="m-0">Sin eventos de calendario para hoy.</p>
+                <Link href="/configuracion" className="font-medium text-[var(--color-text-primary)] underline-offset-2 hover:underline">
+                  Conectar Google Calendar
+                </Link>
+              </div>
+            )}
+            {operationalTimeline.source === "example" && (
+              <p className="m-0 text-[10px] leading-snug text-[var(--color-text-secondary)]">
+                Ejemplo ilustrativo. Conecta Google en Configuración para ver tu línea de tiempo real.
+              </p>
+            )}
             <div style={{ display: "grid", gap: "12px" }}>
-              {timeline.map((item, index) => (
-                <div key={item.time} style={{ display: "flex", gap: "10px" }}>
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
-                    <span
-                      style={{
-                        width: "8px",
-                        height: "8px",
-                        borderRadius: "999px",
-                        background: index === 1 ? "var(--color-accent-primary)" : "var(--color-border)",
-                      }}
-                    />
-                    {index < timeline.length - 1 && (
-                      <span style={{ width: "1px", height: "24px", background: "var(--color-border)" }} />
-                    )}
+              {operationalTimeline.rows.map((item, index) => {
+                const last = index === operationalTimeline.rows.length - 1
+                return (
+                  <div key={item.key} style={{ display: "flex", gap: "10px" }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
+                      <span
+                        style={{
+                          width: "8px",
+                          height: "8px",
+                          borderRadius: "999px",
+                          background: item.highlighted ? "var(--color-accent-primary)" : "var(--color-border)",
+                        }}
+                      />
+                      {!last && <span style={{ width: "1px", height: "24px", background: "var(--color-border)" }} />}
+                    </div>
+                    <div className="min-w-0">
+                      <p style={{ margin: 0, fontSize: "12px", color: "var(--color-text-secondary)" }}>{item.time}</p>
+                      <p style={{ margin: 0, fontSize: "13px", fontWeight: 500 }}>{item.label}</p>
+                      {item.sub ? (
+                        <p className="m-0 mt-0.5 text-[11px] text-[var(--color-text-secondary)]">{item.sub}</p>
+                      ) : null}
+                    </div>
                   </div>
-                  <div>
-                    <p style={{ margin: 0, fontSize: "12px", color: "var(--color-text-secondary)" }}>{item.time}</p>
-                    <p style={{ margin: 0, fontSize: "13px", fontWeight: 500 }}>{item.label}</p>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         </Card>

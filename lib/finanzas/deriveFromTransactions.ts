@@ -1,5 +1,9 @@
 import type { FinanceTransaction } from "@/lib/finanzas/types"
 import { expenseAmount, incomeAmount, netCashFlow } from "@/lib/finanzas/calculations/txMath"
+import {
+  normalizeFinanceCatalogKey,
+  type FinanceSubcategoryCatalogEntry,
+} from "@/lib/finanzas/subcategoryCatalog"
 
 export type WeeklyBucketRow = {
   month: string
@@ -8,7 +12,15 @@ export type WeeklyBucketRow = {
   flujo: number
 }
 
-export type StructuralSub = { name: string; total: number }
+export type StructuralSub = {
+  name: string
+  total: number
+  sheetTipo?: "fijo" | "variable"
+  financialImpact?: string
+  budgetable?: boolean
+  catalogCategory?: string
+  categoryMismatch?: boolean
+}
 
 export type StructuralCategory = {
   name: string
@@ -128,6 +140,45 @@ export function buildStructuralCategories(
   const totalStructural = totalFixed + totalVariable
 
   return { structuralCategories, totalFixed, totalVariable, totalStructural }
+}
+
+/**
+ * Enlaza subcategorías del mes con el catálogo (hoja Categorías / orbita_finance_subcategory_catalog).
+ */
+export function attachCatalogToStructuralCategories(
+  structuralCategories: StructuralCategory[],
+  catalog: FinanceSubcategoryCatalogEntry[],
+): { structuralCategories: StructuralCategory[]; unknownSubcategories: string[] } {
+  const bySub = new Map<string, FinanceSubcategoryCatalogEntry>()
+  for (const row of catalog) {
+    if (row.active === false) continue
+    bySub.set(normalizeFinanceCatalogKey(row.subcategory), row)
+  }
+
+  const unknown = new Set<string>()
+
+  const next = structuralCategories.map((cat) => ({
+    ...cat,
+    subcategories: (cat.subcategories ?? []).map((sub) => {
+      const meta = bySub.get(normalizeFinanceCatalogKey(sub.name))
+      if (!meta) {
+        unknown.add(sub.name)
+        return sub
+      }
+      const mismatch =
+        normalizeFinanceCatalogKey(meta.category) !== normalizeFinanceCatalogKey(cat.name)
+      return {
+        ...sub,
+        sheetTipo: meta.expense_type,
+        financialImpact: meta.financial_impact,
+        budgetable: meta.budgetable,
+        catalogCategory: meta.category,
+        categoryMismatch: mismatch,
+      }
+    }),
+  }))
+
+  return { structuralCategories: next, unknownSubcategories: [...unknown] }
 }
 
 const SUBS_RE = /suscrip|saas|software|spotify|netflix|chatgpt|figma|copilot|github|notion|slack|openai|apple music/i

@@ -30,6 +30,7 @@ function FinanzasLayoutContent({
     { name: "Categorías", path: "/finanzas/categories" },
     { name: "Cuentas", path: "/finanzas/cuentas" },
     { name: "Insights", path: "/finanzas/insights" },
+    { name: "Auditoría", path: "/finanzas/audit" },
   ]
 
   return (

@@ -279,8 +279,14 @@ export function AppShell({
         <div className="mx-auto max-w-[1400px] px-3 sm:px-4 md:px-6">
           <div className="flex gap-[var(--spacing-xs)]">
             {navItems.map((item) => {
+              const saludActive =
+                pathname === "/health" ||
+                pathname === "/fisico" ||
+                pathname === "/salud" ||
+                pathname.startsWith("/salud/")
               const isActive =
                 pathname === item.path ||
+                (item.path === "/health" && saludActive) ||
                 (item.path === "/finanzas/overview" && pathname.startsWith("/finanzas"))
               const Icon = item.icon
               return (

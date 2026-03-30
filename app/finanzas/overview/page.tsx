@@ -72,6 +72,13 @@ interface OverviewResponse {
   source?: string
 }
 
+interface DbSnapshotSummary {
+  month: string
+  income: number
+  expense: number
+  balance: number
+}
+
 function FlowChartLegend() {
   const items = [
     { key: "flujo", label: "Flujo", color: "var(--color-accent-primary)" },
@@ -122,7 +129,55 @@ export default function FinanzasOverview() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [dbSnapshot, setDbSnapshot] = useState<DbSnapshotSummary | null>(null)
+  const [dbSnapshotError, setDbSnapshotError] = useState<string | null>(null)
   const fetchSeq = useRef(0)
+
+  useEffect(() => {
+    if (!month) {
+      setDbSnapshot(null)
+      setDbSnapshotError(null)
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      try {
+        setDbSnapshotError(null)
+        const res = await financeApiGet(`/api/orbita/finanzas/summary?month=${encodeURIComponent(month)}`)
+        const json = (await res.json()) as {
+          success?: boolean
+          meta?: { month?: string }
+          summary?: {
+            total_income_current?: number
+            total_expense_current?: number
+            balance_current?: number
+          }
+          error?: string
+        }
+        if (cancelled) return
+        if (!res.ok || !json.success) {
+          setDbSnapshot(null)
+          setDbSnapshotError(json.error ?? "No se pudo cargar el resumen de base de datos")
+          return
+        }
+        const s = json.summary
+        setDbSnapshot({
+          month: json.meta?.month ?? month,
+          income: Number(s?.total_income_current ?? 0),
+          expense: Number(s?.total_expense_current ?? 0),
+          balance: Number(s?.balance_current ?? 0),
+        })
+      } catch {
+        if (!cancelled) {
+          setDbSnapshot(null)
+          setDbSnapshotError("No se pudo cargar el resumen de base de datos")
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [month])
 
   useEffect(() => {
     if (!month) {
@@ -275,6 +330,43 @@ export default function FinanzasOverview() {
           </Card>
         ))}
       </div>
+
+      {(dbSnapshot || dbSnapshotError) && (
+        <Card className="min-w-0 border border-orbita-border/80 p-4 sm:p-6">
+          <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">
+            Resumen almacenado (snapshots)
+          </p>
+          <p className="mt-1 text-xs leading-snug text-orbita-secondary">
+            Mismo periodo que arriba: totales en{" "}
+            <code className="rounded bg-orbita-surface px-1 text-[10px]">finance_monthly_snapshots</code> y
+            desglose por categoría desde transacciones del mes.
+          </p>
+          {dbSnapshotError ? (
+            <p className="mt-3 text-sm text-amber-700 dark:text-amber-400">{dbSnapshotError}</p>
+          ) : dbSnapshot ? (
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <div>
+                <p className="text-[11px] text-orbita-secondary">Ingresos (BD)</p>
+                <p className="tabular-nums text-lg font-semibold text-orbita-primary">
+                  ${formatMoney(dbSnapshot.income)}
+                </p>
+              </div>
+              <div>
+                <p className="text-[11px] text-orbita-secondary">Gastos (BD)</p>
+                <p className="tabular-nums text-lg font-semibold text-orbita-primary">
+                  ${formatMoney(dbSnapshot.expense)}
+                </p>
+              </div>
+              <div>
+                <p className="text-[11px] text-orbita-secondary">Balance mes (BD)</p>
+                <p className="tabular-nums text-lg font-semibold text-orbita-primary">
+                  ${formatMoney(dbSnapshot.balance)}
+                </p>
+              </div>
+            </div>
+          ) : null}
+        </Card>
+      )}
 
       <Card className="min-w-0 overflow-x-clip p-4 sm:p-8">
         <div className="grid min-w-0 max-w-full gap-4">
