@@ -1,4 +1,5 @@
 -- Google Integrations + soft delete + finance indexes (v1.2.0)
+-- Version timestamp alineada con el resto de migraciones (antes era 20260326_* y rompía el emparejado CLI/remoto).
 
 ---------------------------------------------
 -- 1) Google integrations table
