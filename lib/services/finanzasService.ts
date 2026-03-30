@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { FinanceTransaction } from "@/lib/finanzas/types"
+import { normalizeTransactionDateIsoDay } from "@/lib/finanzas/transactionDate"
 
 export async function getTransactionsByRange(
   supabase: SupabaseClient,
@@ -16,5 +17,9 @@ export async function getTransactionsByRange(
 
   if (error) throw new Error(error.message)
 
-  return (data ?? []) as FinanceTransaction[]
+  const rows = (data ?? []) as FinanceTransaction[]
+  return rows.map((row) => ({
+    ...row,
+    date: normalizeTransactionDateIsoDay(row.date),
+  }))
 }

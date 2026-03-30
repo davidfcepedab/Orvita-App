@@ -1,4 +1,5 @@
 import type { FinanceTransaction } from "@/lib/finanzas/types"
+import { monthBounds } from "@/lib/finanzas/monthRange"
 import { expenseAmount, incomeAmount, netCashFlow } from "@/lib/finanzas/calculations/txMath"
 import {
   normalizeFinanceCatalogKey,
@@ -41,7 +42,9 @@ function isFixedCategoryName(name: string) {
 }
 
 export function filterMonth(rows: FinanceTransaction[], month: string) {
-  return rows.filter((r) => r.date >= `${month}-01` && r.date <= `${month}-31`)
+  const b = monthBounds(month)
+  if (!b) return []
+  return rows.filter((r) => r.date >= b.startStr && r.date <= b.endStr)
 }
 
 export function buildWeeklyBuckets(month: string, rows: FinanceTransaction[]): WeeklyBucketRow[] {

@@ -18,6 +18,7 @@ import {
 } from "@/lib/finanzas/deriveFromTransactions"
 import { mockTransactionsForMonth } from "@/lib/finanzas/mockFinancePayloads"
 import { monthBounds } from "@/lib/finanzas/monthRange"
+import { getHouseholdId } from "@/lib/households/getHouseholdId"
 import { getTransactionsByRange } from "@/lib/services/finanzasService"
 
 export const runtime = "nodejs"
@@ -90,11 +91,65 @@ export async function GET(req: NextRequest) {
     const auth = await requireUser(req)
     if (auth instanceof NextResponse) return auth
 
+    const householdId = await getHouseholdId(auth.supabase, auth.userId)
+    if (!householdId) {
+      return NextResponse.json({ success: false, error: "Usuario sin hogar asignado" }, { status: 403 })
+    }
+
     const rows = await getTransactionsByRange(auth.supabase, extendedStartStr, endStr)
     const currentRows = rows.filter((r) => r.date >= startStr && r.date <= endStr)
     const previousRows = rows.filter((r) => r.date >= prevStartStr && r.date <= prevEndStr)
 
-    const overview = calculateOverview(currentRows, previousRows)
+    let overview = calculateOverview(currentRows, previousRows)
+    const [yStr, mStr] = month.split("-")
+    const y = Number(yStr)
+    const mo = Number(mStr)
+    const prevYm =
+      mo === 1
+        ? { year: y - 1, month: 12 }
+        : { year: y, month: mo - 1 }
+
+    const [{ data: snapCur }, { data: snapPrev }] = await Promise.all([
+      auth.supabase
+        .from("finance_monthly_snapshots")
+        .select("total_income,total_expense,balance")
+        .eq("household_id", householdId)
+        .eq("year", y)
+        .eq("month", mo)
+        .maybeSingle(),
+      auth.supabase
+        .from("finance_monthly_snapshots")
+        .select("total_income,total_expense,balance")
+        .eq("household_id", householdId)
+        .eq("year", prevYm.year)
+        .eq("month", prevYm.month)
+        .maybeSingle(),
+    ])
+
+    const snapIn = Number(snapCur?.total_income ?? 0)
+    const snapEx = Number(snapCur?.total_expense ?? 0)
+    const txMag = overview.income + overview.expense
+    const snapMag = snapIn + snapEx
+    let snapshotKpiNotice: string | undefined
+    if (txMag < 1 && snapMag > 1) {
+      const prevIn = Number(snapPrev?.total_income ?? 0)
+      const prevEx = Number(snapPrev?.total_expense ?? 0)
+      const prevNet = prevIn - prevEx
+      const net = snapIn - snapEx
+      const deltaNet =
+        Math.abs(prevNet) > 1e-6 ? ((net - prevNet) / Math.abs(prevNet)) * 100 : null
+      overview = {
+        income: snapIn,
+        expense: snapEx,
+        net,
+        savingsRate: snapIn !== 0 ? (net / snapIn) * 100 : 0,
+        previousNet: prevNet,
+        deltaNet,
+        runway: snapEx > 0 && net > 0 ? net / snapEx : 0,
+      }
+      snapshotKpiNotice =
+        "KPI superiores tomados de finance_monthly_snapshots: la suma de movimientos del mes en esta API fue 0 (si esperabas gráficos, revisa fechas o tipos en orbita_finance_transactions)."
+    }
     const weeklySeries = buildWeeklyBuckets(month, currentRows)
     const flowEvolution = {
       weeks: weeklySeries,
@@ -107,6 +162,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      ...(snapshotKpiNotice ? { notice: snapshotKpiNotice } : {}),
       data: {
         ...overview,
         weeklySeries,
