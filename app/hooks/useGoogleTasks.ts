@@ -6,7 +6,18 @@ import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import type { GoogleTaskDTO } from "@/lib/google/types"
 
-export function useGoogleTasks() {
+export type GoogleTasksFeedState = {
+  tasks: GoogleTaskDTO[]
+  loading: boolean
+  error: string | null
+  connected: boolean
+  notice: string | null
+  creating: boolean
+  refresh: () => Promise<void>
+  createTask: (input: { title: string; notes?: string; due?: string | null }) => Promise<GoogleTaskDTO | null>
+}
+
+export function useGoogleTasks(): GoogleTasksFeedState {
   const [tasks, setTasks] = useState<GoogleTaskDTO[]>([])
   const [loading, setLoading] = useState(!isAppMockMode())
   const [error, setError] = useState<string | null>(null)

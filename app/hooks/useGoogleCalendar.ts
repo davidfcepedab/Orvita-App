@@ -6,7 +6,16 @@ import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import type { GoogleCalendarEventDTO } from "@/lib/google/types"
 
-export function useGoogleCalendar() {
+export type GoogleCalendarFeedState = {
+  events: GoogleCalendarEventDTO[]
+  loading: boolean
+  error: string | null
+  connected: boolean
+  notice: string | null
+  refresh: () => Promise<void>
+}
+
+export function useGoogleCalendar(): GoogleCalendarFeedState {
   const [events, setEvents] = useState<GoogleCalendarEventDTO[]>([])
   const [loading, setLoading] = useState(!isAppMockMode())
   const [error, setError] = useState<string | null>(null)

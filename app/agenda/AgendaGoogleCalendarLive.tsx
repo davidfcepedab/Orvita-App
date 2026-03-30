@@ -1,22 +1,19 @@
 "use client"
 
-import { useEffect } from "react"
 import { Card } from "@/src/components/ui/Card"
-import { useGoogleCalendar } from "@/app/hooks/useGoogleCalendar"
+import type { GoogleCalendarFeedState } from "@/app/hooks/useGoogleCalendar"
+import { agendaCardSurfaceStyle } from "@/app/agenda/agendaUnifiedCardStyles"
 import { AGENDA_COLOR } from "@/app/agenda/taskTypeVisual"
+import { GOOGLE_AGENDA_WINDOW_DAYS } from "@/lib/agenda/googleTasksUpcoming"
 
 type AgendaGoogleCalendarLiveProps = {
-  livePullKey: number
-  /** Sin Card ni título: para incrustar en el panel unificado. */
+  /** Datos del calendario (el padre debe llamar `refresh` al cambiar livePullKey). */
+  feed: Pick<GoogleCalendarFeedState, "events" | "loading" | "error" | "connected" | "notice">
   embedded?: boolean
 }
 
-export function AgendaGoogleCalendarLive({ livePullKey, embedded = false }: AgendaGoogleCalendarLiveProps) {
-  const { events, loading, error, connected, notice, refresh } = useGoogleCalendar()
-
-  useEffect(() => {
-    void refresh()
-  }, [livePullKey, refresh])
+export function AgendaGoogleCalendarLive({ feed, embedded = false }: AgendaGoogleCalendarLiveProps) {
+  const { events, loading, error, connected, notice } = feed
 
   const body = (
     <>
@@ -30,7 +27,7 @@ export function AgendaGoogleCalendarLive({ livePullKey, embedded = false }: Agen
             color: "var(--color-text-secondary)",
           }}
         >
-          Reuniones y eventos — Google Calendar (en vivo, próximos 14 días)
+          Reuniones y eventos — Google Calendar (en vivo, próximos {GOOGLE_AGENDA_WINDOW_DAYS} días)
         </p>
       )}
       {notice && (
@@ -85,11 +82,8 @@ export function AgendaGoogleCalendarLive({ livePullKey, embedded = false }: Agen
 
   return (
     <Card
-      className="p-0"
-      style={{
-        borderLeft: `4px solid ${AGENDA_COLOR.calendar}`,
-        overflow: "hidden",
-      }}
+      className="p-0 overflow-hidden"
+      style={agendaCardSurfaceStyle(`4px solid ${AGENDA_COLOR.calendar}`)}
     >
       <div style={{ padding: "var(--spacing-md)" }}>{body}</div>
     </Card>

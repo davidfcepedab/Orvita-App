@@ -75,7 +75,7 @@ export function useAgendaTasks() {
         headers,
         body: JSON.stringify({
           ...input,
-          // ÓRVITA → Google Tasks solo para tareas “para mí” (sin asignatario).
+          // Órvita → Google Tasks solo para tareas “para mí” (sin asignatario).
           syncToGoogle: personal,
         }),
       })

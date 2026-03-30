@@ -69,7 +69,7 @@ export default function ControlPage() {
             }}
           >
             <span style={{ width: "6px", height: "6px", borderRadius: "999px", background: "var(--color-accent-health)" }} />
-            Órbita adaptó tu día por baja de energía
+            Órvita adaptó tu día por baja de energía
           </div>
         </div>
       </div>

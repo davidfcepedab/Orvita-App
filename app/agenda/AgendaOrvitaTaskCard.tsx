@@ -1,0 +1,152 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import { Check, Clock } from "lucide-react"
+import { Card } from "@/src/components/ui/Card"
+import type { UiAgendaTask } from "@/app/agenda/mapAgendaTaskToUi"
+import { assignmentShortLine } from "@/app/agenda/mapAgendaTaskToUi"
+import {
+  agendaCardSurfaceStyle,
+  agendaPillBaseClass,
+  priorityPillStyle,
+  statusPillStyle,
+} from "@/app/agenda/agendaUnifiedCardStyles"
+import {
+  formatPriorityTitle,
+  formatStatusTitle,
+  venceLine,
+} from "@/app/agenda/taskCardFormat"
+import { taskLeftBorder } from "@/app/agenda/taskTypeVisual"
+
+type Props = {
+  task: UiAgendaTask
+  variant: "list" | "kanban"
+  /** Guarda el estado «realizada» al pulsar Guardar (debe resolver cuando el servidor confirme). */
+  onSaveComplete?: (task: UiAgendaTask, completed: boolean) => Promise<void> | void
+}
+
+export function AgendaOrvitaTaskCard({ task, variant, onSaveComplete }: Props) {
+  const isList = variant === "list"
+  const titleCls = isList ? "text-[14px]" : "text-[13px]"
+  const lineCls = isList ? "text-[11px]" : "text-[10px]"
+  const fuenteCls = isList ? "text-[10px]" : "text-[9px]"
+
+  const [done, setDone] = useState(task.completed)
+  const [dirty, setDirty] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    setDone(task.completed)
+    setDirty(false)
+  }, [task.id, task.completed])
+
+  const durationVenceLine = `${task.duration} min | ${venceLine(task.due)}`
+  const statusTitle = formatStatusTitle(task.status)
+  const statusKey = task.status.toLowerCase()
+  const assignShort = assignmentShortLine(task)
+
+  async function handleGuardar() {
+    if (!onSaveComplete || !dirty) return
+    setSaving(true)
+    try {
+      await onSaveComplete(task, done)
+      setDirty(false)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Card
+      hover
+      className="p-0 overflow-hidden"
+      style={agendaCardSurfaceStyle(taskLeftBorder(task.type, 4))}
+    >
+      <div
+        className={`flex items-start gap-3 text-left ${isList ? "p-3" : "p-2.5"}`}
+      >
+        <div className="min-w-0 flex-1 space-y-1">
+          <p
+            className={`m-0 font-semibold leading-snug tracking-tight text-[var(--color-text-primary)] ${titleCls}`}
+          >
+            {task.title}
+          </p>
+
+          <p
+            className={`m-0 flex items-center gap-1 leading-snug text-[var(--color-text-secondary)] ${lineCls}`}
+          >
+            <Clock
+              className="h-3 w-3 shrink-0 opacity-70"
+              strokeWidth={2}
+              aria-hidden
+            />
+            <span>{durationVenceLine}</span>
+          </p>
+
+          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+            <span
+              className={agendaPillBaseClass}
+              style={priorityPillStyle(task.priority)}
+              title="Prioridad (etiqueta de color)"
+            >
+              {formatPriorityTitle(task.priority)}
+            </span>
+            <span className="text-[var(--color-text-secondary)] text-[10px]" aria-hidden>
+              |
+            </span>
+            <span
+              className={agendaPillBaseClass}
+              style={statusPillStyle(statusKey)}
+              title="Estado (etiqueta de color)"
+            >
+              {statusTitle}
+            </span>
+          </div>
+
+          <p className={`m-0 text-[var(--color-text-secondary)] ${fuenteCls}`}>
+            Fuente: {task.orvitaFuente}
+          </p>
+
+          {assignShort ? (
+            <p className={`m-0 text-[var(--color-text-secondary)] ${fuenteCls}`}>{assignShort}</p>
+          ) : null}
+        </div>
+
+        {onSaveComplete ? (
+          <div className="flex shrink-0 items-center gap-2 self-start pt-0.5">
+            <button
+              type="button"
+              disabled={!dirty || saving}
+              onClick={() => void handleGuardar()}
+              className="min-w-0 border-0 bg-transparent p-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)] underline decoration-[var(--color-border)] underline-offset-2 transition-colors hover:text-[var(--color-text-primary)] disabled:cursor-not-allowed disabled:no-underline disabled:opacity-40"
+            >
+              {saving ? "Guardando…" : "Guardar"}
+            </button>
+            <button
+              type="button"
+              role="checkbox"
+              aria-checked={done}
+              aria-label={done ? "Marcar como pendiente" : "Marcar como realizada"}
+              onClick={() => {
+                setDone((v) => !v)
+                setDirty(true)
+              }}
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-border)] text-[var(--agenda-assigned)] transition-colors hover:border-[var(--agenda-assigned)]"
+              style={
+                done
+                  ? {
+                      borderColor: "var(--agenda-assigned)",
+                      background:
+                        "color-mix(in srgb, var(--agenda-assigned) 22%, transparent)",
+                    }
+                  : undefined
+              }
+            >
+              {done ? <Check className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden /> : null}
+            </button>
+          </div>
+        ) : null}
+      </div>
+    </Card>
+  )
+}

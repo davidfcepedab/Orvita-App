@@ -1,5 +1,23 @@
 import type { AgendaTask } from "@/app/hooks/useAgendaTasks"
 
+function initialsFromName(name: string): string {
+  const t = name.trim()
+  if (!t) return ""
+  const parts = t.split(/\s+/).filter(Boolean)
+  if (parts.length >= 2) {
+    const a = parts[0][0] || ""
+    const b = parts[parts.length - 1][0] || ""
+    return (a + b).toUpperCase()
+  }
+  return t.slice(0, 2).toUpperCase()
+}
+
+function orvitaFuenteForType(type: "recibida" | "asignada" | "personal"): string {
+  if (type === "recibida") return "Me la asignaron"
+  if (type === "asignada") return "Yo la asigné"
+  return "Nueva"
+}
+
 export type UiAgendaTask = {
   id: string
   title: string
@@ -12,6 +30,20 @@ export type UiAgendaTask = {
   completed: boolean
   /** Línea legible para lista enriquecida (asignación / origen). */
   assigneeLine: string
+  /** Iniciales de la persona relacionada (contacto o asignado). Vacío en personales. */
+  relatedPersonInitials: string
+  /** "Asignado por …" / "Asignado a …". Vacío en personales. */
+  assignmentCaption: string
+  /** Texto para pie "Fuente: …". */
+  orvitaFuente: string
+}
+
+export function assignmentShortLine(task: UiAgendaTask): string | null {
+  const ini = task.relatedPersonInitials.trim()
+  if (!ini) return null
+  if (task.type === "recibida") return `De: ${ini}`
+  if (task.type === "asignada") return `Para: ${ini}`
+  return null
 }
 
 export function mapAgendaTaskToUi(t: AgendaTask): UiAgendaTask {
@@ -29,18 +61,24 @@ export function mapAgendaTaskToUi(t: AgendaTask): UiAgendaTask {
   if (t.status === "in-progress") displayStatus = "en progreso"
   if (t.status === "completed") displayStatus = "completada"
 
-  const owner =
-    t.type === "personal" ? "Yo" : (t.assigneeName?.trim().slice(0, 2).toUpperCase() || "EQ")
-
   const name = t.assigneeName?.trim() || ""
+  const relatedPersonInitials = t.type === "personal" ? "" : initialsFromName(name)
+  const owner =
+    t.type === "personal" ? "YO" : relatedPersonInitials || "EQ"
+
   let assigneeLine = ""
+  let assignmentCaption = ""
   if (t.type === "personal") {
     assigneeLine = "Para ti · las tareas sin asignatario pueden sincronizarse con Google Tasks"
   } else if (t.type === "assigned") {
     assigneeLine = name ? `Asignado a: ${name}` : "Asignado a: sin nombre (añade asignatario al crear la tarea)"
+    assignmentCaption = name ? `Asignado a ${name}` : "Asignado a (sin nombre)"
   } else {
     assigneeLine = name ? `Recibida · origen / contacto: ${name}` : "Recibida · sin contacto indicado"
+    assignmentCaption = name ? `Asignado por ${name}` : "Asignado por (sin nombre)"
   }
+
+  const orvitaFuente = orvitaFuenteForType(typeMap[t.type])
 
   return {
     id: t.id,
@@ -53,6 +91,9 @@ export function mapAgendaTaskToUi(t: AgendaTask): UiAgendaTask {
     owner,
     completed: t.status === "completed",
     assigneeLine,
+    relatedPersonInitials,
+    assignmentCaption,
+    orvitaFuente,
   }
 }
 

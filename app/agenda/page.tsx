@@ -2,21 +2,42 @@
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react"
 import { Card } from "@/src/components/ui/Card"
-import { CalendarDays, CalendarRange, LayoutGrid, ListChecks, Plus, Search, UserPlus } from "lucide-react"
+import { CalendarDays, CalendarRange, LayoutGrid, ListChecks, Plus, Search } from "lucide-react"
+
 import { GoogleAgendaPanel } from "@/app/agenda/GoogleAgendaPanel"
-import { AgendaGoogleCalendarLive } from "@/app/agenda/AgendaGoogleCalendarLive"
-import { AgendaRemindersSection } from "@/app/agenda/AgendaRemindersSection"
 import { AgendaColorLegend } from "@/app/agenda/AgendaColorLegend"
+
 import { useAgendaTasks } from "@/app/hooks/useAgendaTasks"
+import { useGoogleCalendar } from "@/app/hooks/useGoogleCalendar"
+import { useGoogleTasks } from "@/app/hooks/useGoogleTasks"
 import { mapAgendaTaskToUi, priorityFormToApi } from "@/app/agenda/mapAgendaTaskToUi"
+import { agendaPanelSurfaceStyle } from "@/app/agenda/agendaUiTokens"
+import { priorityFilterControlStyle } from "@/app/agenda/agendaUnifiedCardStyles"
+import { formatPriorityTitle } from "@/app/agenda/taskCardFormat"
+
 import {
   AgendaSharedKanban,
   AgendaSharedList,
   AgendaSharedMonth,
   AgendaSharedWeek,
 } from "@/app/agenda/AgendaSharedViews"
+
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import { isAppMockMode, isSupabaseEnabled } from "@/lib/checkins/flags"
+import { createBrowserClient } from "@/lib/supabase/browser"
+import { buildGoogleByDayIndex } from "@/lib/agenda/googleAgendaByDay"
+
+function pickViewerFirstName(
+  user: { user_metadata?: Record<string, unknown>; email?: string | null } | null | undefined
+): string | null {
+  if (!user) return null
+  const meta = user.user_metadata
+  const fromMeta = [meta?.full_name, meta?.name].find((v) => typeof v === "string" && String(v).trim()) as string | undefined
+  const raw = (fromMeta?.trim() || user.email?.split("@")[0]?.trim() || "").trim()
+  if (!raw) return null
+  const first = raw.split(/\s+/)[0]
+  return first || null
+}
 
 function todayDateInputValue() {
   return new Date().toISOString().slice(0, 10)
@@ -30,7 +51,6 @@ const tabs = [
 ]
 
 const priorities = ["alta", "media", "baja"] as const
-
 type Priority = typeof priorities[number]
 
 function getWeekDays(base = new Date()) {
@@ -70,51 +90,50 @@ function buildMonthGrid(date: Date) {
   return days
 }
 
-/** Una sola vista principal a la vez (kanban = columnas por tipo). */
 type AgendaMainView = "columns" | "list" | "week" | "month"
 
-const viewOptions: {
-  key: AgendaMainView
-  label: string
-  description: string
-  icon: typeof LayoutGrid
-  color: string
-}[] = [
-  {
-    key: "columns",
-    label: "Columnas",
-    description: "Flujo por tipo",
-    icon: LayoutGrid,
-    color: "var(--color-accent-finance)",
-  },
-  {
-    key: "list",
-    label: "Lista",
-    description: "Detalle en filas",
-    icon: ListChecks,
-    color: "var(--color-accent-health)",
-  },
-  {
-    key: "week",
-    label: "Semana",
-    description: "7 días",
-    icon: CalendarDays,
-    color: "var(--color-accent-warning)",
-  },
-  {
-    key: "month",
-    label: "Mes",
-    description: "Calendario mensual",
-    icon: CalendarRange,
-    color: "var(--color-accent-primary)",
-  },
+const viewOptions = [
+  { key: "columns" as const, label: "Columnas", description: "Flujo por tipo", icon: LayoutGrid, color: "var(--color-accent-finance)" },
+  { key: "list" as const,    label: "Lista",    description: "Órvita + Google en una línea", icon: ListChecks, color: "var(--color-accent-health)" },
+  { key: "week" as const,    label: "Semana",   description: "7 días", icon: CalendarDays, color: "var(--color-accent-warning)" },
+  { key: "month" as const,   label: "Mes",      description: "Calendario mensual", icon: CalendarRange, color: "var(--color-accent-primary)" },
 ]
 
 export default function AgendaPage() {
   const { tasks: agendaTasks, loading, error, refresh, createTask, updateTask } = useAgendaTasks()
   const tasks = useMemo(() => agendaTasks.map(mapAgendaTaskToUi), [agendaTasks])
+  const googleCalendar = useGoogleCalendar()
+  const googleTasksFeed = useGoogleTasks()
+
+  const [viewerFirstName, setViewerFirstName] = useState<string | null>(null)
   const [googleLivePullKey, setGoogleLivePullKey] = useState(0)
   const lastVisibilityPullRef = useRef(0)
+
+  useEffect(() => {
+    const supabase = createBrowserClient()
+    const getUser = supabase.auth?.getUser
+    if (typeof getUser !== "function") return
+    void getUser()
+      .then(({ data }) => setViewerFirstName(pickViewerFirstName(data?.user)))
+      .catch(() => setViewerFirstName(null))
+  }, [])
+
+  const agendaTitle = viewerFirstName ? `Agenda ${viewerFirstName}` : "Tu agenda diaria"
+
+  const agendaTagline = useMemo(() => {
+    if (loading) return "Sincronizando tablero…"
+    const n = agendaTasks.length
+    const active = agendaTasks.filter((t) => t.status !== "completed").length
+    if (n === 0) return "Órvita y Google en un solo lugar: crea, importa o revisa la lista unificada."
+    if (active === 0) return "Sin pendientes en el tablero compartido."
+    return `${active} pendiente${active === 1 ? "" : "s"} en Órvita. Todas las vistas mezclan o muestran Calendar y recordatorios Google junto al tablero.`
+  }, [loading, agendaTasks])
+
+  useEffect(() => {
+    if (googleLivePullKey < 1) return
+    void googleCalendar.refresh()
+    void googleTasksFeed.refresh()
+  }, [googleLivePullKey, googleCalendar.refresh, googleTasksFeed.refresh])
 
   useEffect(() => {
     if (isAppMockMode() || !isSupabaseEnabled()) return
@@ -129,14 +148,10 @@ export default function AgendaPage() {
         if (cancelled) return
         await refresh()
         setGoogleLivePullKey((k) => k + 1)
-      } catch {
-        /* sin conexión o sesión: la UI sigue con datos locales */
-      }
+      } catch {}
     }
     void pull()
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [refresh])
 
   useEffect(() => {
@@ -155,9 +170,7 @@ export default function AgendaPage() {
           ])
           await refresh()
           setGoogleLivePullKey((k) => k + 1)
-        } catch {
-          /* ignore */
-        }
+        } catch {}
       })()
     }
     document.addEventListener("visibilitychange", onVisible)
@@ -190,25 +203,26 @@ export default function AgendaPage() {
       const queryMatch = !query || task.title.toLowerCase().includes(query.toLowerCase())
       return tabMatch && priorityMatch && queryMatch
     })
-  }, [tab, priority, query])
+  }, [tab, priority, query, tasks])
+
+  const googleByDay = useMemo(
+    () => buildGoogleByDayIndex(googleCalendar, googleTasksFeed),
+    [googleCalendar.connected, googleCalendar.events, googleTasksFeed.connected, googleTasksFeed.tasks]
+  )
 
   const countByTab = (key: string) =>
     key === "todas" ? tasks.length : tasks.filter((task) => task.type === key).length
 
-  const grouped = useMemo(() => {
-    return {
-      recibida: filtered.filter((task) => task.type === "recibida"),
-      asignada: filtered.filter((task) => task.type === "asignada"),
-      personal: filtered.filter((task) => task.type === "personal"),
-    }
-  }, [filtered])
+  const grouped = useMemo(() => ({
+    recibida: filtered.filter((task) => task.type === "recibida"),
+    asignada: filtered.filter((task) => task.type === "asignada"),
+    personal: filtered.filter((task) => task.type === "personal"),
+  }), [filtered])
 
   const { weekDays, weekMap } = useMemo(() => {
     const days = getWeekDays(new Date())
     const map: Record<string, typeof tasks> = {}
-    days.forEach((day) => {
-      map[formatDateKey(day)] = []
-    })
+    days.forEach((day) => { map[formatDateKey(day)] = [] })
     filtered.forEach((task) => {
       if (task.due && map[task.due]) map[task.due].push(task)
     })
@@ -270,280 +284,222 @@ export default function AgendaPage() {
     }
   }
 
-  const toggleTaskComplete = (taskId: string, completed: boolean) => {
-    void updateTask(taskId, { status: completed ? "completed" : "pending" })
-  }
+  const saveTaskComplete = (taskId: string, completed: boolean) =>
+    updateTask(taskId, { status: completed ? "completed" : "pending" })
 
   return (
-    <div className="flex flex-col gap-6 lg:gap-8">
-      {/* —— Cabecera: título, acciones —— */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--spacing-lg)" }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: "28px", fontWeight: 500 }}>Tareas Compartidas</h1>
-          <p style={{ margin: "6px 0 0", fontSize: "13px", color: "var(--color-text-secondary)" }}>
-            Elige Columnas, Lista, Semana o Mes: la vista activa, el calendario en vivo y los recordatorios comparten el mismo panel
-            (filtros y búsqueda aplican a las tareas compartidas).
-          </p>
-        </div>
-        <div style={{ display: "flex", gap: "var(--spacing-sm)" }}>
-          <button
-            onClick={() => setFormOpen(true)}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "8px",
-              padding: "8px 14px",
-              borderRadius: "10px",
-              border: "0.5px solid var(--color-border)",
-              background: "var(--agenda-assigned)",
-              color: "white",
-              fontSize: "12px",
-              fontWeight: 600,
-              textTransform: "uppercase",
-              letterSpacing: "0.12em",
-            }}
-          >
-            <Plus size={14} />
-            Nueva Tarea
-          </button>
-          <button
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "8px",
-              padding: "10px 16px",
-              borderRadius: "10px",
-              border: "0.5px solid var(--color-border)",
-              background: "var(--color-surface)",
-              fontSize: "12px",
-              fontWeight: 600,
-              color: "var(--color-text-secondary)",
-              textTransform: "uppercase",
-              letterSpacing: "0.12em",
-            }}
-          >
-            <UserPlus size={14} />
-            Asignar
-          </button>
-        </div>
-      </div>
-
-      <AgendaColorLegend />
-
-      {/* —— Google Tasks & sync (sin cambiar comportamiento) —— */}
-      <GoogleAgendaPanel
-        livePullKey={googleLivePullKey}
-        onAfterTasksSync={() => void refresh()}
-      />
-      {(loading || error) && (
-        <div
-          style={{
-            padding: "10px 14px",
-            borderRadius: "12px",
-            border: "0.5px solid var(--color-border)",
-            background: error ? "color-mix(in srgb, var(--color-accent-danger) 10%, var(--color-surface))" : "var(--color-surface-alt)",
-            fontSize: "13px",
-            color: error ? "var(--color-accent-danger)" : "var(--color-text-secondary)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "12px",
-          }}
+    <>
+      <section
+        aria-label="Agenda unificada"
+        className="overflow-hidden rounded-3xl border border-[var(--color-border)] shadow-sm"
+        style={{ borderWidth: "0.5px", background: "var(--agenda-shell-bg)" }}
+      >
+        <header
+          className="flex flex-col gap-4 border-b border-[var(--color-border)] px-5 pb-4 pt-5 sm:flex-row sm:items-center sm:justify-between lg:px-8 lg:pb-5 lg:pt-7"
+          style={{ background: "var(--agenda-elevated-bg)" }}
         >
-          <span>{error ?? "Cargando tareas compartidas…"}</span>
-          {error && (
+          <div>
+            <h1 className="m-0 text-[26px] font-medium tracking-tight text-[var(--color-text-primary)] lg:text-[28px]">
+              {agendaTitle}
+            </h1>
+            <p className="m-0 mt-1.5 max-w-xl text-[13px] leading-snug text-[var(--color-text-secondary)]">
+              {agendaTagline}
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-wrap gap-2 sm:gap-[var(--spacing-sm)]">
             <button
               type="button"
-              onClick={() => void refresh()}
-              style={{
-                border: "0.5px solid var(--color-border)",
-                background: "var(--color-surface)",
-                borderRadius: "8px",
-                padding: "6px 10px",
-                fontSize: "12px",
-                cursor: "pointer",
-              }}
+              onClick={() => setFormOpen(true)}
+              className="inline-flex items-center gap-2 rounded-[10px] border border-[var(--color-border)] px-3.5 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-white"
+              style={{ background: "var(--agenda-assigned)" }}
             >
-              Reintentar
+              <Plus size={14} /> Nueva Tarea
             </button>
-          )}
-        </div>
-      )}
+          </div>
+        </header>
 
-      {/* —— Sticky: selector de vista + filtros —— */}
-      <div
-        className="sticky z-10 pb-2"
-        style={{
-          top: "84px",
-          background: "var(--color-background)",
-        }}
-      >
-        <div className="flex flex-col gap-3">
+        {(loading || error) && (
           <div
-            className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3 shadow-[0_8px_24px_rgba(15,23,42,0.06)]"
-            style={{ borderWidth: "0.5px" }}
+            className="flex items-center justify-between gap-3 border-b border-[var(--color-border)] px-5 py-3 text-[13px] lg:px-8"
+            style={{
+              background: error
+                ? "color-mix(in srgb, var(--color-accent-danger) 10%, var(--agenda-shell-bg))"
+                : "var(--agenda-inset-bg)",
+              color: error ? "var(--color-accent-danger)" : "var(--color-text-secondary)",
+            }}
           >
-            <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-              {viewOptions.map((item) => {
-                const Icon = item.icon
-                const active = view === item.key
-                return (
-                  <button
-                    key={item.key}
-                    type="button"
-                    onClick={() => setView(item.key)}
-                    className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-[box-shadow,background-color,border-color] duration-150"
-                    style={{
-                      border: active ? `2px solid ${item.color}` : "1px solid var(--color-border)",
-                      background: active ? `color-mix(in srgb, ${item.color} 14%, var(--color-surface))` : "var(--color-surface-alt)",
-                      boxShadow: active ? "0 10px 22px rgba(15, 23, 42, 0.1)" : "none",
-                    }}
-                  >
-                    <span
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px]"
+            <span>{error ?? "Cargando tareas compartidas…"}</span>
+            {error && (
+              <button
+                type="button"
+                onClick={() => void refresh()}
+                className="shrink-0 cursor-pointer rounded-lg border border-[var(--color-border)] px-2.5 py-1.5 text-[12px]"
+                style={{ background: "var(--agenda-elevated-bg)" }}
+              >
+                Reintentar
+              </button>
+            )}
+          </div>
+        )}
+
+        <div
+          className="sticky z-10 border-b border-[var(--color-border)] px-5 py-3 lg:px-8"
+          style={{ top: "84px", background: "var(--agenda-shell-bg)" }}
+        >
+          <div className="flex flex-col gap-2">
+            <div
+              className="rounded-xl border border-[var(--color-border)] px-3 py-2 sm:px-3.5 sm:py-2.5"
+              style={agendaPanelSurfaceStyle}
+              role="region"
+              aria-label="Buscar, sincronizar Google y filtros"
+            >
+              <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3 sm:gap-y-2">
+                <div className="flex min-h-[40px] min-w-0 w-full flex-1 items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-2.5 py-1.5 sm:min-w-[12rem] sm:max-w-xl">
+                  <Search size={14} className="shrink-0 text-[var(--color-text-secondary)]" aria-hidden />
+                  <input
+                    placeholder="Buscar…"
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    className="min-w-0 flex-1 border-0 bg-transparent text-[13px] text-[var(--color-text-primary)] outline-none placeholder:text-[var(--color-text-secondary)] sm:text-[12px]"
+                  />
+                </div>
+                <div className="flex w-full min-w-0 flex-wrap items-center gap-x-1 gap-y-1 sm:w-auto sm:flex-[0_1_auto] sm:justify-end">
+                  <GoogleAgendaPanel
+                    feed={googleTasksFeed}
+                    compact
+                    inlineCompact
+                    onAfterTasksSync={() => void refresh()}
+                  />
+                </div>
+              </div>
+              <div className="mt-2 flex flex-col gap-2 border-t border-[var(--color-border)] pt-2 sm:mt-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3 sm:gap-y-1.5 sm:pt-2">
+                <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                  <AgendaColorLegend inline omitHeading sourcesOnly dense />
+                </div>
+                <span className="hidden h-3.5 w-px shrink-0 self-stretch bg-[var(--color-border)] sm:block" aria-hidden />
+                <div className="flex min-w-0 flex-wrap gap-1">
+                  {tabs.map((item) => (
+                    <button
+                      key={item.key}
+                      type="button"
+                      onClick={() => setTab(item.key)}
+                      className="inline-flex min-h-9 items-center gap-1 rounded-full border border-[var(--color-border)] px-2.5 py-1 text-[10px] sm:min-h-0 sm:px-2 sm:py-0.5"
                       style={{
-                        background: active ? `color-mix(in srgb, ${item.color} 22%, transparent)` : "var(--color-surface)",
-                        color: item.color,
+                        background: tab === item.key ? "var(--color-surface-alt)" : "transparent",
+                        color: tab === item.key ? "var(--color-text-primary)" : "var(--color-text-secondary)",
+                        boxShadow:
+                          tab === item.key ? "inset 0 0 0 1px color-mix(in srgb, var(--color-border) 80%, transparent)" : undefined,
                       }}
                     >
-                      <Icon size={18} strokeWidth={2} />
-                    </span>
-                    <div className="min-w-0">
-                      <p
-                        className="m-0 text-[13px] font-semibold leading-tight"
+                      {item.label}
+                      <span className="tabular-nums text-[9px] text-[var(--color-text-secondary)]">{countByTab(item.key)}</span>
+                    </button>
+                  ))}
+                </div>
+                <span className="hidden h-3.5 w-px shrink-0 self-stretch bg-[var(--color-border)] lg:block" aria-hidden />
+                <div className="flex w-full min-w-0 flex-wrap gap-1 lg:ml-auto lg:w-auto lg:justify-end">
+                  {priorities.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => setPriority(priority === item ? "" : item)}
+                      className="min-h-9 rounded-full px-2.5 py-1 text-[9px] uppercase tracking-[0.1em] sm:min-h-0 sm:px-2 sm:py-0.5"
+                      style={priorityFilterControlStyle(item, priority === item)}
+                    >
+                      {formatPriorityTitle(item)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-[var(--color-border)] p-1.5 sm:p-2" style={agendaPanelSurfaceStyle}>
+              <div className="grid grid-cols-2 gap-1 min-[440px]:grid-cols-4">
+                {viewOptions.map((item) => {
+                  const Icon = item.icon
+                  const active = view === item.key
+                  return (
+                    <button
+                      key={item.key}
+                      type="button"
+                      title={item.description}
+                      aria-label={`${item.label}: ${item.description}`}
+                      onClick={() => setView(item.key)}
+                      className="flex min-h-[48px] flex-col items-center justify-center gap-1 rounded-lg px-1.5 py-2 text-center transition-[background-color,border-color] duration-150 min-[440px]:min-h-[44px] min-[440px]:gap-0.5 min-[440px]:py-1.5"
+                      style={{
+                        border: active ? `1.5px solid ${item.color}` : "1px solid var(--color-border)",
+                        background: active
+                          ? `color-mix(in srgb, ${item.color} 12%, var(--color-surface-alt))`
+                          : "var(--color-surface-alt)",
+                      }}
+                    >
+                      <Icon size={16} strokeWidth={2} style={{ color: item.color }} aria-hidden />
+                      <span
+                        className="m-0 max-w-full truncate px-0.5 text-[11px] font-semibold leading-tight min-[440px]:text-[10px]"
                         style={{ color: active ? "var(--color-text-primary)" : "var(--color-text-secondary)" }}
                       >
                         {item.label}
-                      </p>
-                      <p className="m-0 mt-0.5 text-[11px] leading-snug text-[var(--color-text-secondary)]">{item.description}</p>
-                    </div>
-                  </button>
-                )
-              })}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
             </div>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--spacing-md)", flexWrap: "wrap" }}>
-            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-              {tabs.map((item) => (
-                <button
-                  key={item.key}
-                  onClick={() => setTab(item.key)}
-                  style={{
-                    padding: "6px 10px",
-                    borderRadius: "999px",
-                    border: "0.5px solid var(--color-border)",
-                    background: tab === item.key ? "var(--color-surface)" : "var(--color-surface-alt)",
-                    fontSize: "11px",
-                    color: tab === item.key ? "var(--color-text-primary)" : "var(--color-text-secondary)",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                  }}
-                >
-                  {item.label}
-                  <span style={{ fontSize: "10px", color: "var(--color-text-secondary)" }}>({countByTab(item.key)})</span>
-                </button>
-              ))}
-            </div>
-            <div style={{ display: "flex", gap: "6px" }}>
-              {priorities.map((item) => (
-                <button
-                  key={item}
-                  onClick={() => setPriority(priority === item ? "" : item)}
-                  style={{
-                    padding: "6px 12px",
-                    borderRadius: "999px",
-                    border: "0.5px solid var(--color-border)",
-                    background: priority === item ? "var(--color-surface)" : "var(--color-surface-alt)",
-                    fontSize: "10px",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.12em",
-                    color: "var(--color-text-secondary)",
-                  }}
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "var(--color-surface)", border: "0.5px solid var(--color-border)", borderRadius: "12px", padding: "10px 14px" }}>
-            <Search size={16} color="var(--color-text-secondary)" />
-            <input
-              placeholder="Buscar tareas..."
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              style={{ border: "none", outline: "none", fontSize: "13px", width: "100%", background: "transparent", color: "var(--color-text-primary)" }}
-            />
           </div>
         </div>
-      </div>
 
-      {/* —— Post-filtros: una sola card (Figma) — vista + Calendar + Recordatorios —— */}
-      <section aria-label="Panel integrado de agenda" className="mt-6">
         <div
-          className="unified-agenda-container flex flex-col rounded-3xl border bg-white p-6 shadow-sm lg:p-8"
-          style={{ borderColor: "var(--color-border)" }}
+          className="unified-agenda-container flex min-w-0 flex-col gap-4 px-5 py-6 md:gap-6 lg:px-8 lg:py-8"
+          style={{ background: "var(--agenda-shell-bg)" }}
         >
-          {/* Vista principal — ocupa la mayor parte del espacio (flex-1 requiere flex flex-col en la card) */}
-          <div className="flex-1 min-h-[min(420px,55dvh)]">
-            {view === "columns" && <AgendaSharedKanban grouped={grouped} />}
-            {view === "list" && (
-              <AgendaSharedList
-                filtered={filtered}
-                onToggleComplete={(task, completed) => toggleTaskComplete(task.id, completed)}
-              />
-            )}
-            {view === "week" && (
-              <AgendaSharedWeek
-                weekDays={weekDays}
-                weekMap={weekMap}
-                totalWeeklyTasks={totalWeeklyTasks}
-                totalWeeklyCompleted={totalWeeklyCompleted}
-                totalWeeklyPending={totalWeeklyPending}
-                totalWeeklyMinutes={totalWeeklyMinutes}
-                formatDateKey={formatDateKey}
-                formatDayLabel={formatDayLabel}
-              />
-            )}
-            {view === "month" && (
-              <AgendaSharedMonth
-                monthGrid={monthGrid}
-                monthLabel={monthLabel}
-                monthSummary={monthSummary}
-                tasks={filtered}
-                selectedDay={selectedDay}
-                onSelectDay={setSelectedDay}
-                dayDetails={dayDetails}
-                formatDateKey={formatDateKey}
-              />
-            )}
-          </div>
-
-          {/* Google Calendar — separación suave dentro del mismo contenedor */}
-          <div className="mt-10 border-t border-neutral-100 pt-8">
-            <div className="border-l-4 pl-4" style={{ borderLeftColor: "#8B5CF6" }}>
-              <h3 className="mb-1 text-sm font-semibold" style={{ color: "var(--color-text-primary)" }}>
-                Google Calendar en vivo (próximos 14 días)
-              </h3>
-              <p className="mb-3 text-xs leading-snug text-[var(--color-text-secondary)]">
-                Eventos conectados a tu cuenta; sincroniza desde el panel GOOGLE TASKS & SYNC.
-              </p>
-              <AgendaGoogleCalendarLive livePullKey={googleLivePullKey} embedded />
-            </div>
-          </div>
-
-          {/* Recordatorios — separación suave dentro del mismo contenedor */}
-          <div className="mt-8 border-t border-neutral-100 pt-8">
-            <div className="border-l-4 pl-4" style={{ borderLeftColor: "#FBBC04" }}>
-              <h3 className="mb-1 text-sm font-semibold" style={{ color: "var(--color-text-primary)" }}>
-                Recordatorios
-              </h3>
-              <p className="mb-3 text-xs leading-snug text-[var(--color-text-secondary)]">
-                Vencimientos en los próximos 14 días (Google Tasks, tono ámbar en la leyenda).
-              </p>
-              <AgendaRemindersSection livePullKey={googleLivePullKey} embedded />
+          <div
+            className="flex min-h-[min(420px,55dvh)] min-w-0 flex-1 flex-col gap-4 md:gap-6"
+            aria-label="Agenda: vista activa con Órvita y Google"
+          >
+            <div className="min-h-0 flex-1">
+              {view === "columns" && (
+                <AgendaSharedKanban
+                  grouped={grouped}
+                  calendarFeed={googleCalendar}
+                  googleTasksFeed={googleTasksFeed}
+                  onSaveComplete={(task, completed) => saveTaskComplete(task.id, completed)}
+                />
+              )}
+              {view === "list" && (
+                <AgendaSharedList
+                  filtered={filtered}
+                  calendarFeed={googleCalendar}
+                  googleTasksFeed={googleTasksFeed}
+                  agendaLoading={loading}
+                  onSaveComplete={(task, completed) => saveTaskComplete(task.id, completed)}
+                />
+              )}
+              {view === "week" && (
+                <AgendaSharedWeek
+                  weekDays={weekDays}
+                  weekMap={weekMap}
+                  totalWeeklyTasks={totalWeeklyTasks}
+                  totalWeeklyCompleted={totalWeeklyCompleted}
+                  totalWeeklyPending={totalWeeklyPending}
+                  totalWeeklyMinutes={totalWeeklyMinutes}
+                  formatDateKey={formatDateKey}
+                  formatDayLabel={formatDayLabel}
+                  googleByDay={googleByDay}
+                />
+              )}
+              {view === "month" && (
+                <AgendaSharedMonth
+                  monthGrid={monthGrid}
+                  monthLabel={monthLabel}
+                  monthSummary={monthSummary}
+                  tasks={filtered}
+                  selectedDay={selectedDay}
+                  onSelectDay={setSelectedDay}
+                  dayDetails={dayDetails}
+                  formatDateKey={formatDateKey}
+                  googleByDay={googleByDay}
+                />
+              )}
             </div>
           </div>
         </div>
@@ -561,8 +517,8 @@ export default function AgendaPage() {
             zIndex: 50,
           }}
         >
-          <Card className="p-6" hover>
-            <form onSubmit={(e) => void handleCreateTask(e)} style={{ display: "grid", gap: "12px", minWidth: "420px" }}>
+          <Card className="mx-4 w-full max-w-lg p-4 sm:mx-0 sm:p-6" hover>
+            <form onSubmit={(e) => void handleCreateTask(e)} className="grid w-full min-w-0 gap-3">
               {formSubmitError && (
                 <p style={{ margin: 0, fontSize: "12px", color: "var(--color-accent-danger)" }}>{formSubmitError}</p>
               )}
@@ -593,7 +549,7 @@ export default function AgendaPage() {
                 onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
                 style={{ padding: "10px 12px", borderRadius: "10px", border: "0.5px solid var(--color-border)" }}
               />
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "10px" }}>
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-2.5">
                 <input
                   placeholder="Asignado a (iniciales)"
                   value={form.assignee}
@@ -607,7 +563,7 @@ export default function AgendaPage() {
                   style={{ padding: "10px 12px", borderRadius: "10px", border: "0.5px solid var(--color-border)" }}
                 />
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "10px" }}>
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3 sm:gap-2.5">
                 <select
                   value={form.type}
                   onChange={(event) => setForm((prev) => ({ ...prev, type: event.target.value }))}
@@ -637,7 +593,7 @@ export default function AgendaPage() {
                   <option value="completada">Completada</option>
                 </select>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "10px" }}>
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-2.5">
                 <input
                   type="number"
                   min={5}
@@ -681,7 +637,6 @@ export default function AgendaPage() {
           </Card>
         </div>
       )}
-    </div>
+    </>
   )
 }
-

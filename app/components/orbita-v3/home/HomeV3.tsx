@@ -30,7 +30,7 @@ export default function HomeV3() {
     <div className="mx-auto max-w-5xl space-y-8">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-3xl tracking-tight">Orbita Control</h2>
+          <h2 className="text-3xl tracking-tight">Órvita Control</h2>
           <p className="text-sm" style={{ color: theme.textMuted }}>
             Centro de mando adaptativo.
           </p>
@@ -48,7 +48,7 @@ export default function HomeV3() {
             style={{ color: theme.accent.health }}
           />
           <span className="text-xs uppercase tracking-wider">
-            Orbita adapta tu dia segun energia
+            Órvita adapta tu día según energía
           </span>
         </div>
       </div>

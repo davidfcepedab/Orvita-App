@@ -3,4 +3,4 @@ alter table public.users
   add column if not exists health_preferences jsonb not null default '{}'::jsonb;
 
 comment on column public.users.health_preferences is
-  'Órbita Health: supplements[], etc. (merge vía API).';
+  'Órvita Health: supplements[], etc. (merge vía API).';

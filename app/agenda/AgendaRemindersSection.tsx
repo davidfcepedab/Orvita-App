@@ -1,52 +1,28 @@
 "use client"
 
-import { useEffect, useMemo } from "react"
+import { useMemo } from "react"
 import { Card } from "@/src/components/ui/Card"
-import { useGoogleTasks } from "@/app/hooks/useGoogleTasks"
+import type { GoogleTasksFeedState } from "@/app/hooks/useGoogleTasks"
+import { agendaCardSurfaceStyle } from "@/app/agenda/agendaUnifiedCardStyles"
 import { AGENDA_COLOR } from "@/app/agenda/taskTypeVisual"
-
-function parseDue(due: string | null) {
-  if (!due) return null
-  const d = new Date(due)
-  return Number.isNaN(d.getTime()) ? null : d
-}
-
-function isGoogleTaskDone(status: string | null) {
-  const s = (status || "").toLowerCase()
-  return s === "completed"
-}
+import {
+  GOOGLE_AGENDA_PANEL_REMINDER_LIMIT,
+  GOOGLE_AGENDA_WINDOW_DAYS,
+  upcomingGoogleReminders,
+} from "@/lib/agenda/googleTasksUpcoming"
 
 type AgendaRemindersSectionProps = {
-  livePullKey: number
+  feed: Pick<GoogleTasksFeedState, "tasks" | "loading" | "error" | "connected" | "notice">
   embedded?: boolean
 }
 
-export function AgendaRemindersSection({ livePullKey, embedded = false }: AgendaRemindersSectionProps) {
-  const { tasks, loading, error, connected, notice, refresh } = useGoogleTasks()
+export function AgendaRemindersSection({ feed, embedded = false }: AgendaRemindersSectionProps) {
+  const { tasks, loading, error, connected, notice } = feed
 
-  useEffect(() => {
-    void refresh()
-  }, [livePullKey, refresh])
-
-  const upcoming = useMemo(() => {
-    const now = new Date()
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    const horizon = new Date(start)
-    horizon.setDate(horizon.getDate() + 14)
-    return tasks
-      .filter((t) => {
-        if (isGoogleTaskDone(t.status)) return false
-        const d = parseDue(t.due)
-        if (!d) return false
-        return d >= start && d <= horizon
-      })
-      .sort((a, b) => {
-        const da = parseDue(a.due)?.getTime() ?? 0
-        const db = parseDue(b.due)?.getTime() ?? 0
-        return da - db
-      })
-      .slice(0, 24)
-  }, [tasks])
+  const upcoming = useMemo(
+    () => upcomingGoogleReminders(tasks, GOOGLE_AGENDA_WINDOW_DAYS, GOOGLE_AGENDA_PANEL_REMINDER_LIMIT),
+    [tasks]
+  )
 
   const body = (
     <>
@@ -81,14 +57,21 @@ export function AgendaRemindersSection({ livePullKey, embedded = false }: Agenda
           }}
         >
           {upcoming.map((t) => (
-            <li key={t.id} style={{ marginBottom: "6px" }}>
+            <li
+              key={t.id}
+              style={{
+                marginBottom: "6px",
+                paddingLeft: "4px",
+                borderLeft: `3px solid ${AGENDA_COLOR.reminder}`,
+              }}
+            >
               <span style={{ fontWeight: 500 }}>{t.title}</span>
               <span style={{ color: AGENDA_COLOR.reminder, marginLeft: "8px" }}>{t.due ? t.due.slice(0, 10) : "—"}</span>
             </li>
           ))}
           {upcoming.length === 0 && (
             <li style={{ color: "var(--color-text-secondary)", listStyle: "none", marginLeft: "-18px" }}>
-              Sin vencimientos en los próximos 14 días.
+              Sin vencimientos en los próximos {GOOGLE_AGENDA_WINDOW_DAYS} días.
             </li>
           )}
         </ul>
@@ -106,11 +89,8 @@ export function AgendaRemindersSection({ livePullKey, embedded = false }: Agenda
 
   return (
     <Card
-      className="p-0"
-      style={{
-        borderLeft: `4px solid ${AGENDA_COLOR.reminder}`,
-        overflow: "hidden",
-      }}
+      className="p-0 overflow-hidden"
+      style={agendaCardSurfaceStyle(`4px solid ${AGENDA_COLOR.reminder}`)}
     >
       <div style={{ padding: "var(--spacing-md)" }}>{body}</div>
     </Card>

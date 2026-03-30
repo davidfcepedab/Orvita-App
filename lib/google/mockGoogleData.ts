@@ -19,5 +19,5 @@ export const MOCK_GOOGLE_CALENDAR_EVENTS: GoogleCalendarEventDTO[] = [
 
 export const MOCK_GOOGLE_TASKS: GoogleTaskDTO[] = [
   { id: "mock-task-1", title: "Revisar métricas de salud", status: "needsAction", due: null },
-  { id: "mock-task-2", title: "Sincronizar agenda Órbita", status: "needsAction", due: null },
+  { id: "mock-task-2", title: "Sincronizar agenda Órvita", status: "needsAction", due: null },
 ]

@@ -419,7 +419,7 @@ export default function ConfigV3() {
           Configuración del sistema
         </h2>
         <p className="mt-2 text-sm leading-relaxed" style={{ color: theme.textMuted }}>
-          Control paramétrico de la interfaz Órbita
+          Control paramétrico de la interfaz Órvita
         </p>
       </header>
 

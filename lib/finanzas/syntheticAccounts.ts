@@ -49,7 +49,7 @@ export function buildSyntheticAccounts(
     id: "consolidado-snapshot",
     name: "Saldo consolidado (hogar)",
     type: "Consolidado",
-    institution: "Órbita / Supabase",
+    institution: "Órvita / Supabase",
     available: Math.round(Math.max(0, balance)),
     debt: 0,
     limit: 0,

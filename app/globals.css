@@ -33,6 +33,10 @@
   --shadow-hover: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.03);
   --layout-padding: var(--spacing-xl);
   --layout-gap: var(--spacing-xl);
+  /* Agenda unificada: capas suaves sin blanco puro (#fff) */
+  --agenda-shell-bg: color-mix(in srgb, var(--color-surface-alt) 68%, var(--color-background));
+  --agenda-inset-bg: color-mix(in srgb, var(--color-surface-alt) 52%, var(--color-background));
+  --agenda-elevated-bg: color-mix(in srgb, var(--color-surface) 58%, var(--color-surface-alt));
 
   --bg-app: var(--color-background);
   --surface-card: var(--color-surface);
@@ -53,6 +57,9 @@
 }
 
 [data-theme="carbon"] {
+  --agenda-shell-bg: color-mix(in srgb, var(--color-surface) 88%, var(--color-background));
+  --agenda-inset-bg: color-mix(in srgb, var(--color-surface-alt) 75%, var(--color-background));
+  --agenda-elevated-bg: color-mix(in srgb, var(--color-surface) 70%, var(--color-surface-alt));
   --color-background: #0F0F10;
   --color-surface: #1A1A1B;
   --color-surface-alt: #0F0F10;
@@ -73,6 +80,9 @@
 }
 
 [data-theme="sand"] {
+  --agenda-shell-bg: color-mix(in srgb, var(--color-surface-alt) 72%, var(--color-background));
+  --agenda-inset-bg: color-mix(in srgb, var(--color-surface-alt) 58%, var(--color-background));
+  --agenda-elevated-bg: color-mix(in srgb, var(--color-surface) 55%, var(--color-surface-alt));
   --color-background: #FAF8F5;
   --color-surface: #FFFCF7;
   --color-surface-alt: #F5F1EA;
@@ -93,6 +103,9 @@
 }
 
 [data-theme="midnight"] {
+  --agenda-shell-bg: color-mix(in srgb, var(--color-surface) 85%, var(--color-background));
+  --agenda-inset-bg: color-mix(in srgb, var(--color-surface-alt) 70%, var(--color-background));
+  --agenda-elevated-bg: color-mix(in srgb, var(--color-surface) 65%, var(--color-surface-alt));
   --color-background: #0B1120;
   --color-surface: #111827;
   --color-surface-alt: #0B1120;
