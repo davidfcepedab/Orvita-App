@@ -293,7 +293,7 @@ export function SubscriptionsBurnSection({
         <button
           type="button"
           onClick={() => setSubscriptionsExpanded((v) => !v)}
-          className="flex w-full touch-manipulation items-start gap-3 p-4 text-left sm:p-5"
+          className="flex w-full touch-manipulation items-start gap-2.5 p-3 text-left sm:p-3.5"
           aria-expanded={subscriptionsExpanded}
         >
           <div className="min-w-0 flex-1">
@@ -307,7 +307,7 @@ export function SubscriptionsBurnSection({
             </p>
 
             {!subscriptionsExpanded ? (
-              <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+              <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">Total mensual</p>
                   <p className="mt-0.5 text-2xl font-bold tabular-nums text-orbita-primary sm:text-3xl">
@@ -367,7 +367,7 @@ export function SubscriptionsBurnSection({
         </button>
 
         {subscriptionsExpanded ? (
-          <div className="space-y-4 border-t border-orbita-border p-4 sm:p-5">
+          <div className="space-y-3 border-t border-orbita-border p-3 sm:p-3.5">
             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
               <p className="max-w-xl text-xs text-orbita-secondary sm:text-sm">
                 Renovaciones recurrentes y ahorro potencial al pausar o cancelar.

@@ -573,23 +573,23 @@ export function CashFlowSimulatorSection({
         ))}
       </div>
 
-      <div className={`${arcticPanel} p-4 sm:p-5`}>
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2 text-orbita-primary">
-            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" aria-hidden />
-            <span className="text-xs font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
+      <div className={`${arcticPanel} p-3 sm:p-4`}>
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <div className="flex items-center gap-1.5 text-orbita-primary">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" aria-hidden />
+            <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">
               Próximos compromisos (30 días)
             </span>
           </div>
           <button
             type="button"
             onClick={() => setCommitOpen(true)}
-            className="min-h-[48px] w-full touch-manipulation rounded-full bg-sky-500 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-white shadow-sm hover:bg-sky-600 active:bg-sky-700 sm:w-auto sm:min-h-0 sm:py-2"
+            className="min-h-10 w-full touch-manipulation rounded-full bg-sky-500 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-white shadow-sm hover:bg-sky-600 active:bg-sky-700 sm:w-auto sm:min-h-0"
           >
             + Gestionar compromisos
           </button>
         </div>
-        <ul className="mt-4 space-y-3">
+        <ul className="mt-3 space-y-2">
           {commitmentsSorted.slice(0, 8).map((c) => {
             const inc = isIncomeCommitment(c)
             const cat = c.category.trim()
@@ -598,11 +598,11 @@ export function CashFlowSimulatorSection({
             return (
               <li
                 key={c.id}
-                className="rounded-xl border border-orbita-border bg-orbita-surface-alt/80 px-3 py-3 sm:flex sm:items-start sm:gap-4 sm:px-4 sm:py-3.5"
+                className="rounded-lg border border-orbita-border bg-orbita-surface-alt/80 px-2.5 py-2 sm:flex sm:items-start sm:gap-3 sm:px-3 sm:py-2.5"
               >
-                <div className="flex gap-3 sm:min-w-0 sm:flex-1 sm:items-start sm:gap-4">
+                <div className="flex gap-2 sm:min-w-0 sm:flex-1 sm:items-start sm:gap-3">
                   <div
-                    className="w-[3.25rem] shrink-0 text-sm font-bold tabular-nums text-orbita-primary sm:w-[4.25rem] sm:pt-0.5"
+                    className="w-12 shrink-0 text-xs font-bold tabular-nums text-orbita-primary sm:w-[3.75rem] sm:pt-0.5 sm:text-sm"
                     title={c.date}
                   >
                     {formatCommitmentDayEn(c.date)}
@@ -610,25 +610,25 @@ export function CashFlowSimulatorSection({
                   <div className="min-w-0 flex-1">
                     {showCat ? (
                       <>
-                        <p className="text-sm font-semibold leading-snug text-orbita-primary">{cat}</p>
+                        <p className="text-[13px] font-semibold leading-snug text-orbita-primary sm:text-sm">{cat}</p>
                         {titleDiffers ? (
-                          <p className="mt-1 text-xs leading-snug text-orbita-secondary">{c.title}</p>
+                          <p className="mt-0.5 text-[11px] leading-snug text-orbita-secondary">{c.title}</p>
                         ) : null}
                       </>
                     ) : (
-                      <p className="text-sm font-semibold leading-snug text-orbita-primary">{c.title}</p>
+                      <p className="text-[13px] font-semibold leading-snug text-orbita-primary sm:text-sm">{c.title}</p>
                     )}
                     <span
-                      className={`mt-2 inline-flex rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${flowTypeBadgeClass(c.flowType)}`}
+                      className={`mt-1.5 inline-flex rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${flowTypeBadgeClass(c.flowType)}`}
                     >
                       {c.flowType}
                     </span>
                   </div>
                 </div>
                 <div
-                  className={`mt-2 text-right sm:mt-0 sm:shrink-0 sm:self-center sm:pl-2 ${inc ? "text-emerald-600" : "text-orbita-primary"}`}
+                  className={`mt-1.5 text-right sm:mt-0 sm:shrink-0 sm:self-center sm:pl-2 ${inc ? "text-emerald-600" : "text-orbita-primary"}`}
                 >
-                  <p className="text-base font-bold tabular-nums sm:text-lg">
+                  <p className="text-sm font-bold tabular-nums sm:text-base">
                     {inc ? "+" : "-"}${formatMoney(c.amount)}
                   </p>
                 </div>

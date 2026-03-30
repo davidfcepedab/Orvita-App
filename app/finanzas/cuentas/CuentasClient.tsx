@@ -52,18 +52,6 @@ function reorderLedgerAccountList<T>(items: T[], fromIndex: number, toIndex: num
   return next
 }
 
-type AccountLegacy = {
-  id: string
-  name: string
-  type: string
-  institution: string
-  available: number
-  debt: number
-  limit: number
-  status: string
-  score: number
-}
-
 function pmtFixed(pv: number, monthlyRatePercent: number, n: number) {
   if (n <= 0 || pv <= 0) return 0
   const r = monthlyRatePercent / 100
@@ -281,15 +269,15 @@ function LoanStructuralCard({
 }) {
   const Icon = loan.kind === "home" ? Home : GraduationCap
   return (
-    <Card className={`p-6 sm:p-8 ${arcticPanel}`}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-50 text-violet-600">
-            <Icon className="h-5 w-5" aria-hidden />
+    <Card className={`p-4 sm:p-5 ${arcticPanel}`}>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-50 text-violet-600 sm:h-10 sm:w-10">
+            <Icon className="h-4 w-4 sm:h-[18px] sm:w-[18px]" aria-hidden />
           </div>
           <div>
-            <h3 className="text-base font-semibold text-orbita-primary">{loan.title}</h3>
-            <p className="text-xs text-orbita-secondary">Crédito estructural</p>
+            <h3 className="text-[15px] font-semibold leading-tight text-orbita-primary">{loan.title}</h3>
+            <p className="text-[11px] text-orbita-secondary">Crédito estructural</p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -307,32 +295,32 @@ function LoanStructuralCard({
           </span>
         </div>
       </div>
-      <div className="mt-5 h-1.5 w-full overflow-hidden rounded-full bg-orbita-surface-alt">
+      <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-orbita-surface-alt">
         <div
           className="h-full rounded-full bg-gradient-to-r from-violet-500 to-indigo-500"
           style={{ width: `${Math.min(100, loan.pctPagado)}%` }}
         />
       </div>
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
         {[
           { label: "Saldo pendiente", value: `$${formatMoney(loan.saldoPendiente)}` },
           { label: "Cuota mensual", value: `$${formatMoney(loan.cuotaMensual)}` },
           { label: "Próximo pago", value: loan.proximoPagoLabel },
         ].map((c) => (
           <div key={c.label}>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-orbita-secondary">{c.label}</p>
-            <p className="mt-1 text-sm font-semibold text-orbita-primary">{c.value}</p>
+            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">{c.label}</p>
+            <p className="mt-0.5 text-sm font-semibold text-orbita-primary">{c.value}</p>
           </div>
         ))}
       </div>
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-2 border-t border-orbita-border pt-4 text-xs text-orbita-secondary">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-orbita-border pt-3 text-[11px] text-orbita-secondary">
         <span>Monto original ${formatMoney(loan.montoOriginal)}</span>
-        <span className="rounded-full bg-violet-100/80 px-2.5 py-1 font-semibold text-violet-800">
+        <span className="rounded-full bg-violet-100/80 px-2 py-0.5 text-[11px] font-semibold text-violet-800">
           ${formatShortMillions(loan.abonadoMonto)} abonados
         </span>
       </div>
       {onPayDate || onPlan ? (
-        <div className="mt-4 flex flex-wrap gap-3 border-t border-orbita-border pt-4 text-[11px] font-semibold text-violet-800">
+        <div className="mt-3 flex flex-wrap gap-2 border-t border-orbita-border pt-3 text-[10px] font-semibold text-violet-800">
           {onPayDate ? (
             <button type="button" onClick={onPayDate} className="hover:underline">
               Fecha de pago
@@ -354,6 +342,25 @@ function newManualId(prefix: string) {
   return `${prefix}-${Date.now()}`
 }
 
+/** Solo ítems guardados en manual items / prefijo manual: el resto viene de API/ledger/hoja Cuentas. */
+function isManualOnlySaving(s: CuentasSavingsCard) {
+  return Boolean(s.manualRowId || String(s.id).startsWith("manual-saving"))
+}
+function isManualOnlyCredit(c: CuentasCreditCard) {
+  return Boolean(c.manualRowId || String(c.id).startsWith("manual-cc"))
+}
+function isManualOnlyLoan(l: CuentasLoanCard) {
+  return Boolean(l.manualRowId || String(l.id).startsWith("manual-loan"))
+}
+
+function AutoFieldHint() {
+  return (
+    <p className="mt-1 text-[10px] leading-snug text-orbita-secondary">
+      Automático desde movimientos del mes, ledger y panel de cuentas.
+    </p>
+  )
+}
+
 export default function CuentasClient() {
   const finance = useFinance()
   const month = finance?.month ?? ""
@@ -373,14 +380,11 @@ export default function CuentasClient() {
   }, [ledgerReorderMessage])
 
   const [dashboard, setDashboard] = useState<CuentasDashboardPayload | null>(null)
-  const [accountsLegacy, setAccountsLegacy] = useState<AccountLegacy[]>([])
   const [ledgerReorderBusy, setLedgerReorderBusy] = useState(false)
   const [draggingLedgerIndex, setDraggingLedgerIndex] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
-  const [layoutEdit, setLayoutEdit] = useState(false)
-
   const [activeLoan, setActiveLoan] = useState<CuentasLoanCard | null>(null)
   const [modal, setModal] = useState<"paydate" | "plan" | null>(null)
 
@@ -395,6 +399,8 @@ export default function CuentasClient() {
     healthPct: 88,
     trendUp: true,
     replacesSyntheticId: "" as string | undefined,
+    /** Monto, salud y tendencia vienen del motor de datos (no editables). */
+    derivedMetrics: false,
   })
   const [creditForm, setCreditForm] = useState({
     id: "" as string | undefined,
@@ -407,6 +413,7 @@ export default function CuentasClient() {
     score: 75,
     theme: "bbva" as CuentasCreditCard["theme"],
     replacesSyntheticId: "" as string | undefined,
+    derivedFinancials: false,
   })
   const [loanForm, setLoanForm] = useState({
     id: "" as string | undefined,
@@ -419,6 +426,7 @@ export default function CuentasClient() {
     montoOriginal: 80_000_000,
     abonadoMonto: 10_000_000,
     replacesSyntheticId: "" as string | undefined,
+    derivedFinancials: false,
   })
 
   const [payDay, setPayDay] = useState(5)
@@ -438,23 +446,18 @@ export default function CuentasClient() {
       const res = await financeApiGet(`/api/orbita/finanzas/accounts?month=${encodeURIComponent(month)}`)
       const json = (await res.json()) as {
         success?: boolean
-        data?: {
-          accounts?: AccountLegacy[]
-          dashboard?: CuentasDashboardPayload | null
-        }
+        data?: { dashboard?: CuentasDashboardPayload | null }
         error?: string
         notice?: string
       }
       if (!res.ok || !json.success) {
         throw new Error(messageForHttpError(res.status, json.error, res.statusText))
       }
-      setAccountsLegacy(json.data?.accounts ?? [])
       setDashboard(json.data?.dashboard ?? null)
       setNotice(json.notice ?? null)
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : "Error")
       setDashboard(null)
-      setAccountsLegacy([])
     } finally {
       setLoading(false)
     }
@@ -463,7 +466,6 @@ export default function CuentasClient() {
   useEffect(() => {
     if (!month) {
       setDashboard(null)
-      setAccountsLegacy([])
       setLoadError(null)
       setLoading(false)
       return
@@ -639,6 +641,7 @@ export default function CuentasClient() {
       healthPct: 88,
       trendUp: true,
       replacesSyntheticId: undefined,
+      derivedMetrics: false,
     })
     setManualModal("savings")
   }
@@ -652,12 +655,13 @@ export default function CuentasClient() {
       healthPct: item.healthPct,
       trendUp: item.trendUp,
       replacesSyntheticId: item.replacesSyntheticId ?? (item.id.startsWith("manual-saving") ? undefined : item.id),
+      derivedMetrics: !isManualOnlySaving(item),
     })
     setManualModal("savings")
   }
 
   const submitSavings = async () => {
-    if (savingForm.amount === 0) {
+    if (!savingForm.derivedMetrics && savingForm.amount === 0) {
       const ok = window.confirm(
         "¿Estás seguro de registrar saldo cero? La tarjeta mostrará «Sin saldo registrado» hasta que edites el monto.",
       )
@@ -728,6 +732,7 @@ export default function CuentasClient() {
       score: 72,
       theme: "bbva",
       replacesSyntheticId: undefined,
+      derivedFinancials: false,
     })
     setManualModal("credit")
   }
@@ -744,6 +749,7 @@ export default function CuentasClient() {
       score: c.score,
       theme: normalizeCreditCardTheme(c.theme),
       replacesSyntheticId: c.replacesSyntheticId ?? (c.id.startsWith("manual-cc") ? undefined : c.id),
+      derivedFinancials: !isManualOnlyCredit(c),
     })
     setManualModal("credit")
   }
@@ -821,6 +827,7 @@ export default function CuentasClient() {
       montoOriginal: 55_000_000,
       abonadoMonto: 5_000_000,
       replacesSyntheticId: undefined,
+      derivedFinancials: false,
     })
     setManualModal("loan")
   }
@@ -837,6 +844,7 @@ export default function CuentasClient() {
       montoOriginal: loan.montoOriginal,
       abonadoMonto: loan.abonadoMonto,
       replacesSyntheticId: loan.replacesSyntheticId ?? (loan.id.startsWith("manual-loan") ? undefined : loan.id),
+      derivedFinancials: !isManualOnlyLoan(loan),
     })
     setManualModal("loan")
   }
@@ -1007,26 +1015,15 @@ export default function CuentasClient() {
 
   return (
     <div className="min-w-0 space-y-8 pb-10 sm:space-y-10">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-bold tracking-tight text-orbita-primary sm:text-[28px]">Cuentas</h1>
-          <p className="mt-1 text-sm text-orbita-secondary sm:text-[15px]">
-            Liquidez, exposición y disponibilidad por cuenta
-          </p>
-          <p className="mt-2 text-xs text-orbita-secondary">
-            Periodo {month}
-            {notice ? ` · ${notice}` : ""}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setLayoutEdit((v) => !v)}
-            className="rounded-full border-[0.5px] border-sky-200 bg-sky-50/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-sky-700 transition hover:bg-sky-100"
-          >
-            Editar layout
-          </button>
-        </div>
+      <div className="min-w-0 flex-1">
+        <h1 className="text-2xl font-bold tracking-tight text-orbita-primary sm:text-[28px]">Cuentas</h1>
+        <p className="mt-1 text-sm text-orbita-secondary sm:text-[15px]">
+          Liquidez, exposición y disponibilidad por cuenta
+        </p>
+        <p className="mt-2 text-xs text-orbita-secondary">
+          Periodo {month}
+          {notice ? ` · ${notice}` : ""}
+        </p>
       </div>
 
       {supabaseEnabled && (ledgerLoading || ledgerAccounts.length > 0 || ledgerError) ? (
@@ -1039,24 +1036,24 @@ export default function CuentasClient() {
             boxShadow: "rgba(0, 0, 0, 0.05) 0px 1px 3px, rgba(0, 0, 0, 0.02) 0px 1px 2px",
           }}
         >
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 sm:p-6 [&::-webkit-details-marker]:hidden">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 sm:px-4 sm:py-2 [&::-webkit-details-marker]:hidden">
             <div className="min-w-0 text-left">
-              <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
+              <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">
                 Cuentas desde movimientos (Supabase)
               </h2>
-              <p className="mt-0.5 text-[11px] text-orbita-secondary">
+              <p className="mt-0.5 text-[10px] leading-tight text-orbita-secondary">
                 {ledgerAccounts.length > 0
-                  ? `${ledgerAccounts.length} cuenta${ledgerAccounts.length === 1 ? "" : "s"} · importe hoja Movimientos`
-                  : "Catálogo ledger del hogar"}
+                  ? `${ledgerAccounts.length} cuenta${ledgerAccounts.length === 1 ? "" : "s"} · Movimientos`
+                  : "Ledger del hogar"}
               </p>
             </div>
             <ChevronDown
-              className="h-5 w-5 shrink-0 text-orbita-secondary transition-transform group-open:rotate-180"
+              className="h-4 w-4 shrink-0 text-orbita-secondary transition-transform group-open:rotate-180"
               aria-hidden
             />
           </summary>
-          <div className="border-t border-orbita-border/80 px-4 pb-4 pt-2 sm:px-6 sm:pb-6">
-            <p className="text-xs text-orbita-secondary">
+          <div className="border-t border-orbita-border/80 px-3 pb-3 pt-1.5 sm:px-4 sm:pb-4">
+            <p className="text-[10px] leading-snug text-orbita-secondary">
               Creadas o actualizadas al importar la hoja Movimientos (columna Cuenta). Orden: arrastra ⋮⋮ y suelta para
               guardar en Supabase.
             </p>
@@ -1081,7 +1078,7 @@ export default function CuentasClient() {
               </p>
             ) : null}
             {ledgerAccounts.length > 0 ? (
-              <ul className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+              <ul className="mt-2 grid gap-1.5 text-xs sm:grid-cols-2 sm:text-sm">
                 {ledgerAccounts.map((a, idx) => (
                   <li
                     key={a.id}
@@ -1098,7 +1095,7 @@ export default function CuentasClient() {
                       if (!Number.isFinite(from)) return
                       onDropLedgerReorder(from, idx)
                     }}
-                    className={`flex gap-2 rounded-xl border border-orbita-border/80 bg-orbita-surface px-2 py-2.5 [overflow-wrap:anywhere] transition-shadow ${
+                    className={`flex gap-1.5 rounded-lg border border-orbita-border/80 bg-orbita-surface px-1.5 py-2 [overflow-wrap:anywhere] transition-shadow ${
                       draggingLedgerIndex === idx ? "opacity-60 shadow-lg ring-1 ring-orbita-border" : ""
                     }`}
                   >
@@ -1110,14 +1107,14 @@ export default function CuentasClient() {
                         setDraggingLedgerIndex(idx)
                       }}
                       onDragEnd={() => setDraggingLedgerIndex(null)}
-                      className="flex shrink-0 cursor-grab touch-none select-none items-center rounded-md px-1 text-orbita-secondary hover:bg-orbita-surface-alt active:cursor-grabbing"
+                      className="flex shrink-0 cursor-grab touch-none select-none items-center rounded px-0.5 text-orbita-secondary hover:bg-orbita-surface-alt active:cursor-grabbing"
                       aria-label={`Arrastrar para reordenar ${a.label}`}
                     >
-                      <GripVertical className="h-5 w-5 shrink-0" aria-hidden />
+                      <GripVertical className="h-4 w-4 shrink-0 sm:h-[18px] sm:w-[18px]" aria-hidden />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium text-orbita-primary">{a.label}</p>
-                      <p className="mt-0.5 text-[11px] uppercase tracking-wide text-orbita-secondary">
+                      <p className="font-medium leading-snug text-orbita-primary">{a.label}</p>
+                      <p className="mt-0.5 text-[10px] uppercase tracking-wide text-orbita-secondary sm:text-[11px]">
                         {a.account_class.replace(/_/g, " ")} · {a.nature.replace(/_/g, " ")}
                       </p>
                       {(() => {
@@ -1143,23 +1140,6 @@ export default function CuentasClient() {
             ) : null}
           </div>
         </details>
-      ) : null}
-
-      {layoutEdit ? (
-        <Card className={`p-4 text-sm text-orbita-secondary ${arcticPanel}`}>
-          <p className="font-medium text-orbita-primary">Vista técnica (consolidado legacy)</p>
-          <p className="mt-1 text-xs text-orbita-secondary">
-            {accountsLegacy.length} filas derivadas de snapshot + movimientos. La cuadrícula principal sigue el diseño
-            Capital.
-          </p>
-          <ul className="mt-3 list-inside list-disc text-xs">
-            {accountsLegacy.map((a) => (
-              <li key={a.id}>
-                {a.name} — disponible ${formatMoney(a.available)} / deuda ${formatMoney(a.debt)}
-              </li>
-            ))}
-          </ul>
-        </Card>
       ) : null}
 
       {!kpis ? (
@@ -1539,30 +1519,60 @@ export default function CuentasClient() {
           </label>
           <label className="block text-sm text-orbita-primary">
             Monto (COP)
-            <input
-              type="number"
-              className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
-              value={savingForm.amount}
-              onChange={(e) => setSavingForm((s) => ({ ...s, amount: Number(e.target.value) }))}
-            />
+            {savingForm.derivedMetrics ? (
+              <>
+                <div className="mt-1 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt px-3 py-2 text-sm font-semibold tabular-nums text-orbita-primary">
+                  ${formatMoney(savingForm.amount)}
+                </div>
+                <AutoFieldHint />
+              </>
+            ) : (
+              <input
+                type="number"
+                className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
+                value={savingForm.amount}
+                onChange={(e) => setSavingForm((s) => ({ ...s, amount: Number(e.target.value) }))}
+              />
+            )}
           </label>
           <label className="block text-sm text-orbita-primary">
             Salud %
-            <input
-              type="number"
-              className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
-              value={savingForm.healthPct}
-              onChange={(e) => setSavingForm((s) => ({ ...s, healthPct: Number(e.target.value) }))}
-            />
+            {savingForm.derivedMetrics ? (
+              <>
+                <div className="mt-1 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt px-3 py-2 text-sm font-semibold tabular-nums text-orbita-primary">
+                  {savingForm.healthPct}%
+                </div>
+                <AutoFieldHint />
+              </>
+            ) : (
+              <input
+                type="number"
+                className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
+                value={savingForm.healthPct}
+                onChange={(e) => setSavingForm((s) => ({ ...s, healthPct: Number(e.target.value) }))}
+              />
+            )}
           </label>
-          <label className="flex items-center gap-2 text-sm text-orbita-primary">
-            <input
-              type="checkbox"
-              checked={savingForm.trendUp}
-              onChange={(e) => setSavingForm((s) => ({ ...s, trendUp: e.target.checked }))}
-            />
-            Tendencia positiva
-          </label>
+          <div className="block text-sm text-orbita-primary">
+            <span className="block">Tendencia</span>
+            {savingForm.derivedMetrics ? (
+              <>
+                <div className="mt-1 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt px-3 py-2 text-sm text-orbita-primary">
+                  {savingForm.trendUp ? "Positiva" : "A la baja"}
+                </div>
+                <AutoFieldHint />
+              </>
+            ) : (
+              <label className="mt-1 flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={savingForm.trendUp}
+                  onChange={(e) => setSavingForm((s) => ({ ...s, trendUp: e.target.checked }))}
+                />
+                Tendencia positiva
+              </label>
+            )}
+          </div>
           {savingForm.id && manualBundle.savings.some((s) => s.id === savingForm.id) ? (
             <div className="border-t border-orbita-border/60 pt-3">
               <button type="button" className={manualItemDeleteTextBtnClass} onClick={() => void deleteSavings()}>
@@ -1620,30 +1630,54 @@ export default function CuentasClient() {
               onChange={(e) => setCreditForm((s) => ({ ...s, last4: e.target.value }))}
             />
           </label>
-          <label className="block text-sm text-orbita-primary">
-            Tema visual
-            <select
-              className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
-              value={creditForm.theme}
-              onChange={(e) =>
-                setCreditForm((s) => ({ ...s, theme: e.target.value as CuentasCreditCard["theme"] }))
-              }
-            >
-              {CREDIT_CARD_THEME_IDS.map((id) => (
-                <option key={id} value={id}>
-                  {CREDIT_THEME_LABELS[id]}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="block text-sm text-orbita-primary sm:col-span-2">
+            <span className="block">Tema visual</span>
+            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4" role="listbox" aria-label="Tema de la tarjeta">
+              {CREDIT_CARD_THEME_IDS.map((tid) => {
+                const th = creditThemes[tid]
+                const selected = creditForm.theme === tid
+                return (
+                  <button
+                    key={tid}
+                    type="button"
+                    role="option"
+                    aria-selected={selected}
+                    onClick={() => setCreditForm((s) => ({ ...s, theme: tid }))}
+                    className={`rounded-xl border border-orbita-border p-1.5 text-left transition ${
+                      selected
+                        ? "ring-2 ring-orbita-primary ring-offset-2 ring-offset-[var(--color-surface)]"
+                        : "hover:bg-orbita-surface-alt"
+                    }`}
+                  >
+                    <div
+                      className="h-9 w-full rounded-lg border border-white/20 shadow-inner"
+                      style={{ background: th.gradient }}
+                    />
+                    <span className="mt-1 block truncate text-[9px] font-medium leading-tight text-orbita-secondary">
+                      {CREDIT_THEME_LABELS[tid]}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
           <label className="block text-sm text-orbita-primary">
             Saldo
-            <input
-              type="number"
-              className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
-              value={creditForm.balance}
-              onChange={(e) => setCreditForm((s) => ({ ...s, balance: Number(e.target.value) }))}
-            />
+            {creditForm.derivedFinancials ? (
+              <>
+                <div className="mt-1 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt px-3 py-2 text-sm font-semibold tabular-nums text-orbita-primary">
+                  ${formatMoney(creditForm.balance)}
+                </div>
+                <AutoFieldHint />
+              </>
+            ) : (
+              <input
+                type="number"
+                className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
+                value={creditForm.balance}
+                onChange={(e) => setCreditForm((s) => ({ ...s, balance: Number(e.target.value) }))}
+              />
+            )}
           </label>
           <label className="block text-sm text-orbita-primary">
             Cupo
@@ -1667,12 +1701,21 @@ export default function CuentasClient() {
           </label>
           <label className="block text-sm text-orbita-primary">
             Score
-            <input
-              type="number"
-              className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
-              value={creditForm.score}
-              onChange={(e) => setCreditForm((s) => ({ ...s, score: Number(e.target.value) }))}
-            />
+            {creditForm.derivedFinancials ? (
+              <>
+                <div className="mt-1 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt px-3 py-2 text-sm font-semibold tabular-nums text-orbita-primary">
+                  {creditForm.score}
+                </div>
+                <AutoFieldHint />
+              </>
+            ) : (
+              <input
+                type="number"
+                className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
+                value={creditForm.score}
+                onChange={(e) => setCreditForm((s) => ({ ...s, score: Number(e.target.value) }))}
+              />
+            )}
           </label>
         </div>
         {creditForm.id && manualBundle.creditCards.some((c) => c.id === creditForm.id) ? (
@@ -1728,21 +1771,39 @@ export default function CuentasClient() {
           </label>
           <label className="block text-sm text-orbita-primary">
             % pagado
-            <input
-              type="number"
-              className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
-              value={loanForm.pctPagado}
-              onChange={(e) => setLoanForm((s) => ({ ...s, pctPagado: Number(e.target.value) }))}
-            />
+            {loanForm.derivedFinancials ? (
+              <>
+                <div className="mt-1 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt px-3 py-2 text-sm font-semibold tabular-nums text-orbita-primary">
+                  {loanForm.pctPagado}%
+                </div>
+                <AutoFieldHint />
+              </>
+            ) : (
+              <input
+                type="number"
+                className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
+                value={loanForm.pctPagado}
+                onChange={(e) => setLoanForm((s) => ({ ...s, pctPagado: Number(e.target.value) }))}
+              />
+            )}
           </label>
           <label className="block text-sm text-orbita-primary">
             Saldo pendiente
-            <input
-              type="number"
-              className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
-              value={loanForm.saldoPendiente}
-              onChange={(e) => setLoanForm((s) => ({ ...s, saldoPendiente: Number(e.target.value) }))}
-            />
+            {loanForm.derivedFinancials ? (
+              <>
+                <div className="mt-1 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt px-3 py-2 text-sm font-semibold tabular-nums text-orbita-primary">
+                  ${formatMoney(loanForm.saldoPendiente)}
+                </div>
+                <AutoFieldHint />
+              </>
+            ) : (
+              <input
+                type="number"
+                className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
+                value={loanForm.saldoPendiente}
+                onChange={(e) => setLoanForm((s) => ({ ...s, saldoPendiente: Number(e.target.value) }))}
+              />
+            )}
           </label>
           <label className="block text-sm text-orbita-primary">
             Cuota mensual
@@ -1772,12 +1833,21 @@ export default function CuentasClient() {
           </label>
           <label className="block text-sm text-orbita-primary">
             Abonado
-            <input
-              type="number"
-              className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
-              value={loanForm.abonadoMonto}
-              onChange={(e) => setLoanForm((s) => ({ ...s, abonadoMonto: Number(e.target.value) }))}
-            />
+            {loanForm.derivedFinancials ? (
+              <>
+                <div className="mt-1 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt px-3 py-2 text-sm font-semibold tabular-nums text-orbita-primary">
+                  ${formatMoney(loanForm.abonadoMonto)}
+                </div>
+                <AutoFieldHint />
+              </>
+            ) : (
+              <input
+                type="number"
+                className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
+                value={loanForm.abonadoMonto}
+                onChange={(e) => setLoanForm((s) => ({ ...s, abonadoMonto: Number(e.target.value) }))}
+              />
+            )}
           </label>
         </div>
         {loanForm.id && manualBundle.loans.some((l) => l.id === loanForm.id) ? (
