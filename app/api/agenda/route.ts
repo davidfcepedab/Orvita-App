@@ -422,3 +422,55 @@ export async function PATCH(req: NextRequest) {
     )
   }
 }
+
+export async function DELETE(req: NextRequest) {
+  try {
+    if (isAppMockMode()) {
+      const body = await req.json()
+      const id = String(body?.id || "").trim()
+      if (!id) {
+        return NextResponse.json({ success: false, error: "id es obligatorio" }, { status: 400 })
+      }
+      mockAgendaRows = mockAgendaRows.filter((r) => r.id !== id)
+      return NextResponse.json({ success: true })
+    }
+
+    const auth = await requireUser(req)
+    if (auth instanceof NextResponse) return auth
+    const { supabase, userId } = auth
+    const householdId = await getHouseholdId(supabase, userId)
+    if (!householdId) {
+      return NextResponse.json(
+        { success: false, error: "Usuario sin hogar asignado" },
+        { status: 403 }
+      )
+    }
+    const body = await req.json()
+    const id = String(body?.id || "").trim()
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: "id es obligatorio" },
+        { status: 400 }
+      )
+    }
+
+    const del = await supabase
+      .from("operational_tasks")
+      .delete()
+      .eq("id", id)
+      .eq("domain", "agenda")
+      .eq("household_id", householdId)
+
+    if (del.error) {
+      throw del.error
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error: unknown) {
+    const detail = error instanceof Error ? error.message : "Error desconocido"
+    return NextResponse.json(
+      { success: false, error: `No se pudo borrar la tarea: ${detail}` },
+      { status: 500 }
+    )
+  }
+}

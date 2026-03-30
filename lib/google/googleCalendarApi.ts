@@ -129,3 +129,15 @@ export async function insertPrimaryCalendarEventForTask(
 
   return (await response.json()) as GoogleCalendarEvent
 }
+
+export async function deletePrimaryCalendarEvent(accessToken: string, eventId: string): Promise<void> {
+  const id = encodeURIComponent(eventId)
+  const response = await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/primary/events/${id}`,
+    { method: "DELETE", headers: { Authorization: `Bearer ${accessToken}` } },
+  )
+  if (response.status === 204 || response.status === 200) return
+  if (response.status === 404) return
+  const detail = await response.text()
+  throw new Error(`Google Calendar delete: ${detail}`)
+}

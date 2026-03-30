@@ -7,6 +7,7 @@ import {
   UI_GOOGLE_TASKS_OFF,
 } from "@/lib/checkins/flags"
 import {
+  deleteDefaultListTask,
   fetchDefaultTaskList,
   insertDefaultListTask,
   mapGoogleTask,
@@ -201,5 +202,55 @@ export async function PATCH(req: NextRequest) {
     const msg = e instanceof Error ? e.message : "Error actualizando tarea"
     console.error("GOOGLE TASKS PATCH:", msg)
     return NextResponse.json({ success: false, error: "No se pudo actualizar la tarea en Google" }, { status: 502 })
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  if (isAppMockMode()) {
+    return NextResponse.json({ success: true })
+  }
+
+  if (!isSupabaseEnabled()) {
+    return NextResponse.json({ success: false, error: API_GOOGLE_MUTATION_NO_SYNC }, { status: 403 })
+  }
+
+  const auth = await requireUser(req)
+  if (auth instanceof NextResponse) return auth
+
+  let body: { id?: string }
+  try {
+    body = (await req.json()) as { id?: string }
+  } catch {
+    return NextResponse.json({ success: false, error: "JSON inválido" }, { status: 400 })
+  }
+
+  const id = String(body?.id ?? "").trim()
+  if (!id) {
+    return NextResponse.json({ success: false, error: "id es obligatorio" }, { status: 400 })
+  }
+
+  const tokenResult = await getGoogleAccessTokenForUser(auth.supabase, auth.userId)
+  if ("error" in tokenResult) {
+    return NextResponse.json(
+      { success: false, error: tokenResult.error },
+      { status: tokenResult.status === 404 ? 400 : tokenResult.status },
+    )
+  }
+
+  try {
+    await deleteDefaultListTask(tokenResult.token, id)
+    const soft = await auth.supabase
+      .from("external_tasks")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("user_id", auth.userId)
+      .eq("google_task_id", id)
+    if (soft.error) {
+      console.warn("GOOGLE TASKS DELETE external_tasks soft delete:", soft.error.message)
+    }
+    return NextResponse.json({ success: true })
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Error borrando tarea"
+    console.error("GOOGLE TASKS DELETE:", msg)
+    return NextResponse.json({ success: false, error: "No se pudo borrar la tarea en Google" }, { status: 502 })
   }
 }

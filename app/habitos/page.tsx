@@ -9,11 +9,15 @@ import {
   Clock,
   Flame,
   Loader2,
+  Moon,
   Plus,
+  Sun,
+  Sunset,
   Target,
   TrendingDown,
 } from "lucide-react"
 import { UI_HABITS_MUTATIONS_OFF, UI_HABITS_SAVE_OFF } from "@/lib/checkins/flags"
+import { groupHabitsByDaypart, orderedDaypartBlocks, type HabitTimeBlockId } from "@/lib/habits/habitStackGroups"
 import { lettersToWeekdays } from "@/lib/habits/habitMetrics"
 import { useHabits } from "@/app/hooks/useHabits"
 import type { HabitWeekDayMark } from "@/lib/habits/habitMetrics"
@@ -39,6 +43,16 @@ const METRIC_LABELS: Record<HabitSuccessMetricType, string> = {
   repeticiones: "Repeticiones",
   cantidad: "Cantidad",
   si_no: "Sí / no",
+}
+
+const STACK_BLOCK_META: Record<
+  HabitTimeBlockId,
+  { title: string; subtitle: string; Icon: typeof Sun }
+> = {
+  manana: { title: "Mañana", subtitle: "Antes de 12:00", Icon: Sun },
+  tarde: { title: "Tarde", subtitle: "12:00 – 17:59", Icon: Sunset },
+  noche: { title: "Noche", subtitle: "A partir de 18:00", Icon: Moon },
+  sin_hora: { title: "Sin hora definida", subtitle: "Añade trigger u hora para ordenar el bloque", Icon: Clock },
 }
 
 function habitMetricLine(meta: HabitMetadata | undefined): string | null {
@@ -92,6 +106,19 @@ export default function HabitosPage() {
     () => habits.filter((h) => h.metadata?.is_superhabit).length,
     [habits]
   )
+
+  const habitsByDaypart = useMemo(() => groupHabitsByDaypart(habits), [habits])
+
+  const stackBlocksWithOffsets = useMemo(() => {
+    const out: { blockId: HabitTimeBlockId; habits: HabitWithMetrics[]; animStart: number }[] = []
+    let animStart = 0
+    for (const blockId of orderedDaypartBlocks()) {
+      const list = habitsByDaypart.get(blockId) ?? []
+      out.push({ blockId, habits: list, animStart })
+      animStart += list.length
+    }
+    return out
+  }, [habitsByDaypart])
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
@@ -257,256 +284,304 @@ export default function HabitosPage() {
         </Card>
       </div>
 
-      <div style={{ display: "grid", gap: "var(--spacing-sm)" }}>
+      <div style={{ display: "grid", gap: "var(--spacing-md)" }}>
         <p style={{ margin: 0, fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--color-text-secondary)" }}>
           Stack actual
         </p>
 
-        {habits.map((habit, cardIndex) => {
-          const freq = habit.metadata?.frequency ?? "diario"
-          const streakDays = habit.metrics.current_streak
-          const doneToday = habit.metrics.completed_today
-          const reward = habit.metadata?.is_superhabit ? rewardMessage(streakDays) : null
-          const weekMarks = weekMarksForHabit(habit)
-          const intention = habit.metadata?.intention?.trim()
-          const triggerOrTime = habit.metadata?.trigger_or_time?.trim()
-          const sessionMins = habit.metadata?.estimated_session_minutes
-          const metricLine = habitMetricLine(habit.metadata)
-
-          return (
-            <Card
-              key={habit.id}
-              hover
-              className="group/habit motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1 motion-safe:fill-mode-both motion-safe:duration-500 hover:-translate-y-0.5"
-              style={{
-                animationDelay: `${Math.min(cardIndex, 14) * 42}ms`,
-                background: habit.metadata?.is_superhabit ? "color-mix(in srgb, var(--color-accent-warning) 8%, var(--color-surface))" : "var(--color-surface)",
-                borderColor: habit.metrics.at_risk
-                  ? "color-mix(in srgb, var(--color-accent-danger) 40%, var(--color-border))"
-                  : habit.metadata?.is_superhabit
-                    ? "color-mix(in srgb, var(--color-accent-warning) 30%, var(--color-border))"
-                    : "var(--color-border)",
-                borderWidth: "1px",
-                borderStyle: "solid",
-                boxShadow: "0 4px 14px rgba(15, 23, 42, 0.07)",
-              }}
-            >
-              <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:gap-3 sm:px-3 sm:py-2.5">
-                {/* Texto del hábito: ancho según contenido (tope), sin flex-1 para evitar “desierto” horizontal */}
-                <div className="min-w-0 space-y-1 px-3 pt-3 sm:max-w-[min(100%,22rem)] sm:flex-none sm:px-0 sm:pt-0">
-                  {habit.metadata?.is_superhabit && (
-                    <span
-                      className="inline-flex items-center gap-1"
-                      style={{
-                        fontSize: "10px",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.12em",
-                        padding: "2px 8px",
-                        borderRadius: "999px",
-                        background: "color-mix(in srgb, var(--color-accent-warning) 12%, transparent)",
-                        color: "var(--color-accent-warning)",
-                      }}
-                    >
-                      <span aria-hidden>⚡</span>
-                      Superhábito
-                    </span>
-                  )}
-                  <div className="flex flex-wrap items-center gap-1.5 sm:flex-nowrap sm:items-center sm:gap-2">
-                    <p
-                      className="min-w-0 max-w-full sm:min-w-0 sm:flex-1 sm:truncate"
-                      style={{ margin: 0, fontWeight: 600, fontSize: "15px", color: "var(--color-text-primary)", lineHeight: 1.35 }}
-                      title={habit.name}
-                    >
-                      {habit.name}
-                    </p>
-                    {habit.metrics.at_risk && (
-                      <span
-                        className="shrink-0 motion-safe:animate-pulse"
-                        style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.12em", padding: "2px 8px", borderRadius: "999px", background: "color-mix(in srgb, var(--color-accent-danger) 12%, transparent)", color: "var(--color-accent-danger)" }}
-                      >
-                        Riesgo ruptura
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", fontSize: "10px", color: "var(--color-text-secondary)" }}>
-                    <span>{DOMAIN_LABELS[habit.domain] ?? habit.domain}</span>
-                    <span>• {freq}</span>
-                    <span>• {streakDays} días continuos</span>
-                    {freq === "semanal" && (
-                      <span style={{ padding: "2px 6px", borderRadius: "999px", background: "var(--color-surface-alt)" }}>
-                        Frecuencia específica
-                      </span>
-                    )}
-                  </div>
-                  {intention ? (
-                    <p
-                      className="line-clamp-1 text-[11px] leading-snug text-[var(--color-text-secondary)] transition-colors duration-200 group-hover/habit:text-[var(--color-text-primary)]"
-                      style={{ margin: 0 }}
-                    >
-                      {intention}
-                    </p>
-                  ) : null}
-                  {metricLine ? (
-                    <p className="flex items-start gap-1 text-[10px] leading-snug text-[var(--color-text-secondary)]" style={{ margin: 0 }}>
-                      <Target className="mt-0.5 h-3 w-3 shrink-0 text-[var(--color-accent-health)] opacity-80" aria-hidden />
-                      <span>{metricLine}</span>
-                    </p>
-                  ) : null}
-                  <div className="flex flex-wrap gap-1">
-                    {typeof sessionMins === "number" && sessionMins > 0 ? (
-                      <span
-                        className="inline-flex items-center gap-0.5 rounded-full border border-[color-mix(in_srgb,var(--color-border)_70%,transparent)] bg-[var(--color-surface-alt)] px-1.5 py-px text-[9px] font-medium leading-tight text-[var(--color-text-secondary)] transition-transform duration-200 group-hover/habit:scale-[1.02]"
-                        title="Duración estimada por sesión"
-                      >
-                        <Clock className="h-2.5 w-2.5 text-[var(--color-accent-health)]" aria-hidden />
-                        ~{sessionMins} min/sesión
-                      </span>
-                    ) : null}
-                    {triggerOrTime ? (
-                      <span
-                        className="inline-flex max-w-full items-center gap-0.5 rounded-full border border-[color-mix(in_srgb,var(--color-border)_70%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_5%,var(--color-surface-alt))] px-1.5 py-px text-[9px] font-medium leading-tight text-[var(--color-text-secondary)] transition-transform duration-200 group-hover/habit:scale-[1.02]"
-                        title="Disparador u hora"
-                      >
-                        <span className="truncate">{triggerOrTime}</span>
-                      </span>
-                    ) : null}
-                  </div>
-                  {reward && (
-                    <p style={{ margin: 0, fontSize: "10px", color: "var(--color-accent-health)" }}>{reward}</p>
-                  )}
-                </div>
-
-                {/* Separador móvil */}
-                <div className="mx-3 h-px shrink-0 bg-[var(--color-border)] sm:hidden" aria-hidden />
-
-                {/* Semana + acciones en un solo bloque a la derecha (sin hueco interior en la columna izquierda) */}
-                <div className="flex w-full flex-row items-center justify-between gap-3 px-3 pb-3 sm:ml-auto sm:w-auto sm:shrink-0 sm:justify-end sm:gap-2.5 sm:px-0 sm:pb-0">
+        {stackBlocksWithOffsets.map(({ blockId, habits: blockHabits, animStart }) => {
+            const meta = STACK_BLOCK_META[blockId]
+            const Icon = meta.Icon
+            return (
+              <section
+                key={blockId}
+                className="rounded-[12px] border border-[color-mix(in_srgb,var(--color-border)_65%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_100%,transparent)] p-3 sm:p-4"
+                style={{ display: "grid", gap: "var(--spacing-sm)" }}
+                aria-labelledby={`stack-block-${blockId}`}
+              >
+                <div className="flex flex-wrap items-start gap-3 border-b border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] pb-3">
                   <div
-                    role="group"
-                    aria-label="Estado de la semana: letras L a D y marcas debajo"
-                    className="grid w-max shrink-0 touch-manipulation [grid-template-columns:repeat(7,22px)] gap-x-1 gap-y-0.5 sm:[grid-template-columns:repeat(7,24px)] sm:gap-x-1 sm:gap-y-1"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+                    style={{ background: "color-mix(in srgb, var(--color-accent-health) 12%, transparent)" }}
+                    aria-hidden
                   >
-                    {days.map((day, idx) => {
-                      const mark = weekMarks[idx]
-                      const neutralDay = mark === "off" || mark === "upcoming"
-                      const isMissed = mark === "missed"
-                      const letterColor =
-                        neutralDay && !isMissed
-                          ? "color-mix(in srgb, var(--color-text-secondary) 50%, var(--color-text-primary))"
-                          : "var(--color-text-primary)"
-                      return (
-                        <div
-                          key={`${habit.id}-dlabel-${day}`}
-                          className="select-none text-center text-[10px] font-semibold uppercase tracking-wide leading-none sm:text-[11px]"
-                          style={{ color: letterColor }}
-                        >
-                          {day}
-                        </div>
-                      )
-                    })}
-                    {days.map((day, idx) => {
-                      const mark = weekMarks[idx]
-                      const isDone = mark === "done"
-                      const isMissed = mark === "missed"
-
-                      const chipBg = isDone
-                        ? "color-mix(in srgb, color-mix(in srgb, var(--color-accent-health) 16%, var(--color-surface)) 72%, transparent)"
-                        : isMissed
-                          ? "color-mix(in srgb, color-mix(in srgb, var(--color-text-secondary) 8%, var(--color-surface)) 65%, transparent)"
-                          : "color-mix(in srgb, var(--color-surface) 58%, transparent)"
-
-                      const chipBorder = isDone
-                        ? "1px solid color-mix(in srgb, var(--color-accent-health) 32%, transparent)"
-                        : "1px solid color-mix(in srgb, var(--color-border) 45%, transparent)"
-
-                      const aria =
-                        mark === "done"
-                          ? `${day}: completado`
-                          : mark === "missed"
-                            ? `${day}: pendiente`
-                            : `${day}: sin marca destacada`
-
-                      return (
-                        <div
-                          key={`${habit.id}-dcell-${day}`}
-                          className="flex h-[44px] w-full items-center justify-center rounded-[5px] transition-all duration-200 motion-safe:group-hover/habit:scale-[1.02] sm:h-[48px]"
-                          style={{
-                            background: chipBg,
-                            border: chipBorder,
-                            boxShadow: isDone ? "0 1px 0 color-mix(in srgb, var(--color-accent-health) 14%, transparent)" : "none",
-                            transitionDelay: `${idx * 14}ms`,
-                          }}
-                          aria-label={aria}
-                        >
-                          {isDone ? (
-                            <span
-                              className="motion-safe:animate-in motion-safe:zoom-in-50 motion-safe:duration-200 block h-[5px] w-[5px] shrink-0 rounded-full"
-                              style={{
-                                background: "color-mix(in srgb, var(--color-accent-health) 88%, #14532d)",
-                                boxShadow: "0 0 0 1px color-mix(in srgb, var(--color-accent-health) 25%, transparent)",
-                              }}
-                            />
-                          ) : isMissed ? (
-                            <span className="block h-[5px] w-[5px] shrink-0 rounded-full border border-[color-mix(in_srgb,var(--color-text-secondary)_40%,transparent)] bg-transparent" />
-                          ) : null}
-                        </div>
-                      )
-                    })}
+                    <Icon className="h-5 w-5 text-[var(--color-accent-health)]" />
                   </div>
-
-                  <div className="hidden h-[52px] w-px shrink-0 bg-[var(--color-border)] sm:block" aria-hidden />
-
-                  <div className="flex shrink-0 flex-row items-center gap-2 sm:flex-col sm:items-stretch sm:justify-center sm:gap-1.5">
-                    <button
-                    type="button"
-                    disabled={!persistenceEnabled && !mock}
-                    onClick={() => {
-                      setEditing(habit)
-                      setForm(habitToModalValues(habit))
-                      setFormOpen(true)
-                    }}
-                    className="min-h-[36px] min-w-[52px] rounded-md text-xs font-medium sm:min-h-0 sm:w-full sm:py-0.5 sm:text-left"
-                    style={{ border: "none", background: "transparent", color: "var(--color-text-secondary)", fontSize: "11px" }}
-                  >
-                    Editar
-                    </button>
-                    <button
-                    type="button"
-                    disabled={(!persistenceEnabled && !mock) || loading || togglingId === habit.id}
-                    aria-label={doneToday ? "Deshacer completado de hoy" : "Marcar hecho hoy"}
-                    title={doneToday ? "Deshacer hoy" : "Hecho hoy"}
-                    onClick={async () => {
-                      const r = await toggleCompleteToday(habit.id)
-                      if (!r.ok) alert(r.error || "No se pudo actualizar")
-                    }}
-                    className="h-10 w-10 shrink-0 transition-[transform,opacity,box-shadow] duration-200 active:scale-[0.97] motion-safe:hover:scale-[1.02]"
-                    style={{
-                      border: "0.5px solid var(--color-border)",
-                      borderRadius: "8px",
-                      background: doneToday
-                        ? "color-mix(in srgb, var(--color-accent-health) 11%, var(--color-surface))"
-                        : "color-mix(in srgb, var(--color-text-secondary) 5%, var(--color-surface))",
-                      cursor: (!persistenceEnabled && !mock) || togglingId === habit.id ? "not-allowed" : "pointer",
-                      opacity: (!persistenceEnabled && !mock) ? 0.45 : 1,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    {togglingId === habit.id ? (
-                      <Loader2 className="h-[18px] w-[18px] animate-spin text-[var(--color-accent-health)]" strokeWidth={2} aria-hidden />
-                    ) : doneToday ? (
-                      <CheckCircle2 className="h-[18px] w-[18px] text-[var(--color-accent-health)]" strokeWidth={1.75} aria-hidden />
-                    ) : (
-                      <Circle className="h-[18px] w-[18px] text-[var(--color-text-secondary)]" strokeWidth={1.75} aria-hidden />
-                    )}
-                    </button>
+                  <div className="min-w-0 flex-1 pt-0.5">
+                    <p id={`stack-block-${blockId}`} className="m-0 text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-primary)]">
+                      {meta.title}
+                    </p>
+                    <p className="m-0 mt-0.5 text-[12px] leading-snug text-[var(--color-text-secondary)]">{meta.subtitle}</p>
                   </div>
                 </div>
-              </div>
-            </Card>
-          )
-        })}
+                <div style={{ display: "grid", gap: "var(--spacing-sm)" }}>
+                  {blockHabits.length === 0 ? (
+                    <p
+                      className="m-0 rounded-[10px] border border-dashed border-[color-mix(in_srgb,var(--color-border)_80%,transparent)] bg-[var(--color-surface-alt)] px-3 py-2.5 text-[12px] leading-snug text-[var(--color-text-secondary)]"
+                      role="status"
+                    >
+                      {blockId === "sin_hora"
+                        ? "Ningún hábito sin hora: todos tienen una hora reconocible en «Trigger / hora», o aún no hay hábitos en el stack."
+                        : "Ningún hábito en este tramo. Al editar el hábito, escribe una hora en «Trigger / hora» (por ejemplo 08:00 o las 19) para que aparezca aquí."}
+                    </p>
+                  ) : null}
+                  {blockHabits.map((habit, habitIdx) => {
+                    const idx = animStart + habitIdx
+                    const freq = habit.metadata?.frequency ?? "diario"
+                    const streakDays = habit.metrics.current_streak
+                    const doneToday = habit.metrics.completed_today
+                    const reward = habit.metadata?.is_superhabit ? rewardMessage(streakDays) : null
+                    const weekMarks = weekMarksForHabit(habit)
+                    const intention = habit.metadata?.intention?.trim()
+                    const triggerOrTime = habit.metadata?.trigger_or_time?.trim()
+                    const sessionMins = habit.metadata?.estimated_session_minutes
+                    const metricLine = habitMetricLine(habit.metadata)
+
+                    return (
+                      <Card
+                        key={habit.id}
+                        hover
+                        className="group/habit motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1 motion-safe:fill-mode-both motion-safe:duration-500 hover:-translate-y-0.5"
+                        style={{
+                          animationDelay: `${Math.min(idx, 14) * 42}ms`,
+                          background: habit.metadata?.is_superhabit
+                            ? "color-mix(in srgb, var(--color-accent-warning) 8%, var(--color-surface))"
+                            : "var(--color-surface)",
+                          borderColor: habit.metrics.at_risk
+                            ? "color-mix(in srgb, var(--color-accent-danger) 40%, var(--color-border))"
+                            : habit.metadata?.is_superhabit
+                              ? "color-mix(in srgb, var(--color-accent-warning) 30%, var(--color-border))"
+                              : "var(--color-border)",
+                          borderWidth: "1px",
+                          borderStyle: "solid",
+                          boxShadow: "0 4px 14px rgba(15, 23, 42, 0.07)",
+                        }}
+                      >
+                        <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:gap-3 sm:px-3 sm:py-2.5">
+                          <div className="min-w-0 space-y-1 px-3 pt-3 sm:max-w-[min(100%,22rem)] sm:flex-none sm:px-0 sm:pt-0">
+                            {habit.metadata?.is_superhabit && (
+                              <span
+                                className="inline-flex items-center gap-1"
+                                style={{
+                                  fontSize: "10px",
+                                  textTransform: "uppercase",
+                                  letterSpacing: "0.12em",
+                                  padding: "2px 8px",
+                                  borderRadius: "999px",
+                                  background: "color-mix(in srgb, var(--color-accent-warning) 12%, transparent)",
+                                  color: "var(--color-accent-warning)",
+                                }}
+                              >
+                                <span aria-hidden>⚡</span>
+                                Superhábito
+                              </span>
+                            )}
+                            <div className="flex flex-wrap items-center gap-1.5 sm:flex-nowrap sm:items-center sm:gap-2">
+                              <p
+                                className="min-w-0 max-w-full sm:min-w-0 sm:flex-1 sm:truncate"
+                                style={{ margin: 0, fontWeight: 600, fontSize: "15px", color: "var(--color-text-primary)", lineHeight: 1.35 }}
+                                title={habit.name}
+                              >
+                                {habit.name}
+                              </p>
+                              {habit.metrics.at_risk && (
+                                <span
+                                  className="shrink-0 motion-safe:animate-pulse"
+                                  style={{
+                                    fontSize: "10px",
+                                    textTransform: "uppercase",
+                                    letterSpacing: "0.12em",
+                                    padding: "2px 8px",
+                                    borderRadius: "999px",
+                                    background: "color-mix(in srgb, var(--color-accent-danger) 12%, transparent)",
+                                    color: "var(--color-accent-danger)",
+                                  }}
+                                >
+                                  Riesgo ruptura
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", fontSize: "10px", color: "var(--color-text-secondary)" }}>
+                              <span>{DOMAIN_LABELS[habit.domain] ?? habit.domain}</span>
+                              <span>• {freq}</span>
+                              <span>• {streakDays} días continuos</span>
+                              {freq === "semanal" && (
+                                <span style={{ padding: "2px 6px", borderRadius: "999px", background: "var(--color-surface-alt)" }}>
+                                  Frecuencia específica
+                                </span>
+                              )}
+                            </div>
+                            {intention ? (
+                              <p
+                                className="line-clamp-1 text-[11px] leading-snug text-[var(--color-text-secondary)] transition-colors duration-200 group-hover/habit:text-[var(--color-text-primary)]"
+                                style={{ margin: 0 }}
+                              >
+                                {intention}
+                              </p>
+                            ) : null}
+                            {metricLine ? (
+                              <p className="flex items-start gap-1 text-[10px] leading-snug text-[var(--color-text-secondary)]" style={{ margin: 0 }}>
+                                <Target className="mt-0.5 h-3 w-3 shrink-0 text-[var(--color-accent-health)] opacity-80" aria-hidden />
+                                <span>{metricLine}</span>
+                              </p>
+                            ) : null}
+                            <div className="flex flex-wrap gap-1">
+                              {typeof sessionMins === "number" && sessionMins > 0 ? (
+                                <span
+                                  className="inline-flex items-center gap-0.5 rounded-full border border-[color-mix(in_srgb,var(--color-border)_70%,transparent)] bg-[var(--color-surface-alt)] px-1.5 py-px text-[9px] font-medium leading-tight text-[var(--color-text-secondary)] transition-transform duration-200 group-hover/habit:scale-[1.02]"
+                                  title="Duración estimada por sesión"
+                                >
+                                  <Clock className="h-2.5 w-2.5 text-[var(--color-accent-health)]" aria-hidden />
+                                  ~{sessionMins} min/sesión
+                                </span>
+                              ) : null}
+                              {triggerOrTime ? (
+                                <span
+                                  className="inline-flex max-w-full items-center gap-0.5 rounded-full border border-[color-mix(in_srgb,var(--color-border)_70%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_5%,var(--color-surface-alt))] px-1.5 py-px text-[9px] font-medium leading-tight text-[var(--color-text-secondary)] transition-transform duration-200 group-hover/habit:scale-[1.02]"
+                                  title="Disparador u hora"
+                                >
+                                  <span className="truncate">{triggerOrTime}</span>
+                                </span>
+                              ) : null}
+                            </div>
+                            {reward && (
+                              <p style={{ margin: 0, fontSize: "10px", color: "var(--color-accent-health)" }}>{reward}</p>
+                            )}
+                          </div>
+
+                          <div className="mx-3 h-px shrink-0 bg-[var(--color-border)] sm:hidden" aria-hidden />
+
+                          <div className="flex w-full flex-row items-center justify-between gap-3 px-3 pb-3 sm:ml-auto sm:w-auto sm:shrink-0 sm:justify-end sm:gap-2.5 sm:px-0 sm:pb-0">
+                            <div
+                              role="group"
+                              aria-label="Estado de la semana: letras L a D y marcas debajo"
+                              className="grid w-max shrink-0 touch-manipulation [grid-template-columns:repeat(7,22px)] gap-x-1 gap-y-0.5 sm:[grid-template-columns:repeat(7,24px)] sm:gap-x-1 sm:gap-y-1"
+                            >
+                              {days.map((day, dIdx) => {
+                                const mark = weekMarks[dIdx]
+                                const neutralDay = mark === "off" || mark === "upcoming"
+                                const isMissed = mark === "missed"
+                                const letterColor =
+                                  neutralDay && !isMissed
+                                    ? "color-mix(in srgb, var(--color-text-secondary) 50%, var(--color-text-primary))"
+                                    : "var(--color-text-primary)"
+                                return (
+                                  <div
+                                    key={`${habit.id}-dlabel-${day}`}
+                                    className="select-none text-center text-[10px] font-semibold uppercase tracking-wide leading-none sm:text-[11px]"
+                                    style={{ color: letterColor }}
+                                  >
+                                    {day}
+                                  </div>
+                                )
+                              })}
+                              {days.map((day, dIdx) => {
+                                const mark = weekMarks[dIdx]
+                                const isDone = mark === "done"
+                                const isMissed = mark === "missed"
+
+                                const chipBg = isDone
+                                  ? "color-mix(in srgb, color-mix(in srgb, var(--color-accent-health) 16%, var(--color-surface)) 72%, transparent)"
+                                  : isMissed
+                                    ? "color-mix(in srgb, color-mix(in srgb, var(--color-text-secondary) 8%, var(--color-surface)) 65%, transparent)"
+                                    : "color-mix(in srgb, var(--color-surface) 58%, transparent)"
+
+                                const chipBorder = isDone
+                                  ? "1px solid color-mix(in srgb, var(--color-accent-health) 32%, transparent)"
+                                  : "1px solid color-mix(in srgb, var(--color-border) 45%, transparent)"
+
+                                const aria =
+                                  mark === "done"
+                                    ? `${day}: completado`
+                                    : mark === "missed"
+                                      ? `${day}: pendiente`
+                                      : `${day}: sin marca destacada`
+
+                                return (
+                                  <div
+                                    key={`${habit.id}-dcell-${day}`}
+                                    className="flex h-[44px] w-full items-center justify-center rounded-[5px] transition-all duration-200 motion-safe:group-hover/habit:scale-[1.02] sm:h-[48px]"
+                                    style={{
+                                      background: chipBg,
+                                      border: chipBorder,
+                                      boxShadow: isDone ? "0 1px 0 color-mix(in srgb, var(--color-accent-health) 14%, transparent)" : "none",
+                                      transitionDelay: `${dIdx * 14}ms`,
+                                    }}
+                                    aria-label={aria}
+                                  >
+                                    {isDone ? (
+                                      <span
+                                        className="motion-safe:animate-in motion-safe:zoom-in-50 motion-safe:duration-200 block h-[5px] w-[5px] shrink-0 rounded-full"
+                                        style={{
+                                          background: "color-mix(in srgb, var(--color-accent-health) 88%, #14532d)",
+                                          boxShadow: "0 0 0 1px color-mix(in srgb, var(--color-accent-health) 25%, transparent)",
+                                        }}
+                                      />
+                                    ) : isMissed ? (
+                                      <span className="block h-[5px] w-[5px] shrink-0 rounded-full border border-[color-mix(in_srgb,var(--color-text-secondary)_40%,transparent)] bg-transparent" />
+                                    ) : null}
+                                  </div>
+                                )
+                              })}
+                            </div>
+
+                            <div className="hidden h-[52px] w-px shrink-0 bg-[var(--color-border)] sm:block" aria-hidden />
+
+                            <div className="flex shrink-0 flex-row items-center gap-2 sm:flex-col sm:items-stretch sm:justify-center sm:gap-1.5">
+                              <button
+                                type="button"
+                                disabled={!persistenceEnabled && !mock}
+                                onClick={() => {
+                                  setEditing(habit)
+                                  setForm(habitToModalValues(habit))
+                                  setFormOpen(true)
+                                }}
+                                className="min-h-[36px] min-w-[52px] rounded-md text-xs font-medium sm:min-h-0 sm:w-full sm:py-0.5 sm:text-left"
+                                style={{ border: "none", background: "transparent", color: "var(--color-text-secondary)", fontSize: "11px" }}
+                              >
+                                Editar
+                              </button>
+                              <button
+                                type="button"
+                                disabled={(!persistenceEnabled && !mock) || loading || togglingId === habit.id}
+                                aria-label={doneToday ? "Deshacer completado de hoy" : "Marcar hecho hoy"}
+                                title={doneToday ? "Deshacer hoy" : "Hecho hoy"}
+                                onClick={async () => {
+                                  const r = await toggleCompleteToday(habit.id)
+                                  if (!r.ok) alert(r.error || "No se pudo actualizar")
+                                }}
+                                className="h-10 w-10 shrink-0 transition-[transform,opacity,box-shadow] duration-200 active:scale-[0.97] motion-safe:hover:scale-[1.02]"
+                                style={{
+                                  border: "0.5px solid var(--color-border)",
+                                  borderRadius: "8px",
+                                  background: doneToday
+                                    ? "color-mix(in srgb, var(--color-accent-health) 11%, var(--color-surface))"
+                                    : "color-mix(in srgb, var(--color-text-secondary) 5%, var(--color-surface))",
+                                  cursor: (!persistenceEnabled && !mock) || togglingId === habit.id ? "not-allowed" : "pointer",
+                                  opacity: (!persistenceEnabled && !mock) ? 0.45 : 1,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                }}
+                              >
+                                {togglingId === habit.id ? (
+                                  <Loader2 className="h-[18px] w-[18px] animate-spin text-[var(--color-accent-health)]" strokeWidth={2} aria-hidden />
+                                ) : doneToday ? (
+                                  <CheckCircle2 className="h-[18px] w-[18px] text-[var(--color-accent-health)]" strokeWidth={1.75} aria-hidden />
+                                ) : (
+                                  <Circle className="h-[18px] w-[18px] text-[var(--color-text-secondary)]" strokeWidth={1.75} aria-hidden />
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    )
+                  })}
+                </div>
+              </section>
+            )
+          })}
       </div>
 
       <HabitFormModal

@@ -15,6 +15,7 @@ export type GoogleCalendarFeedState = {
   refresh: () => Promise<void>
   /** Ventana explícita (p. ej. al navegar meses en la agenda). */
   refreshRange: (range: { timeMin: string; timeMax: string }) => Promise<void>
+  deleteEvent: (eventId: string) => Promise<boolean>
 }
 
 export function useGoogleCalendar(): GoogleCalendarFeedState {
@@ -66,6 +67,27 @@ export function useGoogleCalendar(): GoogleCalendarFeedState {
     void load()
   }, [load])
 
+  const deleteEvent = useCallback(async (eventId: string) => {
+    try {
+      setError(null)
+      const headers = await browserBearerHeaders(true)
+      const res = await fetch("/api/google/calendar", {
+        method: "DELETE",
+        headers,
+        body: JSON.stringify({ id: eventId }),
+      })
+      const payload = (await res.json()) as { success?: boolean; error?: string }
+      if (!res.ok || !payload.success) {
+        throw new Error(messageForHttpError(res.status, payload.error, res.statusText))
+      }
+      await load()
+      return true
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error")
+      return false
+    }
+  }, [load])
+
   return {
     events,
     loading,
@@ -74,5 +96,6 @@ export function useGoogleCalendar(): GoogleCalendarFeedState {
     notice,
     refresh: () => load(),
     refreshRange: (range: { timeMin: string; timeMax: string }) => load(range),
+    deleteEvent,
   }
 }

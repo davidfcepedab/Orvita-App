@@ -17,6 +17,7 @@ export type GoogleTasksFeedState = {
   createTask: (input: { title: string; notes?: string; due?: string | null }) => Promise<GoogleTaskDTO | null>
   /** Actualiza vencimiento (YYYY-MM-DD) u otros campos en Google Tasks. */
   patchTask: (id: string, patch: { due?: string | null; title?: string; status?: string }) => Promise<GoogleTaskDTO | null>
+  removeTask: (id: string) => Promise<boolean>
 }
 
 export function useGoogleTasks(): GoogleTasksFeedState {
@@ -85,6 +86,31 @@ export function useGoogleTasks(): GoogleTasksFeedState {
     [load],
   )
 
+  const removeTask = useCallback(
+    async (id: string) => {
+      try {
+        setError(null)
+        const headers = await browserBearerHeaders(true)
+        const res = await fetch("/api/google/tasks", {
+          method: "DELETE",
+          headers,
+          body: JSON.stringify({ id }),
+        })
+        const payload = (await res.json()) as { success?: boolean; error?: string }
+        if (!res.ok || !payload.success) {
+          throw new Error(messageForHttpError(res.status, payload.error, res.statusText))
+        }
+        await load()
+        return true
+      } catch (e) {
+        const m = e instanceof Error ? e.message : "Error"
+        setError(m)
+        return false
+      }
+    },
+    [load],
+  )
+
   const createTask = useCallback(
     async (input: { title: string; notes?: string; due?: string | null }) => {
       try {
@@ -113,5 +139,5 @@ export function useGoogleTasks(): GoogleTasksFeedState {
     [load],
   )
 
-  return { tasks, loading, error, connected, notice, creating, refresh: load, createTask, patchTask }
+  return { tasks, loading, error, connected, notice, creating, refresh: load, createTask, patchTask, removeTask }
 }
