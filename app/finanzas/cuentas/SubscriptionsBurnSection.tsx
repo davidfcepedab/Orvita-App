@@ -288,17 +288,18 @@ export function SubscriptionsBurnSection({
   const moreActiveThanTop = Math.max(0, activeSubscriptions.length - topBurnSubscriptions.length)
 
   return (
-    <section className="space-y-4">
+    <section id="capital-suscripciones" className="scroll-mt-24 space-y-4">
       <div className={arcticPanel}>
-        <button
-          type="button"
-          onClick={() => setSubscriptionsExpanded((v) => !v)}
-          className="flex w-full touch-manipulation items-start gap-2.5 p-3 text-left sm:p-3.5"
-          aria-expanded={subscriptionsExpanded}
-        >
-          <div className="min-w-0 flex-1">
+        <div className="flex w-full items-start">
+          <button
+            type="button"
+            onClick={() => setSubscriptionsExpanded((v) => !v)}
+            className="min-w-0 flex-1 touch-manipulation p-3 text-left sm:p-3.5"
+            aria-expanded={subscriptionsExpanded}
+          >
+            <div className="min-w-0">
             <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
-              Monthly subscriptions burn
+              Suscripciones recurrentes
             </h2>
             <p className="mt-1 text-xs text-orbita-secondary sm:text-sm">
               {subscriptionsExpanded
@@ -359,12 +360,29 @@ export function SubscriptionsBurnSection({
                 </div>
               </div>
             ) : null}
+            </div>
+          </button>
+          <div className="flex shrink-0 flex-col items-end gap-0.5 py-3 pr-2 sm:py-3.5 sm:pr-3">
+            <button
+              type="button"
+              onClick={() => setSubscriptionsExpanded(true)}
+              className="text-[11px] font-medium text-orbita-secondary underline decoration-orbita-border/80 underline-offset-4 hover:text-orbita-primary"
+            >
+              Editar
+            </button>
+            <button
+              type="button"
+              onClick={() => setSubscriptionsExpanded((v) => !v)}
+              className="rounded-lg p-1 text-orbita-secondary hover:bg-orbita-surface-alt"
+              aria-label={subscriptionsExpanded ? "Colapsar" : "Expandir"}
+            >
+              <ChevronDown
+                className={`h-5 w-5 transition-transform duration-200 ${subscriptionsExpanded ? "rotate-180" : ""}`}
+                aria-hidden
+              />
+            </button>
           </div>
-          <ChevronDown
-            className={`mt-0.5 h-5 w-5 shrink-0 text-orbita-secondary transition-transform duration-200 ${subscriptionsExpanded ? "rotate-180" : ""}`}
-            aria-hidden
-          />
-        </button>
+        </div>
 
         {subscriptionsExpanded ? (
           <div className="space-y-3 border-t border-orbita-border p-3 sm:p-3.5">
@@ -469,13 +487,13 @@ export function SubscriptionsBurnSection({
                   })}
                 </div>
               )}
-              <div className="border-t border-orbita-border p-4">
+              <div className="border-t border-orbita-border p-3 sm:p-4">
                 <button
                   type="button"
                   onClick={openAdd}
-                  className="flex min-h-[48px] w-full touch-manipulation items-center justify-center gap-2 rounded-2xl bg-sky-500 py-3.5 text-sm font-semibold uppercase tracking-[0.12em] text-white shadow-sm transition hover:bg-sky-600 active:bg-sky-700"
+                  className="flex min-h-[40px] w-full touch-manipulation items-center justify-center gap-1.5 rounded-xl border border-orbita-border/90 bg-orbita-surface py-2.5 text-xs font-medium text-orbita-primary hover:bg-orbita-surface-alt"
                 >
-                  <Plus className="h-5 w-5 shrink-0" aria-hidden />
+                  <Plus className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
                   Agregar suscripción
                 </button>
               </div>
@@ -521,74 +539,94 @@ export function SubscriptionsBurnSection({
         open={formOpen}
         onClose={() => setFormOpen(false)}
         title={editing ? "Editar suscripción" : "Nueva suscripción"}
-        subtitle="Incluye solo cargos recurrentes mensuales."
+        subtitle="Cargos recurrentes mensuales (completa fila por fila)."
       >
         <div className="space-y-4">
-          <label className="block text-sm font-medium text-orbita-primary">
-            Nombre
-            <input
-              className="mt-1.5 min-h-[44px] w-full rounded-xl border-[0.5px] border-orbita-border px-3 py-2.5 text-base text-orbita-primary sm:text-sm"
-              value={draft.name}
-              onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
-            />
-          </label>
-          <label className="block text-sm font-medium text-orbita-primary">
-            Categoría
-            <select
-              className="mt-1.5 min-h-[44px] w-full rounded-xl border-[0.5px] border-orbita-border px-3 py-2.5 text-base text-orbita-primary sm:text-sm"
-              value={draft.category}
-              onChange={(e) => setDraft((d) => ({ ...d, category: e.target.value }))}
-            >
-              {SUBSCRIPTION_CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block text-sm font-medium text-orbita-primary">
-            Monto mensual (COP)
-            <input
-              type="number"
-              min={0}
-              className="mt-1.5 min-h-[44px] w-full rounded-xl border-[0.5px] border-orbita-border px-3 py-2.5 text-base text-orbita-primary sm:text-sm"
-              value={draft.amount_monthly || ""}
-              onChange={(e) => setDraft((d) => ({ ...d, amount_monthly: Number(e.target.value) }))}
-            />
-          </label>
-          <label className="block text-sm font-medium text-orbita-primary">
-            Próxima renovación
-            <input
-              type="date"
-              className="mt-1.5 min-h-[44px] w-full rounded-xl border-[0.5px] border-orbita-border px-3 py-2.5 text-base text-orbita-primary sm:text-sm"
-              value={draft.renewal_date}
-              onChange={(e) => setDraft((d) => ({ ...d, renewal_date: e.target.value }))}
-            />
-          </label>
-          <label className="flex min-h-[48px] cursor-pointer touch-manipulation items-center gap-3 rounded-xl border-[0.5px] border-orbita-border bg-orbita-surface-alt/80 px-4 py-3 active:bg-orbita-surface-alt">
-            <input
-              type="checkbox"
-              checked={draft.include_in_simulator}
-              onChange={(e) => setDraft((d) => ({ ...d, include_in_simulator: e.target.checked }))}
-              className="h-5 w-5 shrink-0 rounded border-orbita-border"
-            />
-            <span className="text-sm leading-snug text-orbita-primary">
-              Incluir en simulador de flujo (gasto fijo recurrente)
-            </span>
-          </label>
+          <table className="w-full border-collapse text-sm">
+            <tbody className="align-top">
+              <tr className="border-b border-orbita-border/60">
+                <th className="w-[32%] py-2.5 pr-3 text-left text-xs font-medium text-orbita-secondary sm:w-1/4">
+                  Nombre
+                </th>
+                <td className="py-2.5">
+                  <input
+                    className="min-h-[40px] w-full rounded-lg border border-orbita-border px-3 py-2 text-orbita-primary"
+                    value={draft.name}
+                    onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
+                  />
+                </td>
+              </tr>
+              <tr className="border-b border-orbita-border/60">
+                <th className="py-2.5 pr-3 text-left text-xs font-medium text-orbita-secondary">Categoría</th>
+                <td className="py-2.5">
+                  <select
+                    className="min-h-[40px] w-full rounded-lg border border-orbita-border px-3 py-2 text-orbita-primary"
+                    value={draft.category}
+                    onChange={(e) => setDraft((d) => ({ ...d, category: e.target.value }))}
+                  >
+                    {SUBSCRIPTION_CATEGORIES.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+              </tr>
+              <tr className="border-b border-orbita-border/60">
+                <th className="py-2.5 pr-3 text-left text-xs font-medium text-orbita-secondary">Monto / mes</th>
+                <td className="py-2.5">
+                  <input
+                    type="number"
+                    min={0}
+                    className="min-h-[40px] w-full rounded-lg border border-orbita-border px-3 py-2 text-orbita-primary"
+                    placeholder="COP"
+                    value={draft.amount_monthly || ""}
+                    onChange={(e) => setDraft((d) => ({ ...d, amount_monthly: Number(e.target.value) }))}
+                  />
+                </td>
+              </tr>
+              <tr className="border-b border-orbita-border/60">
+                <th className="py-2.5 pr-3 text-left text-xs font-medium text-orbita-secondary">Renovación</th>
+                <td className="py-2.5">
+                  <input
+                    type="date"
+                    className="min-h-[40px] w-full rounded-lg border border-orbita-border px-3 py-2 text-orbita-primary"
+                    value={draft.renewal_date}
+                    onChange={(e) => setDraft((d) => ({ ...d, renewal_date: e.target.value }))}
+                  />
+                </td>
+              </tr>
+              <tr>
+                <th className="py-2.5 pr-3 text-left text-xs font-medium text-orbita-secondary">Simulador</th>
+                <td className="py-2.5">
+                  <label className="flex cursor-pointer items-start gap-2.5">
+                    <input
+                      type="checkbox"
+                      checked={draft.include_in_simulator}
+                      onChange={(e) => setDraft((d) => ({ ...d, include_in_simulator: e.target.checked }))}
+                      className="mt-0.5 h-4 w-4 shrink-0 rounded border-orbita-border"
+                    />
+                    <span className="text-xs leading-snug text-orbita-secondary">
+                      Incluir como gasto fijo recurrente en el simulador de flujo
+                    </span>
+                  </label>
+                </td>
+              </tr>
+            </tbody>
+          </table>
           {saveErr ? <p className="text-sm text-rose-600">{saveErr}</p> : null}
-          <div className="grid grid-cols-2 gap-3 pt-2">
+          <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end sm:gap-3">
             <button
               type="button"
               onClick={() => setFormOpen(false)}
-              className="min-h-[48px] touch-manipulation rounded-xl border border-orbita-border bg-orbita-surface-alt py-3 text-sm font-semibold text-orbita-primary active:opacity-80"
+              className="min-h-[44px] touch-manipulation rounded-xl border border-orbita-border px-4 py-2.5 text-sm font-medium text-orbita-primary hover:bg-orbita-surface-alt"
             >
               Cerrar
             </button>
             <button
               type="button"
               onClick={() => void submitForm()}
-              className="min-h-[48px] touch-manipulation rounded-[var(--radius-button)] bg-[var(--color-text-primary)] py-3 text-sm font-semibold text-[var(--color-surface)] active:opacity-90"
+              className="min-h-[44px] touch-manipulation rounded-xl bg-[var(--color-text-primary)] px-4 py-2.5 text-sm font-semibold text-[var(--color-surface)] active:opacity-90"
             >
               Guardar
             </button>

@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useEffect, useRef, useState } from "react"
 import { useFinance } from "../FinanceContext"
 import { Card } from "@/src/components/ui/Card"
@@ -7,6 +8,9 @@ import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { rechartsTooltipContentStyle } from "@/lib/charts/rechartsShared"
 import { UI_FINANCE_DEMO_MONTH } from "@/lib/checkins/flags"
 import { financeApiGet } from "@/lib/finanzas/financeClientFetch"
+import type { FlowCommitment } from "@/lib/finanzas/flowCommitmentsTypes"
+import { readFlowCommitmentsFromLocalStorage } from "@/lib/finanzas/flowCommitmentsLocal"
+import { subscriptionActiveBurn, type UserSubscription } from "@/lib/finanzas/userSubscriptionsTypes"
 import {
   ResponsiveContainer,
   LineChart,
@@ -56,6 +60,8 @@ interface OverviewData {
   flowEvolution?: FlowEvolutionPayload
   subscriptions?: { name: string; amount: number }[]
   obligations?: { name: string; due: string; amount: number }[]
+  managedSubscriptions?: UserSubscription[]
+  flowCommitments?: FlowCommitment[]
   headline?: {
     liquidityIndex: number
     netCashFlow: number
@@ -72,11 +78,16 @@ interface OverviewResponse {
   source?: string
 }
 
-interface DbSnapshotSummary {
-  month: string
-  income: number
-  expense: number
-  balance: number
+function formatCommitmentDayEs(isoDate: string) {
+  const raw = isoDate.slice(0, 10)
+  const [y, mo, da] = raw.split("-").map(Number)
+  if (!y || !mo || !da) return raw
+  const d = new Date(y, mo - 1, da)
+  return d.toLocaleDateString("es-CO", { month: "short", day: "numeric" })
+}
+
+function isIncomeCommitmentRow(c: FlowCommitment) {
+  return c.flowType === "income"
 }
 
 function FlowChartLegend() {
@@ -120,9 +131,10 @@ const FLOW_TABS: { id: FlowEvolutionKey; label: string; subtitle: string }[] = [
   },
 ]
 
+const supabaseEnabled = process.env.NEXT_PUBLIC_SUPABASE_ENABLED === "true"
+
 export default function FinanzasOverview() {
   const finance = useFinance()
-  /** Periodo activo (FinanceContext). Datos: GET overview (TX + fallback snapshot) y GET summary (snapshots BD). */
   const month = finance?.month ?? ""
 
   const [data, setData] = useState<OverviewData | null>(null)
@@ -130,55 +142,16 @@ export default function FinanzasOverview() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
-  const [dbSnapshot, setDbSnapshot] = useState<DbSnapshotSummary | null>(null)
-  const [dbSnapshotError, setDbSnapshotError] = useState<string | null>(null)
+  const [lsCommitments, setLsCommitments] = useState<FlowCommitment[]>([])
   const fetchSeq = useRef(0)
 
   useEffect(() => {
-    if (!month) {
-      setDbSnapshot(null)
-      setDbSnapshotError(null)
+    if (supabaseEnabled) {
+      if (data) setLsCommitments(data.flowCommitments ?? [])
       return
     }
-    let cancelled = false
-    ;(async () => {
-      try {
-        setDbSnapshotError(null)
-        const res = await financeApiGet(`/api/orbita/finanzas/summary?month=${encodeURIComponent(month)}`)
-        const json = (await res.json()) as {
-          success?: boolean
-          meta?: { month?: string }
-          summary?: {
-            total_income_current?: number
-            total_expense_current?: number
-            balance_current?: number
-          }
-          error?: string
-        }
-        if (cancelled) return
-        if (!res.ok || !json.success) {
-          setDbSnapshot(null)
-          setDbSnapshotError(json.error ?? "No se pudo cargar el resumen de base de datos")
-          return
-        }
-        const s = json.summary
-        setDbSnapshot({
-          month: json.meta?.month ?? month,
-          income: Number(s?.total_income_current ?? 0),
-          expense: Number(s?.total_expense_current ?? 0),
-          balance: Number(s?.balance_current ?? 0),
-        })
-      } catch {
-        if (!cancelled) {
-          setDbSnapshot(null)
-          setDbSnapshotError("No se pudo cargar el resumen de base de datos")
-        }
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [month])
+    setLsCommitments(readFlowCommitmentsFromLocalStorage())
+  }, [month, data, supabaseEnabled])
 
   useEffect(() => {
     if (!month) {
@@ -250,8 +223,19 @@ export default function FinanzasOverview() {
     )
   }
 
-  const { income, expense, net, savingsRate, runway, deltaNet, weeklySeries, flowEvolution, subscriptions, obligations } =
-    data
+  const {
+    income,
+    expense,
+    net,
+    savingsRate,
+    runway,
+    deltaNet,
+    weeklySeries,
+    flowEvolution,
+    subscriptions,
+    obligations,
+    managedSubscriptions,
+  } = data
 
   const formatMoney = (value: number) =>
     new Intl.NumberFormat("es-CO", {
@@ -282,6 +266,10 @@ export default function FinanzasOverview() {
   const subsTotal = subs.reduce((a, s) => a + s.amount, 0)
   const oblsTotal = obls.reduce((a, o) => a + o.amount, 0)
 
+  const managedActive = (managedSubscriptions ?? []).filter(subscriptionActiveBurn)
+  const managedTotal = managedActive.reduce((a, s) => a + s.amount_monthly, 0)
+  const commitmentsSorted = [...lsCommitments].sort((a, b) => a.date.localeCompare(b.date))
+
   const deltaLabel =
     deltaNet != null && Number.isFinite(deltaNet)
       ? `${deltaNet >= 0 ? "+" : ""}${deltaNet.toFixed(1)}% vs mes anterior`
@@ -294,81 +282,64 @@ export default function FinanzasOverview() {
   return (
     <div className="min-w-0 max-w-full space-y-6 sm:space-y-8">
       {notice && <p className="text-xs text-orbita-secondary">{notice}</p>}
-      <div className="grid min-w-0 max-w-full grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {[
-          {
-            label: "Capacidad de ahorro",
-            value: `${formatMoney(savingsRate)}%`,
-            sub: `Ingresos ${formatMoney(income)} COP · ${deltaLabel}`,
-            accent: "var(--color-accent-health)",
-          },
-          {
-            label: "Flujo neto",
-            value: `${net >= 0 ? "+" : ""}$${formatMoney(net)}`,
-            sub: `Gastos ${formatMoney(expense)} · Ingresos ${formatMoney(income)}`,
-            accent: "var(--color-accent-primary)",
-          },
-          {
-            label: "Runway (superávit / gasto)",
-            value: runwayLabel,
-            sub: "Meses de superávit cubriendo el gasto del mes",
-            accent: "var(--color-text-primary)",
-          },
-          {
-            label: "Presión gasto / ingreso",
-            value: `${Math.max(0, Math.min(100, Math.round((expense / Math.max(1, income)) * 100)))}%`,
-            sub: "Gasto operativo sobre ingresos del mes",
-            accent: "var(--color-accent-finance)",
-          },
-        ].map((metric) => (
-          <Card key={metric.label} hover className="min-w-0 p-4 sm:p-8">
-            <div className="grid min-w-0 gap-2">
-              <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">{metric.label}</p>
-              <p className="break-words text-2xl font-semibold tabular-nums" style={{ color: metric.accent }}>
-                {metric.value}
-              </p>
-              <p className="break-words text-xs leading-snug text-orbita-secondary">{metric.sub}</p>
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      {(dbSnapshot || dbSnapshotError) && (
-        <Card className="min-w-0 border border-orbita-border/80 p-4 sm:p-6">
-          <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">
-            Resumen almacenado (snapshots)
+      <section className="min-w-0 space-y-3" aria-labelledby="fin-overview-kpis-heading">
+        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0 max-w-full space-y-1">
+            <h2
+              id="fin-overview-kpis-heading"
+              className="text-sm font-semibold tracking-tight text-orbita-primary"
+            >
+              Indicadores operativos del mes
+            </h2>
+            <p className="max-w-2xl text-[11px] leading-snug text-orbita-secondary sm:text-xs">
+              Los gastos de estas tarjetas usan solo movimientos con impacto{" "}
+              <span className="font-medium text-orbita-primary">operativo</span> según tu catálogo de subcategorías
+              (se excluyen inversión, ajustes y otros impactos no operativos cuando están catalogados).
+            </p>
+          </div>
+          <p className="shrink-0 text-[10px] font-medium uppercase tracking-[0.14em] text-orbita-secondary">
+            4 métricas
           </p>
-          <p className="mt-1 text-xs leading-snug text-orbita-secondary">
-            Mismo periodo que arriba: totales en{" "}
-            <code className="rounded bg-orbita-surface px-1 text-[10px]">finance_monthly_snapshots</code> y
-            desglose por categoría desde transacciones del mes.
-          </p>
-          {dbSnapshotError ? (
-            <p className="mt-3 text-sm text-amber-700 dark:text-amber-400">{dbSnapshotError}</p>
-          ) : dbSnapshot ? (
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              <div>
-                <p className="text-[11px] text-orbita-secondary">Ingresos (BD)</p>
-                <p className="tabular-nums text-lg font-semibold text-orbita-primary">
-                  ${formatMoney(dbSnapshot.income)}
+        </div>
+        <div className="grid min-w-0 max-w-full grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {[
+            {
+              label: "Capacidad de ahorro",
+              value: `${formatMoney(savingsRate)}%`,
+              sub: `Ingresos ${formatMoney(income)} COP · ${deltaLabel}`,
+              accent: "var(--color-accent-health)",
+            },
+            {
+              label: "Flujo neto",
+              value: `${net >= 0 ? "+" : ""}$${formatMoney(net)}`,
+              sub: `Gasto operativo ${formatMoney(expense)} · Ingresos ${formatMoney(income)}`,
+              accent: "var(--color-accent-primary)",
+            },
+            {
+              label: "Runway (superávit / gasto)",
+              value: runwayLabel,
+              sub: "Meses de superávit cubriendo el gasto operativo del mes",
+              accent: "var(--color-text-primary)",
+            },
+            {
+              label: "Presión gasto / ingreso",
+              value: `${Math.max(0, Math.min(100, Math.round((expense / Math.max(1, income)) * 100)))}%`,
+              sub: "Gasto operativo sobre ingresos del mes",
+              accent: "var(--color-accent-finance)",
+            },
+          ].map((metric) => (
+            <Card key={metric.label} hover className="min-w-0 border border-orbita-border/70 p-4 sm:p-6">
+              <div className="grid min-w-0 gap-2">
+                <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">{metric.label}</p>
+                <p className="break-words text-2xl font-semibold tabular-nums" style={{ color: metric.accent }}>
+                  {metric.value}
                 </p>
+                <p className="break-words text-xs leading-snug text-orbita-secondary">{metric.sub}</p>
               </div>
-              <div>
-                <p className="text-[11px] text-orbita-secondary">Gastos (BD)</p>
-                <p className="tabular-nums text-lg font-semibold text-orbita-primary">
-                  ${formatMoney(dbSnapshot.expense)}
-                </p>
-              </div>
-              <div>
-                <p className="text-[11px] text-orbita-secondary">Balance mes (BD)</p>
-                <p className="tabular-nums text-lg font-semibold text-orbita-primary">
-                  ${formatMoney(dbSnapshot.balance)}
-                </p>
-              </div>
-            </div>
-          ) : null}
-        </Card>
-      )}
+            </Card>
+          ))}
+        </div>
+      </section>
 
       <Card className="min-w-0 overflow-x-clip p-4 sm:p-8">
         <div className="grid min-w-0 max-w-full gap-4">
@@ -377,6 +348,10 @@ export default function FinanzasOverview() {
               <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Evolución de flujo</p>
               <span className="break-words text-xs leading-snug text-orbita-secondary [overflow-wrap:anywhere]">
                 {flowSubtitle}
+              </span>
+              <span className="text-[11px] leading-snug text-orbita-secondary/90">
+                La serie roja es <strong className="font-medium text-orbita-primary">gasto operativo</strong> (misma
+                lógica que los KPI de arriba).
               </span>
             </div>
             <div
@@ -482,50 +457,134 @@ export default function FinanzasOverview() {
 
       <div className="grid min-w-0 max-w-full grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2">
         <Card className="min-w-0 overflow-x-clip p-4 sm:p-8">
-          <div className="grid min-w-0 max-w-full gap-3">
-            <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Suscripciones / SaaS (heurística)</p>
-            {subs.length === 0 ? (
-              <p className="text-sm text-orbita-secondary">Sin partidas detectadas con patrón de suscripción.</p>
+          <div className="grid min-w-0 max-w-full gap-4">
+            <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Suscripciones registradas</p>
+                <p className="mt-1 text-[11px] leading-snug text-orbita-secondary">
+                  Misma lista que en Capital → Cuentas (suscripciones recurrentes).
+                </p>
+              </div>
+              <Link
+                href="/finanzas/cuentas#capital-suscripciones"
+                className="shrink-0 text-[11px] font-medium text-orbita-secondary underline decoration-orbita-border/80 underline-offset-4 hover:text-orbita-primary"
+                prefetch={false}
+              >
+                Editar
+              </Link>
+            </div>
+            {managedActive.length === 0 ? (
+              <p className="text-sm text-orbita-secondary">No hay suscripciones activas en tu registro.</p>
             ) : (
-              subs.map((item) => (
+              managedActive.map((s) => (
                 <div
-                  key={item.name}
+                  key={s.id}
                   className="flex min-w-0 flex-col gap-1 rounded-xl bg-orbita-surface-alt px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4"
                 >
-                  <span className="min-w-0 break-words text-sm text-orbita-primary">{item.name}</span>
-                  <span className="shrink-0 tabular-nums text-xs text-orbita-secondary sm:text-right">${formatMoney(item.amount)}</span>
+                  <span className="min-w-0 break-words text-sm font-medium text-orbita-primary">{s.name}</span>
+                  <span className="shrink-0 tabular-nums text-xs text-orbita-secondary sm:text-right">
+                    ${formatMoney(s.amount_monthly)}
+                  </span>
                 </div>
               ))
             )}
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-orbita-border bg-orbita-surface px-3 py-3 sm:px-4">
-              <span className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Total</span>
-              <span className="tabular-nums text-sm font-semibold text-orbita-primary">${formatMoney(subsTotal)}</span>
+              <span className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Total registrado</span>
+              <span className="tabular-nums text-sm font-semibold text-orbita-primary">${formatMoney(managedTotal)}</span>
             </div>
+            <details className="rounded-xl border border-orbita-border/70 bg-orbita-surface-alt/40 px-3 py-2 text-xs text-orbita-secondary">
+              <summary className="cursor-pointer font-medium text-orbita-primary">
+                Patrones en movimientos (operativo, mes)
+              </summary>
+              <p className="mt-2 text-[11px] leading-snug">
+                Heurística sobre transacciones del mes (no reemplaza tu lista registrada).
+              </p>
+              {subs.length === 0 ? (
+                <p className="mt-2 text-[11px]">Sin coincidencias tipo suscripción / SaaS.</p>
+              ) : (
+                <ul className="mt-2 space-y-2">
+                  {subs.map((item) => (
+                    <li key={item.name} className="flex justify-between gap-2 tabular-nums">
+                      <span className="min-w-0 break-words">{item.name}</span>
+                      <span>${formatMoney(item.amount)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="mt-2 border-t border-orbita-border/50 pt-2 text-[11px]">
+                Subtotal heurístico: ${formatMoney(subsTotal)}
+              </p>
+            </details>
           </div>
         </Card>
         <Card className="min-w-0 overflow-x-clip p-4 sm:p-8">
-          <div className="grid min-w-0 max-w-full gap-3">
-            <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Obligaciones fijas (heurística)</p>
-            {obls.length === 0 ? (
-              <p className="text-sm text-orbita-secondary">Sin obligaciones detectadas por categoría / descripción.</p>
-            ) : (
-              obls.map((item) => (
-                <div
-                  key={item.name + item.due}
-                  className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
-                >
-                  <div className="min-w-0">
-                    <p className="break-words text-sm text-orbita-primary">{item.name}</p>
-                    <p className="text-xs text-orbita-secondary">Fecha {item.due}</p>
-                  </div>
-                  <span className="shrink-0 tabular-nums text-xs text-orbita-secondary sm:text-right">${formatMoney(item.amount)}</span>
-                </div>
-              ))
-            )}
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-orbita-border bg-orbita-surface px-3 py-3 sm:px-4">
-              <span className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Total</span>
-              <span className="tabular-nums text-sm font-semibold text-orbita-primary">${formatMoney(oblsTotal)}</span>
+          <div className="grid min-w-0 max-w-full gap-4">
+            <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Compromisos (lista corta)</p>
+                <p className="mt-1 text-[11px] leading-snug text-orbita-secondary">
+                  {supabaseEnabled
+                    ? "Misma lista que el simulador en Capital → Cuentas (guardada por hogar)."
+                    : "Sincronizado con el simulador en Capital → Cuentas (este navegador)."}
+                </p>
+              </div>
+              <Link
+                href="/finanzas/cuentas#capital-compromisos"
+                className="shrink-0 text-[11px] font-medium text-orbita-secondary underline decoration-orbita-border/80 underline-offset-4 hover:text-orbita-primary"
+                prefetch={false}
+              >
+                Editar
+              </Link>
             </div>
+            {commitmentsSorted.length === 0 ? (
+              <p className="text-sm text-orbita-secondary">Aún no hay compromisos guardados.</p>
+            ) : (
+              commitmentsSorted.slice(0, 10).map((c) => {
+                const inc = isIncomeCommitmentRow(c)
+                return (
+                  <div
+                    key={c.id}
+                    className="flex min-w-0 flex-col gap-1 border-b border-orbita-border/50 pb-3 last:border-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="min-w-0">
+                      <p className="break-words text-sm text-orbita-primary">{c.category?.trim() || c.title}</p>
+                      {c.category?.trim() && c.title.trim().toLowerCase() !== c.category.trim().toLowerCase() ? (
+                        <p className="text-[11px] text-orbita-secondary">{c.title}</p>
+                      ) : null}
+                      <p className="text-[11px] text-orbita-secondary">{formatCommitmentDayEs(c.date)}</p>
+                    </div>
+                    <span
+                      className={`shrink-0 tabular-nums text-sm font-medium sm:text-right ${inc ? "text-emerald-700" : "text-orbita-primary"}`}
+                    >
+                      {inc ? "+" : "-"}${formatMoney(c.amount)}
+                    </span>
+                  </div>
+                )
+              })
+            )}
+            <details className="rounded-xl border border-orbita-border/70 bg-orbita-surface-alt/40 px-3 py-2 text-xs text-orbita-secondary">
+              <summary className="cursor-pointer font-medium text-orbita-primary">
+                Sugerencias desde movimientos (operativo)
+              </summary>
+              <p className="mt-2 text-[11px] leading-snug">
+                Cargos fijos detectados por categoría o texto; útil si aún no los copiaste a la lista.
+              </p>
+              {obls.length === 0 ? (
+                <p className="mt-2 text-[11px]">Sin sugerencias este mes.</p>
+              ) : (
+                <ul className="mt-2 space-y-2">
+                  {obls.map((item) => (
+                    <li key={item.name + item.due} className="flex justify-between gap-2 tabular-nums">
+                      <span className="min-w-0 break-words">{item.name}</span>
+                      <span>${formatMoney(item.amount)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="mt-2 border-t border-orbita-border/50 pt-2 text-[11px]">
+                Subtotal sugerido: ${formatMoney(oblsTotal)}
+              </p>
+            </details>
           </div>
         </Card>
       </div>

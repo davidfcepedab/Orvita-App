@@ -1232,6 +1232,7 @@ export default function CuentasClient() {
             <CashFlowSimulatorSection
               month={month}
               kpis={kpis}
+              supabaseEnabled={supabaseEnabled}
               subscriptionFixedMonthly={subscriptionSimulatorMonthly}
               onApplyPaymentPlan={() => {
                 if (creditCards[0]) openEditCredit(creditCards[0]!)

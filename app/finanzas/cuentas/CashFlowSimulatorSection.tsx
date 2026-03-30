@@ -2,24 +2,21 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { AlertTriangle, ChevronDown, TrendingUp } from "lucide-react"
-import { financeApiGet } from "@/lib/finanzas/financeClientFetch"
+import { financeApiGet, financeApiJson } from "@/lib/finanzas/financeClientFetch"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import type { CuentasKpis } from "@/lib/finanzas/cuentasDashboard"
+import type { FlowCommitment, FlowCommitmentFlowType } from "@/lib/finanzas/flowCommitmentsTypes"
+import {
+  readFlowCommitmentsFromLocalStorage,
+  writeFlowCommitmentsToLocalStorage,
+} from "@/lib/finanzas/flowCommitmentsLocal"
 import { CuentasModalShell } from "./CuentasModalShell"
 import { arcticPanel, formatMoney } from "./cuentasFormat"
 
 type FlowRow = { month: string; ingresos: number; gasto_operativo: number; flujo: number }
 
-type CommitmentFlowType = "fixed" | "one-time" | "recurring" | "income"
-
-type Commitment = {
-  id: string
-  title: string
-  category: string
-  date: string
-  amount: number
-  flowType: CommitmentFlowType
-}
+type Commitment = FlowCommitment
+type CommitmentFlowType = FlowCommitmentFlowType
 
 function isIncomeCommitment(c: Commitment) {
   return c.flowType === "income"
@@ -45,10 +42,10 @@ function formatCommitmentDayEn(isoDate: string) {
 }
 
 const FLOW_TYPE_OPTIONS: { value: CommitmentFlowType; label: string }[] = [
-  { value: "fixed", label: "fixed" },
-  { value: "one-time", label: "one-time" },
-  { value: "recurring", label: "recurring" },
-  { value: "income", label: "income" },
+  { value: "fixed", label: "Gasto fijo" },
+  { value: "one-time", label: "Única vez" },
+  { value: "recurring", label: "Recurrente" },
+  { value: "income", label: "Ingreso" },
 ]
 
 function flowTypeBadgeClass(t: CommitmentFlowType) {
@@ -79,11 +76,13 @@ function newId() {
 export function CashFlowSimulatorSection({
   month,
   kpis,
+  supabaseEnabled,
   subscriptionFixedMonthly,
   onApplyPaymentPlan,
 }: {
   month: string
   kpis: CuentasKpis
+  supabaseEnabled: boolean
   subscriptionFixedMonthly: number
   onApplyPaymentPlan: () => void
 }) {
@@ -92,7 +91,9 @@ export function CashFlowSimulatorSection({
   const [incomeBase, setIncomeBase] = useState(0)
   const [rolling, setRolling] = useState<FlowRow[]>([])
   const [commitments, setCommitments] = useState<Commitment[]>([])
+  const [commitmentsHydrated, setCommitmentsHydrated] = useState(false)
   const [commitOpen, setCommitOpen] = useState(false)
+  const [commitSaveErr, setCommitSaveErr] = useState<string | null>(null)
   const [draftC, setDraftC] = useState({
     title: "",
     category: "",
@@ -121,6 +122,7 @@ export function CashFlowSimulatorSection({
           expense?: number
           flowEvolution?: { rollingYear?: FlowRow[] }
           obligations?: { name: string; due: string; amount: number }[]
+          flowCommitments?: FlowCommitment[]
         } | null
         error?: string
       }
@@ -145,7 +147,27 @@ export function CashFlowSimulatorSection({
           flowType: "fixed" as const,
         }
       })
-      setCommitments((prev) => (prev.length === 0 ? seeded : prev))
+      if (supabaseEnabled) {
+        const fromApi = Array.isArray(d.flowCommitments) ? d.flowCommitments : []
+        if (fromApi.length > 0) {
+          setCommitments(fromApi)
+        } else if (seeded.length > 0) {
+          setCommitments(seeded)
+        } else {
+          setCommitments([])
+        }
+      } else {
+        const stored = readFlowCommitmentsFromLocalStorage()
+        if (stored.length > 0) {
+          setCommitments(stored)
+        } else if (seeded.length > 0) {
+          setCommitments(seeded)
+          writeFlowCommitmentsToLocalStorage(seeded)
+        } else {
+          setCommitments([])
+        }
+      }
+      setCommitmentsHydrated(true)
       const defaultFijos = Math.round(kpis.deudaCuotaMensual * 0.42)
       const defaultVar = Math.round(exp * 0.32)
       setGastosFijos((f) => (f === 0 ? defaultFijos : f))
@@ -156,10 +178,21 @@ export function CashFlowSimulatorSection({
       setIncomeBase((i) => i || 5_000_000)
       setGastosFijos((f) => f || Math.round(kpis.deudaCuotaMensual * 0.42))
       setGastosVariables((v) => v || 1_200_000)
+      if (supabaseEnabled) {
+        setCommitments([])
+      } else {
+        setCommitments(readFlowCommitmentsFromLocalStorage())
+      }
+      setCommitmentsHydrated(true)
     } finally {
       setLoading(false)
     }
-  }, [month, kpis.deudaCuotaMensual, subscriptionFixedMonthly])
+  }, [month, kpis.deudaCuotaMensual, subscriptionFixedMonthly, supabaseEnabled])
+
+  useEffect(() => {
+    if (!commitmentsHydrated || supabaseEnabled) return
+    writeFlowCommitmentsToLocalStorage(commitments)
+  }, [commitments, commitmentsHydrated, supabaseEnabled])
 
   useEffect(() => {
     void load()
@@ -239,19 +272,41 @@ export function CashFlowSimulatorSection({
     return m
   }, [pipelineMonths])
 
-  const addCommitment = () => {
+  const addCommitment = async () => {
     if (!draftC.title.trim() || !draftC.date) return
-    setCommitments((c) => [
-      ...c,
-      {
-        id: newId(),
-        title: draftC.title.trim(),
-        category: draftC.category.trim(),
-        date: draftC.date,
-        amount: Math.max(0, draftC.amount),
-        flowType: draftC.flowType,
-      },
-    ])
+    setCommitSaveErr(null)
+    const title = draftC.title.trim()
+    const category = draftC.category.trim()
+    const date = draftC.date
+    const amount = Math.max(0, draftC.amount)
+    const flowType = draftC.flowType
+
+    if (supabaseEnabled) {
+      try {
+        const res = await financeApiJson("/api/orbita/finanzas/commitments", {
+          method: "POST",
+          body: { title, category, date, amount, flow_type: flowType },
+        })
+        const json = (await res.json()) as {
+          success?: boolean
+          data?: { commitment?: FlowCommitment }
+          error?: string
+        }
+        const created = json.data?.commitment
+        if (!res.ok || !json.success || !created) {
+          throw new Error(messageForHttpError(res.status, json.error, res.statusText))
+        }
+        setCommitments((c) => [...c, created])
+      } catch (e) {
+        setCommitSaveErr(e instanceof Error ? e.message : "No se pudo guardar el compromiso")
+        return
+      }
+    } else {
+      setCommitments((c) => [
+        ...c,
+        { id: newId(), title, category, date, amount, flowType },
+      ])
+    }
     setDraftC({ title: "", category: "", date: month + "-15", amount: 0, flowType: "fixed" })
   }
 
@@ -573,7 +628,7 @@ export function CashFlowSimulatorSection({
         ))}
       </div>
 
-      <div className={`${arcticPanel} p-3 sm:p-4`}>
+      <div id="capital-compromisos" className={`${arcticPanel} scroll-mt-24 p-3 sm:p-4`}>
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div className="flex items-center gap-1.5 text-orbita-primary">
             <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" aria-hidden />
@@ -583,10 +638,13 @@ export function CashFlowSimulatorSection({
           </div>
           <button
             type="button"
-            onClick={() => setCommitOpen(true)}
-            className="min-h-10 w-full touch-manipulation rounded-full bg-sky-500 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-white shadow-sm hover:bg-sky-600 active:bg-sky-700 sm:w-auto sm:min-h-0"
+            onClick={() => {
+              setCommitSaveErr(null)
+              setCommitOpen(true)
+            }}
+            className="text-[11px] font-medium text-orbita-secondary underline decoration-orbita-border underline-offset-4 hover:text-orbita-primary"
           >
-            + Gestionar compromisos
+            Editar
           </button>
         </div>
         <ul className="mt-3 space-y-2">
@@ -621,7 +679,7 @@ export function CashFlowSimulatorSection({
                     <span
                       className={`mt-1.5 inline-flex rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${flowTypeBadgeClass(c.flowType)}`}
                     >
-                      {c.flowType}
+                      {FLOW_TYPE_OPTIONS.find((o) => o.value === c.flowType)?.label ?? c.flowType}
                     </span>
                   </div>
                 </div>
@@ -645,67 +703,90 @@ export function CashFlowSimulatorSection({
         subtitle="Agrega cargos o ingresos esperados en la ventana de 30 días."
         wide
       >
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="block text-xs font-medium text-orbita-secondary">
-            Título
-            <input
-              className="mt-1 min-h-[44px] w-full rounded-xl border border-orbita-border px-3 py-2 text-base sm:text-sm"
-              placeholder="p. ej. Client Invoice Due"
-              value={draftC.title}
-              onChange={(e) => setDraftC((d) => ({ ...d, title: e.target.value }))}
-            />
-          </label>
-          <label className="block text-xs font-medium text-orbita-secondary">
-            Categoría (opcional)
-            <input
-              className="mt-1 min-h-[44px] w-full rounded-xl border border-orbita-border px-3 py-2 text-base sm:text-sm"
-              placeholder="p. ej. Rent Payment"
-              value={draftC.category}
-              onChange={(e) => setDraftC((d) => ({ ...d, category: e.target.value }))}
-            />
-          </label>
-          <label className="block text-xs font-medium text-orbita-secondary">
-            Fecha
-            <input
-              type="date"
-              className="mt-1 min-h-[44px] w-full rounded-xl border border-orbita-border px-3 py-2 text-base sm:text-sm"
-              value={draftC.date || month + "-01"}
-              onChange={(e) => setDraftC((d) => ({ ...d, date: e.target.value }))}
-            />
-          </label>
-          <label className="block text-xs font-medium text-orbita-secondary">
-            Monto (COP)
-            <input
-              type="number"
-              inputMode="numeric"
-              className="mt-1 min-h-[44px] w-full rounded-xl border border-orbita-border px-3 py-2 text-base sm:text-sm"
-              placeholder="Monto"
-              value={draftC.amount || ""}
-              onChange={(e) => setDraftC((d) => ({ ...d, amount: Number(e.target.value) }))}
-            />
-          </label>
-        </div>
-        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-          <label className="block w-full text-xs font-medium text-orbita-secondary sm:w-auto sm:min-w-[200px]">
-            Tipo
-            <select
-              className="mt-1 min-h-[44px] w-full rounded-xl border border-orbita-border px-3 py-2 text-base sm:text-sm"
-              value={draftC.flowType}
-              onChange={(e) => setDraftC((d) => ({ ...d, flowType: e.target.value as CommitmentFlowType }))}
-            >
-              {FLOW_TYPE_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </label>
+        <table className="w-full border-collapse text-sm">
+          <tbody className="align-top">
+            <tr className="border-b border-orbita-border/60">
+              <th className="w-[30%] py-2.5 pr-3 text-left text-xs font-medium text-orbita-secondary sm:w-[22%]">
+                Título
+              </th>
+              <td className="py-2.5">
+                <input
+                  className="min-h-[40px] w-full rounded-lg border border-orbita-border px-3 py-2 text-orbita-primary"
+                  placeholder="Ej. Arriendo, factura cliente…"
+                  value={draftC.title}
+                  onChange={(e) => setDraftC((d) => ({ ...d, title: e.target.value }))}
+                />
+              </td>
+            </tr>
+            <tr className="border-b border-orbita-border/60">
+              <th className="py-2.5 pr-3 text-left text-xs font-medium text-orbita-secondary">Categoría</th>
+              <td className="py-2.5">
+                <input
+                  className="min-h-[40px] w-full rounded-lg border border-orbita-border px-3 py-2 text-orbita-primary"
+                  placeholder="Opcional · ej. Vivienda"
+                  value={draftC.category}
+                  onChange={(e) => setDraftC((d) => ({ ...d, category: e.target.value }))}
+                />
+              </td>
+            </tr>
+            <tr className="border-b border-orbita-border/60">
+              <th className="py-2.5 pr-3 text-left text-xs font-medium text-orbita-secondary">Fecha</th>
+              <td className="py-2.5">
+                <input
+                  type="date"
+                  className="min-h-[40px] w-full rounded-lg border border-orbita-border px-3 py-2 text-orbita-primary"
+                  value={draftC.date || month + "-01"}
+                  onChange={(e) => setDraftC((d) => ({ ...d, date: e.target.value }))}
+                />
+              </td>
+            </tr>
+            <tr className="border-b border-orbita-border/60">
+              <th className="py-2.5 pr-3 text-left text-xs font-medium text-orbita-secondary">Monto (COP)</th>
+              <td className="py-2.5">
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  className="min-h-[40px] w-full rounded-lg border border-orbita-border px-3 py-2 text-orbita-primary"
+                  placeholder="0"
+                  value={draftC.amount || ""}
+                  onChange={(e) => setDraftC((d) => ({ ...d, amount: Number(e.target.value) }))}
+                />
+              </td>
+            </tr>
+            <tr>
+              <th className="py-2.5 pr-3 text-left text-xs font-medium text-orbita-secondary">Tipo</th>
+              <td className="py-2.5">
+                <select
+                  className="min-h-[40px] w-full rounded-lg border border-orbita-border px-3 py-2 text-orbita-primary"
+                  value={draftC.flowType}
+                  onChange={(e) => setDraftC((d) => ({ ...d, flowType: e.target.value as CommitmentFlowType }))}
+                >
+                  {FLOW_TYPE_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+                {draftC.flowType === "income" ? (
+                  <p className="mt-1.5 text-[11px] text-orbita-secondary">Suma al flujo como entrada esperada.</p>
+                ) : null}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        {commitSaveErr ? <p className="mt-3 text-sm text-rose-600">{commitSaveErr}</p> : null}
+        {supabaseEnabled ? (
+          <p className="mt-2 text-[11px] text-orbita-secondary">
+            Los compromisos se guardan en tu cuenta (hogar).
+          </p>
+        ) : null}
+        <div className="mt-4 flex justify-end">
           <button
             type="button"
-            onClick={addCommitment}
-            className="min-h-[48px] w-full touch-manipulation rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white active:bg-emerald-700 sm:w-auto sm:min-h-[44px]"
+            onClick={() => void addCommitment()}
+            className="min-h-[44px] touch-manipulation rounded-xl border border-orbita-border bg-orbita-surface px-5 py-2.5 text-sm font-semibold text-orbita-primary hover:bg-orbita-surface-alt"
           >
-            Agregar
+            Agregar a la lista
           </button>
         </div>
         <p className="mt-4 text-xs text-orbita-secondary">

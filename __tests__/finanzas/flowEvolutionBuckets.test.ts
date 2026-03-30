@@ -61,4 +61,16 @@ describe("flowEvolutionBuckets", () => {
       flujo: 300,
     })
   })
+
+  test("fillMonthlyFlowFromSnapshots can skip snapshot expense (operativo mode)", () => {
+    const months = ["2026-02"]
+    const buckets = [{ month: "Feb '26", ingresos: 0, gasto_operativo: 0, flujo: 0 }]
+    const snap = new Map([["2026-02", { income: 500, expense: 200 }]])
+    const out = fillMonthlyFlowFromSnapshots(months, buckets, snap, { fillExpenseFromSnapshots: false })
+    expect(out[0]).toMatchObject({
+      ingresos: 500,
+      gasto_operativo: 0,
+      flujo: 500,
+    })
+  })
 })
