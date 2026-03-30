@@ -6,6 +6,7 @@ import {
   ArrowUpRight,
   Calculator,
   CalendarDays,
+  ChevronDown,
   CreditCard,
   GripVertical,
   GraduationCap,
@@ -19,7 +20,8 @@ import { Card } from "@/src/components/ui/Card"
 import { useFinance } from "../FinanceContext"
 import { useLedgerAccounts } from "../useLedgerAccounts"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
-import { financeApiGet, financeApiJson } from "@/lib/finanzas/financeClientFetch"
+import { financeApiDelete, financeApiGet, financeApiJson } from "@/lib/finanzas/financeClientFetch"
+import { dedupeCreditCards, dedupeLoanCards, dedupeSavingsCards } from "@/lib/finanzas/dedupeCuentasCards"
 import { mergeCuentasDashboard } from "@/lib/finanzas/mergeCuentasManual"
 import type { ManualFinanceBundle } from "@/lib/finanzas/manualFinanceLocal"
 import { readManualFinanceFromLocalStorage, writeManualFinanceToLocalStorage } from "@/lib/finanzas/manualFinanceLocal"
@@ -31,13 +33,17 @@ import type {
   CuentasLoanCard,
   CuentasSavingsCard,
 } from "@/lib/finanzas/cuentasDashboard"
-import { payLabelForMonth } from "@/lib/finanzas/cuentasDashboard"
+import { CREDIT_CARD_THEME_IDS, normalizeCreditCardTheme, payLabelForMonth } from "@/lib/finanzas/cuentasDashboard"
 import { SubscriptionsBurnSection } from "./SubscriptionsBurnSection"
 import { CashFlowSimulatorSection } from "./CashFlowSimulatorSection"
 import { CuentasModalShell } from "./CuentasModalShell"
 import { arcticPanel, formatMoney, formatShortMillions } from "./cuentasFormat"
 
 const supabaseEnabled = process.env.NEXT_PUBLIC_SUPABASE_ENABLED === "true"
+
+/** Texto en modales de edición manual (ahorro / TC / crédito): borrar, discreto */
+const manualItemDeleteTextBtnClass =
+  "w-fit text-left text-xs font-medium text-orbita-secondary/75 underline decoration-transparent underline-offset-[3px] transition hover:text-rose-600/95 hover:decoration-rose-500/35"
 
 function reorderLedgerAccountList<T>(items: T[], fromIndex: number, toIndex: number): T[] {
   const next = [...items]
@@ -56,15 +62,6 @@ type AccountLegacy = {
   limit: number
   status: string
   score: number
-}
-
-type TxRow = {
-  fecha: string
-  descripcion: string
-  categoria: string
-  subcategoria: string
-  cuenta?: string
-  monto: number
 }
 
 function pmtFixed(pv: number, monthlyRatePercent: number, n: number) {
@@ -98,16 +95,37 @@ const creditThemes: Record<
     barHigh: "bg-emerald-300/70",
     barTrack: "bg-white/20",
   },
+  emerald: {
+    gradient: "linear-gradient(145deg, #047857 0%, #34D399 50%, #065F46 100%)",
+    barHigh: "bg-lime-200/90",
+    barTrack: "bg-white/25",
+  },
+  indigo: {
+    gradient: "linear-gradient(145deg, #3730A3 0%, #818CF8 48%, #312E81 100%)",
+    barHigh: "bg-violet-200/85",
+    barTrack: "bg-white/25",
+  },
+  rose: {
+    gradient: "linear-gradient(145deg, #BE185D 0%, #F472B6 45%, #9D174D 100%)",
+    barHigh: "bg-orange-200/80",
+    barTrack: "bg-white/25",
+  },
+  amber: {
+    gradient: "linear-gradient(145deg, #B45309 0%, #FBBF24 50%, #92400E 100%)",
+    barHigh: "bg-yellow-100/90",
+    barTrack: "bg-white/25",
+  },
 }
 
-function categoryIcon(cat: string, monto: number) {
-  const c = `${cat}`.toLowerCase()
-  if (monto > 0) return "↓"
-  if (/stream|prime|netflix|spotify/i.test(c)) return "◷"
-  if (/compra|super|mercado|éxito/i.test(c)) return "◫"
-  if (/restaurant|aliment|comida/i.test(c)) return "◔"
-  if (/servicio|luz|gas|codensa|claro|internet|wifi/i.test(c)) return "⚡"
-  return "◆"
+const CREDIT_THEME_LABELS: Record<CuentasCreditCard["theme"], string> = {
+  itau: "Itaú — rosa",
+  bbva: "BBVA — azul",
+  davivienda: "Davivienda — naranja",
+  scotiabank: "Scotiabank — grafito",
+  emerald: "Esmeralda",
+  indigo: "Índigo",
+  rose: "Rosa",
+  amber: "Ámbar",
 }
 
 function StatKpiCard({
@@ -194,26 +212,14 @@ function SavingsPlank({ item, onEdit }: { item: CuentasSavingsCard; onEdit?: () 
   )
 }
 
-function CreditPlasticCard({
-  card,
-  onMovements,
-  onPayDate,
-  onPlan,
-  onEdit,
-}: {
-  card: CuentasCreditCard
-  onMovements: () => void
-  onPayDate: () => void
-  onPlan: () => void
-  onEdit?: () => void
-}) {
-  const th = creditThemes[card.theme]
+function CreditPlasticCard({ card, onEdit }: { card: CuentasCreditCard; onEdit?: () => void }) {
+  const th = creditThemes[normalizeCreditCardTheme(card.theme)]
   const usageWidth = `${Math.min(100, Math.max(4, card.usagePct))}%`
   const barColor = card.usagePct >= 50 ? th.barHigh : "bg-white/50"
 
   return (
     <div
-      className={`relative flex min-h-[200px] flex-col rounded-[18px] border-[0.5px] border-white/30 p-5 pb-14 text-white shadow-[0_20px_50px_-18px_rgba(15,23,42,0.45)] sm:min-h-[220px] sm:pb-14`}
+      className={`relative flex min-h-[200px] flex-col rounded-[18px] border-[0.5px] border-white/30 p-5 pb-12 text-white shadow-[0_20px_50px_-18px_rgba(15,23,42,0.45)] sm:min-h-[220px] sm:pb-12`}
       style={{
         background: th.gradient,
         boxShadow: "0 20px 50px -18px rgba(15,23,42,0.4), inset 0 1px 0 rgba(255,255,255,0.22)",
@@ -248,17 +254,6 @@ function CreditPlasticCard({
           <span>Uso {card.usagePct}%</span>
           <span>Cupo ${formatMoney(card.limit)}</span>
         </div>
-      </div>
-      <div className="mt-4 flex flex-wrap gap-x-3 gap-y-1 border-t border-white/20 pt-3 text-[11px] font-medium text-white/90">
-        <button type="button" onClick={onMovements} className="hover:underline">
-          Movimientos
-        </button>
-        <button type="button" onClick={onPayDate} className="hover:underline">
-          Fecha pago
-        </button>
-        <button type="button" onClick={onPlan} className="hover:underline">
-          Plan de pago
-        </button>
       </div>
       {onEdit ? (
         <button
@@ -386,9 +381,8 @@ export default function CuentasClient() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [layoutEdit, setLayoutEdit] = useState(false)
 
-  const [activeCard, setActiveCard] = useState<CuentasCreditCard | null>(null)
   const [activeLoan, setActiveLoan] = useState<CuentasLoanCard | null>(null)
-  const [modal, setModal] = useState<"movements" | "paydate" | "plan" | null>(null)
+  const [modal, setModal] = useState<"paydate" | "plan" | null>(null)
 
   const [manualBundle, setManualBundle] = useState<ManualFinanceBundle>(() => readManualFinanceFromLocalStorage())
   const [subscriptionSimulatorMonthly, setSubscriptionSimulatorMonthly] = useState(0)
@@ -426,11 +420,6 @@ export default function CuentasClient() {
     abonadoMonto: 10_000_000,
     replacesSyntheticId: "" as string | undefined,
   })
-
-  const [txRows, setTxRows] = useState<TxRow[]>([])
-  const [txLoading, setTxLoading] = useState(false)
-  const [txLoadError, setTxLoadError] = useState<string | null>(null)
-  const [categoryFilter, setCategoryFilter] = useState<string | "todas">("todas")
 
   const [payDay, setPayDay] = useState(5)
 
@@ -551,34 +540,15 @@ export default function CuentasClient() {
     writeManualFinanceToLocalStorage(next)
   }, [])
 
-  const loadMovements = useCallback(async () => {
-    if (!month) return
-    setTxLoading(true)
-    setTxLoadError(null)
-    try {
-      const res = await financeApiGet(`/api/orbita/finanzas/transactions?month=${encodeURIComponent(month)}`)
-      const json = (await res.json()) as { success?: boolean; data?: { transactions?: TxRow[] }; error?: string }
-      if (!res.ok || !json.success) {
-        setTxLoadError(messageForHttpError(res.status, json.error, res.statusText))
-        setTxRows([])
-        return
-      }
-      setTxRows(json.data?.transactions ?? [])
-    } catch {
-      setTxLoadError("Error de red al cargar movimientos.")
-      setTxRows([])
-    } finally {
-      setTxLoading(false)
-    }
-  }, [month])
-
-  useEffect(() => {
-    if (modal === "movements" && activeCard) void loadMovements()
-  }, [modal, activeCard, loadMovements])
-
   const mergedDashboard = useMemo(() => {
     if (!dashboard) return null
-    return mergeCuentasDashboard(dashboard, manualBundle)
+    const m = mergeCuentasDashboard(dashboard, manualBundle)
+    return {
+      ...m,
+      savings: dedupeSavingsCards(m.savings),
+      creditCards: dedupeCreditCards(m.creditCards),
+      loans: dedupeLoanCards(m.loans),
+    }
   }, [dashboard, manualBundle])
 
   const kpis: CuentasKpis | null = mergedDashboard?.kpis ?? null
@@ -586,33 +556,9 @@ export default function CuentasClient() {
   const creditCards: CuentasCreditCard[] = mergedDashboard?.creditCards ?? []
   const loans: CuentasLoanCard[] = mergedDashboard?.loans ?? []
 
-  const categories = useMemo(() => {
-    const s = new Set<string>()
-    for (const r of txRows) {
-      if (r.categoria) s.add(r.categoria)
-    }
-    return [...s].sort()
-  }, [txRows])
-
-  const filteredTx = useMemo(() => {
-    if (categoryFilter === "todas") return txRows
-    return txRows.filter((r) => r.categoria === categoryFilter)
-  }, [txRows, categoryFilter])
-
-  const movementSummary = useMemo(() => {
-    let gastos = 0
-    let ingresos = 0
-    for (const r of filteredTx) {
-      if (r.monto < 0) gastos += Math.abs(r.monto)
-      else ingresos += r.monto
-    }
-    return { gastos, ingresos, n: filteredTx.length }
-  }, [filteredTx])
-
   useEffect(() => {
-    if (activeCard) setPayDay(activeCard.paymentDay)
-    else if (activeLoan) setPayDay(5)
-  }, [activeCard, activeLoan])
+    if (activeLoan) setPayDay(5)
+  }, [activeLoan])
 
   const cuotaSim = useMemo(() => {
     const base = pmtFixed(planAmount, planRate, planN)
@@ -642,19 +588,7 @@ export default function CuentasClient() {
     return { nuevasObl, flujoConPlan, reduccionPct }
   }, [flowBaseline, cuotaSim])
 
-  const openCardModal = (card: CuentasCreditCard, m: typeof modal) => {
-    setActiveLoan(null)
-    setActiveCard(card)
-    setModal(m)
-    if (m === "movements") {
-      setCategoryFilter("todas")
-      setTxLoadError(null)
-    }
-    if (m === "plan") setPlanAmount(Math.max(50_000, card.balance))
-  }
-
   const openLoanModal = (loan: CuentasLoanCard, m: "paydate" | "plan") => {
-    setActiveCard(null)
     setActiveLoan(loan)
     setModal(m)
     if (m === "plan") setPlanAmount(Math.max(50_000, loan.saldoPendiente))
@@ -662,41 +596,11 @@ export default function CuentasClient() {
 
   const closeModals = () => {
     setModal(null)
-    setActiveCard(null)
     setActiveLoan(null)
   }
 
   const applyPayDate = () => {
-    const labelCredit = payLabelForMonth(month, payDay)
-    if (activeCard) {
-      const updated: CuentasCreditCard = {
-        ...activeCard,
-        paymentDay: payDay,
-        paymentDueLabel: labelCredit,
-      }
-      const existing = manualBundle.creditCards.find((c) => c.id === activeCard.id)
-      const newId =
-        activeCard.manualRowId || existing
-          ? activeCard.id
-          : activeCard.id.startsWith("manual-cc")
-            ? activeCard.id
-            : newManualId("manual-cc")
-      let rep = activeCard.replacesSyntheticId
-      if (!activeCard.manualRowId && !existing && !activeCard.id.startsWith("manual-cc")) {
-        rep = activeCard.id
-      }
-      const row: CuentasCreditCard = {
-        ...updated,
-        id: newId,
-        replacesSyntheticId: rep,
-        manualRowId: activeCard.manualRowId,
-      }
-      const next: ManualFinanceBundle = {
-        ...manualBundle,
-        creditCards: [...manualBundle.creditCards.filter((c) => c.id !== row.id), row],
-      }
-      void persistBundle(next)
-    } else if (activeLoan) {
+    if (activeLoan) {
       const updated: CuentasLoanCard = {
         ...activeLoan,
         proximoPagoLabel: `Cada ${payDay} del mes`,
@@ -838,7 +742,7 @@ export default function CuentasClient() {
       limit: c.limit,
       paymentDay: c.paymentDay,
       score: c.score,
-      theme: c.theme,
+      theme: normalizeCreditCardTheme(c.theme),
       replacesSyntheticId: c.replacesSyntheticId ?? (c.id.startsWith("manual-cc") ? undefined : c.id),
     })
     setManualModal("credit")
@@ -870,7 +774,7 @@ export default function CuentasClient() {
       paymentDay: creditForm.paymentDay,
       paymentDueLabel: payLabelForMonth(month, creditForm.paymentDay),
       score: Math.min(100, Math.max(0, creditForm.score)),
-      theme: creditForm.theme,
+      theme: normalizeCreditCardTheme(creditForm.theme),
       replacesSyntheticId: rep,
       manualRowId: existing?.manualRowId,
     }
@@ -993,6 +897,93 @@ export default function CuentasClient() {
     setManualModal(null)
   }
 
+  const deleteSavings = async () => {
+    if (!savingForm.id) return
+    if (!window.confirm("¿Eliminar esta cuenta de ahorro del listado? No se puede deshacer.")) return
+    const row = manualBundle.savings.find((s) => s.id === savingForm.id)
+    const next: ManualFinanceBundle = {
+      ...manualBundle,
+      savings: manualBundle.savings.filter((s) => s.id !== savingForm.id),
+    }
+    if (supabaseEnabled && row?.manualRowId) {
+      try {
+        const res = await financeApiDelete(
+          `/api/orbita/finanzas/manual-items?id=${encodeURIComponent(row.manualRowId)}`,
+        )
+        const json = (await res.json()) as { success?: boolean; error?: string }
+        if (!res.ok || !json.success) {
+          setNotice(messageForHttpError(res.status, json.error, res.statusText))
+          return
+        }
+        await reloadManualFromApi()
+      } catch {
+        setNotice("No se pudo eliminar en el servidor.")
+        return
+      }
+    } else {
+      persistBundle(next)
+    }
+    setManualModal(null)
+  }
+
+  const deleteCredit = async () => {
+    if (!creditForm.id) return
+    if (!window.confirm("¿Eliminar esta tarjeta del listado? No se puede deshacer.")) return
+    const row = manualBundle.creditCards.find((c) => c.id === creditForm.id)
+    const next: ManualFinanceBundle = {
+      ...manualBundle,
+      creditCards: manualBundle.creditCards.filter((c) => c.id !== creditForm.id),
+    }
+    if (supabaseEnabled && row?.manualRowId) {
+      try {
+        const res = await financeApiDelete(
+          `/api/orbita/finanzas/manual-items?id=${encodeURIComponent(row.manualRowId)}`,
+        )
+        const json = (await res.json()) as { success?: boolean; error?: string }
+        if (!res.ok || !json.success) {
+          setNotice(messageForHttpError(res.status, json.error, res.statusText))
+          return
+        }
+        await reloadManualFromApi()
+      } catch {
+        setNotice("No se pudo eliminar en el servidor.")
+        return
+      }
+    } else {
+      persistBundle(next)
+    }
+    setManualModal(null)
+  }
+
+  const deleteLoan = async () => {
+    if (!loanForm.id) return
+    if (!window.confirm("¿Eliminar este crédito estructural del listado? No se puede deshacer.")) return
+    const row = manualBundle.loans.find((l) => l.id === loanForm.id)
+    const next: ManualFinanceBundle = {
+      ...manualBundle,
+      loans: manualBundle.loans.filter((l) => l.id !== loanForm.id),
+    }
+    if (supabaseEnabled && row?.manualRowId) {
+      try {
+        const res = await financeApiDelete(
+          `/api/orbita/finanzas/manual-items?id=${encodeURIComponent(row.manualRowId)}`,
+        )
+        const json = (await res.json()) as { success?: boolean; error?: string }
+        if (!res.ok || !json.success) {
+          setNotice(messageForHttpError(res.status, json.error, res.statusText))
+          return
+        }
+        await reloadManualFromApi()
+      } catch {
+        setNotice("No se pudo eliminar en el servidor.")
+        return
+      }
+    } else {
+      persistBundle(next)
+    }
+    setManualModal(null)
+  }
+
   if (!finance) {
     return (
       <div className="p-6 text-center text-orbita-secondary">
@@ -1039,97 +1030,119 @@ export default function CuentasClient() {
       </div>
 
       {supabaseEnabled && (ledgerLoading || ledgerAccounts.length > 0 || ledgerError) ? (
-        <Card className={`p-4 sm:p-6 ${arcticPanel}`}>
-          <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
-            Cuentas desde movimientos (Supabase)
-          </h2>
-          <p className="mt-1 text-xs text-orbita-secondary">
-            Creadas o actualizadas al importar la hoja Movimientos (columna Cuenta). Los saldos detallados puedes
-            completarlos desde la hoja Cuentas o editando aquí más adelante. Orden por defecto: tipo, saldo y uso en el
-            mes. Arrastra el ícono ⋮⋮ para reordenar; al soltar se guarda el orden en Supabase.
-          </p>
-          {ledgerReorderMessage ? (
-            <p
-              className="mt-2 rounded-lg border border-emerald-200/80 bg-emerald-50/90 px-3 py-2 text-xs font-medium text-emerald-900"
-              role="status"
-            >
-              {ledgerReorderMessage}
+        <details
+          className={`group rounded-[var(--radius-card)] border-[0.5px] border-orbita-border/90 shadow-card ${arcticPanel}`}
+          style={{
+            background: "var(--color-surface)",
+            border: "0.5px solid var(--color-border)",
+            borderRadius: "var(--radius-card)",
+            boxShadow: "rgba(0, 0, 0, 0.05) 0px 1px 3px, rgba(0, 0, 0, 0.02) 0px 1px 2px",
+          }}
+        >
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 sm:p-6 [&::-webkit-details-marker]:hidden">
+            <div className="min-w-0 text-left">
+              <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
+                Cuentas desde movimientos (Supabase)
+              </h2>
+              <p className="mt-0.5 text-[11px] text-orbita-secondary">
+                {ledgerAccounts.length > 0
+                  ? `${ledgerAccounts.length} cuenta${ledgerAccounts.length === 1 ? "" : "s"} · importe hoja Movimientos`
+                  : "Catálogo ledger del hogar"}
+              </p>
+            </div>
+            <ChevronDown
+              className="h-5 w-5 shrink-0 text-orbita-secondary transition-transform group-open:rotate-180"
+              aria-hidden
+            />
+          </summary>
+          <div className="border-t border-orbita-border/80 px-4 pb-4 pt-2 sm:px-6 sm:pb-6">
+            <p className="text-xs text-orbita-secondary">
+              Creadas o actualizadas al importar la hoja Movimientos (columna Cuenta). Orden: arrastra ⋮⋮ y suelta para
+              guardar en Supabase.
             </p>
-          ) : null}
-          {ledgerError ? (
-            <p className="mt-2 text-xs text-amber-800 dark:text-amber-300">{ledgerError}</p>
-          ) : null}
-          {ledgerLoading && ledgerAccounts.length === 0 ? (
-            <p className="mt-3 text-sm text-orbita-secondary">Cargando cuentas ledger…</p>
-          ) : null}
-          {!ledgerLoading && ledgerAccounts.length === 0 && !ledgerError ? (
-            <p className="mt-3 text-sm text-orbita-secondary">
-              No hay filas en orbita_finance_accounts para este hogar (importa movimientos con columna Cuenta o crea
-              cuentas en BD).
-            </p>
-          ) : null}
-          {ledgerAccounts.length > 0 ? (
-            <ul className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-              {ledgerAccounts.map((a, idx) => (
-                <li
-                  key={a.id}
-                  onDragOver={(e) => {
-                    if (ledgerReorderBusy) return
-                    e.preventDefault()
-                    e.dataTransfer.dropEffect = "move"
-                  }}
-                  onDrop={(e) => {
-                    e.preventDefault()
-                    if (ledgerReorderBusy) return
-                    const raw = e.dataTransfer.getData("text/plain")
-                    const from = Number.parseInt(raw, 10)
-                    if (!Number.isFinite(from)) return
-                    onDropLedgerReorder(from, idx)
-                  }}
-                  className={`flex gap-2 rounded-xl border border-orbita-border/80 bg-orbita-surface px-2 py-2.5 [overflow-wrap:anywhere] transition-shadow ${
-                    draggingLedgerIndex === idx ? "opacity-60 shadow-lg ring-1 ring-orbita-border" : ""
-                  }`}
-                >
-                  <div
-                    draggable={!ledgerReorderBusy}
-                    onDragStart={(e) => {
-                      e.dataTransfer.effectAllowed = "move"
-                      e.dataTransfer.setData("text/plain", String(idx))
-                      setDraggingLedgerIndex(idx)
+            {ledgerReorderMessage ? (
+              <p
+                className="mt-2 rounded-lg border border-emerald-200/80 bg-emerald-50/90 px-3 py-2 text-xs font-medium text-emerald-900"
+                role="status"
+              >
+                {ledgerReorderMessage}
+              </p>
+            ) : null}
+            {ledgerError ? (
+              <p className="mt-2 text-xs text-amber-800 dark:text-amber-300">{ledgerError}</p>
+            ) : null}
+            {ledgerLoading && ledgerAccounts.length === 0 ? (
+              <p className="mt-3 text-sm text-orbita-secondary">Cargando cuentas ledger…</p>
+            ) : null}
+            {!ledgerLoading && ledgerAccounts.length === 0 && !ledgerError ? (
+              <p className="mt-3 text-sm text-orbita-secondary">
+                No hay filas en orbita_finance_accounts para este hogar (importa movimientos con columna Cuenta o crea
+                cuentas en BD).
+              </p>
+            ) : null}
+            {ledgerAccounts.length > 0 ? (
+              <ul className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+                {ledgerAccounts.map((a, idx) => (
+                  <li
+                    key={a.id}
+                    onDragOver={(e) => {
+                      if (ledgerReorderBusy) return
+                      e.preventDefault()
+                      e.dataTransfer.dropEffect = "move"
                     }}
-                    onDragEnd={() => setDraggingLedgerIndex(null)}
-                    className="flex shrink-0 cursor-grab touch-none select-none items-center rounded-md px-1 text-orbita-secondary hover:bg-orbita-surface-alt active:cursor-grabbing"
-                    aria-label={`Arrastrar para reordenar ${a.label}`}
+                    onDrop={(e) => {
+                      e.preventDefault()
+                      if (ledgerReorderBusy) return
+                      const raw = e.dataTransfer.getData("text/plain")
+                      const from = Number.parseInt(raw, 10)
+                      if (!Number.isFinite(from)) return
+                      onDropLedgerReorder(from, idx)
+                    }}
+                    className={`flex gap-2 rounded-xl border border-orbita-border/80 bg-orbita-surface px-2 py-2.5 [overflow-wrap:anywhere] transition-shadow ${
+                      draggingLedgerIndex === idx ? "opacity-60 shadow-lg ring-1 ring-orbita-border" : ""
+                    }`}
                   >
-                    <GripVertical className="h-5 w-5 shrink-0" aria-hidden />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-orbita-primary">{a.label}</p>
-                    <p className="mt-0.5 text-[11px] uppercase tracking-wide text-orbita-secondary">
-                      {a.account_class.replace(/_/g, " ")} · {a.nature.replace(/_/g, " ")}
-                    </p>
-                    {(() => {
-                      const bits: string[] = []
-                      if (a.manual_balance != null && Number(a.manual_balance) !== 0) {
-                        bits.push(`Manual $${formatMoney(Number(a.manual_balance))}`)
-                      }
-                      if (a.account_class === "ahorro" && a.balance_available != null) {
-                        bits.push(`Disp. $${formatMoney(Number(a.balance_available))}`)
-                      }
-                      if (a.account_class !== "ahorro" && a.balance_used != null) {
-                        bits.push(`Usado $${formatMoney(Number(a.balance_used))}`)
-                      }
-                      if (bits.length === 0) return null
-                      return (
-                        <p className="mt-1 text-[11px] tabular-nums text-orbita-secondary">{bits.join(" · ")}</p>
-                      )
-                    })()}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </Card>
+                    <div
+                      draggable={!ledgerReorderBusy}
+                      onDragStart={(e) => {
+                        e.dataTransfer.effectAllowed = "move"
+                        e.dataTransfer.setData("text/plain", String(idx))
+                        setDraggingLedgerIndex(idx)
+                      }}
+                      onDragEnd={() => setDraggingLedgerIndex(null)}
+                      className="flex shrink-0 cursor-grab touch-none select-none items-center rounded-md px-1 text-orbita-secondary hover:bg-orbita-surface-alt active:cursor-grabbing"
+                      aria-label={`Arrastrar para reordenar ${a.label}`}
+                    >
+                      <GripVertical className="h-5 w-5 shrink-0" aria-hidden />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-orbita-primary">{a.label}</p>
+                      <p className="mt-0.5 text-[11px] uppercase tracking-wide text-orbita-secondary">
+                        {a.account_class.replace(/_/g, " ")} · {a.nature.replace(/_/g, " ")}
+                      </p>
+                      {(() => {
+                        const bits: string[] = []
+                        if (a.manual_balance != null && Number(a.manual_balance) !== 0) {
+                          bits.push(`Manual $${formatMoney(Number(a.manual_balance))}`)
+                        }
+                        if (a.account_class === "ahorro" && a.balance_available != null) {
+                          bits.push(`Disp. $${formatMoney(Number(a.balance_available))}`)
+                        }
+                        if (a.account_class !== "ahorro" && a.balance_used != null) {
+                          bits.push(`Usado $${formatMoney(Number(a.balance_used))}`)
+                        }
+                        if (bits.length === 0) return null
+                        return (
+                          <p className="mt-1 text-[11px] tabular-nums text-orbita-secondary">{bits.join(" · ")}</p>
+                        )
+                      })()}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        </details>
       ) : null}
 
       {layoutEdit ? (
@@ -1224,14 +1237,7 @@ export default function CuentasClient() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {creditCards.map((c) => (
-                <CreditPlasticCard
-                  key={c.id}
-                  card={c}
-                  onMovements={() => openCardModal(c, "movements")}
-                  onPayDate={() => openCardModal(c, "paydate")}
-                  onPlan={() => openCardModal(c, "plan")}
-                  onEdit={() => openEditCredit(c)}
-                />
+                <CreditPlasticCard key={c.id} card={c} onEdit={() => openEditCredit(c)} />
               ))}
             </div>
           </section>
@@ -1248,7 +1254,7 @@ export default function CuentasClient() {
               kpis={kpis}
               subscriptionFixedMonthly={subscriptionSimulatorMonthly}
               onApplyPaymentPlan={() => {
-                if (creditCards[0]) openCardModal(creditCards[0]!, "plan")
+                if (creditCards[0]) openEditCredit(creditCards[0]!)
               }}
             />
           ) : null}
@@ -1281,105 +1287,10 @@ export default function CuentasClient() {
       )}
 
       <CuentasModalShell
-        open={modal === "movements" && !!activeCard}
-        onClose={() => setModal(null)}
-        title="Movimientos del mes"
-        subtitle={activeCard ? `${activeCard.network} ${activeCard.bankLabel} ···· ${activeCard.last4}` : undefined}
-      >
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
-          {[
-            { label: "Gastos", value: `$${formatMoney(movementSummary.gastos)}`, tone: "text-rose-600" },
-            { label: "Ingresos", value: `$${formatMoney(movementSummary.ingresos)}`, tone: "text-emerald-600" },
-            { label: "Transacciones", value: String(movementSummary.n), tone: "text-orbita-primary" },
-          ].map((b) => (
-            <div
-              key={b.label}
-              className="rounded-xl border-[0.5px] border-orbita-border/90 bg-orbita-surface-alt/80 p-3 text-center shadow-sm"
-            >
-              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">{b.label}</p>
-              <p className={`mt-1 break-all text-base font-semibold sm:text-lg ${b.tone}`}>{b.value}</p>
-            </div>
-          ))}
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setCategoryFilter("todas")}
-            className={`rounded-full px-3 py-1.5 text-xs font-medium ${
-              categoryFilter === "todas"
-                ? "bg-[var(--color-text-primary)] text-[var(--color-surface)]"
-                : "border border-orbita-border bg-orbita-surface text-orbita-secondary"
-            }`}
-          >
-            Todas
-          </button>
-          {categories.map((c) => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => setCategoryFilter(c)}
-              className={`rounded-full px-3 py-1.5 text-xs font-medium ${
-                categoryFilter === c ? "bg-[var(--color-text-primary)] text-[var(--color-surface)]" : "border border-orbita-border bg-orbita-surface text-orbita-secondary"
-              }`}
-            >
-              {c}
-            </button>
-          ))}
-        </div>
-        <div className="mt-4 space-y-2">
-          {txLoadError ? (
-            <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-center text-sm text-amber-900">
-              {txLoadError}
-            </p>
-          ) : null}
-          {txLoading ? (
-            <p className="text-center text-sm text-orbita-secondary">Cargando…</p>
-          ) : !txLoadError && filteredTx.length === 0 ? (
-            <p className="text-center text-sm text-orbita-secondary">No hay movimientos para este filtro.</p>
-          ) : !txLoadError ? (
-            filteredTx.map((r, i) => {
-              const income = r.monto > 0
-              return (
-                <div
-                  key={`${r.fecha}-${i}`}
-                  className="flex items-center gap-3 rounded-xl border-[0.5px] border-orbita-border bg-orbita-surface-alt/90 p-3"
-                >
-                  <div
-                    className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg text-sm font-semibold ${
-                      income ? "bg-emerald-100 text-emerald-700" : "bg-rose-50 text-rose-600"
-                    }`}
-                  >
-                    {categoryIcon(r.categoria, r.monto)}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold text-orbita-primary">{r.descripcion}</p>
-                    <p className="text-xs text-orbita-secondary">
-                      {r.categoria} · {r.fecha.slice(5).replace("-", " ")}
-                    </p>
-                  </div>
-                  <div
-                    className={`flex-shrink-0 text-sm font-semibold ${income ? "text-emerald-600" : "text-orbita-primary"}`}
-                  >
-                    {income ? "+" : ""}${formatMoney(Math.abs(r.monto))}
-                  </div>
-                </div>
-              )
-            })
-          ) : null}
-        </div>
-      </CuentasModalShell>
-
-      <CuentasModalShell
-        open={modal === "paydate" && (!!activeCard || !!activeLoan)}
+        open={modal === "paydate" && !!activeLoan}
         onClose={closeModals}
         title="Definir fecha de pago"
-        subtitle={
-          activeCard
-            ? `${activeCard.network} ${activeCard.bankLabel} ···· ${activeCard.last4}`
-            : activeLoan
-              ? activeLoan.title
-              : undefined
-        }
+        subtitle={activeLoan ? activeLoan.title : undefined}
         headerTint="linear-gradient(180deg, rgba(254,226,226,0.35) 0%, rgba(255,255,255,0) 100%)"
       >
         <p className="text-sm text-orbita-primary">Selecciona el día del mes para tu pago</p>
@@ -1425,16 +1336,10 @@ export default function CuentasClient() {
       </CuentasModalShell>
 
       <CuentasModalShell
-        open={modal === "plan" && (!!activeCard || !!activeLoan)}
+        open={modal === "plan" && !!activeLoan}
         onClose={closeModals}
         title="Simulador de plan de pago"
-        subtitle={
-          activeCard
-            ? `${activeCard.network} ${activeCard.bankLabel} ···· ${activeCard.last4}`
-            : activeLoan
-              ? activeLoan.title
-              : undefined
-        }
+        subtitle={activeLoan ? activeLoan.title : undefined}
         wide
       >
         <div className="grid gap-6 lg:grid-cols-2">
@@ -1453,8 +1358,7 @@ export default function CuentasClient() {
                 onChange={(e) => setPlanAmount(Number(e.target.value))}
               />
               <span className="mt-1 block text-xs text-orbita-secondary">
-                Saldo / capital: $
-                {formatMoney(activeCard?.balance ?? activeLoan?.saldoPendiente ?? 0)}
+                Saldo / capital: ${formatMoney(activeLoan?.saldoPendiente ?? 0)}
               </span>
             </label>
             <label className="block text-sm font-medium text-orbita-primary">
@@ -1659,6 +1563,13 @@ export default function CuentasClient() {
             />
             Tendencia positiva
           </label>
+          {savingForm.id && manualBundle.savings.some((s) => s.id === savingForm.id) ? (
+            <div className="border-t border-orbita-border/60 pt-3">
+              <button type="button" className={manualItemDeleteTextBtnClass} onClick={() => void deleteSavings()}>
+                Eliminar cuenta
+              </button>
+            </div>
+          ) : null}
           <div className="grid grid-cols-2 gap-2 pt-2">
             <button
               type="button"
@@ -1718,10 +1629,11 @@ export default function CuentasClient() {
                 setCreditForm((s) => ({ ...s, theme: e.target.value as CuentasCreditCard["theme"] }))
               }
             >
-              <option value="itau">Itaú</option>
-              <option value="bbva">BBVA</option>
-              <option value="davivienda">Davivienda</option>
-              <option value="scotiabank">Scotiabank</option>
+              {CREDIT_CARD_THEME_IDS.map((id) => (
+                <option key={id} value={id}>
+                  {CREDIT_THEME_LABELS[id]}
+                </option>
+              ))}
             </select>
           </label>
           <label className="block text-sm text-orbita-primary">
@@ -1763,6 +1675,13 @@ export default function CuentasClient() {
             />
           </label>
         </div>
+        {creditForm.id && manualBundle.creditCards.some((c) => c.id === creditForm.id) ? (
+          <div className="mt-4 border-t border-orbita-border/60 pt-3">
+            <button type="button" className={manualItemDeleteTextBtnClass} onClick={() => void deleteCredit()}>
+              Eliminar tarjeta
+            </button>
+          </div>
+        ) : null}
         <div className="mt-4 grid grid-cols-2 gap-2">
           <button
             type="button"
@@ -1861,6 +1780,13 @@ export default function CuentasClient() {
             />
           </label>
         </div>
+        {loanForm.id && manualBundle.loans.some((l) => l.id === loanForm.id) ? (
+          <div className="mt-4 border-t border-orbita-border/60 pt-3">
+            <button type="button" className={manualItemDeleteTextBtnClass} onClick={() => void deleteLoan()}>
+              Eliminar crédito
+            </button>
+          </div>
+        ) : null}
         <div className="mt-4 grid grid-cols-2 gap-2">
           <button
             type="button"

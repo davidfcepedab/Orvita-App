@@ -5,6 +5,11 @@ export async function financeApiGet(url: string) {
   return fetch(url, { cache: "no-store", headers })
 }
 
+export async function financeApiDelete(url: string) {
+  const headers = await browserBearerHeaders()
+  return fetch(url, { method: "DELETE", cache: "no-store", headers })
+}
+
 export async function financeApiJson(
   url: string,
   init: { method: "POST" | "PATCH" | "DELETE"; body?: unknown },

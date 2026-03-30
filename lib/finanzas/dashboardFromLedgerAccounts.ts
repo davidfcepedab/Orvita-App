@@ -9,7 +9,7 @@ import type {
   CuentasSavingsCard,
   CreditCardTheme,
 } from "@/lib/finanzas/cuentasDashboard"
-import { payLabelForMonth } from "@/lib/finanzas/cuentasDashboard"
+import { CREDIT_CARD_THEME_IDS, payLabelForMonth } from "@/lib/finanzas/cuentasDashboard"
 import type { LedgerAccountSortable } from "@/lib/finanzas/sortLedgerAccounts"
 
 export function parseTcLabel(label: string): { bankLabel: string; network: string; last4: string } {
@@ -33,14 +33,16 @@ export function parseTcLabel(label: string): { bankLabel: string; network: strin
   return { bankLabel, network, last4 }
 }
 
-function inferCreditTheme(hint: string): CreditCardTheme {
+function inferCreditTheme(hint: string, stableId: string): CreditCardTheme {
   const s = hint.toLowerCase()
   if (/itau|itáu/.test(s)) return "itau"
   if (/bbva/.test(s)) return "bbva"
   if (/davivienda/.test(s)) return "davivienda"
   if (/scoti|scotia|scotiabank/.test(s)) return "scotiabank"
-  if (/avillas|villas/.test(s)) return "bbva"
-  return "bbva"
+  if (/avillas|villas/.test(s)) return "indigo"
+  let h = 0
+  for (let i = 0; i < stableId.length; i++) h = (h * 31 + stableId.charCodeAt(i)) | 0
+  return CREDIT_CARD_THEME_IDS[Math.abs(h) % CREDIT_CARD_THEME_IDS.length]!
 }
 
 function ledgerRowToSaving(
@@ -79,7 +81,7 @@ function ledgerRowToCreditCard(row: LedgerAccountSortable, month: string): Cuent
   if (limit < 1 && balance > 0) limit = Math.max(balance * 2, 1)
   const usagePct = limit > 0 ? Math.min(100, Math.round((balance / limit) * 100)) : balance > 0 ? 100 : 0
   const parsed = parseTcLabel(row.label)
-  const theme = inferCreditTheme(parsed.bankLabel + " " + row.label)
+  const theme = inferCreditTheme(parsed.bankLabel + " " + row.label, row.id)
   const paymentDay = 5
   return {
     id: `ledger-${row.id}`,

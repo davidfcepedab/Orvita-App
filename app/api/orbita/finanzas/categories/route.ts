@@ -4,6 +4,8 @@ import { isAppMockMode, isSupabaseEnabled, UI_SYNC_OFF_SHORT } from "@/lib/check
 import {
   attachCatalogToStructuralCategories,
   buildStructuralCategories,
+  recomputeStructuralTotals,
+  splitStructuralCategoriesByCatalogExpenseType,
 } from "@/lib/finanzas/deriveFromTransactions"
 import { mockTransactionsForMonth } from "@/lib/finanzas/mockFinancePayloads"
 import { monthBounds } from "@/lib/finanzas/monthRange"
@@ -32,11 +34,16 @@ export async function GET(req: NextRequest) {
       const current = all.filter((r) => r.date >= startStr && r.date <= endStr)
       const previous = all.filter((r) => r.date >= prevStartStr && r.date <= prevEndStr)
       const base = buildStructuralCategories(current, previous)
+      const { structuralCategories: withCat } = attachCatalogToStructuralCategories(base.structuralCategories, [])
+      const structuralCategories = splitStructuralCategoriesByCatalogExpenseType(withCat)
+      const totals = recomputeStructuralTotals(structuralCategories)
       return NextResponse.json({
         success: true,
         source: "mock",
         data: {
           ...base,
+          ...totals,
+          structuralCategories,
           subcategoryCatalog: [],
           unknownSubcategories: [],
         },
@@ -77,12 +84,17 @@ export async function GET(req: NextRequest) {
     } catch (e) {
       console.warn("CATEGORIES: catalog fetch skipped:", e instanceof Error ? e.message : e)
     }
-    const { structuralCategories, unknownSubcategories } = attachCatalogToStructuralCategories(
+    const { structuralCategories: withCatalog, unknownSubcategories } = attachCatalogToStructuralCategories(
       base.structuralCategories,
       catalog,
     )
+    const structuralCategories = splitStructuralCategoriesByCatalogExpenseType(withCatalog)
+    const { totalFixed, totalVariable, totalStructural } = recomputeStructuralTotals(structuralCategories)
     const data = {
       ...base,
+      totalFixed,
+      totalVariable,
+      totalStructural,
       structuralCategories,
       subcategoryCatalog: catalog,
       unknownSubcategories,

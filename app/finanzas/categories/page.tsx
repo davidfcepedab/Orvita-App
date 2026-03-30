@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { ChevronDown } from "lucide-react"
 import { useFinance } from "../FinanceContext"
 import { useRouter } from "next/navigation"
 import { Card } from "@/src/components/ui/Card"
@@ -41,6 +42,129 @@ interface CategoriesResponse {
   success: boolean
   data?: CategoriesData
   error?: string
+}
+
+function OperativaCategoryCard({
+  cat,
+  onViewMovements,
+}: {
+  cat: Category
+  onViewMovements: (name: string) => void
+}) {
+  const typeLabel = cat.type === "fixed" ? "Fijo" : "Variable"
+  const subCount = cat.subcategories?.length ?? 0
+
+  return (
+    <Card hover className="p-3 sm:p-4">
+      <div className="grid gap-2 text-left">
+        <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="break-words text-sm font-semibold leading-snug text-orbita-primary">{cat.name}</p>
+              <span className="shrink-0 rounded-md bg-orbita-surface-alt px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-orbita-secondary">
+                {typeLabel}
+              </span>
+            </div>
+            {cat.delta !== undefined ? (
+              <p className={`mt-0.5 text-[10px] ${cat.delta > 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                {cat.delta > 0 ? "+" : ""}
+                {cat.delta.toFixed(0)} vs mes anterior
+              </p>
+            ) : null}
+          </div>
+          <div className="shrink-0 text-right">
+            <p className="tabular-nums text-base font-semibold text-orbita-primary">
+              ${Math.abs(cat.total).toLocaleString("es-CO", { maximumFractionDigits: 0 })}
+            </p>
+            <button
+              type="button"
+              onClick={() => onViewMovements(cat.name)}
+              className="mt-0.5 text-[10px] uppercase tracking-[0.12em] text-orbita-secondary hover:text-orbita-primary"
+            >
+              Ver movimientos
+            </button>
+          </div>
+        </div>
+
+        {cat.budget && cat.budget > 0 && (
+          <div className="grid gap-1">
+            <div className="flex items-center justify-between text-xs text-orbita-secondary">
+              <span>Presupuesto</span>
+              <span className="font-semibold text-orbita-primary">{cat.budgetUsedPercent?.toFixed(0)}%</span>
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-orbita-surface-alt">
+              <div
+                className={`${
+                  cat.budgetStatus === "red"
+                    ? "bg-rose-500"
+                    : cat.budgetStatus === "yellow"
+                      ? "bg-amber-500"
+                      : "bg-emerald-500"
+                } h-full`}
+                style={{ width: `${Math.min(cat.budgetUsedPercent || 0, 100)}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {cat.subcategories && subCount > 0 ? (
+          <details className="group border-t border-orbita-border pt-2">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
+              <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">
+                Subcategorías ({subCount})
+              </span>
+              <ChevronDown
+                className="h-3.5 w-3.5 shrink-0 text-orbita-secondary transition-transform group-open:rotate-180"
+                aria-hidden
+              />
+            </summary>
+            <div className="mt-2 grid gap-1">
+              {cat.subcategories.map((sub, idx) => (
+                <div
+                  key={idx}
+                  className="flex min-w-0 flex-col gap-0.5 text-xs sm:flex-row sm:items-start sm:justify-between sm:gap-2"
+                >
+                  <div className="min-w-0 flex-1">
+                    <span className="break-words text-orbita-secondary">{sub.name}</span>
+                    {(sub.sheetTipo || sub.financialImpact != null) && (
+                      <div className="mt-0.5 flex flex-wrap gap-1">
+                        {sub.sheetTipo && (
+                          <span className="rounded bg-orbita-surface-alt px-1 py-0.5 text-[9px] uppercase tracking-wide text-orbita-secondary">
+                            {sub.sheetTipo === "fijo" ? "Fijo" : "Variable"}
+                          </span>
+                        )}
+                        {sub.financialImpact ? (
+                          <span className="rounded border border-orbita-border px-1 py-0.5 text-[9px] text-orbita-secondary">
+                            {sub.financialImpact}
+                          </span>
+                        ) : null}
+                        {sub.budgetable === false && (
+                          <span className="rounded border border-dashed border-orbita-border px-1 py-0.5 text-[9px] text-orbita-secondary">
+                            No presupuestable
+                          </span>
+                        )}
+                        {sub.categoryMismatch && sub.catalogCategory && (
+                          <span
+                            className="rounded px-1 py-0.5 text-[9px] text-amber-800 dark:text-amber-300"
+                            title="La categoría del movimiento no coincide con la del catálogo"
+                          >
+                            Cat. catálogo: {sub.catalogCategory}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <span className="shrink-0 font-semibold text-orbita-primary sm:text-right">
+                    ${Math.abs(sub.total).toLocaleString("es-CO", { maximumFractionDigits: 0 })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </details>
+        ) : null}
+      </div>
+    </Card>
+  )
 }
 
 const mockCategories: CategoriesData = {
@@ -109,7 +233,6 @@ export default function FinanzasCategories() {
   const finance = useFinance()
   const router = useRouter()
   const [data, setData] = useState<CategoriesData | null>(null)
-  const [expanded, setExpanded] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<"operativa" | "estrategica" | "predictiva">("operativa")
@@ -224,17 +347,19 @@ export default function FinanzasCategories() {
       : 0
 
   const navigateToTransactions = (categoryName: string) => {
-    router.push(`/finanzas/transactions?category=${encodeURIComponent(categoryName)}`)
+    const p = new URLSearchParams()
+    if (month_value) p.set("month", month_value)
+    p.set("category", categoryName)
+    router.push(`/finanzas/transactions?${p.toString()}`)
   }
 
   return (
     <div className="min-w-0 space-y-6 sm:space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-xs uppercase tracking-[0.18em] text-orbita-secondary">Categorías</p>
-          <p className="text-lg font-semibold text-orbita-primary">Mapa estructural del gasto</p>
+          <h1 className="text-lg font-semibold text-orbita-primary">Mapa de gasto por categorías</h1>
           <p className="mt-1 text-sm text-orbita-secondary">
-            Lectura operativa y control de presupuesto por bloque.
+            Totales del mes en bloques fijos y variables; cada fila agrupa subcategorías con movimiento.
           </p>
         </div>
         {notice && (
@@ -362,123 +487,11 @@ export default function FinanzasCategories() {
               <div key={group.label} className="space-y-3">
                 <p className="text-xs uppercase tracking-[0.16em] text-orbita-secondary">{group.label}</p>
                 {group.items.map((cat) => (
-                  <Card key={cat.name} hover className="p-4 sm:p-6">
-                    <div
-                      role="button"
-                      tabIndex={0}
-                      className="grid gap-3 text-left"
-                      onClick={() => {
-                        setExpanded(expanded === cat.name ? null : cat.name)
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault()
-                          setExpanded(expanded === cat.name ? null : cat.name)
-                        }
-                      }}
-                    >
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-                        <div className="min-w-0 flex-1">
-                          <p className="break-words font-semibold text-orbita-primary">{cat.name}</p>
-                          <p className="text-xs text-orbita-secondary uppercase tracking-[0.14em] mt-1">
-                            {cat.type === "fixed" ? "Fijo" : "Variable"}
-                          </p>
-                          {cat.delta !== undefined && (
-                            <p className={`text-xs mt-2 ${cat.delta > 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                              {cat.delta > 0 ? "+" : ""}{cat.delta.toFixed(0)} vs mes anterior
-                            </p>
-                          )}
-                        </div>
-                        <div className="w-full shrink-0 sm:w-auto sm:text-right">
-                          <p className="tabular-nums text-lg font-semibold text-orbita-primary">
-                            ${Math.abs(cat.total).toLocaleString("es-CO", {
-                              maximumFractionDigits: 0,
-                            })}
-                          </p>
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              navigateToTransactions(cat.name)
-                            }}
-                            className="mt-2 text-[11px] uppercase tracking-[0.14em] text-orbita-secondary hover:text-orbita-primary"
-                          >
-                            Ver movimientos
-                          </button>
-                        </div>
-                      </div>
-
-                      {cat.budget && cat.budget > 0 && (
-                        <div className="grid gap-2">
-                          <div className="flex justify-between items-center text-xs text-orbita-secondary">
-                            <span>Presupuesto</span>
-                            <span className="font-semibold text-orbita-primary">
-                              {cat.budgetUsedPercent?.toFixed(0)}%
-                            </span>
-                          </div>
-                          <div className="h-2 rounded-full bg-orbita-surface-alt overflow-hidden">
-                            <div
-                              className={`${
-                                cat.budgetStatus === "red"
-                                  ? "bg-rose-500"
-                                  : cat.budgetStatus === "yellow"
-                                  ? "bg-amber-500"
-                                  : "bg-emerald-500"
-                              } h-full`}
-                              style={{ width: `${Math.min(cat.budgetUsedPercent || 0, 100)}%` }}
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      {expanded === cat.name && cat.subcategories && cat.subcategories.length > 0 && (
-                        <div className="mt-2 grid gap-2 border-t border-orbita-border pt-3">
-                          {cat.subcategories.map((sub, idx) => (
-                            <div
-                              key={idx}
-                              className="flex min-w-0 flex-col gap-1 text-sm sm:flex-row sm:items-start sm:justify-between sm:gap-2"
-                            >
-                              <div className="min-w-0 flex-1">
-                                <span className="break-words text-orbita-secondary">{sub.name}</span>
-                                {(sub.sheetTipo || sub.financialImpact != null) && (
-                                  <div className="mt-1 flex flex-wrap gap-1">
-                                    {sub.sheetTipo && (
-                                      <span className="rounded-md bg-orbita-surface-alt px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-orbita-secondary">
-                                        {sub.sheetTipo === "fijo" ? "Fijo" : "Variable"}
-                                      </span>
-                                    )}
-                                    {sub.financialImpact && (
-                                      <span className="rounded-md border border-orbita-border px-1.5 py-0.5 text-[10px] text-orbita-secondary">
-                                        {sub.financialImpact}
-                                      </span>
-                                    )}
-                                    {sub.budgetable === false && (
-                                      <span className="rounded-md border border-dashed border-orbita-border px-1.5 py-0.5 text-[10px] text-orbita-secondary">
-                                        No presupuestable
-                                      </span>
-                                    )}
-                                    {sub.categoryMismatch && sub.catalogCategory && (
-                                      <span
-                                        className="rounded-md px-1.5 py-0.5 text-[10px] text-amber-800 dark:text-amber-300"
-                                        title="La categoría del movimiento no coincide con la del catálogo"
-                                      >
-                                        Cat. catálogo: {sub.catalogCategory}
-                                      </span>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                              <span className="shrink-0 font-semibold text-orbita-primary sm:text-right">
-                                ${Math.abs(sub.total).toLocaleString("es-CO", {
-                                  maximumFractionDigits: 0,
-                                })}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </Card>
+                  <OperativaCategoryCard
+                    key={`${cat.name}-${cat.type}`}
+                    cat={cat}
+                    onViewMovements={navigateToTransactions}
+                  />
                 ))}
               </div>
             ))}

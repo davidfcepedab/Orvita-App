@@ -30,7 +30,33 @@ export type CuentasSavingsCard = {
   manualRowId?: string
 }
 
-export type CreditCardTheme = "itau" | "bbva" | "davivienda" | "scotiabank"
+export type CreditCardTheme =
+  | "itau"
+  | "bbva"
+  | "davivienda"
+  | "scotiabank"
+  | "emerald"
+  | "indigo"
+  | "rose"
+  | "amber"
+
+export const CREDIT_CARD_THEME_IDS: CreditCardTheme[] = [
+  "itau",
+  "bbva",
+  "davivienda",
+  "scotiabank",
+  "emerald",
+  "indigo",
+  "rose",
+  "amber",
+]
+
+export function normalizeCreditCardTheme(raw: unknown): CreditCardTheme {
+  if (typeof raw === "string" && (CREDIT_CARD_THEME_IDS as string[]).includes(raw)) {
+    return raw as CreditCardTheme
+  }
+  return "bbva"
+}
 
 export type CuentasCreditCard = {
   id: string

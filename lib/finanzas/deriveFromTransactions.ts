@@ -16,6 +16,8 @@ export type WeeklyBucketRow = {
 export type StructuralSub = {
   name: string
   total: number
+  /** Gasto mismo sub en el mes anterior (negativo como `total`). */
+  previousTotal?: number
   sheetTipo?: "fijo" | "variable"
   financialImpact?: string
   budgetable?: boolean
@@ -110,7 +112,14 @@ export function buildStructuralCategories(
       previousTotal > 1e-6 ? Math.round(((total - previousTotal) / previousTotal) * 100) : total > 0 ? 100 : 0
     const type: "fixed" | "variable" = isFixedCategoryName(name) ? "fixed" : "variable"
     const subcategories: StructuralSub[] = [...subs.entries()]
-      .map(([n, t]) => ({ name: n, total: -t }))
+      .map(([n, t]) => {
+        const prevAmt = prevSubs?.get(n) ?? 0
+        return {
+          name: n,
+          total: -t,
+          previousTotal: prevAmt > 1e-6 ? -prevAmt : undefined,
+        }
+      })
       .sort((a, b) => Math.abs(b.total) - Math.abs(a.total))
 
     const budget = total * 1.08
@@ -182,6 +191,98 @@ export function attachCatalogToStructuralCategories(
   }))
 
   return { structuralCategories: next, unknownSubcategories: [...unknown] }
+}
+
+/**
+ * Una misma categoría (p. ej. Hogar & Base) puede mezclar subcategorías fijas y variables según el catálogo.
+ * Parte en dos filas (misma `name`, distinto `type`) para las columnas Fijo / Variable del mapa.
+ */
+export function splitStructuralCategoriesByCatalogExpenseType(
+  categories: StructuralCategory[],
+): StructuralCategory[] {
+  const out: StructuralCategory[] = []
+
+  for (const cat of categories) {
+    const subs = cat.subcategories ?? []
+    const fijoSubs: StructuralSub[] = []
+    const varSubs: StructuralSub[] = []
+
+    for (const sub of subs) {
+      const isFijo =
+        sub.sheetTipo === "fijo"
+          ? true
+          : sub.sheetTipo === "variable"
+            ? false
+            : isFixedCategoryName(cat.name)
+
+      ;(isFijo ? fijoSubs : varSubs).push(sub)
+    }
+
+    const makeSlice = (type: "fixed" | "variable", subList: StructuralSub[]): StructuralCategory | null => {
+      if (subList.length === 0) return null
+      const total = subList.reduce((a, s) => a + s.total, 0)
+      let previousSum = 0
+      let hadPrev = false
+      for (const s of subList) {
+        if (s.previousTotal != null) {
+          previousSum += s.previousTotal
+          hadPrev = true
+        }
+      }
+      const absTot = Math.abs(total)
+      const absPrev = Math.abs(previousSum)
+      const delta =
+        hadPrev && absPrev > 1e-6
+          ? Math.round(((absTot - absPrev) / absPrev) * 100)
+          : absTot > 0
+            ? 100
+            : 0
+
+      const budget = absTot * 1.08
+      const budgetUsedPercent = budget > 0 ? Math.min(150, Math.round((absTot / budget) * 100)) : 0
+      let budgetStatus: "green" | "yellow" | "red" = "green"
+      if (budgetUsedPercent >= 100) budgetStatus = "red"
+      else if (budgetUsedPercent >= 88) budgetStatus = "yellow"
+
+      return {
+        ...cat,
+        type,
+        total,
+        previousTotal: hadPrev ? previousSum : undefined,
+        delta,
+        budget: Math.round(budget),
+        budgetUsedPercent,
+        budgetStatus,
+        subcategories: [...subList].sort((a, b) => Math.abs(b.total) - Math.abs(a.total)),
+      }
+    }
+
+    const fixedSlice = makeSlice("fixed", fijoSubs)
+    const varSlice = makeSlice("variable", varSubs)
+    if (fixedSlice) out.push(fixedSlice)
+    if (varSlice) out.push(varSlice)
+  }
+
+  out.sort((a, b) => Math.abs(b.total) - Math.abs(a.total))
+  return out
+}
+
+export function recomputeStructuralTotals(structuralCategories: StructuralCategory[]): {
+  totalFixed: number
+  totalVariable: number
+  totalStructural: number
+} {
+  let totalFixed = 0
+  let totalVariable = 0
+  for (const c of structuralCategories) {
+    if (c.type === "fixed") totalFixed += Math.abs(c.total)
+    else totalVariable += Math.abs(c.total)
+  }
+  return {
+    totalFixed,
+    totalVariable,
+    totalStructural: totalFixed + totalVariable,
+  }
 }
 
 const SUBS_RE = /suscrip|saas|software|spotify|netflix|chatgpt|figma|copilot|github|notion|slack|openai|apple music/i

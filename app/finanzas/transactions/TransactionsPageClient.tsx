@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useFinance } from "../FinanceContext"
 import { useLedgerAccounts } from "../useLedgerAccounts"
@@ -51,11 +51,6 @@ export default function TransactionsPageClient() {
   const financeAccountId = UUID_RE.test(accountParam) ? accountParam : ""
 
   const { accounts: ledgerAccounts } = useLedgerAccounts({ enabled: supabaseEnabled })
-
-  const selectedAccountLabel = useMemo(() => {
-    if (!financeAccountId) return ""
-    return ledgerAccounts.find((a) => a.id === financeAccountId)?.label ?? financeAccountId
-  }, [financeAccountId, ledgerAccounts])
 
   const setFinanceAccountId = (id: string) => {
     const p = new URLSearchParams(searchParams.toString())
@@ -113,11 +108,6 @@ export default function TransactionsPageClient() {
     )
   }
 
-  const titleParts = [category || null, financeAccountId ? selectedAccountLabel || "Cuenta" : null].filter(
-    Boolean,
-  ) as string[]
-  const pageTitle = titleParts.length > 0 ? titleParts.join(" · ") : "Consolidado mensual"
-
   const transactions = data?.transactions ?? []
   const subtotal = data?.subtotal ?? 0
   const previousSubtotal = data?.previousSubtotal ?? 0
@@ -131,26 +121,6 @@ export default function TransactionsPageClient() {
 
   return (
     <div className="min-w-0 space-y-6 sm:space-y-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="order-2 w-full min-h-[44px] rounded-full border border-orbita-border bg-orbita-surface px-4 py-2 text-[11px] uppercase tracking-[0.16em] text-orbita-secondary sm:order-none sm:w-auto sm:min-h-0"
-        >
-          Volver
-        </button>
-        <div className="order-1 min-w-0 flex-1 text-center sm:order-none sm:flex-none sm:text-left">
-          <p className="text-xs uppercase tracking-[0.18em] text-orbita-secondary">Movimientos</p>
-          <h1 className="break-words text-xl font-semibold text-orbita-primary sm:text-2xl">{pageTitle}</h1>
-          <p className="text-xs text-orbita-secondary">Periodo: {month || "Actual"}</p>
-        </div>
-        <div className="order-3 flex justify-center sm:order-none sm:justify-end">
-          <div className="rounded-full border border-orbita-border bg-orbita-surface-alt px-4 py-2 text-center text-[11px] uppercase tracking-[0.16em] text-orbita-secondary">
-            {contentLoading ? "—" : `${transactions.length} registros`}
-          </div>
-        </div>
-      </div>
-
       {supabaseEnabled ? (
         <div className="grid min-w-0 gap-2 sm:max-w-md">
           <label className="grid gap-1.5">
