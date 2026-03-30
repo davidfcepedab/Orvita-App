@@ -82,7 +82,7 @@ export function GoogleAgendaPanel({ onAfterTasksSync, livePullKey = 0 }: GoogleA
                 color: "var(--color-text-secondary)",
               }}
             >
-              Google Tasks &amp; sync
+              GOOGLE TASKS &amp; SYNC
             </p>
             <p style={{ margin: "4px 0 0", fontSize: "12px", color: "var(--color-text-secondary)" }}>
               Al abrir Agenda se sincronizan tareas y calendario con la nube. Las tareas personales que crees abajo también

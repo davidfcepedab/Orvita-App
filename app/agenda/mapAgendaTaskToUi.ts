@@ -10,6 +10,8 @@ export type UiAgendaTask = {
   status: string
   owner: string
   completed: boolean
+  /** Línea legible para lista enriquecida (asignación / origen). */
+  assigneeLine: string
 }
 
 export function mapAgendaTaskToUi(t: AgendaTask): UiAgendaTask {
@@ -30,6 +32,16 @@ export function mapAgendaTaskToUi(t: AgendaTask): UiAgendaTask {
   const owner =
     t.type === "personal" ? "Yo" : (t.assigneeName?.trim().slice(0, 2).toUpperCase() || "EQ")
 
+  const name = t.assigneeName?.trim() || ""
+  let assigneeLine = ""
+  if (t.type === "personal") {
+    assigneeLine = "Para ti · las tareas sin asignatario pueden sincronizarse con Google Tasks"
+  } else if (t.type === "assigned") {
+    assigneeLine = name ? `Asignado a: ${name}` : "Asignado a: sin nombre (añade asignatario al crear la tarea)"
+  } else {
+    assigneeLine = name ? `Recibida · origen / contacto: ${name}` : "Recibida · sin contacto indicado"
+  }
+
   return {
     id: t.id,
     title: t.title,
@@ -40,6 +52,7 @@ export function mapAgendaTaskToUi(t: AgendaTask): UiAgendaTask {
     status: displayStatus,
     owner,
     completed: t.status === "completed",
+    assigneeLine,
   }
 }
 

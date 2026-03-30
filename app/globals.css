@@ -15,6 +15,12 @@
   --color-accent-agenda: #6366F1;
   --color-accent-warning: #F97316;
   --color-accent-danger: #EF4444;
+  /* Agenda: tipo de tarea + Google (Arctic Zen) */
+  --agenda-personal: #0ea5e9;
+  --agenda-received: #ea580c;
+  --agenda-assigned: #059669;
+  --agenda-calendar: #7c3aed;
+  --agenda-reminder: #d97706;
   --radius-card: 16px;
   --radius-button: 10px;
   --spacing-xs: 4px;
@@ -59,6 +65,11 @@
   --color-accent-agenda: #818CF8;
   --color-accent-warning: #FBBF24;
   --color-accent-danger: #F87171;
+  --agenda-personal: #38bdf8;
+  --agenda-received: #fb923c;
+  --agenda-assigned: #34d399;
+  --agenda-calendar: #c084fc;
+  --agenda-reminder: #fbbf24;
 }
 
 [data-theme="sand"] {
@@ -74,6 +85,11 @@
   --color-accent-agenda: #FCA5A5;
   --color-accent-warning: #FDBA74;
   --color-accent-danger: #FCA5A5;
+  --agenda-personal: #0369a1;
+  --agenda-received: #c2410c;
+  --agenda-assigned: #15803d;
+  --agenda-calendar: #7e22ce;
+  --agenda-reminder: #b45309;
 }
 
 [data-theme="midnight"] {
@@ -89,6 +105,11 @@
   --color-accent-agenda: #818CF8;
   --color-accent-warning: #FBBF24;
   --color-accent-danger: #F87171;
+  --agenda-personal: #38bdf8;
+  --agenda-received: #fb923c;
+  --agenda-assigned: #4ade80;
+  --agenda-calendar: #a78bfa;
+  --agenda-reminder: #fbbf24;
 }
 
 [data-layout="compact"] {
