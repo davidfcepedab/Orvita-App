@@ -4,6 +4,10 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 La guia operativa de rutas V3, aliases de compatibilidad y checklist de despliegue esta en `V3_PRODUCTION.md`.
 
+## Contribuir
+
+Flujo de ramas y PRs hacia `main`: [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md).
+
 ## Getting Started
 
 First, run the development server:
