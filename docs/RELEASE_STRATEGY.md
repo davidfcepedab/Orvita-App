@@ -16,6 +16,14 @@
 ## Deployment
 - Preview deployment on Vercel for each PR.
 - Production deploy on merge to `main`.
+- **Dominio de producción:** [https://orvita.app](https://orvita.app) debe apuntar al proyecto de Vercel cuya rama de producción es `main` (o la que tengas fijada en *Production Branch*). La rama `productive` se mantiene alineada con `main` mediante `npm run release:sync` para entornos o automatizaciones que la usen.
+
+## Proteger un corte en producción (snapshot en Git)
+1. Con `main` estable y desplegado, ejecuta la validación local: `npm run validate:release`.
+2. Crea un tag anotado en el commit exacto que está en producción, por ejemplo:  
+   `git tag -a release/orvita-app-YYYY-MM-DD -m "Producción orvita.app — notas breves"`  
+3. Publica el tag: `git push origin release/orvita-app-YYYY-MM-DD`.  
+Así puedes volver a ese árbol con `git checkout <tag>` o crear una rama hotfix desde el tag. **Vercel** no “congela” el dominio solo con el tag: para evitar despliegues accidentales, en el dashboard de Vercel usa *Deployment Protection* (Vercel Authentication) en previews y revisa que solo `main` despliegue a producción.
 
 ## Migration Workflow
 1. Generate migration: `supabase migration new <name>`.

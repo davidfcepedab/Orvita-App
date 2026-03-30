@@ -1,7 +1,7 @@
 {
-  "name": "RESET",
-  "short_name": "RESET",
-  "start_url": "/fisico",
+  "name": "ÓRVITA",
+  "short_name": "ÓRVITA",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#F7F8FA",
   "theme_color": "#FF2D8E",

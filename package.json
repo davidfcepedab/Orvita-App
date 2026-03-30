@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "jest",
+    "validate:release": "npx tsc --noEmit && npx jest --no-cache && npm run build",
     "guard:no-mocks": "bash scripts/guard-no-mocks.sh",
     "prebuild": "npm run guard:no-mocks",
     "import-finance:sheets": "npx tsx scripts/import-finance-from-sheets.ts",
