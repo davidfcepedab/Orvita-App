@@ -18,17 +18,27 @@ type AuditRow = {
 
 export default function FinanzasAuditPage() {
   const finance = useFinance()
+  const month = finance?.month ?? ""
   const [rows, setRows] = useState<AuditRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (!month) {
+      setRows([])
+      setLoading(false)
+      setError(null)
+      return
+    }
+
     let cancelled = false
     ;(async () => {
       try {
         setLoading(true)
         setError(null)
-        const res = await financeApiGet("/api/orbita/finanzas/audit?limit=100")
+        const res = await financeApiGet(
+          `/api/orbita/finanzas/audit?limit=100&month=${encodeURIComponent(month)}`,
+        )
         const json = (await res.json()) as {
           success?: boolean
           data?: AuditRow[]
@@ -48,7 +58,7 @@ export default function FinanzasAuditPage() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [month])
 
   if (!finance) {
     return <div className="p-6 text-center text-orbita-secondary">Inicializando...</div>
@@ -61,7 +71,7 @@ export default function FinanzasAuditPage() {
         <h2 className="mt-2 text-lg font-semibold text-orbita-primary">Cambios en movimientos</h2>
         <p className="mt-2 text-sm text-orbita-secondary">
           Registros de actualización y borrado en <code className="text-xs">orbita_finance_transactions</code>{" "}
-          (filtrado por tu hogar vía RLS).
+          del periodo activo (UTC), filtrados por tu hogar vía RLS.
         </p>
       </Card>
 

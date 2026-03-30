@@ -1,6 +1,17 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
 
+function monthRangeUtcIso(ym: string): { start: string; end: string } | null {
+  const m = /^(\d{4})-(\d{2})$/.exec(ym.trim())
+  if (!m) return null
+  const y = Number(m[1])
+  const mo = Number(m[2])
+  if (mo < 1 || mo > 12) return null
+  const start = new Date(Date.UTC(y, mo - 1, 1))
+  const end = new Date(Date.UTC(y, mo, 1))
+  return { start: start.toISOString(), end: end.toISOString() }
+}
+
 export async function GET(req: NextRequest) {
   try {
     const auth = await requireUser(req)
@@ -15,9 +26,18 @@ export async function GET(req: NextRequest) {
     const from = (page - 1) * limit
     const to = from + limit - 1
 
-    const result = await supabase
+    const monthParam = searchParams.get("month")
+    const range = monthParam ? monthRangeUtcIso(monthParam) : null
+
+    let query = supabase
       .from("finance_transaction_audit")
       .select("*", { count: "exact" })
+
+    if (range) {
+      query = query.gte("changed_at", range.start).lt("changed_at", range.end)
+    }
+
+    const result = await query
       .order("changed_at", { ascending: false })
       .range(from, to)
 

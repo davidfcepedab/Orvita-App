@@ -182,6 +182,7 @@ export default function FinanzasOverview() {
   useEffect(() => {
     if (!month) {
       setData(null)
+      setLoading(false)
       return
     }
 

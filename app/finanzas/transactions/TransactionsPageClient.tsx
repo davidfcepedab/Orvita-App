@@ -12,6 +12,7 @@ interface Transaction {
   descripcion: string
   categoria: string
   subcategoria: string
+  cuenta?: string
   monto: number
 }
 
@@ -37,7 +38,7 @@ export default function TransactionsPageClient() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const month = searchParams.get("month") || finance?.month || ""
+  const month = finance?.month ?? searchParams.get("month") ?? ""
   const category = searchParams.get("category") || ""
 
   useEffect(() => {
@@ -186,10 +187,11 @@ export default function TransactionsPageClient() {
           <div className="max-h-[min(70vh,56rem)] min-w-0 overflow-auto overscroll-contain [-webkit-overflow-scrolling:touch] touch-pan-x touch-pan-y">
             <table className="w-full min-w-0 table-fixed border-collapse text-left text-[10px] sm:text-[11px]">
               <colgroup>
-                <col style={{ width: "17%" }} />
-                <col style={{ width: "7%" }} />
-                <col style={{ width: "24%" }} />
-                <col style={{ width: "36%" }} />
+                <col style={{ width: "14%" }} />
+                <col style={{ width: "6%" }} />
+                <col style={{ width: "20%" }} />
+                <col style={{ width: "18%" }} />
+                <col style={{ width: "26%" }} />
                 <col style={{ width: "16%" }} />
               </colgroup>
               <thead className="sticky top-0 z-[1] border-b border-orbita-border bg-orbita-surface-alt text-[9px] font-semibold uppercase tracking-[0.08em] text-orbita-secondary sm:text-[10px]">
@@ -202,6 +204,9 @@ export default function TransactionsPageClient() {
                   </th>
                   <th scope="col" className="px-1.5 py-1.5 text-left sm:px-2 sm:py-2">
                     Categoría
+                  </th>
+                  <th scope="col" className="px-1.5 py-1.5 text-left sm:px-2 sm:py-2">
+                    Cuenta
                   </th>
                   <th scope="col" className="px-1.5 py-1.5 text-left sm:px-2 sm:py-2">
                     Concepto
@@ -254,6 +259,12 @@ export default function TransactionsPageClient() {
                         title={catLine}
                       >
                         {catLine}
+                      </td>
+                      <td
+                        className="truncate px-1.5 py-1 align-middle text-[10px] text-orbita-secondary sm:px-2 sm:py-1.5 sm:text-[11px]"
+                        title={tx.cuenta || ""}
+                      >
+                        {tx.cuenta || "—"}
                       </td>
                       <td
                         className="truncate px-1.5 py-1 align-middle text-orbita-secondary sm:px-2 sm:py-1.5"

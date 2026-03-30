@@ -114,11 +114,14 @@ export default function FinanzasCategories() {
   const [error, setError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<"operativa" | "estrategica" | "predictiva">("operativa")
   const [notice, setNotice] = useState<string | null>(null)
+  const [categoryQuery, setCategoryQuery] = useState("")
 
   const month_value = finance?.month
   useEffect(() => {
     if (!month_value) {
       setData(null)
+      setLoading(false)
+      setError(null)
       return
     }
 
@@ -199,12 +202,21 @@ export default function FinanzasCategories() {
     )
   }
 
+  const q = categoryQuery.trim().toLowerCase()
+  const matchesQuery = (cat: Category) => {
+    if (!q) return true
+    if (cat.name.toLowerCase().includes(q)) return true
+    return (cat.subcategories ?? []).some((s) => s.name.toLowerCase().includes(q))
+  }
+
   const fixedCategories = (structuralCategories || [])
     .filter((c): c is Category => c?.type === "fixed" && Math.abs(c.total) > 0)
+    .filter(matchesQuery)
     .sort((a, b) => Math.abs(b.total) - Math.abs(a.total))
 
   const variableCategories = (structuralCategories || [])
     .filter((c): c is Category => c?.type === "variable" && Math.abs(c.total) > 0)
+    .filter(matchesQuery)
     .sort((a, b) => Math.abs(b.total) - Math.abs(a.total))
 
   const fixedPct =
@@ -213,11 +225,7 @@ export default function FinanzasCategories() {
       : 0
 
   const navigateToTransactions = (categoryName: string) => {
-    const month = month_value ?? ""
-    if (!month) return
-    router.push(
-      `/finanzas/transactions?month=${encodeURIComponent(month)}&category=${encodeURIComponent(categoryName)}`
-    )
+    router.push(`/finanzas/transactions?category=${encodeURIComponent(categoryName)}`)
   }
 
   return (
@@ -238,6 +246,17 @@ export default function FinanzasCategories() {
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <label className="grid min-w-0 max-w-full gap-1.5 sm:max-w-md sm:flex-1">
+          <span className="text-[11px] uppercase tracking-[0.14em] text-orbita-secondary">Buscar categoría o subcategoría</span>
+          <input
+            type="search"
+            value={categoryQuery}
+            onChange={(e) => setCategoryQuery(e.target.value)}
+            placeholder="Ej. Hogar, Mercado…"
+            className="min-h-11 w-full rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface px-3 py-2 text-sm text-orbita-primary"
+            aria-label="Filtrar categorías"
+          />
+        </label>
         <div className="flex flex-wrap gap-2">
           {(["operativa", "estrategica", "predictiva"] as const).map((mode) => (
             <button
@@ -275,6 +294,12 @@ export default function FinanzasCategories() {
           </div>
         </Card>
       )}
+
+      {viewMode === "operativa" && q && fixedCategories.length === 0 && variableCategories.length === 0 ? (
+        <div className="rounded-xl border border-orbita-border bg-orbita-surface-alt px-4 py-6 text-center text-sm text-orbita-secondary">
+          Ninguna categoría coincide con «{categoryQuery.trim()}». Prueba otro término o borra el filtro.
+        </div>
+      ) : null}
 
       {viewMode === "operativa" && (
         <div className="space-y-4">

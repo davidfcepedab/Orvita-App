@@ -4,6 +4,7 @@ import { isAppMockMode, isSupabaseEnabled, UI_SYNC_OFF_SHORT } from "@/lib/check
 import { buildCuentasDashboard } from "@/lib/finanzas/cuentasDashboard"
 import { mockTransactionsForMonth } from "@/lib/finanzas/mockFinancePayloads"
 import { monthBounds } from "@/lib/finanzas/monthRange"
+import { sortLedgerAccountsForDisplay } from "@/lib/finanzas/sortLedgerAccounts"
 import { buildSyntheticAccounts } from "@/lib/finanzas/syntheticAccounts"
 import { getHouseholdId } from "@/lib/households/getHouseholdId"
 import { getTransactionsByRange } from "@/lib/services/finanzasService"
@@ -12,9 +13,12 @@ export const runtime = "nodejs"
 
 export async function GET(req: NextRequest) {
   try {
-    const month = req.nextUrl.searchParams.get("month") || new Date().toISOString().slice(0, 7)
-    if (!/^\d{4}-\d{2}$/.test(month)) {
-      return NextResponse.json({ success: false, error: "month inválido" }, { status: 400 })
+    const month = req.nextUrl.searchParams.get("month")
+    if (!month || !/^\d{4}-\d{2}$/.test(month)) {
+      return NextResponse.json(
+        { success: false, error: "month requerido (YYYY-MM)" },
+        { status: 400 },
+      )
     }
 
     const b = monthBounds(month)
@@ -32,7 +36,11 @@ export async function GET(req: NextRequest) {
       )
       const accounts = buildSyntheticAccounts(month, 8_200_000, mockTransactionsForMonth(month))
       const dashboard = buildCuentasDashboard(month, 8_200_000, rows, prevRows, true)
-      return NextResponse.json({ success: true, source: "mock", data: { accounts, dashboard } })
+      return NextResponse.json({
+        success: true,
+        source: "mock",
+        data: { accounts, dashboard, ledgerAccounts: [] as unknown[] },
+      })
     }
 
     if (!isSupabaseEnabled()) {
@@ -40,7 +48,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({
         success: true,
         notice: UI_SYNC_OFF_SHORT,
-        data: { accounts: [], dashboard },
+        data: { accounts: [], dashboard, ledgerAccounts: [] as unknown[] },
       })
     }
 
@@ -66,7 +74,24 @@ export async function GET(req: NextRequest) {
     const accounts = buildSyntheticAccounts(month, balance, rows)
     const dashboard = buildCuentasDashboard(month, balance, rows, prevRows, false)
 
-    return NextResponse.json({ success: true, data: { accounts, dashboard } })
+    let ledgerAccounts: unknown[] = []
+    const { data: ledgerRows, error: ledgerErr } = await auth.supabase
+      .from("orbita_finance_accounts")
+      .select(
+        "id, label, account_class, nature, credit_limit, balance_used, balance_available, manual_balance, manual_balance_on, owner_user_id, sort_order, updated_at",
+      )
+      .eq("household_id", householdId)
+      .is("deleted_at", null)
+      .order("sort_order", { ascending: true })
+      .order("label", { ascending: true })
+
+    if (!ledgerErr) {
+      ledgerAccounts = sortLedgerAccountsForDisplay(ledgerRows ?? [], rows)
+    } else if (!/does not exist|PGRST205/i.test(ledgerErr.message ?? "")) {
+      console.warn("ACCOUNTS: ledger query:", ledgerErr.message)
+    }
+
+    return NextResponse.json({ success: true, data: { accounts, dashboard, ledgerAccounts } })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Error"
     console.error("ACCOUNTS ERROR:", message)

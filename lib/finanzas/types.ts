@@ -11,6 +11,9 @@ export interface FinanceTransaction {
   type?: FinanceTxType
   category: string
   subcategory?: string | null
+  /** Texto de la columna Cuenta en la hoja Movimientos. */
+  account_label?: string | null
+  finance_account_id?: string | null
   currency?: string | null
   created_at: string
   updated_at: string

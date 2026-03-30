@@ -16,17 +16,19 @@ function mapTx(tx: FinanceTransaction) {
     descripcion: tx.description,
     categoria: tx.category,
     subcategoria: tx.subcategory ?? "",
+    cuenta: (tx.account_label ?? "").trim(),
     monto: signedDisplayAmount(tx),
   }
 }
 
 export async function GET(req: NextRequest) {
   try {
-    const monthParam =
-      req.nextUrl.searchParams.get("month") || new Date().toISOString().slice(0, 7)
-
-    if (!/^\d{4}-\d{2}$/.test(monthParam)) {
-      return NextResponse.json({ success: false, error: "month debe tener formato YYYY-MM" }, { status: 400 })
+    const monthParam = req.nextUrl.searchParams.get("month")
+    if (!monthParam || !/^\d{4}-\d{2}$/.test(monthParam)) {
+      return NextResponse.json(
+        { success: false, error: "month requerido (YYYY-MM)" },
+        { status: 400 },
+      )
     }
 
     const category = req.nextUrl.searchParams.get("category")

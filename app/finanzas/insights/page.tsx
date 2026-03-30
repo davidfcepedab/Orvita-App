@@ -55,19 +55,13 @@ export default function FinanzasInsights() {
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
 
-  if (!finance) {
-    return (
-      <div className="p-6 text-center text-orbita-secondary">
-        <p>Inicializando...</p>
-      </div>
-    )
-  }
-
-  const { month } = finance
+  const month = finance?.month ?? ""
 
   useEffect(() => {
     if (!month) {
       setData(null)
+      setLoading(false)
+      setError(null)
       return
     }
 
@@ -104,6 +98,14 @@ export default function FinanzasInsights() {
 
     fetchInsights()
   }, [month])
+
+  if (!finance) {
+    return (
+      <div className="p-6 text-center text-orbita-secondary">
+        <p>Inicializando...</p>
+      </div>
+    )
+  }
 
   if (loading) {
     return (

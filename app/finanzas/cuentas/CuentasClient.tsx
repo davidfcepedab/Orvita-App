@@ -6,6 +6,8 @@ import {
   ArrowUpRight,
   Calculator,
   CalendarDays,
+  ChevronDown,
+  ChevronUp,
   CreditCard,
   GraduationCap,
   Home,
@@ -54,6 +56,7 @@ type TxRow = {
   descripcion: string
   categoria: string
   subcategoria: string
+  cuenta?: string
   monto: number
 }
 
@@ -331,6 +334,20 @@ export default function CuentasClient() {
 
   const [dashboard, setDashboard] = useState<CuentasDashboardPayload | null>(null)
   const [accountsLegacy, setAccountsLegacy] = useState<AccountLegacy[]>([])
+  const [ledgerAccounts, setLedgerAccounts] = useState<
+    {
+      id: string
+      label: string
+      account_class: string
+      nature: string
+      credit_limit: number | null
+      balance_used: number | null
+      balance_available: number | null
+      manual_balance: number | null
+      sort_order?: number | null
+    }[]
+  >([])
+  const [ledgerReorderBusy, setLedgerReorderBusy] = useState(false)
   const [loading, setLoading] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -401,7 +418,21 @@ export default function CuentasClient() {
         const res = await financeApiGet(`/api/orbita/finanzas/accounts?month=${encodeURIComponent(month)}`)
         const json = (await res.json()) as {
           success?: boolean
-          data?: { accounts?: AccountLegacy[]; dashboard?: CuentasDashboardPayload | null }
+          data?: {
+            accounts?: AccountLegacy[]
+            dashboard?: CuentasDashboardPayload | null
+            ledgerAccounts?: {
+              id: string
+              label: string
+              account_class: string
+              nature: string
+              credit_limit: number | null
+              balance_used: number | null
+              balance_available: number | null
+              manual_balance: number | null
+              sort_order?: number | null
+            }[]
+          }
           error?: string
           notice?: string
         }
@@ -411,6 +442,7 @@ export default function CuentasClient() {
         if (!cancelled) {
           setAccountsLegacy(json.data?.accounts ?? [])
           setDashboard(json.data?.dashboard ?? null)
+          setLedgerAccounts(json.data?.ledgerAccounts ?? [])
           setNotice(json.notice ?? null)
         }
       } catch (e) {
@@ -418,6 +450,7 @@ export default function CuentasClient() {
           setLoadError(e instanceof Error ? e.message : "Error")
           setDashboard(null)
           setAccountsLegacy([])
+          setLedgerAccounts([])
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -427,6 +460,39 @@ export default function CuentasClient() {
       cancelled = true
     }
   }, [month])
+
+  const moveLedgerAccount = useCallback(
+    async (index: number, dir: -1 | 1) => {
+      if (ledgerAccounts.length < 2) return
+      const j = index + dir
+      if (j < 0 || j >= ledgerAccounts.length) return
+      const next = [...ledgerAccounts]
+      const a = next[index]!
+      const b = next[j]!
+      next[index] = b
+      next[j] = a
+      const orderedIds = next.map((x) => x.id)
+      setLedgerReorderBusy(true)
+      try {
+        const res = await financeApiJson("/api/orbita/finanzas/ledger-accounts", {
+          method: "PATCH",
+          body: { orderedIds },
+        })
+        const json = (await res.json()) as { success?: boolean; error?: string }
+        if (!res.ok || !json.success) {
+          setNotice(messageForHttpError(res.status, json.error, res.statusText))
+          return
+        }
+        setLedgerAccounts(next.map((row, i) => ({ ...row, sort_order: i })))
+        setNotice(null)
+      } catch {
+        setNotice("No se pudo guardar el orden de cuentas.")
+      } finally {
+        setLedgerReorderBusy(false)
+      }
+    },
+    [ledgerAccounts],
+  )
 
   const reloadManualFromApi = useCallback(async () => {
     if (!supabaseEnabled) return
@@ -943,6 +1009,70 @@ export default function CuentasClient() {
           </button>
         </div>
       </div>
+
+      {ledgerAccounts.length > 0 ? (
+        <Card className={`p-4 sm:p-6 ${arcticPanel}`}>
+          <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
+            Cuentas desde movimientos (Supabase)
+          </h2>
+          <p className="mt-1 text-xs text-orbita-secondary">
+            Creadas o actualizadas al importar la hoja Movimientos (columna Cuenta). Los saldos detallados puedes
+            completarlos desde la hoja Cuentas o editando aquí más adelante. El orden por defecto prioriza tipo de
+            cuenta, saldo y uso en el mes; usa las flechas para fijar un orden personal (persistente para el hogar).
+          </p>
+          <ul className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+            {ledgerAccounts.map((a, idx) => (
+              <li
+                key={a.id}
+                className="flex gap-2 rounded-xl border border-orbita-border/80 bg-orbita-surface px-3 py-2.5 [overflow-wrap:anywhere]"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-orbita-primary">{a.label}</p>
+                  <p className="mt-0.5 text-[11px] uppercase tracking-wide text-orbita-secondary">
+                    {a.account_class.replace(/_/g, " ")} · {a.nature.replace(/_/g, " ")}
+                  </p>
+                  {(() => {
+                    const bits: string[] = []
+                    if (a.manual_balance != null && Number(a.manual_balance) !== 0) {
+                      bits.push(`Manual $${formatMoney(Number(a.manual_balance))}`)
+                    }
+                    if (a.account_class === "ahorro" && a.balance_available != null) {
+                      bits.push(`Disp. $${formatMoney(Number(a.balance_available))}`)
+                    }
+                    if (a.account_class !== "ahorro" && a.balance_used != null) {
+                      bits.push(`Usado $${formatMoney(Number(a.balance_used))}`)
+                    }
+                    if (bits.length === 0) return null
+                    return (
+                      <p className="mt-1 text-[11px] tabular-nums text-orbita-secondary">{bits.join(" · ")}</p>
+                    )
+                  })()}
+                </div>
+                <div className="flex shrink-0 flex-col justify-center gap-0.5 border-l border-orbita-border/60 pl-2">
+                  <button
+                    type="button"
+                    disabled={ledgerReorderBusy || idx === 0}
+                    onClick={() => void moveLedgerAccount(idx, -1)}
+                    className="rounded-md p-1 text-orbita-secondary hover:bg-orbita-surface-alt hover:text-orbita-primary disabled:opacity-30"
+                    aria-label={`Subir ${a.label}`}
+                  >
+                    <ChevronUp className="h-4 w-4" aria-hidden />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={ledgerReorderBusy || idx === ledgerAccounts.length - 1}
+                    onClick={() => void moveLedgerAccount(idx, 1)}
+                    className="rounded-md p-1 text-orbita-secondary hover:bg-orbita-surface-alt hover:text-orbita-primary disabled:opacity-30"
+                    aria-label={`Bajar ${a.label}`}
+                  >
+                    <ChevronDown className="h-4 w-4" aria-hidden />
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      ) : null}
 
       {layoutEdit ? (
         <Card className={`p-4 text-sm text-orbita-secondary ${arcticPanel}`}>

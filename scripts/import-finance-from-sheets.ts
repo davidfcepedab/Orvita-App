@@ -1,13 +1,17 @@
 /**
  * Import rows from Google Sheets "Movimientos" into Supabase `orbita_finance_transactions`.
  *
- * Row mapping (Órbita Movimientos + legacy API_CONTRACT; 0-based columns):
- *   [0]  date
- *   [5]  description
- *   [6]  category
- *   [7]  subcategory
- *   [10] amount (signed: negative = expense, positive = income)
- *   [12] month key (optional filter; e.g. YYYY-MM aligned with sheet)
+ * Row mapping (Órbita Movimientos; 0-based columns, cabecera estándar):
+ *   [0]  Fecha
+ *   [1]  Cuenta
+ *   [2]  Tipo (Ingreso/Gasto/Transferencia)
+ *   [3]  Monto (raw)
+ *   [4]  Memo (técnico)
+ *   [5]  Texto limpio / descripción
+ *   [6]  Categoria
+ *   [7]  Subcategoria
+ *   [10] Monto normalizado (signed: negativo = gasto)
+ *   [12] Mes (Y-M) (filtro opcional)
  *
  * Fallbacks si falla fecha o monto: fecha serial ampliada; d-m-a y d.m.a; col 12 YYYY-MM → día 1;
  * monto en cols 5/4/3 si parecen importe o parsean número; signo según Tipo (Ingreso/Gasto).
@@ -54,6 +58,7 @@ import {
   parseServiceAccount,
   privateKeyPemLooksValid,
 } from "./lib/googleSheetsServiceAccount"
+import { inferFinanceAccountMeta } from "@/lib/finanzas/inferFinanceAccount"
 import {
   formatPostgrestError,
   loadCatalogNormalizedKeys,
@@ -107,6 +112,16 @@ function resolveSupabaseUrl(): string | undefined {
   return pickEnv("SUPABASE_URL") || pickEnv("NEXT_PUBLIC_SUPABASE_URL")
 }
 
+function omitAccountColumnsFromEnv(): boolean {
+  const v = pickEnv("FINANCE_IMPORT_OMIT_ACCOUNT_COLUMNS")?.toLowerCase()
+  return v === "1" || v === "true" || v === "yes"
+}
+
+function stripTransactionAccountFields(row: Record<string, unknown>): Record<string, unknown> {
+  const { account_label: _a, finance_account_id: _f, ...rest } = row
+  return rest
+}
+
 async function resolveProfileIdForImport(
   supabase: SupabaseClient<any, "public", any>,
   householdId: string,
@@ -154,6 +169,9 @@ function validateSupabaseUrlForClient(url: string): void {
 /** 0-based column indices — Órbita Movimientos (ver fila cabecera del libro) */
 const COL = {
   date: 0,
+  account: 1,
+  /** Monto (raw) antes del memo; respaldo si col 10 vacía */
+  montoRaw: 3,
   description: 5,
   category: 6,
   subcategory: 7,
@@ -166,6 +184,7 @@ const COL = {
 type ParsedRow = {
   sheetRowNumber: number
   date: string
+  accountLabel: string
   description: string
   category: string
   subcategory: string
@@ -267,17 +286,22 @@ function cellLooksLikeMoney(s: string): boolean {
   const t = s.trim()
   if (!t) return false
   if (/\$/.test(t)) return true
-  if (/^-?[\d]{1,3}(,\d{3})+(\.\d+)?$/.test(t.replace(/\s/g, ""))) return true
-  if (/^-?\d+\.\d{2}$/.test(t.replace(/\s/g, ""))) return true
+  const noSpace = t.replace(/\s/g, "")
+  if (/^-?[\d]{1,3}(,\d{3})+(\.\d+)?$/.test(noSpace)) return true
+  // Punto decimal: 0.24 / 0.2 / 1234.56 (antes solo aceptaba exactamente 2 decimales → perdía 0.2 y similares)
+  if (/^-?\d+\.\d{1,8}$/.test(noSpace)) return true
+  // Coma como decimal sin miles (0,24 / 12,5) — sin $ la hoja suele usar esto en montos chicos
+  if (/^-?\d+,\d{1,8}$/.test(noSpace.replace(/\$/g, ""))) return true
   // Enteros COP grandes sin símbolo (evita 4 dígitos tipo últimos de TC)
-  if (/^-?\d{5,}$/.test(t.replace(/\s/g, "").replace(/,/g, ""))) return true
+  if (/^-?\d{5,}$/.test(noSpace.replace(/,/g, ""))) return true
   return false
 }
 
-/** Columna 3 o 4 suele ser Tipo (Ingreso/Gasto/Transferencia) según fila TC vs ahorros. */
+/** Columna 2 (cabecera estándar), o 3/4 en layouts antiguos. */
 function findTipoColumnIndex(values: string[]): number | null {
-  if (/^(gasto|ingreso|transferencia)/i.test(cell(values, 3))) return 3
-  if (/^(gasto|ingreso|transferencia)/i.test(cell(values, 4))) return 4
+  for (const i of [2, 3, 4] as const) {
+    if (/^(gasto|ingreso|transferencia)/i.test(cell(values, i))) return i
+  }
   return null
 }
 
@@ -300,7 +324,7 @@ function resolveSignedMoney(values: string[]): number | null {
   const norm = parseAmount(cell(values, COL.amount))
   if (norm != null && norm !== 0) return norm
 
-  const tryCols = [COL.description, COL.memo, 3] as const
+  const tryCols = [COL.montoRaw, COL.memo, COL.description] as const
 
   for (const i of tryCols) {
     const s = cell(values, i)
@@ -313,8 +337,8 @@ function resolveSignedMoney(values: string[]): number | null {
   for (const i of tryCols) {
     const s = cell(values, i)
     if (!s) continue
-    if (i === 3) {
-      const c3 = cell(values, 3).replace(/\s/g, "")
+    if (i === COL.montoRaw) {
+      const c3 = cell(values, COL.montoRaw).replace(/\s/g, "")
       const c4 = cell(values, 4).toLowerCase()
       if (/^\d{4}$/.test(c3) && /^(gasto|ingreso|transferencia)/.test(c4)) continue
     }
@@ -395,6 +419,8 @@ function parseRow(values: string[], sheetRowNumber: number): ParsedRow | null {
   const date = resolveRowDate(values)
   if (!date) return null
 
+  const accountLabel = cell(values, COL.account)
+
   let description = cell(values, COL.description) || "(sin descripción)"
   if (cellLooksLikeMoney(description)) {
     const memo = cell(values, COL.memo)
@@ -419,12 +445,95 @@ function parseRow(values: string[], sheetRowNumber: number): ParsedRow | null {
   return {
     sheetRowNumber,
     date,
+    accountLabel,
     description,
     category,
     subcategory,
     amount: mapped.amount,
     type: mapped.type,
   }
+}
+
+async function ensureFinanceAccountsForLabels(
+  supabase: SupabaseClient,
+  householdId: string,
+  labels: string[],
+): Promise<Map<string, string>> {
+  const byKey = new Map<string, string>()
+  const unique = [...new Set(labels.map((l) => l.trim()).filter(Boolean))]
+  if (unique.length === 0) return byKey
+
+  const { data: existing, error: e0 } = await supabase
+    .from("orbita_finance_accounts")
+    .select("id, label")
+    .eq("household_id", householdId)
+    .is("deleted_at", null)
+
+  if (e0) throw new Error(formatPostgrestError(e0))
+
+  for (const row of existing ?? []) {
+    const r = row as { id: string; label: string }
+    byKey.set(r.label.trim().toLowerCase(), r.id)
+  }
+
+  const now = new Date().toISOString()
+  const missing = unique.filter((l) => !byKey.has(l.toLowerCase()))
+
+  for (const label of missing) {
+    const meta = inferFinanceAccountMeta(label)
+    const { data: ins, error: insErr } = await supabase
+      .from("orbita_finance_accounts")
+      .insert({
+        household_id: householdId,
+        label,
+        account_class: meta.account_class,
+        nature: meta.nature,
+        sort_order: 0,
+        created_at: now,
+        updated_at: now,
+      })
+      .select("id")
+      .single()
+
+    if (insErr) {
+      const { data: again, error: e2 } = await supabase
+        .from("orbita_finance_accounts")
+        .select("id, label")
+        .eq("household_id", householdId)
+        .is("deleted_at", null)
+      if (e2) throw new Error(formatPostgrestError(e2))
+      for (const row of again ?? []) {
+        const r = row as { id: string; label: string }
+        byKey.set(r.label.trim().toLowerCase(), r.id)
+      }
+      if (!byKey.has(label.toLowerCase())) {
+        throw new Error(formatPostgrestError(insErr))
+      }
+      continue
+    }
+    byKey.set(label.toLowerCase(), (ins as { id: string }).id)
+  }
+
+  return byKey
+}
+
+/**
+ * Borra datos financieros del hogar (reimport limpio). Orden: snapshots → transacciones → auditoría
+ * (los DELETE en transacciones disparan filas en auditoría; el último paso las limpia).
+ */
+async function wipeHouseholdFinanceData(supabase: SupabaseClient, householdId: string): Promise<void> {
+  const hid = householdId
+  const run = async (table: string, label: string) => {
+    const { error } = await supabase.from(table).delete().eq("household_id", hid)
+    if (error) {
+      console.error(`WIPE falló en ${label}:`, formatPostgrestError(error))
+      process.exit(1)
+    }
+  }
+  await run("finance_monthly_snapshots", "finance_monthly_snapshots")
+  await run("orbita_finance_transactions", "orbita_finance_transactions")
+  await run("finance_transaction_audit", "finance_transaction_audit")
+  console.error(`WIPE: hogar ${hid} — snapshots, transacciones y auditoría eliminados.`)
 }
 
 function monthBoundsYm(ym: string): { start: string; end: string } | null {
@@ -451,7 +560,13 @@ Flags:
   --replace-month=YYYY-MM Borra transacciones del hogar en ese mes y reinserta
   --no-rebuild-snapshots No llama rebuild_month_snapshot tras insertar
   --strict-catalog      Falla si alguna subcategoría no está en orbita_finance_subcategory_catalog
+  --wipe-household-transactions  Borra TODO lo financiero del hogar (transacciones, snapshots, auditoría)
+  --confirm-wipe        Obligatorio junto a --wipe-household-transactions (evita borrados accidentales)
   --help                 Este mensaje
+
+Requiere migraciones con columna Cuenta (col B) y orbita_finance_accounts:
+  20260330120000_finance_profile_uuid_fk_catalog_accounts.sql
+  20260330160000_finance_transactions_account_link.sql
 
 Env obligatorio para import real (sin --dry-run):
   SUPABASE_URL o NEXT_PUBLIC_SUPABASE_URL  (URL real, no https://<proyecto>.supabase.co)
@@ -462,11 +577,13 @@ Env obligatorio para import real (sin --dry-run):
 
 Env opcional: FINANZAS_SPREADSHEET_ID, FINANCE_SHEETS_GID, FINANCE_SHEETS_RANGE,
   FINANCE_SHEETS_DATE_ORDER=DMY|MDY, FINANCE_IMPORT_PROFILE_ID (si no, primer users.id del hogar)
+  FINANCE_IMPORT_OMIT_ACCOUNT_COLUMNS=1 — no envía account_label/finance_account_id (solo si falta migración 20260330160000)
 
 Ejemplos:
   npm run import-finance:sheets -- --dry-run
   FINANCE_IMPORT_HOUSEHOLD_ID=<uuid> npm run import-finance:sheets
   npm run import-finance:sheets -- --replace-month=2025-01
+  npm run import-finance:sheets -- --wipe-household-transactions --confirm-wipe --strict-catalog
 `)
 }
 
@@ -479,6 +596,8 @@ function parseArgs(argv: string[]) {
   let replaceMonth: string | undefined
   let rebuildSnapshots = true
   let strictCatalog = false
+  let wipeHouseholdTransactions = false
+  let confirmWipe = false
   for (const a of argv) {
     if (a === "--dry-run") dryRun = true
     else if (a === "--credentials-check") credentialsCheck = true
@@ -486,10 +605,23 @@ function parseArgs(argv: string[]) {
     else if (a === "--help" || a === "-h") help = true
     else if (a === "--no-rebuild-snapshots") rebuildSnapshots = false
     else if (a === "--strict-catalog") strictCatalog = true
+    else if (a === "--wipe-household-transactions") wipeHouseholdTransactions = true
+    else if (a === "--confirm-wipe") confirmWipe = true
     else if (a.startsWith("--month=")) month = a.slice("--month=".length)
     else if (a.startsWith("--replace-month=")) replaceMonth = a.slice("--replace-month=".length)
   }
-  return { dryRun, credentialsCheck, listTabs, help, month, replaceMonth, rebuildSnapshots, strictCatalog }
+  return {
+    dryRun,
+    credentialsCheck,
+    listTabs,
+    help,
+    month,
+    replaceMonth,
+    rebuildSnapshots,
+    strictCatalog,
+    wipeHouseholdTransactions,
+    confirmWipe,
+  }
 }
 
 async function resolveSheetA1Range(
@@ -534,6 +666,8 @@ async function main() {
     replaceMonth,
     rebuildSnapshots,
     strictCatalog,
+    wipeHouseholdTransactions,
+    confirmWipe,
   } = parseArgs(process.argv.slice(2))
 
   if (help) {
@@ -692,6 +826,10 @@ async function main() {
   }
 
   if (dryRun) {
+    if (wipeHouseholdTransactions) {
+      console.error("--wipe-household-transactions no se ejecuta con --dry-run. Quita --dry-run.")
+      process.exit(1)
+    }
     console.log(JSON.stringify(parsed.slice(0, 5), null, 2))
     if (parsed.length > 5) console.error(`... and ${parsed.length - 5} more (dry-run)`)
     return
@@ -699,7 +837,48 @@ async function main() {
 
   const supabase = createClient(supabaseUrl!, serviceKey!)
 
+  if (wipeHouseholdTransactions) {
+    if (!confirmWipe) {
+      console.error(
+        "Para borrar todas las transacciones, snapshots y auditoría del hogar, añade --confirm-wipe (y revisa FINANCE_IMPORT_HOUSEHOLD_ID).",
+      )
+      process.exit(1)
+    }
+    console.error(
+      "WIPE: eliminando finance_monthly_snapshots, orbita_finance_transactions y finance_transaction_audit del hogar…",
+    )
+    await wipeHouseholdFinanceData(supabase, householdId!)
+  }
+
   const resolvedProfileId = await resolveProfileIdForImport(supabase, householdId!, profileId)
+
+  let omitAccountColumns = omitAccountColumnsFromEnv()
+  if (omitAccountColumns) {
+    console.error(
+      "FINANCE_IMPORT_OMIT_ACCOUNT_COLUMNS: se omiten account_label, finance_account_id y la creación vía hoja Cuenta.",
+    )
+  }
+
+  let accountKeyToId = new Map<string, string>()
+  if (!omitAccountColumns) {
+    try {
+      accountKeyToId = await ensureFinanceAccountsForLabels(
+        supabase,
+        householdId!,
+        parsed.map((p) => p.accountLabel),
+      )
+      const distinctLabels = new Set(parsed.map((p) => p.accountLabel.trim()).filter(Boolean)).size
+      console.error(
+        `Cuentas orbita_finance_accounts: ${accountKeyToId.size} filas del hogar en BD; ${distinctLabels} etiquetas distintas en esta importación.`,
+      )
+    } catch (e) {
+      console.error("ensureFinanceAccountsForLabels:", formatPostgrestError(e))
+      console.error(
+        "Revisa migración supabase/migrations/20260330160000_finance_transactions_account_link.sql (account_label, FK, índice único en cuentas).",
+      )
+      process.exit(1)
+    }
+  }
 
   if (replaceMonth) {
     const b = monthBoundsYm(replaceMonth)
@@ -722,12 +901,15 @@ async function main() {
 
   const now = new Date().toISOString()
   const insertPayload = parsed.map((p) => {
+    const al = p.accountLabel.trim()
     const row: Record<string, unknown> = {
       household_id: householdId,
       date: p.date,
       description: p.description,
       category: p.category,
       subcategory: p.subcategory,
+      account_label: al,
+      finance_account_id: al ? (accountKeyToId.get(al.toLowerCase()) ?? null) : null,
       amount: p.amount,
       type: p.type,
       currency: "USD",
@@ -740,13 +922,38 @@ async function main() {
   })
 
   const chunkSize = 200
-  for (let i = 0; i < insertPayload.length; i += chunkSize) {
+  for (let i = 0; i < insertPayload.length; ) {
     const chunk = insertPayload.slice(i, i + chunkSize)
-    const { error } = await supabase.from("orbita_finance_transactions").insert(chunk)
+    const payload = omitAccountColumns ? chunk.map(stripTransactionAccountFields) : chunk
+    const { error } = await supabase.from("orbita_finance_transactions").insert(payload)
     if (error) {
-      console.error(`Insert chunk ${i / chunkSize + 1} failed:`, error.message)
+      const msg = error.message ?? ""
+      if (
+        !omitAccountColumns &&
+        /account_label|finance_account_id|schema cache|PGRST204/i.test(msg)
+      ) {
+        console.error(`Insert chunk ${i / chunkSize + 1}:`, msg)
+        console.error(
+          "La BD o el API aún no exponen account_label / finance_account_id. Reintentando sin esas columnas.",
+        )
+        console.error(
+          "Solución recomendada: en Supabase SQL Editor ejecuta supabase/migrations/20260330160000_finance_transactions_account_link.sql (incluye notify pgrst).",
+        )
+        console.error(
+          "O define FINANCE_IMPORT_OMIT_ACCOUNT_COLUMNS=1 en .env.local para importar sin cuenta hasta aplicar la migración.",
+        )
+        omitAccountColumns = true
+        continue
+      }
+      console.error(`Insert chunk ${i / chunkSize + 1} failed:`, msg)
       process.exit(1)
     }
+    i += chunkSize
+  }
+  if (omitAccountColumns && !omitAccountColumnsFromEnv()) {
+    console.error(
+      "Import completado sin columnas de cuenta. Vuelve a ejecutar el import tras aplicar 20260330160000 para enlazar movimientos ↔ cuentas.",
+    )
   }
   console.error(`Inserted ${insertPayload.length} rows`)
 
