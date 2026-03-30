@@ -118,3 +118,15 @@ export async function patchDefaultListTask(
 
   return (await response.json()) as GoogleTaskRaw
 }
+
+export async function deleteDefaultListTask(accessToken: string, taskId: string): Promise<void> {
+  const id = encodeURIComponent(taskId)
+  const response = await fetch(`${DEFAULT_LIST}/${id}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+  if (response.status === 204 || response.status === 200) return
+  if (response.status === 404) return
+  const detail = await response.text()
+  throw new Error(`Google Tasks delete: ${detail}`)
+}

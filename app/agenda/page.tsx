@@ -10,7 +10,7 @@ import { AgendaColorLegend } from "@/app/agenda/AgendaColorLegend"
 import { useAgendaTasks } from "@/app/hooks/useAgendaTasks"
 import { useGoogleCalendar } from "@/app/hooks/useGoogleCalendar"
 import { useGoogleTasks } from "@/app/hooks/useGoogleTasks"
-import { mapAgendaTaskToUi, priorityFormToApi } from "@/app/agenda/mapAgendaTaskToUi"
+import { mapAgendaTaskToUi, priorityFormToApi, type UiAgendaTask } from "@/app/agenda/mapAgendaTaskToUi"
 import { agendaPanelSurfaceStyle } from "@/app/agenda/agendaUiTokens"
 import { priorityFilterControlStyle } from "@/app/agenda/agendaUnifiedCardStyles"
 import { formatPriorityTitle } from "@/app/agenda/taskCardFormat"
@@ -25,7 +25,7 @@ import {
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import { isAppMockMode, isSupabaseEnabled } from "@/lib/checkins/flags"
 import { createBrowserClient } from "@/lib/supabase/browser"
-import { buildGoogleByDayIndex } from "@/lib/agenda/googleAgendaByDay"
+import { buildGoogleByDayIndex, type GoogleDayBucket } from "@/lib/agenda/googleAgendaByDay"
 import { formatLocalDateKey } from "@/lib/agenda/localDateKey"
 
 function pickViewerFirstName(
@@ -101,7 +101,7 @@ const viewOptions = [
 ]
 
 export default function AgendaPage() {
-  const { tasks: agendaTasks, loading, error, refresh, createTask, updateTask } = useAgendaTasks()
+  const { tasks: agendaTasks, loading, error, refresh, createTask, updateTask, deleteTask } = useAgendaTasks()
   const tasks = useMemo(() => agendaTasks.map(mapAgendaTaskToUi), [agendaTasks])
   const googleCalendar = useGoogleCalendar()
   const googleTasksFeed = useGoogleTasks()
@@ -187,6 +187,7 @@ export default function AgendaPage() {
     const n = new Date()
     return new Date(n.getFullYear(), n.getMonth(), 1)
   })
+  const [showPastAgenda, setShowPastAgenda] = useState(false)
   const [formOpen, setFormOpen] = useState(false)
   const [formSubmitError, setFormSubmitError] = useState<string | null>(null)
   const [form, setForm] = useState({
@@ -223,21 +224,37 @@ export default function AgendaPage() {
   }, [view, googleCalendar.refresh])
 
   const filtered = useMemo(() => {
+    const todayYmd = formatLocalDateKey(new Date())
     return tasks.filter((task) => {
       const tabMatch = tab === "todas" || task.type === tab
       const priorityMatch = !priority || task.priority === priority
       const queryMatch = !query || task.title.toLowerCase().includes(query.toLowerCase())
-      return tabMatch && priorityMatch && queryMatch
+      const dateOk =
+        showPastAgenda ||
+        !task.due ||
+        task.due.length < 10 ||
+        task.due.slice(0, 10) >= todayYmd
+      return tabMatch && priorityMatch && queryMatch && dateOk
     })
-  }, [tab, priority, query, tasks])
+  }, [tab, priority, query, tasks, showPastAgenda])
 
   const googleByDay = useMemo(
     () => buildGoogleByDayIndex(googleCalendar, googleTasksFeed),
     [googleCalendar.connected, googleCalendar.events, googleTasksFeed.connected, googleTasksFeed.tasks]
   )
 
+  const googleByDayForViews = useMemo(() => {
+    if (showPastAgenda) return googleByDay
+    const todayYmd = formatLocalDateKey(new Date())
+    const out: Record<string, GoogleDayBucket> = {}
+    for (const [k, v] of Object.entries(googleByDay)) {
+      if (k.length === 10 && k >= todayYmd) out[k] = v
+    }
+    return out
+  }, [googleByDay, showPastAgenda])
+
   const countByTab = (key: string) =>
-    key === "todas" ? tasks.length : tasks.filter((task) => task.type === key).length
+    key === "todas" ? filtered.length : filtered.filter((task) => task.type === key).length
 
   const grouped = useMemo(() => ({
     recibida: filtered.filter((task) => task.type === "recibida"),
@@ -317,6 +334,35 @@ export default function AgendaPage() {
     async (taskId: string, dueYmd: string) => {
       const result = await googleTasksFeed.patchTask(taskId, { due: dueYmd })
       if (!result) throw new Error("No se pudo guardar en Google Tasks")
+      setGoogleLivePullKey((k) => k + 1)
+    },
+    [googleTasksFeed],
+  )
+
+  const onDeleteOrvitaTask = useCallback(
+    async (t: UiAgendaTask) => {
+      await deleteTask(t.id)
+    },
+    [deleteTask],
+  )
+
+  const onDeleteCalendarEvent = useCallback(
+    async (eventId: string) => {
+      const ok = await googleCalendar.deleteEvent(eventId)
+      if (!ok && googleCalendar.error) {
+        window.alert(googleCalendar.error)
+      }
+      setGoogleLivePullKey((k) => k + 1)
+    },
+    [googleCalendar],
+  )
+
+  const onDeleteGoogleTask = useCallback(
+    async (taskId: string) => {
+      const ok = await googleTasksFeed.removeTask(taskId)
+      if (!ok && googleTasksFeed.error) {
+        window.alert(googleTasksFeed.error)
+      }
       setGoogleLivePullKey((k) => k + 1)
     },
     [googleTasksFeed],
@@ -432,7 +478,19 @@ export default function AgendaPage() {
                   ))}
                 </div>
                 <span className="hidden h-3.5 w-px shrink-0 self-stretch bg-[var(--color-border)] lg:block" aria-hidden />
-                <div className="flex w-full min-w-0 flex-wrap gap-1 lg:ml-auto lg:w-auto lg:justify-end">
+                <div className="flex w-full min-w-0 flex-wrap items-center gap-2 lg:ml-auto lg:w-auto lg:justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setShowPastAgenda((v) => !v)}
+                    className="min-h-9 rounded-full border border-[var(--color-border)] px-2.5 py-1 text-[9px] font-medium uppercase tracking-[0.08em] sm:min-h-0 sm:px-2 sm:py-0.5"
+                    style={{
+                      background: showPastAgenda ? "var(--color-surface-alt)" : "transparent",
+                      color: showPastAgenda ? "var(--color-text-primary)" : "var(--color-text-secondary)",
+                    }}
+                    title="Muestra ítems con fecha anterior a hoy"
+                  >
+                    {showPastAgenda ? "Ocultar pasado" : "Ver fechas anteriores"}
+                  </button>
                   {priorities.map((item) => (
                     <button
                       key={item}
@@ -491,14 +549,18 @@ export default function AgendaPage() {
             className="flex min-h-[min(420px,55dvh)] min-w-0 flex-1 flex-col gap-4 md:gap-6"
             aria-label="Agenda: vista activa con Órvita y Google"
           >
-            <div className="min-h-0 flex-1">
+            <div className="flex min-h-[min(320px,48dvh)] flex-1 flex-col">
               {view === "columns" && (
                 <AgendaSharedKanban
                   grouped={grouped}
                   calendarFeed={googleCalendar}
                   googleTasksFeed={googleTasksFeed}
+                  hideBeforeToday={!showPastAgenda}
                   onSaveComplete={(task, completed) => saveTaskComplete(task.id, completed)}
                   onGoogleTaskSetDue={googleTasksFeed.connected ? onGoogleTaskSetDue : undefined}
+                  onDeleteOrvitaTask={onDeleteOrvitaTask}
+                  onDeleteCalendarEvent={googleCalendar.connected ? onDeleteCalendarEvent : undefined}
+                  onDeleteGoogleTask={googleTasksFeed.connected ? onDeleteGoogleTask : undefined}
                 />
               )}
               {view === "list" && (
@@ -507,8 +569,12 @@ export default function AgendaPage() {
                   calendarFeed={googleCalendar}
                   googleTasksFeed={googleTasksFeed}
                   agendaLoading={loading}
+                  hideBeforeToday={!showPastAgenda}
                   onSaveComplete={(task, completed) => saveTaskComplete(task.id, completed)}
                   onGoogleTaskSetDue={googleTasksFeed.connected ? onGoogleTaskSetDue : undefined}
+                  onDeleteOrvitaTask={onDeleteOrvitaTask}
+                  onDeleteCalendarEvent={googleCalendar.connected ? onDeleteCalendarEvent : undefined}
+                  onDeleteGoogleTask={googleTasksFeed.connected ? onDeleteGoogleTask : undefined}
                 />
               )}
               {view === "week" && (
@@ -521,7 +587,7 @@ export default function AgendaPage() {
                   totalWeeklyMinutes={totalWeeklyMinutes}
                   formatDateKey={formatDateKey}
                   formatDayLabel={formatDayLabel}
-                  googleByDay={googleByDay}
+                  googleByDay={googleByDayForViews}
                 />
               )}
               {view === "month" && (
@@ -534,7 +600,7 @@ export default function AgendaPage() {
                   onSelectDay={setSelectedDay}
                   dayDetails={dayDetails}
                   formatDateKey={formatDateKey}
-                  googleByDay={googleByDay}
+                  googleByDay={googleByDayForViews}
                   onPrevMonth={() =>
                     setMonthViewDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))
                   }

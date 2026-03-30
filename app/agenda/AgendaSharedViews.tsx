@@ -1,13 +1,13 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { Bell, Calendar, ChevronLeft, ChevronRight } from "lucide-react"
 import { Card } from "@/src/components/ui/Card"
 import type { UiAgendaTask } from "@/app/agenda/mapAgendaTaskToUi"
 import type { GoogleCalendarFeedState } from "@/app/hooks/useGoogleCalendar"
 import type { GoogleCalendarEventDTO, GoogleTaskDTO } from "@/lib/google/types"
 import type { GoogleTasksFeedState } from "@/app/hooks/useGoogleTasks"
-import { localDateKeyFromIso } from "@/lib/agenda/localDateKey"
+import { formatLocalDateKey, localDateKeyFromIso } from "@/lib/agenda/localDateKey"
 import { googleTasksForTimelineMerge } from "@/lib/agenda/googleTasksUpcoming"
 import type { GoogleDayBucket } from "@/lib/agenda/googleAgendaByDay"
 import { countGoogleDayItems } from "@/lib/agenda/googleAgendaByDay"
@@ -57,6 +57,15 @@ type MergedRow =
   | { kind: "reminder"; reminder: GoogleTaskDTO; sortMs: number }
   | { kind: "event"; event: GoogleCalendarEventDTO; sortMs: number }
 
+function mergedRowDayKey(row: MergedRow): string | null {
+  if (row.kind === "task") {
+    const d = row.task.due
+    return d && d.length >= 10 ? d.slice(0, 10) : null
+  }
+  if (row.kind === "reminder") return localDateKeyFromIso(row.reminder.due)
+  return localDateKeyFromIso(row.event.startAt)
+}
+
 function mergedKindOrder(kind: MergedRow["kind"]) {
   if (kind === "task") return 0
   if (kind === "reminder") return 1
@@ -73,7 +82,8 @@ function buildMergedTimeline(
   tasks: UiAgendaTask[],
   calendarFeed?: Pick<GoogleCalendarFeedState, "events" | "connected">,
   googleReminders?: GoogleTaskDTO[],
-  googleTasksConnected?: boolean
+  googleTasksConnected?: boolean,
+  hideBeforeToday = true
 ): MergedRow[] {
   const rows: MergedRow[] = tasks.map((task) => ({ kind: "task", task, sortMs: taskDueSortMs(task.due) }))
   if (googleTasksConnected && googleReminders?.length) {
@@ -93,7 +103,13 @@ function buildMergedTimeline(
     if (ko !== 0) return ko
     return mergedRowLabel(a).localeCompare(mergedRowLabel(b), "es")
   })
-  return rows
+  if (!hideBeforeToday) return rows
+  const todayYmd = formatLocalDateKey(new Date())
+  return rows.filter((row) => {
+    const k = mergedRowDayKey(row)
+    if (k == null) return true
+    return k >= todayYmd
+  })
 }
 
 function monthDayTypeMarkers(dayTasks: UiAgendaTask[]) {
@@ -119,21 +135,33 @@ export function AgendaSharedKanban({
   googleTasksFeed,
   onSaveComplete,
   onGoogleTaskSetDue,
+  hideBeforeToday = true,
+  onDeleteOrvitaTask,
+  onDeleteCalendarEvent,
+  onDeleteGoogleTask,
 }: {
   grouped: GroupedTasks
   calendarFeed?: Pick<GoogleCalendarFeedState, "events" | "connected">
   googleTasksFeed?: Pick<GoogleTasksFeedState, "tasks" | "connected">
   onSaveComplete?: (task: UiAgendaTask, completed: boolean) => Promise<void> | void
   onGoogleTaskSetDue?: (taskId: string, dueYmd: string) => Promise<void>
+  /** Oculta ítems con día local anterior a hoy (tareas sin fecha se muestran). */
+  hideBeforeToday?: boolean
+  onDeleteOrvitaTask?: (task: UiAgendaTask) => Promise<void> | void
+  onDeleteCalendarEvent?: (eventId: string) => Promise<void> | void
+  onDeleteGoogleTask?: (taskId: string) => Promise<void> | void
 }) {
+  const [busyDel, setBusyDel] = useState<string | null>(null)
+
   const googleReminders = useMemo(
     () => (googleTasksFeed?.connected ? googleTasksForTimelineMerge(googleTasksFeed.tasks) : []),
     [googleTasksFeed?.connected, googleTasksFeed?.tasks]
   )
 
   const googleMerged = useMemo(
-    () => buildMergedTimeline([], calendarFeed, googleReminders, googleTasksFeed?.connected),
-    [calendarFeed?.events, calendarFeed?.connected, googleReminders, googleTasksFeed?.connected]
+    () =>
+      buildMergedTimeline([], calendarFeed, googleReminders, googleTasksFeed?.connected, hideBeforeToday),
+    [calendarFeed?.events, calendarFeed?.connected, googleReminders, googleTasksFeed?.connected, hideBeforeToday]
   )
 
   const googleConnected = Boolean(calendarFeed?.connected || googleTasksFeed?.connected)
@@ -157,6 +185,20 @@ export function AgendaSharedKanban({
               task={task}
               variant="kanban"
               onSaveComplete={onSaveComplete}
+              onDelete={
+                onDeleteOrvitaTask
+                  ? async (t) => {
+                      if (!confirm(`¿Eliminar “${t.title}” del tablero Órvita?`)) return
+                      setBusyDel(`o-${t.id}`)
+                      try {
+                        await onDeleteOrvitaTask(t)
+                      } finally {
+                        setBusyDel(null)
+                      }
+                    }
+                  : undefined
+              }
+              deleteBusy={busyDel === `o-${task.id}`}
             />
           ))}
         </div>
@@ -174,6 +216,20 @@ export function AgendaSharedKanban({
             task={task}
             variant="kanban"
             onSaveComplete={onSaveComplete}
+            onDelete={
+              onDeleteOrvitaTask
+                ? async (t) => {
+                    if (!confirm(`¿Eliminar “${t.title}” del tablero Órvita?`)) return
+                    setBusyDel(`o-${t.id}`)
+                    try {
+                      await onDeleteOrvitaTask(t)
+                    } finally {
+                      setBusyDel(null)
+                    }
+                  }
+                : undefined
+            }
+            deleteBusy={busyDel === `o-${task.id}`}
           />
         ))}
         {!googleConnected ? (
@@ -202,7 +258,9 @@ export function AgendaSharedKanban({
                 footNote={
                   googleTaskNeedsDue(row.reminder)
                     ? "Sin fecha en Google Tasks: no aparece en Semana/Mes hasta que tenga vencimiento."
-                    : "Solo lectura en Órvita · edita en Google Tasks"
+                    : onDeleteGoogleTask
+                      ? "Se elimina en Google Tasks."
+                      : "Solo lectura en Órvita · edita en Google Tasks"
                 }
                 footer={
                   onGoogleTaskSetDue && googleTaskNeedsDue(row.reminder) ? (
@@ -211,6 +269,20 @@ export function AgendaSharedKanban({
                 }
                 badgeLetter="GT"
                 badgeColorVar={AGENDA_COLOR.reminder}
+                onDelete={
+                  onDeleteGoogleTask
+                    ? async () => {
+                        if (!confirm("¿Eliminar esta tarea/recordatorio en Google Tasks?")) return
+                        setBusyDel(`r-${row.reminder.id}`)
+                        try {
+                          await onDeleteGoogleTask(row.reminder.id)
+                        } finally {
+                          setBusyDel(null)
+                        }
+                      }
+                    : undefined
+                }
+                deleteBusy={busyDel === `r-${row.reminder.id}`}
               />
             ) : row.kind === "event" ? (
               <AgendaReadonlyUnifiedCard
@@ -224,9 +296,27 @@ export function AgendaSharedKanban({
                 kindPillLabel={calendarEventFuenteLabel(row.event)}
                 statusLabel="Calendario"
                 fuente={calendarEventFuenteLabel(row.event)}
-                footNote="Solo lectura en Órvita · edita en Google Calendar"
+                footNote={
+                  onDeleteCalendarEvent
+                    ? "Se elimina en Google Calendar."
+                    : "Solo lectura en Órvita · edita en Google Calendar"
+                }
                 badgeLetter="GC"
                 badgeColorVar={AGENDA_COLOR.calendar}
+                onDelete={
+                  onDeleteCalendarEvent
+                    ? async () => {
+                        if (!confirm("¿Eliminar este evento en Google Calendar?")) return
+                        setBusyDel(`e-${row.event.id}`)
+                        try {
+                          await onDeleteCalendarEvent(row.event.id)
+                        } finally {
+                          setBusyDel(null)
+                        }
+                      }
+                    : undefined
+                }
+                deleteBusy={busyDel === `e-${row.event.id}`}
               />
             ) : null
           )
@@ -248,41 +338,65 @@ export function AgendaSharedList({
   googleTasksFeed,
   agendaLoading,
   onGoogleTaskSetDue,
+  hideBeforeToday = true,
+  onDeleteOrvitaTask,
+  onDeleteCalendarEvent,
+  onDeleteGoogleTask,
 }: {
   filtered: UiAgendaTask[]
   onSaveComplete: (task: UiAgendaTask, completed: boolean) => Promise<void> | void
   /** Vista lista: mezcla eventos de Google Calendar en la misma cronología. */
   calendarFeed?: Pick<GoogleCalendarFeedState, "events" | "loading" | "connected" | "error">
   /** Recordatorios Google Tasks (misma ventana que el panel lateral). */
-  googleTasksFeed?: Pick<GoogleTasksFeedState, "tasks" | "loading" | "connected">
+  googleTasksFeed?: Pick<GoogleTasksFeedState, "tasks" | "loading" | "connected" | "error">
   /** Evita parpadeo vacío mientras aún no hay datos de Órvita. */
   agendaLoading?: boolean
   onGoogleTaskSetDue?: (taskId: string, dueYmd: string) => Promise<void>
+  hideBeforeToday?: boolean
+  onDeleteOrvitaTask?: (task: UiAgendaTask) => Promise<void> | void
+  onDeleteCalendarEvent?: (eventId: string) => Promise<void> | void
+  onDeleteGoogleTask?: (taskId: string) => Promise<void> | void
 }) {
+  const [busyDel, setBusyDel] = useState<string | null>(null)
+
   const googleReminders = useMemo(
     () => (googleTasksFeed?.connected ? googleTasksForTimelineMerge(googleTasksFeed.tasks) : []),
     [googleTasksFeed?.connected, googleTasksFeed?.tasks]
   )
 
   const merged = useMemo(
-    () => buildMergedTimeline(filtered, calendarFeed, googleReminders, googleTasksFeed?.connected),
+    () =>
+      buildMergedTimeline(
+        filtered,
+        calendarFeed,
+        googleReminders,
+        googleTasksFeed?.connected,
+        hideBeforeToday
+      ),
     [
       filtered,
       calendarFeed?.events,
       calendarFeed?.connected,
       googleReminders,
       googleTasksFeed?.connected,
+      hideBeforeToday,
     ]
   )
 
+  const googleErrored = Boolean(calendarFeed?.error || googleTasksFeed?.error)
+  const waitingGoogle =
+    filtered.length === 0 &&
+    (Boolean(calendarFeed?.connected) || Boolean(googleTasksFeed?.connected)) &&
+    (Boolean(calendarFeed?.loading) || Boolean(googleTasksFeed?.loading))
+
   const feedsLoading =
     merged.length === 0 &&
-    (Boolean(calendarFeed?.loading || googleTasksFeed?.loading) ||
-      Boolean(agendaLoading && filtered.length === 0))
+    !googleErrored &&
+    (Boolean(agendaLoading && filtered.length === 0) || waitingGoogle)
 
   return (
     <div
-      className={agendaViewStackClass}
+      className={`${agendaViewStackClass} min-h-[min(280px,42dvh)]`}
       aria-label="Cronología unificada: Órvita y Google (Tasks con fecha en orden de vencimiento; sin fecha al final)"
     >
       {feedsLoading && (
@@ -297,6 +411,20 @@ export function AgendaSharedList({
             task={row.task}
             variant="list"
             onSaveComplete={onSaveComplete}
+            onDelete={
+              onDeleteOrvitaTask
+                ? async (t) => {
+                    if (!confirm(`¿Eliminar “${t.title}” del tablero Órvita?`)) return
+                    setBusyDel(`o-${t.id}`)
+                    try {
+                      await onDeleteOrvitaTask(t)
+                    } finally {
+                      setBusyDel(null)
+                    }
+                  }
+                : undefined
+            }
+            deleteBusy={busyDel === `o-${row.task.id}`}
           />
         ) : row.kind === "reminder" ? (
           <AgendaReadonlyUnifiedCard
@@ -312,7 +440,9 @@ export function AgendaSharedList({
             footNote={
               googleTaskNeedsDue(row.reminder)
                 ? "Sin fecha en Google Tasks: no se agrupa en calendario. Añade vencimiento abajo o en Google."
-                : "Solo lectura en Órvita · edita en Google Tasks"
+                : onDeleteGoogleTask
+                  ? "Se elimina en Google Tasks."
+                  : "Solo lectura en Órvita · edita en Google Tasks"
             }
             footer={
               onGoogleTaskSetDue && googleTaskNeedsDue(row.reminder) ? (
@@ -321,6 +451,20 @@ export function AgendaSharedList({
             }
             badgeLetter="GT"
             badgeColorVar={AGENDA_COLOR.reminder}
+            onDelete={
+              onDeleteGoogleTask
+                ? async () => {
+                    if (!confirm("¿Eliminar esta tarea/recordatorio en Google Tasks?")) return
+                    setBusyDel(`r-${row.reminder.id}`)
+                    try {
+                      await onDeleteGoogleTask(row.reminder.id)
+                    } finally {
+                      setBusyDel(null)
+                    }
+                  }
+                : undefined
+            }
+            deleteBusy={busyDel === `r-${row.reminder.id}`}
           />
         ) : (
           <AgendaReadonlyUnifiedCard
@@ -334,17 +478,39 @@ export function AgendaSharedList({
             kindPillLabel={calendarEventFuenteLabel(row.event)}
             statusLabel="Calendario"
             fuente={calendarEventFuenteLabel(row.event)}
-            footNote="Solo lectura en Órvita · edita en Google Calendar"
+            footNote={
+              onDeleteCalendarEvent
+                ? "Se elimina en Google Calendar."
+                : "Solo lectura en Órvita · edita en Google Calendar"
+            }
             badgeLetter="GC"
             badgeColorVar={AGENDA_COLOR.calendar}
+            onDelete={
+              onDeleteCalendarEvent
+                ? async () => {
+                    if (!confirm("¿Eliminar este evento en Google Calendar?")) return
+                    setBusyDel(`e-${row.event.id}`)
+                    try {
+                      await onDeleteCalendarEvent(row.event.id)
+                    } finally {
+                      setBusyDel(null)
+                    }
+                  }
+                : undefined
+            }
+            deleteBusy={busyDel === `e-${row.event.id}`}
           />
         )
       )}
       {merged.length === 0 && !feedsLoading && (
         <p className={agendaEmptyStateClass}>
-          {calendarFeed && !calendarFeed.connected
-            ? "Nada que mostrar con estos filtros. Conecta Google en Configuración para mezclar Calendar y recordatorios de Tasks aquí."
-            : "Nada que mostrar con estos filtros (Órvita + Google Tasks y Calendar sincronizados)."}
+          {googleErrored
+            ? "No se pudo cargar Google (revisa conexión o vuelve a conectar la cuenta). Los datos de Órvita siguen abajo si aplican."
+            : calendarFeed && !calendarFeed.connected
+              ? "Nada que mostrar con estos filtros. Conecta Google en Configuración para mezclar Calendar y recordatorios de Tasks aquí."
+              : hideBeforeToday
+                ? "Nada de hoy en adelante con estos filtros. Activa «Ver fechas anteriores» para mostrar días pasados."
+                : "Nada que mostrar con estos filtros (Órvita + Google Tasks y Calendar sincronizados)."}
         </p>
       )}
     </div>

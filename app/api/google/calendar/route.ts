@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
 import { isAppMockMode, isSupabaseEnabled, UI_GOOGLE_CALENDAR_OFF } from "@/lib/checkins/flags"
-import { fetchPrimaryCalendarWindow } from "@/lib/google/googleCalendarApi"
+import { deletePrimaryCalendarEvent, fetchPrimaryCalendarWindow } from "@/lib/google/googleCalendarApi"
 import { getGoogleAccessTokenForUser } from "@/lib/google/loadAccessToken"
 import { MOCK_GOOGLE_CALENDAR_EVENTS } from "@/lib/google/mockGoogleData"
 
@@ -63,5 +63,47 @@ export async function GET(req: NextRequest) {
     const msg = e instanceof Error ? e.message : "Error Calendar"
     console.error("GOOGLE CALENDAR GET:", msg)
     return NextResponse.json({ success: false, error: "No se pudo leer el calendario" }, { status: 502 })
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  if (isAppMockMode()) {
+    return NextResponse.json({ success: true })
+  }
+
+  if (!isSupabaseEnabled()) {
+    return NextResponse.json({ success: false, error: "Sin sincronización" }, { status: 403 })
+  }
+
+  const auth = await requireUser(req)
+  if (auth instanceof NextResponse) return auth
+
+  let body: { id?: string }
+  try {
+    body = (await req.json()) as { id?: string }
+  } catch {
+    return NextResponse.json({ success: false, error: "JSON inválido" }, { status: 400 })
+  }
+
+  const id = String(body?.id ?? "").trim()
+  if (!id) {
+    return NextResponse.json({ success: false, error: "id es obligatorio" }, { status: 400 })
+  }
+
+  const tokenResult = await getGoogleAccessTokenForUser(auth.supabase, auth.userId)
+  if ("error" in tokenResult) {
+    return NextResponse.json(
+      { success: false, error: tokenResult.error },
+      { status: tokenResult.status === 404 ? 400 : tokenResult.status },
+    )
+  }
+
+  try {
+    await deletePrimaryCalendarEvent(tokenResult.token, id)
+    return NextResponse.json({ success: true })
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Error borrando evento"
+    console.error("GOOGLE CALENDAR DELETE:", msg)
+    return NextResponse.json({ success: false, error: "No se pudo borrar el evento en Google" }, { status: 502 })
   }
 }

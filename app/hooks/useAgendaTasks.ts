@@ -88,6 +88,23 @@ export function useAgendaTasks() {
     [refresh]
   )
 
+  const deleteTask = useCallback(
+    async (id: string) => {
+      const headers = await browserBearerHeaders(true)
+      const response = await fetch("/api/agenda", {
+        method: "DELETE",
+        headers,
+        body: JSON.stringify({ id }),
+      })
+      const json = (await response.json()) as AgendaResponse
+      if (!response.ok || !json.success) {
+        throw new Error(messageForHttpError(response.status, json.error, response.statusText))
+      }
+      await refresh()
+    },
+    [refresh]
+  )
+
   const updateTask = useCallback(
     async (
       id: string,
@@ -123,5 +140,6 @@ export function useAgendaTasks() {
     refresh,
     createTask,
     updateTask,
+    deleteTask,
   }
 }

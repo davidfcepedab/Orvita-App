@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react"
 import type { LucideIcon } from "lucide-react"
+import { Trash2 } from "lucide-react"
 import { Card } from "@/src/components/ui/Card"
 import {
   agendaCardSurfaceStyle,
@@ -30,6 +31,9 @@ type Props = {
   embedded?: boolean
   /** Acciones bajo la nota (p. ej. asignar fecha a Google Task) */
   footer?: ReactNode
+  /** Elimina en Google (Calendar o Tasks) */
+  onDelete?: () => void | Promise<void>
+  deleteBusy?: boolean
 }
 
 export function AgendaReadonlyUnifiedCard({
@@ -47,6 +51,8 @@ export function AgendaReadonlyUnifiedCard({
   badgeColorVar,
   embedded = false,
   footer,
+  onDelete,
+  deleteBusy = false,
 }: Props) {
   const pad = variant === "list" ? "p-3" : variant === "kanban" ? "p-2.5" : "p-2"
   const titleCls =
@@ -58,6 +64,11 @@ export function AgendaReadonlyUnifiedCard({
   const iconPx = variant === "compact" ? 10 : 12
   const sepCls = variant === "compact" ? "text-[9px]" : "text-[10px]"
   const showBadge = variant !== "compact"
+
+  async function handleDeleteClick() {
+    if (!onDelete || deleteBusy) return
+    await onDelete()
+  }
 
   const inner = (
     <div className={`flex items-start gap-2 text-left ${pad}`}>
@@ -104,18 +115,32 @@ export function AgendaReadonlyUnifiedCard({
         ) : null}
         {footer ? <div className={`mt-1.5 ${fuenteCls}`}>{footer}</div> : null}
       </div>
-      {showBadge ? (
-        <div
-          className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
-          style={{
-            background: `color-mix(in srgb, ${badgeColorVar} 78%, #0f172a)`,
-            boxShadow: `0 0 0 2px color-mix(in srgb, ${badgeColorVar} 28%, transparent)`,
-          }}
-          aria-hidden
-        >
-          {badgeLetter}
-        </div>
-      ) : null}
+      <div className="mt-0.5 flex shrink-0 items-start gap-1">
+        {onDelete ? (
+          <button
+            type="button"
+            disabled={deleteBusy}
+            onClick={() => void handleDeleteClick()}
+            className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-transparent text-[var(--color-text-secondary)] opacity-45 transition-[opacity,color,background-color] hover:bg-[color-mix(in_srgb,var(--color-text-secondary)_10%,transparent)] hover:opacity-100 hover:text-[var(--color-accent-danger)] disabled:opacity-25"
+            aria-label="Eliminar"
+            title="Eliminar"
+          >
+            <Trash2 className="h-2.5 w-2.5" strokeWidth={1.5} aria-hidden />
+          </button>
+        ) : null}
+        {showBadge ? (
+          <div
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
+            style={{
+              background: `color-mix(in srgb, ${badgeColorVar} 78%, #0f172a)`,
+              boxShadow: `0 0 0 2px color-mix(in srgb, ${badgeColorVar} 28%, transparent)`,
+            }}
+            aria-hidden
+          >
+            {badgeLetter}
+          </div>
+        ) : null}
+      </div>
     </div>
   )
 

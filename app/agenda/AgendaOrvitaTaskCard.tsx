@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Check, Clock } from "lucide-react"
+import { Check, Clock, Trash2 } from "lucide-react"
 import { Card } from "@/src/components/ui/Card"
 import type { UiAgendaTask } from "@/app/agenda/mapAgendaTaskToUi"
 import { assignmentShortLine } from "@/app/agenda/mapAgendaTaskToUi"
@@ -23,9 +23,11 @@ type Props = {
   variant: "list" | "kanban"
   /** Guarda el estado «realizada» al pulsar Guardar (debe resolver cuando el servidor confirme). */
   onSaveComplete?: (task: UiAgendaTask, completed: boolean) => Promise<void> | void
+  onDelete?: (task: UiAgendaTask) => Promise<void> | void
+  deleteBusy?: boolean
 }
 
-export function AgendaOrvitaTaskCard({ task, variant, onSaveComplete }: Props) {
+export function AgendaOrvitaTaskCard({ task, variant, onSaveComplete, onDelete, deleteBusy }: Props) {
   const isList = variant === "list"
   const titleCls = isList ? "text-[14px]" : "text-[13px]"
   const lineCls = isList ? "text-[11px]" : "text-[10px]"
@@ -34,6 +36,7 @@ export function AgendaOrvitaTaskCard({ task, variant, onSaveComplete }: Props) {
   const [done, setDone] = useState(task.completed)
   const [dirty, setDirty] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     setDone(task.completed)
@@ -53,6 +56,16 @@ export function AgendaOrvitaTaskCard({ task, variant, onSaveComplete }: Props) {
       setDirty(false)
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleDelete() {
+    if (!onDelete || deleting || deleteBusy) return
+    setDeleting(true)
+    try {
+      await onDelete(task)
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -112,38 +125,54 @@ export function AgendaOrvitaTaskCard({ task, variant, onSaveComplete }: Props) {
           ) : null}
         </div>
 
-        {onSaveComplete ? (
+        {onSaveComplete || onDelete ? (
           <div className="flex shrink-0 items-center gap-2 self-start pt-0.5">
-            <button
-              type="button"
-              disabled={!dirty || saving}
-              onClick={() => void handleGuardar()}
-              className="min-w-0 border-0 bg-transparent p-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)] underline decoration-[var(--color-border)] underline-offset-2 transition-colors hover:text-[var(--color-text-primary)] disabled:cursor-not-allowed disabled:no-underline disabled:opacity-40"
-            >
-              {saving ? "Guardando…" : "Guardar"}
-            </button>
-            <button
-              type="button"
-              role="checkbox"
-              aria-checked={done}
-              aria-label={done ? "Marcar como pendiente" : "Marcar como realizada"}
-              onClick={() => {
-                setDone((v) => !v)
-                setDirty(true)
-              }}
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-border)] text-[var(--agenda-assigned)] transition-colors hover:border-[var(--agenda-assigned)]"
-              style={
-                done
-                  ? {
-                      borderColor: "var(--agenda-assigned)",
-                      background:
-                        "color-mix(in srgb, var(--agenda-assigned) 22%, transparent)",
-                    }
-                  : undefined
-              }
-            >
-              {done ? <Check className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden /> : null}
-            </button>
+            {onDelete ? (
+              <button
+                type="button"
+                disabled={deleting || Boolean(deleteBusy)}
+                onClick={() => void handleDelete()}
+                className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-transparent text-[var(--color-text-secondary)] opacity-45 transition-[opacity,color,background-color] hover:bg-[color-mix(in_srgb,var(--color-text-secondary)_10%,transparent)] hover:opacity-100 hover:text-[var(--color-accent-danger)] disabled:opacity-25"
+                aria-label="Eliminar tarea"
+                title="Eliminar"
+              >
+                <Trash2 className="h-2.5 w-2.5" strokeWidth={1.5} aria-hidden />
+              </button>
+            ) : null}
+            {onSaveComplete ? (
+              <>
+                <button
+                  type="button"
+                  disabled={!dirty || saving}
+                  onClick={() => void handleGuardar()}
+                  className="min-w-0 border-0 bg-transparent p-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)] underline decoration-[var(--color-border)] underline-offset-2 transition-colors hover:text-[var(--color-text-primary)] disabled:cursor-not-allowed disabled:no-underline disabled:opacity-40"
+                >
+                  {saving ? "Guardando…" : "Guardar"}
+                </button>
+                <button
+                  type="button"
+                  role="checkbox"
+                  aria-checked={done}
+                  aria-label={done ? "Marcar como pendiente" : "Marcar como realizada"}
+                  onClick={() => {
+                    setDone((v) => !v)
+                    setDirty(true)
+                  }}
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-border)] text-[var(--agenda-assigned)] transition-colors hover:border-[var(--agenda-assigned)]"
+                  style={
+                    done
+                      ? {
+                          borderColor: "var(--agenda-assigned)",
+                          background:
+                            "color-mix(in srgb, var(--agenda-assigned) 22%, transparent)",
+                        }
+                      : undefined
+                  }
+                >
+                  {done ? <Check className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden /> : null}
+                </button>
+              </>
+            ) : null}
           </div>
         ) : null}
       </div>
