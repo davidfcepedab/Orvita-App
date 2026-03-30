@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState, type FormEvent } from "react"
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react"
 import { Card } from "@/src/components/ui/Card"
 import {
   CalendarDays,
@@ -12,17 +12,63 @@ import {
   UserPlus,
 } from "lucide-react"
 import { GoogleAgendaPanel } from "@/app/agenda/GoogleAgendaPanel"
+import { useAgendaTasks } from "@/app/hooks/useAgendaTasks"
+import { useGoogleCalendar } from "@/app/hooks/useGoogleCalendar"
+import { mapAgendaTaskToUi, priorityFormToApi } from "@/app/agenda/mapAgendaTaskToUi"
+import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
+import { isAppMockMode, isSupabaseEnabled } from "@/lib/checkins/flags"
 
-const initialTasks = [
-  { id: "1", title: "Revisar propuesta Q2", duration: 30, due: "2026-03-27", type: "recibida", priority: "alta", status: "recibida", owner: "CR", completed: false },
-  { id: "2", title: "Preparar presentación cliente", duration: 60, due: "2026-03-28", type: "recibida", priority: "media", status: "en progreso", owner: "AG", completed: false },
-  { id: "3", title: "Actualizar analítica del dashboard", duration: 45, due: "2026-03-27", type: "asignada", priority: "alta", status: "asignada", owner: "CR", completed: false },
-  { id: "4", title: "Revisar código del backend", duration: 90, due: "2026-03-26", type: "asignada", priority: "media", status: "completada", owner: "ML", completed: true },
-  { id: "5", title: "Planificar el sprint", duration: 30, due: "2026-03-27", type: "personal", priority: "alta", status: "en progreso", owner: "CM", completed: false },
-  { id: "6", title: "Retro con equipo", duration: 50, due: "2026-03-29", type: "asignada", priority: "media", status: "recibida", owner: "CR", completed: false },
-  { id: "7", title: "Planificar presupuesto Q2", duration: 80, due: "2026-03-30", type: "personal", priority: "baja", status: "recibida", owner: "CM", completed: false },
-  { id: "8", title: "Definir OKRs", duration: 70, due: "2026-03-31", type: "recibida", priority: "alta", status: "recibida", owner: "AG", completed: false },
-]
+function todayDateInputValue() {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function AgendaGoogleCalendarLive() {
+  const { events, loading, error, connected, notice } = useGoogleCalendar()
+  return (
+    <Card className="p-0">
+      <div style={{ padding: "var(--spacing-md)" }}>
+        <p
+          style={{
+            margin: 0,
+            fontSize: "11px",
+            textTransform: "uppercase",
+            letterSpacing: "0.14em",
+            color: "var(--color-text-secondary)",
+          }}
+        >
+          Google Calendar (en vivo, próximos 14 días)
+        </p>
+        {notice && (
+          <p style={{ margin: "8px 0 0", fontSize: "12px", color: "var(--color-text-secondary)" }}>{notice}</p>
+        )}
+        {error && (
+          <p style={{ margin: "8px 0 0", fontSize: "12px", color: "var(--color-accent-danger)" }}>{error}</p>
+        )}
+        {loading ? (
+          <p style={{ margin: "8px 0 0", fontSize: "12px", color: "var(--color-text-secondary)" }}>Cargando eventos…</p>
+        ) : connected ? (
+          <ul style={{ margin: "8px 0 0", paddingLeft: "18px", fontSize: "12px", color: "var(--color-text-primary)" }}>
+            {events.slice(0, 12).map((ev) => (
+              <li key={ev.id} style={{ marginBottom: "4px" }}>
+                {ev.summary}
+                <span style={{ color: "var(--color-text-secondary)", marginLeft: "6px" }}>
+                  {ev.startAt ? `${ev.startAt.slice(0, 10)}${ev.allDay ? "" : ` ${ev.startAt.slice(11, 16)}`}` : "—"}
+                </span>
+              </li>
+            ))}
+            {events.length === 0 && (
+              <li style={{ color: "var(--color-text-secondary)" }}>Sin eventos en este periodo.</li>
+            )}
+          </ul>
+        ) : (
+          <p style={{ margin: "8px 0 0", fontSize: "12px", color: "var(--color-text-secondary)" }}>
+            Conecta Google en Configuración para ver tu calendario aquí.
+          </p>
+        )}
+      </div>
+    </Card>
+  )
+}
 
 const tabs = [
   { key: "todas", label: "Todas" },
@@ -106,6 +152,7 @@ function buildMonthGrid(date: Date) {
 }
 
 function humanizeDueDate(dateStr: string) {
+  if (!dateStr) return "Sin fecha"
   const today = new Date()
   const target = new Date(dateStr)
   const todayKey = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()
@@ -124,17 +171,70 @@ function humanizeDueDate(dateStr: string) {
 
 // ← V3 RECONSTRUIDO: fiel a captura + navegación preservada
 export default function AgendaPage() {
-  const [tasks, setTasks] = useState(initialTasks)
+  const { tasks: agendaTasks, loading, error, refresh, createTask, updateTask } = useAgendaTasks()
+  const tasks = useMemo(() => agendaTasks.map(mapAgendaTaskToUi), [agendaTasks])
+  const [googleLivePullKey, setGoogleLivePullKey] = useState(0)
+  const lastVisibilityPullRef = useRef(0)
+
+  useEffect(() => {
+    if (isAppMockMode() || !isSupabaseEnabled()) return
+    let cancelled = false
+    const pull = async () => {
+      try {
+        const headers = await browserBearerHeaders(true)
+        await Promise.all([
+          fetch("/api/integrations/google/tasks/sync", { method: "POST", headers }),
+          fetch("/api/integrations/google/calendar/sync", { method: "POST", headers }),
+        ])
+        if (cancelled) return
+        await refresh()
+        setGoogleLivePullKey((k) => k + 1)
+      } catch {
+        /* sin conexión o sesión: la UI sigue con datos locales */
+      }
+    }
+    void pull()
+    return () => {
+      cancelled = true
+    }
+  }, [refresh])
+
+  useEffect(() => {
+    if (isAppMockMode() || !isSupabaseEnabled()) return
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return
+      const now = Date.now()
+      if (now - lastVisibilityPullRef.current < 120_000) return
+      lastVisibilityPullRef.current = now
+      void (async () => {
+        try {
+          const headers = await browserBearerHeaders(true)
+          await Promise.all([
+            fetch("/api/integrations/google/tasks/sync", { method: "POST", headers }),
+            fetch("/api/integrations/google/calendar/sync", { method: "POST", headers }),
+          ])
+          await refresh()
+          setGoogleLivePullKey((k) => k + 1)
+        } catch {
+          /* ignore */
+        }
+      })()
+    }
+    document.addEventListener("visibilitychange", onVisible)
+    return () => document.removeEventListener("visibilitychange", onVisible)
+  }, [refresh])
+
   const [tab, setTab] = useState("todas")
   const [priority, setPriority] = useState<Priority | "">("")
   const [view, setView] = useState<ViewKey>("list")
   const [query, setQuery] = useState("")
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
   const [formOpen, setFormOpen] = useState(false)
+  const [formSubmitError, setFormSubmitError] = useState<string | null>(null)
   const [form, setForm] = useState({
     title: "",
     assignee: "",
-    due: "2026-03-27",
+    due: todayDateInputValue(),
     duration: 30,
     type: "recibida",
     priority: "media",
@@ -163,17 +263,17 @@ export default function AgendaPage() {
     }
   }, [filtered])
 
-  const weekDays = useMemo(() => getWeekDays(new Date("2026-03-27T10:00:00")), [])
-  const weekMap = useMemo(() => {
+  const { weekDays, weekMap } = useMemo(() => {
+    const days = getWeekDays(new Date())
     const map: Record<string, typeof tasks> = {}
-    weekDays.forEach((day) => {
+    days.forEach((day) => {
       map[formatDateKey(day)] = []
     })
     tasks.forEach((task) => {
-      if (map[task.due]) map[task.due].push(task)
+      if (task.due && map[task.due]) map[task.due].push(task)
     })
-    return map
-  }, [weekDays, tasks])
+    return { weekDays: days, weekMap: map }
+  }, [tasks])
 
   const totalWeeklyTasks = weekDays.reduce((acc, day) => acc + (weekMap[formatDateKey(day)]?.length ?? 0), 0)
   const totalWeeklyMinutes = weekDays.reduce(
@@ -186,7 +286,7 @@ export default function AgendaPage() {
   )
   const totalWeeklyPending = totalWeeklyTasks - totalWeeklyCompleted
 
-  const monthGrid = useMemo(() => buildMonthGrid(new Date("2026-03-27T10:00:00")), [])
+  const monthGrid = buildMonthGrid(new Date())
   const monthSummary = useMemo(() => {
     const total = tasks.length
     const completed = tasks.filter((t) => t.status === "completada").length
@@ -196,41 +296,77 @@ export default function AgendaPage() {
 
   const dayDetails = selectedDay ? tasks.filter((t) => t.due === selectedDay) : []
 
-  const handleCreateTask = (event: FormEvent) => {
+  const handleCreateTask = async (event: FormEvent) => {
     event.preventDefault()
     if (!form.title.trim()) return
-    const owner = form.assignee ? form.assignee.slice(0, 2).toUpperCase() : "ND"
-    setTasks((prev) => [
-      {
-        id: `${Date.now()}`,
-        title: form.title,
-        duration: Number(form.duration),
-        due: form.due,
-        type: form.type,
-        priority: form.priority as Priority,
-        status: form.status,
-        owner,
-        completed: form.status === "completada",
-      },
-      ...prev,
-    ])
-    setFormOpen(false)
-    setForm({
-      title: "",
-      assignee: "",
-      due: "2026-03-27",
-      duration: 30,
-      type: "recibida",
-      priority: "media",
-      status: "recibida",
-      source: "",
-      notes: "",
-    })
+    setFormSubmitError(null)
+    try {
+      await createTask({
+        title: form.title.trim(),
+        priority: priorityFormToApi(form.priority),
+        estimatedMinutes: Number(form.duration) || 30,
+        dueDate: form.due ? form.due : null,
+        assigneeName: form.assignee.trim() ? form.assignee.trim() : null,
+        assigneeId: null,
+      })
+      setFormOpen(false)
+      setForm({
+        title: "",
+        assignee: "",
+        due: todayDateInputValue(),
+        duration: 30,
+        type: "recibida",
+        priority: "media",
+        status: "recibida",
+        source: "",
+        notes: "",
+      })
+    } catch (e) {
+      setFormSubmitError(e instanceof Error ? e.message : "No se pudo crear la tarea")
+    }
   }
 
   return (
     <div style={{ display: "grid", gap: "var(--spacing-lg)" }}>
-      <GoogleAgendaPanel />
+      <GoogleAgendaPanel
+        livePullKey={googleLivePullKey}
+        onAfterTasksSync={() => void refresh()}
+      />
+      <AgendaGoogleCalendarLive />
+      {(loading || error) && (
+        <div
+          style={{
+            padding: "10px 14px",
+            borderRadius: "12px",
+            border: "0.5px solid var(--color-border)",
+            background: error ? "color-mix(in srgb, var(--color-accent-danger) 10%, var(--color-surface))" : "var(--color-surface-alt)",
+            fontSize: "13px",
+            color: error ? "var(--color-accent-danger)" : "var(--color-text-secondary)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "12px",
+          }}
+        >
+          <span>{error ?? "Cargando tareas compartidas…"}</span>
+          {error && (
+            <button
+              type="button"
+              onClick={() => void refresh()}
+              style={{
+                border: "0.5px solid var(--color-border)",
+                background: "var(--color-surface)",
+                borderRadius: "8px",
+                padding: "6px 10px",
+                fontSize: "12px",
+                cursor: "pointer",
+              }}
+            >
+              Reintentar
+            </button>
+          )}
+        </div>
+      )}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--spacing-lg)" }}>
         <div>
           <h1 style={{ margin: 0, fontSize: "28px", fontWeight: 500 }}>Tareas Compartidas</h1>
@@ -410,13 +546,10 @@ export default function AgendaPage() {
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                   <button
                     type="button"
-                    onClick={() =>
-                      setTasks((prev) =>
-                        prev.map((item) =>
-                          item.id === task.id ? { ...item, completed: !item.completed, status: item.completed ? "en progreso" : "completada" } : item
-                        )
-                      )
-                    }
+                    onClick={() => {
+                      const next = !task.completed
+                      void updateTask(task.id, { status: next ? "completed" : "pending" })
+                    }}
                     style={{
                       width: "18px",
                       height: "18px",
@@ -569,7 +702,7 @@ export default function AgendaPage() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: "10px" }}>
             {weekDays.map((day) => {
               const key = formatDateKey(day)
-              const isToday = key === "2026-03-27"
+              const isToday = key === new Date().toISOString().slice(0, 10)
               const dayTasks = weekMap[key] || []
               return (
                 <Card
@@ -754,7 +887,10 @@ export default function AgendaPage() {
           }}
         >
           <Card className="p-6" hover>
-            <form onSubmit={handleCreateTask} style={{ display: "grid", gap: "12px", minWidth: "420px" }}>
+            <form onSubmit={(e) => void handleCreateTask(e)} style={{ display: "grid", gap: "12px", minWidth: "420px" }}>
+              {formSubmitError && (
+                <p style={{ margin: 0, fontSize: "12px", color: "var(--color-accent-danger)" }}>{formSubmitError}</p>
+              )}
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div>
                   <p style={{ margin: 0, fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--color-text-secondary)" }}>

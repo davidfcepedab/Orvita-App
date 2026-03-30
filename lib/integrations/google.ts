@@ -193,7 +193,7 @@ export function mapGoogleSyncErrorToUserMessage(context: "calendar" | "tasks", d
   if (d.includes("ratelimit") || d.includes("rate limit") || d.includes("quota")) {
     return "Google limitó temporalmente las peticiones. Espera un minuto e inténtalo de nuevo."
   }
-  if (d.includes("row-level security") || d.includes("rls") || d.includes("permission denied")) {
+  if (d.includes("row-level security") || d.includes("rls policy")) {
     return "No se pudo guardar en la base de datos. Aplica la migración de Google en Supabase o revisa políticas RLS."
   }
   if (d.includes("does not exist") || d.includes("pgrst") || d.includes("schema cache")) {

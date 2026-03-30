@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
+import { createServiceClient } from "@/lib/supabase/server"
+import { mirrorGoogleTasksToOperationalTasks } from "@/lib/agenda/mirrorGoogleTasksToOperational"
+import { getHouseholdId } from "@/lib/households/getHouseholdId"
 import {
   mapGoogleSyncErrorToUserMessage,
   refreshAccessTokenIfNeeded,
@@ -34,8 +37,9 @@ export async function POST(req: NextRequest) {
     const auth = await requireUser(req)
     if (auth instanceof NextResponse) return auth
     const { supabase, userId } = auth
+    const db = createServiceClient()
 
-    const { data: integration, error: integrationError } = await supabase
+    const { data: integration, error: integrationError } = await db
       .from("user_integrations")
       .select("id, user_id, provider, access_token, refresh_token, expires_at")
       .eq("user_id", userId)
@@ -55,7 +59,7 @@ export async function POST(req: NextRequest) {
 
     const accessToken = await refreshAccessTokenIfNeeded(integration as GoogleIntegrationRecord)
 
-    const { data: lastSync } = await supabase
+    const { data: lastSync } = await db
       .from("external_tasks")
       .select("synced_at")
       .eq("user_id", userId)
@@ -68,6 +72,8 @@ export async function POST(req: NextRequest) {
     let pageToken: string | undefined
     let imported = 0
     let updated = 0
+    let mirroredAgenda = 0
+    const householdId = await getHouseholdId(supabase, userId)
 
     do {
       const params = new URLSearchParams({
@@ -97,7 +103,7 @@ export async function POST(req: NextRequest) {
         .filter((id): id is string => typeof id === "string" && id.length > 0)
 
       if (ids.length > 0) {
-        const { data: existing } = await supabase
+        const { data: existing } = await db
           .from("external_tasks")
           .select("google_task_id")
           .eq("user_id", userId)
@@ -131,17 +137,25 @@ export async function POST(req: NextRequest) {
           .filter((row): row is NonNullable<typeof row> => row !== null)
 
         if (rows.length > 0) {
-          const { error: upsertError } = await supabase
+          const { error: upsertError } = await db
             .from("external_tasks")
             .upsert(rows, { onConflict: "user_id,google_task_id" })
-          if (upsertError) throw upsertError
+          if (upsertError) throw new Error(upsertError.message || "Error guardando tareas")
+        }
+
+        if (householdId && items.length > 0) {
+          mirroredAgenda += await mirrorGoogleTasksToOperationalTasks(db, {
+            userId,
+            householdId,
+            googleTasks: items,
+          })
         }
       }
 
       pageToken = payload.nextPageToken
     } while (pageToken)
 
-    return NextResponse.json({ success: true, imported, updated })
+    return NextResponse.json({ success: true, imported, updated, mirroredAgenda })
   } catch (error: unknown) {
     const detail = error instanceof Error ? error.message : "Unknown error"
     console.error("GOOGLE TASKS SYNC ERROR:", detail)

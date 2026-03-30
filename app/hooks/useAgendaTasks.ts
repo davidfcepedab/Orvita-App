@@ -67,10 +67,17 @@ export function useAgendaTasks() {
       assigneeName?: string | null
     }) => {
       const headers = await browserBearerHeaders(true)
+      const personal =
+        (input.assigneeId == null || String(input.assigneeId).trim() === "") &&
+        (input.assigneeName == null || String(input.assigneeName).trim() === "")
       const response = await fetch("/api/agenda", {
         method: "POST",
         headers,
-        body: JSON.stringify(input),
+        body: JSON.stringify({
+          ...input,
+          // ÓRVITA → Google Tasks solo para tareas “para mí” (sin asignatario).
+          syncToGoogle: personal,
+        }),
       })
       const json = (await response.json()) as AgendaResponse
       if (!response.ok || !json.success) {

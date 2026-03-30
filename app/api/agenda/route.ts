@@ -5,7 +5,12 @@ import { isAppMockMode, isSupabaseEnabled } from "@/lib/checkins/flags"
 import type { OperationalDomain } from "@/lib/operational/types"
 import { getHouseholdId } from "@/lib/households/getHouseholdId"
 import { getGoogleAccessTokenForUser } from "@/lib/google/loadAccessToken"
+import {
+  insertPrimaryCalendarEventForTask,
+  mapGoogleCalendarItem,
+} from "@/lib/google/googleCalendarApi"
 import { insertDefaultListTask, mapGoogleTask } from "@/lib/google/googleTasksApi"
+import { createServiceClient } from "@/lib/supabase/server"
 
 type AgendaRow = {
   id: string
@@ -205,22 +210,30 @@ export async function POST(req: NextRequest) {
         assignee_name: assigneeName,
         created_by: userId,
         domain: "agenda",
+        completed: false,
       })
+      .select("id")
+      .single()
 
     if (insert.error) {
       throw insert.error
     }
 
+    const operationalId = insert.data.id as string
+
     let googleTask: { id: string; title: string } | null = null
     let googleSyncError: string | null = null
+    let googleCalendarEvent: { id: string } | null = null
+    let googleCalendarSyncError: string | null = null
 
     if (syncToGoogle && isSupabaseEnabled()) {
       const tokenResult = await getGoogleAccessTokenForUser(supabase, userId)
       if ("error" in tokenResult) {
         googleSyncError = tokenResult.error
       } else {
+        const token = tokenResult.token
         try {
-          const created = await insertDefaultListTask(tokenResult.token, {
+          const created = await insertDefaultListTask(token, {
             title,
             due: dueDate,
           })
@@ -241,9 +254,48 @@ export async function POST(req: NextRequest) {
               },
               { onConflict: "user_id,google_task_id" },
             )
+            await supabase
+              .from("operational_tasks")
+              .update({ google_task_id: mapped.id })
+              .eq("id", operationalId)
+              .eq("user_id", userId)
           }
         } catch (e) {
           googleSyncError = e instanceof Error ? e.message : "Google sync failed"
+        }
+
+        try {
+          const calRaw = await insertPrimaryCalendarEventForTask(token, {
+            title,
+            dueDate,
+            estimatedMinutes: Number.isFinite(estimatedMinutes) ? estimatedMinutes : 30,
+          })
+          const mappedCal = mapGoogleCalendarItem(calRaw)
+          if (mappedCal) {
+            googleCalendarEvent = { id: mappedCal.id }
+            const now = new Date().toISOString()
+            const db = createServiceClient()
+            await db.from("external_calendar_events").upsert(
+              {
+                user_id: userId,
+                google_event_id: mappedCal.id,
+                summary: mappedCal.summary,
+                start_at: mappedCal.startAt,
+                end_at: mappedCal.endAt,
+                raw: calRaw as Record<string, unknown>,
+                synced_at: now,
+                deleted_at: null,
+              },
+              { onConflict: "user_id,google_event_id" },
+            )
+            await db
+              .from("operational_tasks")
+              .update({ google_calendar_event_id: mappedCal.id })
+              .eq("id", operationalId)
+              .eq("user_id", userId)
+          }
+        } catch (e) {
+          googleCalendarSyncError = e instanceof Error ? e.message : "Google Calendar sync failed"
         }
       }
     }
@@ -252,6 +304,8 @@ export async function POST(req: NextRequest) {
       success: true,
       googleTask,
       googleSyncError: googleSyncError ?? undefined,
+      googleCalendarEvent,
+      googleCalendarSyncError: googleCalendarSyncError ?? undefined,
     })
   } catch (error: unknown) {
     const detail = error instanceof Error ? error.message : "Error desconocido"
@@ -323,6 +377,7 @@ export async function PATCH(req: NextRequest) {
     if (typeof body.title === "string") patch.title = body.title.trim()
     if (body.status === "pending" || body.status === "in-progress" || body.status === "completed") {
       patch.status = body.status
+      patch.completed = body.status === "completed"
     }
     if (body.priority === "Alta" || body.priority === "Media" || body.priority === "Baja") {
       patch.priority = body.priority

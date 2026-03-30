@@ -1,11 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { refreshAccessTokenIfNeeded, type GoogleIntegrationRecord } from "@/lib/integrations/google"
+import { createServiceClient } from "@/lib/supabase/server"
 
 export async function getGoogleAccessTokenForUser(
-  supabase: SupabaseClient,
+  _supabase: SupabaseClient,
   userId: string,
 ): Promise<{ token: string } | { error: string; status: number }> {
-  const { data: integration, error } = await supabase
+  const db = createServiceClient()
+  const { data: integration, error } = await db
     .from("user_integrations")
     .select("id, user_id, provider, access_token, refresh_token, expires_at")
     .eq("user_id", userId)

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Card } from "@/src/components/ui/Card"
 import { useGoogleTasks } from "@/app/hooks/useGoogleTasks"
@@ -8,12 +8,24 @@ import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { isAppMockMode, isSupabaseEnabled, UI_AGENDA_SYNC_OFF } from "@/lib/checkins/flags"
 
-export function GoogleAgendaPanel() {
+type GoogleAgendaPanelProps = {
+  /** Tras sync de Tasks → BD, para refrescar tareas compartidas (operational_tasks). */
+  onAfterTasksSync?: () => void
+  /** Se incrementa tras un pull automático en Agenda para refrescar la lista en vivo. */
+  livePullKey?: number
+}
+
+export function GoogleAgendaPanel({ onAfterTasksSync, livePullKey = 0 }: GoogleAgendaPanelProps) {
   const { tasks, loading, error, connected, notice, creating, refresh, createTask } = useGoogleTasks()
   const [title, setTitle] = useState("")
   const [syncingCal, setSyncingCal] = useState(false)
   const [syncingTasks, setSyncingTasks] = useState(false)
   const [syncMsg, setSyncMsg] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (livePullKey < 1) return
+    void refresh()
+  }, [livePullKey, refresh])
 
   const runSync = async (kind: "calendar" | "tasks") => {
     if (isAppMockMode()) {
@@ -30,12 +42,24 @@ export function GoogleAgendaPanel() {
       setSyncMsg(null)
       const headers = await browserBearerHeaders()
       const res = await fetch(`/api/integrations/google/${kind}/sync`, { method: "POST", headers })
-      const payload = (await res.json()) as { success?: boolean; imported?: number; updated?: number; error?: string }
+      const payload = (await res.json()) as {
+        success?: boolean
+        imported?: number
+        updated?: number
+        mirroredAgenda?: number
+        error?: string
+      }
       if (!res.ok || !payload.success) {
         throw new Error(messageForHttpError(res.status, payload.error, res.statusText))
       }
-      setSyncMsg(`${kind === "calendar" ? "Calendario" : "Tareas"}: +${payload.imported ?? 0} nuevos, ${payload.updated ?? 0} actualizados.`)
+      const base = `${kind === "calendar" ? "Calendario" : "Tareas"}: +${payload.imported ?? 0} nuevos, ${payload.updated ?? 0} actualizados`
+      const mirror =
+        kind === "tasks" && (payload.mirroredAgenda ?? 0) > 0
+          ? ` · ${payload.mirroredAgenda} en Tareas compartidas`
+          : ""
+      setSyncMsg(`${base}.${mirror}`)
       await refresh()
+      onAfterTasksSync?.()
     } catch (e) {
       setSyncMsg(e instanceof Error ? e.message : "Error")
     } finally {
@@ -61,7 +85,8 @@ export function GoogleAgendaPanel() {
               Google Tasks &amp; sync
             </p>
             <p style={{ margin: "4px 0 0", fontSize: "12px", color: "var(--color-text-secondary)" }}>
-              Lista predeterminada de Google. Sincroniza a Supabase para caché o usa la API en vivo desde esta vista.
+              Al abrir Agenda se sincronizan tareas y calendario con la nube. Las tareas personales que crees abajo también
+              se envían a Google Tasks y a tu Google Calendar.
             </p>
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>

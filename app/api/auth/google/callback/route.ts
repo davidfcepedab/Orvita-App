@@ -57,34 +57,29 @@ export async function GET(req: NextRequest) {
     const tokens = await exchangeCodeForTokens(code)
     const profile = await fetchGoogleProfile(tokens.access_token)
 
-    const supabaseAdmin = createServiceClient()
-    const { data: usersData, error: userError } = await supabaseAdmin.auth.admin.listUsers()
+    const db = createServiceClient()
+    const { data: authUserPayload, error: authUserError } = await db.auth.admin.getUserById(auth.userId)
 
-    if (userError) {
-      throw userError
+    if (authUserError || !authUserPayload?.user?.email) {
+      throw authUserError ?? new Error("No se pudo leer el email de tu cuenta Órvita")
     }
 
-    const userData = usersData?.users.find((u) => u.email === profile.email)
-
-    if (!userData) {
+    const sessionEmail = authUserPayload.user.email.trim().toLowerCase()
+    const googleEmail = profile.email.trim().toLowerCase()
+    if (sessionEmail !== googleEmail) {
       const response = NextResponse.json(
-        { success: false, error: "User not found" },
-        { status: 404 }
+        {
+          success: false,
+          error:
+            "El correo de Google no coincide con tu sesión en Órvita. Usa la misma cuenta o cierra sesión y entra con el email correcto.",
+        },
+        { status: 403 },
       )
       clearCookies(response)
       return response
     }
 
-    if (userData.id !== auth.userId) {
-      const response = NextResponse.json(
-        { success: false, error: "Email does not match active session" },
-        { status: 403 }
-      )
-      clearCookies(response)
-      return response
-    }
-
-    const { data: existingIntegration, error: existingError } = await auth.supabase
+    const { data: existingIntegration, error: existingError } = await db
       .from("user_integrations")
       .select("id, refresh_token")
       .eq("user_id", auth.userId)
@@ -97,24 +92,24 @@ export async function GET(req: NextRequest) {
 
     const refreshToken = tokens.refresh_token ?? existingIntegration?.refresh_token
     if (!refreshToken) {
-      throw new Error("Missing Google refresh token")
+      throw new Error(
+        "Google no devolvió refresh token. En Configuración, desvincula Órvita en tu cuenta Google (acceso a apps) y vuelve a conectar con «Conectar Google».",
+      )
     }
 
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString()
 
-    const { error: upsertError } = await auth.supabase
-      .from("user_integrations")
-      .upsert(
-        {
-          user_id: auth.userId,
-          provider: "google",
-          access_token: tokens.access_token,
-          refresh_token: refreshToken,
-          expires_at: expiresAt,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id,provider" }
-      )
+    const { error: upsertError } = await db.from("user_integrations").upsert(
+      {
+        user_id: auth.userId,
+        provider: "google",
+        access_token: tokens.access_token,
+        refresh_token: refreshToken,
+        expires_at: expiresAt,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,provider" },
+    )
 
     if (upsertError) {
       throw upsertError
@@ -127,10 +122,10 @@ export async function GET(req: NextRequest) {
   } catch (error: unknown) {
     const detail = error instanceof Error ? error.message : "Unknown error"
     console.error("GOOGLE OAUTH CALLBACK ERROR:", detail)
-    const response = NextResponse.json(
-      { success: false, error: "Failed to connect Google" },
-      { status: 500 }
-    )
+    const fail = new URL("/configuracion", req.url)
+    fail.searchParams.set("google_error", "1")
+    fail.searchParams.set("google_error_detail", encodeURIComponent(detail.slice(0, 400)))
+    const response = NextResponse.redirect(fail)
     clearCookies(response)
     return response
   }

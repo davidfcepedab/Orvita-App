@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
+import { createServiceClient } from "@/lib/supabase/server"
 import {
   mapGoogleSyncErrorToUserMessage,
   refreshAccessTokenIfNeeded,
@@ -69,9 +70,10 @@ export async function POST(req: NextRequest) {
   try {
     const auth = await requireUser(req)
     if (auth instanceof NextResponse) return auth
-    const { supabase, userId } = auth
+    const { userId } = auth
+    const db = createServiceClient()
 
-    const { data: integration, error: integrationError } = await supabase
+    const { data: integration, error: integrationError } = await db
       .from("user_integrations")
       .select("id, user_id, provider, access_token, refresh_token, expires_at")
       .eq("user_id", userId)
@@ -130,7 +132,7 @@ export async function POST(req: NextRequest) {
         .filter((id): id is string => typeof id === "string" && id.length > 0)
 
       if (ids.length > 0) {
-        const { data: existing } = await supabase
+        const { data: existing } = await db
           .from("external_calendar_events")
           .select("google_event_id")
           .eq("user_id", userId)
@@ -165,7 +167,7 @@ export async function POST(req: NextRequest) {
           .filter((row): row is NonNullable<typeof row> => row !== null)
 
         if (rows.length > 0) {
-          const { error: upsertError } = await supabase
+          const { error: upsertError } = await db
             .from("external_calendar_events")
             .upsert(rows, { onConflict: "user_id,google_event_id" })
           if (upsertError) throw new Error(upsertError.message || "Error guardando eventos")

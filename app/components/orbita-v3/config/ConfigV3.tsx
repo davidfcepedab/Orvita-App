@@ -1,17 +1,18 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useSearchParams } from "next/navigation"
+import { useEffect, useRef, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { type ColorTheme, type LayoutMode, useApp, themes } from "@/app/contexts/AppContext"
 import { designTokens } from "@/src/theme/design-tokens"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { createBrowserClient } from "@/lib/supabase/browser"
-import { Monitor, Palette, Sliders } from "lucide-react"
+import { Monitor, Palette, Sliders, Users } from "lucide-react"
 
 export default function ConfigV3() {
   const { colorTheme, setColorTheme, layoutMode, setLayoutMode } = useApp()
   const theme = themes[colorTheme]
   const [intensity, setIntensity] = useState(50)
+  const router = useRouter()
   const searchParams = useSearchParams()
   const connectedFromParam = searchParams.get("connected") === "google"
   const [googleConnected, setGoogleConnected] = useState(connectedFromParam)
@@ -21,12 +22,34 @@ export default function ConfigV3() {
   const [syncingCalendar, setSyncingCalendar] = useState(false)
   const [syncingTasks, setSyncingTasks] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
+  const [householdInviteCode, setHouseholdInviteCode] = useState<string | null>(null)
+  const [householdInviteLoading, setHouseholdInviteLoading] = useState(true)
+  const [householdInviteError, setHouseholdInviteError] = useState<string | null>(null)
+  const [inviteCopied, setInviteCopied] = useState(false)
+  const googleRedirectErrorHandled = useRef(false)
 
   useEffect(() => {
     if (connectedFromParam) {
       setGoogleConnected(true)
     }
   }, [connectedFromParam])
+
+  useEffect(() => {
+    if (googleRedirectErrorHandled.current) return
+    if (searchParams.get("google_error") !== "1") return
+    googleRedirectErrorHandled.current = true
+    const raw = searchParams.get("google_error_detail")
+    if (raw) {
+      try {
+        setGoogleError(decodeURIComponent(raw))
+      } catch {
+        setGoogleError("No se pudo conectar Google. Inténtalo de nuevo o revisa el correo de tu cuenta.")
+      }
+    } else {
+      setGoogleError("No se pudo conectar Google.")
+    }
+    router.replace("/configuracion", { scroll: false })
+  }, [searchParams, router])
 
   useEffect(() => {
     let cancelled = false
@@ -46,6 +69,50 @@ export default function ConfigV3() {
         }
       } catch {
         /* sin sesión o red: no cambiar estado */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        setHouseholdInviteLoading(true)
+        setHouseholdInviteError(null)
+        const supabase = createBrowserClient()
+        const { data } = await supabase.auth.getSession()
+        const token = data.session?.access_token
+        if (!token) {
+          if (!cancelled) {
+            setHouseholdInviteLoading(false)
+            setHouseholdInviteError("Inicia sesión para ver el código de tu hogar.")
+          }
+          return
+        }
+        const res = await fetch("/api/household/invite", {
+          cache: "no-store",
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const payload = (await res.json()) as {
+          success?: boolean
+          data?: { inviteCode: string }
+          error?: string
+        }
+        if (cancelled) return
+        if (!res.ok || !payload.success || !payload.data?.inviteCode) {
+          throw new Error(messageForHttpError(res.status, payload.error, res.statusText))
+        }
+        setHouseholdInviteCode(payload.data.inviteCode)
+      } catch (e) {
+        if (!cancelled) {
+          setHouseholdInviteCode(null)
+          setHouseholdInviteError(e instanceof Error ? e.message : "No se pudo cargar el código")
+        }
+      } finally {
+        if (!cancelled) setHouseholdInviteLoading(false)
       }
     })()
     return () => {
@@ -188,6 +255,61 @@ export default function ConfigV3() {
 
       <div className="grid gap-8 md:grid-cols-2">
         <div className="space-y-8">
+          <div className="space-y-4">
+            <h3 className="flex items-center gap-2 text-xs uppercase tracking-wider" style={{ color: theme.textMuted }}>
+              <Users className="h-4 w-4" />
+              Hogar y familia
+            </h3>
+            <div className="rounded-xl border p-6" style={{ backgroundColor: theme.surface, borderColor: theme.border }}>
+              <p className="text-sm font-medium">Código de invitación al hogar</p>
+              <p className="mt-1 text-xs" style={{ color: theme.textMuted }}>
+                Es único para tu hogar y se asigna automáticamente. Compártelo por WhatsApp o correo: quien se registre
+                debe pegarlo en el campo de invitación al{" "}
+                <strong className="font-medium" style={{ color: theme.text }}>
+                  crear cuenta
+                </strong>{" "}
+                para unirse al mismo hogar (agenda y capital compartidos).
+              </p>
+              {householdInviteLoading && (
+                <p className="mt-3 text-xs" style={{ color: theme.textMuted }}>
+                  Cargando código…
+                </p>
+              )}
+              {!householdInviteLoading && householdInviteCode && (
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                  <code
+                    className="rounded-lg border px-4 py-2 text-lg font-semibold tracking-widest"
+                    style={{
+                      backgroundColor: theme.surfaceAlt,
+                      borderColor: theme.border,
+                      color: theme.text,
+                    }}
+                  >
+                    {householdInviteCode}
+                  </code>
+                  <button
+                    type="button"
+                    className="rounded-lg border px-3 py-2 text-xs font-medium"
+                    style={{ borderColor: theme.border }}
+                    onClick={() => {
+                      void navigator.clipboard.writeText(householdInviteCode).then(() => {
+                        setInviteCopied(true)
+                        window.setTimeout(() => setInviteCopied(false), 2500)
+                      })
+                    }}
+                  >
+                    {inviteCopied ? "Copiado" : "Copiar código"}
+                  </button>
+                </div>
+              )}
+              {!householdInviteLoading && householdInviteError && (
+                <p className="mt-3 text-xs" style={{ color: theme.accent.finance }}>
+                  {householdInviteError}
+                </p>
+              )}
+            </div>
+          </div>
+
           <div className="space-y-4">
             <h3 className="flex items-center gap-2 text-xs uppercase tracking-wider" style={{ color: theme.textMuted }}>
               <Palette className="h-4 w-4" />

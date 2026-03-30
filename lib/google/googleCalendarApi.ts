@@ -75,3 +75,57 @@ export async function fetchPrimaryCalendarWindow(
   }
   return out
 }
+
+function addUtcCalendarDay(dateStr: string, days: number): string {
+  const d = new Date(`${dateStr}T12:00:00.000Z`)
+  d.setUTCDate(d.getUTCDate() + days)
+  return d.toISOString().slice(0, 10)
+}
+
+export type InsertTaskCalendarEventInput = {
+  title: string
+  dueDate: string | null
+  estimatedMinutes: number
+}
+
+/** Crea un evento en el calendario principal: día completo si hay dueDate, si no bloque timed desde ahora. */
+export async function insertPrimaryCalendarEventForTask(
+  accessToken: string,
+  input: InsertTaskCalendarEventInput,
+): Promise<GoogleCalendarEvent> {
+  const summary = input.title.trim() || "Órvita"
+  const minutes = Math.min(Math.max(Number(input.estimatedMinutes) || 30, 15), 8 * 60)
+
+  let body: Record<string, unknown>
+  if (input.dueDate && /^\d{4}-\d{2}-\d{2}$/.test(input.dueDate)) {
+    body = {
+      summary,
+      start: { date: input.dueDate },
+      end: { date: addUtcCalendarDay(input.dueDate, 1) },
+    }
+  } else {
+    const start = new Date()
+    const end = new Date(start.getTime() + minutes * 60_000)
+    body = {
+      summary,
+      start: { dateTime: start.toISOString() },
+      end: { dateTime: end.toISOString() },
+    }
+  }
+
+  const response = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  })
+
+  if (!response.ok) {
+    const detail = await response.text()
+    throw new Error(`Google Calendar create: ${detail}`)
+  }
+
+  return (await response.json()) as GoogleCalendarEvent
+}
