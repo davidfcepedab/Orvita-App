@@ -1,44 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ÓRVITA
 
-## V3 productivo
+Next.js (App Router) — sistema operativo estratégico personal y hogar.
 
-La guia operativa de rutas V3, aliases de compatibilidad y checklist de despliegue esta en `V3_PRODUCTION.md`.
+## Documentación
 
-## Contribuir
+- Despliegue y ramas (`preview` / `production` / `built`): [docs/RELEASE_STRATEGY.md](docs/RELEASE_STRATEGY.md)
+- Rutas V3 y checklist productivo: [V3_PRODUCTION.md](V3_PRODUCTION.md)
+- Contrato API finanzas: [API_CONTRACT.md](API_CONTRACT.md)
+- Contribución y flujo de PRs: [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md)
 
-Flujo de ramas y PRs hacia `main`: [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md).
+## Requisitos
 
-## Getting Started
+- Node 20+
+- `npm ci`
 
-First, run the development server:
+## Desarrollo
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abre [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Calidad y release
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npx tsc --noEmit
+npm test
+npm run validate:release   # tsc + jest + build (antes de cortes)
+```
 
-## Learn More
+Con la rama local **`production`** actualizada y sin cambios sin commitear:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run release:sync       # alinea built con production y hace push
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Estructura (resumen)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Ruta | Contenido |
+|------|-----------|
+| `app/` | Páginas, layouts y rutas API |
+| `lib/` | Lógica compartida (finanzas, operacional, integraciones) |
+| `src/` | UI tema, componentes base, módulos salud/training |
+| `supabase/migrations/` | Esquema y políticas Postgres |
+| `scripts/` | Importación Sheets, sync de ramas release |
 
-## Deploy on Vercel
+## Deploy
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Producción en **Vercel** apuntando a la rama **`production`** y dominio **https://orvita.app**.

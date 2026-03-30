@@ -1,0 +1,25 @@
+# Copia este archivo a .github/workflows/ci.yml cuando tu credencial de push
+# tenga permiso `workflow` (o créalo desde la UI de GitHub).
+# Nombre sugerido al copiar: ci.yml
+
+name: CI
+
+on:
+  pull_request:
+    branches: [preview, production]
+  push:
+    branches: [preview, production, built]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npx jest --no-cache
+      - run: npm run build

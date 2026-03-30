@@ -4,26 +4,28 @@
 - Semantic versioning: `MAJOR.MINOR.PATCH`.
 - v1.1.0 introduces operational modules and Supabase migrations.
 
-## Branching
-- Feature work lands on `feature/*` branches.
-- Release candidates are merged to `main` via pull requests.
+## Branching (tres ramas en `origin`)
+
+- **`preview`** — Integración; destino habitual de PRs y entorno preview (Vercel).
+- **`production`** — Lo que sirve **https://orvita.app** (rama de producción en Vercel).
+- **`built`** — Copia alineada con `production` tras validación; `npm run release:sync` hace `built` = `production` y hace push de ambas.
+
+El trabajo en curso vive en ramas locales o cortas (`feature/*`, `fix/*`), no como ramas remotas permanentes.
 
 ## Quality Gates
-- TypeScript strict mode and ESLint must pass.
-- Jest test suite must pass.
+- TypeScript (`tsc`) y Jest deben pasar (CI en GitHub Actions sobre `preview`, `production`, `built`).
+- `npm run validate:release` local antes de cortes importantes: `tsc` + `jest` + `build`.
 - Supabase migrations must apply cleanly in preview environments.
 
 ## Deployment
-- Preview deployment on Vercel for each PR.
-- Production deploy on merge to `main`.
-- **Dominio de producción:** [https://orvita.app](https://orvita.app) debe apuntar al proyecto de Vercel cuya rama de producción es `main` (o la que tengas fijada en *Production Branch*). La rama `productive` se mantiene alineada con `main` mediante `npm run release:sync` para entornos o automatizaciones que la usen.
+- **Vercel:** asigna **Production Branch** = `production`. Previews desde PRs o desde `preview`, según tu configuración.
+- **Dominio de producción:** [https://orvita.app](https://orvita.app).
+- Tras merge a `production`, con el árbol limpio: `npm run release:sync` publica `production` y `built` en el remoto.
 
 ## Proteger un corte en producción (snapshot en Git)
-1. Con `main` estable y desplegado, ejecuta la validación local: `npm run validate:release`.
-2. Crea un tag anotado en el commit exacto que está en producción, por ejemplo:  
-   `git tag -a release/orvita-app-YYYY-MM-DD -m "Producción orvita.app — notas breves"`  
-3. Publica el tag: `git push origin release/orvita-app-YYYY-MM-DD`.  
-Así puedes volver a ese árbol con `git checkout <tag>` o crear una rama hotfix desde el tag. **Vercel** no “congela” el dominio solo con el tag: para evitar despliegues accidentales, en el dashboard de Vercel usa *Deployment Protection* (Vercel Authentication) en previews y revisa que solo `main` despliegue a producción.
+1. Con `production` estable y desplegado, ejecuta `npm run validate:release`.
+2. Tag anotado: `git tag -a release/orvita-app-YYYY-MM-DD -m "Producción orvita.app — notas"` y `git push origin release/orvita-app-YYYY-MM-DD`.
+3. En Vercel: *Deployment Protection* en previews y solo `production` ligada al dominio productivo.
 
 ## Migration Workflow
 1. Generate migration: `supabase migration new <name>`.
@@ -35,5 +37,5 @@ Así puedes volver a ese árbol con `git checkout <tag>` o crear una rama hotfix
 1. All migrations applied without errors.
 2. RLS policies verified for operational tables.
 3. API contracts and docs updated.
-4. CI green (TypeScript, ESLint, Jest).
-5. Tag release and publish PR.
+4. CI green (TypeScript, Jest, build).
+5. Tag release when cutting production.

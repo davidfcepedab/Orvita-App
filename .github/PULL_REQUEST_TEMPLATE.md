@@ -1,3 +1,5 @@
+Base recomendada del PR: **`preview`** (integración). Los merges a **`production`** son releases explícitos.
+
 ## Qué cambia
 
 <!-- Breve descripción para quien revisa -->

@@ -1,25 +1,29 @@
 # Contribuir a ÓRVITA-APP
 
-## Flujo recomendado (main protegido)
+## Ramas en el remoto (solo tres)
 
-1. Crea una rama desde `main`: `feature/…`, `fix/…` o `chore/…`.
-2. Commits pequeños y mensajes claros (idealmente en el estilo del repo).
-3. Abre un **pull request** hacia `main` y pasa revisión / CI.
-4. **Merge** en GitHub (squash o merge según acuerdo del equipo).
+| Rama | Rol |
+|------|-----|
+| **`preview`** | Integración y PRs; despliegues *preview* en Vercel (configura el proyecto para construir esta rama o para cada PR). |
+| **`production`** | Código que alimenta **https://orvita.app** (rama de producción en Vercel). |
+| **`built`** | Espejo de `production` tras un corte validado; se actualiza con `npm run release:sync` desde `production`. |
 
-Evita `git push` directo a `main` salvo emergencias acordadas.
+Flujo habitual:
+
+1. Crea una rama desde **`preview`**: `feature/…`, `fix/…`, `chore/…`.
+2. Abre un **pull request** hacia **`preview`** y pasa revisión / CI.
+3. Cuando `preview` esté listo para salir, merge **`preview` → `production`** (PR o merge controlado).
+4. En local, con `production` actualizado y limpio: `npm run validate:release` y luego `npm run release:sync` para alinear **`built`** con **`production`**.
+
+Evita push directo a `production` salvo emergencias acordadas.
 
 ### Protección en GitHub (admin)
 
-En **Settings → Branches → Branch protection rules** para `main`:
+En **Settings → Branches → Branch protection rules**, aplica reglas a **`production`** y **`preview`** según el equipo (PR obligatorio, checks, etc.).
 
-- Require a pull request before merging
-- (Opcional) Require approvals, status checks, linear history
+### Migración desde `main` / `productive`
 
-Así la regla del remoto coincide con este flujo.
+Si el remoto aún tiene `main` como rama por defecto:
 
-## Antes de abrir el PR
-
-- `npx tsc --noEmit`
-- `npm run lint` (si aplica en el cambio)
-- Probar la ruta o flujo que tocaste en local
+1. En GitHub: **Settings → General → Default branch** → cámbiala a **`production`** (debe existir en el remoto).
+2. Elimina ramas obsoletas (`main`, `productive`, ramas de experimento) con `git push origin --delete <rama>`.

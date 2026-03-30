@@ -13,8 +13,8 @@
     "prebuild": "npm run guard:no-mocks",
     "import-finance:sheets": "npx tsx scripts/import-finance-from-sheets.ts",
     "diagnose:finance-sheet": "npx tsx scripts/diagnose-finance-sheet.ts",
-    "release:sync": "bash scripts/sync-main-productive.sh",
-    "release:sync:local": "bash scripts/sync-main-productive.sh --local"
+    "release:sync": "bash scripts/sync-release-branches.sh",
+    "release:sync:local": "bash scripts/sync-release-branches.sh --local"
   },
   "dependencies": {
     "@radix-ui/react-checkbox": "^1.3.3",
