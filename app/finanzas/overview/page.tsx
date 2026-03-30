@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { useFinance } from "../FinanceContext"
 import { Card } from "@/src/components/ui/Card"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
-import { rechartsDefaultMargin, rechartsTooltipContentStyle } from "@/lib/charts/rechartsShared"
+import { rechartsTooltipContentStyle } from "@/lib/charts/rechartsShared"
 import { UI_FINANCE_DEMO_MONTH } from "@/lib/checkins/flags"
 import { financeApiGet } from "@/lib/finanzas/financeClientFetch"
 import {
@@ -15,7 +15,6 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
-  Legend,
   ReferenceLine,
 } from "recharts"
 
@@ -71,6 +70,28 @@ interface OverviewResponse {
   error?: string
   notice?: string
   source?: string
+}
+
+function FlowChartLegend() {
+  const items = [
+    { key: "flujo", label: "Flujo", color: "var(--color-accent-primary)" },
+    { key: "gasto", label: "Gasto operativo", color: "var(--color-accent-danger)" },
+    { key: "ingresos", label: "Ingresos", color: "var(--color-accent-health)" },
+  ]
+  return (
+    <ul className="mt-2 flex flex-wrap justify-center gap-x-3 gap-y-2 px-0.5 text-[10px] text-orbita-secondary sm:gap-x-5 sm:text-[11px]">
+      {items.map((item) => (
+        <li key={item.key} className="flex max-w-full items-center gap-1.5">
+          <span
+            className="h-0.5 w-3 shrink-0 rounded-full sm:h-2 sm:w-4"
+            style={{ backgroundColor: item.color }}
+            aria-hidden
+          />
+          <span className="min-w-0 break-words leading-tight">{item.label}</span>
+        </li>
+      ))}
+    </ul>
+  )
 }
 
 const FLOW_TABS: { id: FlowEvolutionKey; label: string; subtitle: string }[] = [
@@ -147,11 +168,11 @@ export default function FinanzasOverview() {
   }, [month])
 
   if (!finance) {
-    return <div className="p-6 text-center text-gray-500">Inicializando...</div>
+    return <div className="p-6 text-center text-orbita-secondary">Inicializando...</div>
   }
 
   if (loading) {
-    return <div className="p-6 text-center text-gray-500">Cargando datos...</div>
+    return <div className="p-6 text-center text-orbita-secondary">Cargando datos...</div>
   }
 
   if (error) {
@@ -165,9 +186,9 @@ export default function FinanzasOverview() {
 
   if (!data) {
     return (
-      <div className="space-y-2 p-6 text-center text-slate-600">
+      <div className="space-y-2 p-6 text-center text-orbita-secondary">
         <p>{UI_FINANCE_DEMO_MONTH}</p>
-        {notice && <p className="text-xs text-slate-500">{notice}</p>}
+        {notice && <p className="text-xs text-orbita-secondary">{notice}</p>}
       </div>
     )
   }
@@ -211,10 +232,12 @@ export default function FinanzasOverview() {
 
   const runwayLabel = runway > 0 && net > 0 ? `${runway.toFixed(1)}×` : net <= 0 ? "En déficit" : "—"
 
+  const flowChartMargin = { top: 8, right: 2, left: 2, bottom: xAxisHeight + 6 } as const
+
   return (
-    <div className="space-y-6 sm:space-y-8">
-      {notice && <p className="text-xs text-slate-500">{notice}</p>}
-      <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-4">
+    <div className="min-w-0 max-w-full space-y-6 sm:space-y-8">
+      {notice && <p className="text-xs text-orbita-secondary">{notice}</p>}
+      <div className="grid min-w-0 max-w-full grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-4">
         {[
           {
             label: "Capacidad de ahorro",
@@ -241,27 +264,29 @@ export default function FinanzasOverview() {
             accent: "var(--color-accent-finance)",
           },
         ].map((metric) => (
-          <Card key={metric.label} hover className="p-4 sm:p-8">
-            <div className="grid gap-2">
-              <p className="text-xs uppercase tracking-[0.14em] text-slate-500">{metric.label}</p>
-              <p className="text-2xl font-semibold" style={{ color: metric.accent }}>
+          <Card key={metric.label} hover className="min-w-0 p-4 sm:p-8">
+            <div className="grid min-w-0 gap-2">
+              <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">{metric.label}</p>
+              <p className="break-words text-2xl font-semibold tabular-nums" style={{ color: metric.accent }}>
                 {metric.value}
               </p>
-              <p className="text-xs text-slate-500">{metric.sub}</p>
+              <p className="break-words text-xs leading-snug text-orbita-secondary">{metric.sub}</p>
             </div>
           </Card>
         ))}
       </div>
 
-      <Card className="p-4 sm:p-8">
-        <div className="grid gap-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="grid gap-1">
-              <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Evolución de flujo</p>
-              <span className="text-xs text-slate-400">{flowSubtitle}</span>
+      <Card className="min-w-0 overflow-x-clip p-4 sm:p-8">
+        <div className="grid min-w-0 max-w-full gap-4">
+          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="grid min-w-0 max-w-full gap-1">
+              <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Evolución de flujo</p>
+              <span className="break-words text-xs leading-snug text-orbita-secondary [overflow-wrap:anywhere]">
+                {flowSubtitle}
+              </span>
             </div>
             <div
-              className="flex flex-wrap gap-1 rounded-xl p-0.5"
+              className="flex max-w-full min-w-0 flex-wrap gap-1 rounded-xl p-0.5"
               style={{
                 background: "color-mix(in srgb, var(--color-border) 35%, transparent)",
                 border: "0.5px solid var(--color-border)",
@@ -291,95 +316,121 @@ export default function FinanzasOverview() {
               })}
             </div>
           </div>
-          <div className="w-full min-w-0 overflow-x-auto overscroll-x-contain">
-            <div className="h-[220px] w-full min-w-[300px] sm:h-[260px]">
-            {chartData.length > 0 ? (
-              <ResponsiveContainer key={`flow-${flowView}-${month}`} width="100%" height="100%">
-                <LineChart data={chartData} margin={rechartsDefaultMargin}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" opacity={0.85} />
-                  <XAxis
-                    dataKey="month"
-                    tick={{ fontSize: 10, fill: "var(--color-text-secondary)" }}
-                    stroke="var(--color-border)"
-                    interval="preserveStartEnd"
-                    angle={xAxisAngle}
-                    textAnchor={tiltXAxis ? "end" : "middle"}
-                    height={xAxisHeight}
-                  />
-                  <YAxis
-                    width={44}
-                    tick={{ fontSize: 10, fill: "var(--color-text-secondary)" }}
-                    stroke="var(--color-border)"
-                    tickFormatter={formatCompact}
-                  />
-                  <Tooltip
-                    contentStyle={rechartsTooltipContentStyle}
-                    formatter={(value, name) => [
-                      formatMoney(financeTooltipNumber(value)),
-                      String(name ?? ""),
-                    ]}
-                  />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <ReferenceLine y={0} stroke="var(--color-border)" />
-                  <Line type="monotone" dataKey="ingresos" stroke="var(--color-accent-health)" strokeWidth={2} dot={{ r: 3 }} />
-                  <Line type="monotone" dataKey="gasto_operativo" stroke="var(--color-accent-danger)" strokeWidth={2} dot={{ r: 3 }} />
-                  <Line type="monotone" dataKey="flujo" stroke="var(--color-accent-primary)" strokeWidth={2} dot={{ r: 3 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex h-full items-center justify-center px-2 text-center text-sm text-slate-400">
-                {flowView === "weeks"
-                  ? "Sin movimientos suficientes para agrupar por semana"
-                  : "Sin datos en este rango para el gráfico"}
+          <div className="min-w-0 max-w-full">
+            <div className="relative h-[200px] w-full max-w-full min-w-0 sm:h-[260px]">
+              <div className="absolute inset-0 min-w-0 max-w-full">
+                {chartData.length > 0 ? (
+                  <ResponsiveContainer key={`flow-${flowView}-${month}`} width="100%" height="100%">
+                    <LineChart data={chartData} margin={flowChartMargin}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" opacity={0.85} />
+                      <XAxis
+                        dataKey="month"
+                        tick={{ fontSize: 10, fill: "var(--color-text-secondary)" }}
+                        stroke="var(--color-border)"
+                        interval="preserveStartEnd"
+                        angle={xAxisAngle}
+                        textAnchor={tiltXAxis ? "end" : "middle"}
+                        height={xAxisHeight}
+                      />
+                      <YAxis
+                        width={36}
+                        tick={{ fontSize: 9, fill: "var(--color-text-secondary)" }}
+                        stroke="var(--color-border)"
+                        tickFormatter={formatCompact}
+                      />
+                      <Tooltip
+                        contentStyle={rechartsTooltipContentStyle}
+                        formatter={(value, name) => [
+                          formatMoney(financeTooltipNumber(value)),
+                          String(name ?? ""),
+                        ]}
+                      />
+                      <ReferenceLine y={0} stroke="var(--color-border)" />
+                      <Line
+                        type="monotone"
+                        dataKey="ingresos"
+                        name="ingresos"
+                        stroke="var(--color-accent-health)"
+                        strokeWidth={2}
+                        dot={{ r: 3 }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="gasto_operativo"
+                        name="gasto_operativo"
+                        stroke="var(--color-accent-danger)"
+                        strokeWidth={2}
+                        dot={{ r: 3 }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="flujo"
+                        name="flujo"
+                        stroke="var(--color-accent-primary)"
+                        strokeWidth={2}
+                        dot={{ r: 3 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex h-full items-center justify-center px-2 text-center text-sm text-orbita-secondary">
+                    {flowView === "weeks"
+                      ? "Sin movimientos suficientes para agrupar por semana"
+                      : "Sin datos en este rango para el gráfico"}
+                  </div>
+                )}
               </div>
-            )}
             </div>
+            {chartData.length > 0 ? <FlowChartLegend /> : null}
           </div>
         </div>
       </Card>
 
-      <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
-        <Card className="p-4 sm:p-8">
-          <div className="grid gap-3">
-            <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Suscripciones / SaaS (heurística)</p>
+      <div className="grid min-w-0 max-w-full grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2">
+        <Card className="min-w-0 overflow-x-clip p-4 sm:p-8">
+          <div className="grid min-w-0 max-w-full gap-3">
+            <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Suscripciones / SaaS (heurística)</p>
             {subs.length === 0 ? (
-              <p className="text-sm text-slate-500">Sin partidas detectadas con patrón de suscripción.</p>
+              <p className="text-sm text-orbita-secondary">Sin partidas detectadas con patrón de suscripción.</p>
             ) : (
               subs.map((item) => (
                 <div
                   key={item.name}
-                  className="flex min-w-0 flex-col gap-1 rounded-xl bg-slate-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex min-w-0 flex-col gap-1 rounded-xl bg-orbita-surface-alt px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4"
                 >
-                  <span className="min-w-0 break-words text-sm text-slate-700">{item.name}</span>
-                  <span className="shrink-0 text-xs text-slate-500 sm:text-right">${formatMoney(item.amount)}</span>
+                  <span className="min-w-0 break-words text-sm text-orbita-primary">{item.name}</span>
+                  <span className="shrink-0 tabular-nums text-xs text-orbita-secondary sm:text-right">${formatMoney(item.amount)}</span>
                 </div>
               ))
             )}
-            <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3">
-              <span className="text-xs uppercase tracking-[0.14em] text-slate-500">Total</span>
-              <span className="text-sm font-semibold text-slate-900">${formatMoney(subsTotal)}</span>
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-orbita-border bg-orbita-surface px-3 py-3 sm:px-4">
+              <span className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Total</span>
+              <span className="tabular-nums text-sm font-semibold text-orbita-primary">${formatMoney(subsTotal)}</span>
             </div>
           </div>
         </Card>
-        <Card className="p-4 sm:p-8">
-          <div className="grid gap-3">
-            <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Obligaciones fijas (heurística)</p>
+        <Card className="min-w-0 overflow-x-clip p-4 sm:p-8">
+          <div className="grid min-w-0 max-w-full gap-3">
+            <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Obligaciones fijas (heurística)</p>
             {obls.length === 0 ? (
-              <p className="text-sm text-slate-500">Sin obligaciones detectadas por categoría / descripción.</p>
+              <p className="text-sm text-orbita-secondary">Sin obligaciones detectadas por categoría / descripción.</p>
             ) : (
               obls.map((item) => (
-                <div key={item.name + item.due} className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-slate-700">{item.name}</p>
-                    <p className="text-xs text-slate-400">Fecha {item.due}</p>
+                <div
+                  key={item.name + item.due}
+                  className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
+                >
+                  <div className="min-w-0">
+                    <p className="break-words text-sm text-orbita-primary">{item.name}</p>
+                    <p className="text-xs text-orbita-secondary">Fecha {item.due}</p>
                   </div>
-                  <span className="text-xs text-slate-500">${formatMoney(item.amount)}</span>
+                  <span className="shrink-0 tabular-nums text-xs text-orbita-secondary sm:text-right">${formatMoney(item.amount)}</span>
                 </div>
               ))
             )}
-            <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3">
-              <span className="text-xs uppercase tracking-[0.14em] text-slate-500">Total</span>
-              <span className="text-sm font-semibold text-slate-900">${formatMoney(oblsTotal)}</span>
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-orbita-border bg-orbita-surface px-3 py-3 sm:px-4">
+              <span className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Total</span>
+              <span className="tabular-nums text-sm font-semibold text-orbita-primary">${formatMoney(oblsTotal)}</span>
             </div>
           </div>
         </Card>

@@ -32,7 +32,7 @@ const DEFAULT_LIST = "https://www.googleapis.com/tasks/v1/lists/%40default/tasks
 
 export async function fetchDefaultTaskList(accessToken: string, showCompleted = false): Promise<GoogleTaskDTO[]> {
   const params = new URLSearchParams({
-    maxResults: "100",
+    maxResults: "200",
     showCompleted: showCompleted ? "true" : "false",
     showHidden: "false",
   })
@@ -79,6 +79,41 @@ export async function insertDefaultListTask(
   if (!response.ok) {
     const detail = await response.text()
     throw new Error(`Google Tasks create: ${detail}`)
+  }
+
+  return (await response.json()) as GoogleTaskRaw
+}
+
+export async function patchDefaultListTask(
+  accessToken: string,
+  taskId: string,
+  patch: { due?: string | null; title?: string; status?: string },
+): Promise<GoogleTaskRaw> {
+  const id = encodeURIComponent(taskId)
+  const body: Record<string, string> = {}
+  if (patch.title != null) body.title = patch.title.trim()
+  if (patch.status != null) body.status = patch.status
+  if (patch.due !== undefined) {
+    if (patch.due === null || patch.due === "") {
+      body.due = ""
+    } else {
+      const d = patch.due.includes("T") ? patch.due : `${patch.due}T12:00:00.000Z`
+      body.due = d
+    }
+  }
+
+  const response = await fetch(`${DEFAULT_LIST}/${id}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  })
+
+  if (!response.ok) {
+    const detail = await response.text()
+    throw new Error(`Google Tasks patch: ${detail}`)
   }
 
   return (await response.json()) as GoogleTaskRaw

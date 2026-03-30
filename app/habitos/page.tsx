@@ -2,12 +2,28 @@
 
 import { useMemo, useState, type FormEvent } from "react"
 import { Card } from "@/src/components/ui/Card"
-import { Activity, Check, CheckCircle2, Circle, Flame, Loader2, Plus, TrendingDown } from "lucide-react"
+import {
+  Activity,
+  CheckCircle2,
+  Circle,
+  Clock,
+  Flame,
+  Loader2,
+  Plus,
+  Target,
+  TrendingDown,
+} from "lucide-react"
 import { UI_HABITS_MUTATIONS_OFF, UI_HABITS_SAVE_OFF } from "@/lib/checkins/flags"
-import { lettersToWeekdays, weekdaysToLetters } from "@/lib/habits/habitMetrics"
+import { lettersToWeekdays } from "@/lib/habits/habitMetrics"
 import { useHabits } from "@/app/hooks/useHabits"
 import type { HabitWeekDayMark } from "@/lib/habits/habitMetrics"
-import type { HabitWithMetrics, OperationalDomain } from "@/lib/operational/types"
+import type {
+  HabitMetadata,
+  HabitSuccessMetricType,
+  HabitWithMetrics,
+  OperationalDomain,
+} from "@/lib/operational/types"
+import { emptyHabitModalForm, habitToModalValues, HabitFormModal } from "@/app/habitos/HabitFormModal"
 
 const days = ["L", "M", "X", "J", "V", "S", "D"]
 
@@ -16,6 +32,24 @@ const DOMAIN_LABELS: Record<OperationalDomain, string> = {
   fisico: "Energía",
   profesional: "Capital",
   agenda: "Agenda",
+}
+
+const METRIC_LABELS: Record<HabitSuccessMetricType, string> = {
+  duracion: "Duración",
+  repeticiones: "Repeticiones",
+  cantidad: "Cantidad",
+  si_no: "Sí / no",
+}
+
+function habitMetricLine(meta: HabitMetadata | undefined): string | null {
+  const type = meta?.success_metric_type ?? "duracion"
+  const target = meta?.success_metric_target?.trim()
+  if (type === "si_no") {
+    if (target) return `${METRIC_LABELS.si_no} · ${target}`
+    return "Éxito: marcar hecho en el día"
+  }
+  const base = METRIC_LABELS[type]
+  return target ? `${base} · ${target}` : base
 }
 
 function weekMarksForHabit(habit: HabitWithMetrics): HabitWeekDayMark[] {
@@ -47,17 +81,12 @@ export default function HabitosPage() {
     toggleCompleteToday,
     createHabit,
     updateHabit,
+    deleteHabit,
   } = useHabits()
 
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<HabitWithMetrics | null>(null)
-  const [form, setForm] = useState({
-    name: "",
-    domainKey: "salud" as OperationalDomain,
-    frequency: "diario" as "diario" | "semanal",
-    days: ["L", "M", "X", "J", "V"] as string[],
-    superhabit: false,
-  })
+  const [form, setForm] = useState(() => emptyHabitModalForm())
 
   const superhabitCount = useMemo(
     () => habits.filter((h) => h.metadata?.is_superhabit).length,
@@ -74,12 +103,22 @@ export default function HabitosPage() {
       return
     }
 
-    const metadata = {
+    const sessionMins = Math.max(0, Math.min(24 * 60, parseInt(form.sessionDurationMinutes, 10) || 0))
+    const metadata: HabitMetadata = {
       frequency: form.frequency,
       weekdays: lettersToWeekdays(form.days),
       display_days: form.days,
       is_superhabit: form.superhabit,
+      success_metric_type: form.successMetricType,
     }
+    const intention = form.intention.trim()
+    if (intention) metadata.intention = intention
+    const target = form.successMetricTarget.trim()
+    if (target && form.successMetricType !== "si_no") metadata.success_metric_target = target
+    if (form.successMetricType === "si_no" && target) metadata.success_metric_target = target
+    if (sessionMins > 0) metadata.estimated_session_minutes = sessionMins
+    const trigger = form.triggerOrTime.trim()
+    if (trigger) metadata.trigger_or_time = trigger
 
     if (editing) {
       const r = await updateHabit(editing.id, {
@@ -105,13 +144,7 @@ export default function HabitosPage() {
 
     setFormOpen(false)
     setEditing(null)
-    setForm({
-      name: "",
-      domainKey: "salud",
-      frequency: "diario",
-      days: ["L", "M", "X", "J", "V"],
-      superhabit: false,
-    })
+    setForm(emptyHabitModalForm())
   }
 
   const greeting = (() => {
@@ -161,13 +194,15 @@ export default function HabitosPage() {
         <p style={{ margin: 0, fontSize: "13px", color: "var(--color-text-secondary)" }}>Cargando hábitos…</p>
       )}
 
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--spacing-lg)" }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: "28px", fontWeight: 500 }}>Sistema de Hábitos</h1>
-          <p style={{ margin: "6px 0 0", fontSize: "13px", color: "var(--color-text-secondary)" }}>
+      <header className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+        <div className="min-w-0 flex-1 space-y-1.5 sm:space-y-2 sm:pr-2">
+          <h1 className="m-0 text-[1.375rem] font-medium leading-tight tracking-tight text-[var(--color-text-primary)] sm:text-[28px]">
+            Sistema de Hábitos
+          </h1>
+          <p className="m-0 max-w-prose text-[13px] leading-snug text-[var(--color-text-secondary)]">
             Consistencia, tendencias y riesgo de ruptura
           </p>
-          <p style={{ margin: "6px 0 0", fontSize: "12px", color: "var(--color-text-secondary)" }}>
+          <p className="m-0 max-w-prose text-[12px] leading-snug text-[var(--color-text-secondary)]">
             {greeting}. Tu mayor racha actual en el stack es de {summary.current_streak_max} días.
           </p>
         </div>
@@ -175,64 +210,49 @@ export default function HabitosPage() {
           type="button"
           disabled={!persistenceEnabled && !mock}
           onClick={() => {
-            setFormOpen(true)
             setEditing(null)
-            setForm({
-              name: "",
-              domainKey: "salud",
-              frequency: "diario",
-              days: ["L", "M", "X", "J", "V"],
-              superhabit: false,
-            })
+            setForm(emptyHabitModalForm())
+            setFormOpen(true)
           }}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "8px",
-            padding: "8px 14px",
-            borderRadius: "10px",
-            border: "0.5px solid var(--color-border)",
-            background: "var(--color-accent-health)",
-            color: "white",
-            fontSize: "12px",
-            fontWeight: 600,
-            textTransform: "uppercase",
-            letterSpacing: "0.12em",
-            opacity: !persistenceEnabled && !mock ? 0.5 : 1,
-            cursor: !persistenceEnabled && !mock ? "not-allowed" : "pointer",
-          }}
+          className="inline-flex h-11 w-full shrink-0 items-center justify-center gap-2 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-accent-health)] px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.12em] text-white transition-opacity sm:h-auto sm:w-auto sm:justify-center sm:self-start sm:px-3.5 sm:py-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <Plus size={14} />
-          Nuevo Hábito
+          <Plus size={14} className="shrink-0" aria-hidden />
+          Nuevo hábito
         </button>
-      </div>
+      </header>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "var(--layout-gap)" }}>
-        <Card hover>
+      <div className="grid min-w-0 grid-cols-1 gap-[var(--layout-gap)] sm:grid-cols-2 md:grid-cols-3">
+        <Card hover className="min-w-0">
           <div style={{ padding: "var(--spacing-md)", display: "grid", gap: "6px" }}>
-            <p style={{ margin: 0, fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--color-text-secondary)", display: "flex", alignItems: "center", gap: "6px" }}>
-              <Activity size={12} />
-              Consistencia 30D
+            <p className="text-[10px] sm:text-[11px]" style={{ margin: 0, textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--color-text-secondary)", display: "flex", alignItems: "center", gap: "6px" }}>
+              <Activity size={12} className="shrink-0" />
+              <span className="min-w-0 leading-snug">Consistencia 30D</span>
             </p>
-            <p style={{ margin: 0, fontSize: "28px", fontWeight: 600 }}>{summary.consistency_30d}%</p>
+            <p className="text-2xl font-semibold tabular-nums sm:text-[28px]" style={{ margin: 0 }}>
+              {summary.consistency_30d}%
+            </p>
           </div>
         </Card>
-        <Card hover>
+        <Card hover className="min-w-0">
           <div style={{ padding: "var(--spacing-md)", display: "grid", gap: "6px" }}>
-            <p style={{ margin: 0, fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--color-text-secondary)", display: "flex", alignItems: "center", gap: "6px" }}>
-              <Flame size={12} />
-              Mejor Streak
+            <p className="text-[10px] sm:text-[11px]" style={{ margin: 0, textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--color-text-secondary)", display: "flex", alignItems: "center", gap: "6px" }}>
+              <Flame size={12} className="shrink-0" />
+              <span className="min-w-0 leading-snug">Mejor Streak</span>
             </p>
-            <p style={{ margin: 0, fontSize: "28px", fontWeight: 600 }}>{summary.best_streak}</p>
+            <p className="text-2xl font-semibold tabular-nums sm:text-[28px]" style={{ margin: 0 }}>
+              {summary.best_streak}
+            </p>
           </div>
         </Card>
-        <Card hover>
+        <Card hover className="min-w-0 sm:col-span-2 md:col-span-1">
           <div style={{ padding: "var(--spacing-md)", display: "grid", gap: "6px" }}>
-            <p style={{ margin: 0, fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--color-text-secondary)", display: "flex", alignItems: "center", gap: "6px" }}>
-              <TrendingDown size={12} />
-              En riesgo hoy
+            <p className="text-[10px] sm:text-[11px]" style={{ margin: 0, textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--color-text-secondary)", display: "flex", alignItems: "center", gap: "6px" }}>
+              <TrendingDown size={12} className="shrink-0" />
+              <span className="min-w-0 leading-snug">En riesgo hoy</span>
             </p>
-            <p style={{ margin: 0, fontSize: "28px", fontWeight: 600 }}>{summary.at_risk}</p>
+            <p className="text-2xl font-semibold tabular-nums sm:text-[28px]" style={{ margin: 0 }}>
+              {summary.at_risk}
+            </p>
           </div>
         </Card>
       </div>
@@ -242,20 +262,24 @@ export default function HabitosPage() {
           Stack actual
         </p>
 
-        {habits.map((habit) => {
+        {habits.map((habit, cardIndex) => {
           const freq = habit.metadata?.frequency ?? "diario"
-          const displayDays =
-            habit.metadata?.display_days?.length ? habit.metadata.display_days : weekdaysToLetters(habit.metadata?.weekdays ?? [])
           const streakDays = habit.metrics.current_streak
           const doneToday = habit.metrics.completed_today
           const reward = habit.metadata?.is_superhabit ? rewardMessage(streakDays) : null
           const weekMarks = weekMarksForHabit(habit)
+          const intention = habit.metadata?.intention?.trim()
+          const triggerOrTime = habit.metadata?.trigger_or_time?.trim()
+          const sessionMins = habit.metadata?.estimated_session_minutes
+          const metricLine = habitMetricLine(habit.metadata)
 
           return (
             <Card
               key={habit.id}
               hover
+              className="group/habit motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1 motion-safe:fill-mode-both motion-safe:duration-500 hover:-translate-y-0.5"
               style={{
+                animationDelay: `${Math.min(cardIndex, 14) * 42}ms`,
                 background: habit.metadata?.is_superhabit ? "color-mix(in srgb, var(--color-accent-warning) 8%, var(--color-surface))" : "var(--color-surface)",
                 borderColor: habit.metrics.at_risk
                   ? "color-mix(in srgb, var(--color-accent-danger) 40%, var(--color-border))"
@@ -267,23 +291,44 @@ export default function HabitosPage() {
                 boxShadow: "0 4px 14px rgba(15, 23, 42, 0.07)",
               }}
             >
-              <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-stretch">
-                {/* Columna 1: título, badges, meta, reward */}
-                <div className="min-w-0 flex-1 space-y-2 px-4 pb-4 pt-4 sm:px-5 sm:py-5 sm:pr-4">
+              <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:gap-3 sm:px-3 sm:py-2.5">
+                {/* Texto del hábito: ancho según contenido (tope), sin flex-1 para evitar “desierto” horizontal */}
+                <div className="min-w-0 space-y-1 px-3 pt-3 sm:max-w-[min(100%,22rem)] sm:flex-none sm:px-0 sm:pt-0">
                   {habit.metadata?.is_superhabit && (
-                    <span style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.12em", padding: "2px 8px", borderRadius: "999px", background: "color-mix(in srgb, var(--color-accent-warning) 12%, transparent)", color: "var(--color-accent-warning)" }}>
-                      Superhabit
+                    <span
+                      className="inline-flex items-center gap-1"
+                      style={{
+                        fontSize: "10px",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.12em",
+                        padding: "2px 8px",
+                        borderRadius: "999px",
+                        background: "color-mix(in srgb, var(--color-accent-warning) 12%, transparent)",
+                        color: "var(--color-accent-warning)",
+                      }}
+                    >
+                      <span aria-hidden>⚡</span>
+                      Superhábito
                     </span>
                   )}
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p style={{ margin: 0, fontWeight: 600, fontSize: "15px", color: "var(--color-text-primary)" }}>{habit.name}</p>
+                  <div className="flex flex-wrap items-center gap-1.5 sm:flex-nowrap sm:items-center sm:gap-2">
+                    <p
+                      className="min-w-0 max-w-full sm:min-w-0 sm:flex-1 sm:truncate"
+                      style={{ margin: 0, fontWeight: 600, fontSize: "15px", color: "var(--color-text-primary)", lineHeight: 1.35 }}
+                      title={habit.name}
+                    >
+                      {habit.name}
+                    </p>
                     {habit.metrics.at_risk && (
-                      <span style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.12em", padding: "2px 8px", borderRadius: "999px", background: "color-mix(in srgb, var(--color-accent-danger) 12%, transparent)", color: "var(--color-accent-danger)" }}>
+                      <span
+                        className="shrink-0 motion-safe:animate-pulse"
+                        style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.12em", padding: "2px 8px", borderRadius: "999px", background: "color-mix(in srgb, var(--color-accent-danger) 12%, transparent)", color: "var(--color-accent-danger)" }}
+                      >
                         Riesgo ruptura
                       </span>
                     )}
                   </div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", fontSize: "11px", color: "var(--color-text-secondary)" }}>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", fontSize: "10px", color: "var(--color-text-secondary)" }}>
                     <span>{DOMAIN_LABELS[habit.domain] ?? habit.domain}</span>
                     <span>• {freq}</span>
                     <span>• {streakDays} días continuos</span>
@@ -293,116 +338,139 @@ export default function HabitosPage() {
                       </span>
                     )}
                   </div>
+                  {intention ? (
+                    <p
+                      className="line-clamp-1 text-[11px] leading-snug text-[var(--color-text-secondary)] transition-colors duration-200 group-hover/habit:text-[var(--color-text-primary)]"
+                      style={{ margin: 0 }}
+                    >
+                      {intention}
+                    </p>
+                  ) : null}
+                  {metricLine ? (
+                    <p className="flex items-start gap-1 text-[10px] leading-snug text-[var(--color-text-secondary)]" style={{ margin: 0 }}>
+                      <Target className="mt-0.5 h-3 w-3 shrink-0 text-[var(--color-accent-health)] opacity-80" aria-hidden />
+                      <span>{metricLine}</span>
+                    </p>
+                  ) : null}
+                  <div className="flex flex-wrap gap-1">
+                    {typeof sessionMins === "number" && sessionMins > 0 ? (
+                      <span
+                        className="inline-flex items-center gap-0.5 rounded-full border border-[color-mix(in_srgb,var(--color-border)_70%,transparent)] bg-[var(--color-surface-alt)] px-1.5 py-px text-[9px] font-medium leading-tight text-[var(--color-text-secondary)] transition-transform duration-200 group-hover/habit:scale-[1.02]"
+                        title="Duración estimada por sesión"
+                      >
+                        <Clock className="h-2.5 w-2.5 text-[var(--color-accent-health)]" aria-hidden />
+                        ~{sessionMins} min/sesión
+                      </span>
+                    ) : null}
+                    {triggerOrTime ? (
+                      <span
+                        className="inline-flex max-w-full items-center gap-0.5 rounded-full border border-[color-mix(in_srgb,var(--color-border)_70%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_5%,var(--color-surface-alt))] px-1.5 py-px text-[9px] font-medium leading-tight text-[var(--color-text-secondary)] transition-transform duration-200 group-hover/habit:scale-[1.02]"
+                        title="Disparador u hora"
+                      >
+                        <span className="truncate">{triggerOrTime}</span>
+                      </span>
+                    ) : null}
+                  </div>
                   {reward && (
-                    <p style={{ margin: 0, fontSize: "11px", color: "var(--color-accent-health)" }}>{reward}</p>
+                    <p style={{ margin: 0, fontSize: "10px", color: "var(--color-accent-health)" }}>{reward}</p>
                   )}
                 </div>
 
-                <div className="hidden w-px shrink-0 self-stretch bg-[var(--color-border)] sm:mx-3 sm:block" aria-hidden />
+                {/* Separador móvil */}
+                <div className="mx-3 h-px shrink-0 bg-[var(--color-border)] sm:hidden" aria-hidden />
 
-                {/* Separador móvil entre bloque texto y semana */}
-                <div className="mx-4 h-px shrink-0 bg-[var(--color-border)] sm:hidden" aria-hidden />
-
-                <div
-                  className="flex w-full max-w-full touch-manipulation items-stretch justify-center gap-1 px-4 pb-4 sm:w-auto sm:max-w-none sm:justify-start sm:gap-1.5 sm:px-3 sm:py-5"
-                  role="list"
-                  aria-label="Estado de la semana"
-                >
-                  {days.map((day, idx) => {
-                    const mark = weekMarks[idx]
-                    const neutralDay = mark === "off" || mark === "upcoming"
-                    const letterMuted =
-                      neutralDay
-                        ? "color-mix(in srgb, var(--color-text-secondary) 45%, transparent)"
-                        : "var(--color-text-secondary)"
-                    const letterStrong = "var(--color-text-primary)"
-
-                    return (
-                      <div
-                        key={`${habit.id}-${day}`}
-                        role="listitem"
-                        className="flex min-h-[48px] min-w-0 flex-1 max-w-[44px] flex-col items-center justify-center gap-1 rounded-xl px-0.5 py-1 sm:min-h-[52px] sm:max-w-[48px] sm:flex-none sm:px-1"
-                        style={{
-                          background: "transparent",
-                          border: "none",
-                        }}
-                      >
-                        <span
-                          className="select-none text-[10px] font-semibold leading-none sm:text-[11px]"
-                          style={{
-                            color: neutralDay ? letterMuted : displayDays.includes(day) ? letterStrong : letterMuted,
-                          }}
-                          aria-hidden
+                {/* Semana + acciones en un solo bloque a la derecha (sin hueco interior en la columna izquierda) */}
+                <div className="flex w-full flex-row items-center justify-between gap-3 px-3 pb-3 sm:ml-auto sm:w-auto sm:shrink-0 sm:justify-end sm:gap-2.5 sm:px-0 sm:pb-0">
+                  <div
+                    role="group"
+                    aria-label="Estado de la semana: letras L a D y marcas debajo"
+                    className="grid w-max shrink-0 touch-manipulation [grid-template-columns:repeat(7,22px)] gap-x-1 gap-y-0.5 sm:[grid-template-columns:repeat(7,24px)] sm:gap-x-1 sm:gap-y-1"
+                  >
+                    {days.map((day, idx) => {
+                      const mark = weekMarks[idx]
+                      const neutralDay = mark === "off" || mark === "upcoming"
+                      const isMissed = mark === "missed"
+                      const letterColor =
+                        neutralDay && !isMissed
+                          ? "color-mix(in srgb, var(--color-text-secondary) 50%, var(--color-text-primary))"
+                          : "var(--color-text-primary)"
+                      return (
+                        <div
+                          key={`${habit.id}-dlabel-${day}`}
+                          className="select-none text-center text-[10px] font-semibold uppercase tracking-wide leading-none sm:text-[11px]"
+                          style={{ color: letterColor }}
                         >
                           {day}
-                        </span>
-                        <span
-                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9"
-                          style={
-                            mark === "done"
-                              ? {
-                                  background: "var(--color-accent-health)",
-                                  boxShadow: "0 1px 2px color-mix(in srgb, var(--color-accent-health) 35%, transparent)",
-                                }
-                              : mark === "missed"
-                                ? {
-                                    background: "color-mix(in srgb, var(--color-text-secondary) 6%, transparent)",
-                                    border: "1px solid color-mix(in srgb, var(--color-border) 85%, transparent)",
-                                  }
-                                : {
-                                    background: "transparent",
-                                    border: "1px solid color-mix(in srgb, var(--color-border) 35%, transparent)",
-                                  }
-                          }
-                          aria-label={
-                            mark === "done"
-                              ? `${day}: completado`
-                              : mark === "missed"
-                                ? `${day}: pendiente`
-                                : `${day}: sin marca destacada`
-                          }
+                        </div>
+                      )
+                    })}
+                    {days.map((day, idx) => {
+                      const mark = weekMarks[idx]
+                      const isDone = mark === "done"
+                      const isMissed = mark === "missed"
+
+                      const chipBg = isDone
+                        ? "color-mix(in srgb, color-mix(in srgb, var(--color-accent-health) 16%, var(--color-surface)) 72%, transparent)"
+                        : isMissed
+                          ? "color-mix(in srgb, color-mix(in srgb, var(--color-text-secondary) 8%, var(--color-surface)) 65%, transparent)"
+                          : "color-mix(in srgb, var(--color-surface) 58%, transparent)"
+
+                      const chipBorder = isDone
+                        ? "1px solid color-mix(in srgb, var(--color-accent-health) 32%, transparent)"
+                        : "1px solid color-mix(in srgb, var(--color-border) 45%, transparent)"
+
+                      const aria =
+                        mark === "done"
+                          ? `${day}: completado`
+                          : mark === "missed"
+                            ? `${day}: pendiente`
+                            : `${day}: sin marca destacada`
+
+                      return (
+                        <div
+                          key={`${habit.id}-dcell-${day}`}
+                          className="flex h-[44px] w-full items-center justify-center rounded-[5px] transition-all duration-200 motion-safe:group-hover/habit:scale-[1.02] sm:h-[48px]"
+                          style={{
+                            background: chipBg,
+                            border: chipBorder,
+                            boxShadow: isDone ? "0 1px 0 color-mix(in srgb, var(--color-accent-health) 14%, transparent)" : "none",
+                            transitionDelay: `${idx * 14}ms`,
+                          }}
+                          aria-label={aria}
                         >
-                          {mark === "done" ? (
-                            <Check className="h-4 w-4 text-white" strokeWidth={2.75} aria-hidden />
+                          {isDone ? (
+                            <span
+                              className="motion-safe:animate-in motion-safe:zoom-in-50 motion-safe:duration-200 block h-[5px] w-[5px] shrink-0 rounded-full"
+                              style={{
+                                background: "color-mix(in srgb, var(--color-accent-health) 88%, #14532d)",
+                                boxShadow: "0 0 0 1px color-mix(in srgb, var(--color-accent-health) 25%, transparent)",
+                              }}
+                            />
+                          ) : isMissed ? (
+                            <span className="block h-[5px] w-[5px] shrink-0 rounded-full border border-[color-mix(in_srgb,var(--color-text-secondary)_40%,transparent)] bg-transparent" />
                           ) : null}
-                        </span>
-                      </div>
-                    )
-                  })}
-                </div>
+                        </div>
+                      )
+                    })}
+                  </div>
 
-                {/* Separador móvil entre semana y acciones */}
-                <div className="mx-4 h-px shrink-0 bg-[var(--color-border)] sm:hidden" aria-hidden />
+                  <div className="hidden h-[52px] w-px shrink-0 bg-[var(--color-border)] sm:block" aria-hidden />
 
-                <div
-                  className="hidden shrink-0 self-stretch sm:block"
-                  aria-hidden
-                  style={{ width: "1px", background: "var(--color-border)", margin: "0 0 0 12px" }}
-                />
-
-                {/* Columna 3: hecho hoy + editar (siempre visibles, icono a la derecha como referencia) */}
-                <div className="flex flex-row items-center justify-end gap-3 px-4 pb-4 sm:w-auto sm:flex-col sm:items-stretch sm:justify-between sm:gap-3 sm:px-4 sm:py-5 sm:pl-2 sm:pr-5">
-                  <button
+                  <div className="flex shrink-0 flex-row items-center gap-2 sm:flex-col sm:items-stretch sm:justify-center sm:gap-1.5">
+                    <button
                     type="button"
                     disabled={!persistenceEnabled && !mock}
                     onClick={() => {
                       setEditing(habit)
-                      setForm({
-                        name: habit.name,
-                        domainKey: habit.domain,
-                        frequency: habit.metadata?.frequency ?? "diario",
-                        days:
-                          habit.metadata?.display_days?.length ? [...habit.metadata.display_days] : weekdaysToLetters(habit.metadata?.weekdays ?? []),
-                        superhabit: Boolean(habit.metadata?.is_superhabit),
-                      })
+                      setForm(habitToModalValues(habit))
                       setFormOpen(true)
                     }}
-                    className="min-h-[40px] min-w-[56px] rounded-lg text-xs font-medium sm:min-h-0 sm:w-full sm:py-1"
+                    className="min-h-[36px] min-w-[52px] rounded-md text-xs font-medium sm:min-h-0 sm:w-full sm:py-0.5 sm:text-left"
                     style={{ border: "none", background: "transparent", color: "var(--color-text-secondary)", fontSize: "11px" }}
                   >
                     Editar
-                  </button>
-                  <button
+                    </button>
+                    <button
                     type="button"
                     disabled={(!persistenceEnabled && !mock) || loading || togglingId === habit.id}
                     aria-label={doneToday ? "Deshacer completado de hoy" : "Marcar hecho hoy"}
@@ -411,10 +479,10 @@ export default function HabitosPage() {
                       const r = await toggleCompleteToday(habit.id)
                       if (!r.ok) alert(r.error || "No se pudo actualizar")
                     }}
-                    className="h-[52px] w-[52px] shrink-0 self-stretch transition-[transform,opacity] active:scale-[0.98] sm:h-14 sm:w-14 sm:min-h-[56px] sm:min-w-[56px] sm:flex-1"
+                    className="h-10 w-10 shrink-0 transition-[transform,opacity,box-shadow] duration-200 active:scale-[0.97] motion-safe:hover:scale-[1.02]"
                     style={{
                       border: "0.5px solid var(--color-border)",
-                      borderRadius: "14px",
+                      borderRadius: "8px",
                       background: doneToday
                         ? "color-mix(in srgb, var(--color-accent-health) 11%, var(--color-surface))"
                         : "color-mix(in srgb, var(--color-text-secondary) 5%, var(--color-surface))",
@@ -426,13 +494,14 @@ export default function HabitosPage() {
                     }}
                   >
                     {togglingId === habit.id ? (
-                      <Loader2 className="h-7 w-7 animate-spin text-[var(--color-accent-health)]" strokeWidth={2} aria-hidden />
+                      <Loader2 className="h-[18px] w-[18px] animate-spin text-[var(--color-accent-health)]" strokeWidth={2} aria-hidden />
                     ) : doneToday ? (
-                      <CheckCircle2 className="h-7 w-7 text-[var(--color-accent-health)]" strokeWidth={1.75} aria-hidden />
+                      <CheckCircle2 className="h-[18px] w-[18px] text-[var(--color-accent-health)]" strokeWidth={1.75} aria-hidden />
                     ) : (
-                      <Circle className="h-7 w-7 text-[var(--color-text-secondary)]" strokeWidth={1.75} aria-hidden />
+                      <Circle className="h-[18px] w-[18px] text-[var(--color-text-secondary)]" strokeWidth={1.75} aria-hidden />
                     )}
-                  </button>
+                    </button>
+                  </div>
                 </div>
               </div>
             </Card>
@@ -440,122 +509,22 @@ export default function HabitosPage() {
         })}
       </div>
 
-      {formOpen && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(15, 23, 42, 0.35)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 50,
-          }}
-        >
-          <Card className="p-6" hover>
-            <form onSubmit={handleSubmit} style={{ display: "grid", gap: "12px", minWidth: "420px" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div>
-                  <p style={{ margin: 0, fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--color-text-secondary)" }}>
-                    {editing ? "Editar hábito" : "Nuevo hábito"}
-                  </p>
-                  <p style={{ margin: "4px 0 0", fontSize: "14px", fontWeight: 600 }}>
-                    Configuración y frecuencia
-                  </p>
-                </div>
-                <button type="button" onClick={() => setFormOpen(false)} style={{ border: "none", background: "transparent", color: "var(--color-text-secondary)", fontSize: "12px" }}>
-                  Cerrar
-                </button>
-              </div>
-
-              <input
-                placeholder="Nombre del hábito"
-                value={form.name}
-                onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-                style={{ padding: "10px 12px", borderRadius: "10px", border: "0.5px solid var(--color-border)" }}
-              />
-              <select
-                value={form.domainKey}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, domainKey: event.target.value as OperationalDomain }))
-                }
-                style={{ padding: "10px 12px", borderRadius: "10px", border: "0.5px solid var(--color-border)" }}
-              >
-                {(Object.keys(DOMAIN_LABELS) as OperationalDomain[]).map((key) => (
-                  <option key={key} value={key}>
-                    {DOMAIN_LABELS[key]}
-                  </option>
-                ))}
-              </select>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "10px" }}>
-                <select
-                  value={form.frequency}
-                  onChange={(event) => setForm((prev) => ({ ...prev, frequency: event.target.value as "diario" | "semanal" }))}
-                  style={{ padding: "10px 12px", borderRadius: "10px", border: "0.5px solid var(--color-border)" }}
-                >
-                  <option value="diario">Diario</option>
-                  <option value="semanal">Semanal</option>
-                </select>
-                <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12px" }}>
-                  <input
-                    type="checkbox"
-                    checked={form.superhabit}
-                    onChange={(event) => setForm((prev) => ({ ...prev, superhabit: event.target.checked }))}
-                    disabled={!editing && superhabitCount >= 2 && !form.superhabit}
-                  />
-                  Superhabit (máx 2)
-                </label>
-              </div>
-              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                {days.map((day) => (
-                  <button
-                    type="button"
-                    key={day}
-                    onClick={() =>
-                      setForm((prev) => ({
-                        ...prev,
-                        days: prev.days.includes(day)
-                          ? prev.days.filter((d) => d !== day)
-                          : [...prev.days, day],
-                      }))
-                    }
-                    style={{
-                      padding: "6px 10px",
-                      borderRadius: "999px",
-                      border: "0.5px solid var(--color-border)",
-                      background: form.days.includes(day) ? "var(--color-surface)" : "var(--color-surface-alt)",
-                      fontSize: "11px",
-                    }}
-                  >
-                    {day}
-                  </button>
-                ))}
-              </div>
-              <button
-                type="submit"
-                disabled={!persistenceEnabled && !mock}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  padding: "10px 14px",
-                  borderRadius: "10px",
-                  border: "0.5px solid var(--color-border)",
-                  background: "var(--color-accent-health)",
-                  color: "white",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.12em",
-                  opacity: !persistenceEnabled && !mock ? 0.5 : 1,
-                }}
-              >
-                {editing ? "Guardar cambios" : "Crear hábito"}
-              </button>
-            </form>
-          </Card>
-        </div>
-      )}
+      <HabitFormModal
+        open={formOpen}
+        onOpenChange={(open) => {
+          setFormOpen(open)
+          if (!open) setEditing(null)
+        }}
+        editing={editing}
+        form={form}
+        setForm={setForm}
+        onSubmit={handleSubmit}
+        onDeleteHabit={deleteHabit}
+        superhabitCount={superhabitCount}
+        persistenceEnabled={persistenceEnabled}
+        mock={mock}
+        domainLabels={DOMAIN_LABELS}
+      />
     </div>
   )
 }

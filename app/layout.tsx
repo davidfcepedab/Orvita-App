@@ -16,7 +16,9 @@ export default function RootLayout({
           <Providers>
             <AppShell showSidebar={false}>
               {/* ← V3 RECONSTRUIDO: fiel a captura + navegación preservada */}
-              <div className="pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))]">{children}</div>
+              <div className="min-w-0 max-w-full w-full pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))]">
+                {children}
+              </div>
             </AppShell>
             <BottomNav />
           </Providers>

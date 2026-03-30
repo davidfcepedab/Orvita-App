@@ -57,7 +57,7 @@ export default function FinanzasInsights() {
 
   if (!finance) {
     return (
-      <div className="p-6 text-center text-gray-500">
+      <div className="p-6 text-center text-orbita-secondary">
         <p>Inicializando...</p>
       </div>
     )
@@ -107,7 +107,7 @@ export default function FinanzasInsights() {
 
   if (loading) {
     return (
-      <div className="p-6 text-center text-gray-500">
+      <div className="p-6 text-center text-orbita-secondary">
         <p>Cargando insights...</p>
       </div>
     )
@@ -115,18 +115,25 @@ export default function FinanzasInsights() {
 
   if (error) {
     return (
-      <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+      <div
+        className="rounded-[var(--radius-card)] border p-4"
+        style={{
+          background: "color-mix(in srgb, var(--color-accent-danger) 10%, var(--color-surface))",
+          borderColor: "color-mix(in srgb, var(--color-accent-danger) 32%, var(--color-border))",
+          color: "var(--color-accent-danger)",
+        }}
+      >
         <p className="font-semibold">Error al cargar insights</p>
-        <p className="text-sm mt-1">{error}</p>
+        <p className="mt-1 text-sm opacity-90">{error}</p>
       </div>
     )
   }
 
   if (!data) {
     return (
-      <div className="space-y-2 p-6 text-center text-gray-500">
+      <div className="space-y-2 p-6 text-center text-orbita-secondary">
         <p>Sin insights disponibles para este período.</p>
-        {notice && <p className="text-xs text-slate-500">{notice}</p>}
+        {notice && <p className="text-xs text-orbita-secondary">{notice}</p>}
       </div>
     )
   }
@@ -146,12 +153,12 @@ export default function FinanzasInsights() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="min-w-0 space-y-6 sm:space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Insights</p>
-          <p className="text-lg font-semibold text-slate-900">Lectura estratégica</p>
-          <p className="mt-1 text-sm text-slate-500">
+        <div className="min-w-0 flex-1">
+          <p className="text-xs uppercase tracking-[0.18em] text-orbita-secondary">Insights</p>
+          <p className="text-lg font-semibold text-orbita-primary">Lectura estratégica</p>
+          <p className="mt-1 text-sm text-orbita-secondary">
             Señales de estabilidad, riesgo operativo y proyección táctica.
           </p>
         </div>
@@ -162,16 +169,16 @@ export default function FinanzasInsights() {
         )}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1.15fr_1fr]">
-        <div className="grid gap-6">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-[1.15fr_1fr]">
+        <div className="grid gap-4 sm:gap-6">
           {score !== undefined && (
-            <Card hover className="p-8">
+            <Card hover className="p-4 sm:p-8">
               <div className="grid gap-3 text-center">
-                <p className="text-xs uppercase tracking-[0.14em] text-slate-500">
+                <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">
                   Score financiero
                 </p>
                 <p
-                  className={`text-5xl font-semibold ${
+                  className={`text-4xl font-semibold sm:text-5xl ${
                     score >= 70
                       ? "text-emerald-600"
                       : score >= 40
@@ -181,19 +188,19 @@ export default function FinanzasInsights() {
                 >
                   {score}
                 </p>
-                <p className="text-xs text-slate-500">sobre 100</p>
+                <p className="text-xs text-orbita-secondary">sobre 100</p>
               </div>
             </Card>
           )}
 
-          <Card hover className="p-8">
+          <Card hover className="p-4 sm:p-8">
             <div className="grid gap-4">
-              <p className="text-xs uppercase tracking-[0.14em] text-slate-500">
+              <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">
                 Índice de estabilidad
               </p>
               {stability ? (
                 <>
-                  <div className="flex items-end justify-between">
+                  <div className="flex flex-wrap items-end justify-between gap-2">
                     <p
                       className={`text-3xl font-semibold ${
                         stability.status === "green"
@@ -215,38 +222,38 @@ export default function FinanzasInsights() {
                         : "riesgo"}
                     </span>
                   </div>
-                  <div className="grid gap-2 text-xs text-slate-500">
+                  <div className="grid gap-2 text-xs text-orbita-secondary">
                     <div className="flex items-center justify-between">
                       <span>Operativo</span>
-                      <span className="font-semibold text-slate-700">{stability.scoreOperativo}</span>
+                      <span className="font-semibold text-orbita-primary">{stability.scoreOperativo}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span>Liquidez</span>
-                      <span className="font-semibold text-slate-700">{stability.scoreLiquidez}</span>
+                      <span className="font-semibold text-orbita-primary">{stability.scoreLiquidez}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span>Riesgo</span>
-                      <span className="font-semibold text-slate-700">{stability.scoreRiesgo}</span>
+                      <span className="font-semibold text-orbita-primary">{stability.scoreRiesgo}</span>
                     </div>
                   </div>
                 </>
               ) : (
-                <p className="text-sm text-slate-500">Sin datos</p>
+                <p className="text-sm text-orbita-secondary">Sin datos</p>
               )}
             </div>
           </Card>
         </div>
 
-        <div className="grid gap-6">
+        <div className="grid gap-4 sm:gap-6">
           {insight && (
-            <Card hover className="p-8">
+            <Card hover className="p-4 sm:p-8">
               <div className="grid gap-3">
-                <p className="text-xs uppercase tracking-[0.14em] text-slate-500">
+                <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">
                   Insight principal
                 </p>
-                <p className="text-sm font-medium text-slate-800">{insight.message}</p>
+                <p className="break-words text-sm font-medium text-orbita-primary">{insight.message}</p>
                 {insight.all && insight.all.length > 1 && (
-                  <ul className="mt-2 space-y-1 text-xs text-slate-500">
+                  <ul className="mt-2 space-y-1 text-xs text-orbita-secondary">
                     {insight.all.slice(1).map((msg, i) => (
                       <li key={i}>• {msg}</li>
                     ))}
@@ -266,19 +273,19 @@ export default function FinanzasInsights() {
           )}
 
           {prediction?.projection && (
-            <Card hover className="p-8">
+            <Card hover className="p-4 sm:p-8">
               <div className="grid gap-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs uppercase tracking-[0.14em] text-slate-500">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">
                     Proyección 3 meses
                   </p>
-                  <span className="text-xs text-slate-400">Escenario base</span>
+                  <span className="text-xs text-orbita-secondary">Escenario base</span>
                 </div>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
                   {prediction.projection.slice(0, 3).map((p, i) => (
-                    <div key={i} className="rounded-xl bg-slate-50 px-3 py-3 text-center">
-                      <p className="text-xs text-slate-500">{p.month}</p>
-                      <p className="mt-2 text-sm font-semibold text-slate-900">
+                    <div key={i} className="rounded-xl bg-orbita-surface-alt px-3 py-3 text-center">
+                      <p className="text-xs text-orbita-secondary">{p.month}</p>
+                      <p className="mt-2 break-all text-sm font-semibold text-orbita-primary sm:break-normal">
                         ${p.projectedBalance.toLocaleString("es-CO", {
                           maximumFractionDigits: 0,
                         })}
@@ -292,21 +299,21 @@ export default function FinanzasInsights() {
         </div>
       </div>
 
-      <Card className="p-8">
+      <Card className="p-4 sm:p-8">
         <div className="grid gap-3">
-          <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Lectura ejecutiva</p>
-          <p className="text-sm text-slate-600">
+          <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Lectura ejecutiva</p>
+          <p className="text-sm text-orbita-secondary">
             {insight?.message ??
               "Resumen basado en los últimos 6 meses de transacciones del hogar (proyección lineal simple)."}
           </p>
-          <div className="flex flex-wrap gap-2 text-[11px] text-slate-500">
-            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1">
+          <div className="flex flex-wrap gap-2 text-[11px] text-orbita-secondary">
+            <span className="rounded-full border border-orbita-border bg-orbita-surface-alt px-3 py-1">
               Estabilidad: {stability?.status ?? "—"}
             </span>
-            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1">
+            <span className="rounded-full border border-orbita-border bg-orbita-surface-alt px-3 py-1">
               Score {score ?? "—"}
             </span>
-            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1">
+            <span className="rounded-full border border-orbita-border bg-orbita-surface-alt px-3 py-1">
               Proyección 3m activa
             </span>
           </div>

@@ -9,4 +9,4 @@ export function formatShortMillions(value: number) {
 }
 
 export const arcticPanel =
-  "rounded-[20px] border-[0.5px] border-slate-200/90 bg-white shadow-[0_18px_48px_-24px_rgba(15,23,42,0.18)]"
+  "rounded-[var(--radius-card)] border-[0.5px] border-orbita-border/90 bg-orbita-surface shadow-card"

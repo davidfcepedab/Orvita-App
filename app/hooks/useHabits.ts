@@ -257,6 +257,40 @@ export function useHabits() {
     [mock, persistenceEnabled, refresh]
   )
 
+  const deleteHabit = useCallback(
+    async (id: string) => {
+      if (mock) {
+        setHabits((prev) => {
+          const next = prev.filter((h) => h.id !== id)
+          delete mockCompletionDatesRef.current[id]
+          setSummary(aggregateHabitsSummary(next.map((h) => h.metrics)))
+          return next
+        })
+        return { ok: true as const }
+      }
+      if (!persistenceEnabled) {
+        return { ok: false as const, error: UI_HABITS_SAVE_OFF }
+      }
+      try {
+        const headers = await buildJsonHeaders()
+        const res = await fetch("/api/habits", {
+          method: "DELETE",
+          headers,
+          body: JSON.stringify({ id }),
+        })
+        const json = (await res.json()) as { success?: boolean; error?: string }
+        if (!res.ok || !json.success) {
+          return { ok: false as const, error: messageForHttpError(res.status, json.error, res.statusText) }
+        }
+        await refresh()
+        return { ok: true as const }
+      } catch {
+        return { ok: false as const, error: "Error de red" }
+      }
+    },
+    [mock, persistenceEnabled, refresh]
+  )
+
   const updateHabit = useCallback(
     async (
       id: string,
@@ -319,6 +353,7 @@ export function useHabits() {
       toggleCompleteToday,
       createHabit,
       updateHabit,
+      deleteHabit,
     }),
     [
       habits,
@@ -332,6 +367,7 @@ export function useHabits() {
       toggleCompleteToday,
       createHabit,
       updateHabit,
+      deleteHabit,
     ]
   )
 

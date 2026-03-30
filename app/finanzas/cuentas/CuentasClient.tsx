@@ -115,10 +115,10 @@ function StatKpiCard({
 }) {
   return (
     <Card className={`relative overflow-hidden p-6 sm:p-8 ${arcticPanel}`}>
-      <div className="absolute right-4 top-4 text-slate-300">{icon}</div>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{title}</p>
-      <p className="mt-3 text-2xl font-semibold tracking-tight text-slate-900 sm:text-[26px]">{value}</p>
-      <div className="mt-2 text-sm text-slate-500">{sub}</div>
+      <div className="absolute right-4 top-4 text-orbita-secondary">{icon}</div>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-orbita-secondary">{title}</p>
+      <p className="mt-3 text-2xl font-semibold tracking-tight text-orbita-primary sm:text-[26px]">{value}</p>
+      <div className="mt-2 text-sm text-orbita-secondary">{sub}</div>
       {warning ? (
         <div className="absolute bottom-4 right-4 rounded-full bg-orange-100 p-1.5 text-orange-600">
           <TrendingDown className="h-4 w-4" aria-hidden />
@@ -139,13 +139,13 @@ function SavingsPlank({ item, onEdit }: { item: CuentasSavingsCard; onEdit?: () 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-teal-600/80">{item.institution}</p>
-          <h3 className="mt-1 text-lg font-semibold text-slate-900">{item.label}</h3>
+          <h3 className="mt-1 text-lg font-semibold text-orbita-primary">{item.label}</h3>
         </div>
         <span className="inline-flex items-center gap-1 rounded-full border-[0.5px] border-emerald-200/80 bg-emerald-50/90 px-3 py-1 text-xs font-semibold text-emerald-700">
           {item.healthPct}% {item.trendUp ? <ArrowUpRight className="h-3.5 w-3.5" aria-hidden /> : null}
         </span>
       </div>
-      <p className="mt-6 text-3xl font-semibold tracking-tight text-slate-900">${formatMoney(item.amount)}</p>
+      <p className="mt-6 text-3xl font-semibold tracking-tight text-orbita-primary">${formatMoney(item.amount)}</p>
       {onEdit ? (
         <button
           type="button"
@@ -259,8 +259,8 @@ function LoanStructuralCard({
             <Icon className="h-5 w-5" aria-hidden />
           </div>
           <div>
-            <h3 className="text-base font-semibold text-slate-900">{loan.title}</h3>
-            <p className="text-xs text-slate-500">Crédito estructural</p>
+            <h3 className="text-base font-semibold text-orbita-primary">{loan.title}</h3>
+            <p className="text-xs text-orbita-secondary">Crédito estructural</p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -268,7 +268,7 @@ function LoanStructuralCard({
             <button
               type="button"
               onClick={onEdit}
-              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
+              className="rounded-full border border-orbita-border bg-orbita-surface px-3 py-1 text-[11px] font-semibold text-orbita-primary hover:bg-orbita-surface-alt"
             >
               Editar
             </button>
@@ -278,7 +278,7 @@ function LoanStructuralCard({
           </span>
         </div>
       </div>
-      <div className="mt-5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+      <div className="mt-5 h-1.5 w-full overflow-hidden rounded-full bg-orbita-surface-alt">
         <div
           className="h-full rounded-full bg-gradient-to-r from-violet-500 to-indigo-500"
           style={{ width: `${Math.min(100, loan.pctPagado)}%` }}
@@ -291,19 +291,19 @@ function LoanStructuralCard({
           { label: "Próximo pago", value: loan.proximoPagoLabel },
         ].map((c) => (
           <div key={c.label}>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">{c.label}</p>
-            <p className="mt-1 text-sm font-semibold text-slate-900">{c.value}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-orbita-secondary">{c.label}</p>
+            <p className="mt-1 text-sm font-semibold text-orbita-primary">{c.value}</p>
           </div>
         ))}
       </div>
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-4 text-xs text-slate-500">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-2 border-t border-orbita-border pt-4 text-xs text-orbita-secondary">
         <span>Monto original ${formatMoney(loan.montoOriginal)}</span>
         <span className="rounded-full bg-violet-100/80 px-2.5 py-1 font-semibold text-violet-800">
           ${formatShortMillions(loan.abonadoMonto)} abonados
         </span>
       </div>
       {onPayDate || onPlan ? (
-        <div className="mt-4 flex flex-wrap gap-3 border-t border-slate-100 pt-4 text-[11px] font-semibold text-violet-800">
+        <div className="mt-4 flex flex-wrap gap-3 border-t border-orbita-border pt-4 text-[11px] font-semibold text-violet-800">
           {onPayDate ? (
             <button type="button" onClick={onPayDate} className="hover:underline">
               Fecha de pago
@@ -901,14 +901,14 @@ export default function CuentasClient() {
 
   if (!finance) {
     return (
-      <div className="p-6 text-center text-slate-500">
+      <div className="p-6 text-center text-orbita-secondary">
         <p>Inicializando...</p>
       </div>
     )
   }
 
   if (loading) {
-    return <div className="p-6 text-center text-slate-500">Cargando cuentas…</div>
+    return <div className="p-6 text-center text-orbita-secondary">Cargando cuentas…</div>
   }
 
   if (loadError) {
@@ -921,14 +921,14 @@ export default function CuentasClient() {
   }
 
   return (
-    <div className="space-y-10 pb-10">
+    <div className="min-w-0 space-y-8 pb-10 sm:space-y-10">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-[28px]">Cuentas</h1>
-          <p className="mt-1 text-sm text-slate-500 sm:text-[15px]">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl font-bold tracking-tight text-orbita-primary sm:text-[28px]">Cuentas</h1>
+          <p className="mt-1 text-sm text-orbita-secondary sm:text-[15px]">
             Liquidez, exposición y disponibilidad por cuenta
           </p>
-          <p className="mt-2 text-xs text-slate-400">
+          <p className="mt-2 text-xs text-orbita-secondary">
             Periodo {month}
             {notice ? ` · ${notice}` : ""}
           </p>
@@ -945,9 +945,9 @@ export default function CuentasClient() {
       </div>
 
       {layoutEdit ? (
-        <Card className={`p-4 text-sm text-slate-600 ${arcticPanel}`}>
-          <p className="font-medium text-slate-800">Vista técnica (consolidado legacy)</p>
-          <p className="mt-1 text-xs text-slate-500">
+        <Card className={`p-4 text-sm text-orbita-secondary ${arcticPanel}`}>
+          <p className="font-medium text-orbita-primary">Vista técnica (consolidado legacy)</p>
+          <p className="mt-1 text-xs text-orbita-secondary">
             {accountsLegacy.length} filas derivadas de snapshot + movimientos. La cuadrícula principal sigue el diseño
             Capital.
           </p>
@@ -962,12 +962,12 @@ export default function CuentasClient() {
       ) : null}
 
       {!kpis ? (
-        <div className={`rounded-[20px] p-8 text-center text-sm text-slate-500 ${arcticPanel}`}>
+        <div className={`rounded-[20px] p-4 text-center text-sm text-orbita-secondary sm:p-8 ${arcticPanel}`}>
           Sin panel de cuentas (activa Supabase o modo mock para datos).
         </div>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <StatKpiCard
               title="Total liquidez"
               value={`$${formatMoney(kpis.totalLiquidez)}`}
@@ -1005,7 +1005,7 @@ export default function CuentasClient() {
 
           <section className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-400">Cuentas de ahorro</h2>
+              <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-orbita-secondary">Cuentas de ahorro</h2>
               <button
                 type="button"
                 onClick={openAddSavings}
@@ -1024,7 +1024,7 @@ export default function CuentasClient() {
 
           <section className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-400">Tarjetas de crédito</h2>
+              <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-orbita-secondary">Tarjetas de crédito</h2>
               <button
                 type="button"
                 onClick={openAddCredit}
@@ -1067,7 +1067,7 @@ export default function CuentasClient() {
 
           <section className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-400">Créditos estructurales</h2>
+              <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-orbita-secondary">Créditos estructurales</h2>
               <button
                 type="button"
                 onClick={openAddLoan}
@@ -1098,18 +1098,18 @@ export default function CuentasClient() {
         title="Movimientos del mes"
         subtitle={activeCard ? `${activeCard.network} ${activeCard.bankLabel} ···· ${activeCard.last4}` : undefined}
       >
-        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
           {[
             { label: "Gastos", value: `$${formatMoney(movementSummary.gastos)}`, tone: "text-rose-600" },
             { label: "Ingresos", value: `$${formatMoney(movementSummary.ingresos)}`, tone: "text-emerald-600" },
-            { label: "Transacciones", value: String(movementSummary.n), tone: "text-slate-900" },
+            { label: "Transacciones", value: String(movementSummary.n), tone: "text-orbita-primary" },
           ].map((b) => (
             <div
               key={b.label}
-              className="rounded-xl border-[0.5px] border-slate-200/90 bg-slate-50/80 p-3 text-center shadow-sm"
+              className="rounded-xl border-[0.5px] border-orbita-border/90 bg-orbita-surface-alt/80 p-3 text-center shadow-sm"
             >
-              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">{b.label}</p>
-              <p className={`mt-1 text-lg font-semibold ${b.tone}`}>{b.value}</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">{b.label}</p>
+              <p className={`mt-1 break-all text-base font-semibold sm:text-lg ${b.tone}`}>{b.value}</p>
             </div>
           ))}
         </div>
@@ -1119,8 +1119,8 @@ export default function CuentasClient() {
             onClick={() => setCategoryFilter("todas")}
             className={`rounded-full px-3 py-1.5 text-xs font-medium ${
               categoryFilter === "todas"
-                ? "bg-slate-900 text-white"
-                : "border border-slate-200 bg-white text-slate-600"
+                ? "bg-[var(--color-text-primary)] text-[var(--color-surface)]"
+                : "border border-orbita-border bg-orbita-surface text-orbita-secondary"
             }`}
           >
             Todas
@@ -1131,7 +1131,7 @@ export default function CuentasClient() {
               type="button"
               onClick={() => setCategoryFilter(c)}
               className={`rounded-full px-3 py-1.5 text-xs font-medium ${
-                categoryFilter === c ? "bg-slate-900 text-white" : "border border-slate-200 bg-white text-slate-600"
+                categoryFilter === c ? "bg-[var(--color-text-primary)] text-[var(--color-surface)]" : "border border-orbita-border bg-orbita-surface text-orbita-secondary"
               }`}
             >
               {c}
@@ -1145,16 +1145,16 @@ export default function CuentasClient() {
             </p>
           ) : null}
           {txLoading ? (
-            <p className="text-center text-sm text-slate-500">Cargando…</p>
+            <p className="text-center text-sm text-orbita-secondary">Cargando…</p>
           ) : !txLoadError && filteredTx.length === 0 ? (
-            <p className="text-center text-sm text-slate-500">No hay movimientos para este filtro.</p>
+            <p className="text-center text-sm text-orbita-secondary">No hay movimientos para este filtro.</p>
           ) : !txLoadError ? (
             filteredTx.map((r, i) => {
               const income = r.monto > 0
               return (
                 <div
                   key={`${r.fecha}-${i}`}
-                  className="flex items-center gap-3 rounded-xl border-[0.5px] border-slate-100 bg-slate-50/90 p-3"
+                  className="flex items-center gap-3 rounded-xl border-[0.5px] border-orbita-border bg-orbita-surface-alt/90 p-3"
                 >
                   <div
                     className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg text-sm font-semibold ${
@@ -1164,13 +1164,13 @@ export default function CuentasClient() {
                     {categoryIcon(r.categoria, r.monto)}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold text-slate-900">{r.descripcion}</p>
-                    <p className="text-xs text-slate-500">
+                    <p className="truncate font-semibold text-orbita-primary">{r.descripcion}</p>
+                    <p className="text-xs text-orbita-secondary">
                       {r.categoria} · {r.fecha.slice(5).replace("-", " ")}
                     </p>
                   </div>
                   <div
-                    className={`flex-shrink-0 text-sm font-semibold ${income ? "text-emerald-600" : "text-slate-800"}`}
+                    className={`flex-shrink-0 text-sm font-semibold ${income ? "text-emerald-600" : "text-orbita-primary"}`}
                   >
                     {income ? "+" : ""}${formatMoney(Math.abs(r.monto))}
                   </div>
@@ -1194,35 +1194,35 @@ export default function CuentasClient() {
         }
         headerTint="linear-gradient(180deg, rgba(254,226,226,0.35) 0%, rgba(255,255,255,0) 100%)"
       >
-        <p className="text-sm text-slate-700">Selecciona el día del mes para tu pago</p>
-        <div className="mt-4 grid grid-cols-7 gap-2">
+        <p className="text-sm text-orbita-primary">Selecciona el día del mes para tu pago</p>
+        <div className="mt-4 grid grid-cols-4 gap-1.5 sm:grid-cols-7 sm:gap-2">
           {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
             <button
               key={d}
               type="button"
               onClick={() => setPayDay(d)}
-              className={`aspect-square rounded-lg text-sm font-semibold transition ${
+              className={`aspect-square min-h-[40px] rounded-lg text-xs font-semibold transition sm:min-h-0 sm:text-sm ${
                 payDay === d
                   ? "bg-[#DE5E52] text-white shadow-md"
-                  : "border border-slate-200/80 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                  : "border border-orbita-border/80 bg-orbita-surface-alt text-orbita-primary hover:bg-orbita-surface-alt"
               }`}
             >
               {d}
             </button>
           ))}
         </div>
-        <div className="mt-5 flex items-start gap-3 rounded-xl border-[0.5px] border-slate-200 bg-slate-50/90 p-4">
+        <div className="mt-5 flex items-start gap-3 rounded-xl border-[0.5px] border-orbita-border bg-orbita-surface-alt/90 p-4">
           <CalendarDays className="mt-0.5 h-5 w-5 text-rose-500" aria-hidden />
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Nueva fecha de pago</p>
-            <p className="mt-1 text-base font-semibold text-slate-900">Cada {payDay} del mes</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">Nueva fecha de pago</p>
+            <p className="mt-1 text-base font-semibold text-orbita-primary">Cada {payDay} del mes</p>
           </div>
         </div>
         <div className="mt-6 grid grid-cols-2 gap-3">
           <button
             type="button"
             onClick={closeModals}
-            className="rounded-xl border border-slate-200 bg-slate-100 py-3 text-sm font-semibold text-slate-700"
+            className="rounded-xl border border-orbita-border bg-orbita-surface-alt py-3 text-sm font-semibold text-orbita-primary"
           >
             Cancelar
           </button>
@@ -1251,40 +1251,40 @@ export default function CuentasClient() {
       >
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Parámetros del crédito</p>
-            <label className="block text-sm font-medium text-slate-700">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-orbita-secondary">Parámetros del crédito</p>
+            <label className="block text-sm font-medium text-orbita-primary">
               <span className="flex items-center gap-2">
-                <Wallet className="h-4 w-4 text-slate-400" aria-hidden />
+                <Wallet className="h-4 w-4 text-orbita-secondary" aria-hidden />
                 Monto a financiar
               </span>
               <input
                 type="number"
-                className="mt-2 w-full rounded-xl border-[0.5px] border-slate-200 bg-white px-4 py-3 text-lg font-semibold text-slate-900"
+                className="mt-2 w-full rounded-xl border-[0.5px] border-orbita-border bg-orbita-surface px-4 py-3 text-lg font-semibold text-orbita-primary"
                 value={planAmount}
                 min={0}
                 onChange={(e) => setPlanAmount(Number(e.target.value))}
               />
-              <span className="mt-1 block text-xs text-slate-500">
+              <span className="mt-1 block text-xs text-orbita-secondary">
                 Saldo / capital: $
                 {formatMoney(activeCard?.balance ?? activeLoan?.saldoPendiente ?? 0)}
               </span>
             </label>
-            <label className="block text-sm font-medium text-slate-700">
+            <label className="block text-sm font-medium text-orbita-primary">
               <span className="flex items-center gap-2">
-                <Percent className="h-4 w-4 text-slate-400" aria-hidden />
+                <Percent className="h-4 w-4 text-orbita-secondary" aria-hidden />
                 % Tasa de interés mensual
               </span>
               <input
                 type="number"
                 step="0.1"
-                className="mt-2 w-full rounded-xl border-[0.5px] border-slate-200 px-4 py-2.5 text-slate-900"
+                className="mt-2 w-full rounded-xl border-[0.5px] border-orbita-border px-4 py-2.5 text-orbita-primary"
                 value={planRate}
                 onChange={(e) => setPlanRate(Number(e.target.value))}
               />
             </label>
             <div>
-              <span className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                <CalendarDays className="h-4 w-4 text-slate-400" aria-hidden />
+              <span className="flex items-center gap-2 text-sm font-medium text-orbita-primary">
+                <CalendarDays className="h-4 w-4 text-orbita-secondary" aria-hidden />
                 Número de cuotas
               </span>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -1294,7 +1294,7 @@ export default function CuentasClient() {
                     type="button"
                     onClick={() => setPlanN(n)}
                     className={`rounded-lg px-4 py-2 text-sm font-semibold ${
-                      planN === n ? "bg-[#E54D42] text-white" : "border border-slate-200 bg-slate-50 text-slate-700"
+                      planN === n ? "bg-[#E54D42] text-white" : "border border-orbita-border bg-orbita-surface-alt text-orbita-primary"
                     }`}
                   >
                     {n}
@@ -1303,7 +1303,7 @@ export default function CuentasClient() {
               </div>
               <input
                 type="number"
-                className="mt-2 w-full rounded-xl border-[0.5px] border-slate-200 px-4 py-2.5 text-slate-900"
+                className="mt-2 w-full rounded-xl border-[0.5px] border-orbita-border px-4 py-2.5 text-orbita-primary"
                 value={planN}
                 min={1}
                 max={48}
@@ -1311,7 +1311,7 @@ export default function CuentasClient() {
               />
             </div>
             <div>
-              <p className="text-sm font-medium text-slate-700">Tipo de amortización</p>
+              <p className="text-sm font-medium text-orbita-primary">Tipo de amortización</p>
               <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <button
                   type="button"
@@ -1319,11 +1319,11 @@ export default function CuentasClient() {
                   className={`rounded-xl border p-4 text-left text-sm ${
                     planType === "fija"
                       ? "border-[#E54D42] bg-rose-50/60"
-                      : "border-slate-200 bg-slate-50/80"
+                      : "border-orbita-border bg-orbita-surface-alt/80"
                   }`}
                 >
-                  <p className="font-semibold text-slate-900">Cuota fija</p>
-                  <p className="mt-1 text-xs text-slate-500">Mismo pago cada mes</p>
+                  <p className="font-semibold text-orbita-primary">Cuota fija</p>
+                  <p className="mt-1 text-xs text-orbita-secondary">Mismo pago cada mes</p>
                 </button>
                 <button
                   type="button"
@@ -1331,32 +1331,32 @@ export default function CuentasClient() {
                   className={`rounded-xl border p-4 text-left text-sm ${
                     planType === "variable"
                       ? "border-[#E54D42] bg-rose-50/60"
-                      : "border-slate-200 bg-slate-50/80"
+                      : "border-orbita-border bg-orbita-surface-alt/80"
                   }`}
                 >
-                  <p className="font-semibold text-slate-900">Cuota variable</p>
-                  <p className="mt-1 text-xs text-slate-500">Decrece con el tiempo (aprox.)</p>
+                  <p className="font-semibold text-orbita-primary">Cuota variable</p>
+                  <p className="mt-1 text-xs text-orbita-secondary">Decrece con el tiempo (aprox.)</p>
                 </button>
               </div>
             </div>
           </div>
           <div className="space-y-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Resultados</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-orbita-secondary">Resultados</p>
             <div className="rounded-2xl border-[0.5px] border-rose-200/80 bg-rose-50/50 p-5">
               <div className="flex items-center gap-2 text-rose-700">
                 <Calculator className="h-5 w-5" aria-hidden />
                 <span className="text-[11px] font-semibold uppercase tracking-[0.14em]">Cuota mensual</span>
               </div>
-              <p className="mt-2 text-3xl font-bold text-slate-900">${formatMoney(cuotaSim)}</p>
-              <p className="mt-1 text-sm text-slate-500">Durante {planN} meses</p>
+              <p className="mt-2 text-3xl font-bold text-orbita-primary">${formatMoney(cuotaSim)}</p>
+              <p className="mt-1 text-sm text-orbita-secondary">Durante {planN} meses</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-xl border-[0.5px] border-slate-200 bg-white p-4">
-                <p className="text-[10px] font-semibold uppercase text-slate-400">Total a pagar</p>
-                <p className="mt-1 text-lg font-semibold text-slate-900">${formatMoney(totalPagarSim)}</p>
+              <div className="rounded-xl border-[0.5px] border-orbita-border bg-orbita-surface p-4">
+                <p className="text-[10px] font-semibold uppercase text-orbita-secondary">Total a pagar</p>
+                <p className="mt-1 text-lg font-semibold text-orbita-primary">${formatMoney(totalPagarSim)}</p>
               </div>
-              <div className="rounded-xl border-[0.5px] border-slate-200 bg-white p-4">
-                <p className="text-[10px] font-semibold uppercase text-slate-400">Intereses</p>
+              <div className="rounded-xl border-[0.5px] border-orbita-border bg-orbita-surface p-4">
+                <p className="text-[10px] font-semibold uppercase text-orbita-secondary">Intereses</p>
                 <p className="mt-1 text-lg font-semibold text-amber-600">${formatMoney(interesesSim)}</p>
               </div>
             </div>
@@ -1365,25 +1365,25 @@ export default function CuentasClient() {
                 <ArrowDownRight className="h-5 w-5" aria-hidden />
                 <span className="text-[11px] font-semibold uppercase tracking-[0.14em]">Reducción de flujo</span>
               </div>
-              <p className="mt-1 text-2xl font-bold text-slate-900">-{planFlow.reduccionPct}%</p>
-              <p className="text-sm text-slate-600">${formatMoney(cuotaSim)} menos disponible</p>
+              <p className="mt-1 text-2xl font-bold text-orbita-primary">-{planFlow.reduccionPct}%</p>
+              <p className="text-sm text-orbita-secondary">${formatMoney(cuotaSim)} menos disponible</p>
             </div>
-            <div className="space-y-2 rounded-xl border-[0.5px] border-slate-200 bg-slate-50/80 p-4 text-sm">
+            <div className="space-y-2 rounded-xl border-[0.5px] border-orbita-border bg-orbita-surface-alt/80 p-4 text-sm">
               <div className="flex justify-between">
-                <span className="text-slate-500">Flujo actual</span>
-                <span className="font-semibold text-slate-900">${formatMoney(flowBaseline.flujoActual)}</span>
+                <span className="text-orbita-secondary">Flujo actual</span>
+                <span className="font-semibold text-orbita-primary">${formatMoney(flowBaseline.flujoActual)}</span>
               </div>
-              <p className="text-xs text-slate-500">Obligaciones actuales: ${formatMoney(flowBaseline.obligActuales)}</p>
+              <p className="text-xs text-orbita-secondary">Obligaciones actuales: ${formatMoney(flowBaseline.obligActuales)}</p>
               <div className="flex justify-between pt-2">
-                <span className="text-slate-500">Flujo con nuevo plan</span>
-                <span className="font-semibold text-slate-900">${formatMoney(planFlow.flujoConPlan)}</span>
+                <span className="text-orbita-secondary">Flujo con nuevo plan</span>
+                <span className="font-semibold text-orbita-primary">${formatMoney(planFlow.flujoConPlan)}</span>
               </div>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-orbita-secondary">
                 Nuevas obligaciones: ${formatMoney(planFlow.nuevasObl)}
               </p>
             </div>
-            <div className="rounded-xl border-[0.5px] border-slate-200 bg-white p-4 text-sm">
-              <p className="text-[11px] font-semibold uppercase text-slate-400">Resumen obligaciones mensuales</p>
+            <div className="rounded-xl border-[0.5px] border-orbita-border bg-orbita-surface p-4 text-sm">
+              <p className="text-[11px] font-semibold uppercase text-orbita-secondary">Resumen obligaciones mensuales</p>
               <div className="mt-2 space-y-1.5">
                 <div className="flex justify-between">
                   <span>Tarjetas de crédito</span>
@@ -1397,7 +1397,7 @@ export default function CuentasClient() {
                   <span>+ Nuevo plan de pago</span>
                   <span>${formatMoney(cuotaSim)}</span>
                 </div>
-                <div className="flex justify-between border-t border-slate-100 pt-2 font-bold text-slate-900">
+                <div className="flex justify-between border-t border-orbita-border pt-2 font-bold text-orbita-primary">
                   <span>Total mensual</span>
                   <span>${formatMoney(planFlow.nuevasObl)}</span>
                 </div>
@@ -1407,7 +1407,7 @@ export default function CuentasClient() {
               <button
                 type="button"
                 onClick={closeModals}
-                className="rounded-xl border border-slate-200 bg-slate-100 py-3 text-sm font-semibold text-slate-800"
+                className="rounded-xl border border-orbita-border bg-orbita-surface-alt py-3 text-sm font-semibold text-orbita-primary"
               >
                 Cerrar
               </button>
@@ -1429,41 +1429,41 @@ export default function CuentasClient() {
         title={savingForm.id ? "Editar cuenta de ahorro" : "Nueva cuenta de ahorro"}
       >
         <div className="space-y-3">
-          <label className="block text-sm text-slate-700">
+          <label className="block text-sm text-orbita-primary">
             Institución
             <input
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+              className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
               value={savingForm.institution}
               onChange={(e) => setSavingForm((s) => ({ ...s, institution: e.target.value }))}
             />
           </label>
-          <label className="block text-sm text-slate-700">
+          <label className="block text-sm text-orbita-primary">
             Nombre de cuenta
             <input
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+              className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
               value={savingForm.label}
               onChange={(e) => setSavingForm((s) => ({ ...s, label: e.target.value }))}
             />
           </label>
-          <label className="block text-sm text-slate-700">
+          <label className="block text-sm text-orbita-primary">
             Monto (COP)
             <input
               type="number"
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+              className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
               value={savingForm.amount}
               onChange={(e) => setSavingForm((s) => ({ ...s, amount: Number(e.target.value) }))}
             />
           </label>
-          <label className="block text-sm text-slate-700">
+          <label className="block text-sm text-orbita-primary">
             Salud %
             <input
               type="number"
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+              className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
               value={savingForm.healthPct}
               onChange={(e) => setSavingForm((s) => ({ ...s, healthPct: Number(e.target.value) }))}
             />
           </label>
-          <label className="flex items-center gap-2 text-sm text-slate-700">
+          <label className="flex items-center gap-2 text-sm text-orbita-primary">
             <input
               type="checkbox"
               checked={savingForm.trendUp}
@@ -1475,14 +1475,14 @@ export default function CuentasClient() {
             <button
               type="button"
               onClick={() => setManualModal(null)}
-              className="rounded-xl border border-slate-200 py-2.5 text-sm font-semibold"
+              className="rounded-xl border border-orbita-border py-2.5 text-sm font-semibold"
             >
               Cancelar
             </button>
             <button
               type="button"
               onClick={() => void submitSavings()}
-              className="rounded-xl bg-slate-900 py-2.5 text-sm font-semibold text-white"
+              className="rounded-[var(--radius-button)] bg-[var(--color-text-primary)] py-2.5 text-sm font-semibold text-[var(--color-surface)] active:opacity-90"
             >
               Guardar
             </button>
@@ -1497,34 +1497,34 @@ export default function CuentasClient() {
         wide
       >
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="block text-sm text-slate-700">
+          <label className="block text-sm text-orbita-primary">
             Banco
             <input
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+              className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
               value={creditForm.bankLabel}
               onChange={(e) => setCreditForm((s) => ({ ...s, bankLabel: e.target.value }))}
             />
           </label>
-          <label className="block text-sm text-slate-700">
+          <label className="block text-sm text-orbita-primary">
             Red
             <input
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+              className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
               value={creditForm.network}
               onChange={(e) => setCreditForm((s) => ({ ...s, network: e.target.value }))}
             />
           </label>
-          <label className="block text-sm text-slate-700">
+          <label className="block text-sm text-orbita-primary">
             Últimos 4
             <input
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+              className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
               value={creditForm.last4}
               onChange={(e) => setCreditForm((s) => ({ ...s, last4: e.target.value }))}
             />
           </label>
-          <label className="block text-sm text-slate-700">
+          <label className="block text-sm text-orbita-primary">
             Tema visual
             <select
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+              className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
               value={creditForm.theme}
               onChange={(e) =>
                 setCreditForm((s) => ({ ...s, theme: e.target.value as CuentasCreditCard["theme"] }))
@@ -1536,40 +1536,40 @@ export default function CuentasClient() {
               <option value="scotiabank">Scotiabank</option>
             </select>
           </label>
-          <label className="block text-sm text-slate-700">
+          <label className="block text-sm text-orbita-primary">
             Saldo
             <input
               type="number"
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+              className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
               value={creditForm.balance}
               onChange={(e) => setCreditForm((s) => ({ ...s, balance: Number(e.target.value) }))}
             />
           </label>
-          <label className="block text-sm text-slate-700">
+          <label className="block text-sm text-orbita-primary">
             Cupo
             <input
               type="number"
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+              className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
               value={creditForm.limit}
               onChange={(e) => setCreditForm((s) => ({ ...s, limit: Number(e.target.value) }))}
             />
           </label>
-          <label className="block text-sm text-slate-700">
+          <label className="block text-sm text-orbita-primary">
             Día de pago
             <input
               type="number"
               min={1}
               max={28}
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+              className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
               value={creditForm.paymentDay}
               onChange={(e) => setCreditForm((s) => ({ ...s, paymentDay: Number(e.target.value) }))}
             />
           </label>
-          <label className="block text-sm text-slate-700">
+          <label className="block text-sm text-orbita-primary">
             Score
             <input
               type="number"
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+              className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
               value={creditForm.score}
               onChange={(e) => setCreditForm((s) => ({ ...s, score: Number(e.target.value) }))}
             />
@@ -1579,14 +1579,14 @@ export default function CuentasClient() {
           <button
             type="button"
             onClick={() => setManualModal(null)}
-            className="rounded-xl border border-slate-200 py-2.5 text-sm font-semibold"
+            className="rounded-xl border border-orbita-border py-2.5 text-sm font-semibold"
           >
             Cancelar
           </button>
           <button
             type="button"
             onClick={() => void submitCredit()}
-            className="rounded-xl bg-slate-900 py-2.5 text-sm font-semibold text-white"
+            className="rounded-[var(--radius-button)] bg-[var(--color-text-primary)] py-2.5 text-sm font-semibold text-[var(--color-surface)] active:opacity-90"
           >
             Guardar
           </button>
@@ -1600,18 +1600,18 @@ export default function CuentasClient() {
         wide
       >
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="block text-sm text-slate-700 sm:col-span-2">
+          <label className="block text-sm text-orbita-primary sm:col-span-2">
             Título
             <input
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+              className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
               value={loanForm.title}
               onChange={(e) => setLoanForm((s) => ({ ...s, title: e.target.value }))}
             />
           </label>
-          <label className="block text-sm text-slate-700">
+          <label className="block text-sm text-orbita-primary">
             Tipo
             <select
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+              className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
               value={loanForm.kind}
               onChange={(e) => setLoanForm((s) => ({ ...s, kind: e.target.value as "home" | "education" }))}
             >
@@ -1619,55 +1619,55 @@ export default function CuentasClient() {
               <option value="education">Educación</option>
             </select>
           </label>
-          <label className="block text-sm text-slate-700">
+          <label className="block text-sm text-orbita-primary">
             % pagado
             <input
               type="number"
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+              className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
               value={loanForm.pctPagado}
               onChange={(e) => setLoanForm((s) => ({ ...s, pctPagado: Number(e.target.value) }))}
             />
           </label>
-          <label className="block text-sm text-slate-700">
+          <label className="block text-sm text-orbita-primary">
             Saldo pendiente
             <input
               type="number"
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+              className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
               value={loanForm.saldoPendiente}
               onChange={(e) => setLoanForm((s) => ({ ...s, saldoPendiente: Number(e.target.value) }))}
             />
           </label>
-          <label className="block text-sm text-slate-700">
+          <label className="block text-sm text-orbita-primary">
             Cuota mensual
             <input
               type="number"
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+              className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
               value={loanForm.cuotaMensual}
               onChange={(e) => setLoanForm((s) => ({ ...s, cuotaMensual: Number(e.target.value) }))}
             />
           </label>
-          <label className="block text-sm text-slate-700 sm:col-span-2">
+          <label className="block text-sm text-orbita-primary sm:col-span-2">
             Próximo pago (texto)
             <input
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+              className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
               value={loanForm.proximoPagoLabel}
               onChange={(e) => setLoanForm((s) => ({ ...s, proximoPagoLabel: e.target.value }))}
             />
           </label>
-          <label className="block text-sm text-slate-700">
+          <label className="block text-sm text-orbita-primary">
             Monto original
             <input
               type="number"
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+              className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
               value={loanForm.montoOriginal}
               onChange={(e) => setLoanForm((s) => ({ ...s, montoOriginal: Number(e.target.value) }))}
             />
           </label>
-          <label className="block text-sm text-slate-700">
+          <label className="block text-sm text-orbita-primary">
             Abonado
             <input
               type="number"
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+              className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
               value={loanForm.abonadoMonto}
               onChange={(e) => setLoanForm((s) => ({ ...s, abonadoMonto: Number(e.target.value) }))}
             />
@@ -1677,14 +1677,14 @@ export default function CuentasClient() {
           <button
             type="button"
             onClick={() => setManualModal(null)}
-            className="rounded-xl border border-slate-200 py-2.5 text-sm font-semibold"
+            className="rounded-xl border border-orbita-border py-2.5 text-sm font-semibold"
           >
             Cancelar
           </button>
           <button
             type="button"
             onClick={() => void submitLoan()}
-            className="rounded-xl bg-slate-900 py-2.5 text-sm font-semibold text-white"
+            className="rounded-[var(--radius-button)] bg-[var(--color-text-primary)] py-2.5 text-sm font-semibold text-[var(--color-surface)] active:opacity-90"
           >
             Guardar
           </button>

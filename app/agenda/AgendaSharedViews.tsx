@@ -1,17 +1,14 @@
 "use client"
 
 import { useMemo } from "react"
-import { Bell, Calendar } from "lucide-react"
+import { Bell, Calendar, ChevronLeft, ChevronRight } from "lucide-react"
 import { Card } from "@/src/components/ui/Card"
 import type { UiAgendaTask } from "@/app/agenda/mapAgendaTaskToUi"
 import type { GoogleCalendarFeedState } from "@/app/hooks/useGoogleCalendar"
 import type { GoogleCalendarEventDTO, GoogleTaskDTO } from "@/lib/google/types"
 import type { GoogleTasksFeedState } from "@/app/hooks/useGoogleTasks"
-import {
-  GOOGLE_AGENDA_LIST_REMINDER_LIMIT,
-  GOOGLE_AGENDA_WINDOW_DAYS,
-  upcomingGoogleReminders,
-} from "@/lib/agenda/googleTasksUpcoming"
+import { localDateKeyFromIso } from "@/lib/agenda/localDateKey"
+import { googleTasksForTimelineMerge } from "@/lib/agenda/googleTasksUpcoming"
 import type { GoogleDayBucket } from "@/lib/agenda/googleAgendaByDay"
 import { countGoogleDayItems } from "@/lib/agenda/googleAgendaByDay"
 import {
@@ -29,10 +26,12 @@ import {
 } from "@/app/agenda/agendaUiTokens"
 import { AgendaOrvitaMiniCard } from "@/app/agenda/AgendaOrvitaMiniCard"
 import { AgendaOrvitaTaskCard } from "@/app/agenda/AgendaOrvitaTaskCard"
+import { GoogleTaskDueSetter } from "@/app/agenda/GoogleTaskDueSetter"
 import { AgendaReadonlyUnifiedCard } from "@/app/agenda/AgendaReadonlyUnifiedCard"
 import {
   calendarEventFuenteLabel,
   calendarEventScheduleLine,
+  calendarEventVenceLine,
   reminderFuenteLabel,
   venceLine,
 } from "@/app/agenda/taskCardFormat"
@@ -79,7 +78,7 @@ function buildMergedTimeline(
   const rows: MergedRow[] = tasks.map((task) => ({ kind: "task", task, sortMs: taskDueSortMs(task.due) }))
   if (googleTasksConnected && googleReminders?.length) {
     for (const reminder of googleReminders) {
-      const dueDay = reminder.due ? reminder.due.slice(0, 10) : ""
+      const dueDay = localDateKeyFromIso(reminder.due) ?? ""
       rows.push({ kind: "reminder", reminder, sortMs: taskDueSortMs(dueDay) })
     }
   }
@@ -110,26 +109,25 @@ export type GroupedTasks = {
   personal: UiAgendaTask[]
 }
 
+function googleTaskNeedsDue(t: GoogleTaskDTO) {
+  return !t.due || t.due.length < 10
+}
+
 export function AgendaSharedKanban({
   grouped,
   calendarFeed,
   googleTasksFeed,
   onSaveComplete,
+  onGoogleTaskSetDue,
 }: {
   grouped: GroupedTasks
   calendarFeed?: Pick<GoogleCalendarFeedState, "events" | "connected">
   googleTasksFeed?: Pick<GoogleTasksFeedState, "tasks" | "connected">
   onSaveComplete?: (task: UiAgendaTask, completed: boolean) => Promise<void> | void
+  onGoogleTaskSetDue?: (taskId: string, dueYmd: string) => Promise<void>
 }) {
   const googleReminders = useMemo(
-    () =>
-      googleTasksFeed?.connected
-        ? upcomingGoogleReminders(
-            googleTasksFeed.tasks,
-            GOOGLE_AGENDA_WINDOW_DAYS,
-            GOOGLE_AGENDA_LIST_REMINDER_LIMIT
-          )
-        : [],
+    () => (googleTasksFeed?.connected ? googleTasksForTimelineMerge(googleTasksFeed.tasks) : []),
     [googleTasksFeed?.connected, googleTasksFeed?.tasks]
   )
 
@@ -197,10 +195,20 @@ export function AgendaSharedKanban({
                 borderLeft={`4px solid ${AGENDA_COLOR.reminder}`}
                 title={row.reminder.title || "(Sin título)"}
                 TimelineIcon={Bell}
-                timelineText={venceLine(row.reminder.due?.slice(0, 10) || "")}
+                timelineText={venceLine(localDateKeyFromIso(row.reminder.due) ?? "")}
                 googleKind="reminder"
                 kindPillLabel="Recordatorio"
                 fuente={reminderFuenteLabel()}
+                footNote={
+                  googleTaskNeedsDue(row.reminder)
+                    ? "Sin fecha en Google Tasks: no aparece en Semana/Mes hasta que tenga vencimiento."
+                    : "Solo lectura en Órvita · edita en Google Tasks"
+                }
+                footer={
+                  onGoogleTaskSetDue && googleTaskNeedsDue(row.reminder) ? (
+                    <GoogleTaskDueSetter taskId={row.reminder.id} patchDue={onGoogleTaskSetDue} />
+                  ) : undefined
+                }
                 badgeLetter="GT"
                 badgeColorVar={AGENDA_COLOR.reminder}
               />
@@ -211,11 +219,12 @@ export function AgendaSharedKanban({
                 borderLeft={`4px solid ${AGENDA_COLOR.calendar}`}
                 title={row.event.summary || "(Sin título)"}
                 TimelineIcon={Calendar}
-                timelineText={`${calendarEventScheduleLine(row.event)} | ${venceLine(row.event.startAt?.slice(0, 10) || "")}`}
+                timelineText={`${calendarEventScheduleLine(row.event)} | ${calendarEventVenceLine(row.event)}`}
                 googleKind="calendar"
                 kindPillLabel={calendarEventFuenteLabel(row.event)}
                 statusLabel="Calendario"
                 fuente={calendarEventFuenteLabel(row.event)}
+                footNote="Solo lectura en Órvita · edita en Google Calendar"
                 badgeLetter="GC"
                 badgeColorVar={AGENDA_COLOR.calendar}
               />
@@ -238,6 +247,7 @@ export function AgendaSharedList({
   calendarFeed,
   googleTasksFeed,
   agendaLoading,
+  onGoogleTaskSetDue,
 }: {
   filtered: UiAgendaTask[]
   onSaveComplete: (task: UiAgendaTask, completed: boolean) => Promise<void> | void
@@ -247,16 +257,10 @@ export function AgendaSharedList({
   googleTasksFeed?: Pick<GoogleTasksFeedState, "tasks" | "loading" | "connected">
   /** Evita parpadeo vacío mientras aún no hay datos de Órvita. */
   agendaLoading?: boolean
+  onGoogleTaskSetDue?: (taskId: string, dueYmd: string) => Promise<void>
 }) {
   const googleReminders = useMemo(
-    () =>
-      googleTasksFeed?.connected
-        ? upcomingGoogleReminders(
-            googleTasksFeed.tasks,
-            GOOGLE_AGENDA_WINDOW_DAYS,
-            GOOGLE_AGENDA_LIST_REMINDER_LIMIT
-          )
-        : [],
+    () => (googleTasksFeed?.connected ? googleTasksForTimelineMerge(googleTasksFeed.tasks) : []),
     [googleTasksFeed?.connected, googleTasksFeed?.tasks]
   )
 
@@ -271,15 +275,15 @@ export function AgendaSharedList({
     ]
   )
 
-  const orvitaWaiting = Boolean(agendaLoading) && filtered.length === 0
   const feedsLoading =
     merged.length === 0 &&
-    (orvitaWaiting || Boolean(calendarFeed?.loading || googleTasksFeed?.loading))
+    (Boolean(calendarFeed?.loading || googleTasksFeed?.loading) ||
+      Boolean(agendaLoading && filtered.length === 0))
 
   return (
     <div
       className={agendaViewStackClass}
-      aria-label={`Cronología unificada: Órvita y Google (ventana ${GOOGLE_AGENDA_WINDOW_DAYS} días)`}
+      aria-label="Cronología unificada: Órvita y Google (Tasks con fecha en orden de vencimiento; sin fecha al final)"
     >
       {feedsLoading && (
         <p role="status" aria-live="polite" className={agendaLoadingStateClass}>
@@ -301,11 +305,20 @@ export function AgendaSharedList({
             borderLeft={`4px solid ${AGENDA_COLOR.reminder}`}
             title={row.reminder.title || "(Sin título)"}
             TimelineIcon={Bell}
-            timelineText={venceLine(row.reminder.due?.slice(0, 10) || "")}
+            timelineText={venceLine(localDateKeyFromIso(row.reminder.due) ?? "")}
             googleKind="reminder"
             kindPillLabel="Recordatorio"
             fuente={reminderFuenteLabel()}
-            footNote="Solo lectura en Órvita · edita en Google Tasks"
+            footNote={
+              googleTaskNeedsDue(row.reminder)
+                ? "Sin fecha en Google Tasks: no se agrupa en calendario. Añade vencimiento abajo o en Google."
+                : "Solo lectura en Órvita · edita en Google Tasks"
+            }
+            footer={
+              onGoogleTaskSetDue && googleTaskNeedsDue(row.reminder) ? (
+                <GoogleTaskDueSetter taskId={row.reminder.id} patchDue={onGoogleTaskSetDue} />
+              ) : undefined
+            }
             badgeLetter="GT"
             badgeColorVar={AGENDA_COLOR.reminder}
           />
@@ -316,7 +329,7 @@ export function AgendaSharedList({
             borderLeft={`4px solid ${AGENDA_COLOR.calendar}`}
             title={row.event.summary || "(Sin título)"}
             TimelineIcon={Calendar}
-            timelineText={`${calendarEventScheduleLine(row.event)} | ${venceLine(row.event.startAt?.slice(0, 10) || "")}`}
+            timelineText={`${calendarEventScheduleLine(row.event)} | ${calendarEventVenceLine(row.event)}`}
             googleKind="calendar"
             kindPillLabel={calendarEventFuenteLabel(row.event)}
             statusLabel="Calendario"
@@ -331,7 +344,7 @@ export function AgendaSharedList({
         <p className={agendaEmptyStateClass}>
           {calendarFeed && !calendarFeed.connected
             ? "Nada que mostrar con estos filtros. Conecta Google en Configuración para mezclar Calendar y recordatorios de Tasks aquí."
-            : `Nada que mostrar con estos filtros (Órvita + Google en los próximos ${GOOGLE_AGENDA_WINDOW_DAYS} días).`}
+            : "Nada que mostrar con estos filtros (Órvita + Google Tasks y Calendar sincronizados)."}
         </p>
       )}
     </div>
@@ -378,7 +391,7 @@ export function AgendaSharedWeek({
       <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-stretch lg:gap-2.5 xl:gap-3">
         {weekDays.map((day) => {
           const key = formatDateKey(day)
-          const isToday = key === new Date().toISOString().slice(0, 10)
+          const isToday = key === formatDateKey(new Date())
           const dayTasks = weekMap[key] || []
           const g = googleByDay?.[key]
           const gCount = countGoogleDayItems(g)
@@ -417,7 +430,7 @@ export function AgendaSharedWeek({
                       borderLeft={`4px solid ${AGENDA_COLOR.calendar}`}
                       title={ev.summary || "(Evento)"}
                       TimelineIcon={Calendar}
-                      timelineText={`${calendarEventScheduleLine(ev)} | ${venceLine(ev.startAt?.slice(0, 10) || "")}`}
+                      timelineText={`${calendarEventScheduleLine(ev)} | ${calendarEventVenceLine(ev)}`}
                       googleKind="calendar"
                       kindPillLabel={calendarEventFuenteLabel(ev)}
                       statusLabel="Calendario"
@@ -434,7 +447,7 @@ export function AgendaSharedWeek({
                       borderLeft={`4px solid ${AGENDA_COLOR.reminder}`}
                       title={r.title || "(Recordatorio)"}
                       TimelineIcon={Bell}
-                      timelineText={venceLine(r.due?.slice(0, 10) || "")}
+                      timelineText={venceLine(localDateKeyFromIso(r.due) ?? "")}
                       googleKind="reminder"
                       kindPillLabel="Recordatorio"
                       fuente={reminderFuenteLabel()}
@@ -465,6 +478,9 @@ export function AgendaSharedMonth({
   dayDetails,
   formatDateKey,
   googleByDay,
+  onPrevMonth,
+  onNextMonth,
+  onGoThisMonth,
 }: {
   monthGrid: { date: Date | null; key: string }[]
   monthLabel: string
@@ -475,6 +491,9 @@ export function AgendaSharedMonth({
   dayDetails: UiAgendaTask[]
   formatDateKey: (d: Date) => string
   googleByDay?: Record<string, GoogleDayBucket>
+  onPrevMonth?: () => void
+  onNextMonth?: () => void
+  onGoThisMonth?: () => void
 }) {
   const selectedGoogle = selectedDay ? googleByDay?.[selectedDay] : undefined
   const selectedGoogleCount = countGoogleDayItems(selectedGoogle)
@@ -486,12 +505,47 @@ export function AgendaSharedMonth({
     >
       <Card className={agendaCardPadClass}>
         <div className="grid gap-3 sm:gap-3">
-          <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
             <div className="min-w-0">
               <p className={agendaOverlineClass}>{monthLabel}</p>
               <p className={agendaSectionTitleClass}>Órvita + Google</p>
             </div>
-            <span className="shrink-0 text-[10px] text-[var(--color-text-secondary)] sm:text-[11px]">Vista mensual</span>
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              {onPrevMonth && onNextMonth ? (
+                <div
+                  className="flex items-center gap-0.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] p-0.5"
+                  role="group"
+                  aria-label="Cambiar mes"
+                >
+                  <button
+                    type="button"
+                    onClick={onPrevMonth}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--color-text-primary)] hover:bg-[var(--color-surface)]"
+                    aria-label="Mes anterior"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  {onGoThisMonth ? (
+                    <button
+                      type="button"
+                      onClick={onGoThisMonth}
+                      className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+                    >
+                      Este mes
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={onNextMonth}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--color-text-primary)] hover:bg-[var(--color-surface)]"
+                    aria-label="Mes siguiente"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : null}
+              <span className="text-[10px] text-[var(--color-text-secondary)] sm:text-[11px]">Vista mensual</span>
+            </div>
           </div>
           <div className="grid min-w-0 grid-cols-7 gap-1 sm:gap-2">
             {["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map((d) => (
@@ -616,7 +670,7 @@ export function AgendaSharedMonth({
                     borderLeft={`4px solid ${AGENDA_COLOR.calendar}`}
                     title={ev.summary || "(Evento)"}
                     TimelineIcon={Calendar}
-                    timelineText={`${calendarEventScheduleLine(ev)} | ${venceLine(ev.startAt?.slice(0, 10) || "")}`}
+                    timelineText={`${calendarEventScheduleLine(ev)} | ${calendarEventVenceLine(ev)}`}
                     googleKind="calendar"
                     kindPillLabel={calendarEventFuenteLabel(ev)}
                     statusLabel="Calendario"
@@ -633,7 +687,7 @@ export function AgendaSharedMonth({
                     borderLeft={`4px solid ${AGENDA_COLOR.reminder}`}
                     title={r.title || "(Recordatorio)"}
                     TimelineIcon={Bell}
-                    timelineText={venceLine(r.due?.slice(0, 10) || "")}
+                    timelineText={venceLine(localDateKeyFromIso(r.due) ?? "")}
                     googleKind="reminder"
                     kindPillLabel="Recordatorio"
                     fuente={reminderFuenteLabel()}

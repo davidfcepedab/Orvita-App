@@ -8,7 +8,7 @@ export default function BottomNav() {
   const router = useRouter()
 
   const tabs = [
-    { name: "Inicio", route: "/", icon: Home, accent: "var(--text-primary)" },
+    { name: "Inicio", route: "/", icon: Home, accent: "var(--color-text-primary)" },
     { name: "Salud", route: "/health", icon: HeartPulse, accent: "var(--accent-health-strong)" },
     { name: "Capital", route: "/finanzas/overview", icon: DollarSign, accent: "var(--accent-finance-strong)" },
     { name: "Decisión", route: "/decision", icon: SlidersHorizontal, accent: "var(--accent-warning)" },
@@ -16,8 +16,13 @@ export default function BottomNav() {
   ]
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 border-t border-[var(--border-soft)] bg-[rgba(255,255,255,0.88)] pb-[env(safe-area-inset-bottom,0px)] backdrop-blur-xl shadow-[0_-8px_28px_rgba(15,23,42,0.06)]">
-      <div className="mx-auto grid max-w-2xl grid-cols-5 gap-1 px-2 py-2 text-center text-[11px] sm:px-3 sm:py-3 sm:text-xs">
+    <div
+      className="fixed bottom-0 left-0 right-0 z-[100] border-t border-[var(--color-border)] pb-[env(safe-area-inset-bottom,0px)] shadow-nav backdrop-blur-xl"
+      style={{
+        background: "color-mix(in srgb, var(--color-surface) 88%, transparent)",
+      }}
+    >
+      <div className="mx-auto grid max-w-2xl grid-cols-5 gap-0.5 px-1 py-2 text-center text-[11px] leading-tight sm:gap-1 sm:px-3 sm:py-3 sm:text-xs sm:leading-normal">
 
         {tabs.map((tab) => {
           const Icon = tab.icon
@@ -30,13 +35,16 @@ export default function BottomNav() {
             <button
               key={tab.name}
               onClick={() => router.push(tab.route)}
-              className="flex min-h-[48px] flex-col items-center justify-center gap-0.5 rounded-2xl transition active:opacity-80 sm:min-h-[52px] sm:gap-1"
+              type="button"
+              className="flex min-h-[48px] flex-col items-center justify-center gap-0.5 rounded-[var(--radius-button)] transition active:opacity-80 sm:min-h-[52px] sm:gap-1"
               style={{
-                color: active ? tab.accent : "var(--text-muted)",
-                backgroundColor: active ? "rgba(255,255,255,0.72)" : "transparent",
+                color: active ? tab.accent : "var(--color-text-secondary)",
+                backgroundColor: active
+                  ? "color-mix(in srgb, var(--color-surface-alt) 65%, var(--color-surface))"
+                  : "transparent",
               }}
             >
-              <Icon className="h-5 w-5 sm:h-4 sm:w-4" strokeWidth={active ? 2.25 : 2} />
+              <Icon className="h-[18px] w-[18px] sm:h-4 sm:w-4" strokeWidth={active ? 2.25 : 2} aria-hidden />
               <span className={active ? "font-semibold" : "font-medium"}>{tab.name}</span>
             </button>
           )

@@ -1,10 +1,12 @@
 "use client"
 
 import Link from "next/link"
-import { useMemo } from "react"
+import { useMemo, useState, useCallback } from "react"
+import { Check, Loader2 } from "lucide-react"
 import { Card } from "@/src/components/ui/Card"
 import { useOperationalContext } from "@/app/hooks/useOperationalContext"
 import { useGoogleCalendar } from "@/app/hooks/useGoogleCalendar"
+import { formatLocalDateKey, localDateKeyFromIso } from "@/lib/agenda/localDateKey"
 
 const timeline = [
   { time: "08:00", label: "Bloque de Trabajo Profundo" },
@@ -38,15 +40,24 @@ function eventDurationLabel(start: string | null, end: string | null) {
   return `${Math.round(ms / 60000)}m`
 }
 
+function stackRowKey(prefix: string, label: string) {
+  return `${prefix}:${label}`
+}
+
 export default function HoyPage() {
   const { data } = useOperationalContext()
   const { events: calendarEvents, loading: calLoading, notice: calNotice, connected: calConnected, refresh: refreshCal } =
     useGoogleCalendar()
 
+  const [stackChecked, setStackChecked] = useState<Record<string, boolean>>({})
+  const toggleStack = useCallback((key: string) => {
+    setStackChecked((prev) => ({ ...prev, [key]: !prev[key] }))
+  }, [])
+
   const meetings = useMemo(() => {
-    const todayKey = new Date().toISOString().slice(0, 10)
+    const todayKey = formatLocalDateKey(new Date())
     return calendarEvents
-      .filter((e) => e.startAt && e.startAt.slice(0, 10) === todayKey)
+      .filter((e) => localDateKeyFromIso(e.startAt) === todayKey)
       .map((e) => ({
         key: e.id,
         time: formatEventTime(e.startAt),
@@ -184,24 +195,24 @@ export default function HoyPage() {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "var(--layout-gap)" }}>
-        <Card className="p-5">
-          <div style={{ display: "grid", gap: "8px" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
-              <p style={{ margin: 0, fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--color-text-secondary)" }}>
+      <div className="grid min-w-0 grid-cols-1 gap-[var(--layout-gap)] sm:grid-cols-2 lg:grid-cols-3">
+        <Card
+          hover
+          className="min-w-0 p-4 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-500 motion-safe:fill-mode-both sm:p-5"
+          style={{ animationDelay: "0ms" }}
+        >
+          <div className="grid gap-2 sm:gap-2.5">
+            <div className="flex flex-wrap items-start justify-between gap-2 sm:items-center">
+              <p className="m-0 min-w-0 text-[10px] font-medium uppercase leading-snug tracking-[0.14em] text-[var(--color-text-secondary)] sm:text-[11px]">
                 Google Calendar (hoy)
               </p>
               <button
                 type="button"
+                disabled={calLoading}
                 onClick={() => void refreshCal()}
-                style={{
-                  fontSize: "10px",
-                  padding: "4px 8px",
-                  borderRadius: "8px",
-                  border: "0.5px solid var(--color-border)",
-                  background: "var(--color-surface-alt)",
-                }}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-2 py-1 text-[10px] font-medium transition-opacity hover:bg-[color-mix(in_srgb,var(--color-text-secondary)_6%,var(--color-surface-alt))] active:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
               >
+                {calLoading ? <Loader2 className="h-3 w-3 animate-spin" aria-hidden /> : null}
                 Actualizar
               </button>
             </div>
@@ -214,52 +225,158 @@ export default function HoyPage() {
               </p>
             )}
             {calLoading ? (
-              <p style={{ margin: 0, fontSize: "12px", color: "var(--color-text-secondary)" }}>Cargando calendario…</p>
+              <p className="m-0 text-xs text-[var(--color-text-secondary)]">Cargando calendario…</p>
             ) : meetings.length === 0 ? (
-              <p style={{ margin: 0, fontSize: "12px", color: "var(--color-text-secondary)" }}>
+              <p className="m-0 text-xs text-[var(--color-text-secondary)] sm:text-[12px]">
                 Sin eventos hoy en el rango sincronizado.
               </p>
             ) : (
-              meetings.map((meeting) => (
-                <div
-                  key={meeting.key}
-                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "12px" }}
-                >
-                  <span>{meeting.label}</span>
-                  <span style={{ color: "var(--color-text-secondary)" }}>
-                    {meeting.time} · {meeting.duration}
-                  </span>
-                </div>
-              ))
+              <ul className="m-0 grid list-none gap-2 p-0">
+                {meetings.map((meeting) => (
+                  <li
+                    key={meeting.key}
+                    className="flex min-w-0 flex-col gap-0.5 rounded-lg border border-transparent px-0 py-0.5 text-xs transition-colors motion-safe:duration-200 sm:flex-row sm:items-center sm:justify-between sm:gap-2 sm:text-[12px] motion-safe:hover:border-[color-mix(in_srgb,var(--color-border)_80%,transparent)] motion-safe:hover:bg-[color-mix(in_srgb,var(--color-text-secondary)_4%,transparent)] sm:px-1 sm:py-1"
+                  >
+                    <span className="min-w-0 font-medium leading-snug text-[var(--color-text-primary)]">{meeting.label}</span>
+                    <span className="shrink-0 tabular-nums text-[var(--color-text-secondary)]">
+                      {meeting.time} · {meeting.duration}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
         </Card>
-        <Card className="p-5">
-          <div style={{ display: "grid", gap: "8px" }}>
-            <p style={{ margin: 0, fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--color-text-secondary)" }}>
+        <Card
+          hover
+          className="min-w-0 p-4 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-500 motion-safe:fill-mode-both sm:p-5"
+          style={{ animationDelay: "45ms" }}
+        >
+          <div className="grid gap-2 sm:gap-2.5">
+            <p className="m-0 text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--color-text-secondary)] sm:text-[11px]">
               Hábitos clave
             </p>
             {habits.slice(0, 3).map((habit) => (
-              <div key={habit.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "12px" }}>
-                <span>{habit.name}</span>
-                <span style={{ color: habit.completed ? "var(--color-accent-health)" : "var(--color-text-secondary)" }}>
-                  {habit.completed ? "Hecho" : "Pendiente"}
+              <div
+                key={habit.id}
+                role="group"
+                aria-label={`${habit.name}: ${habit.completed ? "hecho" : "pendiente"}`}
+                className="flex min-w-0 items-center gap-2.5 text-xs transition-colors motion-safe:duration-200 sm:gap-3 sm:text-[12px] motion-safe:hover:bg-[color-mix(in_srgb,var(--color-text-secondary)_4%,transparent)] sm:rounded-lg sm:px-1 sm:py-1.5"
+              >
+                <span
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border sm:h-8 sm:w-8"
+                  style={
+                    habit.completed
+                      ? {
+                          background: "var(--color-accent-health)",
+                          borderColor: "transparent",
+                          boxShadow: "0 1px 2px color-mix(in srgb, var(--color-accent-health) 30%, transparent)",
+                        }
+                      : {
+                          background: "transparent",
+                          borderColor: "color-mix(in srgb, var(--color-border) 85%, transparent)",
+                        }
+                  }
+                  aria-hidden
+                >
+                  {habit.completed ? <Check className="h-3.5 w-3.5 text-white" strokeWidth={2.75} /> : null}
                 </span>
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+                  <span className="min-w-0 font-medium leading-snug text-[var(--color-text-primary)]">{habit.name}</span>
+                  <span
+                    className="shrink-0 text-[11px] font-medium sm:text-xs"
+                    style={{ color: habit.completed ? "var(--color-accent-health)" : "var(--color-text-secondary)" }}
+                  >
+                    {habit.completed ? "Hecho" : "Pendiente"}
+                  </span>
+                </div>
               </div>
             ))}
           </div>
         </Card>
-        <Card className="p-5">
-          <div style={{ display: "grid", gap: "8px" }}>
-            <p style={{ margin: 0, fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--color-text-secondary)" }}>
+        <Card
+          hover
+          className="min-w-0 p-4 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-500 motion-safe:fill-mode-both sm:col-span-2 sm:p-5 lg:col-span-1"
+          style={{ animationDelay: "90ms" }}
+        >
+          <div className="grid gap-2 sm:gap-2.5">
+            <p className="m-0 text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--color-text-secondary)] sm:text-[11px]">
               Stack / Recordatorios
             </p>
-            {supplements.map((item) => (
-              <span key={item} style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>{item}</span>
-            ))}
-            {reminders.map((item) => (
-              <span key={item} style={{ fontSize: "12px" }}>• {item}</span>
-            ))}
+            <div className="grid gap-1 sm:gap-1.5">
+              {supplements.map((item) => {
+                const key = stackRowKey("sup", item)
+                const done = Boolean(stackChecked[key])
+                return (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => toggleStack(key)}
+                    className="flex min-h-[44px] w-full min-w-0 items-center gap-2.5 rounded-lg border border-transparent text-left text-xs transition-colors motion-safe:duration-200 sm:min-h-0 sm:gap-3 sm:text-[12px] motion-safe:hover:bg-[color-mix(in_srgb,var(--color-text-secondary)_4%,transparent)] sm:px-1 sm:py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent-health)] focus-visible:ring-offset-2"
+                    aria-pressed={done}
+                    aria-label={`${item}, ${done ? "marcado" : "sin marcar"}. Toca para alternar.`}
+                  >
+                    <span
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border sm:h-8 sm:w-8"
+                      style={
+                        done
+                          ? {
+                              background: "var(--color-accent-health)",
+                              borderColor: "transparent",
+                              boxShadow: "0 1px 2px color-mix(in srgb, var(--color-accent-health) 30%, transparent)",
+                            }
+                          : {
+                              background: "transparent",
+                              borderColor: "color-mix(in srgb, var(--color-border) 85%, transparent)",
+                            }
+                      }
+                      aria-hidden
+                    >
+                      {done ? <Check className="h-3.5 w-3.5 text-white" strokeWidth={2.75} /> : null}
+                    </span>
+                    <span className={`min-w-0 leading-snug ${done ? "text-[var(--color-text-secondary)] line-through opacity-80" : "text-[var(--color-text-secondary)]"}`}>
+                      {item}
+                    </span>
+                  </button>
+                )
+              })}
+              {reminders.map((item) => {
+                const key = stackRowKey("rem", item)
+                const done = Boolean(stackChecked[key])
+                return (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => toggleStack(key)}
+                    className="flex min-h-[44px] w-full min-w-0 items-center gap-2.5 rounded-lg border border-transparent text-left text-xs transition-colors motion-safe:duration-200 sm:min-h-0 sm:gap-3 sm:text-[12px] motion-safe:hover:bg-[color-mix(in_srgb,var(--color-text-secondary)_4%,transparent)] sm:px-1 sm:py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent-health)] focus-visible:ring-offset-2"
+                    aria-pressed={done}
+                    aria-label={`${item}, ${done ? "marcado" : "sin marcar"}. Toca para alternar.`}
+                  >
+                    <span
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border sm:h-8 sm:w-8"
+                      style={
+                        done
+                          ? {
+                              background: "var(--color-accent-health)",
+                              borderColor: "transparent",
+                              boxShadow: "0 1px 2px color-mix(in srgb, var(--color-accent-health) 30%, transparent)",
+                            }
+                          : {
+                              background: "transparent",
+                              borderColor: "color-mix(in srgb, var(--color-border) 85%, transparent)",
+                            }
+                      }
+                      aria-hidden
+                    >
+                      {done ? <Check className="h-3.5 w-3.5 text-white" strokeWidth={2.75} /> : null}
+                    </span>
+                    <span className={`min-w-0 font-medium leading-snug text-[var(--color-text-primary)] ${done ? "line-through opacity-70" : ""}`}>
+                      {item}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </Card>
       </div>

@@ -30,11 +30,15 @@ export function Button({ children, className, onClick, disabled, type = "button"
       onMouseLeave={() => setIsHovering(false)}
       style={{
         height: "40px",
-        padding: "12px 24px",
+        padding: "0 20px",
         borderRadius: "var(--radius-button)",
         background,
         color: "var(--color-surface)",
         border: "0.5px solid var(--color-border)",
+        fontFamily: "var(--font-sans)",
+        fontSize: "14px",
+        fontWeight: 600,
+        lineHeight: 1.25,
         transition: "background-color 300ms ease, color 300ms ease",
         cursor: disabled ? "not-allowed" : "pointer",
         opacity: disabled ? 0.6 : 1,
