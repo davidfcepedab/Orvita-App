@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
 import { isAppMockMode, isSupabaseEnabled, UI_SYNC_OFF_SHORT } from "@/lib/checkins/flags"
 import { buildCuentasDashboard } from "@/lib/finanzas/cuentasDashboard"
+import { mergeLiveDashboardWithLedger } from "@/lib/finanzas/dashboardFromLedgerAccounts"
 import { mockTransactionsForMonth } from "@/lib/finanzas/mockFinancePayloads"
 import { monthBounds } from "@/lib/finanzas/monthRange"
 import { sortLedgerAccountsForDisplay } from "@/lib/finanzas/sortLedgerAccounts"
@@ -72,7 +73,7 @@ export async function GET(req: NextRequest) {
     const prevRows = await getTransactionsByRange(auth.supabase, b.prevStartStr, b.prevEndStr)
     const balance = snapshot?.balance != null ? Number(snapshot.balance) : null
     const accounts = buildSyntheticAccounts(month, balance, rows)
-    const dashboard = buildCuentasDashboard(month, balance, rows, prevRows, false)
+    const dashboardBase = buildCuentasDashboard(month, balance, rows, prevRows, false)
 
     let ledgerAccounts: unknown[] = []
     const { data: ledgerRows, error: ledgerErr } = await auth.supabase
@@ -85,8 +86,11 @@ export async function GET(req: NextRequest) {
       .order("sort_order", { ascending: true })
       .order("label", { ascending: true })
 
+    let dashboard = dashboardBase
     if (!ledgerErr) {
-      ledgerAccounts = sortLedgerAccountsForDisplay(ledgerRows ?? [], rows)
+      const sortedLedger = sortLedgerAccountsForDisplay(ledgerRows ?? [], rows)
+      ledgerAccounts = sortedLedger
+      dashboard = mergeLiveDashboardWithLedger(dashboardBase, month, sortedLedger, rows)
     } else if (!/does not exist|PGRST205/i.test(ledgerErr.message ?? "")) {
       console.warn("ACCOUNTS: ledger query:", ledgerErr.message)
     }

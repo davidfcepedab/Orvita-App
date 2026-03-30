@@ -10,6 +10,9 @@ import { getTransactionsByRange } from "@/lib/services/finanzasService"
 
 export const runtime = "nodejs"
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
 function mapTx(tx: FinanceTransaction) {
   return {
     fecha: tx.date,
@@ -33,6 +36,13 @@ export async function GET(req: NextRequest) {
 
     const category = req.nextUrl.searchParams.get("category")
     const subcategory = req.nextUrl.searchParams.get("subcategory")
+    const financeAccountId = req.nextUrl.searchParams.get("finance_account_id")?.trim() ?? ""
+    if (financeAccountId && !UUID_RE.test(financeAccountId)) {
+      return NextResponse.json(
+        { success: false, error: "finance_account_id debe ser un UUID válido" },
+        { status: 400 },
+      )
+    }
 
     const bounds = monthBounds(monthParam)
     if (!bounds) {
@@ -45,6 +55,7 @@ export async function GET(req: NextRequest) {
       rows.filter((tx) => {
         if (category && tx.category !== category) return false
         if (subcategory && (tx.subcategory ?? "") !== subcategory) return false
+        if (financeAccountId && (tx.finance_account_id ?? "").trim() !== financeAccountId) return false
         return true
       })
 

@@ -81,3 +81,31 @@ export function buildMonthlyFlowBuckets(months: string[], rows: FinanceTransacti
     }
   })
 }
+
+/**
+ * Si un mes no tiene movimientos en `rows` pero sí totales en snapshots, rellena la serie
+ * (misma lógica que el fallback de KPI en overview).
+ */
+export function fillMonthlyFlowFromSnapshots(
+  monthsYm: string[],
+  buckets: FlowEvolutionRow[],
+  snapByYm: ReadonlyMap<string, { income: number; expense: number }>,
+): FlowEvolutionRow[] {
+  return buckets.map((row, i) => {
+    const ym = monthsYm[i]
+    if (!ym) return row
+    const hasTx = row.ingresos > 1e-6 || row.gasto_operativo > 1e-6
+    if (hasTx) return row
+    const s = snapByYm.get(ym)
+    if (!s) return row
+    const ing = s.income
+    const exp = s.expense
+    if (ing < 1e-6 && exp < 1e-6) return row
+    return {
+      ...row,
+      ingresos: ing,
+      gasto_operativo: exp,
+      flujo: ing - exp,
+    }
+  })
+}

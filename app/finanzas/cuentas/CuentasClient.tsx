@@ -6,9 +6,8 @@ import {
   ArrowUpRight,
   Calculator,
   CalendarDays,
-  ChevronDown,
-  ChevronUp,
   CreditCard,
+  GripVertical,
   GraduationCap,
   Home,
   Percent,
@@ -39,6 +38,13 @@ import { CuentasModalShell } from "./CuentasModalShell"
 import { arcticPanel, formatMoney, formatShortMillions } from "./cuentasFormat"
 
 const supabaseEnabled = process.env.NEXT_PUBLIC_SUPABASE_ENABLED === "true"
+
+function reorderLedgerAccountList<T>(items: T[], fromIndex: number, toIndex: number): T[] {
+  const next = [...items]
+  const [removed] = next.splice(fromIndex, 1)
+  next.splice(toIndex, 0, removed!)
+  return next
+}
 
 type AccountLegacy = {
   id: string
@@ -374,6 +380,7 @@ export default function CuentasClient() {
   const [dashboard, setDashboard] = useState<CuentasDashboardPayload | null>(null)
   const [accountsLegacy, setAccountsLegacy] = useState<AccountLegacy[]>([])
   const [ledgerReorderBusy, setLedgerReorderBusy] = useState(false)
+  const [draggingLedgerIndex, setDraggingLedgerIndex] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -433,58 +440,50 @@ export default function CuentasClient() {
   const [planType, setPlanType] = useState<"fija" | "variable">("fija")
   const installmentOptions = [6, 12, 18, 24]
 
-  useEffect(() => {
+  const refetchAccountsDashboard = useCallback(async () => {
     if (!month) return
-    let cancelled = false
-    ;(async () => {
-      try {
-        setLoading(true)
-        setLoadError(null)
-        setNotice(null)
-        const res = await financeApiGet(`/api/orbita/finanzas/accounts?month=${encodeURIComponent(month)}`)
-        const json = (await res.json()) as {
-          success?: boolean
-          data?: {
-            accounts?: AccountLegacy[]
-            dashboard?: CuentasDashboardPayload | null
-          }
-          error?: string
-          notice?: string
+    try {
+      setLoading(true)
+      setLoadError(null)
+      setNotice(null)
+      const res = await financeApiGet(`/api/orbita/finanzas/accounts?month=${encodeURIComponent(month)}`)
+      const json = (await res.json()) as {
+        success?: boolean
+        data?: {
+          accounts?: AccountLegacy[]
+          dashboard?: CuentasDashboardPayload | null
         }
-        if (!res.ok || !json.success) {
-          throw new Error(messageForHttpError(res.status, json.error, res.statusText))
-        }
-        if (!cancelled) {
-          setAccountsLegacy(json.data?.accounts ?? [])
-          setDashboard(json.data?.dashboard ?? null)
-          setNotice(json.notice ?? null)
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setLoadError(e instanceof Error ? e.message : "Error")
-          setDashboard(null)
-          setAccountsLegacy([])
-        }
-      } finally {
-        if (!cancelled) setLoading(false)
+        error?: string
+        notice?: string
       }
-    })()
-    return () => {
-      cancelled = true
+      if (!res.ok || !json.success) {
+        throw new Error(messageForHttpError(res.status, json.error, res.statusText))
+      }
+      setAccountsLegacy(json.data?.accounts ?? [])
+      setDashboard(json.data?.dashboard ?? null)
+      setNotice(json.notice ?? null)
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : "Error")
+      setDashboard(null)
+      setAccountsLegacy([])
+    } finally {
+      setLoading(false)
     }
   }, [month])
 
-  const moveLedgerAccount = useCallback(
-    async (index: number, dir: -1 | 1) => {
-      if (ledgerAccounts.length < 2) return
-      const j = index + dir
-      if (j < 0 || j >= ledgerAccounts.length) return
-      const next = [...ledgerAccounts]
-      const a = next[index]!
-      const b = next[j]!
-      next[index] = b
-      next[j] = a
-      const orderedIds = next.map((x) => x.id)
+  useEffect(() => {
+    if (!month) {
+      setDashboard(null)
+      setAccountsLegacy([])
+      setLoadError(null)
+      setLoading(false)
+      return
+    }
+    void refetchAccountsDashboard()
+  }, [month, refetchAccountsDashboard])
+
+  const persistLedgerOrder = useCallback(
+    async (orderedIds: string[]) => {
       setLedgerReorderBusy(true)
       try {
         const res = await financeApiJson("/api/orbita/finanzas/ledger-accounts", {
@@ -497,6 +496,7 @@ export default function CuentasClient() {
           return
         }
         await refetchLedger()
+        await refetchAccountsDashboard()
         setLedgerReorderMessage("Orden de cuentas guardado.")
       } catch {
         setNotice("No se pudo guardar el orden de cuentas.")
@@ -504,7 +504,16 @@ export default function CuentasClient() {
         setLedgerReorderBusy(false)
       }
     },
-    [ledgerAccounts, refetchLedger],
+    [refetchAccountsDashboard, refetchLedger],
+  )
+
+  const onDropLedgerReorder = useCallback(
+    (fromIdx: number, toIdx: number) => {
+      if (fromIdx === toIdx || ledgerAccounts.length < 2) return
+      const next = reorderLedgerAccountList(ledgerAccounts, fromIdx, toIdx)
+      void persistLedgerOrder(next.map((x) => x.id))
+    },
+    [ledgerAccounts, persistLedgerOrder],
   )
 
   const reloadManualFromApi = useCallback(async () => {
@@ -744,6 +753,12 @@ export default function CuentasClient() {
   }
 
   const submitSavings = async () => {
+    if (savingForm.amount === 0) {
+      const ok = window.confirm(
+        "¿Estás seguro de registrar saldo cero? La tarjeta mostrará «Sin saldo registrado» hasta que edites el monto.",
+      )
+      if (!ok) return
+    }
     const existing = savingForm.id ? manualBundle.savings.find((s) => s.id === savingForm.id) : undefined
     const newId =
       existing?.manualRowId || String(existing?.id ?? "").startsWith("manual-saving")
@@ -1030,8 +1045,8 @@ export default function CuentasClient() {
           </h2>
           <p className="mt-1 text-xs text-orbita-secondary">
             Creadas o actualizadas al importar la hoja Movimientos (columna Cuenta). Los saldos detallados puedes
-            completarlos desde la hoja Cuentas o editando aquí más adelante. El orden por defecto prioriza tipo de
-            cuenta, saldo y uso en el mes; usa las flechas para fijar un orden personal (persistente para el hogar).
+            completarlos desde la hoja Cuentas o editando aquí más adelante. Orden por defecto: tipo, saldo y uso en el
+            mes. Arrastra el ícono ⋮⋮ para reordenar; al soltar se guarda el orden en Supabase.
           </p>
           {ledgerReorderMessage ? (
             <p
@@ -1058,8 +1073,36 @@ export default function CuentasClient() {
               {ledgerAccounts.map((a, idx) => (
                 <li
                   key={a.id}
-                  className="flex gap-2 rounded-xl border border-orbita-border/80 bg-orbita-surface px-3 py-2.5 [overflow-wrap:anywhere]"
+                  onDragOver={(e) => {
+                    if (ledgerReorderBusy) return
+                    e.preventDefault()
+                    e.dataTransfer.dropEffect = "move"
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    if (ledgerReorderBusy) return
+                    const raw = e.dataTransfer.getData("text/plain")
+                    const from = Number.parseInt(raw, 10)
+                    if (!Number.isFinite(from)) return
+                    onDropLedgerReorder(from, idx)
+                  }}
+                  className={`flex gap-2 rounded-xl border border-orbita-border/80 bg-orbita-surface px-2 py-2.5 [overflow-wrap:anywhere] transition-shadow ${
+                    draggingLedgerIndex === idx ? "opacity-60 shadow-lg ring-1 ring-orbita-border" : ""
+                  }`}
                 >
+                  <div
+                    draggable={!ledgerReorderBusy}
+                    onDragStart={(e) => {
+                      e.dataTransfer.effectAllowed = "move"
+                      e.dataTransfer.setData("text/plain", String(idx))
+                      setDraggingLedgerIndex(idx)
+                    }}
+                    onDragEnd={() => setDraggingLedgerIndex(null)}
+                    className="flex shrink-0 cursor-grab touch-none select-none items-center rounded-md px-1 text-orbita-secondary hover:bg-orbita-surface-alt active:cursor-grabbing"
+                    aria-label={`Arrastrar para reordenar ${a.label}`}
+                  >
+                    <GripVertical className="h-5 w-5 shrink-0" aria-hidden />
+                  </div>
                   <div className="min-w-0 flex-1">
                     <p className="font-medium text-orbita-primary">{a.label}</p>
                     <p className="mt-0.5 text-[11px] uppercase tracking-wide text-orbita-secondary">
@@ -1081,26 +1124,6 @@ export default function CuentasClient() {
                         <p className="mt-1 text-[11px] tabular-nums text-orbita-secondary">{bits.join(" · ")}</p>
                       )
                     })()}
-                  </div>
-                  <div className="flex shrink-0 flex-col justify-center gap-0.5 border-l border-orbita-border/60 pl-2">
-                    <button
-                      type="button"
-                      disabled={ledgerReorderBusy || idx === 0}
-                      onClick={() => void moveLedgerAccount(idx, -1)}
-                      className="rounded-md p-1 text-orbita-secondary hover:bg-orbita-surface-alt hover:text-orbita-primary disabled:opacity-30"
-                      aria-label={`Subir ${a.label}`}
-                    >
-                      <ChevronUp className="h-4 w-4" aria-hidden />
-                    </button>
-                    <button
-                      type="button"
-                      disabled={ledgerReorderBusy || idx === ledgerAccounts.length - 1}
-                      onClick={() => void moveLedgerAccount(idx, 1)}
-                      className="rounded-md p-1 text-orbita-secondary hover:bg-orbita-surface-alt hover:text-orbita-primary disabled:opacity-30"
-                      aria-label={`Bajar ${a.label}`}
-                    >
-                      <ChevronDown className="h-4 w-4" aria-hidden />
-                    </button>
                   </div>
                 </li>
               ))}

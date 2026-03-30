@@ -2,6 +2,7 @@ import {
   addMonthsYm,
   calendarQuarterMonthsThrough,
   eachMonthInclusive,
+  fillMonthlyFlowFromSnapshots,
   rollingSemesterMonths,
   rollingYearMonths,
   rollingWindowStartYm,
@@ -41,5 +42,23 @@ describe("flowEvolutionBuckets", () => {
   test("addMonthsYm rolls year boundaries", () => {
     expect(addMonthsYm("2026-01", -1)).toBe("2025-12")
     expect(addMonthsYm("2025-12", 1)).toBe("2026-01")
+  })
+
+  test("fillMonthlyFlowFromSnapshots fills empty months from map", () => {
+    const months = ["2026-01", "2026-02"]
+    const buckets = [
+      { month: "Ene '26", ingresos: 100, gasto_operativo: 40, flujo: 60 },
+      { month: "Feb '26", ingresos: 0, gasto_operativo: 0, flujo: 0 },
+    ]
+    const snap = new Map([
+      ["2026-02", { income: 500, expense: 200 }],
+    ])
+    const out = fillMonthlyFlowFromSnapshots(months, buckets, snap)
+    expect(out[0]).toEqual(buckets[0])
+    expect(out[1]).toMatchObject({
+      ingresos: 500,
+      gasto_operativo: 200,
+      flujo: 300,
+    })
   })
 })

@@ -7,6 +7,7 @@ import {
   buildMonthlyFlowBuckets,
   calendarQuarterMonthsThrough,
   eachMonthInclusive,
+  fillMonthlyFlowFromSnapshots,
   rollingSemesterMonths,
   rollingYearMonths,
   rollingWindowStartYm,
@@ -156,11 +157,51 @@ export async function GET(req: NextRequest) {
         "KPI superiores tomados de finance_monthly_snapshots: la suma de movimientos del mes en esta API fue 0 (si esperabas gráficos, revisa fechas o tipos en orbita_finance_transactions)."
     }
     const weeklySeries = buildWeeklyBuckets(month, currentRows)
+
+    const quarterMonths = calendarQuarterMonthsThrough(month)
+    const semesterMonths = rollingSemesterMonths(month)
+    const rollingMonths = rollingYearMonths(month)
+    const flowMonthsUnion = [...new Set([...quarterMonths, ...semesterMonths, ...rollingMonths])]
+    const yearsInFlow = flowMonthsUnion.map((ym) => Number(ym.split("-")[0])).filter(Number.isFinite)
+    const minFlowYear = yearsInFlow.length ? Math.min(...yearsInFlow) : y
+    const maxFlowYear = yearsInFlow.length ? Math.max(...yearsInFlow) : y
+
+    const { data: flowSnapRows } = await auth.supabase
+      .from("finance_monthly_snapshots")
+      .select("year, month, total_income, total_expense")
+      .eq("household_id", householdId)
+      .gte("year", minFlowYear)
+      .lte("year", maxFlowYear)
+
+    const snapByYm = new Map<string, { income: number; expense: number }>()
+    for (const r of flowSnapRows ?? []) {
+      const yy = Number((r as { year?: number }).year)
+      const mm = Number((r as { month?: number }).month)
+      if (!yy || !mm || mm < 1 || mm > 12) continue
+      const key = `${yy}-${String(mm).padStart(2, "0")}`
+      snapByYm.set(key, {
+        income: Number((r as { total_income?: unknown }).total_income ?? 0),
+        expense: Number((r as { total_expense?: unknown }).total_expense ?? 0),
+      })
+    }
+
     const flowEvolution = {
       weeks: weeklySeries,
-      quarter: buildMonthlyFlowBuckets(calendarQuarterMonthsThrough(month), rows),
-      semester: buildMonthlyFlowBuckets(rollingSemesterMonths(month), rows),
-      rollingYear: buildMonthlyFlowBuckets(rollingYearMonths(month), rows),
+      quarter: fillMonthlyFlowFromSnapshots(
+        quarterMonths,
+        buildMonthlyFlowBuckets(quarterMonths, rows),
+        snapByYm,
+      ),
+      semester: fillMonthlyFlowFromSnapshots(
+        semesterMonths,
+        buildMonthlyFlowBuckets(semesterMonths, rows),
+        snapByYm,
+      ),
+      rollingYear: fillMonthlyFlowFromSnapshots(
+        rollingMonths,
+        buildMonthlyFlowBuckets(rollingMonths, rows),
+        snapByYm,
+      ),
     }
     const subs = pickSubscriptionExpenses(currentRows)
     const obls = pickObligationExpenses(currentRows)

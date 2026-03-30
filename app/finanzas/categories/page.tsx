@@ -145,7 +145,6 @@ export default function FinanzasCategories() {
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Error desconocido"
         setError(errorMessage)
-        console.error("Error fetching categories:", err)
         setData(null)
       } finally {
         setLoading(false)
