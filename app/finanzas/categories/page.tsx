@@ -6,6 +6,7 @@ import { useFinance } from "../FinanceContext"
 import { useRouter } from "next/navigation"
 import { Card } from "@/src/components/ui/Card"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
+import { financialImpactPillClass, sheetTipoPillClass } from "@/lib/finanzas/catalogTagStyles"
 import { financeApiGet } from "@/lib/finanzas/financeClientFetch"
 
 interface Subcategory {
@@ -61,7 +62,9 @@ function OperativaCategoryCard({
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <p className="break-words text-sm font-semibold leading-snug text-orbita-primary">{cat.name}</p>
-              <span className="shrink-0 rounded-md bg-orbita-surface-alt px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-orbita-secondary">
+              <span
+                className={`shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${sheetTipoPillClass(cat.type === "fixed" ? "fijo" : "variable")}`}
+              >
                 {typeLabel}
               </span>
             </div>
@@ -129,12 +132,16 @@ function OperativaCategoryCard({
                     {(sub.sheetTipo || sub.financialImpact != null) && (
                       <div className="mt-0.5 flex flex-wrap gap-1">
                         {sub.sheetTipo && (
-                          <span className="rounded bg-orbita-surface-alt px-1 py-0.5 text-[9px] uppercase tracking-wide text-orbita-secondary">
+                          <span
+                            className={`rounded px-1 py-0.5 text-[9px] uppercase tracking-wide ${sheetTipoPillClass(sub.sheetTipo)}`}
+                          >
                             {sub.sheetTipo === "fijo" ? "Fijo" : "Variable"}
                           </span>
                         )}
                         {sub.financialImpact ? (
-                          <span className="rounded border border-orbita-border px-1 py-0.5 text-[9px] text-orbita-secondary">
+                          <span
+                            className={`rounded px-1 py-0.5 text-[9px] font-medium ${financialImpactPillClass(sub.financialImpact)}`}
+                          >
                             {sub.financialImpact}
                           </span>
                         ) : null}

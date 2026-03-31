@@ -388,7 +388,7 @@ export function SubscriptionsBurnSection({
           <div className="space-y-3 border-t border-orbita-border p-3 sm:p-3.5">
             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
               <p className="max-w-xl text-xs text-orbita-secondary sm:text-sm">
-                Renovaciones recurrentes y ahorro potencial al pausar o cancelar.
+                Lista editable en tabla; pausa o cancela desde acciones.
               </p>
               <div className="shrink-0 text-left sm:text-right">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">Total mensual</p>
@@ -404,88 +404,103 @@ export function SubscriptionsBurnSection({
               </div>
             ) : null}
 
-            <div className="overflow-hidden rounded-2xl border-[0.5px] border-orbita-border/80 bg-orbita-surface shadow-sm">
+            <div className="overflow-x-auto rounded-2xl border-[0.5px] border-orbita-border/80 bg-orbita-surface shadow-sm">
               {loading ? (
                 <p className="p-6 text-center text-sm text-orbita-secondary">Cargando suscripciones…</p>
               ) : (
-                <div className="divide-y divide-orbita-border/80">
-                  {rows.map((s) => {
-                    const active = subscriptionActiveBurn(s)
-                    const imp = impactLabel(s.amount_monthly, baselineMonthlyIncome)
-                    return (
-                      <div
-                        key={s.id}
-                        className={`flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3 ${
-                          !active ? "bg-orbita-surface-alt/50" : ""
-                        }`}
-                      >
-                        <div className="min-w-0 flex-1">
-                          <p className="text-base font-semibold text-orbita-primary">{s.name}</p>
-                          <p className="mt-0.5 text-xs text-orbita-secondary sm:text-sm">
+                <table className="w-full min-w-[720px] border-collapse text-left text-xs sm:text-sm">
+                  <thead>
+                    <tr className="border-b border-orbita-border bg-orbita-surface-alt text-[10px] font-semibold uppercase tracking-wide text-orbita-secondary">
+                      <th className="px-3 py-2.5 font-medium">Nombre</th>
+                      <th className="px-3 py-2.5 font-medium">Categoría</th>
+                      <th className="px-3 py-2.5 text-right font-medium">Mensual (COP)</th>
+                      <th className="px-3 py-2.5 font-medium">Renovación</th>
+                      <th className="px-3 py-2.5 font-medium">Impacto</th>
+                      <th className="px-3 py-2.5 font-medium">Simulador</th>
+                      <th className="px-3 py-2.5 text-right font-medium">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((s) => {
+                      const active = subscriptionActiveBurn(s)
+                      const imp = impactLabel(s.amount_monthly, baselineMonthlyIncome)
+                      return (
+                        <tr
+                          key={s.id}
+                          className={`border-b border-orbita-border/70 ${!active ? "bg-orbita-surface-alt/40" : ""}`}
+                        >
+                          <td className="px-3 py-2.5 align-middle">
+                            <p className="font-semibold text-orbita-primary">{s.name}</p>
+                            {!active ? (
+                              <p className="mt-0.5 text-[10px] text-orbita-secondary">
+                                {s.status === "paused" ? "Pausada" : "Cancelada"}
+                              </p>
+                            ) : null}
+                          </td>
+                          <td className="max-w-[140px] px-3 py-2.5 align-middle text-orbita-secondary">
                             {s.category}
-                            {s.include_in_simulator ? " · En simulador" : " · Fuera del simulador"}
-                            {!active ? ` · ${s.status === "paused" ? "Pausada" : "Cancelada"}` : ""}
-                          </p>
-                        </div>
-                        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-                          <div className="flex flex-wrap items-center justify-between gap-2 sm:justify-end">
-                            <div className="text-left sm:text-right">
-                              <p className="text-base font-semibold tabular-nums text-orbita-primary">
-                                ${formatMoney(s.amount_monthly)}
-                              </p>
-                              <p className="text-[11px] text-orbita-secondary sm:text-xs">
-                                Renov. {renewalLabel(s.renewal_date)}
-                              </p>
-                            </div>
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-2.5 text-right align-middle font-semibold tabular-nums text-orbita-primary">
+                            ${formatMoney(s.amount_monthly)}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-2.5 align-middle text-orbita-secondary">
+                            {renewalLabel(s.renewal_date)}
+                          </td>
+                          <td className="px-3 py-2.5 align-middle">
                             <span
-                              className={`rounded-full border-[0.5px] px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wide ${impactTone(imp)}`}
+                              className={`inline-flex rounded-full border-[0.5px] px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${impactTone(imp)}`}
                             >
                               {imp}
                             </span>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-2">
-                            <button
-                              type="button"
-                              onClick={() => openEdit(s)}
-                              className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-orbita-border bg-orbita-surface px-3 text-xs font-medium text-orbita-primary touch-manipulation hover:bg-orbita-surface-alt active:bg-orbita-surface-alt sm:min-h-0 sm:rounded-full sm:py-2"
-                            >
-                              <Pencil className="mr-1.5 h-4 w-4 shrink-0 sm:h-3.5 sm:w-3.5" aria-hidden />
-                              Editar
-                            </button>
-                            {active ? (
+                          </td>
+                          <td className="px-3 py-2.5 align-middle text-orbita-secondary">
+                            {s.include_in_simulator ? "Sí" : "No"}
+                          </td>
+                          <td className="px-3 py-2.5 align-middle">
+                            <div className="flex flex-wrap justify-end gap-1.5">
                               <button
                                 type="button"
-                                onClick={() => void setStatus(s, "paused")}
-                                className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-orbita-border bg-orbita-surface px-3 text-xs font-medium text-orbita-primary touch-manipulation hover:bg-orbita-surface-alt active:bg-orbita-surface-alt sm:min-h-0 sm:rounded-full sm:py-2"
+                                onClick={() => openEdit(s)}
+                                className="inline-flex min-h-9 items-center justify-center rounded-lg border border-orbita-border bg-orbita-surface px-2 py-1 text-[11px] font-medium text-orbita-primary hover:bg-orbita-surface-alt"
                               >
-                                <Pause className="mr-1.5 h-4 w-4 shrink-0 sm:h-3.5 sm:w-3.5" aria-hidden />
-                                Pausar
+                                <Pencil className="mr-1 h-3.5 w-3.5" aria-hidden />
+                                Editar
                               </button>
-                            ) : s.status === "paused" ? (
-                              <button
-                                type="button"
-                                onClick={() => void setStatus(s, "active")}
-                                className="col-span-2 inline-flex min-h-[44px] items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-xs font-medium text-emerald-800 touch-manipulation hover:bg-emerald-100 sm:col-span-1 sm:min-h-0 sm:rounded-full sm:py-2"
-                              >
-                                Reactivar
-                              </button>
-                            ) : null}
-                            {active || s.status === "paused" ? (
-                              <button
-                                type="button"
-                                onClick={() => void setStatus(s, "cancelled")}
-                                className="col-span-2 inline-flex min-h-[44px] items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-3 text-xs font-medium text-rose-800 touch-manipulation hover:bg-rose-100 active:bg-rose-100 sm:col-span-1 sm:min-h-0 sm:rounded-full sm:py-2"
-                              >
-                                <Ban className="mr-1.5 h-4 w-4 shrink-0 sm:h-3.5 sm:w-3.5" aria-hidden />
-                                Cancelar
-                              </button>
-                            ) : null}
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
+                              {active ? (
+                                <button
+                                  type="button"
+                                  onClick={() => void setStatus(s, "paused")}
+                                  className="inline-flex min-h-9 items-center justify-center rounded-lg border border-orbita-border px-2 py-1 text-[11px] font-medium text-orbita-primary hover:bg-orbita-surface-alt"
+                                >
+                                  <Pause className="mr-1 h-3.5 w-3.5" aria-hidden />
+                                  Pausar
+                                </button>
+                              ) : s.status === "paused" ? (
+                                <button
+                                  type="button"
+                                  onClick={() => void setStatus(s, "active")}
+                                  className="inline-flex min-h-9 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1 text-[11px] font-medium text-emerald-800 hover:bg-emerald-100"
+                                >
+                                  Reactivar
+                                </button>
+                              ) : null}
+                              {active || s.status === "paused" ? (
+                                <button
+                                  type="button"
+                                  onClick={() => void setStatus(s, "cancelled")}
+                                  className="inline-flex min-h-9 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-medium text-rose-800 hover:bg-rose-100"
+                                >
+                                  <Ban className="mr-1 h-3.5 w-3.5" aria-hidden />
+                                  Cancelar
+                                </button>
+                              ) : null}
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
               )}
               <div className="border-t border-orbita-border p-3 sm:p-4">
                 <button

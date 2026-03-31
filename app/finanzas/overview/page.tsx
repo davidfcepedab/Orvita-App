@@ -292,9 +292,8 @@ export default function FinanzasOverview() {
               Indicadores operativos del mes
             </h2>
             <p className="max-w-2xl text-[11px] leading-snug text-orbita-secondary sm:text-xs">
-              Los gastos de estas tarjetas usan solo movimientos con impacto{" "}
-              <span className="font-medium text-orbita-primary">operativo</span> según tu catálogo de subcategorías
-              (se excluyen inversión, ajustes y otros impactos no operativos cuando están catalogados).
+              Solo cuenta el gasto catalogado como <span className="font-medium text-orbita-primary">operativo</span>
+              ; inversión y ajustes no entran en estas tarjetas si vienen del catálogo.
             </p>
           </div>
           <p className="shrink-0 text-[10px] font-medium uppercase tracking-[0.14em] text-orbita-secondary">
@@ -302,32 +301,35 @@ export default function FinanzasOverview() {
           </p>
         </div>
         <div className="grid min-w-0 max-w-full grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {[
-            {
-              label: "Capacidad de ahorro",
-              value: `${formatMoney(savingsRate)}%`,
-              sub: `Ingresos ${formatMoney(income)} COP · ${deltaLabel}`,
-              accent: "var(--color-accent-health)",
-            },
-            {
-              label: "Flujo neto",
-              value: `${net >= 0 ? "+" : ""}$${formatMoney(net)}`,
-              sub: `Gasto operativo ${formatMoney(expense)} · Ingresos ${formatMoney(income)}`,
-              accent: "var(--color-accent-primary)",
-            },
-            {
-              label: "Runway (superávit / gasto)",
-              value: runwayLabel,
-              sub: "Meses de superávit cubriendo el gasto operativo del mes",
-              accent: "var(--color-text-primary)",
-            },
-            {
-              label: "Presión gasto / ingreso",
-              value: `${Math.max(0, Math.min(100, Math.round((expense / Math.max(1, income)) * 100)))}%`,
-              sub: "Gasto operativo sobre ingresos del mes",
-              accent: "var(--color-accent-finance)",
-            },
-          ].map((metric) => (
+          {(
+            [
+              {
+                label: "Capacidad de ahorro",
+                value: `${formatMoney(savingsRate)}%`,
+                sub: `Ingresos ${formatMoney(income)} COP`,
+                subExtra: deltaLabel,
+                accent: "var(--color-accent-health)",
+              },
+              {
+                label: "Flujo neto",
+                value: `${net >= 0 ? "+" : ""}$${formatMoney(net)}`,
+                sub: `Gasto operativo ${formatMoney(expense)} · Ingresos ${formatMoney(income)}`,
+                accent: "var(--color-accent-primary)",
+              },
+              {
+                label: "Runway (superávit / gasto)",
+                value: runwayLabel,
+                sub: "Meses de superávit cubriendo el gasto operativo del mes",
+                accent: "var(--color-text-primary)",
+              },
+              {
+                label: "Presión gasto / ingreso",
+                value: `${Math.max(0, Math.min(100, Math.round((expense / Math.max(1, income)) * 100)))}%`,
+                sub: "Gasto operativo sobre ingresos del mes",
+                accent: "var(--color-accent-finance)",
+              },
+            ] as const
+          ).map((metric) => (
             <Card key={metric.label} hover className="min-w-0 border border-orbita-border/70 p-4 sm:p-6">
               <div className="grid min-w-0 gap-2">
                 <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">{metric.label}</p>
@@ -335,6 +337,9 @@ export default function FinanzasOverview() {
                   {metric.value}
                 </p>
                 <p className="break-words text-xs leading-snug text-orbita-secondary">{metric.sub}</p>
+                {"subExtra" in metric && metric.subExtra ? (
+                  <p className="break-words text-xs leading-snug text-orbita-secondary">{metric.subExtra}</p>
+                ) : null}
               </div>
             </Card>
           ))}

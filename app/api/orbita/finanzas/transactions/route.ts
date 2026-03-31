@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
 import { isAppMockMode, isSupabaseEnabled, UI_SYNC_OFF_SHORT } from "@/lib/checkins/flags"
 import { calculateSubtotal } from "@/lib/finanzas/calculations"
-import { signedDisplayAmount } from "@/lib/finanzas/calculations/txMath"
+import { incomeAmount, signedDisplayAmount } from "@/lib/finanzas/calculations/txMath"
 import { mockTransactionsForMonth } from "@/lib/finanzas/mockFinancePayloads"
 import { monthBounds } from "@/lib/finanzas/monthRange"
-import type { FinanceTransaction } from "@/lib/finanzas/types"
+import type { FinanceTransaction, FinanceTxType } from "@/lib/finanzas/types"
+import { getHouseholdId } from "@/lib/households/getHouseholdId"
 import { getTransactionsByRange } from "@/lib/services/finanzasService"
 
 export const runtime = "nodejs"
@@ -13,14 +14,21 @@ export const runtime = "nodejs"
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
+function resolvedTxType(tx: FinanceTransaction): FinanceTxType {
+  if (tx.type === "income" || tx.type === "expense") return tx.type
+  return incomeAmount(tx) > 0 ? "income" : "expense"
+}
+
 function mapTx(tx: FinanceTransaction) {
   return {
+    id: tx.id,
     fecha: tx.date,
     descripcion: tx.description,
     categoria: tx.category,
     subcategoria: tx.subcategory ?? "",
     cuenta: (tx.account_label ?? "").trim(),
     monto: signedDisplayAmount(tx),
+    tipo: resolvedTxType(tx),
   }
 }
 
@@ -117,5 +125,87 @@ export async function GET(req: NextRequest) {
     const message = error instanceof Error ? error.message : "Error"
     console.error("TRANSACTIONS ERROR:", message)
     return NextResponse.json({ success: false, error: "Error cargando transacciones" }, { status: 500 })
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  try {
+    if (isAppMockMode()) {
+      return NextResponse.json({ success: false, error: "No disponible en modo demo" }, { status: 400 })
+    }
+    if (!isSupabaseEnabled()) {
+      return NextResponse.json({ success: false, error: UI_SYNC_OFF_SHORT }, { status: 400 })
+    }
+
+    const auth = await requireUser(req)
+    if (auth instanceof NextResponse) return auth
+
+    const householdId = await getHouseholdId(auth.supabase, auth.userId)
+    if (!householdId) {
+      return NextResponse.json({ success: false, error: "Usuario sin hogar asignado" }, { status: 403 })
+    }
+
+    const body = (await req.json()) as {
+      id?: string
+      category?: string
+      subcategory?: string | null
+      type?: string
+    }
+
+    const id = String(body.id ?? "").trim()
+    if (!UUID_RE.test(id)) {
+      return NextResponse.json({ success: false, error: "id inválido" }, { status: 400 })
+    }
+
+    const { data: existing, error: fetchErr } = await auth.supabase
+      .from("orbita_finance_transactions")
+      .select("id, household_id")
+      .eq("id", id)
+      .maybeSingle()
+
+    if (fetchErr) throw fetchErr
+    if (!existing || String(existing.household_id) !== String(householdId)) {
+      return NextResponse.json({ success: false, error: "Movimiento no encontrado" }, { status: 404 })
+    }
+
+    const patch: Record<string, unknown> = { updated_at: new Date().toISOString() }
+    if (body.category !== undefined) patch.category = String(body.category).trim()
+    if (body.subcategory !== undefined) {
+      patch.subcategory =
+        body.subcategory === null || body.subcategory === ""
+          ? null
+          : String(body.subcategory).trim()
+    }
+    if (body.type === "income" || body.type === "expense") {
+      patch.type = body.type
+    }
+
+    const patchKeys = Object.keys(patch).filter((k) => k !== "updated_at")
+    if (patchKeys.length === 0) {
+      return NextResponse.json({ success: false, error: "Nada que actualizar" }, { status: 400 })
+    }
+
+    const { data: updated, error: upErr } = await auth.supabase
+      .from("orbita_finance_transactions")
+      .update(patch)
+      .eq("id", id)
+      .eq("household_id", householdId)
+      .select("*")
+      .maybeSingle()
+
+    if (upErr) throw upErr
+    if (!updated) {
+      return NextResponse.json({ success: false, error: "No se pudo actualizar" }, { status: 404 })
+    }
+
+    const row = updated as FinanceTransaction
+    return NextResponse.json({
+      success: true,
+      data: { transaction: mapTx(row) },
+    })
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Error"
+    console.error("TRANSACTIONS PATCH:", message)
+    return NextResponse.json({ success: false, error: "Error actualizando movimiento" }, { status: 500 })
   }
 }

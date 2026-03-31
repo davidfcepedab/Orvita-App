@@ -1,12 +1,12 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useFinance } from "../FinanceContext"
 import { useLedgerAccounts } from "../useLedgerAccounts"
 import { Card } from "@/src/components/ui/Card"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
-import { financeApiGet } from "@/lib/finanzas/financeClientFetch"
+import { financeApiGet, financeApiJson } from "@/lib/finanzas/financeClientFetch"
 
 const supabaseEnabled = process.env.NEXT_PUBLIC_SUPABASE_ENABLED === "true"
 
@@ -14,12 +14,14 @@ const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 interface Transaction {
+  id?: string
   fecha: string
   descripcion: string
   categoria: string
   subcategoria: string
   cuenta?: string
   monto: number
+  tipo?: "income" | "expense"
 }
 
 interface TransactionsData {
@@ -35,14 +37,23 @@ interface TransactionsResponse {
   error?: string
 }
 
+interface PatchTxResponse {
+  success: boolean
+  data?: { transaction?: Transaction }
+  error?: string
+}
+
 export default function TransactionsPageClient() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const finance = useFinance()
 
   const [data, setData] = useState<TransactionsData | null>(null)
+  const [txRows, setTxRows] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [patchErr, setPatchErr] = useState<string | null>(null)
+  const patchTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
   const month = finance?.month ?? searchParams.get("month") ?? ""
   const category = searchParams.get("category") || ""
@@ -87,11 +98,14 @@ export default function TransactionsPageClient() {
           throw new Error(messageForHttpError(response.status, json.error, response.statusText))
         }
 
-        setData(json.data ?? null)
+        const d = json.data ?? null
+        setData(d)
+        setTxRows(d?.transactions ?? [])
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Error desconocido"
         setError(errorMessage)
         setData(null)
+        setTxRows([])
       } finally {
         setLoading(false)
       }
@@ -108,7 +122,45 @@ export default function TransactionsPageClient() {
     )
   }
 
-  const transactions = data?.transactions ?? []
+  const transactions = data != null ? txRows : []
+
+  const schedulePatch = useCallback(
+    (id: string, body: { category?: string; type?: "income" | "expense" }) => {
+      const prev = patchTimers.current.get(id)
+      if (prev) clearTimeout(prev)
+      const t = setTimeout(() => {
+        patchTimers.current.delete(id)
+        void (async () => {
+          setPatchErr(null)
+          try {
+            const res = await financeApiJson("/api/orbita/finanzas/transactions", {
+              method: "PATCH",
+              body: { id, category: body.category, type: body.type },
+            })
+            const json = (await res.json()) as PatchTxResponse
+            if (!res.ok || !json.success || !json.data?.transaction) {
+              throw new Error(messageForHttpError(res.status, json.error, res.statusText))
+            }
+            const u = json.data.transaction
+            setTxRows((rows) =>
+              rows.map((r) => (r.id === id ? { ...r, ...u } : r)),
+            )
+          } catch (e) {
+            setPatchErr(e instanceof Error ? e.message : "No se pudo guardar")
+          }
+        })()
+      }, 450)
+      patchTimers.current.set(id, t)
+    },
+    [],
+  )
+
+  useEffect(() => {
+    return () => {
+      patchTimers.current.forEach((t) => clearTimeout(t))
+      patchTimers.current.clear()
+    }
+  }, [])
   const subtotal = data?.subtotal ?? 0
   const previousSubtotal = data?.previousSubtotal ?? 0
   const delta = data?.delta ?? null
@@ -140,12 +192,13 @@ export default function TransactionsPageClient() {
               ))}
             </select>
           </label>
-          <p className="text-[11px] leading-snug text-orbita-secondary">
-            Orden según la hoja Cuentas. Compatible con el filtro por categoría en la URL (
-            <code className="text-[10px]">?category=</code>
-            ).
-          </p>
         </div>
+      ) : null}
+
+      {patchErr ? (
+        <p className="text-xs text-rose-600" role="status">
+          {patchErr}
+        </p>
       ) : null}
 
       {!periodReady ? (
@@ -260,11 +313,13 @@ export default function TransactionsPageClient() {
               <tbody>
                 {transactions.map((tx, idx) => {
                   const catLine = [tx.categoria, tx.subcategoria].filter(Boolean).join(" · ")
-                  const tipoLabel = tx.monto > 0 ? "Ingreso" : "Egreso"
+                  const tipoResolved =
+                    tx.tipo ?? (tx.monto > 0 ? ("income" as const) : ("expense" as const))
+                  const tipoLabel = tipoResolved === "income" ? "Ingreso" : "Egreso"
                   const montoStr = `$${Math.abs(tx.monto).toLocaleString("es-CO", {
                     maximumFractionDigits: 0,
                   })}`
-                  const isIngreso = tx.monto > 0
+                  const isIngreso = tipoResolved === "income"
                   const rowBg = isIngreso ? "hover:opacity-95" : "hover:opacity-95"
                   const rowBorder = "border-b border-orbita-border/60"
                   const rowStyle = isIngreso
@@ -276,9 +331,10 @@ export default function TransactionsPageClient() {
                         background:
                           "color-mix(in srgb, var(--color-accent-danger) 12%, var(--color-surface))",
                       }
+                  const editable = Boolean(supabaseEnabled && tx.id)
                   return (
                     <tr
-                      key={idx}
+                      key={tx.id ?? idx}
                       className={`${rowBg} ${rowBorder} last:border-b-0 transition-opacity`}
                       style={rowStyle}
                     >
@@ -286,18 +342,62 @@ export default function TransactionsPageClient() {
                         {tx.fecha}
                       </td>
                       <td
-                        className={`px-0.5 py-1 align-middle text-center text-[9px] font-bold sm:py-1.5 ${
+                        className={`px-0.5 py-1 align-middle text-center sm:py-1.5 ${
                           isIngreso ? "text-[var(--color-accent-health)]" : "text-[var(--color-accent-danger)]"
                         }`}
                         title={tipoLabel}
                       >
-                        {isIngreso ? "IN" : "EG"}
+                        {editable ? (
+                          <select
+                            aria-label="Tipo de movimiento"
+                            className="max-w-[3.25rem] rounded border border-orbita-border bg-orbita-surface py-0.5 text-[9px] font-bold"
+                            value={tipoResolved}
+                            onChange={(e) => {
+                              const t = e.target.value as "income" | "expense"
+                              const abs = Math.abs(tx.monto)
+                              setTxRows((rs) =>
+                                rs.map((r) =>
+                                  r.id === tx.id
+                                    ? { ...r, tipo: t, monto: t === "income" ? abs : -abs }
+                                    : r,
+                                ),
+                              )
+                              schedulePatch(tx.id!, { type: t })
+                            }}
+                          >
+                            <option value="income">IN</option>
+                            <option value="expense">EG</option>
+                          </select>
+                        ) : (
+                          <span className="text-[9px] font-bold">{isIngreso ? "IN" : "EG"}</span>
+                        )}
                       </td>
-                      <td
-                        className="truncate px-1.5 py-1 align-middle text-orbita-primary sm:px-2 sm:py-1.5"
-                        title={catLine}
-                      >
-                        {catLine}
+                      <td className="min-w-0 px-1.5 py-1 align-middle text-orbita-primary sm:px-2 sm:py-1.5">
+                        {editable ? (
+                          <div className="grid min-w-0 gap-0.5">
+                            <input
+                              aria-label="Categoría"
+                              className="w-full min-w-0 rounded border border-orbita-border bg-orbita-surface px-1 py-0.5 text-[10px] sm:text-[11px]"
+                              value={tx.categoria}
+                              onChange={(e) => {
+                                const v = e.target.value
+                                setTxRows((rs) =>
+                                  rs.map((r) => (r.id === tx.id ? { ...r, categoria: v } : r)),
+                                )
+                                schedulePatch(tx.id!, { category: v })
+                              }}
+                            />
+                            {tx.subcategoria ? (
+                              <span className="truncate text-[9px] text-orbita-secondary" title={tx.subcategoria}>
+                                {tx.subcategoria}
+                              </span>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <span className="truncate block" title={catLine}>
+                            {catLine}
+                          </span>
+                        )}
                       </td>
                       <td
                         className="truncate px-1.5 py-1 align-middle text-[10px] text-orbita-secondary sm:px-2 sm:py-1.5 sm:text-[11px]"

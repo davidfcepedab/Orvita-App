@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { AlertTriangle, ChevronDown, TrendingUp } from "lucide-react"
-import { financeApiGet, financeApiJson } from "@/lib/finanzas/financeClientFetch"
+import { financeApiDelete, financeApiGet, financeApiJson } from "@/lib/finanzas/financeClientFetch"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import type { CuentasKpis } from "@/lib/finanzas/cuentasDashboard"
 import type { FlowCommitment, FlowCommitmentFlowType } from "@/lib/finanzas/flowCommitmentsTypes"
@@ -17,6 +17,7 @@ type FlowRow = { month: string; ingresos: number; gasto_operativo: number; flujo
 
 type Commitment = FlowCommitment
 type CommitmentFlowType = FlowCommitmentFlowType
+type CommitmentModalRow = FlowCommitment & { _isNew?: boolean }
 
 function isIncomeCommitment(c: Commitment) {
   return c.flowType === "income"
@@ -94,13 +95,8 @@ export function CashFlowSimulatorSection({
   const [commitmentsHydrated, setCommitmentsHydrated] = useState(false)
   const [commitOpen, setCommitOpen] = useState(false)
   const [commitSaveErr, setCommitSaveErr] = useState<string | null>(null)
-  const [draftC, setDraftC] = useState({
-    title: "",
-    category: "",
-    date: "",
-    amount: 0,
-    flowType: "fixed" as CommitmentFlowType,
-  })
+  const [commitModalRows, setCommitModalRows] = useState<CommitmentModalRow[]>([])
+  const [commitModalInitialIds, setCommitModalInitialIds] = useState<Set<string>>(new Set())
   const [simulatorExpanded, setSimulatorExpanded] = useState(false)
   const [flowViz, setFlowViz] = useState<"table" | "bars">("table")
 
@@ -272,42 +268,107 @@ export function CashFlowSimulatorSection({
     return m
   }, [pipelineMonths])
 
-  const addCommitment = async () => {
-    if (!draftC.title.trim() || !draftC.date) return
+  const openCommitModal = () => {
     setCommitSaveErr(null)
-    const title = draftC.title.trim()
-    const category = draftC.category.trim()
-    const date = draftC.date
-    const amount = Math.max(0, draftC.amount)
-    const flowType = draftC.flowType
+    const rows = commitments.map((c) => ({ ...c }))
+    setCommitModalRows(rows)
+    setCommitModalInitialIds(new Set(rows.map((r) => r.id)))
+    setCommitOpen(true)
+  }
+
+  const addCommitModalRow = () => {
+    setCommitModalRows((r) => [
+      ...r,
+      {
+        id: newId(),
+        title: "",
+        category: "",
+        date: `${month}-15`,
+        amount: 0,
+        flowType: "fixed",
+        _isNew: true,
+      },
+    ])
+  }
+
+  const saveCommitModal = async () => {
+    setCommitSaveErr(null)
+    for (const row of commitModalRows) {
+      if (!row.title.trim() || !row.date || !/^\d{4}-\d{2}-\d{2}$/.test(row.date)) {
+        setCommitSaveErr("Cada fila necesita título y fecha válida.")
+        return
+      }
+    }
+
+    const currentIds = new Set(commitModalRows.map((r) => r.id))
+    const toDelete = [...commitModalInitialIds].filter((id) => !currentIds.has(id))
 
     if (supabaseEnabled) {
       try {
-        const res = await financeApiJson("/api/orbita/finanzas/commitments", {
-          method: "POST",
-          body: { title, category, date, amount, flow_type: flowType },
-        })
-        const json = (await res.json()) as {
-          success?: boolean
-          data?: { commitment?: FlowCommitment }
-          error?: string
+        for (const id of toDelete) {
+          const res = await financeApiDelete(
+            `/api/orbita/finanzas/commitments?id=${encodeURIComponent(id)}`,
+          )
+          const json = (await res.json()) as { success?: boolean; error?: string }
+          if (!res.ok || !json.success) {
+            throw new Error(messageForHttpError(res.status, json.error, res.statusText))
+          }
         }
-        const created = json.data?.commitment
-        if (!res.ok || !json.success || !created) {
-          throw new Error(messageForHttpError(res.status, json.error, res.statusText))
+        for (const row of commitModalRows) {
+          const title = row.title.trim()
+          const category = row.category.trim()
+          const date = row.date.slice(0, 10)
+          const amount = Math.max(0, row.amount)
+          const flowType = row.flowType
+          if (row._isNew) {
+            const res = await financeApiJson("/api/orbita/finanzas/commitments", {
+              method: "POST",
+              body: { title, category, date, amount, flow_type: flowType },
+            })
+            const json = (await res.json()) as {
+              success?: boolean
+              data?: { commitment?: FlowCommitment }
+              error?: string
+            }
+            if (!res.ok || !json.success || !json.data?.commitment) {
+              throw new Error(messageForHttpError(res.status, json.error, res.statusText))
+            }
+          } else {
+            const res = await financeApiJson("/api/orbita/finanzas/commitments", {
+              method: "PATCH",
+              body: {
+                id: row.id,
+                title,
+                category,
+                date,
+                amount,
+                flow_type: flowType,
+              },
+            })
+            const json = (await res.json()) as { success?: boolean; error?: string }
+            if (!res.ok || !json.success) {
+              throw new Error(messageForHttpError(res.status, json.error, res.statusText))
+            }
+          }
         }
-        setCommitments((c) => [...c, created])
+        await load()
+        setCommitOpen(false)
       } catch (e) {
-        setCommitSaveErr(e instanceof Error ? e.message : "No se pudo guardar el compromiso")
-        return
+        setCommitSaveErr(e instanceof Error ? e.message : "No se pudieron guardar los compromisos")
       }
     } else {
-      setCommitments((c) => [
-        ...c,
-        { id: newId(), title, category, date, amount, flowType },
-      ])
+      const cleaned: FlowCommitment[] = commitModalRows.map((row) => ({
+        id: row.id,
+        title: row.title,
+        category: row.category,
+        date: row.date,
+        amount: row.amount,
+        flowType: row.flowType,
+      }))
+      setCommitments(cleaned)
+      writeFlowCommitmentsToLocalStorage(cleaned)
+      setCommitOpen(false)
     }
-    setDraftC({ title: "", category: "", date: month + "-15", amount: 0, flowType: "fixed" })
   }
 
   return (
@@ -318,7 +379,7 @@ export function CashFlowSimulatorSection({
             Simulador de cash flow
           </h2>
           <p className="mt-1 max-w-xl text-xs text-orbita-secondary sm:text-sm">
-            What-if en vivo: ajusta palancas y observa el tubo de ingresos vs egresos (mes actual + 6 meses).
+            Proyección 7 meses: ingresos vs salidas según tus palancas.
           </p>
         </div>
         <button
@@ -638,159 +699,196 @@ export function CashFlowSimulatorSection({
           </div>
           <button
             type="button"
-            onClick={() => {
-              setCommitSaveErr(null)
-              setCommitOpen(true)
-            }}
+            onClick={openCommitModal}
             className="text-[11px] font-medium text-orbita-secondary underline decoration-orbita-border underline-offset-4 hover:text-orbita-primary"
           >
             Editar
           </button>
         </div>
-        <ul className="mt-3 space-y-2">
-          {commitmentsSorted.slice(0, 8).map((c) => {
-            const inc = isIncomeCommitment(c)
-            const cat = c.category.trim()
-            const showCat = Boolean(cat)
-            const titleDiffers = c.title.trim().toLowerCase() !== cat.toLowerCase()
-            return (
-              <li
-                key={c.id}
-                className="rounded-lg border border-orbita-border bg-orbita-surface-alt/80 px-2.5 py-2 sm:flex sm:items-start sm:gap-3 sm:px-3 sm:py-2.5"
-              >
-                <div className="flex gap-2 sm:min-w-0 sm:flex-1 sm:items-start sm:gap-3">
-                  <div
-                    className="w-12 shrink-0 text-xs font-bold tabular-nums text-orbita-primary sm:w-[3.75rem] sm:pt-0.5 sm:text-sm"
-                    title={c.date}
-                  >
-                    {formatCommitmentDayEn(c.date)}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    {showCat ? (
-                      <>
-                        <p className="text-[13px] font-semibold leading-snug text-orbita-primary sm:text-sm">{cat}</p>
-                        {titleDiffers ? (
-                          <p className="mt-0.5 text-[11px] leading-snug text-orbita-secondary">{c.title}</p>
-                        ) : null}
-                      </>
-                    ) : (
-                      <p className="text-[13px] font-semibold leading-snug text-orbita-primary sm:text-sm">{c.title}</p>
-                    )}
-                    <span
-                      className={`mt-1.5 inline-flex rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${flowTypeBadgeClass(c.flowType)}`}
+        <div className="mt-3 overflow-x-auto">
+          <table className="w-full min-w-[520px] border-collapse text-left text-[11px] sm:text-sm">
+            <thead>
+              <tr className="border-b border-orbita-border text-[9px] font-semibold uppercase tracking-wide text-orbita-secondary sm:text-[10px]">
+                <th className="py-2 pr-2 font-medium">Fecha</th>
+                <th className="py-2 pr-2 font-medium">Concepto</th>
+                <th className="py-2 pr-2 font-medium">Tipo</th>
+                <th className="py-2 pr-0 text-right font-medium">Monto</th>
+              </tr>
+            </thead>
+            <tbody>
+              {commitmentsSorted.slice(0, 8).map((c) => {
+                const inc = isIncomeCommitment(c)
+                const cat = c.category.trim()
+                const showCat = Boolean(cat)
+                const titleDiffers = c.title.trim().toLowerCase() !== cat.toLowerCase()
+                return (
+                  <tr key={c.id} className="border-b border-orbita-border/70 last:border-0">
+                    <td className="whitespace-nowrap py-2 pr-2 align-top tabular-nums text-orbita-primary">
+                      {formatCommitmentDayEn(c.date)}
+                    </td>
+                    <td className="max-w-[200px] py-2 pr-2 align-top sm:max-w-none">
+                      {showCat ? (
+                        <>
+                          <p className="font-semibold leading-snug text-orbita-primary">{cat}</p>
+                          {titleDiffers ? (
+                            <p className="mt-0.5 text-[10px] leading-snug text-orbita-secondary">{c.title}</p>
+                          ) : null}
+                        </>
+                      ) : (
+                        <p className="font-semibold leading-snug text-orbita-primary">{c.title}</p>
+                      )}
+                    </td>
+                    <td className="py-2 pr-2 align-top">
+                      <span
+                        className={`inline-flex rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${flowTypeBadgeClass(c.flowType)}`}
+                      >
+                        {FLOW_TYPE_OPTIONS.find((o) => o.value === c.flowType)?.label ?? c.flowType}
+                      </span>
+                    </td>
+                    <td
+                      className={`whitespace-nowrap py-2 pl-2 text-right font-bold tabular-nums ${inc ? "text-emerald-600" : "text-orbita-primary"}`}
                     >
-                      {FLOW_TYPE_OPTIONS.find((o) => o.value === c.flowType)?.label ?? c.flowType}
-                    </span>
-                  </div>
-                </div>
-                <div
-                  className={`mt-1.5 text-right sm:mt-0 sm:shrink-0 sm:self-center sm:pl-2 ${inc ? "text-emerald-600" : "text-orbita-primary"}`}
-                >
-                  <p className="text-sm font-bold tabular-nums sm:text-base">
-                    {inc ? "+" : "-"}${formatMoney(c.amount)}
-                  </p>
-                </div>
-              </li>
-            )
-          })}
-        </ul>
+                      {inc ? "+" : "-"}${formatMoney(c.amount)}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <CuentasModalShell
         open={commitOpen}
         onClose={() => setCommitOpen(false)}
         title="Gestionar compromisos"
-        subtitle="Agrega cargos o ingresos esperados en la ventana de 30 días."
+        subtitle="Edita en tabla: una fila por compromiso. Guarda para aplicar cambios."
         wide
       >
-        <table className="w-full border-collapse text-sm">
-          <tbody className="align-top">
-            <tr className="border-b border-orbita-border/60">
-              <th className="w-[30%] py-2.5 pr-3 text-left text-xs font-medium text-orbita-secondary sm:w-[22%]">
-                Título
-              </th>
-              <td className="py-2.5">
-                <input
-                  className="min-h-[40px] w-full rounded-lg border border-orbita-border px-3 py-2 text-orbita-primary"
-                  placeholder="Ej. Arriendo, factura cliente…"
-                  value={draftC.title}
-                  onChange={(e) => setDraftC((d) => ({ ...d, title: e.target.value }))}
-                />
-              </td>
-            </tr>
-            <tr className="border-b border-orbita-border/60">
-              <th className="py-2.5 pr-3 text-left text-xs font-medium text-orbita-secondary">Categoría</th>
-              <td className="py-2.5">
-                <input
-                  className="min-h-[40px] w-full rounded-lg border border-orbita-border px-3 py-2 text-orbita-primary"
-                  placeholder="Opcional · ej. Vivienda"
-                  value={draftC.category}
-                  onChange={(e) => setDraftC((d) => ({ ...d, category: e.target.value }))}
-                />
-              </td>
-            </tr>
-            <tr className="border-b border-orbita-border/60">
-              <th className="py-2.5 pr-3 text-left text-xs font-medium text-orbita-secondary">Fecha</th>
-              <td className="py-2.5">
-                <input
-                  type="date"
-                  className="min-h-[40px] w-full rounded-lg border border-orbita-border px-3 py-2 text-orbita-primary"
-                  value={draftC.date || month + "-01"}
-                  onChange={(e) => setDraftC((d) => ({ ...d, date: e.target.value }))}
-                />
-              </td>
-            </tr>
-            <tr className="border-b border-orbita-border/60">
-              <th className="py-2.5 pr-3 text-left text-xs font-medium text-orbita-secondary">Monto (COP)</th>
-              <td className="py-2.5">
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  className="min-h-[40px] w-full rounded-lg border border-orbita-border px-3 py-2 text-orbita-primary"
-                  placeholder="0"
-                  value={draftC.amount || ""}
-                  onChange={(e) => setDraftC((d) => ({ ...d, amount: Number(e.target.value) }))}
-                />
-              </td>
-            </tr>
-            <tr>
-              <th className="py-2.5 pr-3 text-left text-xs font-medium text-orbita-secondary">Tipo</th>
-              <td className="py-2.5">
-                <select
-                  className="min-h-[40px] w-full rounded-lg border border-orbita-border px-3 py-2 text-orbita-primary"
-                  value={draftC.flowType}
-                  onChange={(e) => setDraftC((d) => ({ ...d, flowType: e.target.value as CommitmentFlowType }))}
-                >
-                  {FLOW_TYPE_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-                {draftC.flowType === "income" ? (
-                  <p className="mt-1.5 text-[11px] text-orbita-secondary">Suma al flujo como entrada esperada.</p>
-                ) : null}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div className="max-h-[min(70vh,520px)] overflow-auto">
+          <table className="w-full min-w-[640px] border-collapse text-left text-xs sm:text-sm">
+            <thead className="sticky top-0 z-[1] border-b border-orbita-border bg-orbita-surface-alt">
+              <tr className="text-[10px] font-semibold uppercase tracking-wide text-orbita-secondary">
+                <th className="px-2 py-2 font-medium">Fecha</th>
+                <th className="px-2 py-2 font-medium">Título</th>
+                <th className="px-2 py-2 font-medium">Categoría</th>
+                <th className="px-2 py-2 font-medium">Tipo</th>
+                <th className="px-2 py-2 font-medium">Monto</th>
+                <th className="px-2 py-2 font-medium" />
+              </tr>
+            </thead>
+            <tbody>
+              {commitModalRows.map((row) => (
+                <tr key={row.id} className="border-b border-orbita-border/60 align-top">
+                  <td className="px-2 py-1.5">
+                    <input
+                      type="date"
+                      className="min-h-9 w-full min-w-[9.5rem] rounded-lg border border-orbita-border bg-orbita-surface px-1 py-1 text-orbita-primary"
+                      value={row.date.slice(0, 10)}
+                      onChange={(e) => {
+                        const v = e.target.value
+                        setCommitModalRows((rs) =>
+                          rs.map((r) => (r.id === row.id ? { ...r, date: v } : r)),
+                        )
+                      }}
+                    />
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <input
+                      className="min-h-9 w-full min-w-[7rem] rounded-lg border border-orbita-border px-2 py-1 text-orbita-primary"
+                      placeholder="Concepto"
+                      value={row.title}
+                      onChange={(e) =>
+                        setCommitModalRows((rs) =>
+                          rs.map((r) => (r.id === row.id ? { ...r, title: e.target.value } : r)),
+                        )
+                      }
+                    />
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <input
+                      className="min-h-9 w-full min-w-[6rem] rounded-lg border border-orbita-border px-2 py-1 text-orbita-primary"
+                      placeholder="Opcional"
+                      value={row.category}
+                      onChange={(e) =>
+                        setCommitModalRows((rs) =>
+                          rs.map((r) => (r.id === row.id ? { ...r, category: e.target.value } : r)),
+                        )
+                      }
+                    />
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <select
+                      className="min-h-9 w-full min-w-[7rem] rounded-lg border border-orbita-border px-1 py-1 text-orbita-primary"
+                      value={row.flowType}
+                      onChange={(e) =>
+                        setCommitModalRows((rs) =>
+                          rs.map((r) =>
+                            r.id === row.id
+                              ? { ...r, flowType: e.target.value as CommitmentFlowType }
+                              : r,
+                          ),
+                        )
+                      }
+                    >
+                      {FLOW_TYPE_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      className="min-h-9 w-full min-w-[5.5rem] rounded-lg border border-orbita-border px-2 py-1 text-orbita-primary tabular-nums"
+                      value={row.amount || ""}
+                      onChange={(e) =>
+                        setCommitModalRows((rs) =>
+                          rs.map((r) =>
+                            r.id === row.id ? { ...r, amount: Math.max(0, Number(e.target.value)) } : r,
+                          ),
+                        )
+                      }
+                    />
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <button
+                      type="button"
+                      className="text-[11px] text-rose-600 underline"
+                      onClick={() => setCommitModalRows((rs) => rs.filter((r) => r.id !== row.id))}
+                    >
+                      Quitar
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         {commitSaveErr ? <p className="mt-3 text-sm text-rose-600">{commitSaveErr}</p> : null}
         {supabaseEnabled ? (
-          <p className="mt-2 text-[11px] text-orbita-secondary">
-            Los compromisos se guardan en tu cuenta (hogar).
-          </p>
+          <p className="mt-2 text-[11px] text-orbita-secondary">Se guardan en tu hogar en Supabase.</p>
         ) : null}
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-between">
           <button
             type="button"
-            onClick={() => void addCommitment()}
-            className="min-h-[44px] touch-manipulation rounded-xl border border-orbita-border bg-orbita-surface px-5 py-2.5 text-sm font-semibold text-orbita-primary hover:bg-orbita-surface-alt"
+            onClick={addCommitModalRow}
+            className="min-h-[44px] touch-manipulation rounded-xl border border-orbita-border bg-orbita-surface px-4 py-2.5 text-sm font-medium text-orbita-primary hover:bg-orbita-surface-alt"
           >
-            Agregar a la lista
+            + Agregar fila
+          </button>
+          <button
+            type="button"
+            onClick={() => void saveCommitModal()}
+            className="min-h-[44px] touch-manipulation rounded-xl border border-orbita-border bg-orbita-primary px-5 py-2.5 text-sm font-semibold text-white hover:opacity-95"
+          >
+            Guardar cambios
           </button>
         </div>
-        <p className="mt-4 text-xs text-orbita-secondary">
-          Net impact (30 días) se recalcula al instante con la lista actual (${formatMoney(netImpact30)}).
+        <p className="mt-3 text-xs text-orbita-secondary">
+          Impacto neto (30 días) con la lista actual: ${formatMoney(netImpact30)}.
         </p>
       </CuentasModalShell>
     </section>
