@@ -78,6 +78,7 @@ export function useLedgerAccounts(options?: Options) {
 
   return {
     accounts,
+    setAccounts,
     loading,
     error,
     refetch,

@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
+import { useCallback, useEffect, useMemo, useState, useTransition, type ReactNode } from "react"
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -385,7 +385,7 @@ function creditCardUtilizationPct(card: CuentasCreditCard): number {
 }
 
 function creditCardScoreExplanation(score: number, utilizationPct: number): string {
-  return `Score ${score} (escala aprox. 45–92): resume qué tan “apretada” está la línea. A mayor % de cupo utilizado (${utilizationPct.toFixed(1)}%), el score tiende a bajar (en catálogo: partimos de 88 y restamos ~0,22 puntos por cada punto de utilización, con límites).`
+  return `Salud ${score}% basada en utilización: 100 - uso. Con ${utilizationPct.toFixed(1)}% de uso, la salud cae proporcionalmente (clamp 0–100).`
 }
 
 function CreditPlasticCard({
@@ -569,6 +569,21 @@ function newManualId(prefix: string) {
   return `${prefix}-${Date.now()}`
 }
 
+function ledgerUuidForCardLike(x: { id: string; replacesSyntheticId?: string }): string | null {
+  const id = String(x.id ?? "")
+  if (id.startsWith("ledger-")) return id.slice("ledger-".length)
+  const rep = String(x.replacesSyntheticId ?? "")
+  if (rep.startsWith("ledger-")) return rep.slice("ledger-".length)
+  return null
+}
+
+function deriveLoanPctPagado(montoOriginal: number, abonadoMonto: number): number {
+  const original = Math.max(0, Number(montoOriginal))
+  const paid = Math.max(0, Number(abonadoMonto))
+  if (original <= 0) return 0
+  return Math.max(0, Math.min(100, Math.round((paid / original) * 100)))
+}
+
 /** Solo ítems guardados en manual items / prefijo manual: el resto viene de API/ledger/hoja Cuentas. */
 function isManualOnlySaving(s: CuentasSavingsCard) {
   return Boolean(s.manualRowId || String(s.id).startsWith("manual-saving"))
@@ -588,12 +603,34 @@ function AutoFieldHint() {
   )
 }
 
+function FieldMetaTag({ kind }: { kind: "manual" | "automatico" | "derivado" }) {
+  const map = {
+    manual: "Manual",
+    automatico: "Automático",
+    derivado: "Derivado",
+  } as const
+  return (
+    <span className="ml-1 rounded-full border border-orbita-border/70 bg-orbita-surface-alt px-2 py-0.5 text-[10px] font-medium text-orbita-secondary">
+      {map[kind]}
+    </span>
+  )
+}
+
+function ReadonlyField({ value }: { value: ReactNode }) {
+  return (
+    <div className="mt-1 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt px-3 py-2 text-sm font-medium text-orbita-primary">
+      {value}
+    </div>
+  )
+}
+
 export default function CuentasClient() {
   const finance = useFinance()
   const month = finance?.month ?? ""
 
   const {
     accounts: ledgerAccounts,
+    setAccounts: setLedgerAccounts,
     refetch: refetchLedger,
     loading: ledgerLoading,
     error: ledgerError,
@@ -609,6 +646,8 @@ export default function CuentasClient() {
   const [dashboard, setDashboard] = useState<CuentasDashboardPayload | null>(null)
   const [tcMovementLinks, setTcMovementLinks] = useState<TcMovementLinkSummary[]>([])
   const [ledgerReorderBusy, setLedgerReorderBusy] = useState(false)
+  const [ledgerReconcileBusyId, setLedgerReconcileBusyId] = useState<string | null>(null)
+  const [, startTransition] = useTransition()
   const [draggingLedgerIndex, setDraggingLedgerIndex] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
@@ -766,6 +805,113 @@ export default function CuentasClient() {
     [ledgerAccounts, persistLedgerOrder],
   )
 
+  const reconcileLedgerAccount = useCallback(
+    async (account: { id: string; label: string; account_class: string; credit_limit?: number | null }) => {
+      if (typeof window === "undefined") return
+      const isCreditCard = account.account_class === "tarjeta_credito"
+      const limit = Number(account.credit_limit ?? NaN)
+      const hasLimit = Number.isFinite(limit) && limit >= 0
+      const promptLabel = isCreditCard
+        ? hasLimit
+          ? `Disponible actual en tarjeta "${account.label}" (cupo ${formatMoney(Math.round(limit))})`
+          : `Deuda actual en tarjeta "${account.label}" (sin cupo definido; fallback seguro)`
+        : `Saldo real bancario para "${account.label}"`
+      const rawBalance = window.prompt(promptLabel, "0")
+      if (rawBalance == null) return
+      const sanitized = rawBalance.replace(/[^\d,.-]/g, "").replace(",", ".")
+      const realBalance = Number(sanitized)
+      if (!Number.isFinite(realBalance)) {
+        setNotice("Saldo inválido. Escribe un número válido.")
+        return
+      }
+      if (isCreditCard && hasLimit) {
+        const clampedLimit = Math.round(limit)
+        if (realBalance < 0 || realBalance > clampedLimit) {
+          setNotice(`Disponible inválido: debe estar entre 0 y ${formatMoney(clampedLimit)}.`)
+          return
+        }
+        const realDebt = clampedLimit - realBalance
+        const usagePct = clampedLimit > 0 ? Math.round((realDebt / clampedLimit) * 1000) / 10 : 0
+        const ok = window.confirm(
+          `Confirmar conciliación\nCupo: ${formatMoney(clampedLimit)}\nDisponible: ${formatMoney(realBalance)}\nDeuda calculada: ${formatMoney(realDebt)}\nUso: ${usagePct}%`,
+        )
+        if (!ok) return
+      }
+      if (isCreditCard && !hasLimit) {
+        setNotice("No se puede conciliar disponible sin cupo definido en la tarjeta.")
+        return
+      }
+      const reason =
+        window.prompt("Motivo de conciliación (opcional, recomendado para auditoría)", "Ajuste por diferencia bancaria") ??
+        ""
+
+      setLedgerReconcileBusyId(account.id)
+      try {
+        const res = await financeApiJson("/api/orbita/finanzas/ledger-accounts/reconcile", {
+          method: "POST",
+          body: {
+            accountId: account.id,
+            realBalance,
+            reason,
+          },
+        })
+        const json = (await res.json()) as {
+          success?: boolean
+          error?: string
+          data?: {
+            delta?: number
+            inserted?: boolean
+            needsAttention?: boolean
+            adjustmentsLast30d?: number
+            realBalance?: number
+            reconcileDate?: string
+          }
+        }
+        if (!res.ok || !json.success) {
+          setNotice(messageForHttpError(res.status, json.error, res.statusText))
+          return
+        }
+        if (json.data?.reconcileDate && Number.isFinite(Number(json.data?.realBalance))) {
+          const rb = Number(json.data.realBalance)
+          const rd = json.data.reconcileDate
+          setLedgerAccounts((prev) =>
+            prev.map((row) =>
+              row.id === account.id
+                ? {
+                    ...row,
+                    manual_balance: rb,
+                    manual_balance_on: rd,
+                    updated_at: new Date().toISOString(),
+                  }
+                : row,
+            ),
+          )
+        }
+        if (json.data?.inserted) {
+          const d = Number(json.data?.delta ?? 0)
+          if (json.data?.needsAttention) {
+            setNotice(
+              `Conciliación aplicada (Δ ${d >= 0 ? "+" : ""}${formatMoney(Math.abs(d))}), pero detectamos desvío alto o ajustes frecuentes (${Number(json.data.adjustmentsLast30d ?? 0)} en 30d). Revisa sync/matching.`,
+            )
+          } else {
+            setNotice(`Conciliación aplicada. Delta ${d >= 0 ? "+" : ""}${formatMoney(Math.abs(d))}.`)
+          }
+        } else {
+          setNotice("Conciliación sin cambios: el saldo ya coincidía.")
+        }
+        startTransition(() => {
+          void refetchLedger()
+          void refetchAccountsDashboard()
+        })
+      } catch {
+        setNotice("No se pudo conciliar la cuenta.")
+      } finally {
+        setLedgerReconcileBusyId(null)
+      }
+    },
+    [refetchAccountsDashboard, refetchLedger, setLedgerAccounts, startTransition],
+  )
+
   const reloadManualFromApi = useCallback(async () => {
     if (!supabaseEnabled) return
     try {
@@ -826,9 +972,33 @@ export default function CuentasClient() {
   }, [dashboard, manualBundle])
 
   const kpis: CuentasKpis | null = mergedDashboard?.kpis ?? null
-  const savings: CuentasSavingsCard[] = mergedDashboard?.savings ?? []
-  const creditCards: CuentasCreditCard[] = mergedDashboard?.creditCards ?? []
-  const loans: CuentasLoanCard[] = mergedDashboard?.loans ?? []
+  const savings: CuentasSavingsCard[] = useMemo(() => mergedDashboard?.savings ?? [], [mergedDashboard])
+  const creditCards: CuentasCreditCard[] = useMemo(
+    () => mergedDashboard?.creditCards ?? [],
+    [mergedDashboard],
+  )
+  const loans: CuentasLoanCard[] = useMemo(() => mergedDashboard?.loans ?? [], [mergedDashboard])
+  const ledgerOrderIndex = useMemo(() => {
+    const m = new Map<string, number>()
+    ledgerAccounts.forEach((a, idx) => m.set(a.id, idx))
+    return m
+  }, [ledgerAccounts])
+  const sortByLedgerOrder = useCallback(
+    <T extends { id: string; replacesSyntheticId?: string }>(items: T[]): T[] =>
+      [...items].sort((a, b) => {
+        const ai = ledgerOrderIndex.get(ledgerUuidForCardLike(a) ?? "") ?? Number.MAX_SAFE_INTEGER
+        const bi = ledgerOrderIndex.get(ledgerUuidForCardLike(b) ?? "") ?? Number.MAX_SAFE_INTEGER
+        if (ai !== bi) return ai - bi
+        return String(a.id).localeCompare(String(b.id))
+      }),
+    [ledgerOrderIndex],
+  )
+  const savingsOrdered = useMemo(() => sortByLedgerOrder(savings), [savings, sortByLedgerOrder])
+  const creditCardsOrdered = useMemo(
+    () => sortByLedgerOrder(creditCards),
+    [creditCards, sortByLedgerOrder],
+  )
+  const loansOrdered = useMemo(() => sortByLedgerOrder(loans), [loans, sortByLedgerOrder])
 
   const tcLinkByAccountId = useMemo(() => {
     const m = new Map<string, TcMovementLinkSummary>()
@@ -1117,16 +1287,18 @@ export default function CuentasClient() {
   }
 
   const openAddLoan = () => {
+    const montoOriginal = 55_000_000
+    const abonadoMonto = 5_000_000
     setLoanForm({
       id: undefined,
       title: "Nuevo crédito",
       kind: "home",
-      pctPagado: 15,
+      pctPagado: deriveLoanPctPagado(montoOriginal, abonadoMonto),
       saldoPendiente: 40_000_000,
       cuotaMensual: 900_000,
       proximoPagoLabel: "Próximo ciclo",
-      montoOriginal: 55_000_000,
-      abonadoMonto: 5_000_000,
+      montoOriginal,
+      abonadoMonto,
       replacesSyntheticId: undefined,
       derivedFinancials: false,
     })
@@ -1134,11 +1306,12 @@ export default function CuentasClient() {
   }
 
   const openEditLoan = (loan: CuentasLoanCard) => {
+    const pctPagado = deriveLoanPctPagado(loan.montoOriginal, loan.abonadoMonto)
     setLoanForm({
       id: loan.id,
       title: loan.title,
       kind: loan.kind,
-      pctPagado: loan.pctPagado,
+      pctPagado,
       saldoPendiente: loan.saldoPendiente,
       cuotaMensual: loan.cuotaMensual,
       proximoPagoLabel: loan.proximoPagoLabel,
@@ -1162,11 +1335,12 @@ export default function CuentasClient() {
     if (loanForm.id && !String(loanForm.id).startsWith("manual-loan") && !existing?.manualRowId) {
       rep = loanForm.id
     }
+    const pctPagado = deriveLoanPctPagado(loanForm.montoOriginal, loanForm.abonadoMonto)
     const row: CuentasLoanCard = {
       id: newId,
       title: loanForm.title.trim() || "Crédito",
       kind: loanForm.kind,
-      pctPagado: Math.min(100, Math.max(0, loanForm.pctPagado)),
+      pctPagado,
       saldoPendiente: Math.max(0, loanForm.saldoPendiente),
       cuotaMensual: Math.max(0, loanForm.cuotaMensual),
       proximoPagoLabel: loanForm.proximoPagoLabel.trim() || "Próximo ciclo",
@@ -1476,6 +1650,16 @@ export default function CuentasClient() {
                           <p className="mt-1 text-[11px] tabular-nums text-orbita-secondary">{bits.join(" · ")}</p>
                         )
                       })()}
+                      <div className="mt-2">
+                        <button
+                          type="button"
+                          onClick={() => void reconcileLedgerAccount(a)}
+                          disabled={ledgerReconcileBusyId === a.id}
+                          className="rounded-full border border-orbita-border/80 bg-orbita-surface-alt px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-orbita-secondary hover:text-orbita-primary disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {ledgerReconcileBusyId === a.id ? "Conciliando..." : "Conciliar"}
+                        </button>
+                      </div>
                     </div>
                   </li>
                 ))}
@@ -1563,7 +1747,7 @@ export default function CuentasClient() {
                       </button>
                     </div>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      {savings.map((s) => (
+                      {savingsOrdered.map((s) => (
                         <SavingsPlasticCard key={s.id} item={s} onEdit={() => openEditSavings(s)} />
                       ))}
                     </div>
@@ -1586,7 +1770,7 @@ export default function CuentasClient() {
                       </button>
                     </div>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      {creditCards.map((c) => {
+                      {creditCardsOrdered.map((c) => {
                         const ledgerUuid = ledgerFinanceAccountUuidFromCard(c)
                         const linkSummary = ledgerUuid ? (tcLinkByAccountId.get(ledgerUuid) ?? null) : null
                         return (
@@ -1638,7 +1822,7 @@ export default function CuentasClient() {
                       </button>
                     </div>
                     <div className="grid gap-4 md:grid-cols-2">
-                      {loans.map((loan) => (
+                      {loansOrdered.map((loan) => (
                         <LoanStructuralCard
                           key={loan.id}
                           loan={loan}
@@ -1893,6 +2077,9 @@ export default function CuentasClient() {
         wide
       >
         <div className="space-y-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">
+            Identificación
+          </p>
           <label className="block text-sm text-orbita-primary">
             Institución
             <input
@@ -1909,6 +2096,9 @@ export default function CuentasClient() {
               onChange={(e) => setSavingForm((s) => ({ ...s, label: e.target.value }))}
             />
           </label>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">
+            Visual y métricas
+          </p>
           <div className="block text-sm text-orbita-primary">
             <span className="block">Color de la tarjeta</span>
             <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4" role="listbox" aria-label="Tema visual ahorro">
@@ -2029,56 +2219,20 @@ export default function CuentasClient() {
         wide
       >
         <div className="grid gap-3 sm:grid-cols-2">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary sm:col-span-2">
+            Identificación
+          </p>
           <label className="block text-sm text-orbita-primary">
-            Banco
-            {lockCatalogCreditIdentity ? (
-              <>
-                <div className="mt-1 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt px-3 py-2 text-sm font-medium text-orbita-primary">
-                  {creditForm.bankLabel}
-                </div>
-                <p className="mt-1 text-[10px] text-orbita-secondary">Definido en el catálogo de cuentas (no editable aquí).</p>
-              </>
-            ) : (
-              <input
-                className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
-                value={creditForm.bankLabel}
-                onChange={(e) => setCreditForm((s) => ({ ...s, bankLabel: e.target.value }))}
-              />
-            )}
+            Banco <FieldMetaTag kind="automatico" />
+            <ReadonlyField value={creditForm.bankLabel} />
           </label>
           <label className="block text-sm text-orbita-primary">
-            Red
-            {lockCatalogCreditIdentity ? (
-              <>
-                <div className="mt-1 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt px-3 py-2 text-sm font-medium text-orbita-primary">
-                  {creditForm.network}
-                </div>
-                <p className="mt-1 text-[10px] text-orbita-secondary">Definido en el catálogo de cuentas.</p>
-              </>
-            ) : (
-              <input
-                className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
-                value={creditForm.network}
-                onChange={(e) => setCreditForm((s) => ({ ...s, network: e.target.value }))}
-              />
-            )}
+            Red <FieldMetaTag kind="automatico" />
+            <ReadonlyField value={creditForm.network} />
           </label>
           <label className="block text-sm text-orbita-primary">
-            Últimos 4
-            {lockCatalogCreditIdentity ? (
-              <>
-                <div className="mt-1 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt px-3 py-2 text-sm font-semibold tabular-nums text-orbita-primary">
-                  {creditForm.last4}
-                </div>
-                <p className="mt-1 text-[10px] text-orbita-secondary">Deben coincidir con movimientos (descripción o columna Cuenta).</p>
-              </>
-            ) : (
-              <input
-                className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
-                value={creditForm.last4}
-                onChange={(e) => setCreditForm((s) => ({ ...s, last4: e.target.value }))}
-              />
-            )}
+            Últimos 4 <FieldMetaTag kind="automatico" />
+            <ReadonlyField value={<span className="tabular-nums">{creditForm.last4}</span>} />
           </label>
           {lockCatalogCreditIdentity ? (
             <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-orbita-border/70 bg-orbita-surface-alt/40 px-3 py-2.5 text-sm text-orbita-primary sm:col-span-2">
@@ -2091,11 +2245,13 @@ export default function CuentasClient() {
                 }
               />
               <span className="leading-snug">
-                Este saldo, cupo y score son <strong className="font-semibold">manuales</strong> y deben
-                prevalecer sobre el ledger (conciliación automática no los sobrescribe).
+                Usar valores manuales para esta tarjeta (saldo/cupo/score) en lugar del ledger.
               </span>
             </label>
           ) : null}
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary sm:col-span-2">
+            Configuración visual
+          </p>
           <div className="block text-sm text-orbita-primary sm:col-span-2">
             <span className="block">Tema visual</span>
             <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4" role="listbox" aria-label="Tema de la tarjeta">
@@ -2127,14 +2283,14 @@ export default function CuentasClient() {
               })}
             </div>
           </div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary sm:col-span-2">
+            Métricas financieras
+          </p>
           <label className="block text-sm text-orbita-primary">
-            Saldo
+            Deuda actual {catalogLockedMetrics ? <FieldMetaTag kind="automatico" /> : <FieldMetaTag kind="manual" />}
             {catalogLockedMetrics ? (
               <>
-                <div className="mt-1 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt px-3 py-2 text-sm font-semibold tabular-nums text-orbita-primary">
-                  ${formatMoney(creditForm.balance)}
-                </div>
-                <AutoFieldHint />
+                <ReadonlyField value={`$${formatMoney(creditForm.balance)}`} />
               </>
             ) : (
               <input
@@ -2146,9 +2302,10 @@ export default function CuentasClient() {
             )}
           </label>
           <label className="block text-sm text-orbita-primary">
-            Cupo
+            Cupo {catalogLockedMetrics ? <FieldMetaTag kind="automatico" /> : <FieldMetaTag kind="manual" />}
             <input
               type="number"
+              disabled={catalogLockedMetrics}
               className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
               value={creditForm.limit}
               onChange={(e) => setCreditForm((s) => ({ ...s, limit: Number(e.target.value) }))}
@@ -2166,13 +2323,20 @@ export default function CuentasClient() {
             />
           </label>
           <label className="block text-sm text-orbita-primary">
-            Score
+            Salud % <FieldMetaTag kind="derivado" />
+            <ReadonlyField
+              value={
+                creditForm.limit > 0
+                  ? Math.max(0, Math.min(100, Math.round(100 - (creditForm.balance / creditForm.limit) * 100)))
+                  : 0
+              }
+            />
+          </label>
+          <label className="block text-sm text-orbita-primary">
+            Score {catalogLockedMetrics ? <FieldMetaTag kind="automatico" /> : <FieldMetaTag kind="manual" />}
             {catalogLockedMetrics ? (
               <>
-                <div className="mt-1 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt px-3 py-2 text-sm font-semibold tabular-nums text-orbita-primary">
-                  {creditForm.score}
-                </div>
-                <AutoFieldHint />
+                <ReadonlyField value={creditForm.score} />
               </>
             ) : (
               <input
@@ -2223,6 +2387,9 @@ export default function CuentasClient() {
         wide
       >
         <div className="grid gap-3 sm:grid-cols-2">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary sm:col-span-2">
+            Identificación
+          </p>
           <label className="block text-sm text-orbita-primary sm:col-span-2">
             Título
             <input
@@ -2242,23 +2409,12 @@ export default function CuentasClient() {
               <option value="education">Educación</option>
             </select>
           </label>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary sm:col-span-2">
+            Deuda y progreso
+          </p>
           <label className="block text-sm text-orbita-primary">
-            % abonado (capital)
-            {loanForm.derivedFinancials ? (
-              <>
-                <div className="mt-1 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt px-3 py-2 text-sm font-semibold tabular-nums text-orbita-primary">
-                  {loanForm.pctPagado}%
-                </div>
-                <AutoFieldHint />
-              </>
-            ) : (
-              <input
-                type="number"
-                className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
-                value={loanForm.pctPagado}
-                onChange={(e) => setLoanForm((s) => ({ ...s, pctPagado: Number(e.target.value) }))}
-              />
-            )}
+            % abonado (capital) <FieldMetaTag kind="derivado" />
+            <ReadonlyField value={`${loanForm.pctPagado}%`} />
           </label>
           <label className="block text-sm text-orbita-primary">
             Deuda a la fecha
@@ -2301,7 +2457,16 @@ export default function CuentasClient() {
               type="number"
               className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
               value={loanForm.montoOriginal}
-              onChange={(e) => setLoanForm((s) => ({ ...s, montoOriginal: Number(e.target.value) }))}
+              onChange={(e) =>
+                setLoanForm((s) => {
+                  const montoOriginal = Number(e.target.value)
+                  return {
+                    ...s,
+                    montoOriginal,
+                    pctPagado: deriveLoanPctPagado(montoOriginal, s.abonadoMonto),
+                  }
+                })
+              }
             />
           </label>
           <label className="block text-sm text-orbita-primary">
@@ -2318,7 +2483,16 @@ export default function CuentasClient() {
                 type="number"
                 className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
                 value={loanForm.abonadoMonto}
-                onChange={(e) => setLoanForm((s) => ({ ...s, abonadoMonto: Number(e.target.value) }))}
+                onChange={(e) =>
+                  setLoanForm((s) => {
+                    const abonadoMonto = Number(e.target.value)
+                    return {
+                      ...s,
+                      abonadoMonto,
+                      pctPagado: deriveLoanPctPagado(s.montoOriginal, abonadoMonto),
+                    }
+                  })
+                }
               />
             )}
           </label>
