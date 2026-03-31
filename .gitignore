@@ -28,6 +28,7 @@ secrets/
 /build
 
 # misc
+.vscode/
 .DS_Store
 *.pem
 *.save
