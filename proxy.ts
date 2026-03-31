@@ -9,6 +9,8 @@ function getSupabaseEnv() {
   return { url, anonKey }
 }
 
+const AUTH_CHECK_TIMEOUT_MS = 12_000
+
 async function isAuthenticated(req: NextRequest): Promise<boolean> {
   const token = req.cookies.get(AUTH_COOKIE)?.value
   if (!token) return false
@@ -16,14 +18,23 @@ async function isAuthenticated(req: NextRequest): Promise<boolean> {
   const { url, anonKey } = getSupabaseEnv()
   if (!url || !anonKey) return false
 
-  const response = await fetch(`${url}/auth/v1/user`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      apikey: anonKey,
-    },
-  })
+  const signal =
+    typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function"
+      ? AbortSignal.timeout(AUTH_CHECK_TIMEOUT_MS)
+      : undefined
 
-  return response.ok
+  try {
+    const response = await fetch(`${url}/auth/v1/user`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: anonKey,
+      },
+      ...(signal ? { signal } : {}),
+    })
+    return response.ok
+  } catch {
+    return false
+  }
 }
 
 export default async function proxy(req: NextRequest) {

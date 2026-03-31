@@ -13,6 +13,25 @@ type RegisterPayload = {
 
 const isMock = process.env.NEXT_PUBLIC_APP_MODE === "mock"
 
+const SIGN_IN_TIMEOUT_MS = 35_000
+const SESSION_COOKIE_TIMEOUT_MS = 25_000
+
+function withTimeout<T>(promise: Promise<T>, ms: number, timeoutMessage: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const id = window.setTimeout(() => reject(new Error(timeoutMessage)), ms)
+    promise.then(
+      (v) => {
+        window.clearTimeout(id)
+        resolve(v)
+      },
+      (e) => {
+        window.clearTimeout(id)
+        reject(e)
+      },
+    )
+  })
+}
+
 export default function AuthPage() {
   const [mode, setMode] = useState<Mode>("login")
   const [email, setEmail] = useState("")
@@ -22,10 +41,23 @@ export default function AuthPage() {
   const [error, setError] = useState<string | null>(null)
 
   const syncSessionCookie = async (accessToken: string) => {
-    await fetch("/api/auth/session", {
+    const signal =
+      typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function"
+        ? AbortSignal.timeout(SESSION_COOKIE_TIMEOUT_MS)
+        : undefined
+    const res = await fetch("/api/auth/session", {
       method: "POST",
       headers: { Authorization: `Bearer ${accessToken}` },
+      ...(signal ? { signal } : {}),
     })
+    const payload = (await res.json().catch(() => ({}))) as { success?: boolean; error?: string }
+    if (!res.ok) {
+      throw new Error(
+        payload.error ||
+          messageForHttpError(res.status, payload.error, res.statusText) ||
+          "No se pudo guardar la sesión en el servidor",
+      )
+    }
   }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -59,16 +91,30 @@ export default function AuthPage() {
         }
       }
 
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
+      type SignInResponse = {
+        data: { session: { access_token: string } | null }
+        error: { message?: string } | null
+      }
+      const signInResult = await withTimeout(
+        supabase.auth.signInWithPassword({
+          email,
+          password,
+        }) as Promise<SignInResponse>,
+        SIGN_IN_TIMEOUT_MS,
+        "El acceso tardó demasiado. Revisa tu conexión o intenta de nuevo.",
+      )
+      const { data, error: signInError } = signInResult
 
       if (signInError || !data.session?.access_token) {
-        throw new Error("Credenciales inválidas")
+        const msg = signInError?.message || "Credenciales inválidas"
+        throw new Error(msg)
       }
 
-      await syncSessionCookie(data.session.access_token)
+      await withTimeout(
+        syncSessionCookie(data.session.access_token),
+        SESSION_COOKIE_TIMEOUT_MS + 5_000,
+        "No se pudo confirmar la sesión a tiempo. Intenta de nuevo.",
+      )
 
       if (mode === "register") {
         window.location.href = "/household/invite"
@@ -76,7 +122,10 @@ export default function AuthPage() {
         window.location.href = "/hoy"
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Error autenticando"
+      let message = err instanceof Error ? err.message : "Error autenticando"
+      if (err instanceof Error && err.name === "AbortError") {
+        message = "Tiempo agotado al guardar la sesión. Intenta de nuevo."
+      }
       setError(message)
     } finally {
       setLoading(false)
