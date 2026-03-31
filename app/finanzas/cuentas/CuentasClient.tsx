@@ -106,14 +106,15 @@ const creditThemes: Record<
   },
 }
 
+/** Nombres solo visuales (sin banco) para evitar duplicados tipo “rosa” y mezclar marcas con colores. */
 const CREDIT_THEME_LABELS: Record<CuentasCreditCard["theme"], string> = {
-  itau: "Itaú — rosa",
-  bbva: "BBVA — azul",
-  davivienda: "Davivienda — naranja",
-  scotiabank: "Scotiabank — grafito",
+  itau: "Coral",
+  bbva: "Azul",
+  davivienda: "Naranja",
+  scotiabank: "Grafito",
   emerald: "Esmeralda",
   indigo: "Índigo",
-  rose: "Rosa",
+  rose: "Magenta",
   amber: "Ámbar",
 }
 
@@ -605,6 +606,11 @@ export default function CuentasClient() {
     return m
   }, [tcMovementLinks])
 
+  /** Tarjeta ligada al catálogo ledger: banco/red/últimos 4 no editables en el modal. */
+  const lockCatalogCreditIdentity = Boolean(
+    creditForm.id?.startsWith("ledger-") || creditForm.replacesSyntheticId?.startsWith("ledger-"),
+  )
+
   useEffect(() => {
     if (activeLoan) setPayDay(5)
   }, [activeLoan])
@@ -785,6 +791,8 @@ export default function CuentasClient() {
   }
 
   const openEditCredit = (c: CuentasCreditCard) => {
+    const tiedToLedgerCatalog =
+      c.id.startsWith("ledger-") || Boolean(c.replacesSyntheticId?.startsWith("ledger-"))
     setCreditForm({
       id: c.id,
       bankLabel: c.bankLabel,
@@ -796,7 +804,8 @@ export default function CuentasClient() {
       score: c.score,
       theme: normalizeCreditCardTheme(c.theme),
       replacesSyntheticId: c.replacesSyntheticId ?? (c.id.startsWith("manual-cc") ? undefined : c.id),
-      derivedFinancials: !isManualOnlyCredit(c),
+      /** Saldo/score automáticos si viene del catálogo ledger o una manual que lo sustituye. */
+      derivedFinancials: tiedToLedgerCatalog ? true : !isManualOnlyCredit(c),
     })
     setManualModal("credit")
   }
@@ -1665,27 +1674,54 @@ export default function CuentasClient() {
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block text-sm text-orbita-primary">
             Banco
-            <input
-              className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
-              value={creditForm.bankLabel}
-              onChange={(e) => setCreditForm((s) => ({ ...s, bankLabel: e.target.value }))}
-            />
+            {lockCatalogCreditIdentity ? (
+              <>
+                <div className="mt-1 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt px-3 py-2 text-sm font-medium text-orbita-primary">
+                  {creditForm.bankLabel}
+                </div>
+                <p className="mt-1 text-[10px] text-orbita-secondary">Definido en el catálogo de cuentas (no editable aquí).</p>
+              </>
+            ) : (
+              <input
+                className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
+                value={creditForm.bankLabel}
+                onChange={(e) => setCreditForm((s) => ({ ...s, bankLabel: e.target.value }))}
+              />
+            )}
           </label>
           <label className="block text-sm text-orbita-primary">
             Red
-            <input
-              className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
-              value={creditForm.network}
-              onChange={(e) => setCreditForm((s) => ({ ...s, network: e.target.value }))}
-            />
+            {lockCatalogCreditIdentity ? (
+              <>
+                <div className="mt-1 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt px-3 py-2 text-sm font-medium text-orbita-primary">
+                  {creditForm.network}
+                </div>
+                <p className="mt-1 text-[10px] text-orbita-secondary">Definido en el catálogo de cuentas.</p>
+              </>
+            ) : (
+              <input
+                className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
+                value={creditForm.network}
+                onChange={(e) => setCreditForm((s) => ({ ...s, network: e.target.value }))}
+              />
+            )}
           </label>
           <label className="block text-sm text-orbita-primary">
             Últimos 4
-            <input
-              className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
-              value={creditForm.last4}
-              onChange={(e) => setCreditForm((s) => ({ ...s, last4: e.target.value }))}
-            />
+            {lockCatalogCreditIdentity ? (
+              <>
+                <div className="mt-1 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt px-3 py-2 text-sm font-semibold tabular-nums text-orbita-primary">
+                  {creditForm.last4}
+                </div>
+                <p className="mt-1 text-[10px] text-orbita-secondary">Deben coincidir con movimientos (descripción o columna Cuenta).</p>
+              </>
+            ) : (
+              <input
+                className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
+                value={creditForm.last4}
+                onChange={(e) => setCreditForm((s) => ({ ...s, last4: e.target.value }))}
+              />
+            )}
           </label>
           <div className="block text-sm text-orbita-primary sm:col-span-2">
             <span className="block">Tema visual</span>

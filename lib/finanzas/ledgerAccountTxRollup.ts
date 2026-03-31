@@ -53,7 +53,10 @@ export function classifyLedgerTransactionLink(
   const tl = normalizeFinanceAccountLabel(t.account_label ?? "")
   if (tl.length > 0 && tl === normalizedLedger) return "label"
 
-  if (tl.length === 0 && !tid) {
+  // Sin FK: últimos 4 en la descripción, aunque account_label traiga otro texto (columna Cuenta
+  // genérica, typo o vacío distinto al catálogo). Antes exigíamos account_label vacío y eso
+  // dejaba saldo TC en 0 para la mayoría de importes.
+  if (!tid) {
     const last4 = lastFourFromLedgerLabel(ledgerLabel)
     if (last4 && descriptionSuggestsLast4(t.description ?? "", last4)) return "last4"
   }
@@ -63,7 +66,7 @@ export function classifyLedgerTransactionLink(
 
 /**
  * Enlaza movimiento ↔ cuenta ledger por FK, por etiqueta normalizada, o (fallback) por últimos 4 del label
- * en la descripción cuando el movimiento no trae cuenta (importes previos a account_label / finance_account_id).
+ * en la descripción cuando no hay FK (aunque account_label venga relleno con otro valor).
  */
 export function transactionMatchesLedgerAccount(
   t: FinanceTransaction,

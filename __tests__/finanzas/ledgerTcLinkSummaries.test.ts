@@ -13,6 +13,27 @@ describe("summarizeTcMovementLinks", () => {
     sort_order: 0,
   }
 
+  test("counts last4 when account_label does not match catalog", () => {
+    const rows: FinanceTransaction[] = [
+      {
+        id: "x",
+        date: "2026-03-05",
+        description: "Tienda · 5419",
+        amount: 50_000,
+        type: "expense",
+        category: "X",
+        created_at: "",
+        updated_at: "",
+        account_label: "Varios",
+        finance_account_id: null,
+      },
+    ]
+    const [s] = summarizeTcMovementLinks([tc], rows, "2026-03-31")
+    expect(s.matchedCount).toBe(1)
+    expect(s.byLast4).toBe(1)
+    expect(s.byLabel).toBe(0)
+  })
+
   test("counts fk, label and last4 links separately", () => {
     const rows: FinanceTransaction[] = [
       {
