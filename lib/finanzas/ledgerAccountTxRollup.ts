@@ -35,6 +35,32 @@ function descriptionSuggestsLast4(description: string, last4: string): boolean {
   }
 }
 
+export type LedgerTransactionLinkKind = "fk" | "label" | "last4"
+
+/**
+ * Cómo enlaza el movimiento con la cuenta del catálogo (para diagnóstico y métricas).
+ * `null` = no hay enlace con esta cuenta.
+ */
+export function classifyLedgerTransactionLink(
+  t: FinanceTransaction,
+  accountId: string,
+  ledgerLabel: string,
+): LedgerTransactionLinkKind | null {
+  const tid = t.finance_account_id?.trim()
+  if (tid && tid === accountId) return "fk"
+
+  const normalizedLedger = normalizeFinanceAccountLabel(ledgerLabel)
+  const tl = normalizeFinanceAccountLabel(t.account_label ?? "")
+  if (tl.length > 0 && tl === normalizedLedger) return "label"
+
+  if (tl.length === 0 && !tid) {
+    const last4 = lastFourFromLedgerLabel(ledgerLabel)
+    if (last4 && descriptionSuggestsLast4(t.description ?? "", last4)) return "last4"
+  }
+
+  return null
+}
+
 /**
  * Enlaza movimiento ↔ cuenta ledger por FK, por etiqueta normalizada, o (fallback) por últimos 4 del label
  * en la descripción cuando el movimiento no trae cuenta (importes previos a account_label / finance_account_id).
@@ -44,19 +70,7 @@ export function transactionMatchesLedgerAccount(
   accountId: string,
   ledgerLabel: string,
 ): boolean {
-  const tid = t.finance_account_id?.trim()
-  if (tid && tid === accountId) return true
-
-  const normalizedLedger = normalizeFinanceAccountLabel(ledgerLabel)
-  const tl = normalizeFinanceAccountLabel(t.account_label ?? "")
-  if (tl.length > 0 && tl === normalizedLedger) return true
-
-  if (tl.length === 0 && !tid) {
-    const last4 = lastFourFromLedgerLabel(ledgerLabel)
-    if (last4 && descriptionSuggestsLast4(t.description ?? "", last4)) return true
-  }
-
-  return false
+  return classifyLedgerTransactionLink(t, accountId, ledgerLabel) !== null
 }
 
 /** Ingresos y gastos del mes vinculados a la cuenta (FK o etiqueta). */

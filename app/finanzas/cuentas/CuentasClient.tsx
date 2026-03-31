@@ -34,6 +34,7 @@ import type {
   CuentasSavingsCard,
 } from "@/lib/finanzas/cuentasDashboard"
 import { CREDIT_CARD_THEME_IDS, normalizeCreditCardTheme, payLabelForMonth } from "@/lib/finanzas/cuentasDashboard"
+import type { TcMovementLinkSummary } from "@/lib/finanzas/ledgerTcLinkSummaries"
 import { SubscriptionsBurnSection } from "./SubscriptionsBurnSection"
 import { CashFlowSimulatorSection } from "./CashFlowSimulatorSection"
 import { CuentasModalShell } from "./CuentasModalShell"
@@ -200,10 +201,30 @@ function SavingsPlank({ item, onEdit }: { item: CuentasSavingsCard; onEdit?: () 
   )
 }
 
-function CreditPlasticCard({ card, onEdit }: { card: CuentasCreditCard; onEdit?: () => void }) {
+function formatTcMovementLinkLine(s: TcMovementLinkSummary): string {
+  const bits: string[] = []
+  if (s.byFk) bits.push(`${s.byFk} por cuenta`)
+  if (s.byLabel) bits.push(`${s.byLabel} por etiqueta`)
+  if (s.byLast4) bits.push(`${s.byLast4} por últ. 4 en descripción`)
+  const tail = bits.length ? ` · ${bits.join(" · ")}` : ""
+  return `${s.matchedCount} movimiento${s.matchedCount === 1 ? "" : "s"} enlazado${s.matchedCount === 1 ? "" : "s"}${tail}`
+}
+
+function CreditPlasticCard({
+  card,
+  linkSummary,
+  onEdit,
+}: {
+  card: CuentasCreditCard
+  /** Solo tarjetas `ledger-*`: resumen de vínculo movimientos ↔ cuenta del mes (hasta fin de mes). */
+  linkSummary?: TcMovementLinkSummary | null
+  onEdit?: () => void
+}) {
   const th = creditThemes[normalizeCreditCardTheme(card.theme)]
   const usageWidth = `${Math.min(100, Math.max(4, card.usagePct))}%`
   const barColor = card.usagePct >= 50 ? th.barHigh : "bg-white/50"
+  const fromLedger = card.id.startsWith("ledger-")
+  const showLinkRow = fromLedger && linkSummary != null
 
   return (
     <div
@@ -233,6 +254,18 @@ function CreditPlasticCard({ card, onEdit }: { card: CuentasCreditCard; onEdit?:
       <div className="mt-4 flex-1">
         <p className="text-[11px] uppercase tracking-[0.14em] text-white/70">Saldo actual</p>
         <p className="mt-1 text-2xl font-semibold tracking-tight sm:text-[26px]">${formatMoney(card.balance)} COP</p>
+        {showLinkRow ? (
+          <p
+            className={`mt-2 max-w-[95%] text-[10px] font-medium leading-snug text-white/85 ${
+              linkSummary!.matchedCount === 0 ? "text-amber-100/95" : ""
+            }`}
+            title="Cómo se atribuyen movimientos a esta tarjeta: FK en BD, columna Cuenta igual al catálogo, o últimos 4 del catálogo en la descripción."
+          >
+            {linkSummary!.matchedCount === 0
+              ? "Sin movimientos enlazados hasta fin de mes: asigna Cuenta en Movimientos o vincula finance_account_id."
+              : formatTcMovementLinkLine(linkSummary!)}
+          </p>
+        ) : null}
       </div>
       <div className="mt-4 space-y-2">
         <div className={`h-1.5 w-full overflow-hidden rounded-full ${th.barTrack}`}>
@@ -380,6 +413,7 @@ export default function CuentasClient() {
   }, [ledgerReorderMessage])
 
   const [dashboard, setDashboard] = useState<CuentasDashboardPayload | null>(null)
+  const [tcMovementLinks, setTcMovementLinks] = useState<TcMovementLinkSummary[]>([])
   const [ledgerReorderBusy, setLedgerReorderBusy] = useState(false)
   const [draggingLedgerIndex, setDraggingLedgerIndex] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
@@ -446,7 +480,10 @@ export default function CuentasClient() {
       const res = await financeApiGet(`/api/orbita/finanzas/accounts?month=${encodeURIComponent(month)}`)
       const json = (await res.json()) as {
         success?: boolean
-        data?: { dashboard?: CuentasDashboardPayload | null }
+        data?: {
+          dashboard?: CuentasDashboardPayload | null
+          tcMovementLinks?: TcMovementLinkSummary[]
+        }
         error?: string
         notice?: string
       }
@@ -454,10 +491,12 @@ export default function CuentasClient() {
         throw new Error(messageForHttpError(res.status, json.error, res.statusText))
       }
       setDashboard(json.data?.dashboard ?? null)
+      setTcMovementLinks(Array.isArray(json.data?.tcMovementLinks) ? json.data!.tcMovementLinks! : [])
       setNotice(json.notice ?? null)
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : "Error")
       setDashboard(null)
+      setTcMovementLinks([])
     } finally {
       setLoading(false)
     }
@@ -557,6 +596,14 @@ export default function CuentasClient() {
   const savings: CuentasSavingsCard[] = mergedDashboard?.savings ?? []
   const creditCards: CuentasCreditCard[] = mergedDashboard?.creditCards ?? []
   const loans: CuentasLoanCard[] = mergedDashboard?.loans ?? []
+
+  const tcLinkByAccountId = useMemo(() => {
+    const m = new Map<string, TcMovementLinkSummary>()
+    for (const s of tcMovementLinks) {
+      m.set(s.financeAccountId, s)
+    }
+    return m
+  }, [tcMovementLinks])
 
   useEffect(() => {
     if (activeLoan) setPayDay(5)
@@ -1216,9 +1263,18 @@ export default function CuentasClient() {
               </button>
             </div>
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {creditCards.map((c) => (
-                <CreditPlasticCard key={c.id} card={c} onEdit={() => openEditCredit(c)} />
-              ))}
+              {creditCards.map((c) => {
+                const ledgerUuid = c.id.startsWith("ledger-") ? c.id.slice("ledger-".length) : null
+                const linkSummary = ledgerUuid ? (tcLinkByAccountId.get(ledgerUuid) ?? null) : null
+                return (
+                  <CreditPlasticCard
+                    key={c.id}
+                    card={c}
+                    linkSummary={linkSummary}
+                    onEdit={() => openEditCredit(c)}
+                  />
+                )
+              })}
             </div>
           </section>
 

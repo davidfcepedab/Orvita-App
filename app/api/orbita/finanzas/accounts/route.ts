@@ -8,6 +8,7 @@ import { ledgerRollupRangeStart, monthBounds } from "@/lib/finanzas/monthRange"
 import { sortLedgerAccountsForDisplay } from "@/lib/finanzas/sortLedgerAccounts"
 import { buildSyntheticAccounts } from "@/lib/finanzas/syntheticAccounts"
 import { getHouseholdId } from "@/lib/households/getHouseholdId"
+import { summarizeTcMovementLinks } from "@/lib/finanzas/ledgerTcLinkSummaries"
 import { getTransactionsByRange } from "@/lib/services/finanzasService"
 
 export const runtime = "nodejs"
@@ -40,7 +41,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({
         success: true,
         source: "mock",
-        data: { accounts, dashboard, ledgerAccounts: [] as unknown[] },
+        data: { accounts, dashboard, ledgerAccounts: [] as unknown[], tcMovementLinks: [] },
       })
     }
 
@@ -49,7 +50,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({
         success: true,
         notice: UI_SYNC_OFF_SHORT,
-        data: { accounts: [], dashboard, ledgerAccounts: [] as unknown[] },
+        data: { accounts: [], dashboard, ledgerAccounts: [] as unknown[], tcMovementLinks: [] },
       })
     }
 
@@ -90,15 +91,20 @@ export async function GET(req: NextRequest) {
       .order("label", { ascending: true })
 
     let dashboard = dashboardBase
+    let tcMovementLinks: ReturnType<typeof summarizeTcMovementLinks> = []
     if (!ledgerErr) {
       const sortedLedger = sortLedgerAccountsForDisplay(ledgerRows ?? [], rows)
       ledgerAccounts = sortedLedger
       dashboard = mergeLiveDashboardWithLedger(dashboardBase, month, sortedLedger, rows, ledgerRollupRows)
+      tcMovementLinks = summarizeTcMovementLinks(sortedLedger, ledgerRollupRows, b.endStr)
     } else if (!/does not exist|PGRST205/i.test(ledgerErr.message ?? "")) {
       console.warn("ACCOUNTS: ledger query:", ledgerErr.message)
     }
 
-    return NextResponse.json({ success: true, data: { accounts, dashboard, ledgerAccounts } })
+    return NextResponse.json({
+      success: true,
+      data: { accounts, dashboard, ledgerAccounts, tcMovementLinks },
+    })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Error"
     console.error("ACCOUNTS ERROR:", message)
