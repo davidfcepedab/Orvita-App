@@ -371,43 +371,47 @@ export function SubscriptionsBurnSection({
           <button
             type="button"
             onClick={() => setSubscriptionsExpanded((v) => !v)}
-            className="min-w-0 flex-1 touch-manipulation p-3 text-left sm:p-3.5"
+            className="min-w-0 flex-1 touch-manipulation px-3 py-2.5 text-left sm:px-3.5 sm:py-3"
             aria-expanded={subscriptionsExpanded}
           >
             <div className="min-w-0">
-              <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
-                Suscripciones recurrentes
-              </h2>
-              <p className="mt-1 text-xs text-orbita-secondary sm:text-sm">
-                {subscriptionsExpanded
-                  ? "Toca para colapsar el detalle."
-                  : "Renovaciones recurrentes y ahorro potencial al pausar o cancelar."}
-              </p>
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-orbita-secondary sm:text-sm">
+                  Suscripciones recurrentes
+                </h2>
+                {!subscriptionsExpanded ? (
+                  <span className="text-[10px] text-orbita-secondary sm:text-[11px]">
+                    Pausar o cancelar reduce el gasto fijo.
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-orbita-secondary sm:text-[11px]">Toca para colapsar.</span>
+                )}
+              </div>
 
               {!subscriptionsExpanded ? (
-                <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
-                      Total mensual
-                    </p>
-                    <p className="mt-0.5 text-2xl font-bold tabular-nums text-orbita-primary sm:text-3xl">
+                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 sm:justify-between">
+                  <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                    <p className="text-xl font-bold tabular-nums text-orbita-primary sm:text-2xl">
                       ${formatMoney(monthlyBurn)}
                     </p>
-                    <p className="mt-1 text-[11px] text-orbita-secondary">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">
+                      / mes
+                    </span>
+                    <span className="text-[11px] text-orbita-secondary">
                       {activeSubscriptions.length === 0
-                        ? "Ninguna suscripción activa"
+                        ? "Sin activas"
                         : `${activeSubscriptions.length} activa${activeSubscriptions.length === 1 ? "" : "s"}`}
-                    </p>
+                    </span>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-2">
                     {topBurnSubscriptions.length > 0 ? (
                       <div className="flex items-center" aria-hidden>
-                        <div className="flex shrink-0 -space-x-2.5 pl-1">
+                        <div className="flex shrink-0 -space-x-2 pl-0.5">
                           {topBurnSubscriptions.map((s) => (
                             <div
                               key={s.id}
-                              className="flex h-11 w-11 items-center justify-center rounded-full border-[2.5px] border-white text-[11px] font-bold text-white shadow-md ring-1 ring-orbita-border/50"
+                              className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-white text-[10px] font-bold text-white shadow-sm ring-1 ring-orbita-border/40"
                               style={{ background: avatarGradientForLabel(s.name) }}
                               title={s.name}
                             >
@@ -417,7 +421,7 @@ export function SubscriptionsBurnSection({
                         </div>
                         {moreActiveThanTop > 0 ? (
                           <span
-                            className="-ml-1 flex h-11 min-w-[2.75rem] items-center justify-center rounded-full border-[2.5px] border-white bg-orbita-surface-alt px-2 text-[11px] font-bold tabular-nums text-orbita-primary shadow-sm ring-1 ring-orbita-border/50"
+                            className="-ml-0.5 flex h-9 min-w-[2.25rem] items-center justify-center rounded-full border-2 border-white bg-orbita-surface-alt px-1.5 text-[10px] font-bold tabular-nums text-orbita-primary shadow-sm ring-1 ring-orbita-border/40"
                             title={`${moreActiveThanTop} más`}
                           >
                             +{moreActiveThanTop}
@@ -425,15 +429,15 @@ export function SubscriptionsBurnSection({
                         ) : null}
                       </div>
                     ) : (
-                      <span className="rounded-full border border-dashed border-orbita-border bg-orbita-surface-alt px-3 py-2 text-xs text-orbita-secondary">
-                        Sin cargos recurrentes
+                      <span className="rounded-full border border-dashed border-orbita-border/80 bg-orbita-surface-alt px-2.5 py-1 text-[10px] text-orbita-secondary">
+                        Sin recurrentes
                       </span>
                     )}
 
                     {potentialSaving > 0 ? (
-                      <p className="text-sm font-semibold text-emerald-700">
+                      <p className="text-xs font-semibold text-emerald-700 sm:text-sm">
                         +${formatMoney(potentialSaving)}{" "}
-                        <span className="font-normal text-emerald-600/90">ahorro potencial</span>
+                        <span className="font-normal text-emerald-600/90">ahorro</span>
                       </p>
                     ) : null}
                   </div>
@@ -441,7 +445,7 @@ export function SubscriptionsBurnSection({
               ) : null}
             </div>
           </button>
-          <div className="flex shrink-0 flex-col items-end gap-0.5 py-3 pr-2 sm:py-3.5 sm:pr-3">
+          <div className="flex shrink-0 flex-col items-end gap-0.5 py-2 pr-2 sm:py-3 sm:pr-3">
             <button
               type="button"
               onClick={() => {

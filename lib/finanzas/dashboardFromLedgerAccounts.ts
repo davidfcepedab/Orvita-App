@@ -66,19 +66,21 @@ function ledgerRowToSaving(
 ): CuentasSavingsCard {
   const manualRaw = row.manual_balance != null ? Number(row.manual_balance) : NaN
   const availRaw = row.balance_available != null ? Number(row.balance_available) : NaN
-  const manualExplicit =
-    row.manual_balance != null &&
-    Number.isFinite(manualRaw) &&
-    (manualRaw !== 0 || Boolean(row.manual_balance_on?.trim()))
-  let amount = 0
-  if (manualExplicit) {
-    amount = Math.max(0, manualRaw)
-  } else if (Number.isFinite(availRaw)) {
-    amount = Math.max(0, availRaw)
+  /** Igual que TC: solo prevalece manual si el usuario lo ancló en catálogo. */
+  const manualLocked = Boolean(row.manual_balance_on?.trim())
+
+  const { expense, income } = accountMonthExpenseIncome(monthRows, month, row.id, row.label)
+  const netOnAccount = income - expense
+
+  let uso = 0
+  if (manualLocked && Number.isFinite(manualRaw)) {
+    uso = Math.max(0, Math.round(manualRaw))
+  } else if (Number.isFinite(availRaw) && availRaw >= 0) {
+    uso = Math.round(Math.max(0, availRaw))
+  } else if (Number.isFinite(manualRaw) && manualRaw > 0) {
+    uso = Math.round(Math.max(0, manualRaw))
   } else {
-    const { expense, income } = accountMonthExpenseIncome(monthRows, month, row.id, row.label)
-    const netOnAccount = income - expense
-    amount = netOnAccount > 0 ? Math.round(netOnAccount) : 0
+    uso = netOnAccount > 0 ? Math.round(netOnAccount) : 0
   }
 
   const parts = row.label.split("|").map((p) => p.trim()).filter(Boolean)
@@ -98,8 +100,12 @@ function ledgerRowToSaving(
 
   const { creditosExtras, ajusteManual, fechaUltimaReconciliacion } = ledgerBalanceExtras(row)
   const cupo = 0
-  const uso = amount
-  const disponibleOperativoLine = computeDisponibleCuenta(cupo, uso, creditosExtras, ajusteManual)
+  const disponibleOperativoLine = Math.max(
+    0,
+    Math.round(computeDisponibleCuenta(cupo, uso, creditosExtras, ajusteManual)),
+  )
+  const amount = disponibleOperativoLine
+  const theme = inferCreditTheme(institution + " " + row.label, row.id)
 
   return {
     id: `ledger-${row.id}`,
@@ -108,6 +114,7 @@ function ledgerRowToSaving(
     amount,
     healthPct: Math.min(96, Math.max(52, Math.round(74 - ratio * 22 + (netForHealth >= 0 ? 10 : -8)))),
     trendUp,
+    theme,
     cupo,
     uso,
     creditosExtras,
@@ -123,7 +130,10 @@ function ledgerRowToCreditCard(
   rollupRows: FinanceTransaction[],
   monthEndInclusive: string,
 ): CuentasCreditCard {
-  const dbBalance = Math.max(0, Number(row.balance_used ?? 0))
+  let limit = Math.max(0, Number(row.credit_limit ?? 0))
+  const dbUsed = Math.max(0, Number(row.balance_used ?? 0))
+  const dbAvailRaw = row.balance_available != null ? Number(row.balance_available) : NaN
+  const dbAvail = Number.isFinite(dbAvailRaw) && dbAvailRaw >= 0 ? dbAvailRaw : NaN
   const { expense, income } = accountCumulativeExpenseIncomeThrough(
     rollupRows,
     monthEndInclusive,
@@ -131,8 +141,22 @@ function ledgerRowToCreditCard(
     row.label,
   )
   const txNetDebt = Math.max(0, Math.round(expense - income))
-  const balance = dbBalance > 0 ? dbBalance : txNetDebt
-  let limit = Math.max(0, Number(row.credit_limit ?? 0))
+  let balance = dbUsed > 0 ? dbUsed : txNetDebt
+
+  /**
+   * Con cupo + disponible del banco: deuda ≈ cupo − disponible (evita "balance_used" mal cargado como disponible).
+   * Si usado+disponible ≈ cupo, confiamos en `balance_used`; si no, preferimos la derivación por disponible.
+   */
+  if (limit > 0 && Number.isFinite(dbAvail)) {
+    const fromAvail = Math.max(0, Math.min(limit, Math.round(limit - dbAvail)))
+    if (dbUsed <= 0) {
+      balance = fromAvail > 0 ? fromAvail : balance
+    } else {
+      const drift = Math.abs(dbUsed + dbAvail - limit) / limit
+      balance = drift < 0.06 ? dbUsed : fromAvail
+    }
+  }
+
   if (limit < 1 && balance > 0) limit = Math.max(balance * 2, 1)
   const usagePct = limit > 0 ? Math.min(100, Math.round((balance / limit) * 100)) : balance > 0 ? 100 : 0
   const parsed = parseTcLabel(row.label)
@@ -168,7 +192,11 @@ function ledgerRowToLoan(
   rollupRows: FinanceTransaction[],
   monthEndInclusive: string,
 ): CuentasLoanCard {
-  let saldoPendiente = Math.round(Math.max(0, Number(row.balance_used ?? row.manual_balance ?? 0)))
+  /** Deuda a la fecha: `balance_used` en catálogo (pasivo estructural). */
+  let saldoPendiente = Math.round(Math.max(0, Number(row.balance_used ?? 0)))
+  if (saldoPendiente < 1) {
+    saldoPendiente = Math.round(Math.max(0, Number(row.manual_balance ?? 0)))
+  }
   if (saldoPendiente < 1) {
     const { expense, income } = accountCumulativeExpenseIncomeThrough(
       rollupRows,
@@ -178,13 +206,30 @@ function ledgerRowToLoan(
     )
     saldoPendiente = Math.max(0, Math.round(expense - income))
   }
-  const original = Number(row.credit_limit ?? 0)
-  const hasOrig = original > saldoPendiente && original > 0
-  const pctPagado = hasOrig
-    ? Math.min(99, Math.max(0, Math.round(((original - saldoPendiente) / original) * 100)))
-    : Math.min(85, Math.max(5, saldoPendiente > 0 ? 18 : 0))
-  const abonadoMonto = hasOrig ? Math.round(original - saldoPendiente) : Math.round(saldoPendiente * 0.12)
-  const montoOriginal = hasOrig ? Math.round(original) : Math.max(saldoPendiente + abonadoMonto, saldoPendiente)
+
+  /**
+   * `credit_limit` en créditos estructurales = monto original / capital inicial del préstamo.
+   * % pagado = abonado acumulado / original = (original − saldo) / original.
+   */
+  const catalogOriginal = Math.round(Math.max(0, Number(row.credit_limit ?? 0)))
+  let montoOriginal = catalogOriginal
+  let abonadoMonto = 0
+  let pctPagado = 0
+
+  if (catalogOriginal > 0 && saldoPendiente <= catalogOriginal) {
+    abonadoMonto = Math.round(catalogOriginal - saldoPendiente)
+    pctPagado = Math.min(100, Math.max(0, Math.round((abonadoMonto / catalogOriginal) * 100)))
+  } else if (catalogOriginal > 0 && saldoPendiente > catalogOriginal) {
+    abonadoMonto = 0
+    pctPagado = 0
+  } else if (saldoPendiente > 0) {
+    montoOriginal = saldoPendiente
+    abonadoMonto = 0
+    pctPagado = 0
+  }
+
+  const cupoLine = catalogOriginal > 0 ? catalogOriginal : montoOriginal
+
   const cuotaMensual = Math.max(50_000, Math.round(saldoPendiente * 0.0035))
   const kind: "home" | "education" = /icetex|estudio|estudios|educacion|educación/i.test(row.label)
     ? "education"
@@ -198,7 +243,7 @@ function ledgerRowToLoan(
       .join(" · ") || row.label.trim()
 
   const { creditosExtras, ajusteManual, fechaUltimaReconciliacion } = ledgerBalanceExtras(row)
-  const cupo = montoOriginal
+  const cupo = cupoLine
   const uso = -saldoPendiente
   const disponibleOperativoLine = computeDisponibleCuenta(cupo, uso, creditosExtras, ajusteManual)
 
@@ -289,7 +334,7 @@ export function mergeLiveDashboardWithLedger(
   const nextLoans = hasCredito ? loans : []
 
   const kpiNeedsMerge = hasTc || hasCredito
-  const kpis = kpiNeedsMerge
+  let kpis = kpiNeedsMerge
     ? kpisFromMergedCards(live.kpis, nextCards, nextLoans)
     : hasAhorro
       ? {
@@ -300,6 +345,16 @@ export function mergeLiveDashboardWithLedger(
           deudaCuotaMensual: 0,
         }
       : live.kpis
+
+  if (hasAhorro && nextSavings.length > 0) {
+    const savingsLiquidezSum = nextSavings.reduce((a, s) => a + Math.max(0, Number(s.amount)), 0)
+    if (savingsLiquidezSum > 0) {
+      kpis = {
+        ...kpis,
+        totalLiquidez: Math.max(kpis.totalLiquidez, Math.round(savingsLiquidezSum)),
+      }
+    }
+  }
 
   return {
     ...live,

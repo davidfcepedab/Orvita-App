@@ -167,7 +167,7 @@ function enrichManualSavingsWithLedger(
 
   const fromLedger = (): CuentasSavingsCard => ({
     ...manual,
-    amount: L.amount,
+    amount: L.disponibleOperativoLine ?? L.amount,
     healthPct: L.healthPct,
     trendUp: L.trendUp,
     cupo: L.cupo,

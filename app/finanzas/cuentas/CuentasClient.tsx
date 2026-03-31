@@ -37,7 +37,12 @@ import type {
   CuentasLoanCard,
   CuentasSavingsCard,
 } from "@/lib/finanzas/cuentasDashboard"
-import { CREDIT_CARD_THEME_IDS, normalizeCreditCardTheme, payLabelForMonth } from "@/lib/finanzas/cuentasDashboard"
+import {
+  CREDIT_CARD_THEME_IDS,
+  normalizeCreditCardTheme,
+  payLabelForMonth,
+} from "@/lib/finanzas/cuentasDashboard"
+import { computeDisponibleCuenta } from "@/lib/finanzas/accountBalanceTypes"
 import type { TcMovementLinkSummary } from "@/lib/finanzas/ledgerTcLinkSummaries"
 import { SubscriptionsBurnSection } from "./SubscriptionsBurnSection"
 import { CashFlowSimulatorSection } from "./CashFlowSimulatorSection"
@@ -150,77 +155,130 @@ function StatKpiCard({
   )
 }
 
-function SavingsPlank({ item, onEdit }: { item: CuentasSavingsCard; onEdit?: () => void }) {
-  const raw = Number(item.amount)
-  const hasAmount = Number.isFinite(raw) && raw !== 0
+function SavingsPlasticCard({ item, onEdit }: { item: CuentasSavingsCard; onEdit?: () => void }) {
+  const displayAmount = Math.round(Number(item.disponibleOperativoLine ?? item.amount))
+  const hasAmount = Number.isFinite(displayAmount) && displayAmount !== 0
   const fromManual = Boolean(item.manualRowId)
   const fromLedgerCatalog = cardUsesLedgerCatalogRow(item)
   const tipManual =
     "Monto de esta tarjeta: datos manuales (guardados en el dispositivo o en Supabase según tu configuración). Edita para actualizar."
+  const th = creditThemes[normalizeCreditCardTheme(item.theme ?? "emerald")]
+  const healthW = `${Math.min(100, Math.max(4, item.healthPct))}%`
+  const barColor = item.healthPct >= 50 ? th.barHigh : "bg-white/50"
 
   return (
     <div
-      className={`relative overflow-hidden p-6 sm:p-8 ${arcticPanel}`}
+      className="relative flex min-h-[200px] flex-col rounded-[18px] border-[0.5px] border-white/30 p-5 pb-12 text-white shadow-[0_20px_50px_-18px_rgba(15,23,42,0.45)] sm:min-h-[220px] sm:pb-12"
       style={{
-        background: "linear-gradient(120deg, rgba(240,253,250,0.95) 0%, rgba(255,255,255,0.98) 55%, rgba(236,254,255,0.88) 100%)",
+        background: th.gradient,
+        boxShadow: "0 20px 50px -18px rgba(15,23,42,0.4), inset 0 1px 0 rgba(255,255,255,0.22)",
       }}
       title={fromManual ? tipManual : undefined}
     >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-teal-600/80">{item.institution}</p>
-          <h3 className="mt-1 text-lg font-semibold text-orbita-primary">{item.label}</h3>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-[11px] font-medium uppercase tracking-wider text-white/75">{item.institution}</p>
+          <p className="mt-1 line-clamp-2 text-sm font-semibold leading-snug">{item.label}</p>
         </div>
-        <span className="inline-flex items-center gap-1 rounded-full border-[0.5px] border-emerald-200/80 bg-emerald-50/90 px-3 py-1 text-xs font-semibold text-emerald-700">
-          {item.healthPct}% {item.trendUp ? <ArrowUpRight className="h-3.5 w-3.5" aria-hidden /> : null}
-        </span>
+        <div
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/35 bg-white/15 text-sm font-bold backdrop-blur-sm"
+          title="Salud de la cuenta (heurística según movimientos y actividad)."
+        >
+          {item.healthPct}
+        </div>
       </div>
-      {hasAmount ? (
-        <p className="mt-6 text-3xl font-semibold tracking-tight text-orbita-primary">${formatMoney(raw)}</p>
-      ) : (
-        <div className="mt-6 grid gap-2">
-          <p className="text-lg font-semibold text-orbita-secondary">Sin saldo registrado</p>
-          <p className="text-sm leading-snug text-orbita-secondary">
-            Pendiente de completar.
-            {fromManual
-              ? " Edita la tarjeta para fijar el monto manual."
-              : " Si usas datos manuales, edita la tarjeta; si no, la liquidez del mes puede ser 0 o aún no repartida en estas tarjetas."}
+      <div className="mt-4 flex-1">
+        <p className="text-[11px] uppercase tracking-[0.14em] text-white/70">Disponible</p>
+        {hasAmount ? (
+          <p className="mt-1 text-2xl font-semibold tracking-tight sm:text-[26px]">
+            ${formatMoney(Math.round(Number(item.disponibleOperativoLine ?? item.amount)))} COP
           </p>
-          {fromManual ? (
-            <p className="text-[11px] text-orbita-secondary" title={tipManual}>
-              Origen: datos manuales · Pasa el cursor para más info
+        ) : (
+          <div className="mt-2 grid gap-1.5 text-[11px] leading-snug text-white/90">
+            <p className="font-semibold">Sin saldo registrado</p>
+            <p className="text-white/80">
+              {fromManual
+                ? "Edita la tarjeta para fijar el monto manual."
+                : fromLedgerCatalog
+                  ? "El monto sale de manual_balance, balance_available o movimientos del mes enlazados."
+                  : "Edita la tarjeta o completa movimientos enlazados."}
             </p>
-          ) : fromLedgerCatalog ? (
-            <p className="text-[11px] leading-snug text-orbita-secondary">
-              Cuenta del catálogo (Supabase): el monto sale de{" "}
-              <span className="font-medium text-orbita-primary/90">manual_balance</span>,{" "}
-              <span className="font-medium text-orbita-primary/90">balance_available</span> o de movimientos del mes
-              enlazados (misma columna Cuenta / <span className="font-medium">finance_account_id</span>).
-            </p>
-          ) : null}
+          </div>
+        )}
+        <p className="mt-2 flex items-center gap-1 text-[10px] font-medium text-white/85">
+          {item.trendUp ? <ArrowUpRight className="h-3 w-3 shrink-0" aria-hidden /> : null}
+          <span>{item.trendUp ? "Tendencia positiva" : "Tendencia a la baja"}</span>
+        </p>
+      </div>
+      <div className="mt-4 space-y-2">
+        <div className={`h-1.5 w-full overflow-hidden rounded-full ${th.barTrack}`}>
+          <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: healthW }} />
         </div>
-      )}
+        <div className="flex justify-between text-[10px] uppercase tracking-wide text-white/75">
+          <span>Salud {item.healthPct}%</span>
+          <span>Ahorro</span>
+        </div>
+      </div>
       {onEdit ? (
         <button
           type="button"
           onClick={onEdit}
-          className="absolute bottom-4 left-4 rounded-full border border-teal-200/80 bg-white/90 px-3 py-1.5 text-[11px] font-semibold text-teal-800 shadow-sm hover:bg-white"
+          className="absolute bottom-4 left-4 rounded-full border border-white/40 bg-white/15 px-3 py-1.5 text-[10px] font-semibold text-white backdrop-blur-sm hover:bg-white/25"
         >
           Editar
         </button>
       ) : null}
-      <Wallet className="pointer-events-none absolute bottom-4 right-4 h-14 w-14 text-teal-200/50" aria-hidden />
+      <Wallet className="pointer-events-none absolute bottom-4 right-4 h-10 w-10 text-white/25" aria-hidden />
     </div>
   )
 }
 
 function formatTcMovementLinkLine(s: TcMovementLinkSummary): string {
+  const n = s.matchedCount
+  if (n === 0) return ""
+  if (s.byFk === n) return `${n} movimiento${n === 1 ? "" : "s"} enlazados por cuenta`
+  if (s.byLabel === n) return `${n} movimiento${n === 1 ? "" : "s"} enlazados por etiqueta`
+  if (s.byLast4 === n) return `${n} movimiento${n === 1 ? "" : "s"} enlazados por últimos 4 en descripción`
   const bits: string[] = []
   if (s.byFk) bits.push(`${s.byFk} por cuenta`)
   if (s.byLabel) bits.push(`${s.byLabel} por etiqueta`)
-  if (s.byLast4) bits.push(`${s.byLast4} por últ. 4 en descripción`)
-  const tail = bits.length ? ` · ${bits.join(" · ")}` : ""
-  return `${s.matchedCount} movimiento${s.matchedCount === 1 ? "" : "s"} enlazado${s.matchedCount === 1 ? "" : "s"}${tail}`
+  if (s.byLast4) bits.push(`${s.byLast4} por últ. 4`)
+  return `${n} movimientos enlazados · ${bits.join(" · ")}`
+}
+
+/** Deuda reconocida en TC (positivo = adeudado); alinea `uso` negativo con `balance`. */
+function creditCardDebt(card: CuentasCreditCard): number {
+  if (card.uso != null && Number.isFinite(card.uso) && card.uso < 0) {
+    return Math.max(0, -card.uso)
+  }
+  return Math.max(0, Number(card.balance))
+}
+
+/** Línea disponible para compras (COP), misma fórmula que Capital operativo. */
+function creditCardDisponibleLine(card: CuentasCreditCard): number {
+  const lim = Math.max(0, Number(card.limit))
+  const cupo = Number.isFinite(Number(card.cupo)) ? Number(card.cupo) : lim
+  const debt = creditCardDebt(card)
+  const uso =
+    card.uso != null && Number.isFinite(card.uso) ? card.uso : -debt
+  const extras = Math.max(0, Number(card.creditosExtras ?? 0))
+  const adj = Number(card.ajusteManual ?? 0)
+  if (card.disponibleOperativoLine != null && Number.isFinite(card.disponibleOperativoLine)) {
+    return Math.max(0, Math.round(card.disponibleOperativoLine))
+  }
+  return Math.max(0, Math.round(computeDisponibleCuenta(cupo, uso, extras, adj)))
+}
+
+/** % del cupo ya utilizado (deuda / cupo), una decimal. */
+function creditCardUtilizationPct(card: CuentasCreditCard): number {
+  const lim = Math.max(1, Number(card.limit))
+  const debt = creditCardDebt(card)
+  const raw = Math.min(100, Math.max(0, (debt / lim) * 100))
+  return Math.round(raw * 10) / 10
+}
+
+function creditCardScoreExplanation(score: number, utilizationPct: number): string {
+  return `Score ${score} (escala aprox. 45–92): resume qué tan “apretada” está la línea. A mayor % de cupo utilizado (${utilizationPct.toFixed(1)}%), el score tiende a bajar (en catálogo: partimos de 88 y restamos ~0,22 puntos por cada punto de utilización, con límites).`
 }
 
 function CreditPlasticCard({
@@ -234,10 +292,13 @@ function CreditPlasticCard({
   onEdit?: () => void
 }) {
   const th = creditThemes[normalizeCreditCardTheme(card.theme)]
-  const usageWidth = `${Math.min(100, Math.max(4, card.usagePct))}%`
-  const barColor = card.usagePct >= 50 ? th.barHigh : "bg-white/50"
+  const disponible = creditCardDisponibleLine(card)
+  const utilPct = creditCardUtilizationPct(card)
+  const usageWidth = `${Math.min(100, Math.max(4, utilPct))}%`
+  const barColor = utilPct >= 50 ? th.barHigh : "bg-white/50"
   const fromLedger = cardUsesLedgerCatalogRow(card)
   const showLinkRow = fromLedger && linkSummary != null
+  const scoreTitle = creditCardScoreExplanation(card.score, utilPct)
 
   return (
     <div
@@ -258,15 +319,15 @@ function CreditPlasticCard({
           <p className="text-[11px] text-white/80">{card.paymentDueLabel}</p>
           <div
             className="flex h-10 w-10 items-center justify-center rounded-full border border-white/35 bg-white/15 text-sm font-bold backdrop-blur-sm"
-            title="Score"
+            title={scoreTitle}
           >
             {card.score}
           </div>
         </div>
       </div>
       <div className="mt-4 flex-1">
-        <p className="text-[11px] uppercase tracking-[0.14em] text-white/70">Saldo actual</p>
-        <p className="mt-1 text-2xl font-semibold tracking-tight sm:text-[26px]">${formatMoney(card.balance)} COP</p>
+        <p className="text-[11px] uppercase tracking-[0.14em] text-white/70">Disponible</p>
+        <p className="mt-1 text-2xl font-semibold tracking-tight sm:text-[26px]">${formatMoney(disponible)} COP</p>
         {showLinkRow ? (
           <p
             className={`mt-2 max-w-[95%] text-[10px] font-medium leading-snug text-white/85 ${
@@ -293,7 +354,7 @@ function CreditPlasticCard({
           <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: usageWidth }} />
         </div>
         <div className="flex justify-between text-[10px] uppercase tracking-wide text-white/75">
-          <span>Uso {card.usagePct}%</span>
+          <span>Utilización {utilPct.toFixed(1)}%</span>
           <span>Cupo ${formatMoney(card.limit)}</span>
         </div>
       </div>
@@ -344,8 +405,11 @@ function LoanStructuralCard({
               Editar
             </button>
           ) : null}
-          <span className="rounded-full border-[0.5px] border-violet-200 bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700">
-            {loan.pctPagado}% pagado
+          <span
+            className="rounded-full border-[0.5px] border-violet-200 bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700"
+            title="Porcentaje del préstamo original ya abonado en capital. Debes cargar el monto original del crédito en credit_limit (catálogo Supabase)."
+          >
+            {loan.pctPagado}% abonado
           </span>
         </div>
       </div>
@@ -357,7 +421,7 @@ function LoanStructuralCard({
       </div>
       <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
         {[
-          { label: "Saldo pendiente", value: `$${formatMoney(loan.saldoPendiente)}` },
+          { label: "Deuda a la fecha", value: `$${formatMoney(loan.saldoPendiente)}` },
           { label: "Cuota mensual", value: `$${formatMoney(loan.cuotaMensual)}` },
           { label: "Próximo pago", value: loan.proximoPagoLabel },
         ].map((c) => (
@@ -368,9 +432,11 @@ function LoanStructuralCard({
         ))}
       </div>
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-orbita-border pt-3 text-[11px] text-orbita-secondary">
-        <span>Monto original ${formatMoney(loan.montoOriginal)}</span>
+        <span title="Capital inicial del crédito (campo credit_limit en catálogo).">
+          Préstamo original ${formatMoney(loan.montoOriginal)}
+        </span>
         <span className="rounded-full bg-violet-100/80 px-2 py-0.5 text-[11px] font-semibold text-violet-800">
-          ${formatShortMillions(loan.abonadoMonto)} abonados
+          ${formatShortMillions(loan.abonadoMonto)} capital abonado
         </span>
       </div>
       {onPayDate || onPlan ? (
@@ -453,6 +519,7 @@ export default function CuentasClient() {
     amount: 1_000_000,
     healthPct: 88,
     trendUp: true,
+    theme: "emerald" as CuentasSavingsCard["theme"],
     replacesSyntheticId: "" as string | undefined,
     /** Monto, salud y tendencia vienen del motor de datos (no editables). */
     derivedMetrics: false,
@@ -731,6 +798,7 @@ export default function CuentasClient() {
       amount: 2_000_000,
       healthPct: 88,
       trendUp: true,
+      theme: "emerald",
       replacesSyntheticId: undefined,
       derivedMetrics: false,
     })
@@ -745,6 +813,7 @@ export default function CuentasClient() {
       amount: item.amount,
       healthPct: item.healthPct,
       trendUp: item.trendUp,
+      theme: item.theme ?? "emerald",
       replacesSyntheticId: item.replacesSyntheticId ?? (item.id.startsWith("manual-saving") ? undefined : item.id),
       derivedMetrics: !isManualOnlySaving(item),
     })
@@ -776,6 +845,7 @@ export default function CuentasClient() {
       amount: Math.max(0, savingForm.amount),
       healthPct: Math.min(100, Math.max(0, savingForm.healthPct)),
       trendUp: savingForm.trendUp,
+      theme: normalizeCreditCardTheme(savingForm.theme),
       replacesSyntheticId: rep,
       manualRowId: existing?.manualRowId,
     }
@@ -1294,9 +1364,9 @@ export default function CuentasClient() {
                 Agregar cuenta
               </button>
             </div>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {savings.map((s) => (
-                <SavingsPlank key={s.id} item={s} onEdit={() => openEditSavings(s)} />
+                <SavingsPlasticCard key={s.id} item={s} onEdit={() => openEditSavings(s)} />
               ))}
             </div>
           </section>
@@ -1607,6 +1677,7 @@ export default function CuentasClient() {
         open={manualModal === "savings"}
         onClose={() => setManualModal(null)}
         title={savingForm.id ? "Editar cuenta de ahorro" : "Nueva cuenta de ahorro"}
+        wide
       >
         <div className="space-y-3">
           <label className="block text-sm text-orbita-primary">
@@ -1625,6 +1696,37 @@ export default function CuentasClient() {
               onChange={(e) => setSavingForm((s) => ({ ...s, label: e.target.value }))}
             />
           </label>
+          <div className="block text-sm text-orbita-primary">
+            <span className="block">Color de la tarjeta</span>
+            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4" role="listbox" aria-label="Tema visual ahorro">
+              {CREDIT_CARD_THEME_IDS.map((tid) => {
+                const th = creditThemes[tid]
+                const selected = normalizeCreditCardTheme(savingForm.theme) === tid
+                return (
+                  <button
+                    key={tid}
+                    type="button"
+                    role="option"
+                    aria-selected={selected}
+                    onClick={() => setSavingForm((s) => ({ ...s, theme: tid }))}
+                    className={`rounded-xl border border-orbita-border p-1.5 text-left transition ${
+                      selected
+                        ? "ring-2 ring-orbita-primary ring-offset-2 ring-offset-[var(--color-surface)]"
+                        : "hover:bg-orbita-surface-alt"
+                    }`}
+                  >
+                    <div
+                      className="h-9 w-full rounded-lg border border-white/20 shadow-inner"
+                      style={{ background: th.gradient }}
+                    />
+                    <span className="mt-1 block truncate text-[9px] font-medium leading-tight text-orbita-secondary">
+                      {CREDIT_THEME_LABELS[tid]}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
           <label className="block text-sm text-orbita-primary">
             Monto (COP)
             {savingForm.derivedMetrics ? (
@@ -1928,7 +2030,7 @@ export default function CuentasClient() {
             </select>
           </label>
           <label className="block text-sm text-orbita-primary">
-            % pagado
+            % abonado (capital)
             {loanForm.derivedFinancials ? (
               <>
                 <div className="mt-1 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt px-3 py-2 text-sm font-semibold tabular-nums text-orbita-primary">
@@ -1946,7 +2048,7 @@ export default function CuentasClient() {
             )}
           </label>
           <label className="block text-sm text-orbita-primary">
-            Saldo pendiente
+            Deuda a la fecha
             {loanForm.derivedFinancials ? (
               <>
                 <div className="mt-1 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt px-3 py-2 text-sm font-semibold tabular-nums text-orbita-primary">
@@ -1981,7 +2083,7 @@ export default function CuentasClient() {
             />
           </label>
           <label className="block text-sm text-orbita-primary">
-            Monto original
+            Préstamo original (capital inicial)
             <input
               type="number"
               className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"

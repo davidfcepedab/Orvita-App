@@ -70,6 +70,25 @@ describe("mergeLiveDashboardWithLedger", () => {
     expect(out.kpis.creditoDisponible).toBe(0)
   })
 
+  test("sube totalLiquidez con suma de ahorros ledger si el KPI venía en 0", () => {
+    const liveZero: CuentasDashboardPayload = {
+      ...live,
+      kpis: { ...live.kpis, totalLiquidez: 0 },
+    }
+    const ledger: LedgerAccountSortable[] = [
+      {
+        id: "a1",
+        label: "Ahorros | Bancolombia | Juan",
+        account_class: "ahorro",
+        nature: "activo_liquido",
+        manual_balance: 3_500_000,
+        sort_order: 0,
+      },
+    ]
+    const out = mergeLiveDashboardWithLedger(liveZero, "2026-03", ledger, [])
+    expect(out.kpis.totalLiquidez).toBe(3_500_000)
+  })
+
   test("maps tarjeta_credito and recalculates debt KPIs", () => {
     const ledger: LedgerAccountSortable[] = [
       {
@@ -79,6 +98,7 @@ describe("mergeLiveDashboardWithLedger", () => {
         nature: "pasivo_rotativo",
         credit_limit: 10_000_000,
         balance_used: 2_000_000,
+        balance_available: 8_000_000,
         sort_order: 0,
       },
     ]
@@ -88,6 +108,24 @@ describe("mergeLiveDashboardWithLedger", () => {
     expect(out.creditCards[0]!.limit).toBe(10_000_000)
     expect(out.kpis.deudaTotal).toBe(2_000_000)
     expect(out.kpis.creditoDisponible).toBe(8_000_000)
+  })
+
+  test("TC: si usado+disponible no cierra con el cupo, deuda = cupo − disponible", () => {
+    const ledger: LedgerAccountSortable[] = [
+      {
+        id: "c1",
+        label: "TC | Visa | Juan | 5419",
+        account_class: "tarjeta_credito",
+        nature: "pasivo_rotativo",
+        credit_limit: 25_010_000,
+        balance_used: 2_011_719,
+        balance_available: 2_011_719,
+        sort_order: 0,
+      },
+    ]
+    const out = mergeLiveDashboardWithLedger(live, "2026-03", ledger, [])
+    expect(out.creditCards[0]!.balance).toBe(22_998_281)
+    expect(out.creditCards[0]!.usagePct).toBe(92)
   })
 
   test("prefers balance_available when manual_balance is zero without manual_balance_on", () => {
@@ -104,6 +142,60 @@ describe("mergeLiveDashboardWithLedger", () => {
     ]
     const out = mergeLiveDashboardWithLedger(live, "2026-03", ledger, [])
     expect(out.savings[0]!.amount).toBe(3_000_000)
+  })
+
+  test("ahorro: con disponible en BD y manual distinto sin anclar, gana balance_available", () => {
+    const ledger: LedgerAccountSortable[] = [
+      {
+        id: "a1",
+        label: "Ahorros | Davivienda | David",
+        account_class: "ahorro",
+        nature: "activo_liquido",
+        manual_balance: 50_000,
+        balance_available: 3_472_626,
+        sort_order: 0,
+      },
+    ]
+    const out = mergeLiveDashboardWithLedger(live, "2026-03", ledger, [])
+    expect(out.savings[0]!.amount).toBe(3_472_626)
+    expect(out.savings[0]!.disponibleOperativoLine).toBe(3_472_626)
+  })
+
+  test("ahorro: manual_balance_on ancla el monto aunque haya balance_available", () => {
+    const ledger: LedgerAccountSortable[] = [
+      {
+        id: "a1",
+        label: "Ahorros | Bancolombia | Juan",
+        account_class: "ahorro",
+        nature: "activo_liquido",
+        manual_balance: 1_000_000,
+        manual_balance_on: "2026-03-15",
+        balance_available: 31_295_266,
+        sort_order: 0,
+      },
+    ]
+    const out = mergeLiveDashboardWithLedger(live, "2026-03", ledger, [])
+    expect(out.savings[0]!.amount).toBe(1_000_000)
+  })
+
+  test("crédito estructural: deuda en balance_used y % abonado desde credit_limit original", () => {
+    const ledger: LedgerAccountSortable[] = [
+      {
+        id: "l1",
+        label: "Credito | Icetex | Estudios",
+        account_class: "credito",
+        nature: "pasivo_estructural",
+        credit_limit: 120_000_000,
+        balance_used: 90_540_792,
+        sort_order: 0,
+      },
+    ]
+    const out = mergeLiveDashboardWithLedger(live, "2026-03", ledger, [])
+    expect(out.loans).toHaveLength(1)
+    expect(out.loans[0]!.saldoPendiente).toBe(90_540_792)
+    expect(out.loans[0]!.montoOriginal).toBe(120_000_000)
+    expect(out.loans[0]!.abonadoMonto).toBe(29_459_208)
+    expect(out.loans[0]!.pctPagado).toBe(25)
   })
 
   test("derives TC balance from movements when balance_used is zero", () => {

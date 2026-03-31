@@ -38,19 +38,6 @@ export type CuentasBalanceFields = {
   conciliacionPendiente?: boolean
 }
 
-export type CuentasSavingsCard = {
-  id: string
-  institution: string
-  label: string
-  amount: number
-  healthPct: number
-  trendUp: boolean
-  /** Si existe, oculta la tarjeta sintética con este id al fusionar manual + API. */
-  replacesSyntheticId?: string
-  /** Fila Supabase `household_finance_manual_items.id` cuando aplica. */
-  manualRowId?: string
-} & CuentasBalanceFields
-
 export type CreditCardTheme =
   | "itau"
   | "bbva"
@@ -60,6 +47,21 @@ export type CreditCardTheme =
   | "indigo"
   | "rose"
   | "amber"
+
+export type CuentasSavingsCard = {
+  id: string
+  institution: string
+  label: string
+  amount: number
+  healthPct: number
+  trendUp: boolean
+  /** Gradiente visual (misma paleta que tarjetas de crédito). */
+  theme?: CreditCardTheme
+  /** Si existe, oculta la tarjeta sintética con este id al fusionar manual + API. */
+  replacesSyntheticId?: string
+  /** Fila Supabase `household_finance_manual_items.id` cuando aplica. */
+  manualRowId?: string
+} & CuentasBalanceFields
 
 export const CREDIT_CARD_THEME_IDS: CreditCardTheme[] = [
   "itau",
@@ -147,6 +149,7 @@ function mockDashboard(month: string): CuentasDashboardPayload {
         amount: 12_850_000 + Math.round(jitter * 0.4),
         healthPct: 92,
         trendUp: true,
+        theme: "emerald",
       },
       {
         id: "ahorro-skandia",
@@ -155,6 +158,7 @@ function mockDashboard(month: string): CuentasDashboardPayload {
         amount: 8_500_000 + Math.round(jitter * 0.35),
         healthPct: 88,
         trendUp: true,
+        theme: "indigo",
       },
     ],
     creditCards: [
@@ -369,6 +373,7 @@ function liveDashboard(
         amount: s1,
         healthPct: healthBase + 3,
         trendUp: net >= 0,
+        theme: "emerald",
       },
       {
         id: "ahorro-b",
@@ -377,6 +382,7 @@ function liveDashboard(
         amount: s2,
         healthPct: healthBase - 2,
         trendUp: net >= 0,
+        theme: "indigo",
       },
     ],
     creditCards,
