@@ -41,7 +41,7 @@ function pickViewerFirstName(
 }
 
 function todayDateInputValue() {
-  return new Date().toISOString().slice(0, 10)
+  return formatLocalDateKey(new Date())
 }
 
 const tabs = [

@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react"
 import type { LucideIcon } from "lucide-react"
-import { Trash2 } from "lucide-react"
+import { Pencil, Trash2 } from "lucide-react"
 import { Card } from "@/src/components/ui/Card"
 import {
   agendaCardSurfaceStyle,
@@ -34,6 +34,9 @@ type Props = {
   /** Elimina en Google (Calendar o Tasks) */
   onDelete?: () => void | Promise<void>
   deleteBusy?: boolean
+  /** Abre Google en nueva pestaña para editar el ítem */
+  editUrl?: string
+  editTitle?: string
 }
 
 export function AgendaReadonlyUnifiedCard({
@@ -53,6 +56,8 @@ export function AgendaReadonlyUnifiedCard({
   footer,
   onDelete,
   deleteBusy = false,
+  editUrl,
+  editTitle = "Editar en Google",
 }: Props) {
   const pad = variant === "list" ? "p-3" : variant === "kanban" ? "p-2.5" : "p-2"
   const titleCls =
@@ -115,31 +120,47 @@ export function AgendaReadonlyUnifiedCard({
         ) : null}
         {footer ? <div className={`mt-1.5 ${fuenteCls}`}>{footer}</div> : null}
       </div>
-      <div className="mt-0.5 flex shrink-0 items-start gap-1">
-        {onDelete ? (
+      <div className="mt-0.5 flex shrink-0 flex-col items-stretch gap-1.5 sm:items-end">
+        {editUrl ? (
           <button
             type="button"
-            disabled={deleteBusy}
-            onClick={() => void handleDeleteClick()}
-            className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-transparent text-[var(--color-text-secondary)] opacity-45 transition-[opacity,color,background-color] hover:bg-[color-mix(in_srgb,var(--color-text-secondary)_10%,transparent)] hover:opacity-100 hover:text-[var(--color-accent-danger)] disabled:opacity-25"
-            aria-label="Eliminar"
-            title="Eliminar"
+            onClick={() => window.open(editUrl, "_blank", "noopener,noreferrer")}
+            className={`inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] font-semibold text-[var(--color-text-primary)] shadow-sm transition hover:bg-[color-mix(in_srgb,var(--color-surface-alt)_85%,var(--color-text-secondary))] ${
+              variant === "list" ? "px-3 py-2 text-[12px]" : "px-2.5 py-1.5 text-[11px]"
+            }`}
+            aria-label={editTitle}
+            title={editTitle}
           >
-            <Trash2 className="h-2.5 w-2.5" strokeWidth={1.5} aria-hidden />
+            <Pencil className={variant === "list" ? "h-3.5 w-3.5" : "h-3 w-3"} strokeWidth={2} aria-hidden />
+            Editar
           </button>
         ) : null}
-        {showBadge ? (
-          <div
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
-            style={{
-              background: `color-mix(in srgb, ${badgeColorVar} 78%, #0f172a)`,
-              boxShadow: `0 0 0 2px color-mix(in srgb, ${badgeColorVar} 28%, transparent)`,
-            }}
-            aria-hidden
-          >
-            {badgeLetter}
-          </div>
-        ) : null}
+        <div className="flex items-center justify-end gap-1">
+          {onDelete ? (
+            <button
+              type="button"
+              disabled={deleteBusy}
+              onClick={() => void handleDeleteClick()}
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-transparent text-[var(--color-text-secondary)] opacity-45 transition-[opacity,color,background-color] hover:bg-[color-mix(in_srgb,var(--color-text-secondary)_10%,transparent)] hover:opacity-100 hover:text-[var(--color-accent-danger)] disabled:opacity-25"
+              aria-label="Eliminar"
+              title="Eliminar"
+            >
+              <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} aria-hidden />
+            </button>
+          ) : null}
+          {showBadge ? (
+            <div
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
+              style={{
+                background: `color-mix(in srgb, ${badgeColorVar} 78%, #0f172a)`,
+                boxShadow: `0 0 0 2px color-mix(in srgb, ${badgeColorVar} 28%, transparent)`,
+              }}
+              aria-hidden
+            >
+              {badgeLetter}
+            </div>
+          ) : null}
+        </div>
       </div>
     </div>
   )

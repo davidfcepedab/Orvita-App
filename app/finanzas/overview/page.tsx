@@ -8,7 +8,8 @@ import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { rechartsTooltipContentStyle } from "@/lib/charts/rechartsShared"
 import { UI_FINANCE_DEMO_MONTH } from "@/lib/checkins/flags"
 import { financeApiGet } from "@/lib/finanzas/financeClientFetch"
-import { isoDateInMonth } from "@/lib/finanzas/commitmentAnchorDate"
+import { dayFromIso, isoDateInMonth } from "@/lib/finanzas/commitmentAnchorDate"
+import { localDateKeyFromIso } from "@/lib/agenda/localDateKey"
 import type { FlowCommitment } from "@/lib/finanzas/flowCommitmentsTypes"
 import { readFlowCommitmentsFromLocalStorage } from "@/lib/finanzas/flowCommitmentsLocal"
 import { subscriptionActiveBurn, type UserSubscription } from "@/lib/finanzas/userSubscriptionsTypes"
@@ -80,11 +81,14 @@ interface OverviewResponse {
 }
 
 function formatCommitmentDayEs(isoDate: string) {
-  const raw = isoDate.slice(0, 10)
-  const [y, mo, da] = raw.split("-").map(Number)
-  if (!y || !mo || !da) return raw
-  const d = new Date(y, mo - 1, da)
-  return d.toLocaleDateString("es-CO", { month: "short", day: "numeric" })
+  const key = localDateKeyFromIso(isoDate) ?? (isoDate.length >= 10 ? isoDate.slice(0, 10) : "")
+  if (key.length < 10) return "—"
+  const y = Number(key.slice(0, 4))
+  const mo = Number(key.slice(5, 7)) - 1
+  const da = Number(key.slice(8, 10))
+  if (!Number.isFinite(y) || !Number.isFinite(mo) || !Number.isFinite(da)) return key
+  const d = new Date(y, mo, da)
+  return d.toLocaleDateString("es-CO", { weekday: "short", day: "numeric", month: "short" })
 }
 
 function isIncomeCommitmentRow(c: FlowCommitment) {
@@ -162,8 +166,8 @@ export default function FinanzasOverview() {
 
     setLsCommitments(
       raw.map((c) => {
-        const fallbackDay = Number(c.date?.slice(8, 10)) || 1
-        const dueDay = c.dueDay ?? fallbackDay
+        const fallbackDay = c.date ? dayFromIso(c.date) : 1
+        const dueDay = c.dueDay != null && c.dueDay >= 1 ? c.dueDay : fallbackDay
 
         return {
           ...c,

@@ -7,7 +7,12 @@ import type { UiAgendaTask } from "@/app/agenda/mapAgendaTaskToUi"
 import type { GoogleCalendarFeedState } from "@/app/hooks/useGoogleCalendar"
 import type { GoogleCalendarEventDTO, GoogleTaskDTO } from "@/lib/google/types"
 import type { GoogleTasksFeedState } from "@/app/hooks/useGoogleTasks"
-import { formatLocalDateKey, localDateKeyFromIso } from "@/lib/agenda/localDateKey"
+import {
+  calendarEventLocalDayKey,
+  formatLocalDateKey,
+  localDateKeyFromIso,
+} from "@/lib/agenda/localDateKey"
+import { GOOGLE_CALENDAR_WEB_APP, GOOGLE_TASKS_WEB_APP } from "@/lib/agenda/googleEditUrls"
 import { googleTasksForTimelineMerge } from "@/lib/agenda/googleTasksUpcoming"
 import type { GoogleDayBucket } from "@/lib/agenda/googleAgendaByDay"
 import { countGoogleDayItems } from "@/lib/agenda/googleAgendaByDay"
@@ -30,8 +35,7 @@ import { GoogleTaskDueSetter } from "@/app/agenda/GoogleTaskDueSetter"
 import { AgendaReadonlyUnifiedCard } from "@/app/agenda/AgendaReadonlyUnifiedCard"
 import {
   calendarEventFuenteLabel,
-  calendarEventScheduleLine,
-  calendarEventVenceLine,
+  calendarEventUnifiedTimeline,
   reminderFuenteLabel,
   venceLine,
 } from "@/app/agenda/taskCardFormat"
@@ -48,6 +52,9 @@ function taskDueSortMs(due: string): number {
 
 function eventStartSortMs(ev: GoogleCalendarEventDTO): number {
   if (!ev.startAt) return Number.MAX_SAFE_INTEGER - 5000
+  if (ev.allDay && ev.startAt.length >= 10) {
+    return taskDueSortMs(ev.startAt.slice(0, 10))
+  }
   const t = Date.parse(ev.startAt)
   return Number.isNaN(t) ? Number.MAX_SAFE_INTEGER - 5000 : t
 }
@@ -63,7 +70,7 @@ function mergedRowDayKey(row: MergedRow): string | null {
     return d && d.length >= 10 ? d.slice(0, 10) : null
   }
   if (row.kind === "reminder") return localDateKeyFromIso(row.reminder.due)
-  return localDateKeyFromIso(row.event.startAt)
+  return calendarEventLocalDayKey(row.event)
 }
 
 function mergedKindOrder(kind: MergedRow["kind"]) {
@@ -269,6 +276,8 @@ export function AgendaSharedKanban({
                 }
                 badgeLetter="GT"
                 badgeColorVar={AGENDA_COLOR.reminder}
+                editUrl={GOOGLE_TASKS_WEB_APP}
+                editTitle="Editar en Google Tasks"
                 onDelete={
                   onDeleteGoogleTask
                     ? async () => {
@@ -291,7 +300,7 @@ export function AgendaSharedKanban({
                 borderLeft={`4px solid ${AGENDA_COLOR.calendar}`}
                 title={row.event.summary || "(Sin título)"}
                 TimelineIcon={Calendar}
-                timelineText={`${calendarEventScheduleLine(row.event)} | ${calendarEventVenceLine(row.event)}`}
+                timelineText={calendarEventUnifiedTimeline(row.event)}
                 googleKind="calendar"
                 kindPillLabel={calendarEventFuenteLabel(row.event)}
                 statusLabel="Calendario"
@@ -303,6 +312,8 @@ export function AgendaSharedKanban({
                 }
                 badgeLetter="GC"
                 badgeColorVar={AGENDA_COLOR.calendar}
+                editUrl={GOOGLE_CALENDAR_WEB_APP}
+                editTitle="Editar en Google Calendar"
                 onDelete={
                   onDeleteCalendarEvent
                     ? async () => {
@@ -451,6 +462,8 @@ export function AgendaSharedList({
             }
             badgeLetter="GT"
             badgeColorVar={AGENDA_COLOR.reminder}
+            editUrl={GOOGLE_TASKS_WEB_APP}
+            editTitle="Editar en Google Tasks"
             onDelete={
               onDeleteGoogleTask
                 ? async () => {
@@ -473,7 +486,7 @@ export function AgendaSharedList({
             borderLeft={`4px solid ${AGENDA_COLOR.calendar}`}
             title={row.event.summary || "(Sin título)"}
             TimelineIcon={Calendar}
-            timelineText={`${calendarEventScheduleLine(row.event)} | ${calendarEventVenceLine(row.event)}`}
+            timelineText={calendarEventUnifiedTimeline(row.event)}
             googleKind="calendar"
             kindPillLabel={calendarEventFuenteLabel(row.event)}
             statusLabel="Calendario"
@@ -485,6 +498,8 @@ export function AgendaSharedList({
             }
             badgeLetter="GC"
             badgeColorVar={AGENDA_COLOR.calendar}
+            editUrl={GOOGLE_CALENDAR_WEB_APP}
+            editTitle="Editar en Google Calendar"
             onDelete={
               onDeleteCalendarEvent
                 ? async () => {
@@ -596,13 +611,15 @@ export function AgendaSharedWeek({
                       borderLeft={`4px solid ${AGENDA_COLOR.calendar}`}
                       title={ev.summary || "(Evento)"}
                       TimelineIcon={Calendar}
-                      timelineText={`${calendarEventScheduleLine(ev)} | ${calendarEventVenceLine(ev)}`}
+                      timelineText={calendarEventUnifiedTimeline(ev)}
                       googleKind="calendar"
                       kindPillLabel={calendarEventFuenteLabel(ev)}
                       statusLabel="Calendario"
                       fuente={calendarEventFuenteLabel(ev)}
                       badgeLetter="GC"
                       badgeColorVar={AGENDA_COLOR.calendar}
+                      editUrl={GOOGLE_CALENDAR_WEB_APP}
+                      editTitle="Editar en Google Calendar"
                     />
                   ))}
                   {(g?.reminders ?? []).map((r) => (
@@ -619,6 +636,8 @@ export function AgendaSharedWeek({
                       fuente={reminderFuenteLabel()}
                       badgeLetter="GT"
                       badgeColorVar={AGENDA_COLOR.reminder}
+                      editUrl={GOOGLE_TASKS_WEB_APP}
+                      editTitle="Editar en Google Tasks"
                     />
                   ))}
                   {dayTasks.length === 0 && gCount === 0 && (
@@ -836,13 +855,15 @@ export function AgendaSharedMonth({
                     borderLeft={`4px solid ${AGENDA_COLOR.calendar}`}
                     title={ev.summary || "(Evento)"}
                     TimelineIcon={Calendar}
-                    timelineText={`${calendarEventScheduleLine(ev)} | ${calendarEventVenceLine(ev)}`}
+                    timelineText={calendarEventUnifiedTimeline(ev)}
                     googleKind="calendar"
                     kindPillLabel={calendarEventFuenteLabel(ev)}
                     statusLabel="Calendario"
                     fuente={calendarEventFuenteLabel(ev)}
                     badgeLetter="GC"
                     badgeColorVar={AGENDA_COLOR.calendar}
+                    editUrl={GOOGLE_CALENDAR_WEB_APP}
+                    editTitle="Editar en Google Calendar"
                   />
                 ))}
                 {(selectedGoogle?.reminders ?? []).map((r) => (
@@ -859,6 +880,8 @@ export function AgendaSharedMonth({
                     fuente={reminderFuenteLabel()}
                     badgeLetter="GT"
                     badgeColorVar={AGENDA_COLOR.reminder}
+                    editUrl={GOOGLE_TASKS_WEB_APP}
+                    editTitle="Editar en Google Tasks"
                   />
                 ))}
               </div>

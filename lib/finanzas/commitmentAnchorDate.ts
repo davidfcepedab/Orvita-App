@@ -1,3 +1,5 @@
+import { localDateKeyFromIso } from "@/lib/agenda/localDateKey"
+
 /** Ancla un día del mes (1–31) al mes civil `YYYY-MM` (respeta fin de mes). */
 export function daysInMonthYm(ym: string): number {
   const [ys, ms] = ym.split("-").map(Number)
@@ -17,8 +19,9 @@ export function isoDateInMonth(ym: string, day: number): string {
   return `${ym}-${String(d).padStart(2, "0")}`
 }
 
+/** Día del mes (1–31) en calendario local; no usar solo slice(0,10) si el ISO trae zona UTC. */
 export function dayFromIso(iso: string): number {
-  const s = iso.slice(0, 10)
-  const da = Number(s.slice(8, 10))
+  const key = localDateKeyFromIso(iso) ?? (iso.length >= 10 ? iso.slice(0, 10) : "")
+  const da = Number(key.slice(8, 10))
   return Number.isFinite(da) && da >= 1 ? da : 1
 }

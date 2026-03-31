@@ -1,4 +1,4 @@
-import { localDateKeyFromIso } from "@/lib/agenda/localDateKey"
+import { calendarEventLocalDayKey, localDateKeyFromIso } from "@/lib/agenda/localDateKey"
 import type { GoogleCalendarEventDTO, GoogleTaskDTO } from "@/lib/google/types"
 import { googleTasksWithDueForDayIndex } from "@/lib/agenda/googleTasksUpcoming"
 
@@ -19,11 +19,7 @@ export function buildGoogleByDayIndex(
   }
   if (calendar.connected) {
     for (const ev of calendar.events) {
-      const k = ev.allDay
-        ? ev.startAt && ev.startAt.length >= 10
-          ? ev.startAt.slice(0, 10)
-          : null
-        : localDateKeyFromIso(ev.startAt)
+      const k = calendarEventLocalDayKey(ev)
       if (k && k.length === 10) touch(k).events.push(ev)
     }
   }

@@ -1,4 +1,4 @@
-import { localDateKeyFromIso } from "@/lib/agenda/localDateKey"
+import { formatLocalDateLabelEsCo, localDateKeyFromIso } from "@/lib/agenda/localDateKey"
 import type { GoogleCalendarEventDTO } from "@/lib/google/types"
 import type { UiAgendaTask } from "@/app/agenda/mapAgendaTaskToUi"
 
@@ -14,15 +14,16 @@ export function venceLine(dueDateKey: string): string {
   const todayKey = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()
   const targetKey = new Date(target.getFullYear(), target.getMonth(), target.getDate()).getTime()
   const diffDays = Math.round((targetKey - todayKey) / (1000 * 60 * 60 * 24))
+  const civil = formatLocalDateLabelEsCo(dueDateKey)
 
-  if (diffDays === 0) return "Vence: Hoy"
-  if (diffDays === 1) return "Vence: Mañana"
-  if (diffDays === -1) return "Vence: Ayer"
-  if (diffDays < -1) return "Vence: Atrasada"
+  if (diffDays === 0) return `Vence: Hoy · ${civil}`
+  if (diffDays === 1) return `Vence: Mañana · ${civil}`
+  if (diffDays === -1) return `Vence: Ayer · ${civil}`
+  if (diffDays < -1) return `Vence: Atrasada · ${civil}`
 
   const weekday = target.toLocaleDateString("es-CO", { weekday: "long" })
-  if (diffDays <= 7) return `Vence: el ${weekday}`
-  return `Vence: el ${weekday} (próx. semana)`
+  if (diffDays <= 7) return `Vence: el ${weekday} · ${civil}`
+  return `Vence: el ${weekday} (próx. semana) · ${civil}`
 }
 
 export function formatPriorityTitle(p: UiAgendaTask["priority"]): string {
@@ -39,28 +40,55 @@ export function formatStatusTitle(status: string): string {
     .join(" ")
 }
 
-/** Primera línea de tiempo para evento Google: hora local o todo el día (no UTC crudo). */
+/** Solo horas (sin fecha); preferir `calendarEventUnifiedTimeline` en tarjetas. */
 export function calendarEventScheduleLine(ev: GoogleCalendarEventDTO): string {
   if (ev.allDay) return "Todo el día"
   if (!ev.startAt) return "Sin horario"
   const start = new Date(ev.startAt)
   if (Number.isNaN(start.getTime())) return "Sin horario"
   const tf = (dt: Date) =>
-    dt.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", hour12: false })
+    dt.toLocaleTimeString("es-CO", { hour: "numeric", minute: "2-digit", hour12: true })
   if (ev.endAt) {
     const end = new Date(ev.endAt)
     if (!Number.isNaN(end.getTime())) return `${tf(start)} – ${tf(end)}`
   }
-  return `${tf(start)} h`
+  return `${tf(start)}`
+}
+
+/**
+ * Una sola línea: fecha civil local + horario (evita duplicar con "| Vence:" y corrige lectura vs UTC).
+ * Ej.: "lunes, 6 de abril de 2026 · 4:00 p. m. – 4:50 p. m."
+ */
+export function calendarEventUnifiedTimeline(ev: GoogleCalendarEventDTO): string {
+  if (!ev.startAt) return "Sin fecha"
+  if (ev.allDay) {
+    const k = localDateKeyFromIso(ev.startAt) ?? ev.startAt.slice(0, 10)
+    if (k.length < 10) return "Todo el día"
+    const y = Number(k.slice(0, 4))
+    const m = Number(k.slice(5, 7)) - 1
+    const d = Number(k.slice(8, 10))
+    if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return "Todo el día"
+    const dt = new Date(y, m, d)
+    const datePart = dt.toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
+    return `Todo el día · ${datePart}`
+  }
+  const start = new Date(ev.startAt)
+  if (Number.isNaN(start.getTime())) return "Sin horario"
+  const datePart = start.toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
+  const tf = (dt: Date) =>
+    dt.toLocaleTimeString("es-CO", { hour: "numeric", minute: "2-digit", hour12: true })
+  if (ev.endAt) {
+    const end = new Date(ev.endAt)
+    if (!Number.isNaN(end.getTime())) return `${datePart} · ${tf(start)} – ${tf(end)}`
+  }
+  return `${datePart} · ${tf(start)}`
 }
 
 /** Texto "Vence: …" para eventos de calendario usando el día local de inicio. */
 export function calendarEventVenceLine(ev: GoogleCalendarEventDTO): string {
-  if (ev.allDay && ev.startAt && ev.startAt.length >= 10) {
-    return venceLine(ev.startAt.slice(0, 10))
-  }
-  const localKey = localDateKeyFromIso(ev.startAt)
-  return venceLine(localKey ?? "")
+  if (!ev.startAt || ev.startAt.length < 10) return venceLine("")
+  const localKey = localDateKeyFromIso(ev.startAt) ?? ev.startAt.slice(0, 10)
+  return venceLine(localKey)
 }
 
 export function calendarEventFuenteLabel(ev: GoogleCalendarEventDTO): string {

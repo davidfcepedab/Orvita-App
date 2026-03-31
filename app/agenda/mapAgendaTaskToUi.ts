@@ -1,4 +1,5 @@
 import type { AgendaTask } from "@/app/hooks/useAgendaTasks"
+import { localDateKeyFromIso } from "@/lib/agenda/localDateKey"
 
 function initialsFromName(name: string): string {
   const t = name.trim()
@@ -84,7 +85,7 @@ export function mapAgendaTaskToUi(t: AgendaTask): UiAgendaTask {
     id: t.id,
     title: t.title,
     duration: t.estimatedMinutes,
-    due: t.dueDate ? t.dueDate.slice(0, 10) : "",
+    due: t.dueDate ? (localDateKeyFromIso(t.dueDate) ?? t.dueDate.slice(0, 10)) : "",
     type: typeMap[t.type],
     priority: priMap[t.priority],
     status: displayStatus,
