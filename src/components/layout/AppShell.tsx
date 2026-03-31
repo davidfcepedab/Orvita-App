@@ -69,8 +69,13 @@ export function AppShell({
       return
     }
 
-    supabase.auth
-      .getUser()
+    const GET_USER_MS = 10_000
+    const getUserPromise = supabase.auth.getUser()
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      window.setTimeout(() => reject(new Error("getUser timeout")), GET_USER_MS)
+    })
+
+    Promise.race([getUserPromise, timeoutPromise])
       .then(({ data }) => {
         const rawName =
           data?.user?.user_metadata?.full_name ??

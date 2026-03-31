@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
+import { ORVITA_AUTH_COOKIE } from "@/lib/auth/middlewareSession"
 import { createClient } from "@/lib/supabase/server"
 
 export const runtime = "nodejs"
 
-const AUTH_COOKIE = "orvita_access_token"
+const AUTH_COOKIE = ORVITA_AUTH_COOKIE
 
 function extractBearerToken(req: NextRequest) {
   const header = req.headers.get("authorization")

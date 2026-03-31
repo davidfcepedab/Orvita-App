@@ -41,22 +41,33 @@ export default function AuthPage() {
   const [error, setError] = useState<string | null>(null)
 
   const syncSessionCookie = async (accessToken: string) => {
-    const signal =
-      typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function"
-        ? AbortSignal.timeout(SESSION_COOKIE_TIMEOUT_MS)
-        : undefined
-    const res = await fetch("/api/auth/session", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${accessToken}` },
-      ...(signal ? { signal } : {}),
-    })
-    const payload = (await res.json().catch(() => ({}))) as { success?: boolean; error?: string }
-    if (!res.ok) {
-      throw new Error(
-        payload.error ||
-          messageForHttpError(res.status, payload.error, res.statusText) ||
-          "No se pudo guardar la sesión en el servidor",
-      )
+    const c = typeof AbortController !== "undefined" ? new AbortController() : null
+    const timer =
+      c != null
+        ? window.setTimeout(() => {
+            try {
+              c.abort()
+            } catch {
+              /* ignore */
+            }
+          }, SESSION_COOKIE_TIMEOUT_MS)
+        : null
+    try {
+      const res = await fetch("/api/auth/session", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${accessToken}` },
+        ...(c ? { signal: c.signal } : {}),
+      })
+      const payload = (await res.json().catch(() => ({}))) as { success?: boolean; error?: string }
+      if (!res.ok) {
+        throw new Error(
+          payload.error ||
+            messageForHttpError(res.status, payload.error, res.statusText) ||
+            "No se pudo guardar la sesión en el servidor",
+        )
+      }
+    } finally {
+      if (timer != null) window.clearTimeout(timer)
     }
   }
 
@@ -75,6 +86,10 @@ export default function AuthPage() {
       const supabase = createBrowserClient()
 
       if (mode === "register") {
+        const regSignal =
+          typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function"
+            ? AbortSignal.timeout(45_000)
+            : undefined
         const response = await fetch("/api/auth/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -83,6 +98,7 @@ export default function AuthPage() {
             password,
             inviteCode: inviteCode.trim() || null,
           }),
+          ...(regSignal ? { signal: regSignal } : {}),
         })
 
         const payload = (await response.json()) as RegisterPayload

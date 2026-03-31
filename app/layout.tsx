@@ -1,8 +1,17 @@
 import "./globals.css"
+import type { Metadata } from "next"
 import Providers from "@/app/providers"
 import { ThemeProvider } from "@/src/theme/ThemeProvider"
 import { AppShell } from "@/src/components/layout/AppShell"
 import BottomNav from "@/app/components/BottomNav"
+
+export const metadata: Metadata = {
+  title: {
+    default: "Órvita",
+    template: "%s · Órvita",
+  },
+  description: "Sistema operativo estratégico — salud, capital, agenda y decisión.",
+}
 
 export default function RootLayout({
   children,
