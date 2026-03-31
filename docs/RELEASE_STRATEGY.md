@@ -4,11 +4,11 @@
 - Semantic versioning: `MAJOR.MINOR.PATCH`.
 - v1.1.0 introduces operational modules and Supabase migrations.
 
-## Branching (tres ramas en `origin`)
+## Branching
 
-- **`preview`** — Integración; destino habitual de PRs y entorno preview (Vercel).
-- **`production`** — Lo que sirve **https://orvita.app** (rama de producción en Vercel).
-- **`built`** — Copia alineada con `production` tras validación; `npm run release:sync` hace `built` = `production` y hace push de ambas.
+- **`main`** — **Única rama de producción** para **https://orvita.app**: en Vercel, **Production Branch** = `main` (y el dominio ligado a Production). Cada push a `main` sustituye el deployment público anterior.
+- **`preview`** — Integración opcional; destino de PRs y previews en Vercel si lo configuráis así.
+- **`production`** / **`built`** — Ramas auxiliares opcionales: `npm run release:sync` (ejecutado estando en **`production`** con árbol limpio) alinea **`built`** con **`production`** y hace push de ambas. **No** definen el dominio; para evitar confusión, mantened **`production`** al mismo commit que **`main`** cuando uséis este flujo.
 
 El trabajo en curso vive en ramas locales o cortas (`feature/*`, `fix/*`), no como ramas remotas permanentes.
 
@@ -18,14 +18,14 @@ El trabajo en curso vive en ramas locales o cortas (`feature/*`, `fix/*`), no co
 - Supabase migrations must apply cleanly in preview environments.
 
 ## Deployment
-- **Vercel:** asigna **Production Branch** = `production`. Previews desde PRs o desde `preview`, según tu configuración.
-- **Dominio de producción:** [https://orvita.app](https://orvita.app).
-- Tras merge a `production`, con el árbol limpio: `npm run release:sync` publica `production` y `built` en el remoto.
+- **Vercel:** **Production Branch** = **`main`**. Previews desde PRs o desde `preview`, según configuración.
+- **Dominio de producción:** [https://orvita.app](https://orvita.app) solo sirve el último deployment de Production (rama `main`).
+- Opcional: si usáis **`production`** / **`built`** como espejo, tras alinear `production` con `main`, con el árbol limpio en `production`: `npm run release:sync` publica `production` y `built` en el remoto.
 
 ## Proteger un corte en producción (snapshot en Git)
-1. Con `production` estable y desplegado, ejecuta `npm run validate:release`.
+1. Con **`main`** estable y desplegado en orvita.app, ejecuta `npm run validate:release`.
 2. Tag anotado: `git tag -a release/orvita-app-YYYY-MM-DD -m "Producción orvita.app — notas"` y `git push origin release/orvita-app-YYYY-MM-DD`.
-3. En Vercel: *Deployment Protection* en previews y solo `production` ligada al dominio productivo.
+3. En Vercel: *Deployment Protection* en previews; dominio productivo solo en entorno **Production** (rama **`main`**).
 
 ## Migration Workflow
 1. Generate migration: `supabase migration new <name>`.

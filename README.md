@@ -4,7 +4,7 @@ Next.js (App Router) — sistema operativo estratégico personal y hogar.
 
 ## Documentación
 
-- Despliegue y ramas (`preview` / `production` / `built`): [docs/RELEASE_STRATEGY.md](docs/RELEASE_STRATEGY.md)
+- Despliegue y ramas (`main` producción, `preview` / `production` / `built` opcionales): [docs/RELEASE_STRATEGY.md](docs/RELEASE_STRATEGY.md)
 - Rutas V3 y checklist productivo: [V3_PRODUCTION.md](V3_PRODUCTION.md)
 - Contrato API finanzas: [API_CONTRACT.md](API_CONTRACT.md)
 - Contribución y flujo de PRs: [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md)
@@ -30,10 +30,10 @@ npm test
 npm run validate:release   # tsc + jest + build (antes de cortes)
 ```
 
-Con la rama local **`production`** actualizada y sin cambios sin commitear:
+Si usas las ramas **`production`** y **`built`** como espejo (ver [docs/RELEASE_STRATEGY.md](docs/RELEASE_STRATEGY.md)), con **`production`** actualizada y el árbol limpio:
 
 ```bash
-npm run release:sync       # alinea built con production y hace push
+npm run release:sync       # alinea built con production y hace push de ambas
 ```
 
 ## Estructura (resumen)
@@ -48,5 +48,5 @@ npm run release:sync       # alinea built con production y hace push
 
 ## Deploy
 
-- **Vercel:** rama de producción = **`production`** → dominio **https://orvita.app**.
-- **GitHub:** si aún existe **`main`**, cámbiala como rama por defecto a **`production`** y bórrala (ver [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md)).
+- **Vercel:** **Production Branch** = **`main`** → dominio **https://orvita.app** (un solo deployment productivo por commit en `main`).
+- **GitHub:** rama por defecto del repo = **`main`** (alineado con Vercel).

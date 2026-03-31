@@ -1,32 +1,31 @@
 # Contribuir a ÓRVITA-APP
 
-## Ramas en el remoto (solo tres)
+## Rama de producción (única para el dominio)
 
 | Rama | Rol |
 |------|-----|
-| **`preview`** | Integración y PRs; despliegues *preview* en Vercel (configura el proyecto para construir esta rama o para cada PR). |
-| **`production`** | Código que alimenta **https://orvita.app** (rama de producción en Vercel). |
-| **`built`** | Espejo de `production` tras un corte validado; se actualiza con `npm run release:sync` desde `production`. |
+| **`main`** | **Producción Vercel** → **https://orvita.app**. Es la rama por defecto en GitHub y la única que debe estar configurada como **Production Branch** en Vercel. |
+
+## Otras ramas en el remoto (opcionales)
+
+| Rama | Rol |
+|------|-----|
+| **`preview`** | Integración y PRs; despliegues *preview* en Vercel (si el proyecto construye esta rama o cada PR). |
+| **`production`** | Flujo interno opcional; **no** sustituye a `main` para el dominio. Si la usas, mantenla al mismo commit que `main` tras cada release. |
+| **`built`** | Espejo de `production` tras un corte; se actualiza con `npm run release:sync` **desde la rama `production`** (ver [docs/RELEASE_STRATEGY.md](../docs/RELEASE_STRATEGY.md)). |
 
 Flujo habitual:
 
-1. Crea una rama desde **`preview`**: `feature/…`, `fix/…`, `chore/…`.
-2. Abre un **pull request** hacia **`preview`** y pasa revisión / CI.
-3. Cuando `preview` esté listo para salir, merge **`preview` → `production`** (PR o merge controlado).
-4. En local, con `production` actualizado y limpio: `npm run validate:release` y luego `npm run release:sync` para alinear **`built`** con **`production`**.
+1. Crea una rama desde **`main`** o desde **`preview`**: `feature/…`, `fix/…`, `chore/…`.
+2. Abre un **pull request** hacia **`main`** (o hacia **`preview`** y luego **`main`**, según acuerdo del equipo).
+3. Tras merge a **`main`**, Vercel despliega **orvita.app** automáticamente (salvo que solo uses Deploy Hooks; en ese caso el hook debe apuntar a **`main`**).
 
-Evita push directo a `production` salvo emergencias acordadas.
+Evita push directo a **`main`** salvo emergencias acordadas; preferible PR con revisión / CI.
 
 ### Protección en GitHub (admin)
 
-En **Settings → Branches → Branch protection rules**, aplica reglas a **`production`** y **`preview`** según el equipo (PR obligatorio, checks, etc.).
+En **Settings → Branches → Branch protection rules**, aplica reglas a **`main`** (y a **`preview`** si aplica): PR obligatorio, checks, etc.
 
-### Migración desde `main` / `productive`
+### Deploy Hook en Vercel
 
-En el remoto puede quedar **`main`** mientras siga siendo la **rama por defecto** del repositorio (GitHub no permite borrarla hasta entonces).
-
-1. **Settings → General → Default branch** → elige **`production`** y confirma.
-2. Borra la rama antigua: `git push origin --delete main`.
-3. Actualiza tu clon: `git fetch origin --prune` y, si quieres trabajar en preview, `git checkout -b preview origin/preview`.
-
-Tras eso solo deberían quedar en `origin` las ramas **`production`**, **`preview`** y **`built`** (más tags si los usas).
+Si usas un hook llamado “production”, la **rama del hook** debe ser **`main`**, igual que **Production Branch** en **Settings → Build and Deployment**, para no tener dos fuentes de verdad.
