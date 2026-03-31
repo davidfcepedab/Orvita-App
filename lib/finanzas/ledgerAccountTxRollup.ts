@@ -76,3 +76,24 @@ export function accountMonthExpenseIncome(
   }
   return { expense, income }
 }
+
+/**
+ * Acumulado hasta el último día del mes visto (inclusive). Sirve para “saldo actual” de TC/préstamo
+ * cuando `balance_used` en BD es 0 y los cargos están en meses anteriores.
+ */
+export function accountCumulativeExpenseIncomeThrough(
+  rows: FinanceTransaction[],
+  endDateInclusive: string,
+  accountId: string,
+  accountLabel: string,
+): { expense: number; income: number } {
+  let expense = 0
+  let income = 0
+  for (const t of rows) {
+    if (t.date > endDateInclusive) continue
+    if (!transactionMatchesLedgerAccount(t, accountId, accountLabel)) continue
+    expense += expenseAmount(t)
+    income += incomeAmount(t)
+  }
+  return { expense, income }
+}

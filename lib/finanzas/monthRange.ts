@@ -1,3 +1,14 @@
+/**
+ * Inicio de rango para enlazar movimientos históricos con el catálogo de cuentas (TC/préstamos).
+ * Evita cargar toda la historia; ~12 años suele bastar para saldo acumulado en Capital.
+ */
+export function ledgerRollupRangeStart(month: string): string {
+  const [ys] = month.split("-")
+  const y = Number(ys)
+  if (!y) return "2015-01-01"
+  return `${Math.max(2010, y - 12)}-01-01`
+}
+
 /** `month` = YYYY-MM (mes civil 1–12). */
 export function monthBounds(month: string) {
   const [ys, ms] = month.split("-")

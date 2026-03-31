@@ -4,7 +4,7 @@ import { isAppMockMode, isSupabaseEnabled, UI_SYNC_OFF_SHORT } from "@/lib/check
 import { buildCuentasDashboard } from "@/lib/finanzas/cuentasDashboard"
 import { mergeLiveDashboardWithLedger } from "@/lib/finanzas/dashboardFromLedgerAccounts"
 import { mockTransactionsForMonth } from "@/lib/finanzas/mockFinancePayloads"
-import { monthBounds } from "@/lib/finanzas/monthRange"
+import { ledgerRollupRangeStart, monthBounds } from "@/lib/finanzas/monthRange"
 import { sortLedgerAccountsForDisplay } from "@/lib/finanzas/sortLedgerAccounts"
 import { buildSyntheticAccounts } from "@/lib/finanzas/syntheticAccounts"
 import { getHouseholdId } from "@/lib/households/getHouseholdId"
@@ -69,8 +69,11 @@ export async function GET(req: NextRequest) {
       .eq("month", mo)
       .maybeSingle()
 
-    const rows = await getTransactionsByRange(auth.supabase, b.startStr, b.endStr)
-    const prevRows = await getTransactionsByRange(auth.supabase, b.prevStartStr, b.prevEndStr)
+    const [rows, prevRows, ledgerRollupRows] = await Promise.all([
+      getTransactionsByRange(auth.supabase, b.startStr, b.endStr),
+      getTransactionsByRange(auth.supabase, b.prevStartStr, b.prevEndStr),
+      getTransactionsByRange(auth.supabase, ledgerRollupRangeStart(month), b.endStr),
+    ])
     const balance = snapshot?.balance != null ? Number(snapshot.balance) : null
     const accounts = buildSyntheticAccounts(month, balance, rows)
     const dashboardBase = buildCuentasDashboard(month, balance, rows, prevRows, false)
@@ -90,7 +93,7 @@ export async function GET(req: NextRequest) {
     if (!ledgerErr) {
       const sortedLedger = sortLedgerAccountsForDisplay(ledgerRows ?? [], rows)
       ledgerAccounts = sortedLedger
-      dashboard = mergeLiveDashboardWithLedger(dashboardBase, month, sortedLedger, rows)
+      dashboard = mergeLiveDashboardWithLedger(dashboardBase, month, sortedLedger, rows, ledgerRollupRows)
     } else if (!/does not exist|PGRST205/i.test(ledgerErr.message ?? "")) {
       console.warn("ACCOUNTS: ledger query:", ledgerErr.message)
     }

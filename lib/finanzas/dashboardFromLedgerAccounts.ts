@@ -1,9 +1,11 @@
 import { filterMonth } from "@/lib/finanzas/deriveFromTransactions"
 import { incomeAmount, expenseAmount, netCashFlow } from "@/lib/finanzas/calculations/txMath"
 import {
+  accountCumulativeExpenseIncomeThrough,
   accountMonthExpenseIncome,
   transactionMatchesLedgerAccount,
 } from "@/lib/finanzas/ledgerAccountTxRollup"
+import { monthBounds } from "@/lib/finanzas/monthRange"
 import type { FinanceTransaction } from "@/lib/finanzas/types"
 import type {
   CuentasCreditCard,
@@ -96,9 +98,19 @@ function ledgerRowToSaving(
   }
 }
 
-function ledgerRowToCreditCard(row: LedgerAccountSortable, month: string, monthRows: FinanceTransaction[]): CuentasCreditCard {
+function ledgerRowToCreditCard(
+  row: LedgerAccountSortable,
+  month: string,
+  rollupRows: FinanceTransaction[],
+  monthEndInclusive: string,
+): CuentasCreditCard {
   const dbBalance = Math.max(0, Number(row.balance_used ?? 0))
-  const { expense, income } = accountMonthExpenseIncome(monthRows, month, row.id, row.label)
+  const { expense, income } = accountCumulativeExpenseIncomeThrough(
+    rollupRows,
+    monthEndInclusive,
+    row.id,
+    row.label,
+  )
   const txNetDebt = Math.max(0, Math.round(expense - income))
   const balance = dbBalance > 0 ? dbBalance : txNetDebt
   let limit = Math.max(0, Number(row.credit_limit ?? 0))
@@ -122,10 +134,19 @@ function ledgerRowToCreditCard(row: LedgerAccountSortable, month: string, monthR
   }
 }
 
-function ledgerRowToLoan(row: LedgerAccountSortable, month: string, monthRows: FinanceTransaction[]): CuentasLoanCard {
+function ledgerRowToLoan(
+  row: LedgerAccountSortable,
+  rollupRows: FinanceTransaction[],
+  monthEndInclusive: string,
+): CuentasLoanCard {
   let saldoPendiente = Math.round(Math.max(0, Number(row.balance_used ?? row.manual_balance ?? 0)))
   if (saldoPendiente < 1) {
-    const { expense, income } = accountMonthExpenseIncome(monthRows, month, row.id, row.label)
+    const { expense, income } = accountCumulativeExpenseIncomeThrough(
+      rollupRows,
+      monthEndInclusive,
+      row.id,
+      row.label,
+    )
     saldoPendiente = Math.max(0, Math.round(expense - income))
   }
   const original = Number(row.credit_limit ?? 0)
@@ -197,8 +218,13 @@ export function mergeLiveDashboardWithLedger(
   month: string,
   ledgerSorted: LedgerAccountSortable[],
   monthRows: FinanceTransaction[],
+  ledgerRollupRows?: FinanceTransaction[],
 ): CuentasDashboardPayload {
   if (ledgerSorted.length === 0) return live
+
+  const bounds = monthBounds(month)
+  const monthEndInclusive = bounds?.endStr ?? `${month}-28`
+  const rollupRows = ledgerRollupRows ?? monthRows
 
   const hasAhorro = ledgerSorted.some((a) => a.account_class === "ahorro")
   const hasTc = ledgerSorted.some((a) => a.account_class === "tarjeta_credito")
@@ -213,8 +239,8 @@ export function mergeLiveDashboardWithLedger(
   for (const row of ledgerSorted) {
     if (row.account_class === "ahorro") savings.push(ledgerRowToSaving(row, month, monthRows))
     else if (row.account_class === "tarjeta_credito")
-      creditCards.push(ledgerRowToCreditCard(row, month, monthRows))
-    else if (row.account_class === "credito") loans.push(ledgerRowToLoan(row, month, monthRows))
+      creditCards.push(ledgerRowToCreditCard(row, month, rollupRows, monthEndInclusive))
+    else if (row.account_class === "credito") loans.push(ledgerRowToLoan(row, rollupRows, monthEndInclusive))
   }
 
   /** Con catálogo en BD: no mezclar tarjetas sintéticas; secciones vacías si aún no hay ese tipo. */

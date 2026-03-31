@@ -165,4 +165,45 @@ describe("mergeLiveDashboardWithLedger", () => {
     const out = mergeLiveDashboardWithLedger(live, "2026-03", ledger, rows)
     expect(out.creditCards[0]!.balance).toBe(220_000)
   })
+
+  test("TC balance acumula meses anteriores al mes mostrado", () => {
+    const ledger: LedgerAccountSortable[] = [
+      {
+        id: "c1",
+        label: "TC | Visa Villas | Juan | 5419",
+        account_class: "tarjeta_credito",
+        nature: "pasivo_rotativo",
+        credit_limit: 25_000_000,
+        balance_used: 0,
+        sort_order: 0,
+      },
+    ]
+    const rollup: FinanceTransaction[] = [
+      {
+        id: "t0",
+        date: "2026-02-12",
+        description: "Compra feb",
+        amount: 300_000,
+        type: "expense",
+        category: "Otros",
+        created_at: "2026-02-12T00:00:00Z",
+        updated_at: "2026-02-12T00:00:00Z",
+        finance_account_id: "c1",
+      },
+      {
+        id: "t1",
+        date: "2026-03-02",
+        description: "Compra mar",
+        amount: 100_000,
+        type: "expense",
+        category: "Otros",
+        created_at: "2026-03-02T00:00:00Z",
+        updated_at: "2026-03-02T00:00:00Z",
+        finance_account_id: "c1",
+      },
+    ]
+    const monthOnlyMarch = rollup.filter((r) => r.date.startsWith("2026-03"))
+    const out = mergeLiveDashboardWithLedger(live, "2026-03", ledger, monthOnlyMarch, rollup)
+    expect(out.creditCards[0]!.balance).toBe(400_000)
+  })
 })
