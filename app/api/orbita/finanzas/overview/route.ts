@@ -19,11 +19,14 @@ import {
   pickSubscriptionExpenses,
 } from "@/lib/finanzas/deriveFromTransactions"
 import { mockTransactionsForMonth } from "@/lib/finanzas/mockFinancePayloads"
+import { dayFromIso } from "@/lib/finanzas/commitmentAnchorDate"
 import { monthBounds } from "@/lib/finanzas/monthRange"
+import { normalizeBillingFrequency } from "@/lib/finanzas/subscriptionBilling"
 import { getHouseholdId } from "@/lib/households/getHouseholdId"
 import { getTransactionsByRange } from "@/lib/services/finanzasService"
 import { flowCommitmentFromDbRow, type UserFlowCommitmentRow } from "@/lib/finanzas/flowCommitmentsDbMap"
 import type { FlowCommitment } from "@/lib/finanzas/flowCommitmentsTypes"
+import { normalizeUserSubscription } from "@/lib/finanzas/userSubscriptionsNormalize"
 import type { SubscriptionStatus, UserSubscription } from "@/lib/finanzas/userSubscriptionsTypes"
 
 export const runtime = "nodejs"
@@ -34,6 +37,8 @@ type SubDbRow = {
   category: string
   amount_monthly: number | string
   renewal_date: string
+  billing_frequency?: string | null
+  renewal_day?: number | string | null
   include_in_simulator: boolean
   active: boolean
   status: string
@@ -42,18 +47,26 @@ type SubDbRow = {
 }
 
 function mapManagedSubscription(r: SubDbRow): UserSubscription {
-  return {
+  const renewal_date =
+    typeof r.renewal_date === "string" ? r.renewal_date.slice(0, 10) : String(r.renewal_date)
+  const renewal_day =
+    r.renewal_day != null && r.renewal_day !== ""
+      ? Math.min(28, Math.max(1, Math.round(Number(r.renewal_day))))
+      : dayFromIso(renewal_date)
+  return normalizeUserSubscription({
     id: r.id,
     name: r.name,
     category: r.category,
     amount_monthly: Number(r.amount_monthly),
-    renewal_date: typeof r.renewal_date === "string" ? r.renewal_date.slice(0, 10) : String(r.renewal_date),
+    renewal_date,
+    billing_frequency: normalizeBillingFrequency(r.billing_frequency),
+    renewal_day,
     include_in_simulator: r.include_in_simulator,
     active: r.active,
     status: r.status as SubscriptionStatus,
     created_at: r.created_at,
     updated_at: r.updated_at,
-  }
+  })
 }
 
 /**
@@ -260,16 +273,17 @@ export async function GET(req: NextRequest) {
     const [{ data: managedSubData }, commitsRes] = await Promise.all([
       auth.supabase
         .from("user_subscriptions")
-        .select(
-          "id, name, category, amount_monthly, renewal_date, include_in_simulator, active, status, created_at, updated_at",
-        )
+        .select("*")
         .eq("household_id", householdId)
         .order("renewal_date", { ascending: true }),
       auth.supabase
         .from("user_flow_commitments")
-        .select("id, household_id, title, category, due_date, amount, flow_type, created_at, updated_at")
+        .select(
+          "id, household_id, title, category, subcategory, due_day, due_date, amount, flow_type, created_at, updated_at",
+        )
         .eq("household_id", householdId)
-        .order("due_date", { ascending: true }),
+        .order("due_day", { ascending: true })
+        .order("title", { ascending: true }),
     ])
 
     const managedSubscriptions = ((managedSubData ?? []) as SubDbRow[]).map(mapManagedSubscription)
@@ -278,7 +292,9 @@ export async function GET(req: NextRequest) {
     if (commitsRes.error) {
       console.warn("OVERVIEW: user_flow_commitments", commitsRes.error.message)
     } else {
-      flowCommitments = ((commitsRes.data ?? []) as UserFlowCommitmentRow[]).map(flowCommitmentFromDbRow)
+      flowCommitments = ((commitsRes.data ?? []) as UserFlowCommitmentRow[]).map((r) =>
+        flowCommitmentFromDbRow(r, month),
+      )
     }
 
     return NextResponse.json({

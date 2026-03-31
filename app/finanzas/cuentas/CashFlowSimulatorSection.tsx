@@ -5,6 +5,7 @@ import { AlertTriangle, ChevronDown, TrendingUp } from "lucide-react"
 import { financeApiDelete, financeApiGet, financeApiJson } from "@/lib/finanzas/financeClientFetch"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import type { CuentasKpis } from "@/lib/finanzas/cuentasDashboard"
+import { dayFromIso, isoDateInMonth } from "@/lib/finanzas/commitmentAnchorDate"
 import type { FlowCommitment, FlowCommitmentFlowType } from "@/lib/finanzas/flowCommitmentsTypes"
 import {
   readFlowCommitmentsFromLocalStorage,
@@ -18,6 +19,18 @@ type FlowRow = { month: string; ingresos: number; gasto_operativo: number; flujo
 type Commitment = FlowCommitment
 type CommitmentFlowType = FlowCommitmentFlowType
 type CommitmentModalRow = FlowCommitment & { _isNew?: boolean }
+
+const CAT_PAIR_SEP = "\u0001"
+function encodeCatPair(category: string, subcategory: string) {
+  return `${category.trim()}${CAT_PAIR_SEP}${subcategory.trim()}`
+}
+function decodeCatPair(v: string): { category: string; subcategory: string } {
+  const i = v.indexOf(CAT_PAIR_SEP)
+  if (i < 0) return { category: v.trim(), subcategory: "" }
+  return { category: v.slice(0, i).trim(), subcategory: v.slice(i + CAT_PAIR_SEP.length).trim() }
+}
+
+const COMMITMENT_DAY_OPTIONS = Array.from({ length: 31 }, (_, i) => i + 1)
 
 function isIncomeCommitment(c: Commitment) {
   return c.flowType === "income"
@@ -97,6 +110,7 @@ export function CashFlowSimulatorSection({
   const [commitSaveErr, setCommitSaveErr] = useState<string | null>(null)
   const [commitModalRows, setCommitModalRows] = useState<CommitmentModalRow[]>([])
   const [commitModalInitialIds, setCommitModalInitialIds] = useState<Set<string>>(new Set())
+  const [commitCatalogOpts, setCommitCatalogOpts] = useState<{ value: string; label: string }[]>([])
   const [simulatorExpanded, setSimulatorExpanded] = useState(false)
   const [flowViz, setFlowViz] = useState<"table" | "bars">("table")
 
@@ -134,11 +148,15 @@ export function CashFlowSimulatorSection({
       const seeded: Commitment[] = (d.obligations ?? []).map((o) => {
         const title = o.name
         const cat = obligationCategoryLabel(o.name)
+        const dueStr = o.due?.slice(0, 10) ?? `${month}-01`
+        const dueDay = dayFromIso(dueStr)
         return {
           id: newId(),
           title,
           category: cat,
-          date: o.due?.slice(0, 10) ?? month + "-01",
+          subcategory: "",
+          dueDay,
+          date: isoDateInMonth(month, dueDay),
           amount: Number(o.amount) || 0,
           flowType: "fixed" as const,
         }
@@ -191,6 +209,48 @@ export function CashFlowSimulatorSection({
   }, [commitments, commitmentsHydrated, supabaseEnabled])
 
   useEffect(() => {
+    if (supabaseEnabled || !month || !commitmentsHydrated) return
+    setCommitments((prev) =>
+      prev.map((c) => {
+        const d = c.dueDay ?? dayFromIso(c.date)
+        return {
+          ...c,
+          subcategory: c.subcategory ?? "",
+          dueDay: d,
+          date: isoDateInMonth(month, d),
+        }
+      }),
+    )
+  }, [month, supabaseEnabled, commitmentsHydrated])
+
+  useEffect(() => {
+    if (!commitOpen || !supabaseEnabled) return
+    let cancelled = false
+    void (async () => {
+      try {
+        const res = await financeApiGet("/api/orbita/finanzas/subcategory-catalog")
+        const json = (await res.json()) as {
+          success?: boolean
+          data?: { rows?: { category: string; subcategory: string }[] }
+        }
+        if (cancelled || !res.ok || !json.success) return
+        const rows = json.data?.rows ?? []
+        setCommitCatalogOpts(
+          rows.map((r) => ({
+            value: encodeCatPair(r.category, r.subcategory),
+            label: `${r.category} › ${r.subcategory}`,
+          })),
+        )
+      } catch {
+        if (!cancelled) setCommitCatalogOpts([])
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [commitOpen, supabaseEnabled])
+
+  useEffect(() => {
     void load()
   }, [load])
 
@@ -238,7 +298,13 @@ export function CashFlowSimulatorSection({
   )
 
   const commitmentsSorted = useMemo(
-    () => [...commitments].sort((a, b) => a.date.localeCompare(b.date)),
+    () =>
+      [...commitments].sort((a, b) => {
+        const da = a.dueDay ?? dayFromIso(a.date)
+        const db = b.dueDay ?? dayFromIso(b.date)
+        if (da !== db) return da - db
+        return a.title.localeCompare(b.title)
+      }),
     [commitments],
   )
 
@@ -270,20 +336,32 @@ export function CashFlowSimulatorSection({
 
   const openCommitModal = () => {
     setCommitSaveErr(null)
-    const rows = commitments.map((c) => ({ ...c }))
+    const ym = month || new Date().toISOString().slice(0, 7)
+    const rows = commitments.map((c) => {
+      const dueDay = c.dueDay ?? dayFromIso(c.date)
+      return {
+        ...c,
+        subcategory: c.subcategory ?? "",
+        dueDay,
+        date: isoDateInMonth(ym, dueDay),
+      }
+    })
     setCommitModalRows(rows)
     setCommitModalInitialIds(new Set(rows.map((r) => r.id)))
     setCommitOpen(true)
   }
 
   const addCommitModalRow = () => {
+    const d = 15
     setCommitModalRows((r) => [
       ...r,
       {
         id: newId(),
         title: "",
         category: "",
-        date: `${month}-15`,
+        subcategory: "",
+        dueDay: d,
+        date: isoDateInMonth(month || new Date().toISOString().slice(0, 7), d),
         amount: 0,
         flowType: "fixed",
         _isNew: true,
@@ -294,8 +372,9 @@ export function CashFlowSimulatorSection({
   const saveCommitModal = async () => {
     setCommitSaveErr(null)
     for (const row of commitModalRows) {
-      if (!row.title.trim() || !row.date || !/^\d{4}-\d{2}-\d{2}$/.test(row.date)) {
-        setCommitSaveErr("Cada fila necesita título y fecha válida.")
+      const dd = row.dueDay ?? dayFromIso(row.date)
+      if (!row.title.trim() || !Number.isFinite(dd) || dd < 1 || dd > 31) {
+        setCommitSaveErr("Cada fila necesita título y día del mes (1–31).")
         return
       }
     }
@@ -314,16 +393,18 @@ export function CashFlowSimulatorSection({
             throw new Error(messageForHttpError(res.status, json.error, res.statusText))
           }
         }
+        const qMonth = encodeURIComponent(month || new Date().toISOString().slice(0, 7))
         for (const row of commitModalRows) {
           const title = row.title.trim()
           const category = row.category.trim()
-          const date = row.date.slice(0, 10)
+          const subcategory = (row.subcategory ?? "").trim()
+          const due_day = row.dueDay ?? dayFromIso(row.date)
           const amount = Math.max(0, row.amount)
           const flowType = row.flowType
           if (row._isNew) {
-            const res = await financeApiJson("/api/orbita/finanzas/commitments", {
+            const res = await financeApiJson(`/api/orbita/finanzas/commitments?month=${qMonth}`, {
               method: "POST",
-              body: { title, category, date, amount, flow_type: flowType },
+              body: { title, category, subcategory, due_day, amount, flow_type: flowType },
             })
             const json = (await res.json()) as {
               success?: boolean
@@ -334,13 +415,14 @@ export function CashFlowSimulatorSection({
               throw new Error(messageForHttpError(res.status, json.error, res.statusText))
             }
           } else {
-            const res = await financeApiJson("/api/orbita/finanzas/commitments", {
+            const res = await financeApiJson(`/api/orbita/finanzas/commitments?month=${qMonth}`, {
               method: "PATCH",
               body: {
                 id: row.id,
                 title,
                 category,
-                date,
+                subcategory,
+                due_day,
                 amount,
                 flow_type: flowType,
               },
@@ -357,14 +439,20 @@ export function CashFlowSimulatorSection({
         setCommitSaveErr(e instanceof Error ? e.message : "No se pudieron guardar los compromisos")
       }
     } else {
-      const cleaned: FlowCommitment[] = commitModalRows.map((row) => ({
-        id: row.id,
-        title: row.title,
-        category: row.category,
-        date: row.date,
-        amount: row.amount,
-        flowType: row.flowType,
-      }))
+      const ym = month || new Date().toISOString().slice(0, 7)
+      const cleaned: FlowCommitment[] = commitModalRows.map((row) => {
+        const dueDay = row.dueDay ?? dayFromIso(row.date)
+        return {
+          id: row.id,
+          title: row.title,
+          category: row.category,
+          subcategory: row.subcategory ?? "",
+          dueDay,
+          date: isoDateInMonth(ym, dueDay),
+          amount: row.amount,
+          flowType: row.flowType,
+        }
+      })
       setCommitments(cleaned)
       writeFlowCommitmentsToLocalStorage(cleaned)
       setCommitOpen(false)
@@ -385,7 +473,7 @@ export function CashFlowSimulatorSection({
         <button
           type="button"
           onClick={onApplyPaymentPlan}
-          className="min-h-[48px] w-full shrink-0 touch-manipulation rounded-full border-[0.5px] border-rose-200 bg-rose-50 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.12em] text-rose-700 hover:bg-rose-100 active:bg-rose-200 sm:w-auto sm:min-h-0 sm:py-2"
+          className="min-h-9 w-full shrink-0 touch-manipulation rounded-full border-[0.5px] border-rose-200 bg-rose-50 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-rose-700 hover:bg-rose-100 active:bg-rose-200 sm:w-auto sm:min-h-0"
         >
           Aplicar plan de pago
         </button>
@@ -675,9 +763,9 @@ export function CashFlowSimulatorSection({
             tone: disponible >= 0 ? "text-emerald-700" : "text-rose-600",
           },
           {
-            k: "Net impact (30d)",
+            k: "Impacto mensual",
             v: `${netImpact30 >= 0 ? "+" : "-"}${formatMoney(Math.abs(netImpact30))}`,
-            sub: "Compromisos listados",
+            sub: "Compromisos recurrentes (lista)",
             tone: netImpact30 >= 0 ? "text-emerald-700" : "text-rose-600",
           },
         ].map((c) => (
@@ -694,7 +782,7 @@ export function CashFlowSimulatorSection({
           <div className="flex items-center gap-1.5 text-orbita-primary">
             <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" aria-hidden />
             <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">
-              Próximos compromisos (30 días)
+              Compromisos del mes (por día fijo)
             </span>
           </div>
           <button
@@ -709,7 +797,7 @@ export function CashFlowSimulatorSection({
           <table className="w-full min-w-[520px] border-collapse text-left text-[11px] sm:text-sm">
             <thead>
               <tr className="border-b border-orbita-border text-[9px] font-semibold uppercase tracking-wide text-orbita-secondary sm:text-[10px]">
-                <th className="py-2 pr-2 font-medium">Fecha</th>
+                <th className="py-2 pr-2 font-medium">Día</th>
                 <th className="py-2 pr-2 font-medium">Concepto</th>
                 <th className="py-2 pr-2 font-medium">Tipo</th>
                 <th className="py-2 pr-0 text-right font-medium">Monto</th>
@@ -720,16 +808,23 @@ export function CashFlowSimulatorSection({
                 const inc = isIncomeCommitment(c)
                 const cat = c.category.trim()
                 const showCat = Boolean(cat)
+                const sub = (c.subcategory ?? "").trim()
                 const titleDiffers = c.title.trim().toLowerCase() !== cat.toLowerCase()
                 return (
                   <tr key={c.id} className="border-b border-orbita-border/70 last:border-0">
                     <td className="whitespace-nowrap py-2 pr-2 align-top tabular-nums text-orbita-primary">
-                      {formatCommitmentDayEn(c.date)}
+                      <span className="font-semibold">{c.dueDay ?? dayFromIso(c.date)}</span>
+                      <span className="ml-1 text-[10px] text-orbita-secondary">
+                        ({formatCommitmentDayEn(c.date)})
+                      </span>
                     </td>
                     <td className="max-w-[200px] py-2 pr-2 align-top sm:max-w-none">
                       {showCat ? (
                         <>
-                          <p className="font-semibold leading-snug text-orbita-primary">{cat}</p>
+                          <p className="font-semibold leading-snug text-orbita-primary">
+                            {cat}
+                            {sub ? <span className="font-normal text-orbita-secondary"> › {sub}</span> : null}
+                          </p>
                           {titleDiffers ? (
                             <p className="mt-0.5 text-[10px] leading-snug text-orbita-secondary">{c.title}</p>
                           ) : null}
@@ -762,16 +857,16 @@ export function CashFlowSimulatorSection({
         open={commitOpen}
         onClose={() => setCommitOpen(false)}
         title="Gestionar compromisos"
-        subtitle="Edita en tabla: una fila por compromiso. Guarda para aplicar cambios."
+        subtitle="Día fijo del mes (todos los meses), categoría del catálogo y monto. Una fila por compromiso."
         wide
       >
         <div className="max-h-[min(70vh,520px)] overflow-auto">
-          <table className="w-full min-w-[640px] border-collapse text-left text-xs sm:text-sm">
+          <table className="w-full min-w-[720px] border-collapse text-left text-xs sm:text-sm">
             <thead className="sticky top-0 z-[1] border-b border-orbita-border bg-orbita-surface-alt">
               <tr className="text-[10px] font-semibold uppercase tracking-wide text-orbita-secondary">
-                <th className="px-2 py-2 font-medium">Fecha</th>
+                <th className="px-2 py-2 font-medium">Día</th>
                 <th className="px-2 py-2 font-medium">Título</th>
-                <th className="px-2 py-2 font-medium">Categoría</th>
+                <th className="px-2 py-2 font-medium">Categoría › sub</th>
                 <th className="px-2 py-2 font-medium">Tipo</th>
                 <th className="px-2 py-2 font-medium">Monto</th>
                 <th className="px-2 py-2 font-medium" />
@@ -781,17 +876,30 @@ export function CashFlowSimulatorSection({
               {commitModalRows.map((row) => (
                 <tr key={row.id} className="border-b border-orbita-border/60 align-top">
                   <td className="px-2 py-1.5">
-                    <input
-                      type="date"
-                      className="min-h-9 w-full min-w-[9.5rem] rounded-lg border border-orbita-border bg-orbita-surface px-1 py-1 text-orbita-primary"
-                      value={row.date.slice(0, 10)}
+                    <select
+                      className="min-h-9 w-full min-w-[3.5rem] rounded-lg border border-orbita-border px-1 py-1 text-orbita-primary"
+                      value={row.dueDay ?? dayFromIso(row.date)}
                       onChange={(e) => {
-                        const v = e.target.value
+                        const d = Number(e.target.value)
                         setCommitModalRows((rs) =>
-                          rs.map((r) => (r.id === row.id ? { ...r, date: v } : r)),
+                          rs.map((r) =>
+                            r.id === row.id
+                              ? {
+                                  ...r,
+                                  dueDay: d,
+                                  date: isoDateInMonth(month || new Date().toISOString().slice(0, 7), d),
+                                }
+                              : r,
+                          ),
                         )
                       }}
-                    />
+                    >
+                      {COMMITMENT_DAY_OPTIONS.map((d) => (
+                        <option key={d} value={d}>
+                          {d}
+                        </option>
+                      ))}
+                    </select>
                   </td>
                   <td className="px-2 py-1.5">
                     <input
@@ -806,16 +914,53 @@ export function CashFlowSimulatorSection({
                     />
                   </td>
                   <td className="px-2 py-1.5">
-                    <input
-                      className="min-h-9 w-full min-w-[6rem] rounded-lg border border-orbita-border px-2 py-1 text-orbita-primary"
-                      placeholder="Opcional"
-                      value={row.category}
-                      onChange={(e) =>
-                        setCommitModalRows((rs) =>
-                          rs.map((r) => (r.id === row.id ? { ...r, category: e.target.value } : r)),
-                        )
-                      }
-                    />
+                    {supabaseEnabled && commitCatalogOpts.length > 0 ? (
+                      <select
+                        className="min-h-9 w-full min-w-[10rem] max-w-[14rem] rounded-lg border border-orbita-border px-1 py-1 text-orbita-primary"
+                        value={
+                          row.category.trim() || row.subcategory.trim()
+                            ? encodeCatPair(row.category, row.subcategory)
+                            : ""
+                        }
+                        onChange={(e) => {
+                          const v = e.target.value
+                          const { category, subcategory } = v ? decodeCatPair(v) : { category: "", subcategory: "" }
+                          setCommitModalRows((rs) =>
+                            rs.map((r) => (r.id === row.id ? { ...r, category, subcategory } : r)),
+                          )
+                        }}
+                      >
+                        <option value="">— Elegir del catálogo —</option>
+                        {commitCatalogOpts.map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="flex flex-col gap-1">
+                        <input
+                          className="min-h-8 w-full rounded-lg border border-orbita-border px-2 py-1 text-[11px] text-orbita-primary"
+                          placeholder="Categoría"
+                          value={row.category}
+                          onChange={(e) =>
+                            setCommitModalRows((rs) =>
+                              rs.map((r) => (r.id === row.id ? { ...r, category: e.target.value } : r)),
+                            )
+                          }
+                        />
+                        <input
+                          className="min-h-8 w-full rounded-lg border border-orbita-border px-2 py-1 text-[11px] text-orbita-primary"
+                          placeholder="Subcategoría"
+                          value={row.subcategory ?? ""}
+                          onChange={(e) =>
+                            setCommitModalRows((rs) =>
+                              rs.map((r) => (r.id === row.id ? { ...r, subcategory: e.target.value } : r)),
+                            )
+                          }
+                        />
+                      </div>
+                    )}
                   </td>
                   <td className="px-2 py-1.5">
                     <select
@@ -888,7 +1033,8 @@ export function CashFlowSimulatorSection({
           </button>
         </div>
         <p className="mt-3 text-xs text-orbita-secondary">
-          Impacto neto (30 días) con la lista actual: ${formatMoney(netImpact30)}.
+          Impacto mensual estimado con la lista actual:{" "}
+          {netImpact30 >= 0 ? "+" : "-"}${formatMoney(Math.abs(netImpact30))}.
         </p>
       </CuentasModalShell>
     </section>

@@ -13,6 +13,12 @@ function validFlowType(v: string): v is FlowCommitmentFlowType {
   return FLOW_TYPES.includes(v as FlowCommitmentFlowType)
 }
 
+function anchorMonthFromReq(req: NextRequest): string {
+  const q = req.nextUrl.searchParams.get("month")
+  if (q && /^\d{4}-\d{2}$/.test(q)) return q
+  return new Date().toISOString().slice(0, 7)
+}
+
 export async function GET(req: NextRequest) {
   try {
     if (!isSupabaseEnabled()) {
@@ -27,18 +33,23 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Usuario sin hogar asignado" }, { status: 403 })
     }
 
+    const anchor = anchorMonthFromReq(req)
+
     const { data, error } = await auth.supabase
       .from("user_flow_commitments")
-      .select("id, household_id, title, category, due_date, amount, flow_type, created_at, updated_at")
+      .select(
+        "id, household_id, title, category, subcategory, due_day, due_date, amount, flow_type, created_at, updated_at",
+      )
       .eq("household_id", householdId)
-      .order("due_date", { ascending: true })
+      .order("due_day", { ascending: true })
+      .order("title", { ascending: true })
 
     if (error) throw error
 
     const rows = (data ?? []) as UserFlowCommitmentRow[]
     return NextResponse.json({
       success: true,
-      data: { commitments: rows.map(flowCommitmentFromDbRow) },
+      data: { commitments: rows.map((r) => flowCommitmentFromDbRow(r, anchor)) },
     })
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Error"
@@ -64,11 +75,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Usuario sin hogar asignado" }, { status: 403 })
     }
 
+    const anchor = anchorMonthFromReq(req)
+
     const body = (await req.json()) as {
       title?: string
       category?: string
-      date?: string
-      due_date?: string
+      subcategory?: string
+      due_day?: number
+      dueDay?: number
       amount?: number
       flowType?: string
       flow_type?: string
@@ -76,12 +90,13 @@ export async function POST(req: NextRequest) {
 
     const title = String(body.title ?? "").trim()
     const category = String(body.category ?? "").trim()
-    const dueRaw = String(body.due_date ?? body.date ?? "").slice(0, 10)
+    const subcategory = String(body.subcategory ?? "").trim()
+    const dueDay = Number(body.due_day ?? body.dueDay)
     const amount = Number(body.amount)
     const ftRaw = String(body.flow_type ?? body.flowType ?? "fixed")
 
-    if (!title || !dueRaw || !/^\d{4}-\d{2}-\d{2}$/.test(dueRaw)) {
-      return NextResponse.json({ success: false, error: "Título y fecha válidos requeridos" }, { status: 400 })
+    if (!title || !Number.isFinite(dueDay) || dueDay < 1 || dueDay > 31) {
+      return NextResponse.json({ success: false, error: "Título y día del mes (1–31) requeridos" }, { status: 400 })
     }
     if (!Number.isFinite(amount) || amount < 0) {
       return NextResponse.json({ success: false, error: "Monto inválido" }, { status: 400 })
@@ -96,17 +111,21 @@ export async function POST(req: NextRequest) {
         household_id: householdId,
         title,
         category,
-        due_date: dueRaw,
+        subcategory,
+        due_day: Math.round(dueDay),
+        due_date: null,
         amount,
         flow_type: ftRaw,
       })
-      .select("id, household_id, title, category, due_date, amount, flow_type, created_at, updated_at")
+      .select(
+        "id, household_id, title, category, subcategory, due_day, due_date, amount, flow_type, created_at, updated_at",
+      )
       .single()
 
     if (error) throw error
     return NextResponse.json({
       success: true,
-      data: { commitment: flowCommitmentFromDbRow(data as UserFlowCommitmentRow) },
+      data: { commitment: flowCommitmentFromDbRow(data as UserFlowCommitmentRow, anchor) },
     })
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Error"
@@ -129,12 +148,15 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Usuario sin hogar asignado" }, { status: 403 })
     }
 
+    const anchor = anchorMonthFromReq(req)
+
     const body = (await req.json()) as {
       id?: string
       title?: string
       category?: string
-      date?: string
-      due_date?: string
+      subcategory?: string
+      due_day?: number
+      dueDay?: number
       amount?: number
       flowType?: string
       flow_type?: string
@@ -149,12 +171,14 @@ export async function PATCH(req: NextRequest) {
 
     if (body.title != null) patch.title = String(body.title).trim()
     if (body.category != null) patch.category = String(body.category).trim()
-    if (body.due_date != null || body.date != null) {
-      const d = String(body.due_date ?? body.date).slice(0, 10)
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) {
-        return NextResponse.json({ success: false, error: "Fecha inválida" }, { status: 400 })
+    if (body.subcategory != null) patch.subcategory = String(body.subcategory).trim()
+    if (body.due_day != null || body.dueDay != null) {
+      const d = Number(body.due_day ?? body.dueDay)
+      if (!Number.isFinite(d) || d < 1 || d > 31) {
+        return NextResponse.json({ success: false, error: "Día del mes inválido" }, { status: 400 })
       }
-      patch.due_date = d
+      patch.due_day = Math.round(d)
+      patch.due_date = null
     }
     if (body.amount != null) {
       const n = Number(body.amount)
@@ -176,7 +200,9 @@ export async function PATCH(req: NextRequest) {
       .update(patch)
       .eq("id", id)
       .eq("household_id", householdId)
-      .select("id, household_id, title, category, due_date, amount, flow_type, created_at, updated_at")
+      .select(
+        "id, household_id, title, category, subcategory, due_day, due_date, amount, flow_type, created_at, updated_at",
+      )
       .maybeSingle()
 
     if (error) throw error
@@ -186,7 +212,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: { commitment: flowCommitmentFromDbRow(data as UserFlowCommitmentRow) },
+      data: { commitment: flowCommitmentFromDbRow(data as UserFlowCommitmentRow, anchor) },
     })
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Error"

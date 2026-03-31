@@ -4,18 +4,28 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { Ban, ChevronDown, Pause, Pencil, Plus } from "lucide-react"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { UI_SUBSCRIPTIONS_LOCAL_STORAGE } from "@/lib/checkins/flags"
-import { financeApiGet, financeApiJson } from "@/lib/finanzas/financeClientFetch"
+import { financeApiDelete, financeApiGet, financeApiJson } from "@/lib/finanzas/financeClientFetch"
 import {
   ensureLocalSubscriptionsSeeded,
   readSubscriptionsFromLocalStorage,
   upsertLocalSubscription,
+  deleteLocalSubscription,
 } from "@/lib/finanzas/subscriptionsLocal"
-import type { UserSubscription } from "@/lib/finanzas/userSubscriptionsTypes"
+import {
+  BILLING_FREQUENCY_OPTIONS,
+  chargeToMonthly,
+  daysUntilRenewalFromDay,
+  monthlyToChargeInput,
+  nextRenewalIsoFromDay,
+  type BillingFrequency,
+} from "@/lib/finanzas/subscriptionBilling"
+import type { SubscriptionStatus, UserSubscription } from "@/lib/finanzas/userSubscriptionsTypes"
 import {
   SUBSCRIPTION_CATEGORIES,
   subscriptionActiveBurn,
   subscriptionPotentialSaving,
 } from "@/lib/finanzas/userSubscriptionsTypes"
+import { normalizeUserSubscription } from "@/lib/finanzas/userSubscriptionsNormalize"
 import { CuentasModalShell } from "./CuentasModalShell"
 import { arcticPanel, formatMoney } from "./cuentasFormat"
 
@@ -24,12 +34,8 @@ function newLocalId() {
   return `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 }
 
-function renewalLabel(iso: string) {
-  if (!iso || iso.length < 10) return "—"
-  const [y, m, d] = iso.slice(0, 10).split("-").map(Number)
-  const MONTH_SHORT = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
-  if (!y || !m || !d) return iso
-  return `${MONTH_SHORT[m - 1] ?? m} ${d}`
+function renewalShortLabel(day: number) {
+  return `Día ${day}`
 }
 
 function impactLabel(amount: number, baselineIncome: number) {
@@ -69,6 +75,49 @@ function avatarGradientForLabel(label: string) {
   return `linear-gradient(135deg, hsl(${h} 62% 42%), hsl(${h2} 58% 32%))`
 }
 
+type SubManageRow = {
+  id: string
+  name: string
+  category: string
+  billing_frequency: BillingFrequency
+  chargeAtFrequency: number
+  renewal_day: number
+  include_in_simulator: boolean
+  status: SubscriptionStatus
+  _isNew?: boolean
+}
+
+function toManageRow(s: UserSubscription): SubManageRow {
+  const n = normalizeUserSubscription(s)
+  return {
+    id: n.id,
+    name: n.name,
+    category: n.category,
+    billing_frequency: n.billing_frequency,
+    chargeAtFrequency: monthlyToChargeInput(n.amount_monthly, n.billing_frequency),
+    renewal_day: n.renewal_day,
+    include_in_simulator: n.include_in_simulator,
+    status: n.status,
+  }
+}
+
+function rowToUserSubscription(r: SubManageRow): Omit<UserSubscription, "created_at" | "updated_at"> {
+  const amount_monthly = chargeToMonthly(r.chargeAtFrequency, r.billing_frequency)
+  const renewal_date = nextRenewalIsoFromDay(r.renewal_day)
+  return {
+    id: r.id,
+    name: r.name.trim(),
+    category: r.category,
+    amount_monthly,
+    renewal_date,
+    billing_frequency: r.billing_frequency,
+    renewal_day: r.renewal_day,
+    include_in_simulator: r.include_in_simulator,
+    active: r.status === "active",
+    status: r.status,
+  }
+}
+
 export function SubscriptionsBurnSection({
   supabaseEnabled,
   baselineMonthlyIncome,
@@ -80,17 +129,13 @@ export function SubscriptionsBurnSection({
 }) {
   const [rows, setRows] = useState<UserSubscription[]>([])
   const [loading, setLoading] = useState(true)
-  const [formOpen, setFormOpen] = useState(false)
-  const [editing, setEditing] = useState<UserSubscription | null>(null)
-  const [draft, setDraft] = useState({
-    name: "",
-    category: "Software" as string,
-    amount_monthly: 0,
-    renewal_date: new Date().toISOString().slice(0, 10),
-    include_in_simulator: true,
-  })
   const [saveErr, setSaveErr] = useState<string | null>(null)
   const [subscriptionsExpanded, setSubscriptionsExpanded] = useState(false)
+
+  const [manageOpen, setManageOpen] = useState(false)
+  const [manageRows, setManageRows] = useState<SubManageRow[]>([])
+  const [manageInitialIds, setManageInitialIds] = useState<Set<string>>(new Set())
+  const [manageErr, setManageErr] = useState<string | null>(null)
 
   const reload = useCallback(async () => {
     setLoading(true)
@@ -106,12 +151,12 @@ export function SubscriptionsBurnSection({
         if (!res.ok || !json.success) {
           throw new Error(messageForHttpError(res.status, json.error, res.statusText))
         }
-        setRows(json.data?.subscriptions ?? [])
+        setRows((json.data?.subscriptions ?? []).map((s) => normalizeUserSubscription(s)))
       } else {
-        setRows(ensureLocalSubscriptionsSeeded())
+        setRows(ensureLocalSubscriptionsSeeded().map((s) => normalizeUserSubscription(s)))
       }
     } catch (e) {
-      setRows(readSubscriptionsFromLocalStorage())
+      setRows(readSubscriptionsFromLocalStorage().map((s) => normalizeUserSubscription(s)))
       if (supabaseEnabled) {
         const msg =
           e instanceof Error && e.message
@@ -147,105 +192,135 @@ export function SubscriptionsBurnSection({
     onSubscriptionSimulatorMonthlyChange(simulatorMonthly)
   }, [simulatorMonthly, onSubscriptionSimulatorMonthlyChange])
 
-  const openAdd = () => {
-    setEditing(null)
-    setDraft({
-      name: "",
-      category: "Software",
-      amount_monthly: 80_000,
-      renewal_date: new Date().toISOString().slice(0, 10),
-      include_in_simulator: true,
-    })
-    setFormOpen(true)
-    setSaveErr(null)
+  const openManage = () => {
+    setManageErr(null)
+    setManageRows(rows.map(toManageRow))
+    setManageInitialIds(new Set(rows.map((r) => r.id)))
+    setManageOpen(true)
   }
 
-  const openEdit = (s: UserSubscription) => {
-    setEditing(s)
-    setDraft({
-      name: s.name,
-      category: s.category,
-      amount_monthly: s.amount_monthly,
-      renewal_date: s.renewal_date.slice(0, 10),
-      include_in_simulator: s.include_in_simulator,
-    })
-    setFormOpen(true)
-    setSaveErr(null)
+  const openManageWithNewRow = () => {
+    setManageErr(null)
+    setManageInitialIds(new Set(rows.map((r) => r.id)))
+    setManageRows([
+      ...rows.map(toManageRow),
+      {
+        id: newLocalId(),
+        name: "",
+        category: "Software",
+        billing_frequency: "monthly",
+        chargeAtFrequency: 50_000,
+        renewal_day: 5,
+        include_in_simulator: true,
+        status: "active",
+        _isNew: true,
+      },
+    ])
+    setManageOpen(true)
   }
 
-  const submitForm = async () => {
-    setSaveErr(null)
-    const name = draft.name.trim()
-    if (!name) {
-      setSaveErr("Nombre requerido")
-      return
+  const addManageRow = () => {
+    setManageRows((r) => [
+      ...r,
+      {
+        id: newLocalId(),
+        name: "",
+        category: "Software",
+        billing_frequency: "monthly",
+        chargeAtFrequency: 50_000,
+        renewal_day: 5,
+        include_in_simulator: true,
+        status: "active",
+        _isNew: true,
+      },
+    ])
+  }
+
+  const saveManage = async () => {
+    setManageErr(null)
+    for (const row of manageRows) {
+      if (!row.name.trim()) {
+        setManageErr("Cada fila necesita nombre.")
+        return
+      }
+      if (!(SUBSCRIPTION_CATEGORIES as readonly string[]).includes(row.category)) {
+        setManageErr("Categoría no válida en una fila.")
+        return
+      }
     }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(draft.renewal_date)) {
-      setSaveErr("Fecha inválida")
-      return
-    }
+
+    const currentIds = new Set(manageRows.map((r) => r.id))
+    const toDelete = [...manageInitialIds].filter((id) => !currentIds.has(id))
 
     if (supabaseEnabled) {
       try {
-        if (editing) {
-          const res = await financeApiJson("/api/orbita/finanzas/subscriptions", {
-            method: "PATCH",
-            body: {
-              id: editing.id,
-              name,
-              category: draft.category,
-              amount_monthly: draft.amount_monthly,
-              renewal_date: draft.renewal_date,
-              include_in_simulator: draft.include_in_simulator,
-              status: editing.status,
-            },
-          })
+        for (const id of toDelete) {
+          const res = await financeApiDelete(`/api/orbita/finanzas/subscriptions?id=${encodeURIComponent(id)}`)
           const json = (await res.json()) as { success?: boolean; error?: string }
-          if (!res.ok || !json.success) throw new Error(json.error || "Error")
-        } else {
-          const res = await financeApiJson("/api/orbita/finanzas/subscriptions", {
-            method: "POST",
-            body: {
-              name,
-              category: draft.category,
-              amount_monthly: draft.amount_monthly,
-              renewal_date: draft.renewal_date,
-              include_in_simulator: draft.include_in_simulator,
-              status: "active",
-            },
-          })
-          const json = (await res.json()) as { success?: boolean; error?: string }
-          if (!res.ok || !json.success) throw new Error(json.error || "Error")
+          if (!res.ok || !json.success) {
+            throw new Error(messageForHttpError(res.status, json.error, res.statusText))
+          }
         }
-        setFormOpen(false)
+        for (const row of manageRows) {
+          const payload = rowToUserSubscription(row)
+          if (row._isNew) {
+            const res = await financeApiJson("/api/orbita/finanzas/subscriptions", {
+              method: "POST",
+              body: {
+                name: payload.name,
+                category: payload.category,
+                amount_monthly: payload.amount_monthly,
+                renewal_date: payload.renewal_date,
+                billing_frequency: payload.billing_frequency,
+                renewal_day: payload.renewal_day,
+                include_in_simulator: payload.include_in_simulator,
+                status: payload.status,
+              },
+            })
+            const json = (await res.json()) as { success?: boolean; error?: string }
+            if (!res.ok || !json.success) throw new Error(messageForHttpError(res.status, json.error, res.statusText))
+          } else {
+            const res = await financeApiJson("/api/orbita/finanzas/subscriptions", {
+              method: "PATCH",
+              body: {
+                id: row.id,
+                name: payload.name,
+                category: payload.category,
+                amount_monthly: payload.amount_monthly,
+                renewal_date: payload.renewal_date,
+                billing_frequency: payload.billing_frequency,
+                renewal_day: payload.renewal_day,
+                include_in_simulator: payload.include_in_simulator,
+                status: payload.status,
+              },
+            })
+            const json = (await res.json()) as { success?: boolean; error?: string }
+            if (!res.ok || !json.success) throw new Error(messageForHttpError(res.status, json.error, res.statusText))
+          }
+        }
         await reload()
+        setManageOpen(false)
       } catch (e) {
-        setSaveErr(e instanceof Error ? e.message : "Error al guardar")
+        setManageErr(e instanceof Error ? e.message : "No se pudieron guardar suscripciones")
       }
       return
     }
 
-    const row: UserSubscription = editing
-      ? {
-          ...editing,
-          name,
-          category: draft.category,
-          amount_monthly: draft.amount_monthly,
-          renewal_date: draft.renewal_date,
-          include_in_simulator: draft.include_in_simulator,
-        }
-      : {
-          id: newLocalId(),
-          name,
-          category: draft.category,
-          amount_monthly: draft.amount_monthly,
-          renewal_date: draft.renewal_date,
-          include_in_simulator: draft.include_in_simulator,
-          active: true,
-          status: "active",
-        }
-    setRows(upsertLocalSubscription(row, rows))
-    setFormOpen(false)
+    let next = [...rows]
+    for (const id of toDelete) {
+      next = deleteLocalSubscription(id, next)
+    }
+    for (const row of manageRows) {
+      const payload = rowToUserSubscription(row)
+      const full: UserSubscription = {
+        ...payload,
+        created_at: rows.find((x) => x.id === row.id)?.created_at,
+        updated_at: rows.find((x) => x.id === row.id)?.updated_at,
+      }
+      next = upsertLocalSubscription(normalizeUserSubscription(full), next)
+    }
+    setRows(next.map((s) => normalizeUserSubscription(s)))
+    setManageOpen(false)
   }
 
   const setStatus = async (s: UserSubscription, status: UserSubscription["status"]) => {
@@ -271,7 +346,7 @@ export function SubscriptionsBurnSection({
       }
       return
     }
-    setRows(upsertLocalSubscription(patchRow(s), rows))
+    setRows(upsertLocalSubscription(patchRow(s), rows).map((x) => normalizeUserSubscription(x)))
   }
 
   const significantSaving = potentialSaving >= 120_000
@@ -287,6 +362,8 @@ export function SubscriptionsBurnSection({
 
   const moreActiveThanTop = Math.max(0, activeSubscriptions.length - topBurnSubscriptions.length)
 
+  const freqLabel = (f: BillingFrequency) => BILLING_FREQUENCY_OPTIONS.find((o) => o.value === f)?.label ?? f
+
   return (
     <section id="capital-suscripciones" className="scroll-mt-24 space-y-4">
       <div className={arcticPanel}>
@@ -298,74 +375,79 @@ export function SubscriptionsBurnSection({
             aria-expanded={subscriptionsExpanded}
           >
             <div className="min-w-0">
-            <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
-              Suscripciones recurrentes
-            </h2>
-            <p className="mt-1 text-xs text-orbita-secondary sm:text-sm">
-              {subscriptionsExpanded
-                ? "Toca para colapsar el detalle."
-                : "Renovaciones recurrentes y ahorro potencial al pausar o cancelar."}
-            </p>
+              <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
+                Suscripciones recurrentes
+              </h2>
+              <p className="mt-1 text-xs text-orbita-secondary sm:text-sm">
+                {subscriptionsExpanded
+                  ? "Toca para colapsar el detalle."
+                  : "Renovaciones recurrentes y ahorro potencial al pausar o cancelar."}
+              </p>
 
-            {!subscriptionsExpanded ? (
-              <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">Total mensual</p>
-                  <p className="mt-0.5 text-2xl font-bold tabular-nums text-orbita-primary sm:text-3xl">
-                    ${formatMoney(monthlyBurn)}
-                  </p>
-                  <p className="mt-1 text-[11px] text-orbita-secondary">
-                    {activeSubscriptions.length === 0
-                      ? "Ninguna suscripción activa"
-                      : `${activeSubscriptions.length} activa${activeSubscriptions.length === 1 ? "" : "s"}`}
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-3">
-                  {topBurnSubscriptions.length > 0 ? (
-                    <div className="flex items-center" aria-hidden>
-                      <div className="flex shrink-0 -space-x-2.5 pl-1">
-                        {topBurnSubscriptions.map((s) => (
-                          <div
-                            key={s.id}
-                            className="flex h-11 w-11 items-center justify-center rounded-full border-[2.5px] border-white text-[11px] font-bold text-white shadow-md ring-1 ring-orbita-border/50"
-                            style={{ background: avatarGradientForLabel(s.name) }}
-                            title={s.name}
-                          >
-                            {subscriptionInitials(s.name)}
-                          </div>
-                        ))}
-                      </div>
-                      {moreActiveThanTop > 0 ? (
-                        <span
-                          className="-ml-1 flex h-11 min-w-[2.75rem] items-center justify-center rounded-full border-[2.5px] border-white bg-orbita-surface-alt px-2 text-[11px] font-bold tabular-nums text-orbita-primary shadow-sm ring-1 ring-orbita-border/50"
-                          title={`${moreActiveThanTop} más`}
-                        >
-                          +{moreActiveThanTop}
-                        </span>
-                      ) : null}
-                    </div>
-                  ) : (
-                    <span className="rounded-full border border-dashed border-orbita-border bg-orbita-surface-alt px-3 py-2 text-xs text-orbita-secondary">
-                      Sin cargos recurrentes
-                    </span>
-                  )}
-
-                  {potentialSaving > 0 ? (
-                    <p className="text-sm font-semibold text-emerald-700">
-                      +${formatMoney(potentialSaving)}{" "}
-                      <span className="font-normal text-emerald-600/90">ahorro potencial</span>
+              {!subscriptionsExpanded ? (
+                <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
+                      Total mensual
                     </p>
-                  ) : null}
+                    <p className="mt-0.5 text-2xl font-bold tabular-nums text-orbita-primary sm:text-3xl">
+                      ${formatMoney(monthlyBurn)}
+                    </p>
+                    <p className="mt-1 text-[11px] text-orbita-secondary">
+                      {activeSubscriptions.length === 0
+                        ? "Ninguna suscripción activa"
+                        : `${activeSubscriptions.length} activa${activeSubscriptions.length === 1 ? "" : "s"}`}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3">
+                    {topBurnSubscriptions.length > 0 ? (
+                      <div className="flex items-center" aria-hidden>
+                        <div className="flex shrink-0 -space-x-2.5 pl-1">
+                          {topBurnSubscriptions.map((s) => (
+                            <div
+                              key={s.id}
+                              className="flex h-11 w-11 items-center justify-center rounded-full border-[2.5px] border-white text-[11px] font-bold text-white shadow-md ring-1 ring-orbita-border/50"
+                              style={{ background: avatarGradientForLabel(s.name) }}
+                              title={s.name}
+                            >
+                              {subscriptionInitials(s.name)}
+                            </div>
+                          ))}
+                        </div>
+                        {moreActiveThanTop > 0 ? (
+                          <span
+                            className="-ml-1 flex h-11 min-w-[2.75rem] items-center justify-center rounded-full border-[2.5px] border-white bg-orbita-surface-alt px-2 text-[11px] font-bold tabular-nums text-orbita-primary shadow-sm ring-1 ring-orbita-border/50"
+                            title={`${moreActiveThanTop} más`}
+                          >
+                            +{moreActiveThanTop}
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <span className="rounded-full border border-dashed border-orbita-border bg-orbita-surface-alt px-3 py-2 text-xs text-orbita-secondary">
+                        Sin cargos recurrentes
+                      </span>
+                    )}
+
+                    {potentialSaving > 0 ? (
+                      <p className="text-sm font-semibold text-emerald-700">
+                        +${formatMoney(potentialSaving)}{" "}
+                        <span className="font-normal text-emerald-600/90">ahorro potencial</span>
+                      </p>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-            ) : null}
+              ) : null}
             </div>
           </button>
           <div className="flex shrink-0 flex-col items-end gap-0.5 py-3 pr-2 sm:py-3.5 sm:pr-3">
             <button
               type="button"
-              onClick={() => setSubscriptionsExpanded(true)}
+              onClick={() => {
+                setSubscriptionsExpanded(true)
+                openManage()
+              }}
               className="text-[11px] font-medium text-orbita-secondary underline decoration-orbita-border/80 underline-offset-4 hover:text-orbita-primary"
             >
               Editar
@@ -388,10 +470,13 @@ export function SubscriptionsBurnSection({
           <div className="space-y-3 border-t border-orbita-border p-3 sm:p-3.5">
             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
               <p className="max-w-xl text-xs text-orbita-secondary sm:text-sm">
-                Lista editable en tabla; pausa o cancela desde acciones.
+                Tabla permanente (todos los meses). Usa <span className="font-medium">Editar</span> para filas y
+                columnas completas.
               </p>
               <div className="shrink-0 text-left sm:text-right">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">Total mensual</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
+                  Total mensual
+                </p>
                 <p className="text-2xl font-semibold tabular-nums text-orbita-primary sm:text-3xl">
                   ${formatMoney(monthlyBurn)}
                 </p>
@@ -408,28 +493,34 @@ export function SubscriptionsBurnSection({
               {loading ? (
                 <p className="p-6 text-center text-sm text-orbita-secondary">Cargando suscripciones…</p>
               ) : (
-                <table className="w-full min-w-[720px] border-collapse text-left text-xs sm:text-sm">
+                <table className="w-full min-w-[1100px] border-collapse text-left text-[11px] sm:text-xs">
                   <thead>
-                    <tr className="border-b border-orbita-border bg-orbita-surface-alt text-[10px] font-semibold uppercase tracking-wide text-orbita-secondary">
-                      <th className="px-3 py-2.5 font-medium">Nombre</th>
-                      <th className="px-3 py-2.5 font-medium">Categoría</th>
-                      <th className="px-3 py-2.5 text-right font-medium">Mensual (COP)</th>
-                      <th className="px-3 py-2.5 font-medium">Renovación</th>
-                      <th className="px-3 py-2.5 font-medium">Impacto</th>
-                      <th className="px-3 py-2.5 font-medium">Simulador</th>
-                      <th className="px-3 py-2.5 text-right font-medium">Acciones</th>
+                    <tr className="border-b border-orbita-border bg-orbita-surface-alt text-[9px] font-semibold uppercase tracking-wide text-orbita-secondary sm:text-[10px]">
+                      <th className="px-2 py-2 font-medium">Nombre</th>
+                      <th className="px-2 py-2 font-medium">Categoría</th>
+                      <th className="px-2 py-2 font-medium">Frecuencia</th>
+                      <th className="px-2 py-2 text-right font-medium">Costo (COP)</th>
+                      <th className="px-2 py-2 font-medium">Día renov.</th>
+                      <th className="px-2 py-2 text-right font-medium">Días</th>
+                      <th className="px-2 py-2 font-medium">Renovación</th>
+                      <th className="px-2 py-2 font-medium">Impacto</th>
+                      <th className="px-2 py-2 font-medium">Simulador</th>
+                      <th className="px-2 py-2 text-right font-medium">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
                     {rows.map((s) => {
                       const active = subscriptionActiveBurn(s)
                       const imp = impactLabel(s.amount_monthly, baselineMonthlyIncome)
+                      const charge = monthlyToChargeInput(s.amount_monthly, s.billing_frequency)
+                      const daysLeft = daysUntilRenewalFromDay(s.renewal_day)
+                      const nextIso = nextRenewalIsoFromDay(s.renewal_day)
                       return (
                         <tr
                           key={s.id}
                           className={`border-b border-orbita-border/70 ${!active ? "bg-orbita-surface-alt/40" : ""}`}
                         >
-                          <td className="px-3 py-2.5 align-middle">
+                          <td className="px-2 py-2 align-middle">
                             <p className="font-semibold text-orbita-primary">{s.name}</p>
                             {!active ? (
                               <p className="mt-0.5 text-[10px] text-orbita-secondary">
@@ -437,49 +528,53 @@ export function SubscriptionsBurnSection({
                               </p>
                             ) : null}
                           </td>
-                          <td className="max-w-[140px] px-3 py-2.5 align-middle text-orbita-secondary">
-                            {s.category}
+                          <td className="max-w-[100px] px-2 py-2 align-middle text-orbita-secondary">{s.category}</td>
+                          <td className="whitespace-nowrap px-2 py-2 align-middle">{freqLabel(s.billing_frequency)}</td>
+                          <td className="whitespace-nowrap px-2 py-2 text-right align-middle font-semibold tabular-nums">
+                            ${formatMoney(charge)}
                           </td>
-                          <td className="whitespace-nowrap px-3 py-2.5 text-right align-middle font-semibold tabular-nums text-orbita-primary">
-                            ${formatMoney(s.amount_monthly)}
+                          <td className="whitespace-nowrap px-2 py-2 align-middle tabular-nums">{s.renewal_day}</td>
+                          <td className="whitespace-nowrap px-2 py-2 text-right align-middle tabular-nums">{daysLeft}</td>
+                          <td className="whitespace-nowrap px-2 py-2 align-middle text-orbita-secondary">
+                            {renewalShortLabel(s.renewal_day)} · {nextIso.slice(5).replace("-", "/")}
                           </td>
-                          <td className="whitespace-nowrap px-3 py-2.5 align-middle text-orbita-secondary">
-                            {renewalLabel(s.renewal_date)}
-                          </td>
-                          <td className="px-3 py-2.5 align-middle">
+                          <td className="px-2 py-2 align-middle">
                             <span
-                              className={`inline-flex rounded-full border-[0.5px] px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${impactTone(imp)}`}
+                              className={`inline-flex rounded-full border-[0.5px] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${impactTone(imp)}`}
                             >
                               {imp}
                             </span>
                           </td>
-                          <td className="px-3 py-2.5 align-middle text-orbita-secondary">
+                          <td className="px-2 py-2 align-middle text-orbita-secondary">
                             {s.include_in_simulator ? "Sí" : "No"}
                           </td>
-                          <td className="px-3 py-2.5 align-middle">
-                            <div className="flex flex-wrap justify-end gap-1.5">
+                          <td className="px-2 py-2 align-middle">
+                            <div className="flex flex-wrap justify-end gap-1">
                               <button
                                 type="button"
-                                onClick={() => openEdit(s)}
-                                className="inline-flex min-h-9 items-center justify-center rounded-lg border border-orbita-border bg-orbita-surface px-2 py-1 text-[11px] font-medium text-orbita-primary hover:bg-orbita-surface-alt"
+                                onClick={() => {
+                                  setSubscriptionsExpanded(true)
+                                  openManage()
+                                }}
+                                className="inline-flex min-h-8 items-center rounded-lg border border-orbita-border bg-orbita-surface px-2 py-1 text-[10px] font-medium text-orbita-primary hover:bg-orbita-surface-alt"
                               >
-                                <Pencil className="mr-1 h-3.5 w-3.5" aria-hidden />
-                                Editar
+                                <Pencil className="mr-1 h-3 w-3" aria-hidden />
+                                Tabla
                               </button>
                               {active ? (
                                 <button
                                   type="button"
                                   onClick={() => void setStatus(s, "paused")}
-                                  className="inline-flex min-h-9 items-center justify-center rounded-lg border border-orbita-border px-2 py-1 text-[11px] font-medium text-orbita-primary hover:bg-orbita-surface-alt"
+                                  className="inline-flex min-h-8 items-center rounded-lg border border-orbita-border px-2 py-1 text-[10px] font-medium hover:bg-orbita-surface-alt"
                                 >
-                                  <Pause className="mr-1 h-3.5 w-3.5" aria-hidden />
+                                  <Pause className="mr-1 h-3 w-3" aria-hidden />
                                   Pausar
                                 </button>
                               ) : s.status === "paused" ? (
                                 <button
                                   type="button"
                                   onClick={() => void setStatus(s, "active")}
-                                  className="inline-flex min-h-9 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1 text-[11px] font-medium text-emerald-800 hover:bg-emerald-100"
+                                  className="inline-flex min-h-8 items-center rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-medium text-emerald-800"
                                 >
                                   Reactivar
                                 </button>
@@ -488,9 +583,9 @@ export function SubscriptionsBurnSection({
                                 <button
                                   type="button"
                                   onClick={() => void setStatus(s, "cancelled")}
-                                  className="inline-flex min-h-9 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-medium text-rose-800 hover:bg-rose-100"
+                                  className="inline-flex min-h-8 items-center rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-[10px] font-medium text-rose-800"
                                 >
-                                  <Ban className="mr-1 h-3.5 w-3.5" aria-hidden />
+                                  <Ban className="mr-1 h-3 w-3" aria-hidden />
                                   Cancelar
                                 </button>
                               ) : null}
@@ -505,7 +600,10 @@ export function SubscriptionsBurnSection({
               <div className="border-t border-orbita-border p-3 sm:p-4">
                 <button
                   type="button"
-                  onClick={openAdd}
+                  onClick={() => {
+                    setSubscriptionsExpanded(true)
+                    openManageWithNewRow()
+                  }}
                   className="flex min-h-[40px] w-full touch-manipulation items-center justify-center gap-1.5 rounded-xl border border-orbita-border/90 bg-orbita-surface py-2.5 text-xs font-medium text-orbita-primary hover:bg-orbita-surface-alt"
                 >
                   <Plus className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
@@ -551,101 +649,200 @@ export function SubscriptionsBurnSection({
       {saveErr ? <p className="text-sm text-rose-600">{saveErr}</p> : null}
 
       <CuentasModalShell
-        open={formOpen}
-        onClose={() => setFormOpen(false)}
-        title={editing ? "Editar suscripción" : "Nueva suscripción"}
-        subtitle="Cargos recurrentes mensuales (completa fila por fila)."
+        open={manageOpen}
+        onClose={() => setManageOpen(false)}
+        title="Gestionar suscripciones"
+        subtitle="Tabla editable: costo según frecuencia, día de renovación (1–28) y categoría. Guarda para aplicar."
+        wide
       >
-        <div className="space-y-4">
-          <table className="w-full border-collapse text-sm">
-            <tbody className="align-top">
-              <tr className="border-b border-orbita-border/60">
-                <th className="w-[32%] py-2.5 pr-3 text-left text-xs font-medium text-orbita-secondary sm:w-1/4">
-                  Nombre
-                </th>
-                <td className="py-2.5">
-                  <input
-                    className="min-h-[40px] w-full rounded-lg border border-orbita-border px-3 py-2 text-orbita-primary"
-                    value={draft.name}
-                    onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
-                  />
-                </td>
+        <div className="max-h-[min(72vh,560px)] overflow-auto">
+          <table className="w-full min-w-[960px] border-collapse text-left text-[11px] sm:text-xs">
+            <thead className="sticky top-0 z-[1] border-b border-orbita-border bg-orbita-surface-alt">
+              <tr className="text-[9px] font-semibold uppercase tracking-wide text-orbita-secondary">
+                <th className="px-2 py-2">Nombre</th>
+                <th className="px-2 py-2">Categoría</th>
+                <th className="px-2 py-2">Frecuencia</th>
+                <th className="px-2 py-2">Costo</th>
+                <th className="px-2 py-2">Día ren.</th>
+                <th className="px-2 py-2">Días</th>
+                <th className="px-2 py-2">Renovación</th>
+                <th className="px-2 py-2">Impacto</th>
+                <th className="px-2 py-2">Sim.</th>
+                <th className="px-2 py-2">Estado</th>
+                <th className="px-2 py-2" />
               </tr>
-              <tr className="border-b border-orbita-border/60">
-                <th className="py-2.5 pr-3 text-left text-xs font-medium text-orbita-secondary">Categoría</th>
-                <td className="py-2.5">
-                  <select
-                    className="min-h-[40px] w-full rounded-lg border border-orbita-border px-3 py-2 text-orbita-primary"
-                    value={draft.category}
-                    onChange={(e) => setDraft((d) => ({ ...d, category: e.target.value }))}
-                  >
-                    {SUBSCRIPTION_CATEGORIES.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
-                </td>
-              </tr>
-              <tr className="border-b border-orbita-border/60">
-                <th className="py-2.5 pr-3 text-left text-xs font-medium text-orbita-secondary">Monto / mes</th>
-                <td className="py-2.5">
-                  <input
-                    type="number"
-                    min={0}
-                    className="min-h-[40px] w-full rounded-lg border border-orbita-border px-3 py-2 text-orbita-primary"
-                    placeholder="COP"
-                    value={draft.amount_monthly || ""}
-                    onChange={(e) => setDraft((d) => ({ ...d, amount_monthly: Number(e.target.value) }))}
-                  />
-                </td>
-              </tr>
-              <tr className="border-b border-orbita-border/60">
-                <th className="py-2.5 pr-3 text-left text-xs font-medium text-orbita-secondary">Renovación</th>
-                <td className="py-2.5">
-                  <input
-                    type="date"
-                    className="min-h-[40px] w-full rounded-lg border border-orbita-border px-3 py-2 text-orbita-primary"
-                    value={draft.renewal_date}
-                    onChange={(e) => setDraft((d) => ({ ...d, renewal_date: e.target.value }))}
-                  />
-                </td>
-              </tr>
-              <tr>
-                <th className="py-2.5 pr-3 text-left text-xs font-medium text-orbita-secondary">Simulador</th>
-                <td className="py-2.5">
-                  <label className="flex cursor-pointer items-start gap-2.5">
-                    <input
-                      type="checkbox"
-                      checked={draft.include_in_simulator}
-                      onChange={(e) => setDraft((d) => ({ ...d, include_in_simulator: e.target.checked }))}
-                      className="mt-0.5 h-4 w-4 shrink-0 rounded border-orbita-border"
-                    />
-                    <span className="text-xs leading-snug text-orbita-secondary">
-                      Incluir como gasto fijo recurrente en el simulador de flujo
-                    </span>
-                  </label>
-                </td>
-              </tr>
+            </thead>
+            <tbody>
+              {manageRows.map((row) => {
+                const monthlyEq = chargeToMonthly(row.chargeAtFrequency, row.billing_frequency)
+                const imp = impactLabel(monthlyEq, baselineMonthlyIncome)
+                const daysLeft = daysUntilRenewalFromDay(row.renewal_day)
+                const nextIso = nextRenewalIsoFromDay(row.renewal_day)
+                return (
+                  <tr key={row.id} className="border-b border-orbita-border/60 align-top">
+                    <td className="px-2 py-1.5">
+                      <input
+                        className="min-h-8 w-full min-w-[6rem] rounded-lg border border-orbita-border px-2 py-1"
+                        value={row.name}
+                        onChange={(e) =>
+                          setManageRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, name: e.target.value } : r)))
+                        }
+                      />
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <select
+                        className="min-h-8 w-full min-w-[5.5rem] rounded-lg border border-orbita-border px-1 py-1"
+                        value={row.category}
+                        onChange={(e) =>
+                          setManageRows((rs) =>
+                            rs.map((r) => (r.id === row.id ? { ...r, category: e.target.value } : r)),
+                          )
+                        }
+                      >
+                        {SUBSCRIPTION_CATEGORIES.map((c) => (
+                          <option key={c} value={c}>
+                            {c}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <select
+                        className="min-h-8 w-full min-w-[5rem] rounded-lg border border-orbita-border px-1 py-1"
+                        value={row.billing_frequency}
+                        onChange={(e) =>
+                          setManageRows((rs) =>
+                            rs.map((r) =>
+                              r.id === row.id
+                                ? { ...r, billing_frequency: e.target.value as BillingFrequency }
+                                : r,
+                            ),
+                          )
+                        }
+                      >
+                        {BILLING_FREQUENCY_OPTIONS.map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <input
+                        type="number"
+                        className="min-h-8 w-full min-w-[4.5rem] rounded-lg border border-orbita-border px-2 py-1 tabular-nums"
+                        value={row.chargeAtFrequency || ""}
+                        onChange={(e) =>
+                          setManageRows((rs) =>
+                            rs.map((r) =>
+                              r.id === row.id
+                                ? { ...r, chargeAtFrequency: Math.max(0, Number(e.target.value)) }
+                                : r,
+                            ),
+                          )
+                        }
+                      />
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <select
+                        className="min-h-8 w-full rounded-lg border border-orbita-border px-1 py-1"
+                        value={row.renewal_day}
+                        onChange={(e) =>
+                          setManageRows((rs) =>
+                            rs.map((r) =>
+                              r.id === row.id ? { ...r, renewal_day: Number(e.target.value) } : r,
+                            ),
+                          )
+                        }
+                      >
+                        {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
+                          <option key={d} value={d}>
+                            {d}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="px-2 py-1.5 text-right tabular-nums text-orbita-secondary">{daysLeft}</td>
+                    <td className="px-2 py-1.5 whitespace-nowrap text-orbita-secondary">
+                      {nextIso.slice(5).replace("-", "/")}
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <span
+                        className={`inline-flex rounded-full border-[0.5px] px-1.5 py-0.5 text-[9px] font-semibold uppercase ${impactTone(imp)}`}
+                      >
+                        {imp}
+                      </span>
+                    </td>
+                    <td className="px-2 py-1.5 text-center">
+                      <input
+                        type="checkbox"
+                        checked={row.include_in_simulator}
+                        onChange={(e) =>
+                          setManageRows((rs) =>
+                            rs.map((r) =>
+                              r.id === row.id ? { ...r, include_in_simulator: e.target.checked } : r,
+                            ),
+                          )
+                        }
+                        className="h-4 w-4 rounded border-orbita-border"
+                      />
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <select
+                        className="min-h-8 w-full min-w-[4.5rem] rounded-lg border border-orbita-border px-1 py-1"
+                        value={row.status}
+                        onChange={(e) =>
+                          setManageRows((rs) =>
+                            rs.map((r) =>
+                              r.id === row.id ? { ...r, status: e.target.value as SubscriptionStatus } : r,
+                            ),
+                          )
+                        }
+                      >
+                        <option value="active">Activa</option>
+                        <option value="paused">Pausada</option>
+                        <option value="cancelled">Cancelada</option>
+                      </select>
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <button
+                        type="button"
+                        className="text-[10px] text-rose-600 underline"
+                        onClick={() => setManageRows((rs) => rs.filter((r) => r.id !== row.id))}
+                      >
+                        Quitar
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
-          {saveErr ? <p className="text-sm text-rose-600">{saveErr}</p> : null}
-          <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end sm:gap-3">
-            <button
-              type="button"
-              onClick={() => setFormOpen(false)}
-              className="min-h-[44px] touch-manipulation rounded-xl border border-orbita-border px-4 py-2.5 text-sm font-medium text-orbita-primary hover:bg-orbita-surface-alt"
-            >
-              Cerrar
-            </button>
-            <button
-              type="button"
-              onClick={() => void submitForm()}
-              className="min-h-[44px] touch-manipulation rounded-xl bg-[var(--color-text-primary)] px-4 py-2.5 text-sm font-semibold text-[var(--color-surface)] active:opacity-90"
-            >
-              Guardar
-            </button>
-          </div>
+        </div>
+        {manageErr ? <p className="mt-2 text-sm text-rose-600">{manageErr}</p> : null}
+        <p className="mt-2 text-[10px] text-orbita-secondary">
+          Equiv. mensual total (activas en esta tabla): $
+          {formatMoney(
+            manageRows
+              .filter((r) => r.status === "active")
+              .reduce((a, r) => a + chargeToMonthly(r.chargeAtFrequency, r.billing_frequency), 0),
+          )}
+        </p>
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-between">
+          <button
+            type="button"
+            onClick={addManageRow}
+            className="min-h-[44px] touch-manipulation rounded-xl border border-orbita-border bg-orbita-surface px-4 py-2.5 text-sm font-medium hover:bg-orbita-surface-alt"
+          >
+            + Agregar fila
+          </button>
+          <button
+            type="button"
+            onClick={() => void saveManage()}
+            className="min-h-[44px] touch-manipulation rounded-xl bg-[var(--color-text-primary)] px-5 py-2.5 text-sm font-semibold text-[var(--color-surface)] active:opacity-90"
+          >
+            Guardar cambios
+          </button>
         </div>
       </CuentasModalShell>
     </section>

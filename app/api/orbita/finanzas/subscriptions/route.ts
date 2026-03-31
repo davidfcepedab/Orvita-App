@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
 import { API_NOTICE_SUBSCRIPTIONS_LOCAL, isSupabaseEnabled } from "@/lib/checkins/flags"
+import { dayFromIso } from "@/lib/finanzas/commitmentAnchorDate"
+import {
+  nextRenewalIsoFromDay,
+  normalizeBillingFrequency,
+} from "@/lib/finanzas/subscriptionBilling"
+import { normalizeUserSubscription } from "@/lib/finanzas/userSubscriptionsNormalize"
 import { getHouseholdId } from "@/lib/households/getHouseholdId"
 import type { SubscriptionStatus, UserSubscription } from "@/lib/finanzas/userSubscriptionsTypes"
 import { SUBSCRIPTION_CATEGORIES } from "@/lib/finanzas/userSubscriptionsTypes"
@@ -14,6 +20,8 @@ type DbRow = {
   category: string
   amount_monthly: number | string
   renewal_date: string
+  billing_frequency?: string | null
+  renewal_day?: number | string | null
   include_in_simulator: boolean
   active: boolean
   status: string
@@ -22,18 +30,27 @@ type DbRow = {
 }
 
 function mapRow(r: DbRow): UserSubscription {
-  return {
+  const renewal_date =
+    typeof r.renewal_date === "string" ? r.renewal_date.slice(0, 10) : String(r.renewal_date)
+  const renewal_day_raw =
+    r.renewal_day != null && r.renewal_day !== ""
+      ? Number(r.renewal_day)
+      : dayFromIso(renewal_date)
+  const renewal_day = Math.min(28, Math.max(1, Math.round(renewal_day_raw) || 1))
+  return normalizeUserSubscription({
     id: r.id,
     name: r.name,
     category: r.category,
     amount_monthly: Number(r.amount_monthly),
-    renewal_date: typeof r.renewal_date === "string" ? r.renewal_date.slice(0, 10) : String(r.renewal_date),
+    renewal_date,
+    billing_frequency: normalizeBillingFrequency(r.billing_frequency),
+    renewal_day,
     include_in_simulator: r.include_in_simulator,
     active: r.active,
     status: r.status as SubscriptionStatus,
     created_at: r.created_at,
     updated_at: r.updated_at,
-  }
+  })
 }
 
 function validCategory(c: string) {
@@ -100,13 +117,21 @@ export async function POST(req: NextRequest) {
     const name = String(body.name ?? "").trim()
     const category = String(body.category ?? "").trim()
     const amount_monthly = Number(body.amount_monthly)
-    const renewal_date = String(body.renewal_date ?? "").slice(0, 10)
+    const billing_frequency = normalizeBillingFrequency(body.billing_frequency)
+    const renewal_day = Math.min(
+      28,
+      Math.max(1, Math.round(Number(body.renewal_day ?? dayFromIso(String(body.renewal_date ?? ""))))),
+    )
+    let renewal_date = String(body.renewal_date ?? "").slice(0, 10)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(renewal_date)) {
+      renewal_date = nextRenewalIsoFromDay(renewal_day)
+    }
     const include_in_simulator = Boolean(body.include_in_simulator)
     const status: SubscriptionStatus =
       body.status === "paused" || body.status === "cancelled" ? body.status : "active"
 
-    if (!name || !renewal_date || !/^\d{4}-\d{2}-\d{2}$/.test(renewal_date)) {
-      return NextResponse.json({ success: false, error: "Nombre y fecha de renovación válidos requeridos" }, { status: 400 })
+    if (!name) {
+      return NextResponse.json({ success: false, error: "Nombre requerido" }, { status: 400 })
     }
     if (!validCategory(category)) {
       return NextResponse.json({ success: false, error: "Categoría no válida" }, { status: 400 })
@@ -125,6 +150,8 @@ export async function POST(req: NextRequest) {
         category,
         amount_monthly,
         renewal_date,
+        billing_frequency,
+        renewal_day,
         include_in_simulator,
         status,
         active,
@@ -181,12 +208,20 @@ export async function PATCH(req: NextRequest) {
       }
       patch.amount_monthly = n
     }
-    if (body.renewal_date != null) {
+    if (body.billing_frequency != null) {
+      patch.billing_frequency = normalizeBillingFrequency(body.billing_frequency)
+    }
+    if (body.renewal_day != null) {
+      const rd = Math.min(28, Math.max(1, Math.round(Number(body.renewal_day))))
+      patch.renewal_day = rd
+      patch.renewal_date = nextRenewalIsoFromDay(rd)
+    } else if (body.renewal_date != null) {
       const d = String(body.renewal_date).slice(0, 10)
       if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) {
         return NextResponse.json({ success: false, error: "Fecha inválida" }, { status: 400 })
       }
       patch.renewal_date = d
+      patch.renewal_day = Math.min(28, Math.max(1, dayFromIso(d)))
     }
     if (body.include_in_simulator != null) patch.include_in_simulator = Boolean(body.include_in_simulator)
     if (body.status != null) {

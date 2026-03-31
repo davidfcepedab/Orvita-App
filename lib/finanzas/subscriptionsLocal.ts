@@ -1,4 +1,6 @@
 import type { UserSubscription } from "@/lib/finanzas/userSubscriptionsTypes"
+import { stubUserSubscription } from "@/lib/finanzas/userSubscriptionsNormalize"
+import { normalizeUserSubscription } from "@/lib/finanzas/userSubscriptionsNormalize"
 
 const LS_KEY = "orbita:user_subscriptions:v1"
 
@@ -12,56 +14,41 @@ export function defaultSeedSubscriptions(): UserSubscription[] {
   const m = String(new Date().getMonth() + 1).padStart(2, "0")
   const base = `${y}-${m}-`
   return [
-    {
+    stubUserSubscription({
       id: newId(),
       name: "Figma",
       category: "Software",
       amount_monthly: 60_000,
       renewal_date: `${base}12`,
-      include_in_simulator: true,
-      active: true,
-      status: "active",
-    },
-    {
+    }),
+    stubUserSubscription({
       id: newId(),
       name: "ChatGPT Plus",
       category: "Software",
       amount_monthly: 80_000,
       renewal_date: `${base}05`,
-      include_in_simulator: true,
-      active: true,
-      status: "active",
-    },
-    {
+    }),
+    stubUserSubscription({
       id: newId(),
       name: "GitHub Copilot",
       category: "Software",
       amount_monthly: 45_000,
       renewal_date: `${base}18`,
-      include_in_simulator: true,
-      active: true,
-      status: "active",
-    },
-    {
+    }),
+    stubUserSubscription({
       id: newId(),
       name: "Equinox Gym",
       category: "Fitness",
       amount_monthly: 350_000,
       renewal_date: `${base}01`,
-      include_in_simulator: true,
-      active: true,
-      status: "active",
-    },
-    {
+    }),
+    stubUserSubscription({
       id: newId(),
       name: "Spotify",
       category: "Entretenimiento",
       amount_monthly: 45_000,
       renewal_date: `${base}22`,
-      include_in_simulator: true,
-      active: true,
-      status: "active",
-    },
+    }),
   ]
 }
 
@@ -72,7 +59,7 @@ export function readSubscriptionsFromLocalStorage(): UserSubscription[] {
     if (!raw) return []
     const parsed = JSON.parse(raw) as unknown
     if (!Array.isArray(parsed)) return []
-    return parsed as UserSubscription[]
+    return (parsed as UserSubscription[]).map((r) => normalizeUserSubscription(r))
   } catch {
     return []
   }

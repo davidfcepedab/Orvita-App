@@ -1,11 +1,17 @@
+import type { BillingFrequency } from "@/lib/finanzas/subscriptionBilling"
+
 export type SubscriptionStatus = "active" | "paused" | "cancelled"
 
 export type UserSubscription = {
   id: string
   name: string
   category: string
+  /** Equivalente mensual (simulador / total recurrente). */
   amount_monthly: number
   renewal_date: string
+  billing_frequency: BillingFrequency
+  /** Día del mes (1–28) para próxima renovación. */
+  renewal_day: number
   include_in_simulator: boolean
   active: boolean
   status: SubscriptionStatus

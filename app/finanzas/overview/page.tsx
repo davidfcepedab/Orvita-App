@@ -8,6 +8,7 @@ import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { rechartsTooltipContentStyle } from "@/lib/charts/rechartsShared"
 import { UI_FINANCE_DEMO_MONTH } from "@/lib/checkins/flags"
 import { financeApiGet } from "@/lib/finanzas/financeClientFetch"
+import { isoDateInMonth } from "@/lib/finanzas/commitmentAnchorDate"
 import type { FlowCommitment } from "@/lib/finanzas/flowCommitmentsTypes"
 import { readFlowCommitmentsFromLocalStorage } from "@/lib/finanzas/flowCommitmentsLocal"
 import { subscriptionActiveBurn, type UserSubscription } from "@/lib/finanzas/userSubscriptionsTypes"
@@ -150,7 +151,23 @@ export default function FinanzasOverview() {
       if (data) setLsCommitments(data.flowCommitments ?? [])
       return
     }
-    setLsCommitments(readFlowCommitmentsFromLocalStorage())
+    const raw = readFlowCommitmentsFromLocalStorage()
+    if (!month) {
+      setLsCommitments(raw)
+      return
+    }
+    setLsCommitments(
+      raw.map((c) => {
+        const fallbackDay = Number(c.date.slice(8, 10)) || 1
+        const dueDay = c.dueDay ?? fallbackDay
+        return {
+          ...c,
+          dueDay,
+          subcategory: c.subcategory ?? "",
+          date: isoDateInMonth(month, dueDay),
+        }
+      }),
+    )
   }, [month, data, supabaseEnabled])
 
   useEffect(() => {
@@ -268,7 +285,12 @@ export default function FinanzasOverview() {
 
   const managedActive = (managedSubscriptions ?? []).filter(subscriptionActiveBurn)
   const managedTotal = managedActive.reduce((a, s) => a + s.amount_monthly, 0)
-  const commitmentsSorted = [...lsCommitments].sort((a, b) => a.date.localeCompare(b.date))
+  const commitmentsSorted = [...lsCommitments].sort((a, b) => {
+    const da = a.dueDay ?? 1
+    const db = b.dueDay ?? 1
+    if (da !== db) return da - db
+    return a.title.localeCompare(b.title)
+  })
 
   const deltaLabel =
     deltaNet != null && Number.isFinite(deltaNet)
@@ -556,7 +578,9 @@ export default function FinanzasOverview() {
                       {c.category?.trim() && c.title.trim().toLowerCase() !== c.category.trim().toLowerCase() ? (
                         <p className="text-[11px] text-orbita-secondary">{c.title}</p>
                       ) : null}
-                      <p className="text-[11px] text-orbita-secondary">{formatCommitmentDayEs(c.date)}</p>
+                      <p className="text-[11px] text-orbita-secondary">
+                        Día {c.dueDay ?? "—"} · {formatCommitmentDayEs(c.date)}
+                      </p>
                     </div>
                     <span
                       className={`shrink-0 tabular-nums text-sm font-medium sm:text-right ${inc ? "text-emerald-700" : "text-orbita-primary"}`}

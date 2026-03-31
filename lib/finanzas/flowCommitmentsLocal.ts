@@ -1,3 +1,4 @@
+import { dayFromIso } from "@/lib/finanzas/commitmentAnchorDate"
 import type { FlowCommitment, FlowCommitmentFlowType } from "@/lib/finanzas/flowCommitmentsTypes"
 
 const LS_KEY = "orbita:flow_commitments:v1"
@@ -15,13 +16,22 @@ function parseRow(raw: unknown): FlowCommitment | null {
   if (!id) return null
   const title = typeof o.title === "string" ? o.title : ""
   const category = typeof o.category === "string" ? o.category : ""
+  const subcategory = typeof o.subcategory === "string" ? o.subcategory : ""
   const date = typeof o.date === "string" ? o.date.slice(0, 10) : ""
+  const dueDay =
+    typeof o.dueDay === "number" && Number.isFinite(o.dueDay)
+      ? Math.min(31, Math.max(1, Math.round(o.dueDay)))
+      : date
+        ? dayFromIso(date)
+        : 1
   const amount = Number(o.amount)
   return {
     id,
     title,
     category,
-    date,
+    subcategory,
+    dueDay,
+    date: date || `2000-01-${String(dueDay).padStart(2, "0")}`,
     amount: Number.isFinite(amount) ? amount : 0,
     flowType: normalizeFlowType(o.flowType),
   }

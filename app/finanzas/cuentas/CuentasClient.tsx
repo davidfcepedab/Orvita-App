@@ -1076,10 +1076,7 @@ export default function CuentasClient() {
         <p className="mt-1 text-sm text-orbita-secondary sm:text-[15px]">
           Liquidez, exposición y disponibilidad por cuenta
         </p>
-        <p className="mt-2 text-xs text-orbita-secondary">
-          Periodo {month}
-          {notice ? ` · ${notice}` : ""}
-        </p>
+        {notice ? <p className="mt-2 text-xs text-orbita-secondary">{notice}</p> : null}
       </div>
 
       {supabaseEnabled && (ledgerLoading || ledgerAccounts.length > 0 || ledgerError) ? (
@@ -1246,9 +1243,9 @@ export default function CuentasClient() {
               <button
                 type="button"
                 onClick={openAddSavings}
-                className="inline-flex items-center gap-1.5 rounded-full border border-teal-200 bg-teal-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-teal-800 hover:bg-teal-100"
+                className="inline-flex items-center gap-1 rounded-full border border-teal-200 bg-teal-50 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-teal-800 hover:bg-teal-100"
               >
-                <Plus className="h-4 w-4" aria-hidden />
+                <Plus className="h-3.5 w-3.5" aria-hidden />
                 Agregar cuenta
               </button>
             </div>
@@ -1265,9 +1262,9 @@ export default function CuentasClient() {
               <button
                 type="button"
                 onClick={openAddCredit}
-                className="inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-sky-800 hover:bg-sky-100"
+                className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-sky-800 hover:bg-sky-100"
               >
-                <Plus className="h-4 w-4" aria-hidden />
+                <Plus className="h-3.5 w-3.5" aria-hidden />
                 Agregar tarjeta
               </button>
             </div>
@@ -1311,9 +1308,9 @@ export default function CuentasClient() {
               <button
                 type="button"
                 onClick={openAddLoan}
-                className="inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-violet-800 hover:bg-violet-100"
+                className="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-violet-800 hover:bg-violet-100"
               >
-                <Plus className="h-4 w-4" aria-hidden />
+                <Plus className="h-3.5 w-3.5" aria-hidden />
                 Agregar crédito
               </button>
             </div>
