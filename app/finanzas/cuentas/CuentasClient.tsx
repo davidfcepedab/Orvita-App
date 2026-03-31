@@ -609,6 +609,7 @@ export default function CuentasClient() {
   const [dashboard, setDashboard] = useState<CuentasDashboardPayload | null>(null)
   const [tcMovementLinks, setTcMovementLinks] = useState<TcMovementLinkSummary[]>([])
   const [ledgerReorderBusy, setLedgerReorderBusy] = useState(false)
+  const [ledgerReconcileBusyId, setLedgerReconcileBusyId] = useState<string | null>(null)
   const [draggingLedgerIndex, setDraggingLedgerIndex] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
@@ -764,6 +765,63 @@ export default function CuentasClient() {
       void persistLedgerOrder(next.map((x) => x.id))
     },
     [ledgerAccounts, persistLedgerOrder],
+  )
+
+  const reconcileLedgerAccount = useCallback(
+    async (account: { id: string; label: string }) => {
+      if (typeof window === "undefined") return
+      const rawBalance = window.prompt(`Saldo real bancario para "${account.label}"`, "0")
+      if (rawBalance == null) return
+      const sanitized = rawBalance.replace(/[^\d,.-]/g, "").replace(",", ".")
+      const realBalance = Number(sanitized)
+      if (!Number.isFinite(realBalance)) {
+        setNotice("Saldo inválido. Escribe un número válido.")
+        return
+      }
+      const reason =
+        window.prompt("Motivo de conciliación (opcional, recomendado para auditoría)", "Ajuste por diferencia bancaria") ??
+        ""
+
+      setLedgerReconcileBusyId(account.id)
+      try {
+        const res = await financeApiJson("/api/orbita/finanzas/ledger-accounts/reconcile", {
+          method: "POST",
+          body: {
+            accountId: account.id,
+            realBalance,
+            reason,
+          },
+        })
+        const json = (await res.json()) as {
+          success?: boolean
+          error?: string
+          data?: { delta?: number; inserted?: boolean; needsAttention?: boolean; adjustmentsLast30d?: number }
+        }
+        if (!res.ok || !json.success) {
+          setNotice(messageForHttpError(res.status, json.error, res.statusText))
+          return
+        }
+        await refetchLedger()
+        await refetchAccountsDashboard()
+        if (json.data?.inserted) {
+          const d = Number(json.data?.delta ?? 0)
+          if (json.data?.needsAttention) {
+            setNotice(
+              `Conciliación aplicada (Δ ${d >= 0 ? "+" : ""}${formatMoney(Math.abs(d))}), pero detectamos desvío alto o ajustes frecuentes (${Number(json.data.adjustmentsLast30d ?? 0)} en 30d). Revisa sync/matching.`,
+            )
+          } else {
+            setNotice(`Conciliación aplicada. Delta ${d >= 0 ? "+" : ""}${formatMoney(Math.abs(d))}.`)
+          }
+        } else {
+          setNotice("Conciliación sin cambios: el saldo ya coincidía.")
+        }
+      } catch {
+        setNotice("No se pudo conciliar la cuenta.")
+      } finally {
+        setLedgerReconcileBusyId(null)
+      }
+    },
+    [refetchAccountsDashboard, refetchLedger],
   )
 
   const reloadManualFromApi = useCallback(async () => {
@@ -1476,6 +1534,16 @@ export default function CuentasClient() {
                           <p className="mt-1 text-[11px] tabular-nums text-orbita-secondary">{bits.join(" · ")}</p>
                         )
                       })()}
+                      <div className="mt-2">
+                        <button
+                          type="button"
+                          onClick={() => void reconcileLedgerAccount(a)}
+                          disabled={ledgerReconcileBusyId === a.id}
+                          className="rounded-full border border-orbita-border/80 bg-orbita-surface-alt px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-orbita-secondary hover:text-orbita-primary disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {ledgerReconcileBusyId === a.id ? "Conciliando..." : "Conciliar"}
+                        </button>
+                      </div>
                     </div>
                   </li>
                 ))}
