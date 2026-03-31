@@ -72,6 +72,7 @@ export function reconciliationDelta(
     // En TC ambos valores deben estar normalizados a deuda.
     return Math.round((realBalance - calculatedBalance) * 100) / 100
   }
+export function reconciliationDelta(realBalance: number, calculatedBalance: number): number {
   return Math.round((realBalance - calculatedBalance) * 100) / 100
 }
 

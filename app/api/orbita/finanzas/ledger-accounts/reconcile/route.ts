@@ -57,6 +57,7 @@ export async function POST(req: NextRequest) {
     const { data: account, error: accErr } = await auth.supabase
       .from("orbita_finance_accounts")
       .select("id, label, account_class, credit_limit, manual_balance, manual_balance_on")
+      .select("id, label, account_class, manual_balance, manual_balance_on")
       .eq("id", accountId)
       .eq("household_id", householdId)
       .is("deleted_at", null)
@@ -80,6 +81,8 @@ export async function POST(req: NextRequest) {
     }
     const accountClass = account.account_class as LedgerAccountClass
     const delta = reconciliationDelta(real, calculated, accountClass)
+    const real = Number(body.realBalance)
+    const delta = reconciliationDelta(real, calculated)
     const tolerance = reconciliationTolerance(real)
 
     if (Math.abs(delta) <= tolerance) {
@@ -99,6 +102,7 @@ export async function POST(req: NextRequest) {
       })
     }
 
+    const accountClass = account.account_class as LedgerAccountClass
     const type = reconciliationTxTypeForDelta(accountClass, delta)
     const amount = Math.abs(delta)
     const now = new Date().toISOString()
@@ -144,6 +148,7 @@ export async function POST(req: NextRequest) {
     const needsAttention = deltaPct > 0.05 || Number(adjustmentsLast30d ?? 0) > 3
 
     const note = `[${now}] reconciliation_adjustment input_mode=${inputAdapter.mode} input=${realRawInput} delta=${delta} target=${real} calc=${calculated} tol=${tolerance} adjustments_30d=${Number(adjustmentsLast30d ?? 0)} alert=${needsAttention} by=${auth.userId} reason=${compactReason}`
+    const note = `[${now}] reconciliation_adjustment delta=${delta} target=${real} calc=${calculated} tol=${tolerance} adjustments_30d=${Number(adjustmentsLast30d ?? 0)} alert=${needsAttention} by=${auth.userId} reason=${compactReason}`
     await auth.supabase
       .from("orbita_finance_accounts")
       .update({
