@@ -2,7 +2,7 @@ import { filterMonth } from "@/lib/finanzas/deriveFromTransactions"
 import { incomeAmount, expenseAmount, netCashFlow } from "@/lib/finanzas/calculations/txMath"
 import {
   accountCumulativeExpenseIncomeThrough,
-  accountMonthExpenseIncome,
+  cumulativeNetByAhorroLedgerRows,
   transactionMatchesLedgerAccount,
 } from "@/lib/finanzas/ledgerAccountTxRollup"
 import { monthBounds } from "@/lib/finanzas/monthRange"
@@ -67,21 +67,15 @@ function ledgerRowToSaving(
   row: LedgerAccountSortable,
   month: string,
   monthRows: FinanceTransaction[],
-  rollupRows: FinanceTransaction[],
-  monthEndInclusive: string,
+  cumNetByAhorroId: Map<string, number>,
 ): CuentasSavingsCard {
-  const { expense, income } = accountMonthExpenseIncome(monthRows, month, row.id, row.label)
-  const netOnAccount = income - expense
-
   const fromCatalog = ahorroSaldoOperativoFromCatalog(row)
   /**
-   * Sin saldo en catálogo (disponible/manual), el neto **solo del mes** no es el disponible de la cuenta
-   * (es flujo del período). Misma idea que TC: acumulado hasta fin de mes visto con `rollupRows`.
+   * Sin saldo en catálogo: acumulado ingresos − gastos hasta fin de mes (mapa precalculado, una pasada).
    */
   let usoFromMovements = 0
   if (fromCatalog == null) {
-    const cum = accountCumulativeExpenseIncomeThrough(rollupRows, monthEndInclusive, row.id, row.label)
-    const cumNet = Math.round(cum.income - cum.expense)
+    const cumNet = Math.round(cumNetByAhorroId.get(row.id) ?? 0)
     usoFromMovements = cumNet > 0 ? cumNet : 0
   }
   const uso = fromCatalog != null ? fromCatalog : usoFromMovements
@@ -321,9 +315,12 @@ export function mergeLiveDashboardWithLedger(
   const creditCards: CuentasCreditCard[] = []
   const loans: CuentasLoanCard[] = []
 
+  const ahorroLedgerRows = ledgerSorted.filter((r) => r.account_class === "ahorro")
+  const cumNetByAhorroId = cumulativeNetByAhorroLedgerRows(ahorroLedgerRows, rollupRows, monthEndInclusive)
+
   for (const row of ledgerSorted) {
     if (row.account_class === "ahorro")
-      savings.push(ledgerRowToSaving(row, month, monthRows, rollupRows, monthEndInclusive))
+      savings.push(ledgerRowToSaving(row, month, monthRows, cumNetByAhorroId))
     else if (row.account_class === "tarjeta_credito")
       creditCards.push(ledgerRowToCreditCard(row, month, rollupRows, monthEndInclusive))
     else if (row.account_class === "credito") loans.push(ledgerRowToLoan(row, rollupRows, monthEndInclusive))

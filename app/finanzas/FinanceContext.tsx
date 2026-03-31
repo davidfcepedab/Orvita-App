@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from "react"
+import { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from "react"
 
 export interface FinanceContextType {
   month: string
@@ -30,11 +30,12 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     setMonth(currentMonth)
   }, [])
 
-  return (
-    <FinanceContext.Provider value={{ month, setMonth, capitalDataEpoch, touchCapitalData }}>
-      {children}
-    </FinanceContext.Provider>
+  const value = useMemo(
+    () => ({ month, setMonth, capitalDataEpoch, touchCapitalData }),
+    [month, capitalDataEpoch, touchCapitalData],
   )
+
+  return <FinanceContext.Provider value={value}>{children}</FinanceContext.Provider>
 }
 
 export function useFinance(): FinanceContextType | null {

@@ -114,3 +114,36 @@ export function accountCumulativeExpenseIncomeThrough(
   }
   return { expense, income }
 }
+
+export type AhorroLedgerRef = { id: string; label: string }
+
+/**
+ * Una sola pasada sobre el rollup: ingresos − gastos acumulados por cuenta de ahorro.
+ * Evita O(#ahorros × #movimientos) al no llamar `accountCumulativeExpenseIncomeThrough` por fila
+ * (crítico en Vercel con muchas TX y varias cuentas).
+ */
+export function cumulativeNetByAhorroLedgerRows(
+  savingsRows: AhorroLedgerRef[],
+  rollupRows: FinanceTransaction[],
+  endDateInclusive: string,
+): Map<string, number> {
+  const byId = new Map<string, number>()
+  for (const r of savingsRows) byId.set(r.id, 0)
+  if (savingsRows.length === 0) return byId
+
+  for (const t of rollupRows) {
+    if (t.date > endDateInclusive) continue
+    const fid = t.finance_account_id?.trim()
+    if (fid && byId.has(fid)) {
+      byId.set(fid, (byId.get(fid) ?? 0) + incomeAmount(t) - expenseAmount(t))
+      continue
+    }
+    for (const r of savingsRows) {
+      if (transactionMatchesLedgerAccount(t, r.id, r.label)) {
+        byId.set(r.id, (byId.get(r.id) ?? 0) + incomeAmount(t) - expenseAmount(t))
+        break
+      }
+    }
+  }
+  return byId
+}
