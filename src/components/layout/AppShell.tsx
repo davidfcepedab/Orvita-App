@@ -7,6 +7,7 @@ import { useTheme } from "@/src/theme/ThemeProvider"
 import { designTokens } from "@/src/theme/design-tokens"
 import { Button } from "@/src/components/ui/Button"
 import { createBrowserClient } from "@/lib/supabase/browser"
+import { isAppMockMode } from "@/lib/checkins/flags"
 import {
   Activity,
   Calendar,
@@ -48,6 +49,9 @@ export function AppShell({
   const [loggingOut, setLoggingOut] = useState(false)
 
   useEffect(() => {
+    const mock = isAppMockMode()
+    const sinSesionLabel = mock ? "Usuario demo" : "Invitado"
+
     const supabase = createBrowserClient() as {
       auth?: {
         getUser?: () => Promise<{
@@ -64,8 +68,13 @@ export function AppShell({
       }
     }
 
+    if (mock) {
+      setUserName("Usuario demo")
+      return
+    }
+
     if (!supabase?.auth?.getUser) {
-      setUserName("Demo User")
+      setUserName(sinSesionLabel)
       return
     }
 
@@ -77,22 +86,26 @@ export function AppShell({
 
     Promise.race([getUserPromise, timeoutPromise])
       .then(({ data }) => {
+        if (!data?.user) {
+          setUserName(sinSesionLabel)
+          return
+        }
         const rawName =
-          data?.user?.user_metadata?.full_name ??
-          data?.user?.user_metadata?.name ??
-          data?.user?.email ??
+          data.user.user_metadata?.full_name ??
+          data.user.user_metadata?.name ??
+          data.user.email ??
           null
 
         if (!rawName) {
-          setUserName("Demo User")
+          setUserName(sinSesionLabel)
           return
         }
 
         const firstName = rawName.trim().split(/\s+/)[0]
-        setUserName(firstName || "Demo User")
+        setUserName(firstName || sinSesionLabel)
       })
       .catch(() => {
-        setUserName("Demo User")
+        setUserName(sinSesionLabel)
       })
   }, [])
 
@@ -164,7 +177,13 @@ export function AppShell({
                 </span>
               </div>
               <span className="pl-[18px] text-sm text-[var(--color-text-primary)]">
-                Hola, {userName ?? "Commander"}
+                {pathname.startsWith("/auth") && !isAppMockMode()
+                  ? "Inicia sesión para continuar"
+                  : userName == null
+                    ? isAppMockMode()
+                      ? "Cargando…"
+                      : "…"
+                    : `Hola, ${userName}`}
               </span>
             </div>
 

@@ -2,24 +2,15 @@
 
 import { useEffect, useState } from "react"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
-import { isAppMockMode } from "@/lib/checkins/flags"
-import { createBrowserClient } from "@/lib/supabase/browser"
+import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import type { OperationalContextData } from "@/lib/operational/types"
 
+/** Reutiliza `browserBearerHeaders`: getSession con timeout; evita “Cargando…” infinito si Supabase no responde. */
 async function contextHeaders(): Promise<HeadersInit> {
-  if (isAppMockMode()) return {}
-  try {
-    const supabase = createBrowserClient() as {
-      auth: { getSession: () => Promise<{ data: { session?: { access_token?: string } | null } }> }
-    }
-    const { data } = await supabase.auth.getSession()
-    const token = data.session?.access_token
-    if (!token) return {}
-    return { Authorization: `Bearer ${token}` }
-  } catch {
-    return {}
-  }
+  return browserBearerHeaders(false)
 }
+
+const CONTEXT_FETCH_TIMEOUT_MS = 45_000
 
 export function useOperationalContext() {
   const [data, setData] = useState<OperationalContextData | null>(null)
@@ -34,7 +25,14 @@ export function useOperationalContext() {
         setLoading(true)
         setError(null)
         const headers = await contextHeaders()
-        const response = await fetch("/api/context", { cache: "no-store", headers })
+        const ac = new AbortController()
+        const timeoutId = window.setTimeout(() => ac.abort(), CONTEXT_FETCH_TIMEOUT_MS)
+        let response: Response
+        try {
+          response = await fetch("/api/context", { cache: "no-store", headers, signal: ac.signal })
+        } finally {
+          window.clearTimeout(timeoutId)
+        }
         const payload = (await response.json()) as {
           success?: boolean
           data?: OperationalContextData
@@ -48,7 +46,14 @@ export function useOperationalContext() {
         }
       } catch (err) {
         if (!cancelled) {
-          const message = err instanceof Error ? err.message : "Error desconocido"
+          const aborted =
+            (err instanceof DOMException && err.name === "AbortError") ||
+            (err instanceof Error && err.name === "AbortError")
+          const message = aborted
+            ? "La solicitud tardó demasiado. Revisa tu conexión e intenta de nuevo."
+            : err instanceof Error
+              ? err.message
+              : "Error desconocido"
           setError(message)
           setData(null)
         }
