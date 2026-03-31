@@ -21,6 +21,10 @@ import { useFinance } from "../FinanceContext"
 import { useLedgerAccounts } from "../useLedgerAccounts"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { financeApiDelete, financeApiGet, financeApiJson } from "@/lib/finanzas/financeClientFetch"
+import {
+  cardUsesLedgerCatalogRow,
+  ledgerFinanceAccountUuidFromCard,
+} from "@/lib/finanzas/cuentasCardLedgerLink"
 import { dedupeCreditCards, dedupeLoanCards, dedupeSavingsCards } from "@/lib/finanzas/dedupeCuentasCards"
 import { mergeCuentasDashboard } from "@/lib/finanzas/mergeCuentasManual"
 import type { ManualFinanceBundle } from "@/lib/finanzas/manualFinanceLocal"
@@ -150,6 +154,7 @@ function SavingsPlank({ item, onEdit }: { item: CuentasSavingsCard; onEdit?: () 
   const raw = Number(item.amount)
   const hasAmount = Number.isFinite(raw) && raw !== 0
   const fromManual = Boolean(item.manualRowId)
+  const fromLedgerCatalog = cardUsesLedgerCatalogRow(item)
   const tipManual =
     "Monto de esta tarjeta: datos manuales (guardados en el dispositivo o en Supabase según tu configuración). Edita para actualizar."
 
@@ -185,6 +190,13 @@ function SavingsPlank({ item, onEdit }: { item: CuentasSavingsCard; onEdit?: () 
             <p className="text-[11px] text-orbita-secondary" title={tipManual}>
               Origen: datos manuales · Pasa el cursor para más info
             </p>
+          ) : fromLedgerCatalog ? (
+            <p className="text-[11px] leading-snug text-orbita-secondary">
+              Cuenta del catálogo (Supabase): el monto sale de{" "}
+              <span className="font-medium text-orbita-primary/90">manual_balance</span>,{" "}
+              <span className="font-medium text-orbita-primary/90">balance_available</span> o de movimientos del mes
+              enlazados (misma columna Cuenta / <span className="font-medium">finance_account_id</span>).
+            </p>
           ) : null}
         </div>
       )}
@@ -217,14 +229,14 @@ function CreditPlasticCard({
   onEdit,
 }: {
   card: CuentasCreditCard
-  /** Solo tarjetas `ledger-*`: resumen de vínculo movimientos ↔ cuenta del mes (hasta fin de mes). */
+  /** Catálogo oficial (`ledger-*` o manual que reemplaza con `replacesSyntheticId`): vínculo movimientos ↔ cuenta. */
   linkSummary?: TcMovementLinkSummary | null
   onEdit?: () => void
 }) {
   const th = creditThemes[normalizeCreditCardTheme(card.theme)]
   const usageWidth = `${Math.min(100, Math.max(4, card.usagePct))}%`
   const barColor = card.usagePct >= 50 ? th.barHigh : "bg-white/50"
-  const fromLedger = card.id.startsWith("ledger-")
+  const fromLedger = cardUsesLedgerCatalogRow(card)
   const showLinkRow = fromLedger && linkSummary != null
 
   return (
@@ -263,7 +275,7 @@ function CreditPlasticCard({
             title="Cómo se atribuyen movimientos a esta tarjeta: FK en BD, columna Cuenta igual al catálogo, o últimos 4 del catálogo en la descripción."
           >
             {linkSummary!.matchedCount === 0
-              ? "Sin movimientos enlazados hasta fin de mes: asigna Cuenta en Movimientos o vincula finance_account_id."
+              ? "Sin movimientos enlazados hasta fin de mes: en Movimientos usa finance_account_id (mismo UUID que orbita_finance_accounts.id), o igualá la columna Cuenta al label del catálogo, o últimos 4 en la descripción."
               : formatTcMovementLinkLine(linkSummary!)}
           </p>
         ) : null}
@@ -1270,7 +1282,7 @@ export default function CuentasClient() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {creditCards.map((c) => {
-                const ledgerUuid = c.id.startsWith("ledger-") ? c.id.slice("ledger-".length) : null
+                const ledgerUuid = ledgerFinanceAccountUuidFromCard(c)
                 const linkSummary = ledgerUuid ? (tcLinkByAccountId.get(ledgerUuid) ?? null) : null
                 return (
                   <CreditPlasticCard

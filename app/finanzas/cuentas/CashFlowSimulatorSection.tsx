@@ -112,6 +112,7 @@ export function CashFlowSimulatorSection({
   const [commitModalInitialIds, setCommitModalInitialIds] = useState<Set<string>>(new Set())
   const [commitCatalogOpts, setCommitCatalogOpts] = useState<{ value: string; label: string }[]>([])
   const [simulatorExpanded, setSimulatorExpanded] = useState(false)
+  const [commitmentsListExpanded, setCommitmentsListExpanded] = useState(false)
   const [flowViz, setFlowViz] = useState<"table" | "bars">("table")
 
   const [ingresosAdjustPct, setIngresosAdjustPct] = useState(0)
@@ -207,6 +208,16 @@ export function CashFlowSimulatorSection({
     if (!commitmentsHydrated || supabaseEnabled) return
     writeFlowCommitmentsToLocalStorage(commitments)
   }, [commitments, commitmentsHydrated, supabaseEnabled])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const syncHash = () => {
+      if (window.location.hash === "#capital-compromisos") setCommitmentsListExpanded(true)
+    }
+    syncHash()
+    window.addEventListener("hashchange", syncHash)
+    return () => window.removeEventListener("hashchange", syncHash)
+  }, [])
 
   useEffect(() => {
     if (supabaseEnabled || !month || !commitmentsHydrated) return
@@ -777,80 +788,123 @@ export function CashFlowSimulatorSection({
         ))}
       </div>
 
-      <div id="capital-compromisos" className={`${arcticPanel} scroll-mt-24 p-3 sm:p-4`}>
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-          <div className="flex items-center gap-1.5 text-orbita-primary">
-            <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" aria-hidden />
-            <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">
-              Compromisos del mes (por día fijo)
-            </span>
-          </div>
+      <div id="capital-compromisos" className={`${arcticPanel} scroll-mt-24`}>
+        <div className="flex w-full items-start">
           <button
             type="button"
-            onClick={openCommitModal}
-            className="text-[11px] font-medium text-orbita-secondary underline decoration-orbita-border underline-offset-4 hover:text-orbita-primary"
+            onClick={() => setCommitmentsListExpanded((v) => !v)}
+            className="min-w-0 flex-1 touch-manipulation p-3 text-left sm:p-4"
+            aria-expanded={commitmentsListExpanded}
           >
-            Editar
+            <div className="flex items-center gap-1.5 text-orbita-primary">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" aria-hidden />
+              <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">
+                Compromisos del mes (por día fijo)
+              </span>
+            </div>
+            <p className="mt-1 text-xs text-orbita-secondary">
+              {commitmentsListExpanded
+                ? "Toca para ocultar la tabla de vista previa."
+                : "Resumen del mes; despliega para ver día, concepto, tipo y monto."}
+            </p>
+            {!commitmentsListExpanded ? (
+              <p className="mt-2 text-sm text-orbita-primary">
+                <span className="font-semibold tabular-nums">{commitmentsSorted.length}</span> compromiso
+                {commitmentsSorted.length === 1 ? "" : "s"}
+                {" · "}
+                Impacto neto lista:{" "}
+                <span
+                  className={`font-semibold tabular-nums ${netImpact30 >= 0 ? "text-emerald-600" : "text-rose-600"}`}
+                >
+                  {netImpact30 >= 0 ? "+" : "-"}${formatMoney(Math.abs(netImpact30))}
+                </span>
+              </p>
+            ) : null}
           </button>
+          <div className="flex shrink-0 flex-col items-end gap-0.5 py-3 pr-2 sm:py-4 sm:pr-3">
+            <button
+              type="button"
+              onClick={openCommitModal}
+              className="text-[11px] font-medium text-orbita-secondary underline decoration-orbita-border/80 underline-offset-4 hover:text-orbita-primary"
+            >
+              Editar
+            </button>
+            <button
+              type="button"
+              onClick={() => setCommitmentsListExpanded((v) => !v)}
+              className="rounded-lg p-1 text-orbita-secondary hover:bg-orbita-surface-alt"
+              aria-label={commitmentsListExpanded ? "Colapsar lista" : "Expandir lista"}
+            >
+              <ChevronDown
+                className={`h-5 w-5 transition-transform duration-200 ${commitmentsListExpanded ? "rotate-180" : ""}`}
+                aria-hidden
+              />
+            </button>
+          </div>
         </div>
-        <div className="mt-3 overflow-x-auto">
-          <table className="w-full min-w-[520px] border-collapse text-left text-[11px] sm:text-sm">
-            <thead>
-              <tr className="border-b border-orbita-border text-[9px] font-semibold uppercase tracking-wide text-orbita-secondary sm:text-[10px]">
-                <th className="py-2 pr-2 font-medium">Día</th>
-                <th className="py-2 pr-2 font-medium">Concepto</th>
-                <th className="py-2 pr-2 font-medium">Tipo</th>
-                <th className="py-2 pr-0 text-right font-medium">Monto</th>
-              </tr>
-            </thead>
-            <tbody>
-              {commitmentsSorted.slice(0, 8).map((c) => {
-                const inc = isIncomeCommitment(c)
-                const cat = c.category.trim()
-                const showCat = Boolean(cat)
-                const sub = (c.subcategory ?? "").trim()
-                const titleDiffers = c.title.trim().toLowerCase() !== cat.toLowerCase()
-                return (
-                  <tr key={c.id} className="border-b border-orbita-border/70 last:border-0">
-                    <td className="whitespace-nowrap py-2 pr-2 align-top tabular-nums text-orbita-primary">
-                      <span className="font-semibold">{c.dueDay ?? dayFromIso(c.date)}</span>
-                      <span className="ml-1 text-[10px] text-orbita-secondary">
-                        ({formatCommitmentDayEn(c.date)})
-                      </span>
-                    </td>
-                    <td className="max-w-[200px] py-2 pr-2 align-top sm:max-w-none">
-                      {showCat ? (
-                        <>
-                          <p className="font-semibold leading-snug text-orbita-primary">
-                            {cat}
-                            {sub ? <span className="font-normal text-orbita-secondary"> › {sub}</span> : null}
-                          </p>
-                          {titleDiffers ? (
-                            <p className="mt-0.5 text-[10px] leading-snug text-orbita-secondary">{c.title}</p>
-                          ) : null}
-                        </>
-                      ) : (
-                        <p className="font-semibold leading-snug text-orbita-primary">{c.title}</p>
-                      )}
-                    </td>
-                    <td className="py-2 pr-2 align-top">
-                      <span
-                        className={`inline-flex rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${flowTypeBadgeClass(c.flowType)}`}
-                      >
-                        {FLOW_TYPE_OPTIONS.find((o) => o.value === c.flowType)?.label ?? c.flowType}
-                      </span>
-                    </td>
-                    <td
-                      className={`whitespace-nowrap py-2 pl-2 text-right font-bold tabular-nums ${inc ? "text-emerald-600" : "text-orbita-primary"}`}
-                    >
-                      {inc ? "+" : "-"}${formatMoney(c.amount)}
-                    </td>
+
+        {commitmentsListExpanded ? (
+          <div className="border-t border-orbita-border px-3 pb-3 sm:px-4 sm:pb-4">
+            <div className="overflow-x-auto pt-3">
+              <table className="w-full min-w-[520px] border-collapse text-left text-[11px] sm:text-sm">
+                <thead>
+                  <tr className="border-b border-orbita-border text-[9px] font-semibold uppercase tracking-wide text-orbita-secondary sm:text-[10px]">
+                    <th className="py-2 pr-2 font-medium">Día</th>
+                    <th className="py-2 pr-2 font-medium">Concepto</th>
+                    <th className="py-2 pr-2 font-medium">Tipo</th>
+                    <th className="py-2 pr-0 text-right font-medium">Monto</th>
                   </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody>
+                  {commitmentsSorted.map((c) => {
+                    const inc = isIncomeCommitment(c)
+                    const cat = c.category.trim()
+                    const showCat = Boolean(cat)
+                    const sub = (c.subcategory ?? "").trim()
+                    const titleDiffers = c.title.trim().toLowerCase() !== cat.toLowerCase()
+                    return (
+                      <tr key={c.id} className="border-b border-orbita-border/70 last:border-0">
+                        <td className="whitespace-nowrap py-2 pr-2 align-top tabular-nums text-orbita-primary">
+                          <span className="font-semibold">{c.dueDay ?? dayFromIso(c.date)}</span>
+                          <span className="ml-1 text-[10px] text-orbita-secondary">
+                            ({formatCommitmentDayEn(c.date)})
+                          </span>
+                        </td>
+                        <td className="max-w-[200px] py-2 pr-2 align-top sm:max-w-none">
+                          {showCat ? (
+                            <>
+                              <p className="font-semibold leading-snug text-orbita-primary">
+                                {cat}
+                                {sub ? <span className="font-normal text-orbita-secondary"> › {sub}</span> : null}
+                              </p>
+                              {titleDiffers ? (
+                                <p className="mt-0.5 text-[10px] leading-snug text-orbita-secondary">{c.title}</p>
+                              ) : null}
+                            </>
+                          ) : (
+                            <p className="font-semibold leading-snug text-orbita-primary">{c.title}</p>
+                          )}
+                        </td>
+                        <td className="py-2 pr-2 align-top">
+                          <span
+                            className={`inline-flex rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${flowTypeBadgeClass(c.flowType)}`}
+                          >
+                            {FLOW_TYPE_OPTIONS.find((o) => o.value === c.flowType)?.label ?? c.flowType}
+                          </span>
+                        </td>
+                        <td
+                          className={`whitespace-nowrap py-2 pl-2 text-right font-bold tabular-nums ${inc ? "text-emerald-600" : "text-orbita-primary"}`}
+                        >
+                          {inc ? "+" : "-"}${formatMoney(c.amount)}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <CuentasModalShell
