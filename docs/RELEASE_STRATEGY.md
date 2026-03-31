@@ -13,7 +13,7 @@
 El trabajo en curso vive en ramas locales o cortas (`feature/*`, `fix/*`), no como ramas remotas permanentes.
 
 ## Quality Gates
-- TypeScript (`tsc`) y Jest deben pasar (CI en GitHub Actions sobre `preview`, `production`, `built`).
+- TypeScript (`tsc`) y Jest deben pasar. Para CI en GitHub Actions, copia `scripts/github-actions-ci.example.yml` a `.github/workflows/ci.yml` (el push de workflows exige token con permiso `workflow`).
 - `npm run validate:release` local antes de cortes importantes: `tsc` + `jest` + `build`.
 - Supabase migrations must apply cleanly in preview environments.
 
