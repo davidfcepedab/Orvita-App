@@ -16,6 +16,10 @@ import type {
   CreditCardTheme,
 } from "@/lib/finanzas/cuentasDashboard"
 import { computeDisponibleCuenta } from "@/lib/finanzas/accountBalanceTypes"
+import {
+  ahorroSaldoOperativoFromCatalog,
+  creditoSaldoPendienteFromCatalog,
+} from "@/lib/finanzas/catalogLedgerBalances"
 import { CREDIT_CARD_THEME_IDS, payLabelForMonth } from "@/lib/finanzas/cuentasDashboard"
 import type { LedgerAccountSortable } from "@/lib/finanzas/sortLedgerAccounts"
 
@@ -64,24 +68,16 @@ function ledgerRowToSaving(
   month: string,
   monthRows: FinanceTransaction[],
 ): CuentasSavingsCard {
-  const manualRaw = row.manual_balance != null ? Number(row.manual_balance) : NaN
-  const availRaw = row.balance_available != null ? Number(row.balance_available) : NaN
-  /** Igual que TC: solo prevalece manual si el usuario lo ancló en catálogo. */
-  const manualLocked = Boolean(row.manual_balance_on?.trim())
-
   const { expense, income } = accountMonthExpenseIncome(monthRows, month, row.id, row.label)
   const netOnAccount = income - expense
 
-  let uso = 0
-  if (manualLocked && Number.isFinite(manualRaw)) {
-    uso = Math.max(0, Math.round(manualRaw))
-  } else if (Number.isFinite(availRaw) && availRaw >= 0) {
-    uso = Math.round(Math.max(0, availRaw))
-  } else if (Number.isFinite(manualRaw) && manualRaw > 0) {
-    uso = Math.round(Math.max(0, manualRaw))
-  } else {
-    uso = netOnAccount > 0 ? Math.round(netOnAccount) : 0
-  }
+  const fromCatalog = ahorroSaldoOperativoFromCatalog(row)
+  const uso =
+    fromCatalog != null
+      ? fromCatalog
+      : netOnAccount > 0
+        ? Math.round(netOnAccount)
+        : 0
 
   const parts = row.label.split("|").map((p) => p.trim()).filter(Boolean)
   const institution = parts[1] ?? parts[0] ?? "Ahorros"
@@ -192,12 +188,9 @@ function ledgerRowToLoan(
   rollupRows: FinanceTransaction[],
   monthEndInclusive: string,
 ): CuentasLoanCard {
-  /** Deuda a la fecha: `balance_used` en catálogo (pasivo estructural). */
-  let saldoPendiente = Math.round(Math.max(0, Number(row.balance_used ?? 0)))
-  if (saldoPendiente < 1) {
-    saldoPendiente = Math.round(Math.max(0, Number(row.manual_balance ?? 0)))
-  }
-  if (saldoPendiente < 1) {
+  /** Deuda a la fecha: `balance_used`; mismos fallbacks que TC si el saldo vino en otra columna del extracto. */
+  let saldoPendiente = creditoSaldoPendienteFromCatalog(row)
+  if (saldoPendiente == null || saldoPendiente < 1) {
     const { expense, income } = accountCumulativeExpenseIncomeThrough(
       rollupRows,
       monthEndInclusive,

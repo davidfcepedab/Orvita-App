@@ -62,6 +62,113 @@ function reorderLedgerAccountList<T>(items: T[], fromIndex: number, toIndex: num
   return next
 }
 
+const CUENTAS_SECTION_STORAGE_KEY = "orbita.finanzas.cuentas.sectionOrder.v1"
+
+type CuentasPageSectionId = "kpis" | "savings" | "credit" | "subscriptions" | "cashflow" | "loans"
+
+const DEFAULT_CUENTAS_PAGE_SECTIONS: CuentasPageSectionId[] = [
+  "kpis",
+  "savings",
+  "credit",
+  "subscriptions",
+  "cashflow",
+  "loans",
+]
+
+const CUENTAS_SECTION_LABELS: Record<CuentasPageSectionId, string> = {
+  kpis: "Indicadores",
+  savings: "Cuentas de ahorro",
+  credit: "Tarjetas de crédito",
+  subscriptions: "Suscripciones y burn",
+  cashflow: "Simulador de flujo",
+  loans: "Créditos estructurales",
+}
+
+function normalizeCuentasSectionOrder(parsed: unknown): CuentasPageSectionId[] {
+  const allowed = new Set<string>(DEFAULT_CUENTAS_PAGE_SECTIONS)
+  const fromArr = Array.isArray(parsed) ? parsed : []
+  const seen = new Set<CuentasPageSectionId>()
+  const out: CuentasPageSectionId[] = []
+  for (const x of fromArr) {
+    if (typeof x === "string" && allowed.has(x) && !seen.has(x as CuentasPageSectionId)) {
+      out.push(x as CuentasPageSectionId)
+      seen.add(x as CuentasPageSectionId)
+    }
+  }
+  for (const id of DEFAULT_CUENTAS_PAGE_SECTIONS) {
+    if (!seen.has(id)) out.push(id)
+  }
+  return out
+}
+
+function readCuentasSectionOrderFromStorage(): CuentasPageSectionId[] {
+  if (typeof window === "undefined") return [...DEFAULT_CUENTAS_PAGE_SECTIONS]
+  try {
+    const raw = window.localStorage.getItem(CUENTAS_SECTION_STORAGE_KEY)
+    if (!raw) return [...DEFAULT_CUENTAS_PAGE_SECTIONS]
+    return normalizeCuentasSectionOrder(JSON.parse(raw))
+  } catch {
+    return [...DEFAULT_CUENTAS_PAGE_SECTIONS]
+  }
+}
+
+function CuentasSectionReorderChrome({
+  reorderMode,
+  sectionIndex,
+  sectionLabel,
+  draggingIndex,
+  onDragStart,
+  onDragEnd,
+  onDropAtIndex,
+  children,
+}: {
+  reorderMode: boolean
+  sectionIndex: number
+  sectionLabel: string
+  draggingIndex: number | null
+  onDragStart: (index: number) => void
+  onDragEnd: () => void
+  onDropAtIndex: (fromIndex: number, toIndex: number) => void
+  children: React.ReactNode
+}) {
+  if (!reorderMode) return <>{children}</>
+
+  return (
+    <div
+      className={`rounded-[var(--radius-card)] border border-dashed border-orbita-border/60 bg-orbita-surface-alt/25 p-3 sm:p-4 ${
+        draggingIndex === sectionIndex ? "opacity-[0.72]" : ""
+      }`}
+      onDragOver={(e) => {
+        e.preventDefault()
+        e.dataTransfer.dropEffect = "move"
+      }}
+      onDrop={(e) => {
+        e.preventDefault()
+        const raw = e.dataTransfer.getData("text/plain")
+        const from = Number.parseInt(raw, 10)
+        if (!Number.isFinite(from)) return
+        onDropAtIndex(from, sectionIndex)
+      }}
+    >
+      <div
+        draggable
+        onDragStart={(e) => {
+          e.dataTransfer.effectAllowed = "move"
+          e.dataTransfer.setData("text/plain", String(sectionIndex))
+          onDragStart(sectionIndex)
+        }}
+        onDragEnd={onDragEnd}
+        className="mb-3 flex cursor-grab touch-none select-none items-center gap-2 rounded-lg border border-orbita-border/50 bg-orbita-surface/90 px-2.5 py-2 text-[11px] font-semibold text-orbita-secondary shadow-sm active:cursor-grabbing"
+        aria-label={`Reordenar bloque: ${sectionLabel}`}
+      >
+        <GripVertical className="h-4 w-4 shrink-0 text-orbita-secondary" aria-hidden />
+        <span className="uppercase tracking-[0.12em]">{sectionLabel}</span>
+      </div>
+      {children}
+    </div>
+  )
+}
+
 function pmtFixed(pv: number, monthlyRatePercent: number, n: number) {
   if (n <= 0 || pv <= 0) return 0
   const r = monthlyRatePercent / 100
@@ -511,6 +618,11 @@ export default function CuentasClient() {
 
   const [manualBundle, setManualBundle] = useState<ManualFinanceBundle>(() => readManualFinanceFromLocalStorage())
   const [subscriptionSimulatorMonthly, setSubscriptionSimulatorMonthly] = useState(0)
+  const [cuentasSectionOrder, setCuentasSectionOrder] = useState<CuentasPageSectionId[]>(() => [
+    ...DEFAULT_CUENTAS_PAGE_SECTIONS,
+  ])
+  const [cuentasReorderMode, setCuentasReorderMode] = useState(false)
+  const [draggingCuentasSectionIdx, setDraggingCuentasSectionIdx] = useState<number | null>(null)
   const [manualModal, setManualModal] = useState<"savings" | "credit" | "loan" | null>(null)
   const [savingForm, setSavingForm] = useState({
     id: "" as string | undefined,
@@ -601,6 +713,24 @@ export default function CuentasClient() {
     }
     void refetchAccountsDashboard()
   }, [month, refetchAccountsDashboard])
+
+  useEffect(() => {
+    setCuentasSectionOrder(readCuentasSectionOrderFromStorage())
+  }, [])
+
+  const onDropCuentasSection = useCallback((fromIdx: number, toIdx: number) => {
+    if (fromIdx === toIdx) return
+    setCuentasSectionOrder((prev) => {
+      const next = reorderLedgerAccountList(prev, fromIdx, toIdx)
+      try {
+        window.localStorage.setItem(CUENTAS_SECTION_STORAGE_KEY, JSON.stringify(next))
+      } catch {
+        /* ignore */
+      }
+      return next
+    })
+    setDraggingCuentasSectionIdx(null)
+  }, [])
 
   const persistLedgerOrder = useCallback(
     async (orderedIds: string[]) => {
@@ -1187,10 +1317,55 @@ export default function CuentasClient() {
   return (
     <div className="min-w-0 space-y-8 pb-10 sm:space-y-10">
       <div className="min-w-0 flex-1">
-        <h1 className="text-2xl font-bold tracking-tight text-orbita-primary sm:text-[28px]">Cuentas</h1>
-        <p className="mt-1 text-sm text-orbita-secondary sm:text-[15px]">
-          Liquidez, exposición y disponibilidad por cuenta
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <h1 className="text-2xl font-bold tracking-tight text-orbita-primary sm:text-[28px]">Cuentas</h1>
+              <button
+                type="button"
+                onClick={() => {
+                  setCuentasReorderMode((v) => {
+                    const next = !v
+                    if (!next) setDraggingCuentasSectionIdx(null)
+                    return next
+                  })
+                }}
+                className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] transition ${
+                  cuentasReorderMode
+                    ? "border-orbita-primary bg-orbita-primary text-white shadow-sm"
+                    : "border-orbita-border/70 bg-transparent text-orbita-secondary/80 hover:border-orbita-border hover:text-orbita-primary"
+                }`}
+                aria-pressed={cuentasReorderMode}
+                title="Reordenar bloques de esta página"
+              >
+                {cuentasReorderMode ? "Listo" : "Orden"}
+              </button>
+            </div>
+            <p className="mt-1 text-sm text-orbita-secondary sm:text-[15px]">
+              Liquidez, exposición y disponibilidad por cuenta
+            </p>
+            {cuentasReorderMode ? (
+              <div
+                className="mt-4 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt/55 p-4 text-sm shadow-sm"
+                role="region"
+                aria-label="Contexto Capital Operations"
+              >
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">Capital</p>
+                <p className="mt-1 text-base font-semibold tracking-tight text-orbita-primary">Capital Operations</p>
+                <p className="mt-1 text-xs leading-relaxed text-orbita-secondary">
+                  Liquidity flow, burn rate, and strategic financial decisions.
+                </p>
+                <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
+                  Periodo activo{" "}
+                  <span className="tabular-nums text-orbita-primary">{month ? month : "—"}</span>
+                </p>
+                <p className="mt-2 text-xs text-orbita-secondary">
+                  Arrastra la barra ⋮⋮ de cada bloque para subirlo o bajarlo. El orden se guarda en este dispositivo.
+                </p>
+              </div>
+            ) : null}
+          </div>
+        </div>
         {notice ? <p className="mt-2 text-xs text-orbita-secondary">{notice}</p> : null}
       </div>
 
@@ -1316,131 +1491,169 @@ export default function CuentasClient() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <StatKpiCard
-              title="Total liquidez"
-              value={`$${formatMoney(kpis.totalLiquidez)}`}
-              sub={
-                <span
-                  className={`inline-flex items-center gap-1 font-medium ${
-                    kpis.liquidezTrendPct >= 0 ? "text-emerald-600" : "text-rose-600"
-                  }`}
-                >
-                  {kpis.liquidezTrendPct >= 0 ? (
-                    <ArrowUpRight className="h-4 w-4" aria-hidden />
-                  ) : (
-                    <ArrowDownRight className="h-4 w-4" aria-hidden />
-                  )}
-                  {kpis.liquidezTrendPct >= 0 ? "+" : ""}
-                  {kpis.liquidezTrendPct}% vs mes anterior
-                </span>
-              }
-              icon={<Wallet className="h-5 w-5" />}
-            />
-            <StatKpiCard
-              title="Crédito disponible"
-              value={`$${formatMoney(kpis.creditoDisponible)}`}
-              sub={<span>{kpis.creditoUsoPromedioPct}% uso promedio</span>}
-              icon={<CreditCard className="h-5 w-5" />}
-            />
-            <StatKpiCard
-              title="Deuda total"
-              value={`$${formatMoney(kpis.deudaTotal)}`}
-              sub={<span>${formatMoney(kpis.deudaCuotaMensual)}/mes en obligaciones estimadas</span>}
-              icon={<TrendingDown className="h-5 w-5" />}
-              warning
-            />
-          </div>
-
-          <section className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-orbita-secondary">Cuentas de ahorro</h2>
-              <button
-                type="button"
-                onClick={openAddSavings}
-                className="inline-flex items-center gap-1 rounded-full border border-teal-200 bg-teal-50 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-teal-800 hover:bg-teal-100"
+          {cuentasSectionOrder.map((sectionId, sectionIdx) => {
+            const chrome = (body: ReactNode) => (
+              <CuentasSectionReorderChrome
+                key={sectionId}
+                reorderMode={cuentasReorderMode}
+                sectionIndex={sectionIdx}
+                sectionLabel={CUENTAS_SECTION_LABELS[sectionId]}
+                draggingIndex={draggingCuentasSectionIdx}
+                onDragStart={setDraggingCuentasSectionIdx}
+                onDragEnd={() => setDraggingCuentasSectionIdx(null)}
+                onDropAtIndex={onDropCuentasSection}
               >
-                <Plus className="h-3.5 w-3.5" aria-hidden />
-                Agregar cuenta
-              </button>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {savings.map((s) => (
-                <SavingsPlasticCard key={s.id} item={s} onEdit={() => openEditSavings(s)} />
-              ))}
-            </div>
-          </section>
+                {body}
+              </CuentasSectionReorderChrome>
+            )
 
-          <section className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-orbita-secondary">Tarjetas de crédito</h2>
-              <button
-                type="button"
-                onClick={openAddCredit}
-                className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-sky-800 hover:bg-sky-100"
-              >
-                <Plus className="h-3.5 w-3.5" aria-hidden />
-                Agregar tarjeta
-              </button>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {creditCards.map((c) => {
-                const ledgerUuid = ledgerFinanceAccountUuidFromCard(c)
-                const linkSummary = ledgerUuid ? (tcLinkByAccountId.get(ledgerUuid) ?? null) : null
-                return (
-                  <CreditPlasticCard
-                    key={c.id}
-                    card={c}
-                    linkSummary={linkSummary}
-                    onEdit={() => openEditCredit(c)}
-                  />
+            switch (sectionId) {
+              case "kpis":
+                return chrome(
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <StatKpiCard
+                      title="Total liquidez"
+                      value={`$${formatMoney(kpis.totalLiquidez)}`}
+                      sub={
+                        <span
+                          className={`inline-flex items-center gap-1 font-medium ${
+                            kpis.liquidezTrendPct >= 0 ? "text-emerald-600" : "text-rose-600"
+                          }`}
+                        >
+                          {kpis.liquidezTrendPct >= 0 ? (
+                            <ArrowUpRight className="h-4 w-4" aria-hidden />
+                          ) : (
+                            <ArrowDownRight className="h-4 w-4" aria-hidden />
+                          )}
+                          {kpis.liquidezTrendPct >= 0 ? "+" : ""}
+                          {kpis.liquidezTrendPct}% vs mes anterior
+                        </span>
+                      }
+                      icon={<Wallet className="h-5 w-5" />}
+                    />
+                    <StatKpiCard
+                      title="Crédito disponible"
+                      value={`$${formatMoney(kpis.creditoDisponible)}`}
+                      sub={<span>{kpis.creditoUsoPromedioPct}% uso promedio</span>}
+                      icon={<CreditCard className="h-5 w-5" />}
+                    />
+                    <StatKpiCard
+                      title="Deuda total"
+                      value={`$${formatMoney(kpis.deudaTotal)}`}
+                      sub={<span>${formatMoney(kpis.deudaCuotaMensual)}/mes en obligaciones estimadas</span>}
+                      icon={<TrendingDown className="h-5 w-5" />}
+                      warning
+                    />
+                  </div>,
                 )
-              })}
-            </div>
-          </section>
-
-          <SubscriptionsBurnSection
-            supabaseEnabled={supabaseEnabled}
-            baselineMonthlyIncome={kpis ? Math.max(1, Math.round(kpis.totalLiquidez * 0.04)) : 4_000_000}
-            onSubscriptionSimulatorMonthlyChange={setSubscriptionSimulatorMonthly}
-          />
-
-          {kpis ? (
-            <CashFlowSimulatorSection
-              month={month}
-              kpis={kpis}
-              supabaseEnabled={supabaseEnabled}
-              subscriptionFixedMonthly={subscriptionSimulatorMonthly}
-              onApplyPaymentPlan={() => {
-                if (creditCards[0]) openEditCredit(creditCards[0]!)
-              }}
-            />
-          ) : null}
-
-          <section className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-orbita-secondary">Créditos estructurales</h2>
-              <button
-                type="button"
-                onClick={openAddLoan}
-                className="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-violet-800 hover:bg-violet-100"
-              >
-                <Plus className="h-3.5 w-3.5" aria-hidden />
-                Agregar crédito
-              </button>
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              {loans.map((loan) => (
-                <LoanStructuralCard
-                  key={loan.id}
-                  loan={loan}
-                  onEdit={() => openEditLoan(loan)}
-                  onPayDate={() => openLoanModal(loan, "paydate")}
-                  onPlan={() => openLoanModal(loan, "plan")}
-                />
-              ))}
-            </div>
-          </section>
+              case "savings":
+                return chrome(
+                  <section className="space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
+                        Cuentas de ahorro
+                      </h2>
+                      <button
+                        type="button"
+                        onClick={openAddSavings}
+                        className="inline-flex items-center gap-1 rounded-full border border-teal-200 bg-teal-50 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-teal-800 hover:bg-teal-100"
+                      >
+                        <Plus className="h-3.5 w-3.5" aria-hidden />
+                        Agregar cuenta
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      {savings.map((s) => (
+                        <SavingsPlasticCard key={s.id} item={s} onEdit={() => openEditSavings(s)} />
+                      ))}
+                    </div>
+                  </section>,
+                )
+              case "credit":
+                return chrome(
+                  <section className="space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
+                        Tarjetas de crédito
+                      </h2>
+                      <button
+                        type="button"
+                        onClick={openAddCredit}
+                        className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-sky-800 hover:bg-sky-100"
+                      >
+                        <Plus className="h-3.5 w-3.5" aria-hidden />
+                        Agregar tarjeta
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      {creditCards.map((c) => {
+                        const ledgerUuid = ledgerFinanceAccountUuidFromCard(c)
+                        const linkSummary = ledgerUuid ? (tcLinkByAccountId.get(ledgerUuid) ?? null) : null
+                        return (
+                          <CreditPlasticCard
+                            key={c.id}
+                            card={c}
+                            linkSummary={linkSummary}
+                            onEdit={() => openEditCredit(c)}
+                          />
+                        )
+                      })}
+                    </div>
+                  </section>,
+                )
+              case "subscriptions":
+                return chrome(
+                  <SubscriptionsBurnSection
+                    supabaseEnabled={supabaseEnabled}
+                    baselineMonthlyIncome={Math.max(1, Math.round(kpis.totalLiquidez * 0.04))}
+                    onSubscriptionSimulatorMonthlyChange={setSubscriptionSimulatorMonthly}
+                  />,
+                )
+              case "cashflow":
+                return chrome(
+                  <CashFlowSimulatorSection
+                    month={month}
+                    kpis={kpis}
+                    supabaseEnabled={supabaseEnabled}
+                    subscriptionFixedMonthly={subscriptionSimulatorMonthly}
+                    onApplyPaymentPlan={() => {
+                      if (creditCards[0]) openEditCredit(creditCards[0]!)
+                    }}
+                  />,
+                )
+              case "loans":
+                return chrome(
+                  <section className="space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
+                        Créditos estructurales
+                      </h2>
+                      <button
+                        type="button"
+                        onClick={openAddLoan}
+                        className="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-violet-800 hover:bg-violet-100"
+                      >
+                        <Plus className="h-3.5 w-3.5" aria-hidden />
+                        Agregar crédito
+                      </button>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {loans.map((loan) => (
+                        <LoanStructuralCard
+                          key={loan.id}
+                          loan={loan}
+                          onEdit={() => openEditLoan(loan)}
+                          onPayDate={() => openLoanModal(loan, "paydate")}
+                          onPlan={() => openLoanModal(loan, "plan")}
+                        />
+                      ))}
+                    </div>
+                  </section>,
+                )
+              default:
+                return null
+            }
+          })}
         </>
       )}
 

@@ -178,6 +178,26 @@ describe("mergeLiveDashboardWithLedger", () => {
     expect(out.savings[0]!.amount).toBe(1_000_000)
   })
 
+  test("crédito estructural: saldo solo en balance_available si balance_used vacío", () => {
+    const ledger: LedgerAccountSortable[] = [
+      {
+        id: "l2",
+        label: "Credito | Vivienda | Ibague",
+        account_class: "credito",
+        nature: "pasivo_estructural",
+        credit_limit: 150_000_000,
+        balance_used: 0,
+        balance_available: 113_750_000,
+        sort_order: 0,
+      },
+    ]
+    const out = mergeLiveDashboardWithLedger(live, "2026-03", ledger, [])
+    expect(out.loans[0]!.saldoPendiente).toBe(113_750_000)
+    expect(out.loans[0]!.montoOriginal).toBe(150_000_000)
+    expect(out.loans[0]!.abonadoMonto).toBe(36_250_000)
+    expect(out.loans[0]!.pctPagado).toBe(24)
+  })
+
   test("crédito estructural: deuda en balance_used y % abonado desde credit_limit original", () => {
     const ledger: LedgerAccountSortable[] = [
       {

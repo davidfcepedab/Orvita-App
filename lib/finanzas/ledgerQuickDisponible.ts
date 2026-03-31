@@ -1,4 +1,8 @@
 import { computeDisponibleCuenta } from "@/lib/finanzas/accountBalanceTypes"
+import {
+  ahorroSaldoOperativoFromCatalog,
+  creditoSaldoPendienteFromCatalog,
+} from "@/lib/finanzas/catalogLedgerBalances"
 
 /** Disponible aproximado para filas ledger sin recalcular movimientos del mes (lista compacta). */
 export function quickDisponibleFromLedgerRow(a: {
@@ -15,15 +19,8 @@ export function quickDisponibleFromLedgerRow(a: {
   const adj = Number(a.balance_reconciliation_adjustment ?? 0)
 
   if (a.account_class === "ahorro") {
-    const manualRaw = a.manual_balance != null ? Number(a.manual_balance) : NaN
-    const availRaw = a.balance_available != null ? Number(a.balance_available) : NaN
-    const manualExplicit =
-      a.manual_balance != null &&
-      Number.isFinite(manualRaw) &&
-      (manualRaw !== 0 || Boolean(a.manual_balance_on?.trim()))
-    let uso = 0
-    if (manualExplicit) uso = Math.max(0, manualRaw)
-    else if (Number.isFinite(availRaw)) uso = Math.max(0, availRaw)
+    const fromCat = ahorroSaldoOperativoFromCatalog(a)
+    const uso = fromCat != null ? fromCat : 0
     return computeDisponibleCuenta(0, uso, extras, adj)
   }
 
@@ -35,7 +32,8 @@ export function quickDisponibleFromLedgerRow(a: {
 
   if (a.account_class === "credito") {
     const cupo = Math.max(0, Number(a.credit_limit ?? 0))
-    const saldo = Math.max(0, Number(a.balance_used ?? a.manual_balance ?? 0))
+    const fromCat = creditoSaldoPendienteFromCatalog(a)
+    const saldo = fromCat != null ? fromCat : 0
     return computeDisponibleCuenta(cupo, -saldo, extras, adj)
   }
 
