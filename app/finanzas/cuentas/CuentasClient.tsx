@@ -817,9 +817,6 @@ export default function CuentasClient() {
           : `Deuda actual en tarjeta "${account.label}" (sin cupo definido; fallback seguro)`
         : `Saldo real bancario para "${account.label}"`
       const rawBalance = window.prompt(promptLabel, "0")
-    async (account: { id: string; label: string }) => {
-      if (typeof window === "undefined") return
-      const rawBalance = window.prompt(`Saldo real bancario para "${account.label}"`, "0")
       if (rawBalance == null) return
       const sanitized = rawBalance.replace(/[^\d,.-]/g, "").replace(",", ".")
       const realBalance = Number(sanitized)
@@ -869,7 +866,6 @@ export default function CuentasClient() {
             realBalance?: number
             reconcileDate?: string
           }
-          data?: { delta?: number; inserted?: boolean; needsAttention?: boolean; adjustmentsLast30d?: number }
         }
         if (!res.ok || !json.success) {
           setNotice(messageForHttpError(res.status, json.error, res.statusText))
@@ -916,7 +912,6 @@ export default function CuentasClient() {
       }
     },
     [refetchAccountsDashboard, refetchLedger, setLedgerAccounts, startTransition],
-    [refetchAccountsDashboard, refetchLedger],
   )
 
   const reloadManualFromApi = useCallback(async () => {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { verifySupabaseAccessToken } from "@/lib/auth/verifySupabaseAccessToken"
 import { createClient } from "@/lib/supabase/server"
 
 export type AuthedRequest = {
@@ -24,8 +25,13 @@ export async function requireUser(req: NextRequest): Promise<AuthedRequest | Nex
   }
 
   const supabase = createClient({ accessToken: token })
-  const { data, error } = await supabase.auth.getUser()
 
+  const local = await verifySupabaseAccessToken(token)
+  if (local) {
+    return { supabase, userId: local.sub }
+  }
+
+  const { data, error } = await supabase.auth.getUser()
   if (error || !data.user) {
     return NextResponse.json(
       { success: false, error: "Unauthorized: invalid token" },

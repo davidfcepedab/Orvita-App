@@ -6,7 +6,6 @@ import { useEffect, useMemo, useState } from "react"
 import { useTheme } from "@/src/theme/ThemeProvider"
 import { designTokens } from "@/src/theme/design-tokens"
 import { Button } from "@/src/components/ui/Button"
-import { createBrowserClient } from "@/lib/supabase/browser"
 import { isAppMockMode } from "@/lib/checkins/flags"
 import {
   Activity,
@@ -49,43 +48,53 @@ export function AppShell({
   const [loggingOut, setLoggingOut] = useState(false)
 
   useEffect(() => {
+    let cancelled = false
     const mock = isAppMockMode()
     const sinSesionLabel = mock ? "Usuario demo" : "Invitado"
-
-    const supabase = createBrowserClient() as {
-      auth?: {
-        getUser?: () => Promise<{
-          data?: {
-            user?: {
-              user_metadata?: {
-                full_name?: string
-                name?: string
-              }
-              email?: string
-            }
-          }
-        }>
-      }
-    }
 
     if (mock) {
       setUserName("Usuario demo")
       return
     }
 
-    if (!supabase?.auth?.getUser) {
-      setUserName(sinSesionLabel)
+    // No cargar @supabase/supabase-js ni llamar a Auth en /auth: menos JS inicial y sin red competiendo con el login.
+    if (pathname.startsWith("/auth")) {
+      setUserName(null)
       return
     }
 
-    const GET_USER_MS = 10_000
-    const getUserPromise = supabase.auth.getUser()
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      window.setTimeout(() => reject(new Error("getUser timeout")), GET_USER_MS)
-    })
+    ;(async () => {
+      try {
+        const { createBrowserClient } = await import("@/lib/supabase/browser")
+        const supabase = createBrowserClient() as {
+          auth?: {
+            getUser?: () => Promise<{
+              data?: {
+                user?: {
+                  user_metadata?: {
+                    full_name?: string
+                    name?: string
+                  }
+                  email?: string
+                }
+              }
+            }>
+          }
+        }
 
-    Promise.race([getUserPromise, timeoutPromise])
-      .then(({ data }) => {
+        if (!supabase?.auth?.getUser) {
+          if (!cancelled) setUserName(sinSesionLabel)
+          return
+        }
+
+        const GET_USER_MS = 10_000
+        const getUserPromise = supabase.auth.getUser()
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          window.setTimeout(() => reject(new Error("getUser timeout")), GET_USER_MS)
+        })
+
+        const { data } = await Promise.race([getUserPromise, timeoutPromise])
+        if (cancelled) return
         if (!data?.user) {
           setUserName(sinSesionLabel)
           return
@@ -103,11 +112,15 @@ export function AppShell({
 
         const firstName = rawName.trim().split(/\s+/)[0]
         setUserName(firstName || sinSesionLabel)
-      })
-      .catch(() => {
-        setUserName(sinSesionLabel)
-      })
-  }, [])
+      } catch {
+        if (!cancelled) setUserName(sinSesionLabel)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [pathname])
 
   const cycleTheme = () => {
     const order = ["arctic", "carbon", "sand", "midnight"] as const
@@ -119,6 +132,7 @@ export function AppShell({
   const handleLogout = async () => {
     try {
       setLoggingOut(true)
+      const { createBrowserClient } = await import("@/lib/supabase/browser")
       const supabase = createBrowserClient() as {
         auth?: { signOut?: () => Promise<{ error?: unknown }> }
       }

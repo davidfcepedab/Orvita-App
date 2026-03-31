@@ -13,8 +13,56 @@ type RegisterPayload = {
 
 const isMock = process.env.NEXT_PUBLIC_APP_MODE === "mock"
 
-const SIGN_IN_TIMEOUT_MS = 35_000
-const SESSION_COOKIE_TIMEOUT_MS = 25_000
+/** Vercel inyecta esto en build; en prod suele haber más cold start (Hobby). */
+const isVercelProduction = process.env.NEXT_PUBLIC_VERCEL_ENV === "production"
+
+/** Por intento; hay hasta 2 intentos con pausa entre ellos (Supabase lento / I/O). */
+const SIGN_IN_TIMEOUT_PER_ATTEMPT_MS = isVercelProduction ? 24_000 : 20_000
+const SIGN_IN_MAX_ATTEMPTS = 2
+const SESSION_COOKIE_TIMEOUT_MS = isVercelProduction ? 28_000 : 22_000
+const SESSION_COOKIE_MAX_ATTEMPTS = 2
+
+const DB_SLOW_MSG =
+  "La base de datos está lenta en este momento. Intenta de nuevo en 10 segundos."
+
+function delay(ms: number) {
+  return new Promise<void>((r) => setTimeout(r, ms))
+}
+
+type AuthPhase = "register" | "signin" | "session"
+
+function isAbortError(err: unknown): boolean {
+  return (
+    (err instanceof DOMException && err.name === "AbortError") ||
+    (err instanceof Error && err.name === "AbortError")
+  )
+}
+
+function isLikelyNetworkError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false
+  const m = err.message.toLowerCase()
+  return (
+    m.includes("failed to fetch") ||
+    m.includes("networkerror") ||
+    m.includes("load failed") ||
+    (err.name === "TypeError" && m.includes("fetch"))
+  )
+}
+
+function formatLoginError(err: unknown, phase: AuthPhase): string {
+  if (isAbortError(err)) {
+    if (phase === "session" || phase === "signin") return DB_SLOW_MSG
+    if (phase === "register") {
+      return "El registro tardó demasiado o se canceló. Revisa la conexión e intenta de nuevo."
+    }
+    return DB_SLOW_MSG
+  }
+  if (isLikelyNetworkError(err)) {
+    return "No se pudo conectar (red, VPN o bloqueador). Comprueba conexión y que no bloquees peticiones a Supabase ni a tu dominio."
+  }
+  if (err instanceof Error) return err.message
+  return "Error al autenticar."
+}
 
 function withTimeout<T>(promise: Promise<T>, ms: number, timeoutMessage: string): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -38,9 +86,10 @@ export default function AuthPage() {
   const [password, setPassword] = useState("")
   const [inviteCode, setInviteCode] = useState("")
   const [loading, setLoading] = useState(false)
+  const [busyHint, setBusyHint] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const syncSessionCookie = async (accessToken: string) => {
+  const syncSessionCookieOnce = async (accessToken: string) => {
     const c = typeof AbortController !== "undefined" ? new AbortController() : null
     const timer =
       c != null
@@ -71,6 +120,33 @@ export default function AuthPage() {
     }
   }
 
+  const syncSessionCookieWithRetry = async (accessToken: string) => {
+    let lastErr: unknown
+    for (let attempt = 0; attempt < SESSION_COOKIE_MAX_ATTEMPTS; attempt += 1) {
+      try {
+        await withTimeout(
+          syncSessionCookieOnce(accessToken),
+          SESSION_COOKIE_TIMEOUT_MS + 4_000,
+          "__SESSION_TIMEOUT__",
+        )
+        return
+      } catch (e) {
+        lastErr = e
+        if (
+          e instanceof Error &&
+          e.message === "__SESSION_TIMEOUT__" &&
+          attempt < SESSION_COOKIE_MAX_ATTEMPTS - 1
+        ) {
+          setBusyHint("Reintentando guardar sesión…")
+          await delay(1_000)
+          continue
+        }
+        throw e
+      }
+    }
+    throw lastErr
+  }
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
@@ -80,15 +156,22 @@ export default function AuthPage() {
     }
 
     setLoading(true)
+    setBusyHint("Conectando con el servicio de acceso…")
     setError(null)
 
+    let phase: AuthPhase = "signin"
+
     try {
+      // Import estático: un `import()` aquí retrasaba todo el login hasta bajar ~el chunk de Supabase.
       const supabase = createBrowserClient()
 
       if (mode === "register") {
+        phase = "register"
+        setBusyHint("Creando cuenta…")
+        const regMs = isVercelProduction ? 55_000 : 45_000
         const regSignal =
           typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function"
-            ? AbortSignal.timeout(45_000)
+            ? AbortSignal.timeout(regMs)
             : undefined
         const response = await fetch("/api/auth/register", {
           method: "POST",
@@ -107,18 +190,40 @@ export default function AuthPage() {
         }
       }
 
+      phase = "signin"
+      setBusyHint("Verificando usuario y contraseña…")
       type SignInResponse = {
         data: { session: { access_token: string } | null }
         error: { message?: string } | null
       }
-      const signInResult = await withTimeout(
-        supabase.auth.signInWithPassword({
-          email,
-          password,
-        }) as Promise<SignInResponse>,
-        SIGN_IN_TIMEOUT_MS,
-        "El acceso tardó demasiado. Revisa tu conexión o intenta de nuevo.",
-      )
+
+      let signInResult: SignInResponse | null = null
+      for (let attempt = 0; attempt < SIGN_IN_MAX_ATTEMPTS; attempt += 1) {
+        try {
+          signInResult = await withTimeout(
+            supabase.auth.signInWithPassword({
+              email,
+              password,
+            }) as Promise<SignInResponse>,
+            SIGN_IN_TIMEOUT_PER_ATTEMPT_MS,
+            "__SIGNIN_TIMEOUT__",
+          )
+          break
+        } catch (e) {
+          if (
+            e instanceof Error &&
+            e.message === "__SIGNIN_TIMEOUT__" &&
+            attempt < SIGN_IN_MAX_ATTEMPTS - 1
+          ) {
+            setBusyHint("Reintentando inicio de sesión…")
+            await delay(900)
+            continue
+          }
+          throw e
+        }
+      }
+      if (!signInResult) throw new Error("__SIGNIN_TIMEOUT__")
+
       const { data, error: signInError } = signInResult
 
       if (signInError || !data.session?.access_token) {
@@ -126,11 +231,9 @@ export default function AuthPage() {
         throw new Error(msg)
       }
 
-      await withTimeout(
-        syncSessionCookie(data.session.access_token),
-        SESSION_COOKIE_TIMEOUT_MS + 5_000,
-        "No se pudo confirmar la sesión a tiempo. Intenta de nuevo.",
-      )
+      phase = "session"
+      setBusyHint("Guardando sesión segura…")
+      await syncSessionCookieWithRetry(data.session.access_token)
 
       if (mode === "register") {
         window.location.href = "/household/invite"
@@ -138,19 +241,28 @@ export default function AuthPage() {
         window.location.href = "/hoy"
       }
     } catch (err) {
-      let message = err instanceof Error ? err.message : "Error autenticando"
-      if (err instanceof Error && err.name === "AbortError") {
-        message = "Tiempo agotado al guardar la sesión. Intenta de nuevo."
+      let message: string
+      if (err instanceof Error && err.message === "__SIGNIN_TIMEOUT__") {
+        message = DB_SLOW_MSG
+      } else if (err instanceof Error && err.message === "__SESSION_TIMEOUT__") {
+        message = DB_SLOW_MSG
+      } else {
+        message = formatLoginError(err, phase)
       }
       setError(message)
     } finally {
+      setBusyHint(null)
       setLoading(false)
     }
   }
 
   return (
     <div className="mx-auto flex min-h-[70vh] max-w-lg flex-col justify-center gap-6 px-6 py-12">
-      <div>
+      <div
+        className="flex flex-col gap-6 rounded-2xl border border-gray-200/90 bg-gray-50/90 p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950/90"
+        aria-busy={loading}
+      >
+        <div>
         <h1 className="text-3xl font-semibold tracking-tight">
           {isMock ? "Modo demo" : mode === "login" ? "Iniciar sesión" : "Crear cuenta"}
         </h1>
@@ -258,6 +370,17 @@ export default function AuthPage() {
           {error}
         </div>
       )}
+
+      {loading && (
+        <p
+          className="text-center text-xs text-gray-500 motion-safe:animate-pulse"
+          role="status"
+          aria-live="polite"
+        >
+          {busyHint ?? "Procesando…"}
+        </p>
+      )}
+      </div>
     </div>
   )
 }

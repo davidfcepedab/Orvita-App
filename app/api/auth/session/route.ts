@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { ORVITA_AUTH_COOKIE } from "@/lib/auth/middlewareSession"
-import { createClient } from "@/lib/supabase/server"
+import { verifySupabaseAccessToken } from "@/lib/auth/verifySupabaseAccessToken"
 
 export const runtime = "nodejs"
+/** Hobby: tope efectivo ~10s; deja explícito el presupuesto de esta ruta crítica. */
+export const maxDuration = 10
 
 const AUTH_COOKIE = ORVITA_AUTH_COOKIE
 
@@ -14,6 +16,26 @@ function extractBearerToken(req: NextRequest) {
   return token.trim()
 }
 
+/** Si `SUPABASE_JWT_SECRET` está bien, casi nunca se usa (evita I/O a Auth enfermo). */
+const GET_USER_FALLBACK_MS = 8_000
+
+async function assertValidAccessToken(token: string): Promise<boolean> {
+  const local = await verifySupabaseAccessToken(token)
+  if (local) return true
+
+  const { createClient } = await import("@/lib/supabase/server")
+  const supabase = createClient({ accessToken: token })
+
+  const getUserPromise = supabase.auth.getUser().then((r) => ({ kind: "done" as const, r }))
+  const timeoutPromise = new Promise<{ kind: "timeout" }>((resolve) => {
+    setTimeout(() => resolve({ kind: "timeout" }), GET_USER_FALLBACK_MS)
+  })
+  const out = await Promise.race([getUserPromise, timeoutPromise])
+  if (out.kind === "timeout") return false
+  const { data, error } = out.r
+  return !error && !!data.user
+}
+
 export async function POST(req: NextRequest) {
   const token = extractBearerToken(req)
   if (!token) {
@@ -23,9 +45,8 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const supabase = createClient({ accessToken: token })
-  const { data, error } = await supabase.auth.getUser()
-  if (error || !data.user) {
+  const ok = await assertValidAccessToken(token)
+  if (!ok) {
     return NextResponse.json(
       { success: false, error: "Unauthorized: invalid token" },
       { status: 401 }

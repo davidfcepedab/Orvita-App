@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server"
 import { hasUsableOrvitaSessionCookie } from "@/lib/auth/middlewareSession"
 
 /**
+ * Next.js 16: este archivo (`proxy.ts`) sustituye a `middleware.ts` para la capa Edge.
+ * Mantén imports mínimos (solo cookie + JWT exp) para cold start bajo.
+ *
  * Auth gate **sin llamadas de red** (no fetch a Supabase en Edge).
  * Evita pantallas en blanco / pestaña cargando si la red a Supabase cuelga.
  * Las rutas `/api/*` validan el token con `requireUser`.
