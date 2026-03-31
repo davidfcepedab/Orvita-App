@@ -2,6 +2,7 @@ import type { FinanceTransaction } from "@/lib/finanzas/types"
 import { accountCumulativeExpenseIncomeThrough } from "@/lib/finanzas/ledgerAccountTxRollup"
 
 export type LedgerAccountClass = "ahorro" | "tarjeta_credito" | "credito"
+export type ReconciliationRealInputMode = "balance" | "available_credit"
 
 export function computeAccountCalculatedBalance(
   rows: FinanceTransaction[],
@@ -62,6 +63,15 @@ export function computeAccountCalculatedBalanceFromSnapshot(
   return Math.round(snapshotBalance + debtDeltaAfterSnapshot)
 }
 
+export function reconciliationDelta(
+  realBalance: number,
+  calculatedBalance: number,
+  accountClass?: LedgerAccountClass,
+): number {
+  if (accountClass === "tarjeta_credito") {
+    // En TC ambos valores deben estar normalizados a deuda.
+    return Math.round((realBalance - calculatedBalance) * 100) / 100
+  }
 export function reconciliationDelta(realBalance: number, calculatedBalance: number): number {
   return Math.round((realBalance - calculatedBalance) * 100) / 100
 }
@@ -70,6 +80,9 @@ export function reconciliationTxTypeForDelta(
   accountClass: LedgerAccountClass,
   delta: number,
 ): "income" | "expense" {
+  if (accountClass === "tarjeta_credito") {
+    return delta >= 0 ? "expense" : "income"
+  }
   if (accountClass === "ahorro") {
     return delta >= 0 ? "income" : "expense"
   }
@@ -79,4 +92,31 @@ export function reconciliationTxTypeForDelta(
 export function reconciliationTolerance(realBalance: number): number {
   const byPct = Math.abs(realBalance) * 0.001
   return Math.max(100, Math.round(byPct))
+}
+
+export function normalizeRealBalanceForReconciliation(account: {
+  account_class: string
+  credit_limit?: number | null
+}): { mode: ReconciliationRealInputMode; normalize: (input: number) => number } {
+  const accountClass = account.account_class as LedgerAccountClass
+  if (accountClass !== "tarjeta_credito") {
+    return { mode: "balance", normalize: (input) => input }
+  }
+
+  const limitRaw = Number(account.credit_limit ?? NaN)
+  const hasLimit = Number.isFinite(limitRaw) && limitRaw >= 0
+  if (!hasLimit) {
+    throw new Error("Tarjeta sin cupo definido: no se puede conciliar por disponible")
+  }
+  const limit = Math.round(limitRaw)
+
+  return {
+    mode: "available_credit",
+    normalize: (availableInput) => {
+      if (!Number.isFinite(availableInput)) throw new Error("Disponible inválido")
+      if (availableInput < 0) throw new Error("Disponible no puede ser negativo")
+      if (availableInput > limit) throw new Error("Disponible no puede superar el cupo")
+      return Math.round(limit - availableInput)
+    },
+  }
 }

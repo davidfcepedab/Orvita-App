@@ -22,6 +22,7 @@ import {
 } from "@/lib/finanzas/catalogLedgerBalances"
 import { CREDIT_CARD_THEME_IDS, payLabelForMonth } from "@/lib/finanzas/cuentasDashboard"
 import type { LedgerAccountSortable } from "@/lib/finanzas/sortLedgerAccounts"
+import { creditHealthPctFromUsage } from "@/lib/finanzas/creditHealth"
 
 function ledgerBalanceExtras(row: LedgerAccountSortable) {
   const creditosExtras = Math.max(0, Number(row.creditos_extras ?? 0))
@@ -173,7 +174,7 @@ function ledgerRowToCreditCard(
     usagePct,
     paymentDueLabel: payLabelForMonth(month, paymentDay),
     paymentDay,
-    score: Math.max(45, Math.min(92, 88 - Math.round(usagePct * 0.22))),
+    score: creditHealthPctFromUsage(usagePct),
     theme,
     cupo,
     uso,
