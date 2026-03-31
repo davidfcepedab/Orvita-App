@@ -67,17 +67,24 @@ function ledgerRowToSaving(
   row: LedgerAccountSortable,
   month: string,
   monthRows: FinanceTransaction[],
+  rollupRows: FinanceTransaction[],
+  monthEndInclusive: string,
 ): CuentasSavingsCard {
   const { expense, income } = accountMonthExpenseIncome(monthRows, month, row.id, row.label)
   const netOnAccount = income - expense
 
   const fromCatalog = ahorroSaldoOperativoFromCatalog(row)
-  const uso =
-    fromCatalog != null
-      ? fromCatalog
-      : netOnAccount > 0
-        ? Math.round(netOnAccount)
-        : 0
+  /**
+   * Sin saldo en catálogo (disponible/manual), el neto **solo del mes** no es el disponible de la cuenta
+   * (es flujo del período). Misma idea que TC: acumulado hasta fin de mes visto con `rollupRows`.
+   */
+  let usoFromMovements = 0
+  if (fromCatalog == null) {
+    const cum = accountCumulativeExpenseIncomeThrough(rollupRows, monthEndInclusive, row.id, row.label)
+    const cumNet = Math.round(cum.income - cum.expense)
+    usoFromMovements = cumNet > 0 ? cumNet : 0
+  }
+  const uso = fromCatalog != null ? fromCatalog : usoFromMovements
 
   const parts = row.label.split("|").map((p) => p.trim()).filter(Boolean)
   const institution = parts[1] ?? parts[0] ?? "Ahorros"
@@ -315,7 +322,8 @@ export function mergeLiveDashboardWithLedger(
   const loans: CuentasLoanCard[] = []
 
   for (const row of ledgerSorted) {
-    if (row.account_class === "ahorro") savings.push(ledgerRowToSaving(row, month, monthRows))
+    if (row.account_class === "ahorro")
+      savings.push(ledgerRowToSaving(row, month, monthRows, rollupRows, monthEndInclusive))
     else if (row.account_class === "tarjeta_credito")
       creditCards.push(ledgerRowToCreditCard(row, month, rollupRows, monthEndInclusive))
     else if (row.account_class === "credito") loans.push(ledgerRowToLoan(row, rollupRows, monthEndInclusive))

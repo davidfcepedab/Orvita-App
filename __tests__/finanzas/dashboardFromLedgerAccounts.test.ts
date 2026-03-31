@@ -161,6 +161,47 @@ describe("mergeLiveDashboardWithLedger", () => {
     expect(out.savings[0]!.disponibleOperativoLine).toBe(3_472_626)
   })
 
+  test("ahorro sin saldo en catálogo: disponible = acumulado de movimientos hasta fin de mes (no solo el mes)", () => {
+    const ledger: LedgerAccountSortable[] = [
+      {
+        id: "a1",
+        label: "Ahorros | Davivienda | David",
+        account_class: "ahorro",
+        nature: "activo_liquido",
+        manual_balance: 0,
+        balance_available: null,
+        sort_order: 0,
+      },
+    ]
+    const rollup: FinanceTransaction[] = [
+      {
+        id: "t0",
+        date: "2026-02-10",
+        description: "Abono",
+        amount: 3_000_000,
+        type: "income",
+        category: "Otros",
+        created_at: "2026-02-10T00:00:00Z",
+        updated_at: "2026-02-10T00:00:00Z",
+        finance_account_id: "a1",
+      },
+      {
+        id: "t1",
+        date: "2026-03-05",
+        description: "Retiro",
+        amount: 100_000,
+        type: "expense",
+        category: "Otros",
+        created_at: "2026-03-05T00:00:00Z",
+        updated_at: "2026-03-05T00:00:00Z",
+        finance_account_id: "a1",
+      },
+    ]
+    const monthOnlyMarch = rollup.filter((r) => r.date.startsWith("2026-03"))
+    const out = mergeLiveDashboardWithLedger(live, "2026-03", ledger, monthOnlyMarch, rollup)
+    expect(out.savings[0]!.amount).toBe(2_900_000)
+  })
+
   test("ahorro: manual_balance_on ancla el monto aunque haya balance_available", () => {
     const ledger: LedgerAccountSortable[] = [
       {
