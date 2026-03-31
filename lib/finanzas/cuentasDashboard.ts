@@ -17,6 +17,27 @@ export type CuentasKpis = {
   deudaCuotaMensual: number
 }
 
+/** Origen del valor mostrado tras fusionar ledger + manual + semilla. */
+export type FuenteDatosCuenta = "ledger" | "manual" | "ajuste-auto" | "seed"
+
+/** Campos opcionales del modelo de saldos (ver `accountBalanceTypes.ts`). */
+export type CuentasBalanceFields = {
+  cupo?: number
+  uso?: number
+  creditosExtras?: number
+  ajusteManual?: number
+  fechaUltimaReconciliacion?: string | null
+  /** Si viene del motor; si no, se deriva con cupo+uso+extras+ajuste. */
+  disponibleOperativoLine?: number
+  fuenteDatos?: FuenteDatosCuenta
+  /** manual − ledger (o similar) en última decisión de merge. */
+  diferenciaReconciliacion?: number
+  /** Si true, el usuario exigió que prevalezca lo guardado en manual sobre el ledger. */
+  manualFinancialOverride?: boolean
+  /** Diferencia grande: conviene revisar o aceptar automático en UI. */
+  conciliacionPendiente?: boolean
+}
+
 export type CuentasSavingsCard = {
   id: string
   institution: string
@@ -28,7 +49,7 @@ export type CuentasSavingsCard = {
   replacesSyntheticId?: string
   /** Fila Supabase `household_finance_manual_items.id` cuando aplica. */
   manualRowId?: string
-}
+} & CuentasBalanceFields
 
 export type CreditCardTheme =
   | "itau"
@@ -72,7 +93,7 @@ export type CuentasCreditCard = {
   theme: CreditCardTheme
   replacesSyntheticId?: string
   manualRowId?: string
-}
+} & CuentasBalanceFields
 
 export type CuentasLoanCard = {
   id: string
@@ -86,7 +107,7 @@ export type CuentasLoanCard = {
   abonadoMonto: number
   replacesSyntheticId?: string
   manualRowId?: string
-}
+} & CuentasBalanceFields
 
 export type CuentasDashboardPayload = {
   kpis: CuentasKpis

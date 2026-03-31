@@ -279,6 +279,14 @@ function CreditPlasticCard({
               : formatTcMovementLinkLine(linkSummary!)}
           </p>
         ) : null}
+        {card.conciliacionPendiente ? (
+          <p
+            className="mt-2 max-w-[95%] rounded-lg border border-amber-300/35 bg-black/25 px-2 py-1.5 text-[10px] font-medium leading-snug text-amber-50/95"
+            title="El saldo mostrado sigue al ledger; si el tuyo es otro, abre Editar y marca que tu cifra prevalece."
+          >
+            Hay una diferencia notable con el ledger. Pulsa Editar para revisar o indicar que tus números son los correctos.
+          </p>
+        ) : null}
       </div>
       <div className="mt-4 space-y-2">
         <div className={`h-1.5 w-full overflow-hidden rounded-full ${th.barTrack}`}>
@@ -461,6 +469,8 @@ export default function CuentasClient() {
     theme: "bbva" as CuentasCreditCard["theme"],
     replacesSyntheticId: "" as string | undefined,
     derivedFinancials: false,
+    /** Si true, al fusionar prevalecen saldo/cupo/score guardados frente al ledger. */
+    manualFinancialOverride: false,
   })
   const [loanForm, setLoanForm] = useState({
     id: "" as string | undefined,
@@ -596,7 +606,20 @@ export default function CuentasClient() {
 
   const mergedDashboard = useMemo(() => {
     if (!dashboard) return null
-    const m = mergeCuentasDashboard(dashboard, manualBundle)
+    let forceSeedReconciliation = false
+    if (typeof window !== "undefined") {
+      try {
+        if (window.localStorage.getItem("orbita:force_seed_reconciliation") === "1") {
+          forceSeedReconciliation = true
+          window.localStorage.removeItem("orbita:force_seed_reconciliation")
+        }
+        const sp = new URLSearchParams(window.location.search)
+        if (sp.get("forceSeed") === "1") forceSeedReconciliation = true
+      } catch {
+        /* ignore */
+      }
+    }
+    const m = mergeCuentasDashboard(dashboard, manualBundle, { forceSeedReconciliation })
     return {
       ...m,
       savings: dedupeSavingsCards(m.savings),
@@ -622,6 +645,9 @@ export default function CuentasClient() {
   const lockCatalogCreditIdentity = Boolean(
     creditForm.id?.startsWith("ledger-") || creditForm.replacesSyntheticId?.startsWith("ledger-"),
   )
+  /** Saldo/score solo lectura si vienen del motor y el usuario no pidió override manual. */
+  const catalogLockedMetrics =
+    creditForm.derivedFinancials && !creditForm.manualFinancialOverride
 
   useEffect(() => {
     if (activeLoan) setPayDay(5)
@@ -798,6 +824,7 @@ export default function CuentasClient() {
       theme: "bbva",
       replacesSyntheticId: undefined,
       derivedFinancials: false,
+      manualFinancialOverride: false,
     })
     setManualModal("credit")
   }
@@ -818,6 +845,7 @@ export default function CuentasClient() {
       replacesSyntheticId: c.replacesSyntheticId ?? (c.id.startsWith("manual-cc") ? undefined : c.id),
       /** Saldo/score automáticos si viene del catálogo ledger o una manual que lo sustituye. */
       derivedFinancials: tiedToLedgerCatalog ? true : !isManualOnlyCredit(c),
+      manualFinancialOverride: c.manualFinancialOverride === true,
     })
     setManualModal("credit")
   }
@@ -851,6 +879,11 @@ export default function CuentasClient() {
       theme: normalizeCreditCardTheme(creditForm.theme),
       replacesSyntheticId: rep,
       manualRowId: existing?.manualRowId,
+      manualFinancialOverride: creditForm.manualFinancialOverride,
+      cupo: existing?.cupo,
+      uso: existing?.uso,
+      creditosExtras: existing?.creditosExtras,
+      ajusteManual: existing?.ajusteManual,
     }
     const next: ManualFinanceBundle = {
       ...manualBundle,
@@ -1732,6 +1765,22 @@ export default function CuentasClient() {
               />
             )}
           </label>
+          {lockCatalogCreditIdentity ? (
+            <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-orbita-border/70 bg-orbita-surface-alt/40 px-3 py-2.5 text-sm text-orbita-primary sm:col-span-2">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={creditForm.manualFinancialOverride}
+                onChange={(e) =>
+                  setCreditForm((s) => ({ ...s, manualFinancialOverride: e.target.checked }))
+                }
+              />
+              <span className="leading-snug">
+                Este saldo, cupo y score son <strong className="font-semibold">manuales</strong> y deben
+                prevalecer sobre el ledger (conciliación automática no los sobrescribe).
+              </span>
+            </label>
+          ) : null}
           <div className="block text-sm text-orbita-primary sm:col-span-2">
             <span className="block">Tema visual</span>
             <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4" role="listbox" aria-label="Tema de la tarjeta">
@@ -1765,7 +1814,7 @@ export default function CuentasClient() {
           </div>
           <label className="block text-sm text-orbita-primary">
             Saldo
-            {creditForm.derivedFinancials ? (
+            {catalogLockedMetrics ? (
               <>
                 <div className="mt-1 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt px-3 py-2 text-sm font-semibold tabular-nums text-orbita-primary">
                   ${formatMoney(creditForm.balance)}
@@ -1803,7 +1852,7 @@ export default function CuentasClient() {
           </label>
           <label className="block text-sm text-orbita-primary">
             Score
-            {creditForm.derivedFinancials ? (
+            {catalogLockedMetrics ? (
               <>
                 <div className="mt-1 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt px-3 py-2 text-sm font-semibold tabular-nums text-orbita-primary">
                   {creditForm.score}
@@ -1820,13 +1869,20 @@ export default function CuentasClient() {
             )}
           </label>
         </div>
+
+        {/* Botón Eliminar tarjeta */}
         {creditForm.id && manualBundle.creditCards.some((c) => c.id === creditForm.id) ? (
           <div className="mt-4 border-t border-orbita-border/60 pt-3">
-            <button type="button" className={manualItemDeleteTextBtnClass} onClick={() => void deleteCredit()}>
+            <button
+              type="button"
+              className={manualItemDeleteTextBtnClass}
+              onClick={() => void deleteCredit()}
+            >
               Eliminar tarjeta
             </button>
           </div>
         ) : null}
+
         <div className="mt-4 grid grid-cols-2 gap-2">
           <button
             type="button"

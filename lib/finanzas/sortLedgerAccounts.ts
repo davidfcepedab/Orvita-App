@@ -13,6 +13,9 @@ export type LedgerAccountSortable = {
   balance_available?: number | null
   manual_balance?: number | null
   manual_balance_on?: string | null
+  creditos_extras?: number | null
+  balance_reconciliation_adjustment?: number | null
+  reconciliation_note?: string | null
 }
 
 const ACCOUNT_CLASS_RANK: Record<string, number> = {

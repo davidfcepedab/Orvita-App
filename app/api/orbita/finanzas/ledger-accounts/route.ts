@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
     const { data, error } = await auth.supabase
       .from("orbita_finance_accounts")
       .select(
-        "id, label, account_class, nature, credit_limit, balance_used, balance_available, manual_balance, manual_balance_on, owner_user_id, sort_order, updated_at",
+        "id, label, account_class, nature, credit_limit, balance_used, balance_available, manual_balance, manual_balance_on, creditos_extras, balance_reconciliation_adjustment, reconciliation_note, owner_user_id, sort_order, updated_at",
       )
       .eq("household_id", householdId)
       .is("deleted_at", null)
@@ -76,10 +76,71 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Usuario sin hogar asignado" }, { status: 403 })
     }
 
-    const body = (await req.json()) as { orderedIds?: unknown }
+    const body = (await req.json()) as Record<string, unknown>
+    const now = new Date().toISOString()
+
+    if (typeof body.accountId === "string" && body.accountId.trim()) {
+      const accountId = body.accountId.trim()
+      const { data: row, error: oneErr } = await auth.supabase
+        .from("orbita_finance_accounts")
+        .select("id")
+        .eq("id", accountId)
+        .eq("household_id", householdId)
+        .is("deleted_at", null)
+        .maybeSingle()
+      if (oneErr) throw oneErr
+      if (!row) {
+        return NextResponse.json({ success: false, error: "Cuenta no encontrada" }, { status: 404 })
+      }
+
+      const patch: Record<string, unknown> = { updated_at: now }
+      if (body.manual_balance != null && Number.isFinite(Number(body.manual_balance))) {
+        patch.manual_balance = Number(body.manual_balance)
+      }
+      if (typeof body.manual_balance_on === "string" && body.manual_balance_on.trim()) {
+        patch.manual_balance_on = body.manual_balance_on.trim().slice(0, 10)
+      }
+      if (body.creditos_extras != null && Number.isFinite(Number(body.creditos_extras))) {
+        patch.creditos_extras = Math.max(0, Number(body.creditos_extras))
+      }
+      if (body.balance_reconciliation_adjustment != null && Number.isFinite(Number(body.balance_reconciliation_adjustment))) {
+        patch.balance_reconciliation_adjustment = Number(body.balance_reconciliation_adjustment)
+      }
+      if (typeof body.reconciliation_note === "string") {
+        patch.reconciliation_note = body.reconciliation_note.slice(0, 2000) || null
+      }
+
+      if (Object.keys(patch).length <= 1) {
+        return NextResponse.json(
+          { success: false, error: "Nada que actualizar: envía manual_balance, fechas o ajustes." },
+          { status: 400 },
+        )
+      }
+
+      const { error: upErr } = await auth.supabase
+        .from("orbita_finance_accounts")
+        .update(patch)
+        .eq("id", accountId)
+        .eq("household_id", householdId)
+      if (upErr) {
+        if (/column|does not exist|PGRST204/i.test(upErr.message)) {
+          return NextResponse.json(
+            {
+              success: false,
+              error:
+                "Migración pendiente: aplica supabase/migrations con creditos_extras y balance_reconciliation_adjustment.",
+            },
+            { status: 503 },
+          )
+        }
+        throw upErr
+      }
+      return NextResponse.json({ success: true })
+    }
+
     if (!Array.isArray(body.orderedIds) || body.orderedIds.length === 0) {
       return NextResponse.json(
-        { success: false, error: "orderedIds requerido (array no vacío de UUID)" },
+        { success: false, error: "orderedIds o accountId requerido" },
         { status: 400 },
       )
     }
@@ -108,7 +169,6 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
-    const now = new Date().toISOString()
     for (let i = 0; i < orderedIds.length; i++) {
       const { error: upErr } = await auth.supabase
         .from("orbita_finance_accounts")
@@ -122,6 +182,6 @@ export async function PATCH(req: NextRequest) {
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Error"
     console.error("LEDGER_ACCOUNTS PATCH:", message)
-    return NextResponse.json({ success: false, error: "Error guardando orden" }, { status: 500 })
+    return NextResponse.json({ success: false, error: "Error guardando cuentas ledger" }, { status: 500 })
   }
 }

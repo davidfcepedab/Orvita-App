@@ -66,7 +66,7 @@ describe("mergeCuentasDashboard", () => {
     )
   })
 
-  test("no sobrescribe un manual con balance positivo", () => {
+  test("gran diferencia: muestra saldo del ledger y marca conciliación pendiente", () => {
     const base: CuentasDashboardPayload = {
       kpis: {
         totalLiquidez: 0,
@@ -114,7 +114,63 @@ describe("mergeCuentasDashboard", () => {
       ],
     }
     const out = mergeCuentasDashboard(base, manual)
+    expect(out.creditCards[0]!.balance).toBe(9_000_000)
+    expect(out.creditCards[0]!.conciliacionPendiente).toBe(true)
+    expect(out.creditCards[0]!.fuenteDatos).toBe("ledger")
+  })
+
+  test("manualFinancialOverride: conserva saldo manual aunque el ledger difiera", () => {
+    const base: CuentasDashboardPayload = {
+      kpis: {
+        totalLiquidez: 0,
+        liquidezTrendPct: 0,
+        creditoDisponible: 0,
+        creditoUsoPromedioPct: 0,
+        deudaTotal: 0,
+        deudaCuotaMensual: 0,
+      },
+      savings: [],
+      creditCards: [
+        {
+          id: "ledger-c1",
+          bankLabel: "Itau",
+          network: "Visa",
+          last4: "9485",
+          balance: 9_000_000,
+          limit: 19_400_000,
+          usagePct: 46,
+          paymentDueLabel: "Pago: Abr 5",
+          paymentDay: 5,
+          score: 70,
+          theme: "itau",
+        },
+      ],
+      loans: [],
+    }
+    const manual: ManualFinanceBundle = {
+      ...emptyManual(),
+      creditCards: [
+        {
+          id: "manual-cc-xyz",
+          bankLabel: "Itau",
+          network: "Visa",
+          last4: "9485",
+          balance: 500_000,
+          limit: 19_400_000,
+          usagePct: 3,
+          paymentDueLabel: "Pago: Abr 5",
+          paymentDay: 5,
+          score: 88,
+          theme: "itau",
+          replacesSyntheticId: "ledger-c1",
+          manualFinancialOverride: true,
+        },
+      ],
+    }
+    const out = mergeCuentasDashboard(base, manual)
     expect(out.creditCards[0]!.balance).toBe(500_000)
+    expect(out.creditCards[0]!.fuenteDatos).toBe("manual")
+    expect(out.creditCards[0]!.conciliacionPendiente).toBe(false)
   })
 
   test("oculta ledger con replacesSyntheticId solo UUID (sin prefijo ledger-)", () => {

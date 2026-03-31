@@ -1,16 +1,27 @@
 "use client"
 
-import { createContext, useContext, useState, ReactNode, useEffect } from "react"
+import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from "react"
 
-interface FinanceContextType {
+export interface FinanceContextType {
   month: string
   setMonth: (month: string) => void
+  /**
+   * Contador opcional para que vistas de Capital invaliden datos tras reconciliar u otras acciones.
+   * Ej.: `touchCapitalData()` tras guardar en `orbita_finance_accounts`.
+   */
+  capitalDataEpoch: number
+  touchCapitalData: () => void
 }
 
 const FinanceContext = createContext<FinanceContextType | null>(null)
 
 export function FinanceProvider({ children }: { children: ReactNode }) {
   const [month, setMonth] = useState<string>("")
+  const [capitalDataEpoch, setCapitalDataEpoch] = useState(0)
+
+  const touchCapitalData = useCallback(() => {
+    setCapitalDataEpoch((n) => n + 1)
+  }, [])
 
   // Inicializar con el mes actual
   useEffect(() => {
@@ -20,7 +31,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <FinanceContext.Provider value={{ month, setMonth }}>
+    <FinanceContext.Provider value={{ month, setMonth, capitalDataEpoch, touchCapitalData }}>
       {children}
     </FinanceContext.Provider>
   )

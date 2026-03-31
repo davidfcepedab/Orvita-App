@@ -83,7 +83,7 @@ export async function GET(req: NextRequest) {
     const { data: ledgerRows, error: ledgerErr } = await auth.supabase
       .from("orbita_finance_accounts")
       .select(
-        "id, label, account_class, nature, credit_limit, balance_used, balance_available, manual_balance, manual_balance_on, owner_user_id, sort_order, updated_at",
+        "id, label, account_class, nature, credit_limit, balance_used, balance_available, manual_balance, manual_balance_on, creditos_extras, balance_reconciliation_adjustment, reconciliation_note, owner_user_id, sort_order, updated_at",
       )
       .eq("household_id", householdId)
       .is("deleted_at", null)

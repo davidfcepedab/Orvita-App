@@ -15,8 +15,16 @@ import type {
   CuentasSavingsCard,
   CreditCardTheme,
 } from "@/lib/finanzas/cuentasDashboard"
+import { computeDisponibleCuenta } from "@/lib/finanzas/accountBalanceTypes"
 import { CREDIT_CARD_THEME_IDS, payLabelForMonth } from "@/lib/finanzas/cuentasDashboard"
 import type { LedgerAccountSortable } from "@/lib/finanzas/sortLedgerAccounts"
+
+function ledgerBalanceExtras(row: LedgerAccountSortable) {
+  const creditosExtras = Math.max(0, Number(row.creditos_extras ?? 0))
+  const ajusteManual = Number(row.balance_reconciliation_adjustment ?? 0)
+  const fechaUltimaReconciliacion = row.manual_balance_on?.trim() || null
+  return { creditosExtras, ajusteManual, fechaUltimaReconciliacion }
+}
 
 export function parseTcLabel(label: string): { bankLabel: string; network: string; last4: string } {
   const parts = label.split("|").map((p) => p.trim()).filter(Boolean)
@@ -88,6 +96,11 @@ function ledgerRowToSaving(
       : 0.4
   const netForHealth = matched.length > 0 ? acctNet : householdNet
 
+  const { creditosExtras, ajusteManual, fechaUltimaReconciliacion } = ledgerBalanceExtras(row)
+  const cupo = 0
+  const uso = amount
+  const disponibleOperativoLine = computeDisponibleCuenta(cupo, uso, creditosExtras, ajusteManual)
+
   return {
     id: `ledger-${row.id}`,
     institution,
@@ -95,6 +108,12 @@ function ledgerRowToSaving(
     amount,
     healthPct: Math.min(96, Math.max(52, Math.round(74 - ratio * 22 + (netForHealth >= 0 ? 10 : -8)))),
     trendUp,
+    cupo,
+    uso,
+    creditosExtras,
+    ajusteManual,
+    fechaUltimaReconciliacion,
+    disponibleOperativoLine,
   }
 }
 
@@ -119,6 +138,10 @@ function ledgerRowToCreditCard(
   const parsed = parseTcLabel(row.label)
   const theme = inferCreditTheme(parsed.bankLabel + " " + row.label, row.id)
   const paymentDay = 5
+  const { creditosExtras, ajusteManual, fechaUltimaReconciliacion } = ledgerBalanceExtras(row)
+  const cupo = limit
+  const uso = -balance
+  const disponibleOperativoLine = computeDisponibleCuenta(cupo, uso, creditosExtras, ajusteManual)
   return {
     id: `ledger-${row.id}`,
     bankLabel: parsed.bankLabel,
@@ -131,6 +154,12 @@ function ledgerRowToCreditCard(
     paymentDay,
     score: Math.max(45, Math.min(92, 88 - Math.round(usagePct * 0.22))),
     theme,
+    cupo,
+    uso,
+    creditosExtras,
+    ajusteManual,
+    fechaUltimaReconciliacion,
+    disponibleOperativoLine,
   }
 }
 
@@ -168,6 +197,11 @@ function ledgerRowToLoan(
       .slice(1)
       .join(" · ") || row.label.trim()
 
+  const { creditosExtras, ajusteManual, fechaUltimaReconciliacion } = ledgerBalanceExtras(row)
+  const cupo = montoOriginal
+  const uso = -saldoPendiente
+  const disponibleOperativoLine = computeDisponibleCuenta(cupo, uso, creditosExtras, ajusteManual)
+
   return {
     id: `ledger-${row.id}`,
     title,
@@ -178,6 +212,12 @@ function ledgerRowToLoan(
     proximoPagoLabel: "Próximo ciclo",
     montoOriginal,
     abonadoMonto,
+    cupo,
+    uso,
+    creditosExtras,
+    ajusteManual,
+    fechaUltimaReconciliacion,
+    disponibleOperativoLine,
   }
 }
 

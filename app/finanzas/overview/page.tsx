@@ -146,27 +146,32 @@ export default function FinanzasOverview() {
   const [lsCommitments, setLsCommitments] = useState<FlowCommitment[]>([])
   const fetchSeq = useRef(0)
 
+  // === CORREGIDO: Manejo seguro de compromisos locales ===
   useEffect(() => {
     if (supabaseEnabled) {
       if (data) setLsCommitments(data.flowCommitments ?? [])
       return
     }
+
     const raw = readFlowCommitmentsFromLocalStorage()
+
     if (!month) {
       setLsCommitments(raw)
       return
     }
+
     setLsCommitments(
       raw.map((c) => {
-        const fallbackDay = Number(c.date.slice(8, 10)) || 1
+        const fallbackDay = Number(c.date?.slice(8, 10)) || 1
         const dueDay = c.dueDay ?? fallbackDay
+
         return {
           ...c,
           dueDay,
           subcategory: c.subcategory ?? "",
           date: isoDateInMonth(month, dueDay),
         }
-      }),
+      })
     )
   }, [month, data, supabaseEnabled])
 
