@@ -23,7 +23,10 @@ En **Settings → Branches → Branch protection rules**, aplica reglas a **`pro
 
 ### Migración desde `main` / `productive`
 
-Si el remoto aún tiene `main` como rama por defecto:
+En el remoto puede quedar **`main`** mientras siga siendo la **rama por defecto** del repositorio (GitHub no permite borrarla hasta entonces).
 
-1. En GitHub: **Settings → General → Default branch** → cámbiala a **`production`** (debe existir en el remoto).
-2. Elimina ramas obsoletas (`main`, `productive`, ramas de experimento) con `git push origin --delete <rama>`.
+1. **Settings → General → Default branch** → elige **`production`** y confirma.
+2. Borra la rama antigua: `git push origin --delete main`.
+3. Actualiza tu clon: `git fetch origin --prune` y, si quieres trabajar en preview, `git checkout -b preview origin/preview`.
+
+Tras eso solo deberían quedar en `origin` las ramas **`production`**, **`preview`** y **`built`** (más tags si los usas).

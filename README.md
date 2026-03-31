@@ -48,4 +48,5 @@ npm run release:sync       # alinea built con production y hace push
 
 ## Deploy
 
-Producción en **Vercel** apuntando a la rama **`production`** y dominio **https://orvita.app**.
+- **Vercel:** rama de producción = **`production`** → dominio **https://orvita.app**.
+- **GitHub:** si aún existe **`main`**, cámbiala como rama por defecto a **`production`** y bórrala (ver [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md)).
