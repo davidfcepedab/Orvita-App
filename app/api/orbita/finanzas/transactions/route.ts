@@ -7,9 +7,19 @@ import { mockTransactionsForMonth } from "@/lib/finanzas/mockFinancePayloads"
 import { monthBounds } from "@/lib/finanzas/monthRange"
 import type { FinanceTransaction, FinanceTxType } from "@/lib/finanzas/types"
 import { getHouseholdId } from "@/lib/households/getHouseholdId"
+import { formatPostgrestError } from "@/lib/finanzas/subcategoryCatalog"
 import { getTransactionsByRange } from "@/lib/services/finanzasService"
 
 export const runtime = "nodejs"
+
+function isLikelySupabaseRlsDenial(err: unknown): boolean {
+  const s = formatPostgrestError(err).toLowerCase()
+  return (
+    s.includes("row-level security") ||
+    s.includes("violates row-level security") ||
+    (s.includes("policy") && s.includes("violat"))
+  )
+}
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -263,7 +273,17 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Error"
-    console.error("TRANSACTIONS DELETE:", message)
+    console.error("TRANSACTIONS DELETE:", message, error)
+    if (isLikelySupabaseRlsDenial(error)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "La base de datos rechazó el borrado (RLS). Ejecuta en Supabase las migraciones del audit: 20260401130100 y 20260403120000 (supabase db push o SQL Editor).",
+        },
+        { status: 403 },
+      )
+    }
     return NextResponse.json({ success: false, error: "Error eliminando movimiento" }, { status: 500 })
   }
 }
@@ -349,7 +369,17 @@ export async function POST(req: NextRequest) {
     })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Error"
-    console.error("TRANSACTIONS POST bulk:", message)
+    console.error("TRANSACTIONS POST bulk:", message, error)
+    if (isLikelySupabaseRlsDenial(error)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "La base de datos rechazó el borrado (RLS). Ejecuta en Supabase las migraciones del audit: 20260401130100 y 20260403120000.",
+        },
+        { status: 403 },
+      )
+    }
     return NextResponse.json({ success: false, error: "Error eliminando movimientos" }, { status: 500 })
   }
 }
