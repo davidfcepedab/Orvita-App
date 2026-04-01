@@ -49,33 +49,98 @@ export function filterMonth(rows: FinanceTransaction[], month: string) {
   return rows.filter((r) => r.date >= b.startStr && r.date <= b.endStr)
 }
 
+function parseLocalDateFromIso(iso: string): Date | null {
+  if (!iso || iso.length < 10) return null
+  const y = Number(iso.slice(0, 4))
+  const m = Number(iso.slice(5, 7)) - 1
+  const d = Number(iso.slice(8, 10))
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null
+  return new Date(y, m, d)
+}
+
+function formatIsoDateLocal(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, "0")
+  const day = String(d.getDate()).padStart(2, "0")
+  return `${y}-${m}-${day}`
+}
+
+/** Lunes (inicio semana ISO) de la semana que contiene `d` en hora local. */
+export function startOfIsoWeekContaining(d: Date): Date {
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+  const day = x.getDay()
+  const diff = day === 0 ? -6 : 1 - day
+  x.setDate(x.getDate() + diff)
+  return x
+}
+
+function labelWeekRangeEs(weekStart: Date, weekEnd: Date): string {
+  const a = weekStart.toLocaleDateString("es-CO", { day: "numeric", month: "short" })
+  const b = weekEnd.toLocaleDateString("es-CO", { day: "numeric", month: "short" })
+  return `${a}–${b}`.replace(/\s+/g, " ").trim()
+}
+
+export type BuildWeeklyBucketsOptions = {
+  /**
+   * Movimientos para ventana de semanas (p. ej. varios meses). Si no se pasa, se usa `rows`.
+   * Necesario cuando las 4 semanas corridas cruzan el inicio del mes seleccionado.
+   */
+  allRowsForWeekWindow?: FinanceTransaction[]
+}
+
+/**
+ * Cuatro semanas calendario consecutivas (lun–dom), siempre 4 puntos (ceros si no hay movimientos).
+ * La última semana es la que contiene la fecha de referencia: último movimiento del mes seleccionado,
+ * o fin de mes si no hubo movimientos en ese mes.
+ */
 export function buildWeeklyBuckets(
   month: string,
   rows: FinanceTransaction[],
   expenseFn: (tx: FinanceTransaction) => number = expenseAmount,
+  options?: BuildWeeklyBucketsOptions,
 ): WeeklyBucketRow[] {
-  const inMonth = filterMonth(rows, month)
-  const bucketTotals = new Map<number, { ing: number; exp: number }>()
-  for (let w = 1; w <= 5; w += 1) bucketTotals.set(w, { ing: 0, exp: 0 })
+  const bounds = monthBounds(month)
+  if (!bounds) return []
 
+  const inMonth = filterMonth(rows, month)
+  let refDateStr = bounds.endStr
   for (const tx of inMonth) {
-    const day = Number(tx.date.slice(8, 10))
-    if (!Number.isFinite(day) || day < 1) continue
-    const w = Math.min(5, Math.ceil(day / 7))
-    const b = bucketTotals.get(w)!
-    b.ing += incomeAmount(tx)
-    b.exp += expenseFn(tx)
+    if (tx.date > refDateStr) refDateStr = tx.date
   }
 
-  return [1, 2, 3, 4, 5].map((w) => {
-    const b = bucketTotals.get(w)!
-    return {
-      month: `S${w}`,
-      ingresos: b.ing,
-      gasto_operativo: b.exp,
-      flujo: b.ing - b.exp,
+  const refD = parseLocalDateFromIso(refDateStr)
+  if (!refD) return []
+
+  const week4Monday = startOfIsoWeekContaining(refD)
+  const pool = options?.allRowsForWeekWindow ?? rows
+
+  const out: WeeklyBucketRow[] = []
+  for (let i = 0; i < 4; i += 1) {
+    const ws = new Date(week4Monday)
+    ws.setDate(week4Monday.getDate() + (i - 3) * 7)
+    const we = new Date(ws)
+    we.setDate(ws.getDate() + 6)
+    const wsStr = formatIsoDateLocal(ws)
+    const weStr = formatIsoDateLocal(we)
+
+    let ing = 0
+    let exp = 0
+    for (const tx of pool) {
+      if (tx.date >= wsStr && tx.date <= weStr) {
+        ing += incomeAmount(tx)
+        exp += expenseFn(tx)
+      }
     }
-  }).filter((row) => row.ingresos > 0 || row.gasto_operativo > 0)
+
+    out.push({
+      month: labelWeekRangeEs(ws, we),
+      ingresos: ing,
+      gasto_operativo: exp,
+      flujo: ing - exp,
+    })
+  }
+
+  return out
 }
 
 export function buildStructuralCategories(

@@ -492,109 +492,121 @@ export default function TransactionsPageClient() {
   }
 
   return (
-    <div className="min-w-0 space-y-6 sm:space-y-8">
-      <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end">
-        {supabaseEnabled ? (
-          <label className="grid min-w-0 gap-1.5 sm:max-w-md lg:flex-1">
-            <span className="text-[11px] uppercase tracking-[0.14em] text-orbita-secondary">Cuenta (ledger)</span>
-            <select
-              value={financeAccountId}
-              onChange={(e) => setFinanceAccountId(e.target.value)}
-              disabled={contentLoading}
-              className="min-h-11 w-full rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface px-3 py-2 text-sm text-orbita-primary disabled:cursor-wait disabled:opacity-60"
-              aria-label="Filtrar por cuenta"
-            >
-              <option value="">Todas las cuentas</option>
-              {ledgerAccounts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
-        <label className="grid min-w-0 gap-1.5 sm:max-w-xs">
-          <span className="text-[11px] uppercase tracking-[0.14em] text-orbita-secondary">Tipo</span>
-          <select
-            value={tipoFilterUrl}
-            onChange={(e) => setTipoFilter(e.target.value as "" | "ingreso" | "gasto")}
-            disabled={contentLoading}
-            className="min-h-11 w-full rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface px-3 py-2 text-sm text-orbita-primary disabled:cursor-wait disabled:opacity-60"
-            aria-label="Filtrar por ingreso o gasto"
-          >
-            <option value="">Todos</option>
-            <option value="ingreso">Ingreso</option>
-            <option value="gasto">Gasto</option>
-          </select>
-        </label>
-        <div className="flex min-w-0 flex-col gap-1 sm:max-w-xl">
-          <span className="text-[11px] uppercase tracking-[0.14em] text-orbita-secondary">CSV</span>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={templateDownloading}
-              onClick={() => void downloadTemplateXlsx()}
-              className="min-h-11 rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface-alt px-3 py-2 text-xs font-semibold text-orbita-primary transition enabled:hover:bg-orbita-surface disabled:cursor-wait disabled:opacity-60"
-            >
-              {templateDownloading ? "Generando…" : "Descargar plantilla (.xlsx)"}
-            </button>
-            {supabaseEnabled ? (
-              <>
-                <input
-                  ref={csvFileInputRef}
-                  type="file"
-                  accept=".csv,text/csv,text/plain"
-                  className="hidden"
-                  aria-hidden
-                  tabIndex={-1}
-                  onChange={(e) => {
-                    const f = e.target.files?.[0]
-                    e.target.value = ""
-                    if (f) void importCsvFile(f)
-                  }}
-                />
-                <button
-                  type="button"
-                  disabled={importingCsv || contentLoading || !periodReady}
-                  onClick={() => csvFileInputRef.current?.click()}
-                  className="min-h-11 rounded-[var(--radius-button)] border border-emerald-600/40 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-800 transition enabled:hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50 dark:text-emerald-300"
-                >
-                  {importingCsv ? "Importando…" : "Importar CSV"}
-                </button>
-              </>
-            ) : null}
-            <button
-              type="button"
-              disabled={!contentReady || transactions.length === 0}
-              onClick={() => {
-                const rows = transactions.map((tx) => {
-                  const tipoResolved = tx.tipo ?? (tx.monto > 0 ? ("income" as const) : ("expense" as const))
-                  return {
-                    fecha: tx.fecha,
-                    tipoLabel: tipoResolved === "income" ? ("Ingreso" as const) : ("Gasto" as const),
-                    categoria: tx.categoria,
-                    subcategoria: tx.subcategoria,
-                    cuenta: (tx.cuenta ?? "").trim(),
-                    concepto: tx.descripcion,
-                    monto: tx.monto,
-                  }
-                })
-                const csv = buildTransactionsExportCsv(rows)
-                const suf = tipoFilterUrl ? `-${tipoFilterUrl}` : "-todos"
-                downloadCsv(`movimientos-${month}${suf}.csv`, csv)
-              }}
-              className="min-h-11 rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface px-3 py-2 text-xs font-semibold text-orbita-primary transition enabled:hover:bg-orbita-surface-alt disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Exportar vista actual
-            </button>
-          </div>
-          <p className="text-[10px] leading-snug text-orbita-secondary">
-            La plantilla Excel incluye desplegables; para importar aquí, exporta esa hoja como CSV (UTF-8) con la misma
-            cabecera que «Exportar vista actual», o usa el CSV exportado. Máximo 300 filas por carga; se crean cuentas
-            nuevas si la etiqueta no existía.
+    <div className="min-w-0 space-y-5 sm:space-y-7">
+      <Card className="min-w-0 overflow-hidden p-0">
+        <div className="border-b border-orbita-border/70 bg-orbita-surface-alt/30 px-4 py-3 sm:px-5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">Filtros y datos</p>
+          <p className="mt-0.5 text-[11px] leading-snug text-orbita-secondary/90">
+            Ajusta la vista del periodo; importa o exporta sin salir de la pantalla.
           </p>
         </div>
-      </div>
+        <div className="grid gap-5 px-4 py-4 sm:gap-6 sm:px-5 sm:py-5">
+          <div
+            className={`grid min-w-0 grid-cols-1 gap-4 sm:gap-5 ${supabaseEnabled ? "lg:grid-cols-12 lg:items-end lg:gap-x-5" : "lg:grid-cols-2 lg:items-end lg:gap-x-5"}`}
+          >
+            {supabaseEnabled ? (
+              <label className="grid min-w-0 gap-1.5 lg:col-span-5">
+                <span className="text-[11px] uppercase tracking-[0.14em] text-orbita-secondary">Cuenta (ledger)</span>
+                <select
+                  value={financeAccountId}
+                  onChange={(e) => setFinanceAccountId(e.target.value)}
+                  disabled={contentLoading}
+                  className="min-h-11 w-full min-w-0 rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface px-3 py-2 text-sm text-orbita-primary disabled:cursor-wait disabled:opacity-60"
+                  aria-label="Filtrar por cuenta"
+                >
+                  <option value="">Todas las cuentas</option>
+                  {ledgerAccounts.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+            <label className={`grid min-w-0 gap-1.5 ${supabaseEnabled ? "lg:col-span-2" : ""}`}>
+              <span className="text-[11px] uppercase tracking-[0.14em] text-orbita-secondary">Tipo</span>
+              <select
+                value={tipoFilterUrl}
+                onChange={(e) => setTipoFilter(e.target.value as "" | "ingreso" | "gasto")}
+                disabled={contentLoading}
+                className="min-h-11 w-full max-w-full rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface px-3 py-2 text-sm text-orbita-primary disabled:cursor-wait disabled:opacity-60 sm:max-w-xs lg:max-w-none"
+                aria-label="Filtrar por ingreso o gasto"
+              >
+                <option value="">Todos</option>
+                <option value="ingreso">Ingreso</option>
+                <option value="gasto">Gasto</option>
+              </select>
+            </label>
+            <div className={`grid min-w-0 gap-2 ${supabaseEnabled ? "lg:col-span-5" : "lg:col-span-1"}`}>
+              <span className="text-[11px] uppercase tracking-[0.14em] text-orbita-secondary">Importar / exportar</span>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={templateDownloading}
+                  onClick={() => void downloadTemplateXlsx()}
+                  className="min-h-10 flex-1 rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface-alt px-3 py-2 text-center text-xs font-semibold text-orbita-primary transition [flex-basis:12rem] enabled:hover:bg-orbita-surface disabled:cursor-wait disabled:opacity-60 sm:flex-none sm:min-w-0"
+                >
+                  {templateDownloading ? "Generando…" : "Plantilla (.xlsx)"}
+                </button>
+                {supabaseEnabled ? (
+                  <>
+                    <input
+                      ref={csvFileInputRef}
+                      type="file"
+                      accept=".csv,text/csv,text/plain"
+                      className="hidden"
+                      aria-hidden
+                      tabIndex={-1}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0]
+                        e.target.value = ""
+                        if (f) void importCsvFile(f)
+                      }}
+                    />
+                    <button
+                      type="button"
+                      disabled={importingCsv || contentLoading || !periodReady}
+                      onClick={() => csvFileInputRef.current?.click()}
+                      className="min-h-10 flex-1 rounded-[var(--radius-button)] border border-emerald-600/40 bg-emerald-500/10 px-3 py-2 text-center text-xs font-semibold text-emerald-800 transition [flex-basis:10rem] enabled:hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50 dark:text-emerald-300 sm:flex-none"
+                    >
+                      {importingCsv ? "Importando…" : "Importar CSV"}
+                    </button>
+                  </>
+                ) : null}
+                <button
+                  type="button"
+                  disabled={!contentReady || transactions.length === 0}
+                  onClick={() => {
+                    const rows = transactions.map((tx) => {
+                      const tipoResolved = tx.tipo ?? (tx.monto > 0 ? ("income" as const) : ("expense" as const))
+                      return {
+                        fecha: tx.fecha,
+                        tipoLabel: tipoResolved === "income" ? ("Ingreso" as const) : ("Gasto" as const),
+                        categoria: tx.categoria,
+                        subcategoria: tx.subcategoria,
+                        cuenta: (tx.cuenta ?? "").trim(),
+                        concepto: tx.descripcion,
+                        monto: tx.monto,
+                      }
+                    })
+                    const csv = buildTransactionsExportCsv(rows)
+                    const suf = tipoFilterUrl ? `-${tipoFilterUrl}` : "-todos"
+                    downloadCsv(`movimientos-${month}${suf}.csv`, csv)
+                  }}
+                  className="min-h-10 w-full rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface px-3 py-2 text-xs font-semibold text-orbita-primary transition enabled:hover:bg-orbita-surface-alt disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:flex-1 [flex-basis:11rem]"
+                >
+                  Exportar vista
+                </button>
+              </div>
+              <p className="text-[10px] leading-relaxed text-orbita-secondary [text-wrap:pretty]">
+                La plantilla Excel incluye desplegables; para importar aquí, exporta esa hoja como CSV (UTF-8) con la
+                misma cabecera que «Exportar vista», o usa el CSV exportado. Máximo 300 filas por carga; se crean
+                cuentas nuevas si la etiqueta no existía.
+              </p>
+            </div>
+          </div>
+        </div>
+      </Card>
 
       {patchErr ? (
         <p className="text-xs text-rose-600" role="status">
@@ -626,9 +638,13 @@ export default function TransactionsPageClient() {
         </div>
       ) : contentLoading ? (
         <div className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3">
+          <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
             {[0, 1, 2].map((k) => (
-              <Card key={k} hover className="min-w-0 animate-pulse p-4 sm:p-8">
+              <Card
+                key={k}
+                hover
+                className={`min-w-0 animate-pulse p-4 sm:p-6 ${k === 2 ? "sm:col-span-2 xl:col-span-1" : ""}`}
+              >
                 <div className="h-3 w-24 rounded bg-orbita-border" />
                 <div className="mt-3 h-8 w-32 rounded bg-orbita-border" />
               </Card>
@@ -644,37 +660,39 @@ export default function TransactionsPageClient() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3">
-            <Card hover className="min-w-0 p-4 sm:p-8">
-              <div className="grid min-w-0 gap-2">
+          <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
+            <Card hover className="min-w-0 p-4 sm:p-6">
+              <div className="grid min-w-0 gap-1.5 sm:gap-2">
                 <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Total movimientos</p>
-                <p className="break-words text-2xl font-semibold tabular-nums text-orbita-primary">
+                <p className="break-words text-xl font-semibold tabular-nums text-orbita-primary sm:text-2xl">
                   ${Math.abs(subtotal).toLocaleString("es-CO", {
                     maximumFractionDigits: 0,
                   })}
                 </p>
-                <p className="text-xs text-orbita-secondary">Balance del periodo</p>
+                <p className="text-[11px] text-orbita-secondary sm:text-xs">Balance del periodo</p>
               </div>
             </Card>
-            <Card hover className="min-w-0 p-4 sm:p-8">
-              <div className="grid min-w-0 gap-2">
+            <Card hover className="min-w-0 p-4 sm:p-6">
+              <div className="grid min-w-0 gap-1.5 sm:gap-2">
                 <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Variación mensual</p>
                 <p
-                  className={`break-words text-2xl font-semibold tabular-nums ${deltaValue >= 0 ? "text-emerald-600" : "text-rose-600"}`}
+                  className={`break-words text-xl font-semibold tabular-nums sm:text-2xl ${deltaValue >= 0 ? "text-emerald-600" : "text-rose-600"}`}
                 >
                   {deltaValue >= 0 ? "+" : "-"}$
                   {Math.abs(deltaValue).toLocaleString("es-CO", {
                     maximumFractionDigits: 0,
                   })}
                 </p>
-                <p className="text-xs text-orbita-secondary">vs mes anterior</p>
+                <p className="text-[11px] text-orbita-secondary sm:text-xs">vs mes anterior</p>
               </div>
             </Card>
-            <Card hover className="min-w-0 p-4 sm:p-8">
-              <div className="grid min-w-0 gap-2">
+            <Card hover className="min-w-0 p-4 sm:p-6 sm:col-span-2 xl:col-span-1">
+              <div className="grid min-w-0 gap-1.5 sm:gap-2">
                 <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Transacciones</p>
-                <p className="text-2xl font-semibold tabular-nums text-orbita-primary">{transactions.length}</p>
-                <p className="text-xs text-orbita-secondary">Total del periodo</p>
+                <p className="text-xl font-semibold tabular-nums text-orbita-primary sm:text-2xl">
+                  {transactions.length}
+                </p>
+                <p className="text-[11px] text-orbita-secondary sm:text-xs">Total del periodo</p>
               </div>
             </Card>
           </div>
@@ -684,10 +702,10 @@ export default function TransactionsPageClient() {
               <p>No hay movimientos para esta selección</p>
             </div>
           ) : (
-            <div className="min-w-0 max-w-full space-y-2 overflow-hidden rounded-lg border border-orbita-border bg-[var(--color-surface)] p-2 sm:p-3">
+            <div className="min-w-0 max-w-full overflow-hidden rounded-[var(--radius-card)] border border-orbita-border bg-[var(--color-surface)] shadow-sm">
               {supabaseEnabled && reconciliationRowIds.length > 0 ? (
-                <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-                  <p className="text-[11px] text-orbita-secondary">
+                <div className="flex flex-col gap-2 border-b border-orbita-border/80 bg-orbita-surface-alt/45 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-4">
+                  <p className="min-w-0 text-[11px] leading-snug text-orbita-secondary [text-wrap:pretty]">
                     {selectedIds.size > 0
                       ? `${selectedIds.size} ajuste(s) de conciliación seleccionado(s)`
                       : "Selecciona ajustes de conciliación para borrar varios a la vez"}
@@ -696,14 +714,14 @@ export default function TransactionsPageClient() {
                     type="button"
                     disabled={selectedIds.size === 0 || bulkDeleting}
                     onClick={() => void bulkDeleteReconciliation()}
-                    className="rounded-full border border-rose-500/50 bg-rose-500/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-rose-700 transition-colors hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-50 dark:text-rose-300"
+                    className="shrink-0 self-start rounded-full border border-rose-500/50 bg-rose-500/10 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-rose-700 transition-colors hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-50 sm:self-auto dark:text-rose-300"
                   >
                     {bulkDeleting ? "Eliminando…" : "Eliminar seleccionados"}
                   </button>
                 </div>
               ) : null}
               <div className="max-h-[min(70vh,56rem)] min-w-0 overflow-auto overscroll-contain [-webkit-overflow-scrolling:touch] touch-pan-x touch-pan-y">
-                <table className="w-full min-w-[720px] table-fixed border-collapse text-left text-[10px] sm:min-w-0 sm:text-[11px]">
+                <table className="w-full min-w-[680px] table-fixed border-collapse text-left text-[10px] sm:text-[11px]">
                   <colgroup>
                     {supabaseEnabled ? <col style={{ width: "2.25rem" }} /> : null}
                     <col style={{ width: "11%" }} />

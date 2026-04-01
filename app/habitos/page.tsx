@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState, type FormEvent } from "react"
+import { useMemo, useState, type CSSProperties, type FormEvent } from "react"
 import { Card } from "@/src/components/ui/Card"
 import {
   Activity,
@@ -53,6 +53,45 @@ const STACK_BLOCK_META: Record<
   tarde: { title: "Tarde", subtitle: "12:00 – 17:59", Icon: Sunset },
   noche: { title: "Noche", subtitle: "A partir de 18:00", Icon: Moon },
   sin_hora: { title: "Sin hora definida", subtitle: "Añade trigger u hora para ordenar el bloque", Icon: Clock },
+}
+
+/** Fondos suaves alusivos al momento del día (compatibles con tema claro/oscuro). */
+const STACK_BLOCK_SURFACE: Record<
+  HabitTimeBlockId,
+  { section: CSSProperties; iconWrap: string; iconClass: string }
+> = {
+  manana: {
+    section: {
+      background: "color-mix(in srgb, #FBBF24 12%, var(--color-surface))",
+      borderColor: "color-mix(in srgb, #F59E0B 30%, var(--color-border))",
+    },
+    iconWrap: "bg-[color-mix(in_srgb,#F59E0B_18%,transparent)]",
+    iconClass: "text-amber-600 dark:text-amber-400",
+  },
+  tarde: {
+    section: {
+      background: "color-mix(in srgb, var(--color-accent-warning) 11%, var(--color-surface))",
+      borderColor: "color-mix(in srgb, var(--color-accent-warning) 28%, var(--color-border))",
+    },
+    iconWrap: "bg-[color-mix(in_srgb,var(--color-accent-warning)_18%,transparent)]",
+    iconClass: "text-orange-600 dark:text-orange-400",
+  },
+  noche: {
+    section: {
+      background: "color-mix(in srgb, var(--color-accent-primary) 12%, var(--color-surface))",
+      borderColor: "color-mix(in srgb, var(--color-accent-primary) 26%, var(--color-border))",
+    },
+    iconWrap: "bg-[color-mix(in_srgb,var(--color-accent-primary)_16%,transparent)]",
+    iconClass: "text-indigo-600 dark:text-indigo-300",
+  },
+  sin_hora: {
+    section: {
+      background: "color-mix(in srgb, var(--color-text-secondary) 7%, var(--color-surface))",
+      borderColor: "color-mix(in srgb, var(--color-text-secondary) 20%, var(--color-border))",
+    },
+    iconWrap: "bg-[color-mix(in_srgb,var(--color-text-secondary)_12%,transparent)]",
+    iconClass: "text-[var(--color-text-secondary)]",
+  },
 }
 
 function habitMetricLine(meta: HabitMetadata | undefined): string | null {
@@ -289,23 +328,29 @@ export default function HabitosPage() {
           Stack actual
         </p>
 
-        {stackBlocksWithOffsets.map(({ blockId, habits: blockHabits, animStart }) => {
+        {stackBlocksWithOffsets
+          .filter(({ blockId, habits }) => blockId !== "sin_hora" || habits.length > 0)
+          .map(({ blockId, habits: blockHabits, animStart }) => {
             const meta = STACK_BLOCK_META[blockId]
+            const surface = STACK_BLOCK_SURFACE[blockId]
             const Icon = meta.Icon
             return (
               <section
                 key={blockId}
-                className="rounded-[12px] border border-[color-mix(in_srgb,var(--color-border)_65%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_100%,transparent)] p-3 sm:p-4"
-                style={{ display: "grid", gap: "var(--spacing-sm)" }}
+                className="rounded-[12px] border p-3 sm:p-4"
+                style={{
+                  display: "grid",
+                  gap: "var(--spacing-sm)",
+                  ...surface.section,
+                }}
                 aria-labelledby={`stack-block-${blockId}`}
               >
                 <div className="flex flex-wrap items-start gap-3 border-b border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] pb-3">
                   <div
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-                    style={{ background: "color-mix(in srgb, var(--color-accent-health) 12%, transparent)" }}
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${surface.iconWrap}`}
                     aria-hidden
                   >
-                    <Icon className="h-5 w-5 text-[var(--color-accent-health)]" />
+                    <Icon className={`h-5 w-5 ${surface.iconClass}`} />
                   </div>
                   <div className="min-w-0 flex-1 pt-0.5">
                     <p id={`stack-block-${blockId}`} className="m-0 text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-primary)]">

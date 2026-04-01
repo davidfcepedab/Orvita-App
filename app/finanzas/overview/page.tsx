@@ -23,6 +23,7 @@ import {
   CartesianGrid,
   ReferenceLine,
 } from "recharts"
+import { ChevronDown } from "lucide-react"
 
 function financeTooltipNumber(value: unknown): number {
   if (typeof value === "number" && Number.isFinite(value)) return value
@@ -118,7 +119,11 @@ function FlowChartLegend() {
 }
 
 const FLOW_TABS: { id: FlowEvolutionKey; label: string; subtitle: string }[] = [
-  { id: "weeks", label: "Semanas", subtitle: "Semanas del mes seleccionado (COP)" },
+  {
+    id: "weeks",
+    label: "Semanas",
+    subtitle: "Últimas 4 semanas corridas (lun–dom), ancladas al último movimiento del mes o al cierre del mes (COP)",
+  },
   {
     id: "quarter",
     label: "Trimestre",
@@ -300,6 +305,13 @@ export default function FinanzasOverview() {
     if (da !== db) return da - db
     return a.title.localeCompare(b.title)
   })
+  const commitmentsOutTotal = commitmentsSorted
+    .filter((c) => !isIncomeCommitmentRow(c))
+    .reduce((a, c) => a + c.amount, 0)
+  const commitmentsInTotal = commitmentsSorted
+    .filter((c) => isIncomeCommitmentRow(c))
+    .reduce((a, c) => a + c.amount, 0)
+  const commitmentsNetMonthly = commitmentsInTotal - commitmentsOutTotal
 
   const deltaLabel =
     deltaNet != null && Number.isFinite(deltaNet)
@@ -492,12 +504,12 @@ export default function FinanzasOverview() {
       </Card>
 
       <div className="grid min-w-0 max-w-full grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2">
-        <Card className="min-w-0 overflow-x-clip p-4 sm:p-8">
-          <div className="grid min-w-0 max-w-full gap-4">
+        <Card className="min-w-0 overflow-x-clip p-4 sm:p-5">
+          <div className="grid min-w-0 max-w-full gap-3">
             <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Suscripciones registradas</p>
-                <p className="mt-1 text-[11px] leading-snug text-orbita-secondary">
+                <p className="mt-0.5 text-[11px] leading-snug text-orbita-secondary">
                   Misma lista que en Capital → Cuentas (suscripciones recurrentes).
                 </p>
               </div>
@@ -509,27 +521,51 @@ export default function FinanzasOverview() {
                 Editar
               </Link>
             </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-orbita-border bg-orbita-surface px-3 py-2.5 sm:px-3.5">
+              <div className="min-w-0">
+                <p className="text-[10px] uppercase tracking-[0.12em] text-orbita-secondary">Total mensual</p>
+                <p className="mt-0.5 text-[11px] text-orbita-secondary">
+                  {managedActive.length === 0 ? "Sin ítems" : `${managedActive.length} activa${managedActive.length === 1 ? "" : "s"}`}
+                </p>
+              </div>
+              <span className="shrink-0 tabular-nums text-base font-semibold text-orbita-primary">
+                ${formatMoney(managedTotal)}
+              </span>
+            </div>
+
             {managedActive.length === 0 ? (
               <p className="text-sm text-orbita-secondary">No hay suscripciones activas en tu registro.</p>
             ) : (
-              managedActive.map((s) => (
-                <div
-                  key={s.id}
-                  className="flex min-w-0 flex-col gap-1 rounded-xl bg-orbita-surface-alt px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4"
-                >
-                  <span className="min-w-0 break-words text-sm font-medium text-orbita-primary">{s.name}</span>
-                  <span className="shrink-0 tabular-nums text-xs text-orbita-secondary sm:text-right">
-                    ${formatMoney(s.amount_monthly)}
+              <details className="group rounded-xl border border-orbita-border/80 bg-orbita-surface-alt/35">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-sm font-medium text-orbita-primary transition-colors hover:bg-orbita-surface-alt/60 [&::-webkit-details-marker]:hidden">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <ChevronDown
+                      className="h-4 w-4 shrink-0 text-orbita-secondary transition-transform duration-200 group-open:rotate-180"
+                      aria-hidden
+                    />
+                    Ver lista
                   </span>
+                  <span className="shrink-0 text-[11px] tabular-nums text-orbita-secondary">{managedActive.length} ítems</span>
+                </summary>
+                <div className="space-y-1.5 border-t border-orbita-border/50 px-3 pb-3 pt-2">
+                  {managedActive.map((s) => (
+                    <div
+                      key={s.id}
+                      className="flex min-w-0 items-start justify-between gap-2 rounded-lg bg-orbita-surface-alt px-2.5 py-2"
+                    >
+                      <span className="min-w-0 break-words text-sm font-medium leading-snug text-orbita-primary">
+                        {s.name}
+                      </span>
+                      <span className="shrink-0 tabular-nums text-xs text-orbita-secondary">${formatMoney(s.amount_monthly)}</span>
+                    </div>
+                  ))}
                 </div>
-              ))
+              </details>
             )}
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-orbita-border bg-orbita-surface px-3 py-3 sm:px-4">
-              <span className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Total registrado</span>
-              <span className="tabular-nums text-sm font-semibold text-orbita-primary">${formatMoney(managedTotal)}</span>
-            </div>
+
             <details className="rounded-xl border border-orbita-border/70 bg-orbita-surface-alt/40 px-3 py-2 text-xs text-orbita-secondary">
-              <summary className="cursor-pointer font-medium text-orbita-primary">
+              <summary className="cursor-pointer list-none font-medium text-orbita-primary [&::-webkit-details-marker]:hidden">
                 Patrones en movimientos (operativo, mes)
               </summary>
               <p className="mt-2 text-[11px] leading-snug">
@@ -538,9 +574,12 @@ export default function FinanzasOverview() {
               {subs.length === 0 ? (
                 <p className="mt-2 text-[11px]">Sin coincidencias tipo suscripción / SaaS.</p>
               ) : (
-                <ul className="mt-2 space-y-2">
+                <ul className="mt-2 space-y-1.5">
                   {subs.map((item) => (
-                    <li key={item.name} className="flex justify-between gap-2 tabular-nums">
+                    <li
+                      key={item.name}
+                      className="flex justify-between gap-2 rounded-lg bg-orbita-surface-alt/60 px-2 py-1.5 tabular-nums"
+                    >
                       <span className="min-w-0 break-words">{item.name}</span>
                       <span>${formatMoney(item.amount)}</span>
                     </li>
@@ -553,12 +592,13 @@ export default function FinanzasOverview() {
             </details>
           </div>
         </Card>
-        <Card className="min-w-0 overflow-x-clip p-4 sm:p-8">
-          <div className="grid min-w-0 max-w-full gap-4">
+
+        <Card className="min-w-0 overflow-x-clip p-4 sm:p-5">
+          <div className="grid min-w-0 max-w-full gap-3">
             <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Compromisos (lista corta)</p>
-                <p className="mt-1 text-[11px] leading-snug text-orbita-secondary">
+                <p className="mt-0.5 text-[11px] leading-snug text-orbita-secondary">
                   {supabaseEnabled
                     ? "Misma lista que el simulador en Capital → Cuentas (guardada por hogar)."
                     : "Sincronizado con el simulador en Capital → Cuentas (este navegador)."}
@@ -572,36 +612,76 @@ export default function FinanzasOverview() {
                 Editar
               </Link>
             </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-orbita-border bg-orbita-surface px-3 py-2.5 sm:px-3.5">
+              <div className="min-w-0">
+                <p className="text-[10px] uppercase tracking-[0.12em] text-orbita-secondary">Impacto neto (mes)</p>
+                <p className="mt-0.5 text-[11px] text-orbita-secondary">
+                  {commitmentsSorted.length === 0
+                    ? "Sin ítems"
+                    : `Salidas ${formatMoney(commitmentsOutTotal)} · Entradas ${formatMoney(commitmentsInTotal)}`}
+                </p>
+              </div>
+              <span
+                className={`shrink-0 tabular-nums text-base font-semibold ${
+                  commitmentsNetMonthly >= 0 ? "text-emerald-700" : "text-orbita-primary"
+                }`}
+              >
+                {commitmentsSorted.length === 0
+                  ? "—"
+                  : `${commitmentsNetMonthly >= 0 ? "+" : ""}$${formatMoney(commitmentsNetMonthly)}`}
+              </span>
+            </div>
+
             {commitmentsSorted.length === 0 ? (
               <p className="text-sm text-orbita-secondary">Aún no hay compromisos guardados.</p>
             ) : (
-              commitmentsSorted.slice(0, 10).map((c) => {
-                const inc = isIncomeCommitmentRow(c)
-                return (
-                  <div
-                    key={c.id}
-                    className="flex min-w-0 flex-col gap-1 border-b border-orbita-border/50 pb-3 last:border-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div className="min-w-0">
-                      <p className="break-words text-sm text-orbita-primary">{c.category?.trim() || c.title}</p>
-                      {c.category?.trim() && c.title.trim().toLowerCase() !== c.category.trim().toLowerCase() ? (
-                        <p className="text-[11px] text-orbita-secondary">{c.title}</p>
-                      ) : null}
-                      <p className="text-[11px] text-orbita-secondary">
-                        Día {c.dueDay ?? "—"} · {formatCommitmentDayEs(c.date)}
-                      </p>
-                    </div>
-                    <span
-                      className={`shrink-0 tabular-nums text-sm font-medium sm:text-right ${inc ? "text-emerald-700" : "text-orbita-primary"}`}
-                    >
-                      {inc ? "+" : "-"}${formatMoney(c.amount)}
-                    </span>
-                  </div>
-                )
-              })
+              <details className="group rounded-xl border border-orbita-border/80 bg-orbita-surface-alt/35">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-sm font-medium text-orbita-primary transition-colors hover:bg-orbita-surface-alt/60 [&::-webkit-details-marker]:hidden">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <ChevronDown
+                      className="h-4 w-4 shrink-0 text-orbita-secondary transition-transform duration-200 group-open:rotate-180"
+                      aria-hidden
+                    />
+                    Ver lista
+                  </span>
+                  <span className="shrink-0 text-[11px] tabular-nums text-orbita-secondary">
+                    {commitmentsSorted.length} ítems
+                  </span>
+                </summary>
+                <div className="space-y-1.5 border-t border-orbita-border/50 px-3 pb-3 pt-2">
+                  {commitmentsSorted.map((c) => {
+                    const inc = isIncomeCommitmentRow(c)
+                    return (
+                      <div
+                        key={c.id}
+                        className="flex min-w-0 items-start justify-between gap-2 rounded-lg bg-orbita-surface-alt px-2.5 py-2"
+                      >
+                        <div className="min-w-0">
+                          <p className="break-words text-sm font-medium leading-snug text-orbita-primary">
+                            {c.category?.trim() || c.title}
+                          </p>
+                          {c.category?.trim() && c.title.trim().toLowerCase() !== c.category.trim().toLowerCase() ? (
+                            <p className="text-[11px] text-orbita-secondary">{c.title}</p>
+                          ) : null}
+                          <p className="text-[11px] text-orbita-secondary">
+                            Día {c.dueDay ?? "—"} · {formatCommitmentDayEs(c.date)}
+                          </p>
+                        </div>
+                        <span
+                          className={`shrink-0 tabular-nums text-xs font-medium ${inc ? "text-emerald-700" : "text-orbita-primary"}`}
+                        >
+                          {inc ? "+" : "-"}${formatMoney(c.amount)}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </details>
             )}
+
             <details className="rounded-xl border border-orbita-border/70 bg-orbita-surface-alt/40 px-3 py-2 text-xs text-orbita-secondary">
-              <summary className="cursor-pointer font-medium text-orbita-primary">
+              <summary className="cursor-pointer list-none font-medium text-orbita-primary [&::-webkit-details-marker]:hidden">
                 Sugerencias desde movimientos (operativo)
               </summary>
               <p className="mt-2 text-[11px] leading-snug">
@@ -610,9 +690,12 @@ export default function FinanzasOverview() {
               {obls.length === 0 ? (
                 <p className="mt-2 text-[11px]">Sin sugerencias este mes.</p>
               ) : (
-                <ul className="mt-2 space-y-2">
+                <ul className="mt-2 space-y-1.5">
                   {obls.map((item) => (
-                    <li key={item.name + item.due} className="flex justify-between gap-2 tabular-nums">
+                    <li
+                      key={item.name + item.due}
+                      className="flex justify-between gap-2 rounded-lg bg-orbita-surface-alt/60 px-2 py-1.5 tabular-nums"
+                    >
                       <span className="min-w-0 break-words">{item.name}</span>
                       <span>${formatMoney(item.amount)}</span>
                     </li>

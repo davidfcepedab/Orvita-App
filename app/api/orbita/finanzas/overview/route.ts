@@ -97,7 +97,7 @@ export async function GET(req: NextRequest) {
       const previousRows = all.filter((r) => r.date >= prevStartStr && r.date <= prevEndStr)
       const opex = createOperativoExpenseFn([])
       const overview = calculateOverview(currentRows, previousRows, { expenseAmount: opex })
-      const weeklySeries = buildWeeklyBuckets(month, currentRows, opex)
+      const weeklySeries = buildWeeklyBuckets(month, currentRows, opex, { allRowsForWeekWindow: all })
       const flowEvolution = {
         weeks: weeklySeries,
         quarter: buildMonthlyFlowBuckets(calendarQuarterMonthsThrough(month), all, opex),
@@ -216,7 +216,7 @@ export async function GET(req: NextRequest) {
       snapshotKpiNotice =
         "Hay resumen almacenado para el mes pero no se aplicó a los KPI para no mezclarlo con el filtro de gasto operativo (sin movimientos TX en el mes)."
     }
-    const weeklySeries = buildWeeklyBuckets(month, currentRows, opex)
+    const weeklySeries = buildWeeklyBuckets(month, currentRows, opex, { allRowsForWeekWindow: rows })
 
     const quarterMonths = calendarQuarterMonthsThrough(month)
     const semesterMonths = rollingSemesterMonths(month)

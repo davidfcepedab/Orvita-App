@@ -1,11 +1,23 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
 import { isAppMockMode, isSupabaseEnabled, UI_GOOGLE_CALENDAR_OFF } from "@/lib/checkins/flags"
-import { deletePrimaryCalendarEvent, fetchPrimaryCalendarWindow } from "@/lib/google/googleCalendarApi"
+import {
+  deletePrimaryCalendarEvent,
+  fetchPrimaryCalendarWindow,
+  GoogleCalendarRequestError,
+} from "@/lib/google/googleCalendarApi"
 import { getGoogleAccessTokenForUser } from "@/lib/google/loadAccessToken"
+import { mapGoogleSyncErrorToUserMessage } from "@/lib/integrations/google"
 import { MOCK_GOOGLE_CALENDAR_EVENTS } from "@/lib/google/mockGoogleData"
 
 export const runtime = "nodejs"
+
+function httpStatusFromGoogleCalendar(s: number): number {
+  if (s === 401 || s === 403 || s === 429 || s === 400 || s === 404) return s
+  if (s >= 500) return 502
+  if (s >= 400) return 400
+  return 502
+}
 
 function defaultWindow() {
   const timeMin = new Date()
@@ -62,7 +74,15 @@ export async function GET(req: NextRequest) {
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Error Calendar"
     console.error("GOOGLE CALENDAR GET:", msg)
-    return NextResponse.json({ success: false, error: "No se pudo leer el calendario" }, { status: 502 })
+    if (e instanceof GoogleCalendarRequestError) {
+      const status = httpStatusFromGoogleCalendar(e.httpStatus)
+      const error = mapGoogleSyncErrorToUserMessage("calendar", msg)
+      return NextResponse.json({ success: false, error }, { status })
+    }
+    return NextResponse.json(
+      { success: false, error: mapGoogleSyncErrorToUserMessage("calendar", msg) },
+      { status: 502 },
+    )
   }
 }
 

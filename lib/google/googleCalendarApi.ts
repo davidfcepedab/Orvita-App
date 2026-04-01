@@ -15,6 +15,18 @@ type GoogleCalendarEvent = {
 
 type CalendarListResponse = {
   items?: GoogleCalendarEvent[]
+  nextPageToken?: string
+}
+
+/** Error con status HTTP de Google para mapear respuestas en rutas API. */
+export class GoogleCalendarRequestError extends Error {
+  constructor(
+    message: string,
+    public readonly httpStatus: number,
+  ) {
+    super(message)
+    this.name = "GoogleCalendarRequestError"
+  }
 }
 
 function normalizeInstant(value?: GoogleCalendarDate): { iso: string | null; allDay: boolean } {
@@ -47,28 +59,37 @@ export async function fetchPrimaryCalendarWindow(
   timeMinIso: string,
   timeMaxIso: string,
 ): Promise<GoogleCalendarEventDTO[]> {
-  const params = new URLSearchParams({
-    timeMin: timeMinIso,
-    timeMax: timeMaxIso,
-    singleEvents: "true",
-    orderBy: "startTime",
-    maxResults: "250",
-  })
+  const collected: GoogleCalendarEvent[] = []
+  let pageToken: string | undefined
 
-  const response = await fetch(
-    `https://www.googleapis.com/calendar/v3/calendars/primary/events?${params.toString()}`,
-    { headers: { Authorization: `Bearer ${accessToken}` } },
-  )
+  do {
+    const params = new URLSearchParams({
+      timeMin: timeMinIso,
+      timeMax: timeMaxIso,
+      singleEvents: "true",
+      orderBy: "startTime",
+      maxResults: "2500",
+    })
+    if (pageToken) params.set("pageToken", pageToken)
 
-  if (!response.ok) {
-    const detail = await response.text()
-    throw new Error(`Google Calendar: ${detail}`)
-  }
+    const response = await fetch(
+      `https://www.googleapis.com/calendar/v3/calendars/primary/events?${params.toString()}`,
+      { headers: { Authorization: `Bearer ${accessToken}` } },
+    )
 
-  const payload = (await response.json()) as CalendarListResponse
-  const items = payload.items ?? []
+    if (!response.ok) {
+      const detail = await response.text()
+      throw new GoogleCalendarRequestError(`Google Calendar: ${detail}`, response.status)
+    }
+
+    const payload = (await response.json()) as CalendarListResponse
+    const items = payload.items ?? []
+    collected.push(...items)
+    pageToken = payload.nextPageToken
+  } while (pageToken)
+
   const out: GoogleCalendarEventDTO[] = []
-  for (const item of items) {
+  for (const item of collected) {
     if (item.status === "cancelled") continue
     const row = mapGoogleCalendarItem(item)
     if (row) out.push(row)
