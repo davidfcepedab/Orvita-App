@@ -90,6 +90,9 @@ export default function TransactionsPageClient() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
   const [catalogRows, setCatalogRows] = useState<FinanceSubcategoryCatalogRow[]>([])
   const [templateDownloading, setTemplateDownloading] = useState(false)
+  const [importingCsv, setImportingCsv] = useState(false)
+  const [importNotice, setImportNotice] = useState<string | null>(null)
+  const csvFileInputRef = useRef<HTMLInputElement>(null)
   const patchTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
   const selectAllRef = useRef<HTMLInputElement>(null)
 
@@ -386,6 +389,51 @@ export default function TransactionsPageClient() {
     }
   }
 
+  const importCsvFile = useCallback(
+    async (file: File) => {
+      if (!supabaseEnabled) return
+      setImportingCsv(true)
+      setImportNotice(null)
+      setPatchErr(null)
+      try {
+        const text = await file.text()
+        const res = await financeApiJson("/api/orbita/finanzas/transactions/import", {
+          method: "POST",
+          body: { csv: text },
+        })
+        const json = (await res.json()) as {
+          success?: boolean
+          error?: string
+          data?: {
+            inserted?: number
+            parseErrors?: { line: number; message: string }[]
+            snapshotWarnings?: string[]
+          }
+        }
+        if (!res.ok || !json.success) {
+          throw new Error(messageForHttpError(res.status, json.error, res.statusText))
+        }
+        const d = json.data
+        let msg = `Se importaron ${d?.inserted ?? 0} movimiento(s).`
+        const pe = d?.parseErrors ?? []
+        if (pe.length > 0) {
+          msg += ` ${pe.length} línea(s) con avisos (formato o datos inválidos en esas líneas).`
+        }
+        const sw = d?.snapshotWarnings
+        if (sw?.length) {
+          msg += ` Actualización de resúmenes mensuales: ${sw.join("; ")}`
+        }
+        setImportNotice(msg)
+        await loadTransactions({ showLoading: false })
+      } catch (e) {
+        setPatchErr(e instanceof Error ? e.message : "Error al importar")
+      } finally {
+        setImportingCsv(false)
+      }
+    },
+    [loadTransactions, supabaseEnabled],
+  )
+
   const transactions = data != null ? txRows : []
 
   const reconciliationRowIds = useMemo(
@@ -490,6 +538,31 @@ export default function TransactionsPageClient() {
             >
               {templateDownloading ? "Generando…" : "Descargar plantilla (.xlsx)"}
             </button>
+            {supabaseEnabled ? (
+              <>
+                <input
+                  ref={csvFileInputRef}
+                  type="file"
+                  accept=".csv,text/csv,text/plain"
+                  className="hidden"
+                  aria-hidden
+                  tabIndex={-1}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0]
+                    e.target.value = ""
+                    if (f) void importCsvFile(f)
+                  }}
+                />
+                <button
+                  type="button"
+                  disabled={importingCsv || contentLoading || !periodReady}
+                  onClick={() => csvFileInputRef.current?.click()}
+                  className="min-h-11 rounded-[var(--radius-button)] border border-emerald-600/40 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-800 transition enabled:hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50 dark:text-emerald-300"
+                >
+                  {importingCsv ? "Importando…" : "Importar CSV"}
+                </button>
+              </>
+            ) : null}
             <button
               type="button"
               disabled={!contentReady || transactions.length === 0}
@@ -516,9 +589,9 @@ export default function TransactionsPageClient() {
             </button>
           </div>
           <p className="text-[10px] leading-snug text-orbita-secondary">
-            La plantilla Excel incluye desplegables de Tipo, Categoría y Subcategoría según tu catálogo activo (revisa la
-            hoja Listas). Completa nuevas filas en Movimientos; Monto en positivo. Sin Supabase, las listas de categorías
-            van vacías.
+            La plantilla Excel incluye desplegables; para importar aquí, exporta esa hoja como CSV (UTF-8) con la misma
+            cabecera que «Exportar vista actual», o usa el CSV exportado. Máximo 300 filas por carga; se crean cuentas
+            nuevas si la etiqueta no existía.
           </p>
         </div>
       </div>
@@ -526,6 +599,12 @@ export default function TransactionsPageClient() {
       {patchErr ? (
         <p className="text-xs text-rose-600" role="status">
           {patchErr}
+        </p>
+      ) : null}
+
+      {importNotice ? (
+        <p className="text-xs text-emerald-700 dark:text-emerald-400" role="status">
+          {importNotice}
         </p>
       ) : null}
 
