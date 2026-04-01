@@ -279,7 +279,7 @@ export async function DELETE(req: NextRequest) {
         {
           success: false,
           error:
-            "La base de datos rechazó el borrado (RLS). Ejecuta en Supabase las migraciones del audit: 20260401130100 y 20260403120000 (supabase db push o SQL Editor).",
+            "La base de datos rechazó el borrado (RLS/audit). En Supabase ejecuta la migración 20260403180000 (row_security off en el trigger) o supabase db push.",
         },
         { status: 403 },
       )
@@ -375,7 +375,7 @@ export async function POST(req: NextRequest) {
         {
           success: false,
           error:
-            "La base de datos rechazó el borrado (RLS). Ejecuta en Supabase las migraciones del audit: 20260401130100 y 20260403120000.",
+            "La base de datos rechazó el borrado (RLS/audit). Ejecuta en Supabase 20260403180000 o supabase db push.",
         },
         { status: 403 },
       )
