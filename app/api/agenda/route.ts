@@ -28,6 +28,11 @@ type AgendaRow = {
   assignment_accepted_at: string | null
 }
 
+/** Solo tareas creadas por el usuario o asignadas a él (agenda no compartida entre miembros del hogar). */
+function agendaVisibilityOrFilter(userId: string) {
+  return `user_id.eq.${userId},assignee_id.eq.${userId}`
+}
+
 function mapType(row: AgendaRow, currentUserId: string) {
   const assignee = row.assignee_id?.trim() || null
   const creator = (row.created_by ?? row.user_id)?.trim() || null
@@ -126,6 +131,7 @@ export async function GET(req: NextRequest) {
       .select("*")
       .eq("domain", "agenda")
       .eq("household_id", householdId)
+      .or(agendaVisibilityOrFilter(userId))
       .order("created_at", { ascending: false })
 
     if (result.error) {
@@ -440,9 +446,15 @@ export async function PATCH(req: NextRequest) {
         .eq("id", id)
         .eq("domain", "agenda")
         .eq("household_id", householdId)
+        .eq("assignee_id", userId)
+        .select("id")
+        .maybeSingle()
 
       if (acc.error) {
         throw acc.error
+      }
+      if (!acc.data) {
+        return NextResponse.json({ success: false, error: "Tarea no encontrada" }, { status: 404 })
       }
       return NextResponse.json({ success: true })
     }
@@ -482,9 +494,17 @@ export async function PATCH(req: NextRequest) {
       .eq("id", id)
       .eq("domain", "agenda")
       .eq("household_id", householdId)
+      .or(agendaVisibilityOrFilter(userId))
+      .select("id")
 
     if (update.error) {
       throw update.error
+    }
+    if (!update.data?.length) {
+      return NextResponse.json(
+        { success: false, error: "Tarea no encontrada o sin permiso" },
+        { status: 404 },
+      )
     }
 
     return NextResponse.json({ success: true })
@@ -534,9 +554,17 @@ export async function DELETE(req: NextRequest) {
       .eq("id", id)
       .eq("domain", "agenda")
       .eq("household_id", householdId)
+      .or(agendaVisibilityOrFilter(userId))
+      .select("id")
 
     if (del.error) {
       throw del.error
+    }
+    if (!del.data?.length) {
+      return NextResponse.json(
+        { success: false, error: "Tarea no encontrada o sin permiso" },
+        { status: 404 },
+      )
     }
 
     return NextResponse.json({ success: true })
