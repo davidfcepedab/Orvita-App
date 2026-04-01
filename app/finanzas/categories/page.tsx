@@ -1,18 +1,19 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { type FormEvent, useCallback, useEffect, useState } from "react"
 import { ChevronDown } from "lucide-react"
 import { useFinance } from "../FinanceContext"
 import { useRouter } from "next/navigation"
 import { Card } from "@/src/components/ui/Card"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
-import { financialImpactPillClass, sheetTipoPillClass } from "@/lib/finanzas/catalogTagStyles"
-import { financeApiGet } from "@/lib/finanzas/financeClientFetch"
+import { sheetTipoPillClass } from "@/lib/finanzas/catalogTagStyles"
+import { financeApiGet, financeApiJson } from "@/lib/finanzas/financeClientFetch"
+import type { FinanceSubcategoryCatalogRow } from "@/lib/finanzas/subcategoryCatalog"
 
 interface Subcategory {
   name: string
   total: number
-  sheetTipo?: "fijo" | "variable"
+  sheetTipo?: "fijo" | "variable" | "modulo_finanzas"
   financialImpact?: string
   budgetable?: boolean
   catalogCategory?: string
@@ -37,6 +38,7 @@ interface CategoriesData {
   totalVariable?: number
   totalStructural?: number
   unknownSubcategories?: string[]
+  subcategoryCatalog?: FinanceSubcategoryCatalogRow[]
 }
 
 interface CategoriesResponse {
@@ -52,7 +54,9 @@ function OperativaCategoryCard({
   cat: Category
   onViewMovements: (name: string) => void
 }) {
-  const typeLabel = cat.type === "fixed" ? "Fijo" : "Variable"
+  const isModuloFin = cat.name.includes("Módulo financiero")
+  const pillTipo = isModuloFin ? "modulo_finanzas" : cat.type === "fixed" ? "fijo" : "variable"
+  const typeLabel = isModuloFin ? "Finanzas" : cat.type === "fixed" ? "Fijo" : "Variable"
   const subCount = cat.subcategories?.length ?? 0
 
   return (
@@ -63,7 +67,7 @@ function OperativaCategoryCard({
             <div className="flex flex-wrap items-center gap-2">
               <p className="break-words text-sm font-semibold leading-snug text-orbita-primary">{cat.name}</p>
               <span
-                className={`shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${sheetTipoPillClass(cat.type === "fixed" ? "fijo" : "variable")}`}
+                className={`shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${sheetTipoPillClass(pillTipo)}`}
               >
                 {typeLabel}
               </span>
@@ -129,37 +133,11 @@ function OperativaCategoryCard({
                 >
                   <div className="min-w-0 flex-1">
                     <span className="break-words text-orbita-secondary">{sub.name}</span>
-                    {(sub.sheetTipo || sub.financialImpact != null) && (
-                      <div className="mt-0.5 flex flex-wrap gap-1">
-                        {sub.sheetTipo && (
-                          <span
-                            className={`rounded px-1 py-0.5 text-[9px] uppercase tracking-wide ${sheetTipoPillClass(sub.sheetTipo)}`}
-                          >
-                            {sub.sheetTipo === "fijo" ? "Fijo" : "Variable"}
-                          </span>
-                        )}
-                        {sub.financialImpact ? (
-                          <span
-                            className={`rounded px-1 py-0.5 text-[9px] font-medium ${financialImpactPillClass(sub.financialImpact)}`}
-                          >
-                            {sub.financialImpact}
-                          </span>
-                        ) : null}
-                        {sub.budgetable === false && (
-                          <span className="rounded border border-dashed border-orbita-border px-1 py-0.5 text-[9px] text-orbita-secondary">
-                            No presupuestable
-                          </span>
-                        )}
-                        {sub.categoryMismatch && sub.catalogCategory && (
-                          <span
-                            className="rounded px-1 py-0.5 text-[9px] text-amber-800 dark:text-amber-300"
-                            title="La categoría del movimiento no coincide con la del catálogo"
-                          >
-                            Cat. catálogo: {sub.catalogCategory}
-                          </span>
-                        )}
-                      </div>
-                    )}
+                    {sub.categoryMismatch && sub.catalogCategory ? (
+                      <p className="mt-0.5 text-[9px] text-amber-800 dark:text-amber-300" title="La categoría del movimiento no coincide con la del catálogo">
+                        Cat. catálogo: {sub.catalogCategory}
+                      </p>
+                    ) : null}
                   </div>
                   <span className="shrink-0 font-semibold text-orbita-primary sm:text-right">
                     ${Math.abs(sub.total).toLocaleString("es-CO", { maximumFractionDigits: 0 })}
@@ -247,18 +225,29 @@ export default function FinanzasCategories() {
   const [categoryQuery, setCategoryQuery] = useState("")
 
   const month_value = finance?.month
-  useEffect(() => {
-    if (!month_value) {
-      setData(null)
-      setLoading(false)
-      setError(null)
-      return
-    }
+  const [savingCatalogId, setSavingCatalogId] = useState<string | null>(null)
+  const [newOverride, setNewOverride] = useState({
+    subcategory: "",
+    category: "",
+    expense_type: "variable" as FinanceSubcategoryCatalogRow["expense_type"],
+    financial_impact: "operativo",
+  })
+  const [creatingOverride, setCreatingOverride] = useState(false)
 
-    const fetchCategories = async () => {
-      try {
-        setLoading(true)
+  const loadCategories = useCallback(
+    async (opts?: { quiet?: boolean }) => {
+      if (!month_value) {
+        setData(null)
+        setLoading(false)
         setError(null)
+        return
+      }
+      const quiet = opts?.quiet === true
+      try {
+        if (!quiet) {
+          setLoading(true)
+          setError(null)
+        }
 
         const response = await financeApiGet(
           `/api/orbita/finanzas/categories?month=${encodeURIComponent(month_value)}`,
@@ -274,15 +263,20 @@ export default function FinanzasCategories() {
         setData(json.data ?? null)
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Error desconocido"
-        setError(errorMessage)
-        setData(null)
+        if (!quiet) {
+          setError(errorMessage)
+          setData(null)
+        }
       } finally {
-        setLoading(false)
+        if (!quiet) setLoading(false)
       }
-    }
+    },
+    [month_value],
+  )
 
-    fetchCategories()
-  }, [month_value])
+  useEffect(() => {
+    void loadCategories()
+  }, [loadCategories])
 
   if (!finance) {
     return (
@@ -321,15 +315,60 @@ export default function FinanzasCategories() {
   const totalVariable = data?.totalVariable ?? 0
   const totalStructural = data?.totalStructural ?? 0
   const unknownSubcategories = data?.unknownSubcategories ?? []
+  const householdCatalogRows = data?.subcategoryCatalog ?? []
 
-  if (structuralCategories.length === 0 || totalStructural === 0) {
-    return (
-      <div className="space-y-2 p-6 text-center bg-orbita-surface-alt rounded-lg">
-        <p className="text-orbita-secondary">No hay gastos categorizados para este mes.</p>
-        {notice && <p className="text-xs text-orbita-secondary">{notice}</p>}
-      </div>
-    )
+  async function saveCatalogExpenseType(id: string, expense_type: FinanceSubcategoryCatalogRow["expense_type"]) {
+    setSavingCatalogId(id)
+    try {
+      const res = await financeApiJson("/api/orbita/finanzas/subcategory-catalog", {
+        method: "PATCH",
+        body: { id, expense_type },
+      })
+      const json = (await res.json()) as { success?: boolean; error?: string }
+      if (!res.ok || !json.success) {
+        throw new Error(json.error ?? "No se pudo guardar")
+      }
+      await loadCategories({ quiet: true })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error guardando catálogo")
+    } finally {
+      setSavingCatalogId(null)
+    }
   }
+
+  async function createHouseholdOverride(e: FormEvent) {
+    e.preventDefault()
+    if (!newOverride.subcategory.trim() || !newOverride.category.trim()) return
+    setCreatingOverride(true)
+    try {
+      const res = await financeApiJson("/api/orbita/finanzas/subcategory-catalog", {
+        method: "POST",
+        body: {
+          subcategory: newOverride.subcategory.trim(),
+          category: newOverride.category.trim(),
+          expense_type: newOverride.expense_type,
+          financial_impact: newOverride.financial_impact,
+        },
+      })
+      const json = (await res.json()) as { success?: boolean; error?: string }
+      if (!res.ok || !json.success) {
+        throw new Error(json.error ?? "No se pudo crear la fila")
+      }
+      setNewOverride({
+        subcategory: "",
+        category: "",
+        expense_type: "variable",
+        financial_impact: "operativo",
+      })
+      await loadCategories({ quiet: true })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error creando fila")
+    } finally {
+      setCreatingOverride(false)
+    }
+  }
+
+  const noExpenses = structuralCategories.length === 0 || totalStructural === 0
 
   const q = categoryQuery.trim().toLowerCase()
   const matchesQuery = (cat: Category) => {
@@ -434,7 +473,14 @@ export default function FinanzasCategories() {
 
       {viewMode === "operativa" && (
         <div className="space-y-4">
-          {unknownSubcategories.length > 0 && (
+          {noExpenses && (
+            <div className="space-y-2 rounded-lg bg-orbita-surface-alt p-6 text-center">
+              <p className="text-orbita-secondary">No hay gastos categorizados para este mes.</p>
+              {notice && <p className="text-xs text-orbita-secondary">{notice}</p>}
+            </div>
+          )}
+
+          {!noExpenses && unknownSubcategories.length > 0 && (
             <div
               className="rounded-xl border px-4 py-3 text-sm"
               style={{
@@ -451,58 +497,189 @@ export default function FinanzasCategories() {
               </p>
             </div>
           )}
-          <div className="grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            <Card hover className="p-4 sm:p-8">
-              <div className="grid gap-2">
-                <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Total estructural</p>
-                <p className="text-3xl font-semibold text-orbita-primary">
-                  ${Math.abs(totalStructural).toLocaleString("es-CO", {
-                    maximumFractionDigits: 0,
-                  })}
-                </p>
-                <p className="text-xs text-orbita-secondary">
-                  {fixedPct}% fijo / {100 - fixedPct}% variable
-                </p>
+          {!noExpenses && (
+            <>
+              <div className="grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                <Card hover className="p-4 sm:p-8">
+                  <div className="grid gap-2">
+                    <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Total operativo</p>
+                    <p className="text-3xl font-semibold text-orbita-primary">
+                      ${Math.abs(totalStructural).toLocaleString("es-CO", {
+                        maximumFractionDigits: 0,
+                      })}
+                    </p>
+                    <p className="text-xs text-orbita-secondary">
+                      {fixedPct}% fijo / {100 - fixedPct}% variable
+                    </p>
+                  </div>
+                </Card>
+                <Card hover className="p-4 sm:p-8">
+                  <div className="grid gap-2">
+                    <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Total fijo</p>
+                    <p className="text-3xl font-semibold text-orbita-primary">
+                      ${Math.abs(totalFixed).toLocaleString("es-CO", {
+                        maximumFractionDigits: 0,
+                      })}
+                    </p>
+                    <p className="text-xs text-orbita-secondary">Base operativa</p>
+                  </div>
+                </Card>
+                <Card hover className="p-4 sm:p-8">
+                  <div className="grid gap-2">
+                    <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Total variable</p>
+                    <p className="text-3xl font-semibold text-orbita-primary">
+                      ${Math.abs(totalVariable).toLocaleString("es-CO", {
+                        maximumFractionDigits: 0,
+                      })}
+                    </p>
+                    <p className="text-xs text-orbita-secondary">Espacio de ajuste</p>
+                  </div>
+                </Card>
               </div>
-            </Card>
-            <Card hover className="p-4 sm:p-8">
-              <div className="grid gap-2">
-                <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Total fijo</p>
-                <p className="text-3xl font-semibold text-orbita-primary">
-                  ${Math.abs(totalFixed).toLocaleString("es-CO", {
-                    maximumFractionDigits: 0,
-                  })}
-                </p>
-                <p className="text-xs text-orbita-secondary">Base operativa</p>
-              </div>
-            </Card>
-            <Card hover className="p-4 sm:p-8">
-              <div className="grid gap-2">
-                <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Total variable</p>
-                <p className="text-3xl font-semibold text-orbita-primary">
-                  ${Math.abs(totalVariable).toLocaleString("es-CO", {
-                    maximumFractionDigits: 0,
-                  })}
-                </p>
-                <p className="text-xs text-orbita-secondary">Espacio de ajuste</p>
-              </div>
-            </Card>
-          </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
-            {[{ label: "Fijo", items: fixedCategories }, { label: "Variable", items: variableCategories }].map((group) => (
-              <div key={group.label} className="space-y-3">
-                <p className="text-xs uppercase tracking-[0.16em] text-orbita-secondary">{group.label}</p>
-                {group.items.map((cat) => (
-                  <OperativaCategoryCard
-                    key={`${cat.name}-${cat.type}`}
-                    cat={cat}
-                    onViewMovements={navigateToTransactions}
-                  />
-                ))}
+              <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
+                {(
+                  [
+                    { label: "Fijo" as const, items: fixedCategories },
+                    { label: "Variable" as const, items: variableCategories },
+                  ] as const
+                ).map((group) => (
+                    <div key={group.label} className="space-y-3">
+                      <span
+                        className={`inline-flex rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${sheetTipoPillClass(group.label === "Fijo" ? "fijo" : "variable")}`}
+                      >
+                        {group.label}
+                      </span>
+                      {group.items.map((cat) => (
+                        <OperativaCategoryCard
+                          key={`${cat.name}-${cat.type}`}
+                          cat={cat}
+                          onViewMovements={navigateToTransactions}
+                        />
+                      ))}
+                    </div>
+                  ))}
               </div>
-            ))}
-          </div>
+            </>
+          )}
+
+          <Card className="p-4 sm:p-6">
+            <h2 className="text-sm font-semibold text-orbita-primary">Catálogo de tu hogar</h2>
+            <p className="mt-1 text-xs leading-relaxed text-orbita-secondary">
+              Las filas globales (plantilla) no se editan aquí: crea una fila con el mismo nombre de subcategoría para
+              tu hogar y elige <span className="font-medium">expense_type</span>. Usa{" "}
+              <span className={`inline ${sheetTipoPillClass("modulo_finanzas")} px-1 py-0`}>Módulo finanzas</span> para
+              excluir esos movimientos del gasto operativo y del mapa fijo/variable; aparecerán en el bloque «Módulo
+              financiero (catálogo)».
+            </p>
+
+            {householdCatalogRows.length > 0 ? (
+              <div className="mt-4 overflow-x-auto">
+                <table className="w-full min-w-[520px] border-collapse text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-orbita-border text-orbita-secondary">
+                      <th className="py-2 pr-2 font-medium">Subcategoría</th>
+                      <th className="py-2 pr-2 font-medium">Categoría</th>
+                      <th className="py-2 pr-2 font-medium">Tipo (expense_type)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {householdCatalogRows.map((row) => (
+                      <tr key={row.id} className="border-b border-orbita-border/80">
+                        <td className="py-2 pr-2 align-middle text-orbita-primary">{row.subcategory}</td>
+                        <td className="py-2 pr-2 align-middle text-orbita-secondary">{row.category}</td>
+                        <td className="py-2 align-middle">
+                          <select
+                            value={row.expense_type}
+                            disabled={savingCatalogId === row.id}
+                            onChange={(e) => {
+                              const v = e.target.value as FinanceSubcategoryCatalogRow["expense_type"]
+                              if (v === row.expense_type) return
+                              void saveCatalogExpenseType(row.id, v)
+                            }}
+                            className="max-w-full rounded-md border border-orbita-border bg-orbita-surface px-2 py-1.5 text-orbita-primary"
+                            aria-label={`Tipo para ${row.subcategory}`}
+                          >
+                            <option value="fijo">fijo</option>
+                            <option value="variable">variable</option>
+                            <option value="modulo_finanzas">modulo_finanzas</option>
+                          </select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="mt-3 text-xs text-orbita-secondary">
+                Aún no hay filas solo de tu hogar. Usa el formulario siguiente para sobrescribir una subcategoría de la
+                plantilla (mismo texto de subcategoría).
+              </p>
+            )}
+
+            <form onSubmit={createHouseholdOverride} className="mt-4 grid gap-3 border-t border-orbita-border pt-4 sm:grid-cols-2 lg:grid-cols-4">
+              <label className="grid gap-1">
+                <span className="text-[10px] uppercase tracking-wide text-orbita-secondary">Subcategoría</span>
+                <input
+                  value={newOverride.subcategory}
+                  onChange={(e) => setNewOverride((s) => ({ ...s, subcategory: e.target.value }))}
+                  className="rounded-md border border-orbita-border bg-orbita-surface px-2 py-2 text-sm"
+                  placeholder="Ej. Otros"
+                  required
+                />
+              </label>
+              <label className="grid gap-1">
+                <span className="text-[10px] uppercase tracking-wide text-orbita-secondary">Categoría</span>
+                <input
+                  value={newOverride.category}
+                  onChange={(e) => setNewOverride((s) => ({ ...s, category: e.target.value }))}
+                  className="rounded-md border border-orbita-border bg-orbita-surface px-2 py-2 text-sm"
+                  placeholder="Ej. Ajustes"
+                  required
+                />
+              </label>
+              <label className="grid gap-1">
+                <span className="text-[10px] uppercase tracking-wide text-orbita-secondary">expense_type</span>
+                <select
+                  value={newOverride.expense_type}
+                  onChange={(e) =>
+                    setNewOverride((s) => ({
+                      ...s,
+                      expense_type: e.target.value as FinanceSubcategoryCatalogRow["expense_type"],
+                    }))
+                  }
+                  className="rounded-md border border-orbita-border bg-orbita-surface px-2 py-2 text-sm"
+                >
+                  <option value="fijo">fijo</option>
+                  <option value="variable">variable</option>
+                  <option value="modulo_finanzas">modulo_finanzas</option>
+                </select>
+              </label>
+              <label className="grid gap-1">
+                <span className="text-[10px] uppercase tracking-wide text-orbita-secondary">financial_impact</span>
+                <select
+                  value={newOverride.financial_impact}
+                  onChange={(e) => setNewOverride((s) => ({ ...s, financial_impact: e.target.value }))}
+                  className="rounded-md border border-orbita-border bg-orbita-surface px-2 py-2 text-sm"
+                >
+                  <option value="operativo">operativo</option>
+                  <option value="inversion">inversion</option>
+                  <option value="transferencia">transferencia</option>
+                  <option value="financiero">financiero</option>
+                  <option value="ajuste">ajuste</option>
+                </select>
+              </label>
+              <div className="sm:col-span-2 lg:col-span-4">
+                <button
+                  type="submit"
+                  disabled={creatingOverride}
+                  className="rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface px-4 py-2 text-xs font-semibold uppercase tracking-wide text-orbita-primary disabled:opacity-50"
+                >
+                  {creatingOverride ? "Guardando…" : "Crear sobrescritura del hogar"}
+                </button>
+              </div>
+            </form>
+          </Card>
         </div>
       )}
     </div>

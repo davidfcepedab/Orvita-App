@@ -67,4 +67,25 @@ describe("splitStructuralCategoriesByCatalogExpenseType", () => {
     expect(totals.totalFixed).toBe(2_000_000)
     expect(totals.totalVariable).toBe(500_000)
   })
+
+  test("sends modulo_finanzas subs into the finance-module bucket", () => {
+    const current = [tx("2026-03-01", "Ajustes", "Otros", 30_000)]
+    const previous: FinanceTransaction[] = []
+    const base = buildStructuralCategories(current, previous)
+    const catalog: FinanceSubcategoryCatalogEntry[] = [
+      {
+        subcategory: "Otros",
+        category: "Ajustes",
+        expense_type: "modulo_finanzas",
+        financial_impact: "operativo",
+        budgetable: false,
+        active: true,
+      },
+    ]
+    const { structuralCategories: withCat } = attachCatalogToStructuralCategories(base.structuralCategories, catalog)
+    const split = splitStructuralCategoriesByCatalogExpenseType(withCat)
+    const fin = split.find((c) => c.name === "Módulo financiero (catálogo)")
+    expect(fin?.subcategories?.map((s) => s.name)).toEqual(["Otros"])
+    expect(split.filter((c) => c.name === "Ajustes")).toHaveLength(0)
+  })
 })

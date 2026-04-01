@@ -18,7 +18,7 @@ export type StructuralSub = {
   total: number
   /** Gasto mismo sub en el mes anterior (negativo como `total`). */
   previousTotal?: number
-  sheetTipo?: "fijo" | "variable"
+  sheetTipo?: "fijo" | "variable" | "modulo_finanzas"
   financialImpact?: string
   budgetable?: boolean
   catalogCategory?: string
@@ -205,6 +205,7 @@ export function splitStructuralCategoriesByCatalogExpenseType(
   categories: StructuralCategory[],
 ): StructuralCategory[] {
   const out: StructuralCategory[] = []
+  const moduloSubsAll: StructuralSub[] = []
 
   for (const cat of categories) {
     const subs = cat.subcategories ?? []
@@ -212,6 +213,10 @@ export function splitStructuralCategoriesByCatalogExpenseType(
     const varSubs: StructuralSub[] = []
 
     for (const sub of subs) {
+      if (sub.sheetTipo === "modulo_finanzas") {
+        moduloSubsAll.push(sub)
+        continue
+      }
       const isFijo =
         sub.sheetTipo === "fijo"
           ? true
@@ -265,6 +270,43 @@ export function splitStructuralCategoriesByCatalogExpenseType(
     const varSlice = makeSlice("variable", varSubs)
     if (fixedSlice) out.push(fixedSlice)
     if (varSlice) out.push(varSlice)
+  }
+
+  if (moduloSubsAll.length > 0) {
+    const total = moduloSubsAll.reduce((a, s) => a + s.total, 0)
+    let previousSum = 0
+    let hadPrev = false
+    for (const s of moduloSubsAll) {
+      if (s.previousTotal != null) {
+        previousSum += s.previousTotal
+        hadPrev = true
+      }
+    }
+    const absTot = Math.abs(total)
+    const absPrev = Math.abs(previousSum)
+    const delta =
+      hadPrev && absPrev > 1e-6
+        ? Math.round(((absTot - absPrev) / absPrev) * 100)
+        : absTot > 0
+          ? 100
+          : 0
+    const budget = absTot * 1.08
+    const budgetUsedPercent = budget > 0 ? Math.min(150, Math.round((absTot / budget) * 100)) : 0
+    let budgetStatus: "green" | "yellow" | "red" = "green"
+    if (budgetUsedPercent >= 100) budgetStatus = "red"
+    else if (budgetUsedPercent >= 88) budgetStatus = "yellow"
+
+    out.push({
+      name: "Módulo financiero (catálogo)",
+      type: "variable",
+      total,
+      previousTotal: hadPrev ? previousSum : undefined,
+      delta,
+      budget: Math.round(budget),
+      budgetUsedPercent,
+      budgetStatus,
+      subcategories: [...moduloSubsAll].sort((a, b) => Math.abs(b.total) - Math.abs(a.total)),
+    })
   }
 
   out.sort((a, b) => Math.abs(b.total) - Math.abs(a.total))

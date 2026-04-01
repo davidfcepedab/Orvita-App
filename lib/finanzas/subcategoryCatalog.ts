@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 export type FinanceSubcategoryCatalogEntry = {
   subcategory: string
   category: string
-  expense_type: "fijo" | "variable"
+  expense_type: "fijo" | "variable" | "modulo_finanzas"
   financial_impact: string
   budgetable: boolean
   active: boolean
@@ -44,7 +44,12 @@ function rowFromDb(r: Record<string, unknown>): FinanceSubcategoryCatalogRow {
     household_id: (r.household_id as string | null) ?? null,
     subcategory: String(r.subcategory ?? ""),
     category: String(r.category ?? ""),
-    expense_type: r.expense_type === "variable" ? "variable" : "fijo",
+    expense_type:
+      r.expense_type === "variable"
+        ? "variable"
+        : r.expense_type === "modulo_finanzas"
+          ? "modulo_finanzas"
+          : "fijo",
     financial_impact: String(r.financial_impact ?? ""),
     budgetable: Boolean(r.budgetable),
     active: r.active !== false,
@@ -86,6 +91,22 @@ export async function fetchSubcategoryCatalogMerged(
   return [...byNorm.values()].sort(
     (a, b) => a.category.localeCompare(b.category, "es") || a.subcategory.localeCompare(b.subcategory, "es"),
   )
+}
+
+/** Todas las filas del hogar (activas e inactivas), p. ej. editor de catálogo en UI. */
+export async function fetchHouseholdSubcategoryCatalogRows(
+  supabase: SupabaseClient,
+  householdId: string,
+): Promise<FinanceSubcategoryCatalogRow[]> {
+  const { data, error } = await supabase
+    .from("orbita_finance_subcategory_catalog")
+    .select("id, household_id, subcategory, category, expense_type, financial_impact, budgetable, active, comment")
+    .eq("household_id", householdId)
+    .order("category", { ascending: true })
+    .order("subcategory", { ascending: true })
+
+  if (error) throw new Error(formatPostgrestError(error))
+  return (data ?? []).map((raw) => rowFromDb(raw as Record<string, unknown>))
 }
 
 /** Claves normalizadas aceptadas para validación de import (global + hogar). */

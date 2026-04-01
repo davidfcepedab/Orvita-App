@@ -1,4 +1,8 @@
-import { operativoExpenseAmount, financialImpactBySubcategory } from "@/lib/finanzas/operativoExpense"
+import {
+  operativoExpenseAmount,
+  expenseTypeBySubcategory,
+  financialImpactBySubcategory,
+} from "@/lib/finanzas/operativoExpense"
 import type { FinanceTransaction } from "@/lib/finanzas/types"
 
 function tx(partial: Partial<FinanceTransaction> & Pick<FinanceTransaction, "id" | "date" | "amount" | "type">): FinanceTransaction {
@@ -53,5 +57,36 @@ describe("operativoExpense", () => {
       subcategory: "Educacion",
     })
     expect(operativoExpenseAmount(row, map)).toBe(0)
+  })
+
+  test("excludes modulo_finanzas expense_type from operativo aggregate", () => {
+    const impactMap = financialImpactBySubcategory([
+      {
+        subcategory: "Ajuste TC",
+        category: "Finanzas",
+        expense_type: "modulo_finanzas",
+        financial_impact: "operativo",
+        budgetable: true,
+        active: true,
+      },
+    ])
+    const typeMap = expenseTypeBySubcategory([
+      {
+        subcategory: "Ajuste TC",
+        category: "Finanzas",
+        expense_type: "modulo_finanzas",
+        financial_impact: "operativo",
+        budgetable: true,
+        active: true,
+      },
+    ])
+    const row = tx({
+      id: "1",
+      date: "2026-03-01",
+      amount: 30_000,
+      type: "expense",
+      subcategory: "Ajuste TC",
+    })
+    expect(operativoExpenseAmount(row, impactMap, typeMap)).toBe(0)
   })
 })

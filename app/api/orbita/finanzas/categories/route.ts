@@ -9,7 +9,10 @@ import {
 } from "@/lib/finanzas/deriveFromTransactions"
 import { mockTransactionsForMonth } from "@/lib/finanzas/mockFinancePayloads"
 import { monthBounds } from "@/lib/finanzas/monthRange"
-import { fetchSubcategoryCatalogMerged } from "@/lib/finanzas/subcategoryCatalog"
+import {
+  fetchHouseholdSubcategoryCatalogRows,
+  fetchSubcategoryCatalogMerged,
+} from "@/lib/finanzas/subcategoryCatalog"
 import { getHouseholdId } from "@/lib/households/getHouseholdId"
 import { getTransactionsByRange } from "@/lib/services/finanzasService"
 
@@ -79,8 +82,10 @@ export async function GET(req: NextRequest) {
 
     const base = buildStructuralCategories(current, previous)
     let catalog: Awaited<ReturnType<typeof fetchSubcategoryCatalogMerged>> = []
+    let householdCatalog: Awaited<ReturnType<typeof fetchHouseholdSubcategoryCatalogRows>> = []
     try {
       catalog = await fetchSubcategoryCatalogMerged(auth.supabase, householdId)
+      householdCatalog = await fetchHouseholdSubcategoryCatalogRows(auth.supabase, householdId)
     } catch (e) {
       console.warn("CATEGORIES: catalog fetch skipped:", e instanceof Error ? e.message : e)
     }
@@ -96,7 +101,7 @@ export async function GET(req: NextRequest) {
       totalVariable,
       totalStructural,
       structuralCategories,
-      subcategoryCatalog: catalog,
+      subcategoryCatalog: householdCatalog,
       unknownSubcategories,
     }
     return NextResponse.json({ success: true, data })

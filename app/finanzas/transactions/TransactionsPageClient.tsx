@@ -8,6 +8,8 @@ import { Card } from "@/src/components/ui/Card"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import type { FinanceSubcategoryCatalogRow } from "@/lib/finanzas/subcategoryCatalog"
 import { financeApiDelete, financeApiGet, financeApiJson } from "@/lib/finanzas/financeClientFetch"
+import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
+import { buildTransactionsExportCsv } from "@/lib/finanzas/transactionsCsv"
 
 const supabaseEnabled = process.env.NEXT_PUBLIC_SUPABASE_ENABLED === "true"
 
@@ -87,6 +89,7 @@ export default function TransactionsPageClient() {
   const [bulkDeleting, setBulkDeleting] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
   const [catalogRows, setCatalogRows] = useState<FinanceSubcategoryCatalogRow[]>([])
+  const [templateDownloading, setTemplateDownloading] = useState(false)
   const patchTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
   const selectAllRef = useRef<HTMLInputElement>(null)
 
@@ -95,6 +98,14 @@ export default function TransactionsPageClient() {
 
   const accountParam = searchParams.get("account")?.trim() ?? ""
   const financeAccountId = UUID_RE.test(accountParam) ? accountParam : ""
+
+  const tipoParamRaw = searchParams.get("tipo")?.trim().toLowerCase() ?? ""
+  const tipoFilterUrl: "" | "ingreso" | "gasto" =
+    tipoParamRaw === "ingreso" || tipoParamRaw === "income"
+      ? "ingreso"
+      : tipoParamRaw === "gasto" || tipoParamRaw === "expense"
+        ? "gasto"
+        : ""
 
   const { accounts: ledgerAccounts } = useLedgerAccounts({ enabled: supabaseEnabled })
 
@@ -119,6 +130,11 @@ export default function TransactionsPageClient() {
         if (financeAccountId) {
           url += `&finance_account_id=${encodeURIComponent(financeAccountId)}`
         }
+        if (tipoFilterUrl === "ingreso") {
+          url += "&tipo=ingreso"
+        } else if (tipoFilterUrl === "gasto") {
+          url += "&tipo=gasto"
+        }
 
         const response = await financeApiGet(url)
         const json: TransactionsResponse = await response.json()
@@ -141,7 +157,7 @@ export default function TransactionsPageClient() {
         if (opts.showLoading) setLoading(false)
       }
     },
-    [month, category, financeAccountId],
+    [month, category, financeAccountId, tipoFilterUrl],
   )
 
   const fetchTransactions = useCallback(async () => {
@@ -158,7 +174,7 @@ export default function TransactionsPageClient() {
 
   useEffect(() => {
     setSelectedIds(new Set())
-  }, [month, category, financeAccountId])
+  }, [month, category, financeAccountId, tipoFilterUrl])
 
   useEffect(() => {
     if (!supabaseEnabled) {
@@ -325,6 +341,51 @@ export default function TransactionsPageClient() {
     router.replace(qs ? `/finanzas/transactions?${qs}` : "/finanzas/transactions")
   }
 
+  const setTipoFilter = (v: "" | "ingreso" | "gasto") => {
+    const p = new URLSearchParams(searchParams.toString())
+    if (v) p.set("tipo", v)
+    else p.delete("tipo")
+    const qs = p.toString()
+    router.replace(qs ? `/finanzas/transactions?${qs}` : "/finanzas/transactions")
+  }
+
+  const downloadCsv = (filename: string, text: string) => {
+    const blob = new Blob([text], { type: "text/csv;charset=utf-8" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const downloadTemplateXlsx = async () => {
+    setTemplateDownloading(true)
+    setPatchErr(null)
+    try {
+      const headers = await browserBearerHeaders()
+      const res = await fetch("/api/orbita/finanzas/transactions/template", {
+        cache: "no-store",
+        headers,
+      })
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { error?: string }
+        throw new Error(j.error ?? `Error ${res.status}`)
+      }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = "plantilla-movimientos-orvita.xlsx"
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      setPatchErr(e instanceof Error ? e.message : "No se pudo descargar la plantilla")
+    } finally {
+      setTemplateDownloading(false)
+    }
+  }
+
   const transactions = data != null ? txRows : []
 
   const reconciliationRowIds = useMemo(
@@ -384,9 +445,9 @@ export default function TransactionsPageClient() {
 
   return (
     <div className="min-w-0 space-y-6 sm:space-y-8">
-      {supabaseEnabled ? (
-        <div className="grid min-w-0 gap-2 sm:max-w-md">
-          <label className="grid gap-1.5">
+      <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end">
+        {supabaseEnabled ? (
+          <label className="grid min-w-0 gap-1.5 sm:max-w-md lg:flex-1">
             <span className="text-[11px] uppercase tracking-[0.14em] text-orbita-secondary">Cuenta (ledger)</span>
             <select
               value={financeAccountId}
@@ -403,8 +464,64 @@ export default function TransactionsPageClient() {
               ))}
             </select>
           </label>
+        ) : null}
+        <label className="grid min-w-0 gap-1.5 sm:max-w-xs">
+          <span className="text-[11px] uppercase tracking-[0.14em] text-orbita-secondary">Tipo</span>
+          <select
+            value={tipoFilterUrl}
+            onChange={(e) => setTipoFilter(e.target.value as "" | "ingreso" | "gasto")}
+            disabled={contentLoading}
+            className="min-h-11 w-full rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface px-3 py-2 text-sm text-orbita-primary disabled:cursor-wait disabled:opacity-60"
+            aria-label="Filtrar por ingreso o gasto"
+          >
+            <option value="">Todos</option>
+            <option value="ingreso">Ingreso</option>
+            <option value="gasto">Gasto</option>
+          </select>
+        </label>
+        <div className="flex min-w-0 flex-col gap-1 sm:max-w-xl">
+          <span className="text-[11px] uppercase tracking-[0.14em] text-orbita-secondary">CSV</span>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={templateDownloading}
+              onClick={() => void downloadTemplateXlsx()}
+              className="min-h-11 rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface-alt px-3 py-2 text-xs font-semibold text-orbita-primary transition enabled:hover:bg-orbita-surface disabled:cursor-wait disabled:opacity-60"
+            >
+              {templateDownloading ? "Generando…" : "Descargar plantilla (.xlsx)"}
+            </button>
+            <button
+              type="button"
+              disabled={!contentReady || transactions.length === 0}
+              onClick={() => {
+                const rows = transactions.map((tx) => {
+                  const tipoResolved = tx.tipo ?? (tx.monto > 0 ? ("income" as const) : ("expense" as const))
+                  return {
+                    fecha: tx.fecha,
+                    tipoLabel: tipoResolved === "income" ? ("Ingreso" as const) : ("Gasto" as const),
+                    categoria: tx.categoria,
+                    subcategoria: tx.subcategoria,
+                    cuenta: (tx.cuenta ?? "").trim(),
+                    concepto: tx.descripcion,
+                    monto: tx.monto,
+                  }
+                })
+                const csv = buildTransactionsExportCsv(rows)
+                const suf = tipoFilterUrl ? `-${tipoFilterUrl}` : "-todos"
+                downloadCsv(`movimientos-${month}${suf}.csv`, csv)
+              }}
+              className="min-h-11 rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface px-3 py-2 text-xs font-semibold text-orbita-primary transition enabled:hover:bg-orbita-surface-alt disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Exportar vista actual
+            </button>
+          </div>
+          <p className="text-[10px] leading-snug text-orbita-secondary">
+            La plantilla Excel incluye desplegables de Tipo, Categoría y Subcategoría según tu catálogo activo (revisa la
+            hoja Listas). Completa nuevas filas en Movimientos; Monto en positivo. Sin Supabase, las listas de categorías
+            van vacías.
+          </p>
         </div>
-      ) : null}
+      </div>
 
       {patchErr ? (
         <p className="text-xs text-rose-600" role="status">

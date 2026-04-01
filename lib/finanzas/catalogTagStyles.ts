@@ -1,6 +1,9 @@
 /** Clases Tailwind para chips del catálogo (categorías / subcategorías). */
 
-export function sheetTipoPillClass(tipo: "fijo" | "variable"): string {
+export function sheetTipoPillClass(tipo: "fijo" | "variable" | "modulo_finanzas"): string {
+  if (tipo === "modulo_finanzas") {
+    return "border border-fuchsia-300/80 bg-fuchsia-100/90 text-fuchsia-950"
+  }
   return tipo === "fijo"
     ? "border border-sky-300/80 bg-sky-100/90 text-sky-950"
     : "border border-violet-300/80 bg-violet-100/90 text-violet-950"

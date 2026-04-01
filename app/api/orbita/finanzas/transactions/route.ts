@@ -54,6 +54,13 @@ export async function GET(req: NextRequest) {
 
     const category = req.nextUrl.searchParams.get("category")
     const subcategory = req.nextUrl.searchParams.get("subcategory")
+    const tipoParam = req.nextUrl.searchParams.get("tipo")?.trim().toLowerCase() ?? ""
+    const tipoFilter: "income" | "expense" | null =
+      tipoParam === "ingreso" || tipoParam === "income"
+        ? "income"
+        : tipoParam === "gasto" || tipoParam === "expense"
+          ? "expense"
+          : null
     const financeAccountId = req.nextUrl.searchParams.get("finance_account_id")?.trim() ?? ""
     if (financeAccountId && !UUID_RE.test(financeAccountId)) {
       return NextResponse.json(
@@ -74,6 +81,7 @@ export async function GET(req: NextRequest) {
         if (category && tx.category !== category) return false
         if (subcategory && (tx.subcategory ?? "") !== subcategory) return false
         if (financeAccountId && (tx.finance_account_id ?? "").trim() !== financeAccountId) return false
+        if (tipoFilter && resolvedTxType(tx) !== tipoFilter) return false
         return true
       })
 
