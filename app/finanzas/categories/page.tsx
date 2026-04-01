@@ -47,6 +47,11 @@ interface CategoriesResponse {
   error?: string
 }
 
+/** Bloque agregado en servidor para subs `modulo_finanzas`; no se muestra en el mapa fijo/variable. */
+function isModuloFinancieroCatalogCategory(cat: Pick<Category, "name">): boolean {
+  return cat.name.includes("Módulo financiero")
+}
+
 function OperativaCategoryCard({
   cat,
   onViewMovements,
@@ -54,9 +59,8 @@ function OperativaCategoryCard({
   cat: Category
   onViewMovements: (name: string) => void
 }) {
-  const isModuloFin = cat.name.includes("Módulo financiero")
-  const pillTipo = isModuloFin ? "modulo_finanzas" : cat.type === "fixed" ? "fijo" : "variable"
-  const typeLabel = isModuloFin ? "Finanzas" : cat.type === "fixed" ? "Fijo" : "Variable"
+  const pillTipo = cat.type === "fixed" ? "fijo" : "variable"
+  const typeLabel = cat.type === "fixed" ? "Fijo" : "Variable"
   const subCount = cat.subcategories?.length ?? 0
 
   return (
@@ -313,9 +317,14 @@ export default function FinanzasCategories() {
   const structuralCategories = data?.structuralCategories ?? []
   const totalFixed = data?.totalFixed ?? 0
   const totalVariable = data?.totalVariable ?? 0
-  const totalStructural = data?.totalStructural ?? 0
   const unknownSubcategories = data?.unknownSubcategories ?? []
   const householdCatalogRows = data?.subcategoryCatalog ?? []
+
+  const structuralCategoriesUi = structuralCategories.filter((c) => !isModuloFinancieroCatalogCategory(c))
+  const moduloCategory = structuralCategories.find((c) => isModuloFinancieroCatalogCategory(c))
+  const moduloTotalAbs = moduloCategory ? Math.abs(moduloCategory.total) : 0
+  const totalVariableUi = Math.max(0, totalVariable - moduloTotalAbs)
+  const totalStructuralUi = totalFixed + totalVariableUi
 
   async function saveCatalogExpenseType(id: string, expense_type: FinanceSubcategoryCatalogRow["expense_type"]) {
     setSavingCatalogId(id)
@@ -368,7 +377,7 @@ export default function FinanzasCategories() {
     }
   }
 
-  const noExpenses = structuralCategories.length === 0 || totalStructural === 0
+  const noExpenses = structuralCategoriesUi.length === 0 || totalStructuralUi === 0
 
   const q = categoryQuery.trim().toLowerCase()
   const matchesQuery = (cat: Category) => {
@@ -377,19 +386,19 @@ export default function FinanzasCategories() {
     return (cat.subcategories ?? []).some((s) => s.name.toLowerCase().includes(q))
   }
 
-  const fixedCategories = (structuralCategories || [])
+  const fixedCategories = (structuralCategoriesUi || [])
     .filter((c): c is Category => c?.type === "fixed" && Math.abs(c.total) > 0)
     .filter(matchesQuery)
     .sort((a, b) => Math.abs(b.total) - Math.abs(a.total))
 
-  const variableCategories = (structuralCategories || [])
+  const variableCategories = (structuralCategoriesUi || [])
     .filter((c): c is Category => c?.type === "variable" && Math.abs(c.total) > 0)
     .filter(matchesQuery)
     .sort((a, b) => Math.abs(b.total) - Math.abs(a.total))
 
   const fixedPct =
-    Math.abs(totalStructural) > 0
-      ? Math.round((Math.abs(totalFixed) / Math.abs(totalStructural)) * 100)
+    Math.abs(totalStructuralUi) > 0
+      ? Math.round((Math.abs(totalFixed) / Math.abs(totalStructuralUi)) * 100)
       : 0
 
   const navigateToTransactions = (categoryName: string) => {
@@ -504,7 +513,7 @@ export default function FinanzasCategories() {
                   <div className="grid gap-2">
                     <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Total operativo</p>
                     <p className="text-3xl font-semibold text-orbita-primary">
-                      ${Math.abs(totalStructural).toLocaleString("es-CO", {
+                      ${Math.abs(totalStructuralUi).toLocaleString("es-CO", {
                         maximumFractionDigits: 0,
                       })}
                     </p>
@@ -528,7 +537,7 @@ export default function FinanzasCategories() {
                   <div className="grid gap-2">
                     <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Total variable</p>
                     <p className="text-3xl font-semibold text-orbita-primary">
-                      ${Math.abs(totalVariable).toLocaleString("es-CO", {
+                      ${Math.abs(totalVariableUi).toLocaleString("es-CO", {
                         maximumFractionDigits: 0,
                       })}
                     </p>
@@ -569,8 +578,7 @@ export default function FinanzasCategories() {
               Las filas globales (plantilla) no se editan aquí: crea una fila con el mismo nombre de subcategoría para
               tu hogar y elige <span className="font-medium">expense_type</span>. Usa{" "}
               <span className={`inline ${sheetTipoPillClass("modulo_finanzas")} px-1 py-0`}>Módulo finanzas</span> para
-              excluir esos movimientos del gasto operativo y del mapa fijo/variable; aparecerán en el bloque «Módulo
-              financiero (catálogo)».
+              excluir esos movimientos del gasto operativo y de este mapa (solo se listan categorías fijas y variables).
             </p>
 
             {householdCatalogRows.length > 0 ? (
