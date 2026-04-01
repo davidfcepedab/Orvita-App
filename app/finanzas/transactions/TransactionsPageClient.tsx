@@ -1,11 +1,12 @@
 "use client"
 
-import { startTransition, useCallback, useEffect, useRef, useState } from "react"
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useFinance } from "../FinanceContext"
 import { useLedgerAccounts } from "../useLedgerAccounts"
 import { Card } from "@/src/components/ui/Card"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
+import type { FinanceSubcategoryCatalogRow } from "@/lib/finanzas/subcategoryCatalog"
 import { financeApiDelete, financeApiGet, financeApiJson } from "@/lib/finanzas/financeClientFetch"
 
 const supabaseEnabled = process.env.NEXT_PUBLIC_SUPABASE_ENABLED === "true"
@@ -15,6 +16,31 @@ const UUID_RE =
 
 function isReconciliationAdjustmentDescription(description: string | undefined): boolean {
   return /reconciliation_adjustment/i.test(String(description ?? ""))
+}
+
+function categoryOptionList(rows: FinanceSubcategoryCatalogRow[], currentCategory: string): string[] {
+  const s = new Set<string>()
+  for (const r of rows) {
+    if (r.category) s.add(r.category)
+  }
+  const cur = currentCategory.trim()
+  if (cur) s.add(cur)
+  return [...s].sort((a, b) => a.localeCompare(b, "es"))
+}
+
+function subcategoryOptionList(
+  rows: FinanceSubcategoryCatalogRow[],
+  category: string,
+  currentSub: string,
+): string[] {
+  const list = rows
+    .filter((r) => r.category === category)
+    .map((r) => r.subcategory.trim())
+    .filter(Boolean)
+  const uniq = [...new Set(list)].sort((a, b) => a.localeCompare(b, "es"))
+  const cur = currentSub.trim()
+  if (cur && !uniq.includes(cur)) return [cur, ...uniq]
+  return uniq
 }
 
 interface Transaction {
@@ -58,7 +84,11 @@ export default function TransactionsPageClient() {
   const [error, setError] = useState<string | null>(null)
   const [patchErr, setPatchErr] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [bulkDeleting, setBulkDeleting] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
+  const [catalogRows, setCatalogRows] = useState<FinanceSubcategoryCatalogRow[]>([])
   const patchTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+  const selectAllRef = useRef<HTMLInputElement>(null)
 
   const month = finance?.month ?? searchParams.get("month") ?? ""
   const category = searchParams.get("category") || ""
@@ -122,30 +152,45 @@ export default function TransactionsPageClient() {
     void loadTransactions({ showLoading: false })
   }, [loadTransactions])
 
-  const setFinanceAccountId = (id: string) => {
-    const p = new URLSearchParams(searchParams.toString())
-    if (id) p.set("account", id)
-    else p.delete("account")
-    const qs = p.toString()
-    router.replace(qs ? `/finanzas/transactions?${qs}` : "/finanzas/transactions")
-  }
-
   useEffect(() => {
     void fetchTransactions()
   }, [fetchTransactions])
 
-  if (!finance) {
-    return (
-      <div className="p-6 text-center text-orbita-secondary">
-        <p>Inicializando...</p>
-      </div>
-    )
-  }
+  useEffect(() => {
+    setSelectedIds(new Set())
+  }, [month, category, financeAccountId])
 
-  const transactions = data != null ? txRows : []
+  useEffect(() => {
+    if (!supabaseEnabled) {
+      setCatalogRows([])
+      return
+    }
+    let cancelled = false
+    void (async () => {
+      try {
+        const res = await financeApiGet("/api/orbita/finanzas/subcategory-catalog")
+        const json = (await res.json()) as {
+          success?: boolean
+          data?: { rows?: FinanceSubcategoryCatalogRow[] }
+        }
+        if (cancelled) return
+        if (res.ok && json.success && Array.isArray(json.data?.rows)) {
+          setCatalogRows(json.data!.rows!)
+        }
+      } catch {
+        if (!cancelled) setCatalogRows([])
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [supabaseEnabled])
 
   const schedulePatch = useCallback(
-    (id: string, body: { category?: string; type?: "income" | "expense" }) => {
+    (
+      id: string,
+      body: { category?: string; subcategory?: string | null; type?: "income" | "expense" },
+    ) => {
       const prev = patchTimers.current.get(id)
       if (prev) clearTimeout(prev)
       const t = setTimeout(() => {
@@ -155,16 +200,19 @@ export default function TransactionsPageClient() {
           try {
             const res = await financeApiJson("/api/orbita/finanzas/transactions", {
               method: "PATCH",
-              body: { id, category: body.category, type: body.type },
+              body: {
+                id,
+                category: body.category,
+                subcategory: body.subcategory,
+                type: body.type,
+              },
             })
             const json = (await res.json()) as PatchTxResponse
             if (!res.ok || !json.success || !json.data?.transaction) {
               throw new Error(messageForHttpError(res.status, json.error, res.statusText))
             }
             const u = json.data.transaction
-            setTxRows((rows) =>
-              rows.map((r) => (r.id === id ? { ...r, ...u } : r)),
-            )
+            setTxRows((rows) => rows.map((r) => (r.id === id ? { ...r, ...u } : r)))
           } catch (e) {
             setPatchErr(e instanceof Error ? e.message : "No se pudo guardar")
           }
@@ -181,15 +229,6 @@ export default function TransactionsPageClient() {
       patchTimers.current.clear()
     }
   }, [])
-  const subtotal = data?.subtotal ?? 0
-  const previousSubtotal = data?.previousSubtotal ?? 0
-  const delta = data?.delta ?? null
-  const deltaValue = delta ?? (previousSubtotal ? subtotal - previousSubtotal : 0)
-
-  const periodReady = Boolean(month)
-  const contentLoading = periodReady && loading
-  const contentError = periodReady && error
-  const contentReady = periodReady && !loading && !error && data !== null
 
   const deleteReconciliationTx = useCallback(
     async (tx: Transaction) => {
@@ -201,6 +240,11 @@ export default function TransactionsPageClient() {
       const id = tx.id
       const amount = Number(tx.monto ?? 0)
       setDeletingId(id)
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
       startTransition(() => {
         setTxRows((rows) => rows.filter((r) => r.id !== id))
         setData((prev) => {
@@ -230,6 +274,113 @@ export default function TransactionsPageClient() {
     },
     [fetchTransactionsSilent, supabaseEnabled],
   )
+
+  const bulkDeleteReconciliation = useCallback(async () => {
+    if (!supabaseEnabled || selectedIds.size === 0) return
+    const ids = [...selectedIds]
+    if (
+      !window.confirm(
+        `¿Eliminar ${ids.length} ajuste(s) de conciliación seleccionado(s)? No se puede deshacer.`,
+      )
+    ) {
+      return
+    }
+    setBulkDeleting(true)
+    setPatchErr(null)
+    try {
+      const res = await financeApiJson("/api/orbita/finanzas/transactions", {
+        method: "POST",
+        body: { deleteReconciliationAdjustmentIds: ids },
+      })
+      const json = (await res.json()) as {
+        success?: boolean
+        error?: string
+        data?: { deleted?: string[]; skipped?: string[] }
+      }
+      if (!res.ok || !json.success) {
+        throw new Error(messageForHttpError(res.status, json.error, res.statusText))
+      }
+      const deleted = json.data?.deleted ?? []
+      const skipped = json.data?.skipped ?? []
+      if (skipped.length > 0) {
+        setPatchErr(
+          `${deleted.length} eliminado(s). ${skipped.length} omitido(s) (no son ajustes de conciliación o no aplican).`,
+        )
+      }
+      setSelectedIds(new Set())
+      fetchTransactionsSilent()
+    } catch (e) {
+      setPatchErr(e instanceof Error ? e.message : "No se pudo eliminar la selección")
+      fetchTransactionsSilent()
+    } finally {
+      setBulkDeleting(false)
+    }
+  }, [fetchTransactionsSilent, selectedIds, supabaseEnabled])
+
+  const setFinanceAccountId = (id: string) => {
+    const p = new URLSearchParams(searchParams.toString())
+    if (id) p.set("account", id)
+    else p.delete("account")
+    const qs = p.toString()
+    router.replace(qs ? `/finanzas/transactions?${qs}` : "/finanzas/transactions")
+  }
+
+  const transactions = data != null ? txRows : []
+
+  const reconciliationRowIds = useMemo(
+    () =>
+      transactions
+        .filter((t) => Boolean(t.id) && isReconciliationAdjustmentDescription(t.descripcion))
+        .map((t) => t.id as string),
+    [transactions],
+  )
+
+  const allReconciliationSelected =
+    reconciliationRowIds.length > 0 && reconciliationRowIds.every((id) => selectedIds.has(id))
+
+  useEffect(() => {
+    const el = selectAllRef.current
+    if (!el) return
+    const n = reconciliationRowIds.length
+    const sel = reconciliationRowIds.filter((id) => selectedIds.has(id)).length
+    el.indeterminate = sel > 0 && sel < n
+  }, [reconciliationRowIds, selectedIds])
+
+  const subtotal = data?.subtotal ?? 0
+  const previousSubtotal = data?.previousSubtotal ?? 0
+  const delta = data?.delta ?? null
+  const deltaValue = delta ?? (previousSubtotal ? subtotal - previousSubtotal : 0)
+
+  const periodReady = Boolean(month)
+  const contentLoading = periodReady && loading
+  const contentError = periodReady && error
+  const contentReady = periodReady && !loading && !error && data !== null
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
+
+  const toggleSelectAllReconciliation = useCallback(() => {
+    if (reconciliationRowIds.length === 0) return
+    if (allReconciliationSelected) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(reconciliationRowIds))
+    }
+  }, [allReconciliationSelected, reconciliationRowIds])
+
+  if (!finance) {
+    return (
+      <div className="p-6 text-center text-orbita-secondary">
+        <p>Inicializando...</p>
+      </div>
+    )
+  }
 
   return (
     <div className="min-w-0 space-y-6 sm:space-y-8">
@@ -337,25 +488,57 @@ export default function TransactionsPageClient() {
               <p>No hay movimientos para esta selección</p>
             </div>
           ) : (
-            <div className="min-w-0 max-w-full overflow-hidden rounded-lg border border-orbita-border bg-[var(--color-surface)]">
+            <div className="min-w-0 max-w-full space-y-2 overflow-hidden rounded-lg border border-orbita-border bg-[var(--color-surface)] p-2 sm:p-3">
+              {supabaseEnabled && reconciliationRowIds.length > 0 ? (
+                <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+                  <p className="text-[11px] text-orbita-secondary">
+                    {selectedIds.size > 0
+                      ? `${selectedIds.size} ajuste(s) de conciliación seleccionado(s)`
+                      : "Selecciona ajustes de conciliación para borrar varios a la vez"}
+                  </p>
+                  <button
+                    type="button"
+                    disabled={selectedIds.size === 0 || bulkDeleting}
+                    onClick={() => void bulkDeleteReconciliation()}
+                    className="rounded-full border border-rose-500/50 bg-rose-500/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-rose-700 transition-colors hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-50 dark:text-rose-300"
+                  >
+                    {bulkDeleting ? "Eliminando…" : "Eliminar seleccionados"}
+                  </button>
+                </div>
+              ) : null}
               <div className="max-h-[min(70vh,56rem)] min-w-0 overflow-auto overscroll-contain [-webkit-overflow-scrolling:touch] touch-pan-x touch-pan-y">
-                <table className="w-full min-w-0 table-fixed border-collapse text-left text-[10px] sm:text-[11px]">
+                <table className="w-full min-w-[720px] table-fixed border-collapse text-left text-[10px] sm:min-w-0 sm:text-[11px]">
                   <colgroup>
-                    <col style={{ width: "14%" }} />
-                    <col style={{ width: "6%" }} />
-                    <col style={{ width: "18%" }} />
-                    <col style={{ width: "16%" }} />
-                    <col style={{ width: "24%" }} />
-                    <col style={{ width: "14%" }} />
-                    <col style={{ width: "8%" }} />
+                    {supabaseEnabled ? <col style={{ width: "2.25rem" }} /> : null}
+                    <col style={{ width: "11%" }} />
+                    <col style={{ width: "11%" }} />
+                    <col style={{ width: "22%" }} />
+                    <col style={{ width: "15%" }} />
+                    <col style={{ width: "23%" }} />
+                    <col style={{ width: "12%" }} />
+                    <col style={{ width: "10%" }} />
                   </colgroup>
                   <thead className="sticky top-0 z-[1] border-b border-orbita-border bg-orbita-surface-alt text-[9px] font-semibold uppercase tracking-[0.08em] text-orbita-secondary sm:text-[10px]">
                     <tr>
+                      {supabaseEnabled ? (
+                        <th scope="col" className="w-9 px-1 py-1.5 text-center sm:py-2">
+                          <input
+                            ref={selectAllRef}
+                            type="checkbox"
+                            checked={allReconciliationSelected}
+                            onChange={toggleSelectAllReconciliation}
+                            disabled={reconciliationRowIds.length === 0}
+                            className="h-3.5 w-3.5 rounded border-orbita-border"
+                            title="Seleccionar todos los ajustes de conciliación"
+                            aria-label="Seleccionar todos los ajustes de conciliación visibles"
+                          />
+                        </th>
+                      ) : null}
                       <th scope="col" className="whitespace-nowrap px-1.5 py-1.5 text-left sm:px-2 sm:py-2">
                         Fecha
                       </th>
-                      <th scope="col" className="px-0.5 py-1.5 text-center sm:py-2" title="Tipo">
-                        T
+                      <th scope="col" className="px-1 py-1.5 text-left sm:py-2">
+                        Tipo
                       </th>
                       <th scope="col" className="px-1.5 py-1.5 text-left sm:px-2 sm:py-2">
                         Categoría
@@ -382,13 +565,12 @@ export default function TransactionsPageClient() {
                       const catLine = [tx.categoria, tx.subcategoria].filter(Boolean).join(" · ")
                       const tipoResolved =
                         tx.tipo ?? (tx.monto > 0 ? ("income" as const) : ("expense" as const))
-                      const tipoLabel = tipoResolved === "income" ? "Ingreso" : "Egreso"
+                      const tipoLabel = tipoResolved === "income" ? "Ingreso" : "Gasto"
                       const montoStr = `$${Math.abs(tx.monto).toLocaleString("es-CO", {
                         maximumFractionDigits: 0,
                       })}`
                       const isIngreso = tipoResolved === "income"
                       const isReconciliationAdjustment = isReconciliationAdjustmentDescription(tx.descripcion)
-                      const rowBg = isIngreso ? "hover:opacity-95" : "hover:opacity-95"
                       const rowBorder = "border-b border-orbita-border/60"
                       const rowStyle = isIngreso
                         ? {
@@ -400,17 +582,35 @@ export default function TransactionsPageClient() {
                               "color-mix(in srgb, var(--color-accent-danger) 12%, var(--color-surface))",
                           }
                       const editable = Boolean(supabaseEnabled && tx.id)
+                      const catOptions = categoryOptionList(catalogRows, tx.categoria)
+                      const subOptions = subcategoryOptionList(catalogRows, tx.categoria, tx.subcategoria)
+
                       return (
                         <tr
                           key={tx.id ?? idx}
-                          className={`${rowBg} ${rowBorder} last:border-b-0 transition-opacity`}
+                          className={`${rowBorder} last:border-b-0 transition-opacity hover:opacity-95`}
                           style={rowStyle}
                         >
+                          {supabaseEnabled ? (
+                            <td className="px-1 py-1 align-middle text-center sm:py-1.5">
+                              {tx.id && isReconciliationAdjustment ? (
+                                <input
+                                  type="checkbox"
+                                  checked={selectedIds.has(tx.id)}
+                                  onChange={() => toggleSelect(tx.id!)}
+                                  className="h-3.5 w-3.5 rounded border-orbita-border"
+                                  aria-label={`Seleccionar ajuste ${tx.descripcion?.slice(0, 40) ?? ""}`}
+                                />
+                              ) : (
+                                <span className="inline-block w-3.5" aria-hidden />
+                              )}
+                            </td>
+                          ) : null}
                           <td className="whitespace-nowrap px-1.5 py-1 align-middle tabular-nums text-orbita-primary sm:px-2 sm:py-1.5">
                             {tx.fecha}
                           </td>
                           <td
-                            className={`px-0.5 py-1 align-middle text-center sm:py-1.5 ${
+                            className={`min-w-0 px-1 py-1 align-middle sm:py-1.5 ${
                               isIngreso
                                 ? "text-[var(--color-accent-health)]"
                                 : "text-[var(--color-accent-danger)]"
@@ -420,7 +620,7 @@ export default function TransactionsPageClient() {
                             {editable ? (
                               <select
                                 aria-label="Tipo de movimiento"
-                                className="max-w-[3.25rem] rounded border border-orbita-border bg-orbita-surface py-0.5 text-[9px] font-bold"
+                                className="w-full max-w-full rounded border border-orbita-border bg-orbita-surface py-0.5 pl-0.5 text-[9px] font-semibold sm:text-[10px]"
                                 value={tipoResolved}
                                 onChange={(e) => {
                                   const t = e.target.value as "income" | "expense"
@@ -435,36 +635,64 @@ export default function TransactionsPageClient() {
                                   schedulePatch(tx.id!, { type: t })
                                 }}
                               >
-                                <option value="income">IN</option>
-                                <option value="expense">EG</option>
+                                <option value="income">Ingreso</option>
+                                <option value="expense">Gasto</option>
                               </select>
                             ) : (
-                              <span className="text-[9px] font-bold">{isIngreso ? "IN" : "EG"}</span>
+                              <span className="block truncate text-[9px] font-semibold sm:text-[10px]">
+                                {tipoLabel}
+                              </span>
                             )}
                           </td>
                           <td className="min-w-0 px-1.5 py-1 align-middle text-orbita-primary sm:px-2 sm:py-1.5">
                             {editable ? (
-                              <div className="grid min-w-0 gap-0.5">
-                                <input
+                              <div className="grid min-w-0 gap-1">
+                                <select
                                   aria-label="Categoría"
                                   className="w-full min-w-0 rounded border border-orbita-border bg-orbita-surface px-1 py-0.5 text-[10px] sm:text-[11px]"
                                   value={tx.categoria}
                                   onChange={(e) => {
+                                    const newCat = e.target.value
+                                    const subs = subcategoryOptionList(catalogRows, newCat, "")
+                                    const newSub = subs[0] ?? ""
+                                    setTxRows((rs) =>
+                                      rs.map((r) =>
+                                        r.id === tx.id
+                                          ? { ...r, categoria: newCat, subcategoria: newSub }
+                                          : r,
+                                      ),
+                                    )
+                                    schedulePatch(tx.id!, {
+                                      category: newCat,
+                                      subcategory: newSub || null,
+                                    })
+                                  }}
+                                >
+                                  {catOptions.map((c) => (
+                                    <option key={c} value={c}>
+                                      {c}
+                                    </option>
+                                  ))}
+                                </select>
+                                <select
+                                  aria-label="Subcategoría"
+                                  className="w-full min-w-0 rounded border border-orbita-border bg-orbita-surface px-1 py-0.5 text-[9px] text-orbita-secondary sm:text-[10px]"
+                                  value={tx.subcategoria || ""}
+                                  onChange={(e) => {
                                     const v = e.target.value
                                     setTxRows((rs) =>
-                                      rs.map((r) => (r.id === tx.id ? { ...r, categoria: v } : r)),
+                                      rs.map((r) => (r.id === tx.id ? { ...r, subcategoria: v } : r)),
                                     )
-                                    schedulePatch(tx.id!, { category: v })
+                                    schedulePatch(tx.id!, { subcategory: v || null })
                                   }}
-                                />
-                                {tx.subcategoria ? (
-                                  <span
-                                    className="truncate text-[9px] text-orbita-secondary"
-                                    title={tx.subcategoria}
-                                  >
-                                    {tx.subcategoria}
-                                  </span>
-                                ) : null}
+                                >
+                                  <option value="">—</option>
+                                  {subOptions.map((s) => (
+                                    <option key={s} value={s}>
+                                      {s}
+                                    </option>
+                                  ))}
+                                </select>
                               </div>
                             ) : (
                               <span className="truncate block" title={catLine}>

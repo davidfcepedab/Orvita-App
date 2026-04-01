@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState, useTransition, type ReactNode } from "react"
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -647,7 +647,6 @@ export default function CuentasClient() {
   const [tcMovementLinks, setTcMovementLinks] = useState<TcMovementLinkSummary[]>([])
   const [ledgerReorderBusy, setLedgerReorderBusy] = useState(false)
   const [ledgerReconcileBusyId, setLedgerReconcileBusyId] = useState<string | null>(null)
-  const [, startTransition] = useTransition()
   const [draggingLedgerIndex, setDraggingLedgerIndex] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
@@ -901,17 +900,13 @@ export default function CuentasClient() {
         } else {
           setNotice("Conciliación sin cambios: el saldo ya coincidía.")
         }
-        startTransition(() => {
-          void refetchLedger()
-          void refetchAccountsDashboard()
-        })
       } catch {
         setNotice("No se pudo conciliar la cuenta.")
       } finally {
         setLedgerReconcileBusyId(null)
       }
     },
-    [refetchAccountsDashboard, refetchLedger, setLedgerAccounts, startTransition],
+    [refetchAccountsDashboard, refetchLedger, setLedgerAccounts],
   )
 
   const reloadManualFromApi = useCallback(async () => {

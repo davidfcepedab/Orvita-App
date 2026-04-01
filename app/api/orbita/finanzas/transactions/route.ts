@@ -267,3 +267,89 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ success: false, error: "Error eliminando movimiento" }, { status: 500 })
   }
 }
+
+const BULK_RECONCILIATION_DELETE_MAX = 80
+
+/** Borrado múltiple solo de ajustes de conciliación (misma regla que DELETE unitario). */
+export async function POST(req: NextRequest) {
+  try {
+    if (isAppMockMode()) {
+      return NextResponse.json({ success: false, error: "No disponible en modo demo" }, { status: 400 })
+    }
+    if (!isSupabaseEnabled()) {
+      return NextResponse.json({ success: false, error: UI_SYNC_OFF_SHORT }, { status: 400 })
+    }
+
+    const auth = await requireUser(req)
+    if (auth instanceof NextResponse) return auth
+
+    const householdId = await getHouseholdId(auth.supabase, auth.userId)
+    if (!householdId) {
+      return NextResponse.json({ success: false, error: "Usuario sin hogar asignado" }, { status: 403 })
+    }
+
+    const body = (await req.json()) as { deleteReconciliationAdjustmentIds?: unknown }
+    const raw = body.deleteReconciliationAdjustmentIds
+    if (!Array.isArray(raw) || raw.length === 0) {
+      return NextResponse.json(
+        { success: false, error: "deleteReconciliationAdjustmentIds debe ser un array no vacío" },
+        { status: 400 },
+      )
+    }
+
+    const ids = [...new Set(raw.map((x) => String(x).trim()).filter(Boolean))]
+    if (ids.length > BULK_RECONCILIATION_DELETE_MAX) {
+      return NextResponse.json(
+        { success: false, error: `Máximo ${BULK_RECONCILIATION_DELETE_MAX} movimientos por solicitud` },
+        { status: 400 },
+      )
+    }
+
+    for (const id of ids) {
+      if (!UUID_RE.test(id)) {
+        return NextResponse.json({ success: false, error: `id inválido: ${id}` }, { status: 400 })
+      }
+    }
+
+    const now = new Date().toISOString()
+    const deleted: string[] = []
+    const skipped: string[] = []
+
+    for (const id of ids) {
+      const { data: existing, error: fetchErr } = await auth.supabase
+        .from("orbita_finance_transactions")
+        .select("id, household_id, description")
+        .eq("id", id)
+        .is("deleted_at", null)
+        .maybeSingle()
+
+      if (fetchErr) throw fetchErr
+      if (!existing || String(existing.household_id) !== String(householdId)) {
+        skipped.push(id)
+        continue
+      }
+      if (!/reconciliation_adjustment/i.test(String(existing.description ?? ""))) {
+        skipped.push(id)
+        continue
+      }
+
+      const { error: upErr } = await auth.supabase
+        .from("orbita_finance_transactions")
+        .update({ deleted_at: now, updated_at: now })
+        .eq("id", id)
+        .eq("household_id", householdId)
+
+      if (upErr) throw upErr
+      deleted.push(id)
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: { deleted, skipped },
+    })
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Error"
+    console.error("TRANSACTIONS POST bulk:", message)
+    return NextResponse.json({ success: false, error: "Error eliminando movimientos" }, { status: 500 })
+  }
+}
