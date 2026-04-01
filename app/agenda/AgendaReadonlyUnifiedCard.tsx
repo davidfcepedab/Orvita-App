@@ -125,14 +125,18 @@ export function AgendaReadonlyUnifiedCard({
           <button
             type="button"
             onClick={() => window.open(editUrl, "_blank", "noopener,noreferrer")}
-            className={`inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] font-semibold text-[var(--color-text-primary)] shadow-sm transition hover:bg-[color-mix(in_srgb,var(--color-surface-alt)_85%,var(--color-text-secondary))] ${
-              variant === "list" ? "px-3 py-2 text-[12px]" : "px-2.5 py-1.5 text-[11px]"
+            className={`group inline-flex max-w-full items-center gap-1 rounded-md border-0 bg-transparent font-normal text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color-mix(in_srgb,var(--color-text-secondary)_35%,transparent)] ${
+              variant === "list" ? "px-0 py-0.5 text-[11px] leading-none" : "px-0 py-0.5 text-[10px] leading-none"
             }`}
             aria-label={editTitle}
             title={editTitle}
           >
-            <Pencil className={variant === "list" ? "h-3.5 w-3.5" : "h-3 w-3"} strokeWidth={2} aria-hidden />
-            Editar
+            <Pencil
+              className={`shrink-0 opacity-45 transition-opacity group-hover:opacity-80 ${variant === "list" ? "h-3 w-3" : "h-2.5 w-2.5"}`}
+              strokeWidth={1.75}
+              aria-hidden
+            />
+            <span className="underline-offset-2 group-hover:underline">Editar</span>
           </button>
         ) : null}
         <div className="flex items-center justify-end gap-1">

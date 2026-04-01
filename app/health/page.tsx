@@ -16,6 +16,7 @@ import { Card } from "@/src/components/ui/Card"
 import { useSaludContext } from "@/app/salud/_hooks/useSaludContext"
 import { useTraining } from "@/src/modules/training/useTraining"
 import { useHealthSupplements } from "@/app/hooks/useHealthSupplements"
+import { SupplementStackSection } from "@/app/health/SupplementStackSection"
 import { calculateRecovery } from "@/src/modules/health/recoveryEngine"
 import { buildRecoveryInputs } from "@/lib/health/recoveryFromContext"
 import { buildBiometricCorrelationChartSeries } from "@/lib/health/sleepEnergyCorrelation"
@@ -71,6 +72,8 @@ export default function HealthPage() {
     editMode,
     setEditMode,
     updateSupplement,
+    takenToday,
+    toggleComplianceToday,
     loading: suppLoading,
     error: suppError,
   } = useHealthSupplements()
@@ -206,103 +209,18 @@ export default function HealthPage() {
             ))}
       </div>
 
-      <Card>
-        <div style={{ padding: "var(--spacing-md)", display: "grid", gap: "var(--spacing-md)" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
-            <div>
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: "11px",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.14em",
-                  color: "var(--color-text-secondary)",
-                }}
-              >
-                Stack de suplementación
-              </p>
-              <p style={{ margin: "4px 0 0", fontSize: "12px", color: "var(--color-text-secondary)" }}>
-                {activeCount}/{supplements.length} protocolos activos
-                {suppLoading ? " · guardando…" : ""}
-              </p>
-              {suppError && (
-                <p style={{ margin: "4px 0 0", fontSize: "11px", color: "var(--color-accent-danger)" }}>{suppError}</p>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => setEditMode(!editMode)}
-              style={{
-                padding: "6px 10px",
-                borderRadius: "10px",
-                border: "0.5px solid var(--color-border)",
-                background: editMode ? "var(--color-accent-health)" : "var(--color-surface-alt)",
-                fontSize: "11px",
-                color: editMode ? "white" : "inherit",
-              }}
-            >
-              {editMode ? "Listo" : "Editar stack"}
-            </button>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: "var(--spacing-md)" }}>
-            {supplements.map((item) => (
-              <div key={item.id} style={{ textAlign: "center", display: "grid", gap: "6px" }}>
-                <button
-                  type="button"
-                  onClick={() => toggleActive(item.id)}
-                  title="Pulsa para activar o desactivar en tu stack"
-                  style={{
-                    width: "36px",
-                    height: "36px",
-                    margin: "0 auto",
-                    borderRadius: "999px",
-                    border: `2px solid ${item.active ? "var(--color-accent-health)" : "var(--color-border)"}`,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: item.active ? "var(--color-accent-health)" : "var(--color-text-secondary)",
-                    background: "transparent",
-                    cursor: "pointer",
-                  }}
-                >
-                  ●
-                </button>
-                {editMode ? (
-                  <>
-                    <input
-                      value={item.name}
-                      onChange={(e) => updateSupplement(item.id, { name: e.target.value })}
-                      style={{
-                        fontSize: "10px",
-                        padding: "4px",
-                        borderRadius: "8px",
-                        border: "0.5px solid var(--color-border)",
-                        width: "100%",
-                      }}
-                    />
-                    <input
-                      value={item.amount}
-                      onChange={(e) => updateSupplement(item.id, { amount: e.target.value })}
-                      style={{
-                        fontSize: "10px",
-                        padding: "4px",
-                        borderRadius: "8px",
-                        border: "0.5px solid var(--color-border)",
-                        width: "100%",
-                      }}
-                    />
-                  </>
-                ) : (
-                  <>
-                    <p style={{ margin: 0, fontSize: "11px", fontWeight: 500 }}>{item.name}</p>
-                    <p style={{ margin: 0, fontSize: "10px", color: "var(--color-text-secondary)" }}>{item.amount}</p>
-                  </>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </Card>
+      <SupplementStackSection
+        supplements={supplements}
+        activeCount={activeCount}
+        suppLoading={suppLoading}
+        suppError={suppError}
+        editMode={editMode}
+        setEditMode={setEditMode}
+        toggleActive={toggleActive}
+        updateSupplement={updateSupplement}
+        takenToday={takenToday}
+        toggleComplianceToday={toggleComplianceToday}
+      />
 
       <Card>
         <div style={{ padding: "var(--spacing-lg)", display: "grid", gap: "var(--spacing-sm)" }}>

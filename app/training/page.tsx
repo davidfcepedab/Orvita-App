@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useRef } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   CartesianGrid,
   ComposedChart,
@@ -38,6 +38,23 @@ export default function TrainingPage() {
   const { today, days, loading, error, manualStatus, setManualStatus } = useTraining()
   const { bodyRows, mealDays, prefs, setGoalImageUrl, setMealNotes, loading: prefsLoading } = useTrainingPreferences()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [trainingNotice, setTrainingNotice] = useState<string | null>(null)
+  const trainingNoticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const showTrainingNotice = useCallback((message: string) => {
+    if (trainingNoticeTimerRef.current) clearTimeout(trainingNoticeTimerRef.current)
+    setTrainingNotice(message)
+    trainingNoticeTimerRef.current = setTimeout(() => {
+      setTrainingNotice(null)
+      trainingNoticeTimerRef.current = null
+    }, 10_000)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (trainingNoticeTimerRef.current) clearTimeout(trainingNoticeTimerRef.current)
+    }
+  }, [])
 
   const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), [])
   const weekPoints = useMemo(() => buildWeeklyVolumeIntensity(days, todayIso), [days, todayIso])
@@ -78,13 +95,13 @@ export default function TrainingPage() {
   }
 
   const onAdjustNutritionWithAI = () => {
-    window.alert(
+    showTrainingNotice(
       "Ajuste nutricional con IA (placeholder Bloque 3): propondremos kcal y macros según carga en Hevy y medidas corporales.",
     )
   }
 
   const onGenerateGoalWithAI = () => {
-    window.alert(
+    showTrainingNotice(
       "Imagen de referencia con IA (placeholder Bloque 3): aquí enlazaremos generación o edición de imagen objetivo.",
     )
   }
@@ -296,6 +313,31 @@ export default function TrainingPage() {
           </div>
         </Card>
       </div>
+
+      {trainingNotice ? (
+        <div
+          role="status"
+          className="flex flex-wrap items-start justify-between gap-3 rounded-xl border px-4 py-3 text-sm leading-snug"
+          style={{
+            borderColor: "color-mix(in srgb, var(--color-accent-primary) 32%, var(--color-border))",
+            background: "color-mix(in srgb, var(--color-accent-primary) 8%, var(--color-surface))",
+            color: "var(--color-text-primary)",
+          }}
+        >
+          <p className="m-0 min-w-0 flex-1">{trainingNotice}</p>
+          <button
+            type="button"
+            className="shrink-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)] transition hover:bg-[var(--color-surface-alt)]"
+            onClick={() => {
+              if (trainingNoticeTimerRef.current) clearTimeout(trainingNoticeTimerRef.current)
+              trainingNoticeTimerRef.current = null
+              setTrainingNotice(null)
+            }}
+          >
+            Cerrar
+          </button>
+        </div>
+      ) : null}
 
       <TrainingVisualBodySection
         goalImageUrl={goalUrl}

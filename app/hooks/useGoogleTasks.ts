@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { isAppMockMode } from "@/lib/checkins/flags"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
@@ -27,10 +27,12 @@ export function useGoogleTasks(): GoogleTasksFeedState {
   const [connected, setConnected] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
+  const initialTasksFetchDoneRef = useRef(false)
 
   const load = useCallback(async () => {
+    const showBlockingSpinner = !initialTasksFetchDoneRef.current
     try {
-      setLoading(true)
+      if (showBlockingSpinner) setLoading(true)
       setError(null)
       setNotice(null)
       const headers = await browserBearerHeaders()
@@ -48,12 +50,13 @@ export function useGoogleTasks(): GoogleTasksFeedState {
       setTasks(payload.tasks ?? [])
       setConnected(payload.connected ?? false)
       setNotice(payload.notice ?? null)
+      initialTasksFetchDoneRef.current = true
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error")
       setTasks([])
       setConnected(false)
     } finally {
-      setLoading(false)
+      if (showBlockingSpinner) setLoading(false)
     }
   }, [])
 

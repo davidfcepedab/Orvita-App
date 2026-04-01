@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { isAppMockMode } from "@/lib/checkins/flags"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
@@ -24,10 +24,13 @@ export function useGoogleCalendar(): GoogleCalendarFeedState {
   const [error, setError] = useState<string | null>(null)
   const [connected, setConnected] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
+  /** Evita `loading=true` en refrescos posteriores (stale-while-revalidate) para no parpadear la agenda. */
+  const initialCalendarFetchDoneRef = useRef(false)
 
   const load = useCallback(async (range?: { timeMin: string; timeMax: string }) => {
+    const showBlockingSpinner = !initialCalendarFetchDoneRef.current
     try {
-      setLoading(true)
+      if (showBlockingSpinner) setLoading(true)
       setError(null)
       setNotice(null)
       const headers = await browserBearerHeaders()
@@ -54,12 +57,13 @@ export function useGoogleCalendar(): GoogleCalendarFeedState {
       setEvents(payload.events ?? [])
       setConnected(payload.connected ?? false)
       setNotice(payload.notice ?? null)
+      initialCalendarFetchDoneRef.current = true
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error")
       setEvents([])
       setConnected(false)
     } finally {
-      setLoading(false)
+      if (showBlockingSpinner) setLoading(false)
     }
   }, [])
 
