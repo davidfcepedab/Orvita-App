@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { startTransition, useCallback, useEffect, useRef, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useFinance } from "../FinanceContext"
 import { useLedgerAccounts } from "../useLedgerAccounts"
@@ -57,6 +57,7 @@ export default function TransactionsPageClient() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [patchErr, setPatchErr] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const patchTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
   const month = finance?.month ?? searchParams.get("month") ?? ""
@@ -67,44 +68,59 @@ export default function TransactionsPageClient() {
 
   const { accounts: ledgerAccounts } = useLedgerAccounts({ enabled: supabaseEnabled })
 
+  const loadTransactions = useCallback(
+    async (opts: { showLoading: boolean }) => {
+      if (!month) {
+        setData(null)
+        setTxRows([])
+        return
+      }
+
+      if (opts.showLoading) {
+        setLoading(true)
+        setError(null)
+      }
+
+      try {
+        let url = `/api/orbita/finanzas/transactions?month=${encodeURIComponent(month)}`
+        if (category) {
+          url += `&category=${encodeURIComponent(category)}`
+        }
+        if (financeAccountId) {
+          url += `&finance_account_id=${encodeURIComponent(financeAccountId)}`
+        }
+
+        const response = await financeApiGet(url)
+        const json: TransactionsResponse = await response.json()
+
+        if (!response.ok || !json.success) {
+          throw new Error(messageForHttpError(response.status, json.error, response.statusText))
+        }
+
+        const d = json.data ?? null
+        setData(d)
+        setTxRows(d?.transactions ?? [])
+      } catch (err) {
+        if (opts.showLoading) {
+          const errorMessage = err instanceof Error ? err.message : "Error desconocido"
+          setError(errorMessage)
+          setData(null)
+          setTxRows([])
+        }
+      } finally {
+        if (opts.showLoading) setLoading(false)
+      }
+    },
+    [month, category, financeAccountId],
+  )
+
   const fetchTransactions = useCallback(async () => {
-    if (!month) {
-      setData(null)
-      return
-    }
+    await loadTransactions({ showLoading: true })
+  }, [loadTransactions])
 
-    try {
-      setLoading(true)
-      setError(null)
-
-      let url = `/api/orbita/finanzas/transactions?month=${encodeURIComponent(month)}`
-      if (category) {
-        url += `&category=${encodeURIComponent(category)}`
-      }
-      if (financeAccountId) {
-        url += `&finance_account_id=${encodeURIComponent(financeAccountId)}`
-      }
-
-      const response = await financeApiGet(url)
-
-      const json: TransactionsResponse = await response.json()
-
-      if (!response.ok || !json.success) {
-        throw new Error(messageForHttpError(response.status, json.error, response.statusText))
-      }
-
-      const d = json.data ?? null
-      setData(d)
-      setTxRows(d?.transactions ?? [])
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Error desconocido"
-      setError(errorMessage)
-      setData(null)
-      setTxRows([])
-    } finally {
-      setLoading(false)
-    }
-  }, [month, category, financeAccountId])
+  const fetchTransactionsSilent = useCallback(() => {
+    void loadTransactions({ showLoading: false })
+  }, [loadTransactions])
 
   const setFinanceAccountId = (id: string) => {
     const p = new URLSearchParams(searchParams.toString())
@@ -182,31 +198,37 @@ export default function TransactionsPageClient() {
       if (!isReconciliationAdjustmentDescription(tx.descripcion)) return
       if (!window.confirm("¿Eliminar este ajuste de conciliación? No se puede deshacer.")) return
 
+      const id = tx.id
       const amount = Number(tx.monto ?? 0)
-      setTxRows((rows) => rows.filter((r) => r.id !== tx.id))
-      setData((prev) => {
-        if (!prev) return prev
-        const nextSubtotal = prev.subtotal - amount
-        const nextDelta = prev.delta == null ? null : nextSubtotal - prev.previousSubtotal
-        return { ...prev, subtotal: nextSubtotal, delta: nextDelta }
+      setDeletingId(id)
+      startTransition(() => {
+        setTxRows((rows) => rows.filter((r) => r.id !== id))
+        setData((prev) => {
+          if (!prev) return prev
+          const nextSubtotal = prev.subtotal - amount
+          const nextDelta = prev.delta == null ? null : nextSubtotal - prev.previousSubtotal
+          return { ...prev, subtotal: nextSubtotal, delta: nextDelta }
+        })
       })
 
       try {
         setPatchErr(null)
         const res = await financeApiDelete(
-          `/api/orbita/finanzas/transactions?id=${encodeURIComponent(tx.id)}`,
+          `/api/orbita/finanzas/transactions?id=${encodeURIComponent(id)}`,
         )
         const json = (await res.json()) as { success?: boolean; error?: string }
         if (!res.ok || !json.success) {
           throw new Error(messageForHttpError(res.status, json.error, res.statusText))
         }
+        fetchTransactionsSilent()
       } catch (e) {
         setPatchErr(e instanceof Error ? e.message : "No se pudo eliminar")
+        fetchTransactionsSilent()
       } finally {
-        await fetchTransactions()
+        setDeletingId(null)
       }
     },
-    [fetchTransactions, supabaseEnabled],
+    [fetchTransactionsSilent, supabaseEnabled],
   )
 
   return (
@@ -469,10 +491,12 @@ export default function TransactionsPageClient() {
                             {supabaseEnabled && tx.id && isReconciliationAdjustment ? (
                               <button
                                 type="button"
+                                disabled={deletingId === tx.id}
+                                aria-busy={deletingId === tx.id}
                                 onClick={() => void deleteReconciliationTx(tx)}
-                                className="font-semibold text-rose-600 transition-opacity hover:opacity-80"
+                                className="font-semibold text-rose-600 transition-opacity enabled:hover:opacity-80 disabled:cursor-wait disabled:opacity-50"
                               >
-                                Eliminar
+                                {deletingId === tx.id ? "…" : "Eliminar"}
                               </button>
                             ) : (
                               <span className="text-orbita-secondary">—</span>
