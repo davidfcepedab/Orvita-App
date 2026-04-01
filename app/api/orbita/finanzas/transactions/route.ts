@@ -209,3 +209,61 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ success: false, error: "Error actualizando movimiento" }, { status: 500 })
   }
 }
+
+export async function DELETE(req: NextRequest) {
+  try {
+    if (isAppMockMode()) {
+      return NextResponse.json({ success: false, error: "No disponible en modo demo" }, { status: 400 })
+    }
+    if (!isSupabaseEnabled()) {
+      return NextResponse.json({ success: false, error: UI_SYNC_OFF_SHORT }, { status: 400 })
+    }
+
+    const auth = await requireUser(req)
+    if (auth instanceof NextResponse) return auth
+
+    const householdId = await getHouseholdId(auth.supabase, auth.userId)
+    if (!householdId) {
+      return NextResponse.json({ success: false, error: "Usuario sin hogar asignado" }, { status: 403 })
+    }
+
+    const id = req.nextUrl.searchParams.get("id")?.trim() ?? ""
+    if (!UUID_RE.test(id)) {
+      return NextResponse.json({ success: false, error: "id inválido" }, { status: 400 })
+    }
+
+    const { data: existing, error: fetchErr } = await auth.supabase
+      .from("orbita_finance_transactions")
+      .select("id, household_id, description")
+      .eq("id", id)
+      .is("deleted_at", null)
+      .maybeSingle()
+
+    if (fetchErr) throw fetchErr
+    if (!existing || String(existing.household_id) !== String(householdId)) {
+      return NextResponse.json({ success: false, error: "Movimiento no encontrado" }, { status: 404 })
+    }
+
+    if (!/reconciliation_adjustment/i.test(String(existing.description ?? ""))) {
+      return NextResponse.json(
+        { success: false, error: "Solo se pueden eliminar ajustes de conciliación" },
+        { status: 400 },
+      )
+    }
+
+    const now = new Date().toISOString()
+    const { error: upErr } = await auth.supabase
+      .from("orbita_finance_transactions")
+      .update({ deleted_at: now, updated_at: now })
+      .eq("id", id)
+      .eq("household_id", householdId)
+
+    if (upErr) throw upErr
+
+    return NextResponse.json({ success: true })
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Error"
+    console.error("TRANSACTIONS DELETE:", message)
+    return NextResponse.json({ success: false, error: "Error eliminando movimiento" }, { status: 500 })
+  }
+}

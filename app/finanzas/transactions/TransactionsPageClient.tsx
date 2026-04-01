@@ -6,12 +6,16 @@ import { useFinance } from "../FinanceContext"
 import { useLedgerAccounts } from "../useLedgerAccounts"
 import { Card } from "@/src/components/ui/Card"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
-import { financeApiGet, financeApiJson } from "@/lib/finanzas/financeClientFetch"
+import { financeApiDelete, financeApiGet, financeApiJson } from "@/lib/finanzas/financeClientFetch"
 
 const supabaseEnabled = process.env.NEXT_PUBLIC_SUPABASE_ENABLED === "true"
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+function isReconciliationAdjustmentDescription(description: string | undefined): boolean {
+  return /reconciliation_adjustment/i.test(String(description ?? ""))
+}
 
 interface Transaction {
   id?: string
@@ -63,6 +67,45 @@ export default function TransactionsPageClient() {
 
   const { accounts: ledgerAccounts } = useLedgerAccounts({ enabled: supabaseEnabled })
 
+  const fetchTransactions = useCallback(async () => {
+    if (!month) {
+      setData(null)
+      return
+    }
+
+    try {
+      setLoading(true)
+      setError(null)
+
+      let url = `/api/orbita/finanzas/transactions?month=${encodeURIComponent(month)}`
+      if (category) {
+        url += `&category=${encodeURIComponent(category)}`
+      }
+      if (financeAccountId) {
+        url += `&finance_account_id=${encodeURIComponent(financeAccountId)}`
+      }
+
+      const response = await financeApiGet(url)
+
+      const json: TransactionsResponse = await response.json()
+
+      if (!response.ok || !json.success) {
+        throw new Error(messageForHttpError(response.status, json.error, response.statusText))
+      }
+
+      const d = json.data ?? null
+      setData(d)
+      setTxRows(d?.transactions ?? [])
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Error desconocido"
+      setError(errorMessage)
+      setData(null)
+      setTxRows([])
+    } finally {
+      setLoading(false)
+    }
+  }, [month, category, financeAccountId])
+
   const setFinanceAccountId = (id: string) => {
     const p = new URLSearchParams(searchParams.toString())
     if (id) p.set("account", id)
@@ -72,47 +115,8 @@ export default function TransactionsPageClient() {
   }
 
   useEffect(() => {
-    if (!month) {
-      setData(null)
-      return
-    }
-
-    const fetchTransactions = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-
-        let url = `/api/orbita/finanzas/transactions?month=${encodeURIComponent(month)}`
-        if (category) {
-          url += `&category=${encodeURIComponent(category)}`
-        }
-        if (financeAccountId) {
-          url += `&finance_account_id=${encodeURIComponent(financeAccountId)}`
-        }
-
-        const response = await financeApiGet(url)
-
-        const json: TransactionsResponse = await response.json()
-
-        if (!response.ok || !json.success) {
-          throw new Error(messageForHttpError(response.status, json.error, response.statusText))
-        }
-
-        const d = json.data ?? null
-        setData(d)
-        setTxRows(d?.transactions ?? [])
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : "Error desconocido"
-        setError(errorMessage)
-        setData(null)
-        setTxRows([])
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchTransactions()
-  }, [month, category, financeAccountId])
+    void fetchTransactions()
+  }, [fetchTransactions])
 
   if (!finance) {
     return (
@@ -170,6 +174,40 @@ export default function TransactionsPageClient() {
   const contentLoading = periodReady && loading
   const contentError = periodReady && error
   const contentReady = periodReady && !loading && !error && data !== null
+
+  const deleteReconciliationTx = useCallback(
+    async (tx: Transaction) => {
+      if (!tx.id) return
+      if (!supabaseEnabled) return
+      if (!isReconciliationAdjustmentDescription(tx.descripcion)) return
+      if (!window.confirm("¿Eliminar este ajuste de conciliación? No se puede deshacer.")) return
+
+      const amount = Number(tx.monto ?? 0)
+      setTxRows((rows) => rows.filter((r) => r.id !== tx.id))
+      setData((prev) => {
+        if (!prev) return prev
+        const nextSubtotal = prev.subtotal - amount
+        const nextDelta = prev.delta == null ? null : nextSubtotal - prev.previousSubtotal
+        return { ...prev, subtotal: nextSubtotal, delta: nextDelta }
+      })
+
+      try {
+        setPatchErr(null)
+        const res = await financeApiDelete(
+          `/api/orbita/finanzas/transactions?id=${encodeURIComponent(tx.id)}`,
+        )
+        const json = (await res.json()) as { success?: boolean; error?: string }
+        if (!res.ok || !json.success) {
+          throw new Error(messageForHttpError(res.status, json.error, res.statusText))
+        }
+      } catch (e) {
+        setPatchErr(e instanceof Error ? e.message : "No se pudo eliminar")
+      } finally {
+        await fetchTransactions()
+      }
+    },
+    [fetchTransactions, supabaseEnabled],
+  )
 
   return (
     <div className="min-w-0 space-y-6 sm:space-y-8">
@@ -280,144 +318,170 @@ export default function TransactionsPageClient() {
             <div className="min-w-0 max-w-full overflow-hidden rounded-lg border border-orbita-border bg-[var(--color-surface)]">
               <div className="max-h-[min(70vh,56rem)] min-w-0 overflow-auto overscroll-contain [-webkit-overflow-scrolling:touch] touch-pan-x touch-pan-y">
                 <table className="w-full min-w-0 table-fixed border-collapse text-left text-[10px] sm:text-[11px]">
-              <colgroup>
-                <col style={{ width: "14%" }} />
-                <col style={{ width: "6%" }} />
-                <col style={{ width: "20%" }} />
-                <col style={{ width: "18%" }} />
-                <col style={{ width: "26%" }} />
-                <col style={{ width: "16%" }} />
-              </colgroup>
-              <thead className="sticky top-0 z-[1] border-b border-orbita-border bg-orbita-surface-alt text-[9px] font-semibold uppercase tracking-[0.08em] text-orbita-secondary sm:text-[10px]">
-                <tr>
-                  <th scope="col" className="whitespace-nowrap px-1.5 py-1.5 text-left sm:px-2 sm:py-2">
-                    Fecha
-                  </th>
-                  <th scope="col" className="px-0.5 py-1.5 text-center sm:py-2" title="Tipo">
-                    T
-                  </th>
-                  <th scope="col" className="px-1.5 py-1.5 text-left sm:px-2 sm:py-2">
-                    Categoría
-                  </th>
-                  <th scope="col" className="px-1.5 py-1.5 text-left sm:px-2 sm:py-2">
-                    Cuenta
-                  </th>
-                  <th scope="col" className="px-1.5 py-1.5 text-left sm:px-2 sm:py-2">
-                    Concepto
-                  </th>
-                  <th scope="col" className="whitespace-nowrap px-1.5 py-1.5 text-right tabular-nums sm:px-2 sm:py-2">
-                    Monto
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {transactions.map((tx, idx) => {
-                  const catLine = [tx.categoria, tx.subcategoria].filter(Boolean).join(" · ")
-                  const tipoResolved =
-                    tx.tipo ?? (tx.monto > 0 ? ("income" as const) : ("expense" as const))
-                  const tipoLabel = tipoResolved === "income" ? "Ingreso" : "Egreso"
-                  const montoStr = `$${Math.abs(tx.monto).toLocaleString("es-CO", {
-                    maximumFractionDigits: 0,
-                  })}`
-                  const isIngreso = tipoResolved === "income"
-                  const rowBg = isIngreso ? "hover:opacity-95" : "hover:opacity-95"
-                  const rowBorder = "border-b border-orbita-border/60"
-                  const rowStyle = isIngreso
-                    ? {
-                        background:
-                          "color-mix(in srgb, var(--color-accent-health) 14%, var(--color-surface))",
-                      }
-                    : {
-                        background:
-                          "color-mix(in srgb, var(--color-accent-danger) 12%, var(--color-surface))",
-                      }
-                  const editable = Boolean(supabaseEnabled && tx.id)
-                  return (
-                    <tr
-                      key={tx.id ?? idx}
-                      className={`${rowBg} ${rowBorder} last:border-b-0 transition-opacity`}
-                      style={rowStyle}
-                    >
-                      <td className="whitespace-nowrap px-1.5 py-1 align-middle tabular-nums text-orbita-primary sm:px-2 sm:py-1.5">
-                        {tx.fecha}
-                      </td>
-                      <td
-                        className={`px-0.5 py-1 align-middle text-center sm:py-1.5 ${
-                          isIngreso ? "text-[var(--color-accent-health)]" : "text-[var(--color-accent-danger)]"
-                        }`}
-                        title={tipoLabel}
+                  <colgroup>
+                    <col style={{ width: "14%" }} />
+                    <col style={{ width: "6%" }} />
+                    <col style={{ width: "18%" }} />
+                    <col style={{ width: "16%" }} />
+                    <col style={{ width: "24%" }} />
+                    <col style={{ width: "14%" }} />
+                    <col style={{ width: "8%" }} />
+                  </colgroup>
+                  <thead className="sticky top-0 z-[1] border-b border-orbita-border bg-orbita-surface-alt text-[9px] font-semibold uppercase tracking-[0.08em] text-orbita-secondary sm:text-[10px]">
+                    <tr>
+                      <th scope="col" className="whitespace-nowrap px-1.5 py-1.5 text-left sm:px-2 sm:py-2">
+                        Fecha
+                      </th>
+                      <th scope="col" className="px-0.5 py-1.5 text-center sm:py-2" title="Tipo">
+                        T
+                      </th>
+                      <th scope="col" className="px-1.5 py-1.5 text-left sm:px-2 sm:py-2">
+                        Categoría
+                      </th>
+                      <th scope="col" className="px-1.5 py-1.5 text-left sm:px-2 sm:py-2">
+                        Cuenta
+                      </th>
+                      <th scope="col" className="px-1.5 py-1.5 text-left sm:px-2 sm:py-2">
+                        Concepto
+                      </th>
+                      <th
+                        scope="col"
+                        className="whitespace-nowrap px-1.5 py-1.5 text-right tabular-nums sm:px-2 sm:py-2"
                       >
-                        {editable ? (
-                          <select
-                            aria-label="Tipo de movimiento"
-                            className="max-w-[3.25rem] rounded border border-orbita-border bg-orbita-surface py-0.5 text-[9px] font-bold"
-                            value={tipoResolved}
-                            onChange={(e) => {
-                              const t = e.target.value as "income" | "expense"
-                              const abs = Math.abs(tx.monto)
-                              setTxRows((rs) =>
-                                rs.map((r) =>
-                                  r.id === tx.id
-                                    ? { ...r, tipo: t, monto: t === "income" ? abs : -abs }
-                                    : r,
-                                ),
-                              )
-                              schedulePatch(tx.id!, { type: t })
-                            }}
-                          >
-                            <option value="income">IN</option>
-                            <option value="expense">EG</option>
-                          </select>
-                        ) : (
-                          <span className="text-[9px] font-bold">{isIngreso ? "IN" : "EG"}</span>
-                        )}
-                      </td>
-                      <td className="min-w-0 px-1.5 py-1 align-middle text-orbita-primary sm:px-2 sm:py-1.5">
-                        {editable ? (
-                          <div className="grid min-w-0 gap-0.5">
-                            <input
-                              aria-label="Categoría"
-                              className="w-full min-w-0 rounded border border-orbita-border bg-orbita-surface px-1 py-0.5 text-[10px] sm:text-[11px]"
-                              value={tx.categoria}
-                              onChange={(e) => {
-                                const v = e.target.value
-                                setTxRows((rs) =>
-                                  rs.map((r) => (r.id === tx.id ? { ...r, categoria: v } : r)),
-                                )
-                                schedulePatch(tx.id!, { category: v })
-                              }}
-                            />
-                            {tx.subcategoria ? (
-                              <span className="truncate text-[9px] text-orbita-secondary" title={tx.subcategoria}>
-                                {tx.subcategoria}
-                              </span>
-                            ) : null}
-                          </div>
-                        ) : (
-                          <span className="truncate block" title={catLine}>
-                            {catLine}
-                          </span>
-                        )}
-                      </td>
-                      <td
-                        className="truncate px-1.5 py-1 align-middle text-[10px] text-orbita-secondary sm:px-2 sm:py-1.5 sm:text-[11px]"
-                        title={tx.cuenta || ""}
-                      >
-                        {tx.cuenta || "—"}
-                      </td>
-                      <td
-                        className="truncate px-1.5 py-1 align-middle text-orbita-secondary sm:px-2 sm:py-1.5"
-                        title={tx.descripcion}
-                      >
-                        {tx.descripcion}
-                      </td>
-                      <td className="whitespace-nowrap px-1.5 py-1 align-middle text-right tabular-nums font-semibold text-orbita-primary sm:px-2 sm:py-1.5">
-                        {montoStr}
-                      </td>
+                        Monto
+                      </th>
+                      <th scope="col" className="whitespace-nowrap px-1.5 py-1.5 text-right sm:px-2 sm:py-2">
+                        Acciones
+                      </th>
                     </tr>
-                  )
-                })}
-              </tbody>
+                  </thead>
+                  <tbody>
+                    {transactions.map((tx, idx) => {
+                      const catLine = [tx.categoria, tx.subcategoria].filter(Boolean).join(" · ")
+                      const tipoResolved =
+                        tx.tipo ?? (tx.monto > 0 ? ("income" as const) : ("expense" as const))
+                      const tipoLabel = tipoResolved === "income" ? "Ingreso" : "Egreso"
+                      const montoStr = `$${Math.abs(tx.monto).toLocaleString("es-CO", {
+                        maximumFractionDigits: 0,
+                      })}`
+                      const isIngreso = tipoResolved === "income"
+                      const isReconciliationAdjustment = isReconciliationAdjustmentDescription(tx.descripcion)
+                      const rowBg = isIngreso ? "hover:opacity-95" : "hover:opacity-95"
+                      const rowBorder = "border-b border-orbita-border/60"
+                      const rowStyle = isIngreso
+                        ? {
+                            background:
+                              "color-mix(in srgb, var(--color-accent-health) 14%, var(--color-surface))",
+                          }
+                        : {
+                            background:
+                              "color-mix(in srgb, var(--color-accent-danger) 12%, var(--color-surface))",
+                          }
+                      const editable = Boolean(supabaseEnabled && tx.id)
+                      return (
+                        <tr
+                          key={tx.id ?? idx}
+                          className={`${rowBg} ${rowBorder} last:border-b-0 transition-opacity`}
+                          style={rowStyle}
+                        >
+                          <td className="whitespace-nowrap px-1.5 py-1 align-middle tabular-nums text-orbita-primary sm:px-2 sm:py-1.5">
+                            {tx.fecha}
+                          </td>
+                          <td
+                            className={`px-0.5 py-1 align-middle text-center sm:py-1.5 ${
+                              isIngreso
+                                ? "text-[var(--color-accent-health)]"
+                                : "text-[var(--color-accent-danger)]"
+                            }`}
+                            title={tipoLabel}
+                          >
+                            {editable ? (
+                              <select
+                                aria-label="Tipo de movimiento"
+                                className="max-w-[3.25rem] rounded border border-orbita-border bg-orbita-surface py-0.5 text-[9px] font-bold"
+                                value={tipoResolved}
+                                onChange={(e) => {
+                                  const t = e.target.value as "income" | "expense"
+                                  const abs = Math.abs(tx.monto)
+                                  setTxRows((rs) =>
+                                    rs.map((r) =>
+                                      r.id === tx.id
+                                        ? { ...r, tipo: t, monto: t === "income" ? abs : -abs }
+                                        : r,
+                                    ),
+                                  )
+                                  schedulePatch(tx.id!, { type: t })
+                                }}
+                              >
+                                <option value="income">IN</option>
+                                <option value="expense">EG</option>
+                              </select>
+                            ) : (
+                              <span className="text-[9px] font-bold">{isIngreso ? "IN" : "EG"}</span>
+                            )}
+                          </td>
+                          <td className="min-w-0 px-1.5 py-1 align-middle text-orbita-primary sm:px-2 sm:py-1.5">
+                            {editable ? (
+                              <div className="grid min-w-0 gap-0.5">
+                                <input
+                                  aria-label="Categoría"
+                                  className="w-full min-w-0 rounded border border-orbita-border bg-orbita-surface px-1 py-0.5 text-[10px] sm:text-[11px]"
+                                  value={tx.categoria}
+                                  onChange={(e) => {
+                                    const v = e.target.value
+                                    setTxRows((rs) =>
+                                      rs.map((r) => (r.id === tx.id ? { ...r, categoria: v } : r)),
+                                    )
+                                    schedulePatch(tx.id!, { category: v })
+                                  }}
+                                />
+                                {tx.subcategoria ? (
+                                  <span
+                                    className="truncate text-[9px] text-orbita-secondary"
+                                    title={tx.subcategoria}
+                                  >
+                                    {tx.subcategoria}
+                                  </span>
+                                ) : null}
+                              </div>
+                            ) : (
+                              <span className="truncate block" title={catLine}>
+                                {catLine}
+                              </span>
+                            )}
+                          </td>
+                          <td
+                            className="truncate px-1.5 py-1 align-middle text-[10px] text-orbita-secondary sm:px-2 sm:py-1.5 sm:text-[11px]"
+                            title={tx.cuenta || ""}
+                          >
+                            {tx.cuenta || "—"}
+                          </td>
+                          <td
+                            className="truncate px-1.5 py-1 align-middle text-orbita-secondary sm:px-2 sm:py-1.5"
+                            title={tx.descripcion}
+                          >
+                            {tx.descripcion}
+                          </td>
+                          <td className="whitespace-nowrap px-1.5 py-1 align-middle text-right tabular-nums font-semibold text-orbita-primary sm:px-2 sm:py-1.5">
+                            {montoStr}
+                          </td>
+                          <td className="whitespace-nowrap px-1.5 py-1 align-middle text-right text-[10px] sm:px-2 sm:py-1.5 sm:text-[11px]">
+                            {supabaseEnabled && tx.id && isReconciliationAdjustment ? (
+                              <button
+                                type="button"
+                                onClick={() => void deleteReconciliationTx(tx)}
+                                className="font-semibold text-rose-600 transition-opacity hover:opacity-80"
+                              >
+                                Eliminar
+                              </button>
+                            ) : (
+                              <span className="text-orbita-secondary">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
                 </table>
               </div>
             </div>
