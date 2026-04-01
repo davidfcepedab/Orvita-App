@@ -37,6 +37,12 @@ export type UiAgendaTask = {
   assignmentCaption: string
   /** Texto para pie "Fuente: …". */
   orvitaFuente: string
+  /** Recibida de otro miembro y aún sin aceptar en inicio/agenda. */
+  needsAcceptance: boolean
+  /** Asigné a otro: pendiente de que acepte. */
+  assigneePendingAccept: boolean
+  /** Asigné a otro: ya aceptó. */
+  assigneeAccepted: boolean
 }
 
 export function assignmentShortLine(task: UiAgendaTask): string | null {
@@ -80,6 +86,10 @@ export function mapAgendaTaskToUi(t: AgendaTask): UiAgendaTask {
   }
 
   const orvitaFuente = orvitaFuenteForType(typeMap[t.type])
+  const acceptedAt = t.assignmentAcceptedAt ?? null
+  const needsAcceptance = typeMap[t.type] === "recibida" && !acceptedAt
+  const assigneePendingAccept = typeMap[t.type] === "asignada" && !acceptedAt
+  const assigneeAccepted = typeMap[t.type] === "asignada" && Boolean(acceptedAt)
 
   return {
     id: t.id,
@@ -95,6 +105,9 @@ export function mapAgendaTaskToUi(t: AgendaTask): UiAgendaTask {
     relatedPersonInitials,
     assignmentCaption,
     orvitaFuente,
+    needsAcceptance,
+    assigneePendingAccept,
+    assigneeAccepted,
   }
 }
 

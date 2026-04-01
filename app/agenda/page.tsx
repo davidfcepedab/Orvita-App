@@ -24,6 +24,7 @@ import {
 
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import { isAppMockMode, isSupabaseEnabled } from "@/lib/checkins/flags"
+import type { HouseholdMemberDTO } from "@/lib/household/memberTypes"
 import { createBrowserClient } from "@/lib/supabase/browser"
 import { buildGoogleByDayIndex, type GoogleDayBucket } from "@/lib/agenda/googleAgendaByDay"
 import { formatLocalDateKey } from "@/lib/agenda/localDateKey"
@@ -101,7 +102,8 @@ const viewOptions = [
 ]
 
 export default function AgendaPage() {
-  const { tasks: agendaTasks, loading, error, refresh, createTask, updateTask, deleteTask } = useAgendaTasks()
+  const { tasks: agendaTasks, loading, error, refresh, createTask, updateTask, deleteTask } =
+    useAgendaTasks()
   const tasks = useMemo(() => agendaTasks.map(mapAgendaTaskToUi), [agendaTasks])
   const googleCalendar = useGoogleCalendar()
   const googleTasksFeed = useGoogleTasks()
@@ -190,17 +192,48 @@ export default function AgendaPage() {
   const [showPastAgenda, setShowPastAgenda] = useState(false)
   const [formOpen, setFormOpen] = useState(false)
   const [formSubmitError, setFormSubmitError] = useState<string | null>(null)
+  const [householdMembers, setHouseholdMembers] = useState<HouseholdMemberDTO[]>([])
+  const [membersLoadError, setMembersLoadError] = useState<string | null>(null)
   const [form, setForm] = useState({
     title: "",
-    assignee: "",
+    /** vacío = tarea personal (para mí) */
+    assigneeMemberId: "",
     due: todayDateInputValue(),
     duration: 30,
-    type: "recibida",
-    priority: "media",
-    status: "recibida",
-    source: "",
-    notes: "",
+    priority: "media" as "alta" | "media" | "baja",
   })
+
+  useEffect(() => {
+    if (!formOpen) return
+    let cancelled = false
+    void (async () => {
+      setMembersLoadError(null)
+      if (isAppMockMode() || !isSupabaseEnabled()) {
+        setHouseholdMembers([])
+        return
+      }
+      try {
+        const headers = await browserBearerHeaders(true)
+        const res = await fetch("/api/household/members", { cache: "no-store", headers })
+        const json = (await res.json()) as { success?: boolean; data?: { members: HouseholdMemberDTO[] }; error?: string }
+        if (cancelled) return
+        if (!res.ok || !json.success || !json.data?.members) {
+          setMembersLoadError(json.error || "No se pudieron cargar los miembros del hogar")
+          setHouseholdMembers([])
+          return
+        }
+        setHouseholdMembers(json.data.members)
+      } catch {
+        if (!cancelled) {
+          setMembersLoadError("No se pudieron cargar los miembros del hogar")
+          setHouseholdMembers([])
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [formOpen])
 
   useEffect(() => {
     if (view !== "month") return
@@ -301,31 +334,46 @@ export default function AgendaPage() {
     event.preventDefault()
     if (!form.title.trim()) return
     setFormSubmitError(null)
+    const mid = form.assigneeMemberId.trim()
+    let assigneeId: string | null = null
+    let assigneeName: string | null = null
+    if (mid) {
+      const m = householdMembers.find((x) => x.id === mid)
+      if (!m) {
+        setFormSubmitError("Elige un miembro válido del hogar o deja «Para mí».")
+        return
+      }
+      assigneeId = m.id
+      assigneeName = (m.displayName?.trim() || m.email?.trim() || null) as string | null
+    }
     try {
       await createTask({
         title: form.title.trim(),
         priority: priorityFormToApi(form.priority),
         estimatedMinutes: Number(form.duration) || 30,
         dueDate: form.due ? form.due : null,
-        assigneeName: form.assignee.trim() ? form.assignee.trim() : null,
-        assigneeId: null,
+        assigneeName,
+        assigneeId,
       })
       setFormOpen(false)
       setForm({
         title: "",
-        assignee: "",
+        assigneeMemberId: "",
         due: todayDateInputValue(),
         duration: 30,
-        type: "recibida",
         priority: "media",
-        status: "recibida",
-        source: "",
-        notes: "",
       })
     } catch (e) {
       setFormSubmitError(e instanceof Error ? e.message : "No se pudo crear la tarea")
     }
   }
+
+  const onAcceptAssignment = useCallback(
+    async (t: UiAgendaTask) => {
+      await updateTask(t.id, { acceptAssignment: true })
+    },
+    [updateTask],
+  )
 
   const saveTaskComplete = (taskId: string, completed: boolean) =>
     updateTask(taskId, { status: completed ? "completed" : "pending" })
@@ -561,6 +609,7 @@ export default function AgendaPage() {
                   onDeleteOrvitaTask={onDeleteOrvitaTask}
                   onDeleteCalendarEvent={googleCalendar.connected ? onDeleteCalendarEvent : undefined}
                   onDeleteGoogleTask={googleTasksFeed.connected ? onDeleteGoogleTask : undefined}
+                  onAcceptAssignment={onAcceptAssignment}
                 />
               )}
               {view === "list" && (
@@ -575,6 +624,7 @@ export default function AgendaPage() {
                   onDeleteOrvitaTask={onDeleteOrvitaTask}
                   onDeleteCalendarEvent={googleCalendar.connected ? onDeleteCalendarEvent : undefined}
                   onDeleteGoogleTask={googleTasksFeed.connected ? onDeleteGoogleTask : undefined}
+                  onAcceptAssignment={onAcceptAssignment}
                 />
               )}
               {view === "week" && (
@@ -662,71 +712,67 @@ export default function AgendaPage() {
                 onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
                 style={{ padding: "10px 12px", borderRadius: "10px", border: "0.5px solid var(--color-border)" }}
               />
+              {membersLoadError ? (
+                <p style={{ margin: 0, fontSize: "12px", color: "var(--color-accent-warning)" }}>{membersLoadError}</p>
+              ) : null}
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-2.5">
-                <input
-                  placeholder="Asignado a (iniciales)"
-                  value={form.assignee}
-                  onChange={(event) => setForm((prev) => ({ ...prev, assignee: event.target.value }))}
-                  style={{ padding: "10px 12px", borderRadius: "10px", border: "0.5px solid var(--color-border)" }}
-                />
-                <input
-                  type="date"
-                  value={form.due}
-                  onChange={(event) => setForm((prev) => ({ ...prev, due: event.target.value }))}
-                  style={{ padding: "10px 12px", borderRadius: "10px", border: "0.5px solid var(--color-border)" }}
-                />
-              </div>
-              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3 sm:gap-2.5">
-                <select
-                  value={form.type}
-                  onChange={(event) => setForm((prev) => ({ ...prev, type: event.target.value }))}
-                  style={{ padding: "10px 12px", borderRadius: "10px", border: "0.5px solid var(--color-border)" }}
-                >
-                  <option value="recibida">Recibida</option>
-                  <option value="asignada">Asignada</option>
-                  <option value="personal">Personal</option>
-                </select>
-                <select
-                  value={form.priority}
-                  onChange={(event) => setForm((prev) => ({ ...prev, priority: event.target.value }))}
-                  style={{ padding: "10px 12px", borderRadius: "10px", border: "0.5px solid var(--color-border)" }}
-                >
-                  <option value="alta">Alta</option>
-                  <option value="media">Media</option>
-                  <option value="baja">Baja</option>
-                </select>
-                <select
-                  value={form.status}
-                  onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value }))}
-                  style={{ padding: "10px 12px", borderRadius: "10px", border: "0.5px solid var(--color-border)" }}
-                >
-                  <option value="recibida">Recibida</option>
-                  <option value="asignada">Asignada</option>
-                  <option value="en progreso">En progreso</option>
-                  <option value="completada">Completada</option>
-                </select>
+                <label className="grid gap-1 text-[12px] text-[var(--color-text-secondary)]">
+                  <span>Asignar a</span>
+                  <select
+                    value={form.assigneeMemberId}
+                    onChange={(event) => setForm((prev) => ({ ...prev, assigneeMemberId: event.target.value }))}
+                    style={{ padding: "10px 12px", borderRadius: "10px", border: "0.5px solid var(--color-border)", background: "var(--color-surface)" }}
+                  >
+                    <option value="">Para mí (personal)</option>
+                    {householdMembers.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.displayName?.trim() || m.email || m.id.slice(0, 8)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="grid gap-1 text-[12px] text-[var(--color-text-secondary)]">
+                  <span>Vence</span>
+                  <input
+                    type="date"
+                    value={form.due}
+                    onChange={(event) => setForm((prev) => ({ ...prev, due: event.target.value }))}
+                    style={{ padding: "10px 12px", borderRadius: "10px", border: "0.5px solid var(--color-border)" }}
+                  />
+                </label>
               </div>
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-2.5">
-                <input
-                  type="number"
-                  min={5}
-                  value={form.duration}
-                  onChange={(event) => setForm((prev) => ({ ...prev, duration: Number(event.target.value) }))}
-                  style={{ padding: "10px 12px", borderRadius: "10px", border: "0.5px solid var(--color-border)" }}
-                />
-                <input
-                  placeholder="Origen / destino"
-                  value={form.source}
-                  onChange={(event) => setForm((prev) => ({ ...prev, source: event.target.value }))}
-                  style={{ padding: "10px 12px", borderRadius: "10px", border: "0.5px solid var(--color-border)" }}
-                />
+                <label className="grid gap-1 text-[12px] text-[var(--color-text-secondary)]">
+                  <span>Prioridad</span>
+                  <select
+                    value={form.priority}
+                    onChange={(event) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        priority: event.target.value as "alta" | "media" | "baja",
+                      }))
+                    }
+                    style={{ padding: "10px 12px", borderRadius: "10px", border: "0.5px solid var(--color-border)", background: "var(--color-surface)" }}
+                  >
+                    <option value="alta">Alta</option>
+                    <option value="media">Media</option>
+                    <option value="baja">Baja</option>
+                  </select>
+                </label>
+                <label className="grid gap-1 text-[12px] text-[var(--color-text-secondary)]">
+                  <span>Duración (min)</span>
+                  <input
+                    type="number"
+                    min={5}
+                    value={form.duration}
+                    onChange={(event) => setForm((prev) => ({ ...prev, duration: Number(event.target.value) }))}
+                    style={{ padding: "10px 12px", borderRadius: "10px", border: "0.5px solid var(--color-border)" }}
+                  />
+                </label>
               </div>
-              <textarea
-                placeholder="Notas o contexto"
-                value={form.notes}
-                onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))}
-                style={{ padding: "10px 12px", borderRadius: "10px", border: "0.5px solid var(--color-border)", minHeight: "90px" }}
-              />
+              <p style={{ margin: 0, fontSize: "11px", color: "var(--color-text-secondary)", lineHeight: 1.45 }}>
+                Si asignas a otro miembro, verá la tarea en Inicio para aceptarla; tú verás el estado en la columna «Asignadas por mí».
+              </p>
               <button
                 type="submit"
                 style={{

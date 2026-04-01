@@ -25,12 +25,23 @@ type AgendaRow = {
   created_by: string | null
   created_at: string
   domain: OperationalDomain
+  assignment_accepted_at: string | null
 }
 
 function mapType(row: AgendaRow, currentUserId: string) {
-  if (!row.assignee_id || row.assignee_id === currentUserId) return "personal"
-  if (row.created_by === currentUserId || row.user_id === currentUserId) return "assigned"
-  return "received"
+  const assignee = row.assignee_id?.trim() || null
+  const creator = (row.created_by ?? row.user_id)?.trim() || null
+
+  if (assignee && assignee !== currentUserId) {
+    if (creator === currentUserId) return "assigned"
+    return "personal"
+  }
+
+  if (assignee === currentUserId && creator && creator !== currentUserId) {
+    return "received"
+  }
+
+  return "personal"
 }
 
 const MOCK_AGENDA_USER_ID = "00000000-0000-0000-0000-0000000000aa"
@@ -52,6 +63,7 @@ function seedMockAgendaRows(): AgendaRow[] {
       created_by: MOCK_AGENDA_USER_ID,
       created_at: now,
       domain: "agenda",
+      assignment_accepted_at: now,
     },
     {
       id: "mock-agenda-2",
@@ -66,6 +78,7 @@ function seedMockAgendaRows(): AgendaRow[] {
       created_by: MOCK_AGENDA_USER_ID,
       created_at: now,
       domain: "agenda",
+      assignment_accepted_at: now,
     },
   ]
 }
@@ -84,6 +97,7 @@ function mapTask(row: AgendaRow, currentUserId: string) {
     assigneeName: row.assignee_name,
     createdBy: row.created_by ?? row.user_id,
     createdAt: row.created_at,
+    assignmentAcceptedAt: row.assignment_accepted_at ?? null,
     type: mapType(row, currentUserId),
   }
 }
@@ -150,6 +164,9 @@ export async function POST(req: NextRequest) {
       }
 
       const now = new Date().toISOString()
+      const assignedToOther =
+        Boolean(assigneeId && String(assigneeId).trim()) &&
+        String(assigneeId).trim() !== MOCK_AGENDA_USER_ID
       mockAgendaRows.unshift({
         id: `mock-agenda-${randomUUID()}`,
         user_id: MOCK_AGENDA_USER_ID,
@@ -163,6 +180,7 @@ export async function POST(req: NextRequest) {
         created_by: MOCK_AGENDA_USER_ID,
         created_at: now,
         domain: "agenda",
+        assignment_accepted_at: assignedToOther ? null : now,
       })
 
       return NextResponse.json({ success: true, googleTask: null, googleSyncError: undefined })
@@ -196,6 +214,9 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    const assignedToOther =
+      Boolean(assigneeId && String(assigneeId).trim()) && String(assigneeId).trim() !== userId
+
     const insert = await supabase
       .from("operational_tasks")
       .insert({
@@ -211,6 +232,7 @@ export async function POST(req: NextRequest) {
         created_by: userId,
         domain: "agenda",
         completed: false,
+        assignment_accepted_at: assignedToOther ? null : new Date().toISOString(),
       })
       .select("id")
       .single()
@@ -350,6 +372,9 @@ export async function PATCH(req: NextRequest) {
       if (body.assigneeName === null || typeof body.assigneeName === "string") {
         row.assignee_name = body.assigneeName
       }
+      if (body.acceptAssignment === true) {
+        row.assignment_accepted_at = new Date().toISOString()
+      }
 
       return NextResponse.json({ success: true })
     }
@@ -371,6 +396,55 @@ export async function PATCH(req: NextRequest) {
         { success: false, error: "id es obligatorio" },
         { status: 400 }
       )
+    }
+
+    if (body.acceptAssignment === true) {
+      const sel = await supabase
+        .from("operational_tasks")
+        .select("id, assignee_id, created_by, assignment_accepted_at")
+        .eq("id", id)
+        .eq("domain", "agenda")
+        .eq("household_id", householdId)
+        .maybeSingle()
+
+      if (sel.error) {
+        throw sel.error
+      }
+      const taskRow = sel.data as {
+        assignee_id: string | null
+        created_by: string | null
+        assignment_accepted_at: string | null
+      } | null
+      if (!taskRow) {
+        return NextResponse.json({ success: false, error: "Tarea no encontrada" }, { status: 404 })
+      }
+      if (taskRow.assignee_id?.trim() !== userId) {
+        return NextResponse.json(
+          { success: false, error: "Solo el asignatario puede aceptar la tarea" },
+          { status: 403 }
+        )
+      }
+      if (!taskRow.created_by || taskRow.created_by === userId) {
+        return NextResponse.json(
+          { success: false, error: "Esta tarea no requiere aceptación" },
+          { status: 400 }
+        )
+      }
+      if (taskRow.assignment_accepted_at) {
+        return NextResponse.json({ success: true })
+      }
+
+      const acc = await supabase
+        .from("operational_tasks")
+        .update({ assignment_accepted_at: new Date().toISOString() })
+        .eq("id", id)
+        .eq("domain", "agenda")
+        .eq("household_id", householdId)
+
+      if (acc.error) {
+        throw acc.error
+      }
+      return NextResponse.json({ success: true })
     }
 
     const patch: Record<string, unknown> = {}

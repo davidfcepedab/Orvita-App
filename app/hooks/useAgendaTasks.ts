@@ -20,6 +20,8 @@ export interface AgendaTask {
   createdBy: string
   type: AgendaTaskType
   createdAt: string
+  /** ISO timestamp cuando el asignatario aceptó (null si aún no o no aplica). */
+  assignmentAcceptedAt?: string | null
 }
 
 type AgendaResponse = {
@@ -116,13 +118,18 @@ export function useAgendaTasks() {
         dueDate: string | null
         assigneeId: string | null
         assigneeName: string | null
+        acceptAssignment: boolean
       }>
     ) => {
       const headers = await browserBearerHeaders(true)
+      const body =
+        patch.acceptAssignment === true
+          ? { id, acceptAssignment: true as const }
+          : { id, ...patch }
       const response = await fetch("/api/agenda", {
         method: "PATCH",
         headers,
-        body: JSON.stringify({ id, ...patch }),
+        body: JSON.stringify(body),
       })
       const json = (await response.json()) as AgendaResponse
       if (!response.ok || !json.success) {

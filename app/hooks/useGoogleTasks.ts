@@ -35,8 +35,12 @@ export function useGoogleTasks(): GoogleTasksFeedState {
       if (showBlockingSpinner) setLoading(true)
       setError(null)
       setNotice(null)
-      const headers = await browserBearerHeaders()
-      const res = await fetch("/api/google/tasks", { cache: "no-store", headers })
+      const fetchTasks = (h: HeadersInit) => fetch("/api/google/tasks", { cache: "no-store", headers: h })
+      let res = await fetchTasks(await browserBearerHeaders())
+      if (res.status === 401) {
+        await new Promise((r) => setTimeout(r, 450))
+        res = await fetchTasks(await browserBearerHeaders())
+      }
       const payload = (await res.json()) as {
         success?: boolean
         tasks?: GoogleTaskDTO[]

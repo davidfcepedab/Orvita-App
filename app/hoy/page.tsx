@@ -6,7 +6,11 @@ import { Check, Loader2 } from "lucide-react"
 import { Card } from "@/src/components/ui/Card"
 import { useOperationalContext } from "@/app/hooks/useOperationalContext"
 import { useGoogleCalendar } from "@/app/hooks/useGoogleCalendar"
+import { useGoogleTasks } from "@/app/hooks/useGoogleTasks"
+import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
+import { isAppMockMode, isSupabaseEnabled } from "@/lib/checkins/flags"
 import { formatLocalDateKey, localDateKeyFromIso } from "@/lib/agenda/localDateKey"
+import { isGoogleTaskDone } from "@/lib/agenda/googleTasksUpcoming"
 
 /** Plantilla solo cuando no hay calendario conectado o aún no hay eventos (etiquetada en UI). */
 const TIMELINE_FALLBACK_EXAMPLE = [
@@ -56,13 +60,59 @@ function stackRowKey(prefix: string, label: string) {
 
 export default function HoyPage() {
   const { data } = useOperationalContext()
-  const { events: calendarEvents, loading: calLoading, notice: calNotice, connected: calConnected, refresh: refreshCal } =
-    useGoogleCalendar()
+  const {
+    events: calendarEvents,
+    loading: calLoading,
+    notice: calNotice,
+    connected: calConnected,
+    refresh: refreshCal,
+    error: calError,
+  } = useGoogleCalendar()
+  const {
+    tasks: googleTasks,
+    loading: tasksLoading,
+    notice: tasksNotice,
+    connected: tasksConnected,
+    refresh: refreshTasks,
+    error: tasksError,
+  } = useGoogleTasks()
+
+  useEffect(() => {
+    if (isAppMockMode() || !isSupabaseEnabled()) return
+    let cancelled = false
+    const pull = async () => {
+      try {
+        const headers = await browserBearerHeaders(true)
+        await Promise.all([
+          fetch("/api/integrations/google/tasks/sync", { method: "POST", headers }),
+          fetch("/api/integrations/google/calendar/sync", { method: "POST", headers }),
+        ])
+        if (cancelled) return
+        await Promise.all([refreshCal(), refreshTasks()])
+      } catch {
+        /* sync es best-effort; los hooks ya muestran error si falla la lectura */
+      }
+    }
+    void pull()
+    return () => {
+      cancelled = true
+    }
+  }, [refreshCal, refreshTasks])
 
   const [stackChecked, setStackChecked] = useState<Record<string, boolean>>({})
   const toggleStack = useCallback((key: string) => {
     setStackChecked((prev) => ({ ...prev, [key]: !prev[key] }))
   }, [])
+
+  const googleTasksToday = useMemo(() => {
+    const todayKey = formatLocalDateKey(new Date())
+    return googleTasks
+      .filter((t) => {
+        if (isGoogleTaskDone(t.status)) return false
+        return localDateKeyFromIso(t.due) === todayKey
+      })
+      .slice(0, 8)
+  }, [googleTasks])
 
   const meetings = useMemo(() => {
     const todayKey = formatLocalDateKey(new Date())
@@ -104,10 +154,18 @@ export default function HoyPage() {
 
   const operationalTimeline = useMemo((): {
     rows: OperationalTimelineRow[]
-    source: "calendar" | "example" | "loading" | "empty"
+    source: "calendar" | "example" | "loading" | "empty" | "error"
   } => {
     if (calLoading) {
       return { rows: [], source: "loading" }
+    }
+
+    if (calError) {
+      const block = data?.current_block?.trim()
+      const prefix: OperationalTimelineRow[] = block
+        ? [{ key: "ctx-block", time: "Ahora", label: "Bloque operativo", sub: block }]
+        : []
+      return { rows: prefix, source: "error" }
     }
 
     const block = data?.current_block?.trim()
@@ -139,7 +197,11 @@ export default function HoyPage() {
       label: row.label,
     }))
     return { rows: [...prefix, ...exampleRows], source: "example" }
-  }, [activeMeetingIndex, calLoading, calConnected, data?.current_block, meetings])
+  }, [activeMeetingIndex, calLoading, calError, calConnected, data?.current_block, meetings])
+
+  const refreshGoogleFeeds = useCallback(() => {
+    void Promise.all([refreshCal(), refreshTasks()])
+  }, [refreshCal, refreshTasks])
 
   const focusTask = data?.next_action ?? "Completar propuesta para cliente"
   const focusTime = data?.next_time_required ?? "120 min"
@@ -192,15 +254,27 @@ export default function HoyPage() {
               </p>
               <button
                 type="button"
-                disabled={calLoading}
-                onClick={() => void refreshCal()}
+                disabled={calLoading || tasksLoading}
+                onClick={() => void refreshGoogleFeeds()}
                 className="shrink-0 text-[10px] font-medium uppercase tracking-[0.12em] text-[var(--color-accent-primary)] underline-offset-2 hover:underline disabled:opacity-50"
               >
-                {calLoading ? "Sincronizando…" : "Actualizar"}
+                {calLoading || tasksLoading ? "Sincronizando…" : "Actualizar"}
               </button>
             </div>
             {operationalTimeline.source === "loading" && (
               <p className="m-0 text-xs text-[var(--color-text-secondary)]">Cargando eventos del día…</p>
+            )}
+            {operationalTimeline.source === "error" && calError && (
+              <div className="grid gap-2 rounded-lg border border-[color-mix(in_srgb,var(--color-accent-danger)_35%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-danger)_6%,transparent)] px-3 py-2 text-xs">
+                <p className="m-0 font-medium text-[var(--color-accent-danger)]">No se pudo cargar Google Calendar</p>
+                <p className="m-0 text-[var(--color-text-secondary)]">{calError}</p>
+                <Link
+                  href="/configuracion"
+                  className="font-medium text-[var(--color-accent-primary)] underline-offset-2 hover:underline"
+                >
+                  Revisar conexión en Configuración
+                </Link>
+              </div>
             )}
             {operationalTimeline.source === "empty" && operationalTimeline.rows.length === 0 && (
               <div className="grid gap-2 text-xs text-[var(--color-text-secondary)]">
@@ -212,7 +286,11 @@ export default function HoyPage() {
             )}
             {operationalTimeline.source === "example" && (
               <p className="m-0 text-[10px] leading-snug text-[var(--color-text-secondary)]">
-                Ejemplo ilustrativo. Conecta Google en Configuración para ver tu línea de tiempo real.
+                Ejemplo ilustrativo.{" "}
+                <Link href="/configuracion" className="font-medium text-[var(--color-accent-primary)] underline-offset-2 hover:underline">
+                  Conecta Google
+                </Link>{" "}
+                para ver tu línea de tiempo real.
               </p>
             )}
             <div style={{ display: "grid", gap: "12px" }}>
@@ -313,25 +391,32 @@ export default function HoyPage() {
               </p>
               <button
                 type="button"
-                disabled={calLoading}
-                onClick={() => void refreshCal()}
+                disabled={calLoading || tasksLoading}
+                onClick={() => void refreshGoogleFeeds()}
                 className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-2 py-1 text-[10px] font-medium transition-opacity hover:bg-[color-mix(in_srgb,var(--color-text-secondary)_6%,var(--color-surface-alt))] active:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {calLoading ? <Loader2 className="h-3 w-3 animate-spin" aria-hidden /> : null}
+                {calLoading || tasksLoading ? <Loader2 className="h-3 w-3 animate-spin" aria-hidden /> : null}
                 Actualizar
               </button>
             </div>
-            {calNotice && (
+            {calError && (
+              <p className="m-0 text-[11px] leading-snug text-[var(--color-accent-danger)]">{calError}</p>
+            )}
+            {calNotice && !calError && (
               <p style={{ margin: 0, fontSize: "10px", color: "var(--color-text-secondary)" }}>{calNotice}</p>
             )}
-            {!calConnected && !calLoading && !calNotice && (
+            {!calConnected && !calLoading && !calNotice && !calError && (
               <p style={{ margin: 0, fontSize: "11px", color: "var(--color-text-secondary)" }}>
-                Conecta Google en Configuración para ver eventos reales.
+                Conecta Google en{" "}
+                <Link href="/configuracion" className="font-medium text-[var(--color-text-primary)] underline-offset-2 hover:underline">
+                  Configuración
+                </Link>{" "}
+                para ver eventos reales.
               </p>
             )}
             {calLoading ? (
               <p className="m-0 text-xs text-[var(--color-text-secondary)]">Cargando calendario…</p>
-            ) : meetings.length === 0 ? (
+            ) : calError ? null : meetings.length === 0 ? (
               <p className="m-0 text-xs text-[var(--color-text-secondary)] sm:text-[12px]">
                 Sin eventos hoy en el rango sincronizado.
               </p>
@@ -408,6 +493,35 @@ export default function HoyPage() {
             <p className="m-0 text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--color-text-secondary)] sm:text-[11px]">
               Stack / Recordatorios
             </p>
+            <div className="mb-2 grid gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)]/80 px-2.5 py-2 sm:px-3">
+              <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
+                Google Tasks (hoy)
+              </p>
+              {tasksLoading && !tasksError ? (
+                <p className="m-0 text-[11px] text-[var(--color-text-secondary)]">Cargando tareas…</p>
+              ) : tasksError ? (
+                <p className="m-0 text-[11px] leading-snug text-[var(--color-accent-danger)]">{tasksError}</p>
+              ) : !tasksConnected ? (
+                <p className="m-0 text-[11px] text-[var(--color-text-secondary)]">
+                  {tasksNotice ?? "Conecta Google en Configuración para ver recordatorios con fecha."}{" "}
+                  <Link href="/configuracion" className="font-medium text-[var(--color-accent-primary)] underline-offset-2 hover:underline">
+                    Conectar
+                  </Link>
+                </p>
+              ) : googleTasksToday.length === 0 ? (
+                <p className="m-0 text-[11px] text-[var(--color-text-secondary)]">
+                  Sin tareas con vencimiento hoy en Google Tasks.
+                </p>
+              ) : (
+                <ul className="m-0 grid list-none gap-1 p-0">
+                  {googleTasksToday.map((gt) => (
+                    <li key={gt.id} className="text-[11px] leading-snug text-[var(--color-text-primary)] sm:text-[12px]">
+                      {gt.title}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
             <div className="grid gap-1 sm:gap-1.5">
               {supplements.map((item) => {
                 const key = stackRowKey("sup", item)

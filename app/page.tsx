@@ -1,14 +1,36 @@
 "use client"
 
-import { useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import Link from "next/link"
 import { Card } from "@/src/components/ui/Card"
+import { mapAgendaTaskToUi } from "@/app/agenda/mapAgendaTaskToUi"
+import { useAgendaTasks } from "@/app/hooks/useAgendaTasks"
 import { useOperationalContext } from "@/app/hooks/useOperationalContext"
 import { ChevronRight } from "lucide-react"
 
 // ← V3 RECONSTRUIDO: fiel a captura + navegación preservada
 export default function ControlPage() {
   const { data } = useOperationalContext()
+  const { tasks: agendaTasks, updateTask } = useAgendaTasks()
+  const agendaUi = useMemo(() => agendaTasks.map(mapAgendaTaskToUi), [agendaTasks])
+  const pendingAcceptance = useMemo(
+    () => agendaUi.filter((t) => t.needsAcceptance),
+    [agendaUi],
+  )
+  const [acceptingId, setAcceptingId] = useState<string | null>(null)
+
+  const acceptFromHome = useCallback(
+    async (id: string) => {
+      setAcceptingId(id)
+      try {
+        await updateTask(id, { acceptAssignment: true })
+      } finally {
+        setAcceptingId(null)
+      }
+    },
+    [updateTask],
+  )
+
   const [tab, setTab] = useState("Día")
 
   const nextAction = data?.next_action ?? "Completar propuesta para cliente"
@@ -93,6 +115,62 @@ export default function ControlPage() {
           </button>
         ))}
       </div>
+
+      {pendingAcceptance.length > 0 && (
+        <Card>
+          <div style={{ padding: "var(--spacing-md)", display: "grid", gap: "12px" }}>
+            <p
+              style={{
+                margin: 0,
+                fontSize: "11px",
+                textTransform: "uppercase",
+                letterSpacing: "0.14em",
+                color: "var(--color-text-secondary)",
+              }}
+            >
+              Tareas por aceptar
+            </p>
+            {pendingAcceptance.map((t) => (
+              <div
+                key={t.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "12px",
+                  flexWrap: "wrap",
+                }}
+              >
+                <p style={{ margin: 0, fontSize: "14px", fontWeight: 500 }}>{t.title}</p>
+                <button
+                  type="button"
+                  disabled={acceptingId === t.id}
+                  onClick={() => void acceptFromHome(t.id)}
+                  style={{
+                    padding: "8px 14px",
+                    borderRadius: "10px",
+                    border: "0.5px solid var(--color-border)",
+                    background: "var(--color-accent-primary)",
+                    color: "white",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    cursor: acceptingId === t.id ? "wait" : "pointer",
+                    opacity: acceptingId === t.id ? 0.75 : 1,
+                  }}
+                >
+                  {acceptingId === t.id ? "Aceptando…" : "Aceptar"}
+                </button>
+              </div>
+            ))}
+            <Link
+              href="/agenda"
+              style={{ fontSize: "12px", color: "var(--color-accent-primary)", textDecoration: "none" }}
+            >
+              Ver en Agenda →
+            </Link>
+          </div>
+        </Card>
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "var(--layout-gap)" }}>
         {metrics.map((metric) => {

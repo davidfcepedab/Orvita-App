@@ -146,6 +146,7 @@ export function AgendaSharedKanban({
   onDeleteOrvitaTask,
   onDeleteCalendarEvent,
   onDeleteGoogleTask,
+  onAcceptAssignment,
 }: {
   grouped: GroupedTasks
   calendarFeed?: Pick<GoogleCalendarFeedState, "events" | "connected">
@@ -157,6 +158,7 @@ export function AgendaSharedKanban({
   onDeleteOrvitaTask?: (task: UiAgendaTask) => Promise<void> | void
   onDeleteCalendarEvent?: (eventId: string) => Promise<void> | void
   onDeleteGoogleTask?: (taskId: string) => Promise<void> | void
+  onAcceptAssignment?: (task: UiAgendaTask) => Promise<void> | void
 }) {
   const [busyDel, setBusyDel] = useState<string | null>(null)
 
@@ -192,6 +194,7 @@ export function AgendaSharedKanban({
               task={task}
               variant="kanban"
               onSaveComplete={onSaveComplete}
+              onAcceptAssignment={onAcceptAssignment}
               onDelete={
                 onDeleteOrvitaTask
                   ? async (t) => {
@@ -223,6 +226,7 @@ export function AgendaSharedKanban({
             task={task}
             variant="kanban"
             onSaveComplete={onSaveComplete}
+            onAcceptAssignment={onAcceptAssignment}
             onDelete={
               onDeleteOrvitaTask
                 ? async (t) => {
@@ -353,6 +357,7 @@ export function AgendaSharedList({
   onDeleteOrvitaTask,
   onDeleteCalendarEvent,
   onDeleteGoogleTask,
+  onAcceptAssignment,
 }: {
   filtered: UiAgendaTask[]
   onSaveComplete: (task: UiAgendaTask, completed: boolean) => Promise<void> | void
@@ -367,6 +372,7 @@ export function AgendaSharedList({
   onDeleteOrvitaTask?: (task: UiAgendaTask) => Promise<void> | void
   onDeleteCalendarEvent?: (eventId: string) => Promise<void> | void
   onDeleteGoogleTask?: (taskId: string) => Promise<void> | void
+  onAcceptAssignment?: (task: UiAgendaTask) => Promise<void> | void
 }) {
   const [busyDel, setBusyDel] = useState<string | null>(null)
 
@@ -422,6 +428,7 @@ export function AgendaSharedList({
             task={row.task}
             variant="list"
             onSaveComplete={onSaveComplete}
+            onAcceptAssignment={onAcceptAssignment}
             onDelete={
               onDeleteOrvitaTask
                 ? async (t) => {

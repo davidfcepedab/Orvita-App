@@ -43,7 +43,13 @@ export function useGoogleCalendar(): GoogleCalendarFeedState {
       const timeMin = range?.timeMin ?? dMin.toISOString()
       const timeMax = range?.timeMax ?? dMax.toISOString()
       const qs = `timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}`
-      const res = await fetch(`/api/google/calendar?${qs}`, { cache: "no-store", headers })
+      const url = `/api/google/calendar?${qs}`
+      const fetchCal = (h: HeadersInit) => fetch(url, { cache: "no-store", headers: h })
+      let res = await fetchCal(await browserBearerHeaders())
+      if (res.status === 401) {
+        await new Promise((r) => setTimeout(r, 450))
+        res = await fetchCal(await browserBearerHeaders())
+      }
       const payload = (await res.json()) as {
         success?: boolean
         events?: GoogleCalendarEventDTO[]

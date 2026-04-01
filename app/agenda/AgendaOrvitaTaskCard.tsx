@@ -5,6 +5,7 @@ import { Check, Clock, Trash2 } from "lucide-react"
 import { Card } from "@/src/components/ui/Card"
 import type { UiAgendaTask } from "@/app/agenda/mapAgendaTaskToUi"
 import { assignmentShortLine } from "@/app/agenda/mapAgendaTaskToUi"
+import { TaskSourceBadge } from "@/app/agenda/TaskSourceBadge"
 import {
   agendaCardSurfaceStyle,
   agendaPillBaseClass,
@@ -25,9 +26,18 @@ type Props = {
   onSaveComplete?: (task: UiAgendaTask, completed: boolean) => Promise<void> | void
   onDelete?: (task: UiAgendaTask) => Promise<void> | void
   deleteBusy?: boolean
+  /** Solo tareas recibidas pendientes de aceptación. */
+  onAcceptAssignment?: (task: UiAgendaTask) => Promise<void> | void
 }
 
-export function AgendaOrvitaTaskCard({ task, variant, onSaveComplete, onDelete, deleteBusy }: Props) {
+export function AgendaOrvitaTaskCard({
+  task,
+  variant,
+  onSaveComplete,
+  onDelete,
+  deleteBusy,
+  onAcceptAssignment,
+}: Props) {
   const isList = variant === "list"
   const titleCls = isList ? "text-[14px]" : "text-[13px]"
   const lineCls = isList ? "text-[11px]" : "text-[10px]"
@@ -37,6 +47,7 @@ export function AgendaOrvitaTaskCard({ task, variant, onSaveComplete, onDelete, 
   const [dirty, setDirty] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [accepting, setAccepting] = useState(false)
 
   useEffect(() => {
     setDone(task.completed)
@@ -69,6 +80,16 @@ export function AgendaOrvitaTaskCard({ task, variant, onSaveComplete, onDelete, 
     }
   }
 
+  async function handleAcceptAssignment() {
+    if (!onAcceptAssignment || accepting) return
+    setAccepting(true)
+    try {
+      await onAcceptAssignment(task)
+    } finally {
+      setAccepting(false)
+    }
+  }
+
   return (
     <Card
       hover
@@ -79,11 +100,14 @@ export function AgendaOrvitaTaskCard({ task, variant, onSaveComplete, onDelete, 
         className={`flex items-start gap-3 text-left ${isList ? "p-3" : "p-2.5"}`}
       >
         <div className="min-w-0 flex-1 space-y-1">
-          <p
-            className={`m-0 font-semibold leading-snug tracking-tight text-[var(--color-text-primary)] ${titleCls}`}
-          >
-            {task.title}
-          </p>
+          <div className="flex min-w-0 flex-wrap items-start gap-2">
+            <p
+              className={`m-0 min-w-0 flex-1 font-semibold leading-snug tracking-tight text-[var(--color-text-primary)] ${titleCls}`}
+            >
+              {task.title}
+            </p>
+            <TaskSourceBadge type={task.type} />
+          </div>
 
           <p
             className={`m-0 flex items-center gap-1 leading-snug text-[var(--color-text-secondary)] ${lineCls}`}
@@ -115,6 +139,45 @@ export function AgendaOrvitaTaskCard({ task, variant, onSaveComplete, onDelete, 
               {statusTitle}
             </span>
           </div>
+
+          {(task.assigneePendingAccept ||
+            task.assigneeAccepted ||
+            (task.needsAcceptance && onAcceptAssignment)) && (
+            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+              {task.assigneePendingAccept ? (
+                <span
+                  className={agendaPillBaseClass}
+                  style={{
+                    background: "color-mix(in srgb, var(--color-accent-warning) 18%, transparent)",
+                    color: "var(--color-accent-warning)",
+                  }}
+                >
+                  Pendiente de aceptación
+                </span>
+              ) : null}
+              {task.assigneeAccepted ? (
+                <span
+                  className={agendaPillBaseClass}
+                  style={{
+                    background: "color-mix(in srgb, var(--color-accent-health) 18%, transparent)",
+                    color: "var(--color-accent-health)",
+                  }}
+                >
+                  Aceptada
+                </span>
+              ) : null}
+              {task.needsAcceptance && onAcceptAssignment ? (
+                <button
+                  type="button"
+                  disabled={accepting}
+                  onClick={() => void handleAcceptAssignment()}
+                  className="inline-flex items-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-primary)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-accent-primary)_12%,var(--color-surface-alt))] disabled:opacity-50"
+                >
+                  {accepting ? "Aceptando…" : "Aceptar"}
+                </button>
+              ) : null}
+            </div>
+          )}
 
           <p className={`m-0 text-[var(--color-text-secondary)] ${fuenteCls}`}>
             Fuente: {task.orvitaFuente}
