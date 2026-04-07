@@ -24,6 +24,10 @@ import {
 
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import { isAppMockMode, isSupabaseEnabled } from "@/lib/checkins/flags"
+import {
+  canRunGoogleCalendarSyncNow,
+  markGoogleCalendarSyncRan,
+} from "@/lib/google/googleCalendarSyncThrottle"
 import type { HouseholdMemberDTO } from "@/lib/household/memberTypes"
 import { createBrowserClient } from "@/lib/supabase/browser"
 import { buildGoogleByDayIndex, type GoogleDayBucket } from "@/lib/agenda/googleAgendaByDay"
@@ -109,7 +113,6 @@ export default function AgendaPage() {
   const googleTasksFeed = useGoogleTasks()
 
   const [viewerFirstName, setViewerFirstName] = useState<string | null>(null)
-  const [googleLivePullKey, setGoogleLivePullKey] = useState(0)
   const lastVisibilityPullRef = useRef(0)
 
   useEffect(() => {
@@ -133,52 +136,56 @@ export default function AgendaPage() {
   }, [loading, agendaTasks])
 
   useEffect(() => {
-    if (googleLivePullKey < 1) return
-    void googleCalendar.refresh()
-    void googleTasksFeed.refresh()
-  }, [googleLivePullKey, googleCalendar.refresh, googleTasksFeed.refresh])
-
-  useEffect(() => {
     if (isAppMockMode() || !isSupabaseEnabled()) return
     let cancelled = false
     const pull = async () => {
       try {
         const headers = await browserBearerHeaders(true)
+        const doCalSync = canRunGoogleCalendarSyncNow()
         await Promise.all([
           fetch("/api/integrations/google/tasks/sync", { method: "POST", headers }),
-          fetch("/api/integrations/google/calendar/sync", { method: "POST", headers }),
+          doCalSync
+            ? fetch("/api/integrations/google/calendar/sync", { method: "POST", headers })
+            : Promise.resolve(),
         ])
+        if (doCalSync) markGoogleCalendarSyncRan()
         if (cancelled) return
         await refresh()
-        setGoogleLivePullKey((k) => k + 1)
+        await googleCalendar.refresh()
       } catch {}
     }
     void pull()
-    return () => { cancelled = true }
-  }, [refresh])
+    return () => {
+      cancelled = true
+    }
+  }, [refresh, googleCalendar.refresh])
 
   useEffect(() => {
     if (isAppMockMode() || !isSupabaseEnabled()) return
     const onVisible = () => {
       if (document.visibilityState !== "visible") return
       const now = Date.now()
-      if (now - lastVisibilityPullRef.current < 120_000) return
+      if (now - lastVisibilityPullRef.current < 300_000) return
       lastVisibilityPullRef.current = now
       void (async () => {
         try {
           const headers = await browserBearerHeaders(true)
+          const doCalSync = canRunGoogleCalendarSyncNow()
           await Promise.all([
             fetch("/api/integrations/google/tasks/sync", { method: "POST", headers }),
-            fetch("/api/integrations/google/calendar/sync", { method: "POST", headers }),
+            doCalSync
+              ? fetch("/api/integrations/google/calendar/sync", { method: "POST", headers })
+              : Promise.resolve(),
           ])
+          if (doCalSync) markGoogleCalendarSyncRan()
           await refresh()
-          setGoogleLivePullKey((k) => k + 1)
+          await Promise.all([googleCalendar.refresh(), googleTasksFeed.refresh()])
         } catch {}
       })()
     }
     document.addEventListener("visibilitychange", onVisible)
     return () => document.removeEventListener("visibilitychange", onVisible)
-  }, [refresh])
+  }, [refresh, googleCalendar.refresh, googleTasksFeed.refresh])
 
   const [tab, setTab] = useState("todas")
   const [priority, setPriority] = useState<Priority | "">("")
@@ -382,7 +389,6 @@ export default function AgendaPage() {
     async (taskId: string, dueYmd: string) => {
       const result = await googleTasksFeed.patchTask(taskId, { due: dueYmd })
       if (!result) throw new Error("No se pudo guardar en Google Tasks")
-      setGoogleLivePullKey((k) => k + 1)
     },
     [googleTasksFeed],
   )
@@ -400,7 +406,6 @@ export default function AgendaPage() {
       if (!ok && googleCalendar.error) {
         window.alert(googleCalendar.error)
       }
-      setGoogleLivePullKey((k) => k + 1)
     },
     [googleCalendar],
   )
@@ -411,7 +416,6 @@ export default function AgendaPage() {
       if (!ok && googleTasksFeed.error) {
         window.alert(googleTasksFeed.error)
       }
-      setGoogleLivePullKey((k) => k + 1)
     },
     [googleTasksFeed],
   )
@@ -497,7 +501,10 @@ export default function AgendaPage() {
                     feed={googleTasksFeed}
                     compact
                     inlineCompact
-                    onAfterTasksSync={() => void refresh()}
+                    onAfterTasksSync={() => {
+                      void refresh()
+                      void googleCalendar.refresh()
+                    }}
                   />
                 </div>
               </div>

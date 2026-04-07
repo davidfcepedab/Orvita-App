@@ -177,6 +177,9 @@ export function mapGoogleSyncErrorToUserMessage(context: "calendar" | "tasks", d
   if (d.includes("401") || d.includes("unauthorized")) {
     return "Google no autorizó la operación. Vuelve a conectar tu cuenta."
   }
+  if (d.includes("ratelimit") || d.includes("rate limit") || d.includes("quota") || d.includes("rate_limit_exceeded")) {
+    return "Google limitó temporalmente las peticiones (cuota por minuto). Espera 1–2 minutos y evita abrir varias pestañas de Órvita a la vez."
+  }
   if (d.includes("403") || d.includes("forbidden")) {
     return context === "calendar"
       ? "Google Calendar no permitió el acceso. Comprueba permisos del calendario."
@@ -189,9 +192,6 @@ export function mapGoogleSyncErrorToUserMessage(context: "calendar" | "tasks", d
   }
   if (d.includes("not found") || d.includes("notfound")) {
     return "No se encontró el recurso en Google (calendario o lista). Revisa tu cuenta de Google."
-  }
-  if (d.includes("ratelimit") || d.includes("rate limit") || d.includes("quota")) {
-    return "Google limitó temporalmente las peticiones. Espera un minuto e inténtalo de nuevo."
   }
   if (d.includes("row-level security") || d.includes("rls policy")) {
     return "No se pudo guardar en la base de datos. Aplica la migración de Google en Supabase o revisa políticas RLS."

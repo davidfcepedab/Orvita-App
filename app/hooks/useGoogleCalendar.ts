@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { isAppMockMode } from "@/lib/checkins/flags"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
+import { fetchGoogleCalendarGetCoalesced } from "@/lib/google/googleCalendarInflightGet"
 import type { GoogleCalendarEventDTO } from "@/lib/google/types"
 
 export type GoogleCalendarFeedState = {
@@ -33,7 +34,6 @@ export function useGoogleCalendar(): GoogleCalendarFeedState {
       if (showBlockingSpinner) setLoading(true)
       setError(null)
       setNotice(null)
-      const headers = await browserBearerHeaders()
       const now = new Date()
       const dMin = new Date(now.getFullYear(), now.getMonth(), now.getDate())
       dMin.setDate(dMin.getDate() - 45)
@@ -44,19 +44,7 @@ export function useGoogleCalendar(): GoogleCalendarFeedState {
       const timeMax = range?.timeMax ?? dMax.toISOString()
       const qs = `timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}`
       const url = `/api/google/calendar?${qs}`
-      const fetchCal = (h: HeadersInit) => fetch(url, { cache: "no-store", headers: h })
-      let res = await fetchCal(await browserBearerHeaders())
-      if (res.status === 401) {
-        await new Promise((r) => setTimeout(r, 450))
-        res = await fetchCal(await browserBearerHeaders())
-      }
-      const payload = (await res.json()) as {
-        success?: boolean
-        events?: GoogleCalendarEventDTO[]
-        connected?: boolean
-        notice?: string
-        error?: string
-      }
+      const { res, payload } = await fetchGoogleCalendarGetCoalesced(url)
       if (!res.ok || !payload.success) {
         throw new Error(messageForHttpError(res.status, payload.error, res.statusText))
       }

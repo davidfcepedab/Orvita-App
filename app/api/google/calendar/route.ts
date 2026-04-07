@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
 import { isAppMockMode, isSupabaseEnabled, UI_GOOGLE_CALENDAR_OFF } from "@/lib/checkins/flags"
+import { fetchCalendarEventsFromExternalTable } from "@/lib/google/calendarFromExternalEvents"
 import {
   deletePrimaryCalendarEvent,
   fetchPrimaryCalendarWindow,
@@ -68,22 +69,53 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: false, error: tokenResult.error }, { status: tokenResult.status })
   }
 
-  try {
-    const events = await fetchPrimaryCalendarWindow(tokenResult.token, timeMin, timeMax)
-    return NextResponse.json({ success: true, connected: true, events })
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "Error Calendar"
-    console.error("GOOGLE CALENDAR GET:", msg)
-    if (e instanceof GoogleCalendarRequestError) {
-      const status = httpStatusFromGoogleCalendar(e.httpStatus)
-      const error = mapGoogleSyncErrorToUserMessage("calendar", msg)
-      return NextResponse.json({ success: false, error }, { status })
+  const liveFromGoogle = url.searchParams.get("live") === "1"
+
+  if (liveFromGoogle) {
+    try {
+      const events = await fetchPrimaryCalendarWindow(tokenResult.token, timeMin, timeMax)
+      return NextResponse.json({ success: true, connected: true, events, source: "google" })
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Error Calendar"
+      console.error("GOOGLE CALENDAR GET (live):", msg)
+      if (e instanceof GoogleCalendarRequestError) {
+        const status = httpStatusFromGoogleCalendar(e.httpStatus)
+        const error = mapGoogleSyncErrorToUserMessage("calendar", msg)
+        return NextResponse.json({ success: false, error }, { status })
+      }
+      return NextResponse.json(
+        { success: false, error: mapGoogleSyncErrorToUserMessage("calendar", msg) },
+        { status: 502 },
+      )
     }
+  }
+
+  const { events, dbError } = await fetchCalendarEventsFromExternalTable(
+    auth.supabase,
+    auth.userId,
+    timeMin,
+    timeMax,
+  )
+  if (dbError) {
+    console.error("GOOGLE CALENDAR GET (supabase):", dbError)
     return NextResponse.json(
-      { success: false, error: mapGoogleSyncErrorToUserMessage("calendar", msg) },
-      { status: 502 },
+      { success: false, error: "No se pudieron leer los eventos del calendario guardados." },
+      { status: 500 },
     )
   }
+
+  const notice =
+    events.length === 0
+      ? "Los eventos vienen de la última importación a Órvita. En Agenda, «Importar calendario» actualiza desde Google."
+      : undefined
+
+  return NextResponse.json({
+    success: true,
+    connected: true,
+    source: "supabase",
+    events,
+    ...(notice ? { notice } : {}),
+  })
 }
 
 export async function DELETE(req: NextRequest) {

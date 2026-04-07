@@ -8,6 +8,7 @@ import type { GoogleTasksFeedState } from "@/app/hooks/useGoogleTasks"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { isAppMockMode, isSupabaseEnabled, UI_AGENDA_SYNC_OFF } from "@/lib/checkins/flags"
+import { markGoogleCalendarSyncRan } from "@/lib/google/googleCalendarSyncThrottle"
 
 type GoogleAgendaPanelProps = {
   feed: GoogleTasksFeedState
@@ -62,9 +63,15 @@ export function GoogleAgendaPanel({
       else setSyncingTasks(true)
       setSyncMsg(null)
       const headers = await browserBearerHeaders()
-      const res = await fetch(`/api/integrations/google/${kind}/sync`, { method: "POST", headers })
+      const syncUrl =
+        kind === "calendar"
+          ? "/api/integrations/google/calendar/sync?force=1"
+          : `/api/integrations/google/${kind}/sync`
+      const res = await fetch(syncUrl, { method: "POST", headers })
       const payload = (await res.json()) as {
         success?: boolean
+        skipped?: boolean
+        notice?: string
         imported?: number
         updated?: number
         mirroredAgenda?: number
@@ -73,12 +80,20 @@ export function GoogleAgendaPanel({
       if (!res.ok || !payload.success) {
         throw new Error(messageForHttpError(res.status, payload.error, res.statusText))
       }
+      if (payload.skipped && kind === "calendar") {
+        setSyncMsg(payload.notice ?? "Calendario: sin cambios (sync reciente).")
+        markGoogleCalendarSyncRan()
+        await refresh()
+        onAfterTasksSync?.()
+        return
+      }
       const base = `${kind === "calendar" ? "Calendario" : "Tareas"}: +${payload.imported ?? 0} nuevos, ${payload.updated ?? 0} actualizados`
       const mirror =
         kind === "tasks" && (payload.mirroredAgenda ?? 0) > 0
           ? ` · ${payload.mirroredAgenda} en Tareas compartidas`
           : ""
       setSyncMsg(`${base}.${mirror}`)
+      if (kind === "calendar") markGoogleCalendarSyncRan()
       await refresh()
       onAfterTasksSync?.()
     } catch (e) {

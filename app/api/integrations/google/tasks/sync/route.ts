@@ -8,6 +8,7 @@ import {
   refreshAccessTokenIfNeeded,
   type GoogleIntegrationRecord,
 } from "@/lib/integrations/google"
+import { normalizeGoogleTaskDueToIso } from "@/lib/google/googleTasksApi"
 
 export const runtime = "nodejs"
 
@@ -24,12 +25,6 @@ type GoogleTask = {
 type TasksApiResponse = {
   items?: GoogleTask[]
   nextPageToken?: string
-}
-
-function normalizeDate(value?: string): string | null {
-  if (!value) return null
-  const parsed = Date.parse(value)
-  return Number.isNaN(parsed) ? null : new Date(parsed).toISOString()
 }
 
 export async function POST(req: NextRequest) {
@@ -121,7 +116,7 @@ export async function POST(req: NextRequest) {
           .map((task) => {
             const googleTaskId = task.id
             if (!googleTaskId) return null
-            const dueDate = normalizeDate(task.due)
+            const dueDate = normalizeGoogleTaskDueToIso(task.due)
             const isDeleted = task.deleted === true
             return {
               user_id: userId,

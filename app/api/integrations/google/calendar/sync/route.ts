@@ -45,6 +45,15 @@ function summarizeGoogleCalendarError(status: number, bodyText: string): string 
   return `Google Calendar ${status}: ${bodyText.slice(0, 400)}`
 }
 
+/** Mismo tope que listEvents: menos páginas = menos peticiones hacia la cuota por minuto. */
+const CALENDAR_SYNC_PAGE_SIZE = "2500"
+
+/** Omite llamar a Google si hubo sync reciente (salvo ?force=1). Varias pestañas/dispositivos comparten esto vía BD. */
+const SERVER_CALENDAR_SYNC_COOLDOWN_MS = 15 * 60 * 1000
+
+/** Pausa entre páginas para no disparar todo el burst en el mismo segundo. */
+const PAGE_FETCH_GAP_MS = 200
+
 /** Ventana acotada: evita listados sin límite y reduce errores con parámetros incrementales. */
 function calendarListTimeBounds() {
   const timeMin = new Date()
@@ -72,6 +81,29 @@ export async function POST(req: NextRequest) {
     if (auth instanceof NextResponse) return auth
     const { userId } = auth
     const db = createServiceClient()
+
+    const force = new URL(req.url).searchParams.get("force") === "1"
+
+    if (!force) {
+      const { data: newest } = await db
+        .from("external_calendar_events")
+        .select("synced_at")
+        .eq("user_id", userId)
+        .order("synced_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      const newestMs = newest?.synced_at ? new Date(String(newest.synced_at)).getTime() : 0
+      if (newestMs > 0 && Date.now() - newestMs < SERVER_CALENDAR_SYNC_COOLDOWN_MS) {
+        return NextResponse.json({
+          success: true,
+          skipped: true,
+          imported: 0,
+          updated: 0,
+          notice: "Calendario sincronizado hace poco; omitido para no superar el límite de Google.",
+        })
+      }
+    }
 
     const { data: integration, error: integrationError } = await db
       .from("user_integrations")
@@ -102,10 +134,13 @@ export async function POST(req: NextRequest) {
     let updated = 0
 
     do {
+      if (pageToken) {
+        await new Promise((r) => setTimeout(r, PAGE_FETCH_GAP_MS))
+      }
       const params = new URLSearchParams({
         singleEvents: "true",
         showDeleted: "true",
-        maxResults: "250",
+        maxResults: CALENDAR_SYNC_PAGE_SIZE,
         orderBy: "startTime",
       })
       params.set("timeMin", bounds.timeMin)

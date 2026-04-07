@@ -9,6 +9,10 @@ import { useGoogleCalendar } from "@/app/hooks/useGoogleCalendar"
 import { useGoogleTasks } from "@/app/hooks/useGoogleTasks"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import { isAppMockMode, isSupabaseEnabled } from "@/lib/checkins/flags"
+import {
+  canRunGoogleCalendarSyncNow,
+  markGoogleCalendarSyncRan,
+} from "@/lib/google/googleCalendarSyncThrottle"
 import { formatLocalDateKey, localDateKeyFromIso } from "@/lib/agenda/localDateKey"
 import { isGoogleTaskDone } from "@/lib/agenda/googleTasksUpcoming"
 
@@ -83,12 +87,17 @@ export default function HoyPage() {
     const pull = async () => {
       try {
         const headers = await browserBearerHeaders(true)
+        const doCalSync = canRunGoogleCalendarSyncNow()
         await Promise.all([
           fetch("/api/integrations/google/tasks/sync", { method: "POST", headers }),
-          fetch("/api/integrations/google/calendar/sync", { method: "POST", headers }),
+          doCalSync
+            ? fetch("/api/integrations/google/calendar/sync", { method: "POST", headers })
+            : Promise.resolve(),
         ])
+        if (doCalSync) markGoogleCalendarSyncRan()
         if (cancelled) return
-        await Promise.all([refreshCal(), refreshTasks()])
+        /* Calendario: GET ya no llama a Google (lee Supabase); refrescar trae filas tras importar. */
+        await refreshCal()
       } catch {
         /* sync es best-effort; los hooks ya muestran error si falla la lectura */
       }
@@ -97,7 +106,7 @@ export default function HoyPage() {
     return () => {
       cancelled = true
     }
-  }, [refreshCal, refreshTasks])
+  }, [refreshCal])
 
   const [stackChecked, setStackChecked] = useState<Record<string, boolean>>({})
   const toggleStack = useCallback((key: string) => {
@@ -494,9 +503,14 @@ export default function HoyPage() {
               Stack / Recordatorios
             </p>
             <div className="mb-2 grid gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)]/80 px-2.5 py-2 sm:px-3">
-              <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
-                Google Tasks (hoy)
-              </p>
+              <div className="grid gap-0.5">
+                <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
+                  Google Tasks (hoy)
+                </p>
+                <p className="m-0 text-[10px] leading-snug text-[var(--color-text-secondary)]/90">
+                  Solo tareas con vencimiento hoy (zona de la agenda).
+                </p>
+              </div>
               {tasksLoading && !tasksError ? (
                 <p className="m-0 text-[11px] text-[var(--color-text-secondary)]">Cargando tareas…</p>
               ) : tasksError ? (
@@ -513,9 +527,12 @@ export default function HoyPage() {
                   Sin tareas con vencimiento hoy en Google Tasks.
                 </p>
               ) : (
-                <ul className="m-0 grid list-none gap-1 p-0">
+                <ul className="m-0 list-disc space-y-1 pl-4 marker:text-[var(--color-text-secondary)]">
                   {googleTasksToday.map((gt) => (
-                    <li key={gt.id} className="text-[11px] leading-snug text-[var(--color-text-primary)] sm:text-[12px]">
+                    <li
+                      key={gt.id}
+                      className="min-w-0 break-words text-[11px] leading-snug text-[var(--color-text-primary)] sm:text-[12px]"
+                    >
                       {gt.title}
                     </li>
                   ))}
