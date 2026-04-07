@@ -13,6 +13,7 @@ import {
   mapGoogleTask,
   patchDefaultListTask,
 } from "@/lib/google/googleTasksApi"
+import { fetchTasksFromExternalTable } from "@/lib/google/tasksFromExternalTable"
 import { getGoogleAccessTokenForUser } from "@/lib/google/loadAccessToken"
 import { MOCK_GOOGLE_TASKS } from "@/lib/google/mockGoogleData"
 
@@ -40,7 +41,9 @@ export async function GET(req: NextRequest) {
   const auth = await requireUser(req)
   if (auth instanceof NextResponse) return auth
 
-  const showCompleted = new URL(req.url).searchParams.get("showCompleted") === "1"
+  const url = new URL(req.url)
+  const showCompleted = url.searchParams.get("showCompleted") === "1"
+  const liveFromGoogle = url.searchParams.get("live") === "1"
 
   const tokenResult = await getGoogleAccessTokenForUser(auth.supabase, auth.userId)
   if ("error" in tokenResult) {
@@ -55,12 +58,47 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: false, error: tokenResult.error }, { status: tokenResult.status })
   }
 
+  if (!liveFromGoogle) {
+    const { tasks, dbError } = await fetchTasksFromExternalTable(auth.supabase, auth.userId, {
+      showCompleted,
+    })
+    if (dbError) {
+      console.error("GOOGLE TASKS GET (supabase):", dbError)
+      return NextResponse.json(
+        { success: false, error: "No se pudieron leer las tareas guardadas." },
+        { status: 500 },
+      )
+    }
+    const notice =
+      tasks.length === 0
+        ? "Las tareas vienen de la última importación. En Agenda, «Importar tareas» actualiza desde Google."
+        : undefined
+    return NextResponse.json({
+      success: true,
+      connected: true,
+      source: "supabase",
+      tasks,
+      ...(notice ? { notice } : {}),
+    })
+  }
+
   try {
     const tasks = await fetchDefaultTaskList(tokenResult.token, showCompleted)
-    return NextResponse.json({ success: true, connected: true, tasks })
+    return NextResponse.json({ success: true, connected: true, source: "google", tasks })
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Error Tasks"
-    console.error("GOOGLE TASKS GET:", msg)
+    console.error("GOOGLE TASKS GET (live):", msg)
+    const fallback = await fetchTasksFromExternalTable(auth.supabase, auth.userId, { showCompleted })
+    if (!fallback.dbError && fallback.tasks.length > 0) {
+      return NextResponse.json({
+        success: true,
+        connected: true,
+        source: "supabase_fallback",
+        tasks: fallback.tasks,
+        notice:
+          "Google Tasks no respondió (p. ej. cuota). Mostramos la última copia guardada en Órvita; usa «Importar tareas» cuando vuelva la cuota.",
+      })
+    }
     return NextResponse.json({ success: false, error: "No se pudieron leer las tareas" }, { status: 502 })
   }
 }

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { isAppMockMode } from "@/lib/checkins/flags"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
+import { fetchGoogleTasksGetCoalesced } from "@/lib/google/googleTasksInflightGet"
 import type { GoogleTaskDTO } from "@/lib/google/types"
 
 export type GoogleTasksFeedState = {
@@ -35,19 +36,8 @@ export function useGoogleTasks(): GoogleTasksFeedState {
       if (showBlockingSpinner) setLoading(true)
       setError(null)
       setNotice(null)
-      const fetchTasks = (h: HeadersInit) => fetch("/api/google/tasks", { cache: "no-store", headers: h })
-      let res = await fetchTasks(await browserBearerHeaders())
-      if (res.status === 401) {
-        await new Promise((r) => setTimeout(r, 450))
-        res = await fetchTasks(await browserBearerHeaders())
-      }
-      const payload = (await res.json()) as {
-        success?: boolean
-        tasks?: GoogleTaskDTO[]
-        connected?: boolean
-        notice?: string
-        error?: string
-      }
+      const url = "/api/google/tasks"
+      const { res, payload } = await fetchGoogleTasksGetCoalesced(url)
       if (!res.ok || !payload.success) {
         throw new Error(messageForHttpError(res.status, payload.error, res.statusText))
       }

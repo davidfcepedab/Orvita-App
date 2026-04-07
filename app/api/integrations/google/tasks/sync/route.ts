@@ -32,11 +32,28 @@ const SERVER_TASKS_SYNC_COOLDOWN_MS = 60 * 60 * 1000
 
 const TASKS_PAGE_GAP_MS = 200
 
+/** Una sola sync activa por usuario: evita tormentas de POST concurrentes (misma cuota diaria). */
+const tasksSyncInflight = new Set<string>()
+
 export async function POST(req: NextRequest) {
   try {
     const auth = await requireUser(req)
     if (auth instanceof NextResponse) return auth
     const { supabase, userId } = auth
+
+    if (tasksSyncInflight.has(userId)) {
+      return NextResponse.json({
+        success: true,
+        skipped: true,
+        imported: 0,
+        updated: 0,
+        mirroredAgenda: 0,
+        notice: "Otra sincronización de tareas está en curso; omitida para no multiplicar llamadas a Google.",
+      })
+    }
+    tasksSyncInflight.add(userId)
+
+    try {
     const db = createServiceClient()
 
     const force = new URL(req.url).searchParams.get("force") === "1"
@@ -183,6 +200,9 @@ export async function POST(req: NextRequest) {
     } while (pageToken)
 
     return NextResponse.json({ success: true, imported, updated, mirroredAgenda })
+    } finally {
+      tasksSyncInflight.delete(userId)
+    }
   } catch (error: unknown) {
     const detail = error instanceof Error ? error.message : "Unknown error"
     console.error("GOOGLE TASKS SYNC ERROR:", detail)

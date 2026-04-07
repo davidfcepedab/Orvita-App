@@ -28,7 +28,6 @@ import {
   canRunGoogleCalendarSyncNow,
   markGoogleCalendarSyncRan,
 } from "@/lib/google/googleCalendarSyncThrottle"
-import { canRunGoogleTasksSyncNow, markGoogleTasksSyncRan } from "@/lib/google/googleTasksSyncThrottle"
 import type { HouseholdMemberDTO } from "@/lib/household/memberTypes"
 import { createBrowserClient } from "@/lib/supabase/browser"
 import { buildGoogleByDayIndex, type GoogleDayBucket } from "@/lib/agenda/googleAgendaByDay"
@@ -143,21 +142,13 @@ export default function AgendaPage() {
       try {
         const headers = await browserBearerHeaders(true)
         const doCalSync = canRunGoogleCalendarSyncNow()
-        const doTasksSync = canRunGoogleTasksSyncNow()
-        const [tasksRes, calRes] = await Promise.all([
-          doTasksSync
-            ? fetch("/api/integrations/google/tasks/sync", { method: "POST", headers })
-            : Promise.resolve(null),
-          doCalSync
-            ? fetch("/api/integrations/google/calendar/sync", { method: "POST", headers })
-            : Promise.resolve(null),
-        ])
-        if (tasksRes?.ok) markGoogleTasksSyncRan()
+        const calRes = doCalSync
+          ? await fetch("/api/integrations/google/calendar/sync", { method: "POST", headers })
+          : null
         if (calRes?.ok) markGoogleCalendarSyncRan()
         if (cancelled) return
         await refresh()
-        await googleCalendar.refresh()
-        if (doTasksSync) await googleTasksFeed.refresh()
+        await Promise.all([googleCalendar.refresh(), googleTasksFeed.refresh()])
       } catch {}
     }
     void pull()
@@ -177,16 +168,9 @@ export default function AgendaPage() {
         try {
           const headers = await browserBearerHeaders(true)
           const doCalSync = canRunGoogleCalendarSyncNow()
-          const doTasksSync = canRunGoogleTasksSyncNow()
-          const [tasksRes, calRes] = await Promise.all([
-            doTasksSync
-              ? fetch("/api/integrations/google/tasks/sync", { method: "POST", headers })
-              : Promise.resolve(null),
-            doCalSync
-              ? fetch("/api/integrations/google/calendar/sync", { method: "POST", headers })
-              : Promise.resolve(null),
-          ])
-          if (tasksRes?.ok) markGoogleTasksSyncRan()
+          const calRes = doCalSync
+            ? await fetch("/api/integrations/google/calendar/sync", { method: "POST", headers })
+            : null
           if (calRes?.ok) markGoogleCalendarSyncRan()
           await refresh()
           await Promise.all([googleCalendar.refresh(), googleTasksFeed.refresh()])
@@ -514,6 +498,7 @@ export default function AgendaPage() {
                     onAfterTasksSync={() => {
                       void refresh()
                       void googleCalendar.refresh()
+                      void googleTasksFeed.refresh()
                     }}
                   />
                 </div>
