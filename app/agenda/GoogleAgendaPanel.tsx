@@ -9,6 +9,7 @@ import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { isAppMockMode, isSupabaseEnabled, UI_AGENDA_SYNC_OFF } from "@/lib/checkins/flags"
 import { markGoogleCalendarSyncRan } from "@/lib/google/googleCalendarSyncThrottle"
+import { markGoogleTasksSyncRan } from "@/lib/google/googleTasksSyncThrottle"
 
 type GoogleAgendaPanelProps = {
   feed: GoogleTasksFeedState
@@ -66,7 +67,9 @@ export function GoogleAgendaPanel({
       const syncUrl =
         kind === "calendar"
           ? "/api/integrations/google/calendar/sync?force=1"
-          : `/api/integrations/google/${kind}/sync`
+          : kind === "tasks"
+            ? "/api/integrations/google/tasks/sync?force=1"
+            : `/api/integrations/google/${kind}/sync`
       const res = await fetch(syncUrl, { method: "POST", headers })
       const payload = (await res.json()) as {
         success?: boolean
@@ -80,9 +83,13 @@ export function GoogleAgendaPanel({
       if (!res.ok || !payload.success) {
         throw new Error(messageForHttpError(res.status, payload.error, res.statusText))
       }
-      if (payload.skipped && kind === "calendar") {
-        setSyncMsg(payload.notice ?? "Calendario: sin cambios (sync reciente).")
-        markGoogleCalendarSyncRan()
+      if (payload.skipped) {
+        setSyncMsg(
+          payload.notice ??
+            (kind === "calendar" ? "Calendario: sin cambios (sync reciente)." : "Tareas: sin cambios (sync reciente)."),
+        )
+        if (kind === "calendar") markGoogleCalendarSyncRan()
+        if (kind === "tasks") markGoogleTasksSyncRan()
         await refresh()
         onAfterTasksSync?.()
         return
@@ -94,6 +101,7 @@ export function GoogleAgendaPanel({
           : ""
       setSyncMsg(`${base}.${mirror}`)
       if (kind === "calendar") markGoogleCalendarSyncRan()
+      if (kind === "tasks") markGoogleTasksSyncRan()
       await refresh()
       onAfterTasksSync?.()
     } catch (e) {

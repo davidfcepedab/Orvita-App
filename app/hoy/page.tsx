@@ -13,6 +13,7 @@ import {
   canRunGoogleCalendarSyncNow,
   markGoogleCalendarSyncRan,
 } from "@/lib/google/googleCalendarSyncThrottle"
+import { canRunGoogleTasksSyncNow, markGoogleTasksSyncRan } from "@/lib/google/googleTasksSyncThrottle"
 import { formatLocalDateKey, localDateKeyFromIso } from "@/lib/agenda/localDateKey"
 import { isGoogleTaskDone } from "@/lib/agenda/googleTasksUpcoming"
 
@@ -88,16 +89,21 @@ export default function HoyPage() {
       try {
         const headers = await browserBearerHeaders(true)
         const doCalSync = canRunGoogleCalendarSyncNow()
-        await Promise.all([
-          fetch("/api/integrations/google/tasks/sync", { method: "POST", headers }),
+        const doTasksSync = canRunGoogleTasksSyncNow()
+        const [tasksRes, calRes] = await Promise.all([
+          doTasksSync
+            ? fetch("/api/integrations/google/tasks/sync", { method: "POST", headers })
+            : Promise.resolve(null),
           doCalSync
             ? fetch("/api/integrations/google/calendar/sync", { method: "POST", headers })
-            : Promise.resolve(),
+            : Promise.resolve(null),
         ])
-        if (doCalSync) markGoogleCalendarSyncRan()
+        if (tasksRes?.ok) markGoogleTasksSyncRan()
+        if (calRes?.ok) markGoogleCalendarSyncRan()
         if (cancelled) return
         /* Calendario: GET ya no llama a Google (lee Supabase); refrescar trae filas tras importar. */
         await refreshCal()
+        if (doTasksSync) await refreshTasks()
       } catch {
         /* sync es best-effort; los hooks ya muestran error si falla la lectura */
       }
@@ -106,7 +112,7 @@ export default function HoyPage() {
     return () => {
       cancelled = true
     }
-  }, [refreshCal])
+  }, [refreshCal, refreshTasks])
 
   const [stackChecked, setStackChecked] = useState<Record<string, boolean>>({})
   const toggleStack = useCallback((key: string) => {

@@ -177,8 +177,21 @@ export function mapGoogleSyncErrorToUserMessage(context: "calendar" | "tasks", d
   if (d.includes("401") || d.includes("unauthorized")) {
     return "Google no autorizó la operación. Vuelve a conectar tu cuenta."
   }
+  if (
+    d.includes("queries per day") ||
+    d.includes("per day per project") ||
+    d.includes("defaultperday") ||
+    (d.includes("429") && d.includes("tasks.googleapis.com"))
+  ) {
+    return context === "tasks"
+      ? "Google Tasks alcanzó la cuota diaria del proyecto (compartida entre todos los usuarios). Espera hasta mañana, pide más cuota en Google Cloud o reduce los syncs automáticos."
+      : "Google alcanzó la cuota diaria del proyecto. Espera o solicita más cuota en Google Cloud Console."
+  }
+  if (d.includes("429") || d.includes("resource_exhausted")) {
+    return "Google devolvió demasiadas peticiones (429). Espera unos minutos y evita sincronizar en bucle desde varias pestañas."
+  }
   if (d.includes("ratelimit") || d.includes("rate limit") || d.includes("quota") || d.includes("rate_limit_exceeded")) {
-    return "Google limitó temporalmente las peticiones (cuota por minuto). Espera 1–2 minutos y evita abrir varias pestañas de Órvita a la vez."
+    return "Google limitó temporalmente las peticiones (cuota). Espera 1–2 minutos y evita abrir varias pestañas de Órvita a la vez."
   }
   if (d.includes("403") || d.includes("forbidden")) {
     return context === "calendar"

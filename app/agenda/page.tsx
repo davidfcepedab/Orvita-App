@@ -28,6 +28,7 @@ import {
   canRunGoogleCalendarSyncNow,
   markGoogleCalendarSyncRan,
 } from "@/lib/google/googleCalendarSyncThrottle"
+import { canRunGoogleTasksSyncNow, markGoogleTasksSyncRan } from "@/lib/google/googleTasksSyncThrottle"
 import type { HouseholdMemberDTO } from "@/lib/household/memberTypes"
 import { createBrowserClient } from "@/lib/supabase/browser"
 import { buildGoogleByDayIndex, type GoogleDayBucket } from "@/lib/agenda/googleAgendaByDay"
@@ -142,23 +143,28 @@ export default function AgendaPage() {
       try {
         const headers = await browserBearerHeaders(true)
         const doCalSync = canRunGoogleCalendarSyncNow()
-        await Promise.all([
-          fetch("/api/integrations/google/tasks/sync", { method: "POST", headers }),
+        const doTasksSync = canRunGoogleTasksSyncNow()
+        const [tasksRes, calRes] = await Promise.all([
+          doTasksSync
+            ? fetch("/api/integrations/google/tasks/sync", { method: "POST", headers })
+            : Promise.resolve(null),
           doCalSync
             ? fetch("/api/integrations/google/calendar/sync", { method: "POST", headers })
-            : Promise.resolve(),
+            : Promise.resolve(null),
         ])
-        if (doCalSync) markGoogleCalendarSyncRan()
+        if (tasksRes?.ok) markGoogleTasksSyncRan()
+        if (calRes?.ok) markGoogleCalendarSyncRan()
         if (cancelled) return
         await refresh()
         await googleCalendar.refresh()
+        if (doTasksSync) await googleTasksFeed.refresh()
       } catch {}
     }
     void pull()
     return () => {
       cancelled = true
     }
-  }, [refresh, googleCalendar.refresh])
+  }, [refresh, googleCalendar.refresh, googleTasksFeed.refresh])
 
   useEffect(() => {
     if (isAppMockMode() || !isSupabaseEnabled()) return
@@ -171,13 +177,17 @@ export default function AgendaPage() {
         try {
           const headers = await browserBearerHeaders(true)
           const doCalSync = canRunGoogleCalendarSyncNow()
-          await Promise.all([
-            fetch("/api/integrations/google/tasks/sync", { method: "POST", headers }),
+          const doTasksSync = canRunGoogleTasksSyncNow()
+          const [tasksRes, calRes] = await Promise.all([
+            doTasksSync
+              ? fetch("/api/integrations/google/tasks/sync", { method: "POST", headers })
+              : Promise.resolve(null),
             doCalSync
               ? fetch("/api/integrations/google/calendar/sync", { method: "POST", headers })
-              : Promise.resolve(),
+              : Promise.resolve(null),
           ])
-          if (doCalSync) markGoogleCalendarSyncRan()
+          if (tasksRes?.ok) markGoogleTasksSyncRan()
+          if (calRes?.ok) markGoogleCalendarSyncRan()
           await refresh()
           await Promise.all([googleCalendar.refresh(), googleTasksFeed.refresh()])
         } catch {}
