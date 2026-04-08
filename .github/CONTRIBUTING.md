@@ -22,6 +22,14 @@ Flujo habitual:
 
 Evita push directo a **`main`** salvo emergencias acordadas; preferible PR con revisión / CI.
 
+### Diseño (Figma) y módulos nuevos sin comprometer producción
+
+Para explorar UI en Figma y/o en código **sin afectar `main`** hasta revisión:
+
+- Usa ramas `design/<tema>` o `feature/<modulo>` desde `main`.
+- Abre un **PR** (puede ser **Draft**) para obtener preview en Vercel y revisar en equipo.
+- Detalle del flujo y cómo enlazar Figma con el estado “actual” del producto: **[docs/FIGMA_WORKFLOW.md](../docs/FIGMA_WORKFLOW.md)**.
+
 ### Protección en GitHub (admin)
 
 En **Settings → Branches → Branch protection rules**, aplica reglas a **`main`** (y a **`preview`** si aplica): PR obligatorio, checks, etc.
