@@ -439,18 +439,18 @@ export default function AgendaPage() {
         style={{ borderWidth: "0.5px", background: "var(--agenda-shell-bg)" }}
       >
         <header
-          className="flex flex-col gap-4 border-b border-[var(--color-border)] px-5 pb-4 pt-5 sm:flex-row sm:items-center sm:justify-between lg:px-8 lg:pb-5 lg:pt-7"
+          className="flex flex-col gap-4 border-b border-[var(--color-border)] px-5 pb-4 pt-5 sm:flex-row sm:items-start sm:justify-between sm:gap-6 lg:px-8 lg:pb-5 lg:pt-7"
           style={{ background: "var(--agenda-elevated-bg)" }}
         >
-          <div>
-            <h1 className="m-0 text-[26px] font-medium tracking-tight text-[var(--color-text-primary)] lg:text-[28px]">
+          <div className="min-w-0 w-full flex-1">
+            <h1 className="m-0 break-words text-[26px] font-medium tracking-tight text-[var(--color-text-primary)] lg:text-[28px]">
               {agendaTitle}
             </h1>
-            <p className="m-0 mt-1.5 min-h-[3.25rem] max-w-xl text-[13px] leading-snug text-[var(--color-text-secondary)] sm:min-h-[2.75rem]">
+            <p className="m-0 mt-1.5 w-full max-w-xl min-h-[4.5rem] text-[13px] leading-snug text-[var(--color-text-secondary)] sm:min-h-[4rem]">
               {agendaTagline}
             </p>
           </div>
-          <div className="flex shrink-0 flex-wrap gap-2 sm:gap-[var(--spacing-sm)]">
+          <div className="flex shrink-0 flex-wrap gap-2 sm:gap-[var(--spacing-sm)] sm:pt-1">
             <button
               type="button"
               onClick={() => setFormOpen(true)}
