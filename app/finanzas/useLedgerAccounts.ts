@@ -36,6 +36,7 @@ type Options = {
 export function useLedgerAccounts(options?: Options) {
   const finance = useFinance()
   const month = finance?.month ?? ""
+  const capitalEpoch = finance?.capitalDataEpoch ?? 0
   const enabled = options?.enabled !== false
 
   const [accounts, setAccounts] = useState<LedgerAccountRow[]>([])
@@ -70,7 +71,7 @@ export function useLedgerAccounts(options?: Options) {
     } finally {
       setLoading(false)
     }
-  }, [month, enabled])
+  }, [month, enabled, capitalEpoch])
 
   useEffect(() => {
     void refetch()

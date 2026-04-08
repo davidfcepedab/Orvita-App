@@ -19,6 +19,7 @@ type AuditRow = {
 export default function FinanzasAuditPage() {
   const finance = useFinance()
   const month = finance?.month ?? ""
+  const capitalEpoch = finance?.capitalDataEpoch ?? 0
   const [rows, setRows] = useState<AuditRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -58,7 +59,7 @@ export default function FinanzasAuditPage() {
     return () => {
       cancelled = true
     }
-  }, [month])
+  }, [month, capitalEpoch])
 
   if (!finance) {
     return <div className="p-6 text-center text-orbita-secondary">Inicializando...</div>

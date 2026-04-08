@@ -627,6 +627,7 @@ function ReadonlyField({ value }: { value: ReactNode }) {
 export default function CuentasClient() {
   const finance = useFinance()
   const month = finance?.month ?? ""
+  const capitalEpoch = finance?.capitalDataEpoch ?? 0
 
   const {
     accounts: ledgerAccounts,
@@ -740,7 +741,7 @@ export default function CuentasClient() {
     } finally {
       setLoading(false)
     }
-  }, [month])
+  }, [month, capitalEpoch])
 
   useEffect(() => {
     if (!month) {
@@ -750,7 +751,7 @@ export default function CuentasClient() {
       return
     }
     void refetchAccountsDashboard()
-  }, [month, refetchAccountsDashboard])
+  }, [month, capitalEpoch, refetchAccountsDashboard])
 
   useEffect(() => {
     setCuentasSectionOrder(readCuentasSectionOrderFromStorage())

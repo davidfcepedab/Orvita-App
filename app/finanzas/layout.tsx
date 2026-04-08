@@ -3,6 +3,7 @@
 import { ReactNode } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { FinanceProvider, useFinance } from "./FinanceContext"
+import { FinanceDataLineBanner } from "./FinanceDataLineBanner"
 import { Card } from "@/src/components/ui/Card"
 
 function FinanzasLayoutContent({
@@ -88,6 +89,8 @@ function FinanzasLayoutContent({
           )
         })}
       </div>
+
+      <FinanceDataLineBanner />
 
       <div className="min-w-0">{children}</div>
     </div>

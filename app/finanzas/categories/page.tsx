@@ -229,6 +229,7 @@ export default function FinanzasCategories() {
   const [categoryQuery, setCategoryQuery] = useState("")
 
   const month_value = finance?.month
+  const capitalEpoch = finance?.capitalDataEpoch ?? 0
   const [savingCatalogId, setSavingCatalogId] = useState<string | null>(null)
   const [newOverride, setNewOverride] = useState({
     subcategory: "",
@@ -275,7 +276,7 @@ export default function FinanzasCategories() {
         if (!quiet) setLoading(false)
       }
     },
-    [month_value],
+    [month_value, capitalEpoch],
   )
 
   useEffect(() => {

@@ -340,40 +340,47 @@ export async function POST(req: NextRequest) {
     }
 
     const now = new Date().toISOString()
-    const deleted: string[] = []
     const skipped: string[] = []
 
+    const { data: rows, error: selErr } = await auth.supabase
+      .from("orbita_finance_transactions")
+      .select("id, household_id, description")
+      .eq("household_id", householdId)
+      .is("deleted_at", null)
+      .in("id", ids)
+
+    if (selErr) throw selErr
+
+    type Row = { id: string; household_id?: string; description?: string | null }
+    const rowById = new Map<string, Row>((rows ?? []).map((r) => [String((r as Row).id), r as Row]))
+
+    const eligible: string[] = []
     for (const id of ids) {
-      const { data: existing, error: fetchErr } = await auth.supabase
-        .from("orbita_finance_transactions")
-        .select("id, household_id, description")
-        .eq("id", id)
-        .is("deleted_at", null)
-        .maybeSingle()
-
-      if (fetchErr) throw fetchErr
-      if (!existing || String(existing.household_id) !== String(householdId)) {
+      const row = rowById.get(id)
+      if (!row) {
         skipped.push(id)
         continue
       }
-      if (!/reconciliation_adjustment/i.test(String(existing.description ?? ""))) {
+      if (!/reconciliation_adjustment/i.test(String(row.description ?? ""))) {
         skipped.push(id)
         continue
       }
+      eligible.push(id)
+    }
 
+    if (eligible.length > 0) {
       const { error: upErr } = await auth.supabase
         .from("orbita_finance_transactions")
         .update({ deleted_at: now, updated_at: now })
-        .eq("id", id)
+        .in("id", eligible)
         .eq("household_id", householdId)
 
       if (upErr) throw upErr
-      deleted.push(id)
     }
 
     return NextResponse.json({
       success: true,
-      data: { deleted, skipped },
+      data: { deleted: eligible, skipped },
     })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Error"

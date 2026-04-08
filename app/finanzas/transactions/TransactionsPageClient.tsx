@@ -20,6 +20,15 @@ function isReconciliationAdjustmentDescription(description: string | undefined):
   return /reconciliation_adjustment/i.test(String(description ?? ""))
 }
 
+/** Deja que el navegador pinte (p. ej. estado «Eliminando…») antes de un await largo — mejora INP. */
+function yieldToNextPaint(): Promise<void> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => resolve())
+    })
+  })
+}
+
 function categoryOptionList(rows: FinanceSubcategoryCatalogRow[], currentCategory: string): string[] {
   const s = new Set<string>()
   for (const r of rows) {
@@ -97,6 +106,7 @@ export default function TransactionsPageClient() {
   const selectAllRef = useRef<HTMLInputElement>(null)
 
   const month = finance?.month ?? searchParams.get("month") ?? ""
+  const capitalEpoch = finance?.capitalDataEpoch ?? 0
   const category = searchParams.get("category") || ""
 
   const accountParam = searchParams.get("account")?.trim() ?? ""
@@ -160,7 +170,7 @@ export default function TransactionsPageClient() {
         if (opts.showLoading) setLoading(false)
       }
     },
-    [month, category, financeAccountId, tipoFilterUrl],
+    [month, category, financeAccountId, tipoFilterUrl, capitalEpoch],
   )
 
   const fetchTransactions = useCallback(async () => {
@@ -168,7 +178,9 @@ export default function TransactionsPageClient() {
   }, [loadTransactions])
 
   const fetchTransactionsSilent = useCallback(() => {
-    void loadTransactions({ showLoading: false })
+    startTransition(() => {
+      void loadTransactions({ showLoading: false })
+    })
   }, [loadTransactions])
 
   useEffect(() => {
@@ -274,6 +286,8 @@ export default function TransactionsPageClient() {
         })
       })
 
+      await yieldToNextPaint()
+
       try {
         setPatchErr(null)
         const res = await financeApiDelete(
@@ -306,6 +320,7 @@ export default function TransactionsPageClient() {
     }
     setBulkDeleting(true)
     setPatchErr(null)
+    await yieldToNextPaint()
     try {
       const res = await financeApiJson("/api/orbita/finanzas/transactions", {
         method: "POST",

@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
 import { isAppMockMode, isSupabaseEnabled, UI_FINANCE_DEMO_NOTICE } from "@/lib/checkins/flags"
 import { calculateOverview } from "@/lib/finanzas/calculations/overview"
+import { computeFinanceMonthState } from "@/lib/finanzas/computeFinanceMonthState"
 import { createOperativoExpenseFn } from "@/lib/finanzas/operativoExpense"
-import { fetchSubcategoryCatalogMerged } from "@/lib/finanzas/subcategoryCatalog"
 import {
   buildMonthlyFlowBuckets,
   calendarQuarterMonthsThrough,
@@ -115,6 +115,7 @@ export async function GET(req: NextRequest) {
           lastTransactionUpdatedAt: new Date().toISOString(),
           transactionsInSelectedMonth: currentRows.length,
           kpiSource: "transactions" as const,
+          kpiHasSignal: overview.income > 0.5 || overview.expense > 0.5,
           reference: undefined as
             | { month: string; income: number; expense: number; balance: number }
             | undefined,
@@ -164,70 +165,19 @@ export async function GET(req: NextRequest) {
     const currentRows = rows.filter((r) => r.date >= startStr && r.date <= endStr)
     const previousRows = rows.filter((r) => r.date >= prevStartStr && r.date <= prevEndStr)
 
-    let catalogRows: Awaited<ReturnType<typeof fetchSubcategoryCatalogMerged>> = []
-    try {
-      catalogRows = await fetchSubcategoryCatalogMerged(auth.supabase, householdId)
-    } catch (e) {
-      console.warn("OVERVIEW: catálogo de subcategorías no disponible", e)
-    }
-    const opex = createOperativoExpenseFn(catalogRows)
-    const hasOperativoCatalog = catalogRows.length > 0
+    const monthState = await computeFinanceMonthState(
+      auth.supabase,
+      householdId,
+      month,
+      currentRows,
+      previousRows,
+    )
+    const { overview, opex, snapshotKpiNotice, meta, hasOperativoCatalog } = monthState
 
-    let overview = calculateOverview(currentRows, previousRows, { expenseAmount: opex })
     const [yStr, mStr] = month.split("-")
     const y = Number(yStr)
     const mo = Number(mStr)
-    const prevYm =
-      mo === 1
-        ? { year: y - 1, month: 12 }
-        : { year: y, month: mo - 1 }
 
-    const [{ data: snapCur }, { data: snapPrev }] = await Promise.all([
-      auth.supabase
-        .from("finance_monthly_snapshots")
-        .select("total_income,total_expense,balance")
-        .eq("household_id", householdId)
-        .eq("year", y)
-        .eq("month", mo)
-        .maybeSingle(),
-      auth.supabase
-        .from("finance_monthly_snapshots")
-        .select("total_income,total_expense,balance")
-        .eq("household_id", householdId)
-        .eq("year", prevYm.year)
-        .eq("month", prevYm.month)
-        .maybeSingle(),
-    ])
-
-    const snapIn = Number(snapCur?.total_income ?? 0)
-    const snapEx = Number(snapCur?.total_expense ?? 0)
-    const txMag = overview.income + overview.expense
-    const snapMag = snapIn + snapEx
-    let snapshotKpiNotice: string | undefined
-    /** KPI desde snapshot cuando no hay TX en el mes: evita mostrar 0 ficticios si ya existe cierre en BD. */
-    if (txMag < 1 && snapMag > 1) {
-      const prevIn = Number(snapPrev?.total_income ?? 0)
-      const prevEx = Number(snapPrev?.total_expense ?? 0)
-      const prevNet = prevIn - prevEx
-      const net = snapIn - snapEx
-      const deltaNet =
-        Math.abs(prevNet) > 1e-6 ? ((net - prevNet) / Math.abs(prevNet)) * 100 : null
-      overview = {
-        income: snapIn,
-        expense: snapEx,
-        net,
-        savingsRate: snapIn !== 0 ? (net / snapIn) * 100 : 0,
-        previousNet: prevNet,
-        deltaNet,
-        runway: snapEx > 0 && net > 0 ? net / snapEx : 0,
-      }
-      snapshotKpiNotice = hasOperativoCatalog
-        ? "KPI del mes desde finance_monthly_snapshots (no hay movimientos del mes en transacciones). Gráficos semanales y listas dependen de TX importadas: pueden verse vacíos hasta registrar movimientos."
-        : "KPI del mes desde finance_monthly_snapshots: la suma de movimientos del mes en transacciones fue 0."
-    } else if (txMag < 1 && snapMag < 1) {
-      snapshotKpiNotice =
-        "Sin movimientos ni resumen almacenado para este mes en la base; las cifras pueden ser 0 hasta importar datos o generar el cierre mensual."
-    }
     const weeklySeries = buildWeeklyBuckets(month, currentRows, opex, { allRowsForWeekWindow: rows })
 
     const quarterMonths = calendarQuarterMonthsThrough(month)
@@ -309,67 +259,10 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    const { data: lastTxRow } = await auth.supabase
-      .from("orbita_finance_transactions")
-      .select("date, updated_at")
-      .eq("household_id", householdId)
-      .is("deleted_at", null)
-      .order("date", { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    const lastTransactionDate =
-      typeof lastTxRow?.date === "string" && lastTxRow.date.length >= 10 ? lastTxRow.date.slice(0, 10) : null
-    const lastTransactionUpdatedAt =
-      typeof lastTxRow?.updated_at === "string" ? lastTxRow.updated_at : null
-
-    const usedSnapshotForKpi = txMag < 1 && snapMag > 1
-    const kpiHasSignal = overview.income > 0.5 || overview.expense > 0.5
-    const kpiSource: "transactions" | "snapshot" | "empty" =
-      txMag >= 1 ? "transactions" : usedSnapshotForKpi || kpiHasSignal ? "snapshot" : "empty"
-
-    let reference:
-      | { month: string; income: number; expense: number; balance: number }
-      | undefined
-    if (!kpiHasSignal) {
-      const { data: snapLatest } = await auth.supabase
-        .from("finance_monthly_snapshots")
-        .select("year,month,total_income,total_expense,balance")
-        .eq("household_id", householdId)
-        .order("year", { ascending: false })
-        .order("month", { ascending: false })
-        .limit(48)
-
-      for (const r of snapLatest ?? []) {
-        const ti = Number((r as { total_income?: unknown }).total_income ?? 0)
-        const te = Number((r as { total_expense?: unknown }).total_expense ?? 0)
-        if (ti + te > 1) {
-          const yy = Number((r as { year?: unknown }).year)
-          const mm = Number((r as { month?: unknown }).month)
-          if (yy && mm >= 1 && mm <= 12) {
-            reference = {
-              month: `${yy}-${String(mm).padStart(2, "0")}`,
-              income: ti,
-              expense: te,
-              balance: Number((r as { balance?: unknown }).balance ?? ti - te),
-            }
-          }
-          break
-        }
-      }
-    }
-
     return NextResponse.json({
       success: true,
       ...(snapshotKpiNotice ? { notice: snapshotKpiNotice } : {}),
-      meta: {
-        selectedMonth: month,
-        lastTransactionDate,
-        lastTransactionUpdatedAt,
-        transactionsInSelectedMonth: currentRows.length,
-        kpiSource,
-        reference,
-      },
+      meta,
       data: {
         ...overview,
         weeklySeries,
