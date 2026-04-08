@@ -12,36 +12,47 @@ import {
   priorityPillStyle,
   statusPillStyle,
 } from "@/app/agenda/agendaUnifiedCardStyles"
-import {
-  formatPriorityTitle,
-  formatStatusTitle,
-  venceLine,
-} from "@/app/agenda/taskCardFormat"
+import { formatPriorityTitle, formatStatusTitle, venceLine } from "@/app/agenda/taskCardFormat"
 import { taskLeftBorder } from "@/app/agenda/taskTypeVisual"
+import { TASK_CARD_GRID, taskCardDensityVars, taskCardGridStyle, type TaskCardDensity } from "@/app/agenda/taskCardConfig"
+import { TaskCardArea } from "@/app/agenda/TaskCardArea"
+import { useTaskCardIterationMode } from "@/app/agenda/TaskCardIterationContext"
 
 type Props = {
   task: UiAgendaTask
   variant: "list" | "kanban"
-  /** Guarda el estado «realizada» al pulsar Guardar (debe resolver cuando el servidor confirme). */
+  /** Modo iteración: bordes por área (también `?taskCardDev=1` vía provider). */
+  iterationMode?: boolean
   onSaveComplete?: (task: UiAgendaTask, completed: boolean) => Promise<void> | void
   onDelete?: (task: UiAgendaTask) => Promise<void> | void
   deleteBusy?: boolean
-  /** Solo tareas recibidas pendientes de aceptación. */
   onAcceptAssignment?: (task: UiAgendaTask) => Promise<void> | void
 }
 
 export function AgendaOrvitaTaskCard({
   task,
   variant,
+  iterationMode: iterationProp,
   onSaveComplete,
   onDelete,
   deleteBusy,
   onAcceptAssignment,
 }: Props) {
-  const isList = variant === "list"
-  const titleCls = isList ? "text-[14px]" : "text-[13px]"
-  const lineCls = isList ? "text-[11px]" : "text-[10px]"
-  const fuenteCls = isList ? "text-[10px]" : "text-[9px]"
+  const fromCtx = useTaskCardIterationMode()
+  const iterationMode = iterationProp ?? fromCtx
+
+  const density: TaskCardDensity = variant === "list" ? "list" : "kanban"
+  const varStyle = taskCardDensityVars(density)
+  const hasActions = Boolean(onSaveComplete || onDelete)
+  const gridStyle = hasActions
+    ? taskCardGridStyle(TASK_CARD_GRID.orvita)
+    : ({
+        display: "grid",
+        gridTemplateColumns: "minmax(0,1fr)",
+        gridTemplateAreas: '"title" "meta" "pills" "assign" "footer"',
+        gap: "var(--task-card-gap)",
+        padding: "var(--task-card-pad)",
+      } as const)
 
   const [done, setDone] = useState(task.completed)
   const [dirty, setDirty] = useState(false)
@@ -58,6 +69,10 @@ export function AgendaOrvitaTaskCard({
   const statusTitle = formatStatusTitle(task.status)
   const statusKey = task.status.toLowerCase()
   const assignShort = assignmentShortLine(task)
+  const showAssignRow =
+    task.assigneePendingAccept ||
+    task.assigneeAccepted ||
+    (task.needsAcceptance && onAcceptAssignment)
 
   async function handleGuardar() {
     if (!onSaveComplete || !dirty) return
@@ -94,60 +109,78 @@ export function AgendaOrvitaTaskCard({
     <Card
       hover
       className="p-0 overflow-hidden"
-      style={agendaCardSurfaceStyle(taskLeftBorder(task.type, 4))}
+      style={{ ...agendaCardSurfaceStyle(taskLeftBorder(task.type, 4)), ...varStyle }}
     >
-      <div
-        className={`flex items-start gap-3 text-left ${isList ? "p-3" : "p-2.5"}`}
-      >
-        <div className="min-w-0 flex-1 space-y-1">
-          <div className="flex min-w-0 flex-wrap items-start gap-2">
-            <p
-              className={`m-0 min-w-0 flex-1 font-semibold leading-snug tracking-tight text-[var(--color-text-primary)] ${titleCls}`}
-            >
-              {task.title}
-            </p>
-            <TaskSourceBadge type={task.type} />
-          </div>
-
+      <div style={gridStyle}>
+        <TaskCardArea area="title" iterationMode={iterationMode} className="flex min-w-0 flex-wrap items-start gap-x-2 gap-y-1">
           <p
-            className={`m-0 flex items-center gap-1 leading-snug text-[var(--color-text-secondary)] ${lineCls}`}
+            className="m-0 min-w-0 flex-1 font-semibold tracking-tight text-[var(--color-text-primary)]"
+            style={{
+              fontSize: "var(--task-card-title-size)",
+              lineHeight: "var(--task-card-line-title)",
+            }}
           >
-            <Clock
-              className="h-3 w-3 shrink-0 opacity-70"
-              strokeWidth={2}
-              aria-hidden
-            />
+            {task.title}
+          </p>
+          <TaskSourceBadge type={task.type} />
+        </TaskCardArea>
+
+        <TaskCardArea area="meta" iterationMode={iterationMode}>
+          <p
+            className="m-0 flex items-center gap-1 text-[var(--color-text-secondary)]"
+            style={{
+              fontSize: "var(--task-card-meta-size)",
+              lineHeight: "var(--task-card-line-body)",
+            }}
+          >
+            <Clock className="h-3 w-3 shrink-0 opacity-70" strokeWidth={2} aria-hidden />
             <span>{durationVenceLine}</span>
           </p>
+        </TaskCardArea>
 
-          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+        <TaskCardArea area="pills" iterationMode={iterationMode}>
+          <div
+            className="flex flex-wrap items-center"
+            style={{ gap: "var(--task-card-gap-tight)" }}
+          >
             <span
               className={agendaPillBaseClass}
-              style={priorityPillStyle(task.priority)}
+              style={{
+                ...priorityPillStyle(task.priority),
+                fontSize: "var(--task-card-pill-size)",
+              }}
               title="Prioridad (etiqueta de color)"
             >
               {formatPriorityTitle(task.priority)}
             </span>
-            <span className="text-[var(--color-text-secondary)] text-[10px]" aria-hidden>
+            <span
+              className="text-[var(--color-text-secondary)]"
+              style={{ fontSize: "var(--task-card-pill-size)" }}
+              aria-hidden
+            >
               |
             </span>
             <span
               className={agendaPillBaseClass}
-              style={statusPillStyle(statusKey)}
+              style={{ ...statusPillStyle(statusKey), fontSize: "var(--task-card-pill-size)" }}
               title="Estado (etiqueta de color)"
             >
               {statusTitle}
             </span>
           </div>
+        </TaskCardArea>
 
-          {(task.assigneePendingAccept ||
-            task.assigneeAccepted ||
-            (task.needsAcceptance && onAcceptAssignment)) && (
-            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+        <TaskCardArea area="assign" iterationMode={iterationMode}>
+          {showAssignRow ? (
+            <div
+              className="flex flex-wrap items-center"
+              style={{ gap: "var(--task-card-gap-tight)" }}
+            >
               {task.assigneePendingAccept ? (
                 <span
                   className={agendaPillBaseClass}
                   style={{
+                    fontSize: "var(--task-card-pill-size)",
                     background: "color-mix(in srgb, var(--color-accent-warning) 18%, transparent)",
                     color: "var(--color-accent-warning)",
                   }}
@@ -159,6 +192,7 @@ export function AgendaOrvitaTaskCard({
                 <span
                   className={agendaPillBaseClass}
                   style={{
+                    fontSize: "var(--task-card-pill-size)",
                     background: "color-mix(in srgb, var(--color-accent-health) 18%, transparent)",
                     color: "var(--color-accent-health)",
                   }}
@@ -171,74 +205,114 @@ export function AgendaOrvitaTaskCard({
                   type="button"
                   disabled={accepting}
                   onClick={() => void handleAcceptAssignment()}
-                  className="inline-flex items-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-primary)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-accent-primary)_12%,var(--color-surface-alt))] disabled:opacity-50"
+                  className="inline-flex items-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-2 py-px font-semibold uppercase tracking-[0.08em] text-[var(--color-text-primary)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-accent-primary)_12%,var(--color-surface-alt))] disabled:opacity-50"
+                  style={{ fontSize: "var(--task-card-action-size)" }}
                 >
                   {accepting ? "Aceptando…" : "Aceptar"}
                 </button>
               ) : null}
             </div>
-          )}
+          ) : null}
+        </TaskCardArea>
 
-          <p className={`m-0 text-[var(--color-text-secondary)] ${fuenteCls}`}>
+        <TaskCardArea area="footer" iterationMode={iterationMode}>
+          <p
+            className="m-0 text-[var(--color-text-secondary)]"
+            style={{
+              fontSize: "var(--task-card-fuente-size)",
+              lineHeight: "var(--task-card-line-body)",
+            }}
+          >
             Fuente: {task.orvitaFuente}
           </p>
-
           {assignShort ? (
-            <p className={`m-0 text-[var(--color-text-secondary)] ${fuenteCls}`}>{assignShort}</p>
+            <p
+              className="m-0 text-[var(--color-text-secondary)]"
+              style={{
+                fontSize: "var(--task-card-fuente-size)",
+                lineHeight: "var(--task-card-line-body)",
+              }}
+            >
+              {assignShort}
+            </p>
           ) : null}
-        </div>
+        </TaskCardArea>
 
-        {onSaveComplete || onDelete ? (
-          <div className="flex shrink-0 items-center gap-2 self-start pt-0.5">
-            {onDelete ? (
-              <button
-                type="button"
-                disabled={deleting || Boolean(deleteBusy)}
-                onClick={() => void handleDelete()}
-                className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-transparent text-[var(--color-text-secondary)] opacity-45 transition-[opacity,color,background-color] hover:bg-[color-mix(in_srgb,var(--color-text-secondary)_10%,transparent)] hover:opacity-100 hover:text-[var(--color-accent-danger)] disabled:opacity-25"
-                aria-label="Eliminar tarea"
-                title="Eliminar"
-              >
-                <Trash2 className="h-2.5 w-2.5" strokeWidth={1.5} aria-hidden />
-              </button>
-            ) : null}
-            {onSaveComplete ? (
-              <>
+        {hasActions ? (
+          <TaskCardArea
+            area="actions"
+            iterationMode={iterationMode}
+            className="flex shrink-0 flex-col items-end gap-2 self-start pt-0.5"
+          >
+            <div className="flex items-center gap-2">
+              {onDelete ? (
                 <button
                   type="button"
-                  disabled={!dirty || saving}
-                  onClick={() => void handleGuardar()}
-                  className="min-w-0 border-0 bg-transparent p-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)] underline decoration-[var(--color-border)] underline-offset-2 transition-colors hover:text-[var(--color-text-primary)] disabled:cursor-not-allowed disabled:no-underline disabled:opacity-40"
+                  disabled={deleting || Boolean(deleteBusy)}
+                  onClick={() => void handleDelete()}
+                  className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-transparent text-[var(--color-text-secondary)] opacity-45 transition-[opacity,color,background-color] hover:bg-[color-mix(in_srgb,var(--color-text-secondary)_10%,transparent)] hover:opacity-100 hover:text-[var(--color-accent-danger)] disabled:opacity-25"
+                  aria-label="Eliminar tarea"
+                  title="Eliminar"
                 >
-                  {saving ? "Guardando…" : "Guardar"}
+                  <Trash2 className="h-2.5 w-2.5" strokeWidth={1.5} aria-hidden />
                 </button>
-                <button
-                  type="button"
-                  role="checkbox"
-                  aria-checked={done}
-                  aria-label={done ? "Marcar como pendiente" : "Marcar como realizada"}
-                  onClick={() => {
-                    setDone((v) => !v)
-                    setDirty(true)
-                  }}
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-border)] text-[var(--agenda-assigned)] transition-colors hover:border-[var(--agenda-assigned)]"
-                  style={
-                    done
-                      ? {
-                          borderColor: "var(--agenda-assigned)",
-                          background:
-                            "color-mix(in srgb, var(--agenda-assigned) 22%, transparent)",
-                        }
-                      : undefined
-                  }
-                >
-                  {done ? <Check className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden /> : null}
-                </button>
-              </>
-            ) : null}
-          </div>
+              ) : null}
+              {onSaveComplete ? (
+                <>
+                  <button
+                    type="button"
+                    disabled={!dirty || saving}
+                    onClick={() => void handleGuardar()}
+                    className="min-w-0 border-0 bg-transparent p-0 font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)] underline decoration-[var(--color-border)] underline-offset-2 transition-colors hover:text-[var(--color-text-primary)] disabled:cursor-not-allowed disabled:no-underline disabled:opacity-40"
+                    style={{ fontSize: "var(--task-card-action-size)" }}
+                  >
+                    {saving ? "Guardando…" : "Guardar"}
+                  </button>
+                  <button
+                    type="button"
+                    role="checkbox"
+                    aria-checked={done}
+                    aria-label={done ? "Marcar como pendiente" : "Marcar como realizada"}
+                    onClick={() => {
+                      setDone((v) => !v)
+                      setDirty(true)
+                    }}
+                    className="flex shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-border)] text-[var(--agenda-assigned)] transition-colors hover:border-[var(--agenda-assigned)]"
+                    style={{
+                      width: "var(--task-card-check-size)",
+                      height: "var(--task-card-check-size)",
+                      ...(done
+                        ? {
+                            borderColor: "var(--agenda-assigned)",
+                            background:
+                              "color-mix(in srgb, var(--agenda-assigned) 22%, transparent)",
+                          }
+                        : {}),
+                    }}
+                  >
+                    {done ? <Check className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden /> : null}
+                  </button>
+                </>
+              ) : null}
+            </div>
+          </TaskCardArea>
         ) : null}
       </div>
     </Card>
   )
 }
+
+// === MODO ITERACIÓN ============================================================
+// Cambia variables en app/agenda/taskCardConfig.ts (DENSITY_VARS / BASE_VARS) y guarda.
+// Activa overlays: añade ?taskCardDev=1 a la URL de /agenda o pasa iterationMode al provider.
+//
+// Ejemplo (tokens que puedes duplicar en :root si prefieres CSS global):
+//   --task-card-pad: 10px;
+//   --task-card-gap: 6px;
+//   --task-card-title-size: 13px;
+//   --task-card-meta-size: 10px;
+//   --task-card-fuente-size: 9px;
+//   --task-card-radius: 12px;
+//
+// Reordenar bloques: edita TASK_CARD_GRID.orvita en taskCardConfig.ts (grid-template-areas).
+// ===============================================================================

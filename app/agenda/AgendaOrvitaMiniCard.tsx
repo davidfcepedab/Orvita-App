@@ -10,51 +10,122 @@ import {
 } from "@/app/agenda/agendaUnifiedCardStyles"
 import { formatPriorityTitle, formatStatusTitle, venceLine } from "@/app/agenda/taskCardFormat"
 import { taskLeftBorder } from "@/app/agenda/taskTypeVisual"
+import { TASK_CARD_GRID, taskCardDensityVars, taskCardMiniGridStyle } from "@/app/agenda/taskCardConfig"
+import { TaskCardArea } from "@/app/agenda/TaskCardArea"
+import { useTaskCardIterationMode } from "@/app/agenda/TaskCardIterationContext"
 
-type Props = { task: UiAgendaTask }
+type Props = {
+  task: UiAgendaTask
+  iterationMode?: boolean
+}
 
-/** Misma jerarquía que la tarjeta de tarea Órvita completa; semana/mes (sin acciones). */
-export function AgendaOrvitaMiniCard({ task }: Props) {
+/** Misma jerarquía que la tarjeta completa; semana/mes (sin acciones). Tokens = vista compacta. */
+export function AgendaOrvitaMiniCard({ task, iterationMode: iterationProp }: Props) {
+  const fromCtx = useTaskCardIterationMode()
+  const iterationMode = iterationProp ?? fromCtx
+  const varStyle = taskCardDensityVars("compact")
+  const gridStyle = taskCardMiniGridStyle(TASK_CARD_GRID.mini)
+
   const statusKey = task.status.toLowerCase()
   const assignShort = assignmentShortLine(task)
+
   return (
     <div
-      className="space-y-1 overflow-hidden rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface-alt)] p-2"
-      style={{ borderLeft: taskLeftBorder(task.type, 4) }}
+      className="overflow-hidden border border-[var(--color-border)] bg-[var(--color-surface-alt)]"
+      style={{
+        ...varStyle,
+        ...gridStyle,
+        borderRadius: "var(--task-card-radius)",
+        borderLeft: taskLeftBorder(task.type, 4),
+      }}
     >
-      <p className="m-0 text-[11px] font-semibold leading-snug tracking-tight text-[var(--color-text-primary)]">
-        {task.title}
-      </p>
-      <p className="m-0 flex items-center gap-1 text-[10px] leading-snug text-[var(--color-text-secondary)]">
-        <Clock className="h-2.5 w-2.5 shrink-0 opacity-70" strokeWidth={2} aria-hidden />
-        <span>{`${task.duration} min | ${venceLine(task.due)}`}</span>
-      </p>
-      <div className="flex flex-wrap items-center gap-x-1 gap-y-0.5">
-        <span
-          className={agendaPillBaseClass}
-          style={priorityPillStyle(task.priority)}
-          title="Prioridad (etiqueta de color)"
+      <TaskCardArea area="title" iterationMode={iterationMode}>
+        <p
+          className="m-0 font-semibold tracking-tight text-[var(--color-text-primary)]"
+          style={{
+            fontSize: "var(--task-card-title-size)",
+            lineHeight: "var(--task-card-line-title)",
+          }}
         >
-          {formatPriorityTitle(task.priority)}
-        </span>
-        <span className="text-[9px] text-[var(--color-text-secondary)]" aria-hidden>
-          |
-        </span>
-        <span
-          className={agendaPillBaseClass}
-          style={statusPillStyle(statusKey)}
-          title="Estado (etiqueta de color)"
+          {task.title}
+        </p>
+      </TaskCardArea>
+
+      <TaskCardArea area="meta" iterationMode={iterationMode}>
+        <p
+          className="m-0 flex items-center gap-1 text-[var(--color-text-secondary)]"
+          style={{
+            fontSize: "var(--task-card-meta-size)",
+            lineHeight: "var(--task-card-line-body)",
+          }}
         >
-          {formatStatusTitle(task.status)}
-        </span>
-      </div>
-      {task.assignmentCaption ? (
-        <p className="m-0 text-[10px] text-[var(--color-text-primary)]">{task.assignmentCaption}</p>
-      ) : null}
-      <p className="m-0 text-[9px] text-[var(--color-text-secondary)]">Fuente: {task.orvitaFuente}</p>
-      {assignShort ? (
-        <p className="m-0 text-[9px] text-[var(--color-text-secondary)]">{assignShort}</p>
-      ) : null}
+          <Clock className="h-2.5 w-2.5 shrink-0 opacity-70" strokeWidth={2} aria-hidden />
+          <span>{`${task.duration} min | ${venceLine(task.due)}`}</span>
+        </p>
+      </TaskCardArea>
+
+      <TaskCardArea area="pills" iterationMode={iterationMode}>
+        <div className="flex flex-wrap items-center" style={{ gap: "var(--task-card-gap-tight)" }}>
+          <span
+            className={agendaPillBaseClass}
+            style={{ ...priorityPillStyle(task.priority), fontSize: "var(--task-card-pill-size)" }}
+            title="Prioridad (etiqueta de color)"
+          >
+            {formatPriorityTitle(task.priority)}
+          </span>
+          <span
+            className="text-[var(--color-text-secondary)]"
+            style={{ fontSize: "var(--task-card-pill-size)" }}
+            aria-hidden
+          >
+            |
+          </span>
+          <span
+            className={agendaPillBaseClass}
+            style={{ ...statusPillStyle(statusKey), fontSize: "var(--task-card-pill-size)" }}
+            title="Estado (etiqueta de color)"
+          >
+            {formatStatusTitle(task.status)}
+          </span>
+        </div>
+      </TaskCardArea>
+
+      <TaskCardArea area="extra" iterationMode={iterationMode}>
+        {task.assignmentCaption ? (
+          <p
+            className="m-0 text-[var(--color-text-primary)]"
+            style={{
+              fontSize: "var(--task-card-meta-size)",
+              lineHeight: "var(--task-card-line-body)",
+            }}
+          >
+            {task.assignmentCaption}
+          </p>
+        ) : null}
+      </TaskCardArea>
+
+      <TaskCardArea area="footer" iterationMode={iterationMode}>
+        <p
+          className="m-0 text-[var(--color-text-secondary)]"
+          style={{
+            fontSize: "var(--task-card-fuente-size)",
+            lineHeight: "var(--task-card-line-body)",
+          }}
+        >
+          Fuente: {task.orvitaFuente}
+        </p>
+        {assignShort ? (
+          <p
+            className="m-0 text-[var(--color-text-secondary)]"
+            style={{
+              fontSize: "var(--task-card-fuente-size)",
+              lineHeight: "var(--task-card-line-body)",
+            }}
+          >
+            {assignShort}
+          </p>
+        ) : null}
+      </TaskCardArea>
     </div>
   )
 }

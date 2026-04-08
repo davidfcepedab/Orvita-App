@@ -21,6 +21,7 @@ import {
   AgendaSharedMonth,
   AgendaSharedWeek,
 } from "@/app/agenda/AgendaSharedViews"
+import { TaskCardIterationProvider } from "@/app/agenda/TaskCardIterationContext"
 
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import { isAppMockMode, isSupabaseEnabled } from "@/lib/checkins/flags"
@@ -439,31 +440,32 @@ export default function AgendaPage() {
 
   return (
     <>
+      <TaskCardIterationProvider>
       <section
         aria-label="Agenda unificada"
         className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] shadow-card"
         style={{ borderWidth: "0.5px", background: "var(--agenda-shell-bg)" }}
       >
         <header
-          className="flex flex-col gap-4 border-b border-[var(--color-border)] px-5 pb-4 pt-5 sm:flex-row sm:items-start sm:justify-between sm:gap-6 lg:px-8 lg:pb-5 lg:pt-7"
+          className="flex flex-col gap-2 border-b border-[var(--color-border)] px-4 pb-2.5 pt-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 lg:px-6 lg:pb-3 lg:pt-4"
           style={{ background: "var(--agenda-elevated-bg)" }}
         >
           <div className="min-w-0 w-full flex-1">
-            <h1 className="m-0 min-h-[2.5rem] break-words text-[26px] font-medium leading-tight tracking-tight text-[var(--color-text-primary)] lg:min-h-[2.75rem] lg:text-[28px]">
+            <h1 className="m-0 break-words text-[22px] font-medium leading-tight tracking-tight text-[var(--color-text-primary)] sm:text-[24px] lg:text-[26px]">
               {agendaTitle}
             </h1>
-            <p className="m-0 mt-1.5 w-full max-w-xl min-h-[4.5rem] text-[13px] leading-snug text-[var(--color-text-secondary)] sm:min-h-[4rem]">
+            <p className="m-0 mt-1 max-w-2xl text-[11px] leading-snug text-[var(--color-text-secondary)] sm:text-[12px]">
               {agendaTagline}
             </p>
           </div>
-          <div className="flex shrink-0 flex-wrap gap-2 sm:gap-[var(--spacing-sm)] sm:pt-1">
+          <div className="flex shrink-0 flex-wrap gap-1.5 sm:justify-end">
             <button
               type="button"
               onClick={() => setFormOpen(true)}
-              className="inline-flex items-center gap-2 rounded-[10px] border border-[var(--color-border)] px-3.5 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-white"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-white sm:px-3 sm:py-2 sm:text-[11px]"
               style={{ background: "var(--agenda-assigned)" }}
             >
-              <Plus size={14} /> Nueva Tarea
+              <Plus size={13} className="shrink-0" /> Nueva tarea
             </button>
           </div>
         </header>
@@ -489,27 +491,27 @@ export default function AgendaPage() {
         ) : null}
 
         <div
-          className="sticky z-10 border-b border-[var(--color-border)] px-5 py-3 lg:px-8"
-          style={{ top: "84px", background: "var(--agenda-shell-bg)" }}
+          className="sticky z-10 border-b border-[var(--color-border)] px-4 py-2 lg:px-6"
+          style={{ top: "72px", background: "var(--agenda-shell-bg)" }}
         >
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1.5">
             <div
-              className="rounded-xl border border-[var(--color-border)] px-3 py-2 sm:px-3.5 sm:py-2.5"
+              className="rounded-lg border border-[var(--color-border)] px-2 py-1.5 sm:px-2.5 sm:py-2"
               style={agendaPanelSurfaceStyle}
               role="region"
               aria-label="Buscar, sincronizar Google y filtros"
             >
-              <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3 sm:gap-y-2">
-                <div className="flex min-h-[40px] min-w-0 w-full flex-1 items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-2.5 py-1.5 sm:min-w-[12rem] sm:max-w-xl">
-                  <Search size={14} className="shrink-0 text-[var(--color-text-secondary)]" aria-hidden />
+              <div className="flex w-full min-w-0 flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-2 sm:gap-y-1">
+                <div className="flex min-h-[34px] min-w-0 w-full flex-1 items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-2 py-1 sm:min-w-[10rem] sm:max-w-md lg:max-w-xl">
+                  <Search size={13} className="shrink-0 text-[var(--color-text-secondary)]" aria-hidden />
                   <input
                     placeholder="Buscar…"
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
-                    className="min-w-0 flex-1 border-0 bg-transparent text-[13px] text-[var(--color-text-primary)] outline-none placeholder:text-[var(--color-text-secondary)] sm:text-[12px]"
+                    className="min-w-0 flex-1 border-0 bg-transparent text-[12px] text-[var(--color-text-primary)] outline-none placeholder:text-[var(--color-text-secondary)]"
                   />
                 </div>
-                <div className="flex w-full min-w-0 flex-wrap items-center gap-x-1 gap-y-1 sm:w-auto sm:flex-[0_1_auto] sm:justify-end">
+                <div className="flex w-full min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 sm:w-auto sm:flex-[0_1_auto] sm:justify-end">
                   <GoogleAgendaPanel
                     feed={googleTasksFeed}
                     compact
@@ -522,18 +524,18 @@ export default function AgendaPage() {
                   />
                 </div>
               </div>
-              <div className="mt-2 flex flex-col gap-2 border-t border-[var(--color-border)] pt-2 sm:mt-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3 sm:gap-y-1.5 sm:pt-2">
-                <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+              <div className="mt-1.5 flex flex-col gap-1.5 border-t border-[var(--color-border)] pt-1.5 sm:mt-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-2 sm:gap-y-1 sm:pt-1.5">
+                <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
                   <AgendaColorLegend inline omitHeading sourcesOnly dense />
                 </div>
-                <span className="hidden h-3.5 w-px shrink-0 self-stretch bg-[var(--color-border)] sm:block" aria-hidden />
-                <div className="flex min-w-0 flex-wrap gap-1">
+                <span className="hidden h-3 w-px shrink-0 self-stretch bg-[var(--color-border)] sm:block" aria-hidden />
+                <div className="flex min-w-0 flex-wrap gap-0.5">
                   {tabs.map((item) => (
                     <button
                       key={item.key}
                       type="button"
                       onClick={() => setTab(item.key)}
-                      className="inline-flex min-h-9 items-center gap-1 rounded-full border border-[var(--color-border)] px-2.5 py-1 text-[10px] sm:min-h-0 sm:px-2 sm:py-0.5"
+                      className="inline-flex min-h-8 items-center gap-1 rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[9px] sm:min-h-0 sm:px-2 sm:py-px sm:text-[10px]"
                       style={{
                         background: tab === item.key ? "var(--color-surface-alt)" : "transparent",
                         color: tab === item.key ? "var(--color-text-primary)" : "var(--color-text-secondary)",
@@ -548,12 +550,12 @@ export default function AgendaPage() {
                     </button>
                   ))}
                 </div>
-                <span className="hidden h-3.5 w-px shrink-0 self-stretch bg-[var(--color-border)] lg:block" aria-hidden />
-                <div className="flex w-full min-w-0 flex-wrap items-center gap-2 lg:ml-auto lg:w-auto lg:justify-end">
+                <span className="hidden h-3 w-px shrink-0 self-stretch bg-[var(--color-border)] lg:block" aria-hidden />
+                <div className="flex w-full min-w-0 flex-wrap items-center gap-1 lg:ml-auto lg:w-auto lg:justify-end">
                   <button
                     type="button"
                     onClick={() => setShowPastAgenda((v) => !v)}
-                    className="min-h-9 rounded-full border border-[var(--color-border)] px-2.5 py-1 text-[9px] font-medium uppercase tracking-[0.08em] sm:min-h-0 sm:px-2 sm:py-0.5"
+                    className="min-h-8 rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[8px] font-medium uppercase tracking-[0.08em] sm:min-h-0 sm:px-2 sm:py-px sm:text-[9px]"
                     style={{
                       background: showPastAgenda ? "var(--color-surface-alt)" : "transparent",
                       color: showPastAgenda ? "var(--color-text-primary)" : "var(--color-text-secondary)",
@@ -567,7 +569,7 @@ export default function AgendaPage() {
                       key={item}
                       type="button"
                       onClick={() => setPriority(priority === item ? "" : item)}
-                      className="min-h-9 rounded-full px-2.5 py-1 text-[9px] uppercase tracking-[0.1em] sm:min-h-0 sm:px-2 sm:py-0.5"
+                      className="min-h-8 rounded-full px-2 py-0.5 text-[8px] uppercase tracking-[0.1em] sm:min-h-0 sm:px-2 sm:py-px sm:text-[9px]"
                       style={priorityFilterControlStyle(item, priority === item)}
                     >
                       {formatPriorityTitle(item)}
@@ -577,8 +579,8 @@ export default function AgendaPage() {
               </div>
             </div>
 
-            <div className="rounded-xl border border-[var(--color-border)] p-1.5 sm:p-2" style={agendaPanelSurfaceStyle}>
-              <div className="grid grid-cols-2 gap-1 min-[440px]:grid-cols-4">
+            <div className="rounded-lg border border-[var(--color-border)] p-1 sm:p-1.5" style={agendaPanelSurfaceStyle}>
+              <div className="flex flex-row flex-wrap gap-1" role="tablist" aria-label="Vista de agenda">
                 {viewOptions.map((item) => {
                   const Icon = item.icon
                   const active = view === item.key
@@ -586,10 +588,12 @@ export default function AgendaPage() {
                     <button
                       key={item.key}
                       type="button"
+                      role="tab"
+                      aria-selected={active}
                       title={item.description}
                       aria-label={`${item.label}: ${item.description}`}
                       onClick={() => setView(item.key)}
-                      className="flex min-h-[48px] flex-col items-center justify-center gap-1 rounded-lg px-1.5 py-2 text-center transition-[background-color,border-color] duration-150 min-[440px]:min-h-[44px] min-[440px]:gap-0.5 min-[440px]:py-1.5"
+                      className="flex min-h-9 min-w-0 flex-1 basis-[calc(50%-2px)] flex-row items-center justify-center gap-1.5 rounded-md px-2 py-1 text-center transition-[background-color,border-color] duration-150 sm:min-h-8 sm:flex-1 sm:basis-0 sm:gap-1.5 sm:px-2.5 sm:py-1.5"
                       style={{
                         border: active ? `1.5px solid ${item.color}` : "1px solid var(--color-border)",
                         background: active
@@ -597,9 +601,9 @@ export default function AgendaPage() {
                           : "var(--color-surface-alt)",
                       }}
                     >
-                      <Icon size={16} strokeWidth={2} style={{ color: item.color }} aria-hidden />
+                      <Icon size={14} strokeWidth={2} className="shrink-0" style={{ color: item.color }} aria-hidden />
                       <span
-                        className="m-0 max-w-full truncate px-0.5 text-[11px] font-semibold leading-tight min-[440px]:text-[10px]"
+                        className="m-0 truncate text-[10px] font-semibold leading-none sm:text-[11px]"
                         style={{ color: active ? "var(--color-text-primary)" : "var(--color-text-secondary)" }}
                       >
                         {item.label}
@@ -613,7 +617,7 @@ export default function AgendaPage() {
         </div>
 
         <div
-          className="unified-agenda-container flex min-w-0 flex-col gap-4 px-5 py-6 md:gap-6 lg:px-8 lg:py-8"
+          className="unified-agenda-container flex min-w-0 flex-col gap-3 px-4 py-4 md:gap-4 lg:px-6 lg:py-6"
           style={{ background: "var(--agenda-shell-bg)" }}
         >
           <div
@@ -692,6 +696,7 @@ export default function AgendaPage() {
           </div>
         </div>
       </section>
+      </TaskCardIterationProvider>
 
       {formOpen && (
         <div

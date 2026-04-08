@@ -10,12 +10,19 @@ import {
   googleSourcePillStyle,
   statusPillStyle,
 } from "@/app/agenda/agendaUnifiedCardStyles"
+import {
+  TASK_CARD_GRID,
+  taskCardDensityVars,
+  taskCardGridStyle,
+  type TaskCardDensity,
+} from "@/app/agenda/taskCardConfig"
+import { TaskCardArea } from "@/app/agenda/TaskCardArea"
+import { useTaskCardIterationMode } from "@/app/agenda/TaskCardIterationContext"
 
 type Variant = "list" | "kanban" | "compact"
 
 type Props = {
   variant: Variant
-  /** Borde izquierdo completo, ej. `4px solid var(--agenda-reminder)` */
   borderLeft: string
   title: string
   TimelineIcon: LucideIcon
@@ -27,16 +34,19 @@ type Props = {
   footNote?: string
   badgeLetter: string
   badgeColorVar: string
-  /** Sin `Card`: para rejillas semana/mes */
   embedded?: boolean
-  /** Acciones bajo la nota (p. ej. asignar fecha a Google Task) */
   footer?: ReactNode
-  /** Elimina en Google (Calendar o Tasks) */
   onDelete?: () => void | Promise<void>
   deleteBusy?: boolean
-  /** Abre Google en nueva pestaña para editar el ítem */
   editUrl?: string
   editTitle?: string
+  iterationMode?: boolean
+}
+
+function variantToDensity(v: Variant): TaskCardDensity {
+  if (v === "compact") return "compact"
+  if (v === "list") return "list"
+  return "kanban"
 }
 
 export function AgendaReadonlyUnifiedCard({
@@ -58,17 +68,16 @@ export function AgendaReadonlyUnifiedCard({
   deleteBusy = false,
   editUrl,
   editTitle = "Editar en Google",
+  iterationMode: iterationProp,
 }: Props) {
-  const pad = variant === "list" ? "p-3" : variant === "kanban" ? "p-2.5" : "p-2"
-  const titleCls =
-    variant === "list" ? "text-[14px]" : variant === "kanban" ? "text-[13px]" : "text-[11px]"
-  const lineCls =
-    variant === "list" ? "text-[11px]" : variant === "kanban" ? "text-[10px]" : "text-[10px]"
-  const fuenteCls =
-    variant === "list" ? "text-[10px]" : variant === "kanban" ? "text-[9px]" : "text-[9px]"
-  const iconPx = variant === "compact" ? 10 : 12
-  const sepCls = variant === "compact" ? "text-[9px]" : "text-[10px]"
+  const fromCtx = useTaskCardIterationMode()
+  const iterationMode = iterationProp ?? fromCtx
+
+  const density = variantToDensity(variant)
+  const varStyle = taskCardDensityVars(density)
+  const gridStyle = taskCardGridStyle(TASK_CARD_GRID.readonly)
   const showBadge = variant !== "compact"
+  const iconCls = variant === "compact" ? "h-2.5 w-2.5" : "h-3 w-3"
 
   async function handleDeleteClick() {
     if (!onDelete || deleteBusy) return
@@ -76,58 +85,98 @@ export function AgendaReadonlyUnifiedCard({
   }
 
   const inner = (
-    <div className={`flex items-start gap-2 text-left ${pad}`}>
-      <div className="min-w-0 flex-1 space-y-1">
+    <div style={{ ...varStyle, ...gridStyle }}>
+      <TaskCardArea area="title" iterationMode={iterationMode}>
         <p
-          className={`m-0 font-semibold leading-snug tracking-tight text-[var(--color-text-primary)] ${titleCls}`}
+          className="m-0 font-semibold tracking-tight text-[var(--color-text-primary)]"
+          style={{
+            fontSize: "var(--task-card-title-size)",
+            lineHeight: "var(--task-card-line-title)",
+          }}
         >
           {title}
         </p>
+      </TaskCardArea>
+
+      <TaskCardArea area="meta" iterationMode={iterationMode}>
         <p
-          className={`m-0 flex items-center gap-1 leading-snug text-[var(--color-text-secondary)] ${lineCls}`}
+          className="m-0 flex items-center gap-1 text-[var(--color-text-secondary)]"
+          style={{
+            fontSize: "var(--task-card-meta-size)",
+            lineHeight: "var(--task-card-line-body)",
+          }}
         >
-          <TimelineIcon
-            className="shrink-0 opacity-70"
-            width={iconPx}
-            height={iconPx}
-            strokeWidth={2}
-            aria-hidden
-          />
+          <TimelineIcon className={`${iconCls} shrink-0 opacity-70`} strokeWidth={2} aria-hidden />
           <span>{timelineText}</span>
         </p>
-        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+      </TaskCardArea>
+
+      <TaskCardArea area="pills" iterationMode={iterationMode}>
+        <div className="flex flex-wrap items-center" style={{ gap: "var(--task-card-gap-tight)" }}>
           <span
             className={agendaPillBaseClass}
-            style={googleSourcePillStyle(googleKind)}
+            style={{ ...googleSourcePillStyle(googleKind), fontSize: "var(--task-card-pill-size)" }}
             title="Tipo (Google)"
           >
             {kindPillLabel}
           </span>
-          <span className={`text-[var(--color-text-secondary)] ${sepCls}`} aria-hidden>
+          <span
+            className="text-[var(--color-text-secondary)]"
+            style={{ fontSize: "var(--task-card-pill-size)" }}
+            aria-hidden
+          >
             |
           </span>
           <span
             className={agendaPillBaseClass}
-            style={statusPillStyle(statusLabel.toLowerCase())}
+            style={{ ...statusPillStyle(statusLabel.toLowerCase()), fontSize: "var(--task-card-pill-size)" }}
             title="Estado"
           >
             {statusLabel}
           </span>
         </div>
-        <p className={`m-0 text-[var(--color-text-secondary)] ${fuenteCls}`}>Fuente: {fuente}</p>
+      </TaskCardArea>
+
+      <TaskCardArea area="fuente" iterationMode={iterationMode}>
+        <p
+          className="m-0 text-[var(--color-text-secondary)]"
+          style={{
+            fontSize: "var(--task-card-fuente-size)",
+            lineHeight: "var(--task-card-line-body)",
+          }}
+        >
+          Fuente: {fuente}
+        </p>
+      </TaskCardArea>
+
+      <TaskCardArea area="footer" iterationMode={iterationMode}>
         {footNote ? (
-          <p className={`m-0 text-[var(--color-text-secondary)] ${fuenteCls}`}>{footNote}</p>
+          <p
+            className="m-0 text-[var(--color-text-secondary)]"
+            style={{
+              fontSize: "var(--task-card-fuente-size)",
+              lineHeight: "var(--task-card-line-body)",
+            }}
+          >
+            {footNote}
+          </p>
         ) : null}
-        {footer ? <div className={`mt-1.5 ${fuenteCls}`}>{footer}</div> : null}
-      </div>
-      <div className="mt-0.5 flex shrink-0 flex-col items-stretch gap-1.5 sm:items-end">
+        {footer ? (
+          <div style={{ marginTop: footNote ? "var(--task-card-gap-tight)" : 0 }}>{footer}</div>
+        ) : null}
+      </TaskCardArea>
+
+      <TaskCardArea
+        area="actions"
+        iterationMode={iterationMode}
+        className="flex shrink-0 flex-col items-stretch gap-1.5 sm:items-end"
+      >
         {editUrl ? (
           <button
             type="button"
             onClick={() => window.open(editUrl, "_blank", "noopener,noreferrer")}
-            className={`group inline-flex max-w-full items-center gap-1 rounded-md border-0 bg-transparent font-normal text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color-mix(in_srgb,var(--color-text-secondary)_35%,transparent)] ${
-              variant === "list" ? "px-0 py-0.5 text-[11px] leading-none" : "px-0 py-0.5 text-[10px] leading-none"
-            }`}
+            className="group inline-flex max-w-full items-center gap-1 rounded-md border-0 bg-transparent font-normal text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color-mix(in_srgb,var(--color-text-secondary)_35%,transparent)]"
+            style={{ fontSize: "var(--task-card-meta-size)" }}
             aria-label={editTitle}
             title={editTitle}
           >
@@ -175,15 +224,21 @@ export function AgendaReadonlyUnifiedCard({
             </div>
           ) : null}
         </div>
-      </div>
+      </TaskCardArea>
     </div>
   )
 
   if (embedded) {
     return (
       <div
-        className="overflow-hidden rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface-alt)]"
-        style={{ borderLeft }}
+        className="overflow-hidden"
+        style={{
+          overflow: "hidden",
+          borderRadius: "var(--task-card-radius)",
+          border: "1px solid var(--color-border)",
+          background: "var(--color-surface-alt)",
+          borderLeft,
+        }}
       >
         {inner}
       </div>
