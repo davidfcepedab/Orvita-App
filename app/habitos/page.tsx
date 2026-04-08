@@ -132,17 +132,18 @@ export default function HabitosPage() {
     error,
     togglingId,
     backfillingId,
+    backfillingAll,
     persistenceEnabled,
     mock,
     toggleCompleteToday,
-    completeOnDay,
+    completeAllOnDay,
     createHabit,
     updateHabit,
     deleteHabit,
   } = useHabits()
 
   const [formOpen, setFormOpen] = useState(false)
-  const [backfillOpenId, setBackfillOpenId] = useState<string | null>(null)
+  const [backfillOpen, setBackfillOpen] = useState(false)
   const [backfillDate, setBackfillDate] = useState(() => addDaysIso(utcTodayIso(), -1))
   const [editing, setEditing] = useState<HabitWithMetrics | null>(null)
   const [form, setForm] = useState(() => emptyHabitModalForm())
@@ -229,9 +230,12 @@ export default function HabitosPage() {
   const todayYmd = useMemo(() => utcTodayIso(), [])
   const minBackfillYmd = useMemo(() => addDaysIso(todayYmd, -HABIT_BACKFILL_MAX_DAYS_PAST), [todayYmd])
 
-  const openBackfillFor = (habitId: string) => {
-    setBackfillOpenId(habitId)
-    setBackfillDate(addDaysIso(utcTodayIso(), -1))
+  const openGlobalBackfill = () => {
+    setBackfillOpen((prev) => {
+      const next = !prev
+      if (next) setBackfillDate(addDaysIso(utcTodayIso(), -1))
+      return next
+    })
   }
 
   return (
@@ -280,8 +284,8 @@ export default function HabitosPage() {
             Sistema de Hábitos
           </h1>
           <p className="m-0 max-w-prose text-[13px] leading-snug text-[var(--color-text-secondary)]">
-            Consistencia, tendencias y riesgo de ruptura. Puedes registrar otro día como hecho si se te pasó o
-            viajaste.
+            Consistencia, tendencias y riesgo de ruptura. «Otro día» aplica la misma fecha a todos los hábitos del
+            stack (viaje u olvido).
           </p>
           <p className="m-0 max-w-prose text-[12px] leading-snug text-[var(--color-text-secondary)]">
             {greeting}. Tu mayor racha actual en el stack es de {summary.current_streak_max} días.
@@ -339,9 +343,79 @@ export default function HabitosPage() {
       </div>
 
       <div style={{ display: "grid", gap: "var(--spacing-md)" }}>
-        <p style={{ margin: 0, fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--color-text-secondary)" }}>
-          Stack actual
-        </p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <p className="m-0 shrink-0 text-[12px] uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
+            Stack actual
+          </p>
+          <button
+            type="button"
+            disabled={(!persistenceEnabled && !mock) || loading || habits.length === 0}
+            onClick={openGlobalBackfill}
+            title="Registrar el mismo día para todos los hábitos (viaje, olvido)"
+            aria-expanded={backfillOpen}
+            aria-label="Registrar completado en otro día para todos los hábitos"
+            className="inline-flex min-h-9 w-full shrink-0 items-center justify-center gap-1.5 rounded-lg border border-[color-mix(in_srgb,var(--color-border)_80%,transparent)] bg-[var(--color-surface-alt)] px-3 py-2 text-left text-xs font-medium text-[var(--color-text-secondary)] transition-opacity sm:w-auto sm:justify-center disabled:cursor-not-allowed disabled:opacity-45"
+          >
+            <CalendarPlus className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
+            Otro día (todos)
+          </button>
+        </div>
+
+        {backfillOpen ? (
+          <div
+            className="flex flex-col gap-2 rounded-[12px] border border-[color-mix(in_srgb,var(--color-border)_70%,transparent)] bg-[var(--color-surface-alt)] p-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-3 sm:p-4"
+            role="region"
+            aria-label="Registrar día pasado para todos los hábitos"
+          >
+            <label className="flex min-w-0 flex-1 flex-col gap-1 text-[11px] text-[var(--color-text-secondary)]">
+              <span className="font-medium text-[var(--color-text-primary)]">Día completado (todos los hábitos)</span>
+              <input
+                type="date"
+                value={backfillDate}
+                min={minBackfillYmd}
+                max={todayYmd}
+                onChange={(e) => setBackfillDate(e.target.value)}
+                className="min-h-9 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 text-[13px] text-[var(--color-text-primary)]"
+              />
+            </label>
+            <p className="m-0 w-full text-[10px] leading-snug text-[var(--color-text-secondary)] sm:order-last sm:w-full">
+              Alterna el completado de ese día en cada hábito (si ya estaba marcado, se quita). Máximo{" "}
+              {HABIT_BACKFILL_MAX_DAYS_PAST} días atrás (fechas en UTC).
+            </p>
+            <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:shrink-0">
+              <button
+                type="button"
+                disabled={
+                  (!persistenceEnabled && !mock) || backfillingAll || habits.length === 0
+                }
+                onClick={async () => {
+                  const ids = habits.map((h) => h.id)
+                  const r = await completeAllOnDay(ids, backfillDate)
+                  if (!r.ok) {
+                    alert(r.error || "No se pudo guardar")
+                    return
+                  }
+                  setBackfillOpen(false)
+                }}
+                className="inline-flex min-h-9 flex-1 items-center justify-center rounded-lg bg-[var(--color-accent-health)] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-white sm:flex-none disabled:opacity-50"
+              >
+                {backfillingAll ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                ) : (
+                  "Aplicar a todos"
+                )}
+              </button>
+              <button
+                type="button"
+                disabled={backfillingAll}
+                onClick={() => setBackfillOpen(false)}
+                className="inline-flex min-h-9 items-center justify-center rounded-lg border border-[var(--color-border)] bg-transparent px-3 py-2 text-[11px] font-medium text-[var(--color-text-secondary)]"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        ) : null}
 
         {stackBlocksWithOffsets
           .filter(({ blockId, habits }) => blockId !== "sin_hora" || habits.length > 0)
@@ -603,28 +677,13 @@ export default function HabitosPage() {
                               </button>
                               <button
                                 type="button"
-                                disabled={(!persistenceEnabled && !mock) || loading || togglingId === habit.id || backfillingId === habit.id}
-                                onClick={() =>
-                                  backfillOpenId === habit.id ? setBackfillOpenId(null) : openBackfillFor(habit.id)
+                                disabled={
+                                  (!persistenceEnabled && !mock) ||
+                                  loading ||
+                                  togglingId === habit.id ||
+                                  backfillingId === habit.id ||
+                                  backfillingAll
                                 }
-                                title="Registrar otro día (viaje, olvido)"
-                                aria-expanded={backfillOpenId === habit.id}
-                                aria-label="Registrar completado en otro día"
-                                className="inline-flex min-h-[36px] min-w-[52px] items-center justify-center gap-1 rounded-md text-xs font-medium sm:min-h-0 sm:w-full sm:justify-start sm:py-0.5 sm:text-left"
-                                style={{
-                                  border: "none",
-                                  background: "transparent",
-                                  color: "var(--color-text-secondary)",
-                                  fontSize: "11px",
-                                  opacity: !persistenceEnabled && !mock ? 0.45 : 1,
-                                }}
-                              >
-                                <CalendarPlus className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
-                                Otro día
-                              </button>
-                              <button
-                                type="button"
-                                disabled={(!persistenceEnabled && !mock) || loading || togglingId === habit.id || backfillingId === habit.id}
                                 aria-label={doneToday ? "Deshacer completado de hoy" : "Marcar hecho hoy"}
                                 title={doneToday ? "Deshacer hoy" : "Hecho hoy"}
                                 onClick={async () => {
@@ -639,10 +698,14 @@ export default function HabitosPage() {
                                     ? "color-mix(in srgb, var(--color-accent-health) 11%, var(--color-surface))"
                                     : "color-mix(in srgb, var(--color-text-secondary) 5%, var(--color-surface))",
                                   cursor:
-                                    (!persistenceEnabled && !mock) || togglingId === habit.id || backfillingId === habit.id
+                                    (!persistenceEnabled && !mock) ||
+                                    togglingId === habit.id ||
+                                    backfillingId === habit.id ||
+                                    backfillingAll
                                       ? "not-allowed"
                                       : "pointer",
-                                  opacity: (!persistenceEnabled && !mock) ? 0.45 : 1,
+                                  opacity:
+                                    !persistenceEnabled && !mock ? 0.45 : backfillingAll ? 0.55 : 1,
                                   display: "flex",
                                   alignItems: "center",
                                   justifyContent: "center",
@@ -658,58 +721,6 @@ export default function HabitosPage() {
                               </button>
                             </div>
                           </div>
-                          {backfillOpenId === habit.id ? (
-                            <div
-                              className="mx-3 mb-3 mt-0 flex flex-col gap-2 rounded-lg border border-[color-mix(in_srgb,var(--color-border)_70%,transparent)] bg-[var(--color-surface-alt)] px-3 py-2.5 sm:mx-0 sm:mb-0 sm:mt-2 sm:flex-row sm:flex-wrap sm:items-end sm:gap-3"
-                              role="region"
-                              aria-label="Registrar día pasado"
-                            >
-                              <label className="flex min-w-0 flex-1 flex-col gap-1 text-[11px] text-[var(--color-text-secondary)]">
-                                <span className="font-medium text-[var(--color-text-primary)]">Día completado</span>
-                                <input
-                                  type="date"
-                                  value={backfillDate}
-                                  min={minBackfillYmd}
-                                  max={todayYmd}
-                                  onChange={(e) => setBackfillDate(e.target.value)}
-                                  className="min-h-9 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 text-[13px] text-[var(--color-text-primary)]"
-                                />
-                              </label>
-                              <p className="m-0 w-full text-[10px] leading-snug text-[var(--color-text-secondary)] sm:order-last sm:w-full">
-                                Si ese día ya estaba marcado, se quita. Máximo {HABIT_BACKFILL_MAX_DAYS_PAST} días atrás
-                                (fechas en UTC como el resto del hábito).
-                              </p>
-                              <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:shrink-0">
-                                <button
-                                  type="button"
-                                  disabled={(!persistenceEnabled && !mock) || backfillingId === habit.id}
-                                  onClick={async () => {
-                                    const r = await completeOnDay(habit.id, backfillDate)
-                                    if (!r.ok) {
-                                      alert(r.error || "No se pudo guardar")
-                                      return
-                                    }
-                                    setBackfillOpenId(null)
-                                  }}
-                                  className="inline-flex min-h-9 flex-1 items-center justify-center rounded-lg bg-[var(--color-accent-health)] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-white sm:flex-none disabled:opacity-50"
-                                >
-                                  {backfillingId === habit.id ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                                  ) : (
-                                    "Aplicar"
-                                  )}
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={backfillingId === habit.id}
-                                  onClick={() => setBackfillOpenId(null)}
-                                  className="inline-flex min-h-9 items-center justify-center rounded-lg border border-[var(--color-border)] bg-transparent px-3 py-2 text-[11px] font-medium text-[var(--color-text-secondary)]"
-                                >
-                                  Cerrar
-                                </button>
-                              </div>
-                            </div>
-                          ) : null}
                         </div>
                       </Card>
                     )

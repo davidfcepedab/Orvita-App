@@ -449,7 +449,7 @@ export default function AgendaPage() {
           style={{ background: "var(--agenda-elevated-bg)" }}
         >
           <div className="min-w-0 w-full flex-1">
-            <h1 className="m-0 break-words text-[26px] font-medium tracking-tight text-[var(--color-text-primary)] lg:text-[28px]">
+            <h1 className="m-0 min-h-[2.5rem] break-words text-[26px] font-medium leading-tight tracking-tight text-[var(--color-text-primary)] lg:min-h-[2.75rem] lg:text-[28px]">
               {agendaTitle}
             </h1>
             <p className="m-0 mt-1.5 w-full max-w-xl min-h-[4.5rem] text-[13px] leading-snug text-[var(--color-text-secondary)] sm:min-h-[4rem]">
@@ -542,7 +542,9 @@ export default function AgendaPage() {
                       }}
                     >
                       {item.label}
-                      <span className="tabular-nums text-[9px] text-[var(--color-text-secondary)]">{countByTab(item.key)}</span>
+                      <span className="inline-block min-w-[2.25ch] text-right tabular-nums text-[9px] text-[var(--color-text-secondary)]">
+                        {countByTab(item.key)}
+                      </span>
                     </button>
                   ))}
                 </div>

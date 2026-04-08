@@ -17,8 +17,6 @@ import { googleTasksForTimelineMerge } from "@/lib/agenda/googleTasksUpcoming"
 import type { GoogleDayBucket } from "@/lib/agenda/googleAgendaByDay"
 import { countGoogleDayItems } from "@/lib/agenda/googleAgendaByDay"
 import {
-  agendaEmptyStateClass,
-  agendaLoadingStateClass,
   agendaMetaRowClass,
   agendaOverlineClass,
   agendaSectionStackClass,
@@ -466,11 +464,29 @@ export function AgendaSharedList({
       className={`${agendaViewStackClass} min-h-[min(280px,42dvh)]`}
       aria-label="Cronología unificada: Órvita y Google (Tasks con fecha en orden de vencimiento; sin fecha al final)"
     >
-      {feedsLoading && (
-        <p role="status" aria-live="polite" className={agendaLoadingStateClass}>
-          Cargando agenda (Órvita, Calendar y Tasks)…
-        </p>
-      )}
+      {merged.length === 0 && pendingInvites.length === 0 ? (
+        <div
+          role={feedsLoading ? "status" : undefined}
+          aria-live={feedsLoading ? "polite" : undefined}
+          className={
+            feedsLoading
+              ? "m-0 flex min-h-[5.5rem] items-center justify-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-4 py-6 text-center text-[12px] text-[var(--color-text-secondary)] sm:text-[13px]"
+              : "m-0 flex min-h-[5.5rem] items-center justify-center rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface-alt)] px-4 py-8 text-center text-[12px] leading-snug text-[var(--color-text-secondary)] sm:text-[13px]"
+          }
+        >
+          <p className="m-0">
+            {feedsLoading
+              ? "Cargando agenda (Órvita, Calendar y Tasks)…"
+              : googleErrored
+                ? "No se pudo cargar Google (revisa conexión o vuelve a conectar la cuenta). Los datos de Órvita siguen abajo si aplican."
+                : calendarFeed && !calendarFeed.connected
+                  ? "Nada que mostrar con estos filtros. Conecta Google en Configuración para mezclar Calendar y recordatorios de Tasks aquí."
+                  : hideBeforeToday
+                    ? "Nada de hoy en adelante con estos filtros. Activa «Ver fechas anteriores» para mostrar días pasados."
+                    : "Nada que mostrar con estos filtros (Órvita + Google Tasks y Calendar sincronizados)."}
+          </p>
+        </div>
+      ) : null}
       {pendingInvites.length > 0 ? (
         <div className="flex flex-col gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] p-3 sm:p-4">
           <p className={`m-0 ${agendaSectionTitleClass}`}>Pendientes de aceptar</p>
@@ -589,17 +605,6 @@ export function AgendaSharedList({
             deleteBusy={busyDel === `e-${row.event.id}`}
           />
         )
-      )}
-      {merged.length === 0 && !feedsLoading && (
-        <p className={agendaEmptyStateClass}>
-          {googleErrored
-            ? "No se pudo cargar Google (revisa conexión o vuelve a conectar la cuenta). Los datos de Órvita siguen abajo si aplican."
-            : calendarFeed && !calendarFeed.connected
-              ? "Nada que mostrar con estos filtros. Conecta Google en Configuración para mezclar Calendar y recordatorios de Tasks aquí."
-              : hideBeforeToday
-                ? "Nada de hoy en adelante con estos filtros. Activa «Ver fechas anteriores» para mostrar días pasados."
-                : "Nada que mostrar con estos filtros (Órvita + Google Tasks y Calendar sincronizados)."}
-        </p>
       )}
     </div>
   )

@@ -175,14 +175,22 @@ export function GoogleAgendaPanel({
           {syncMsg ? (
             <span className="max-w-[18rem] truncate text-[10px] text-[var(--color-accent-health)]">{syncMsg}</span>
           ) : null}
-          {loading ? (
-            <span className="text-[10px] text-[var(--color-text-secondary)]">Tasks…</span>
-          ) : (
-            <details className="min-w-0 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-2 py-0.5">
-              <summary className="cursor-pointer list-none text-[10px] font-medium text-[var(--color-text-primary)] marker:content-none [&::-webkit-details-marker]:hidden">
-                <span className="text-[var(--color-text-secondary)]">Tasks</span>
-                <span className="ml-1 tabular-nums text-[var(--color-text-secondary)]">({tasks.length})</span>
-              </summary>
+          {/* Misma caja <details> siempre (no sustituir por un <span> al cargar) para evitar CLS en la barra sticky. */}
+          <details className="min-w-0 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-2 py-0.5">
+            <summary
+              className={`list-none text-[10px] font-medium text-[var(--color-text-primary)] marker:content-none [&::-webkit-details-marker]:hidden ${
+                loading ? "cursor-wait" : "cursor-pointer"
+              }`}
+              onClick={(e) => {
+                if (loading) e.preventDefault()
+              }}
+            >
+              <span className="text-[var(--color-text-secondary)]">Tasks</span>
+              <span className="ml-1 inline-block min-w-[3.5ch] text-right tabular-nums text-[var(--color-text-secondary)]">
+                {loading ? "(…)" : `(${tasks.length})`}
+              </span>
+            </summary>
+            {!loading ? (
               <ul className="mb-0 mt-1 max-h-[min(160px,32dvh)] list-disc space-y-0.5 overflow-y-auto pl-[14px] text-[10px] text-[var(--color-text-primary)]">
                 {tasks.slice(0, 10).map((t) => (
                   <li key={t.id}>
@@ -198,8 +206,8 @@ export function GoogleAgendaPanel({
                   <li className="list-none pl-0 text-[var(--color-text-secondary)]">Sin Tasks o sin conexión.</li>
                 )}
               </ul>
-            </details>
-          )}
+            ) : null}
+          </details>
         </div>
       )
     }

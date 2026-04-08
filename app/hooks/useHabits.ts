@@ -111,6 +111,7 @@ export function useHabits() {
   const [error, setError] = useState<string | null>(null)
   const [togglingId, setTogglingId] = useState<string | null>(null)
   const [backfillingId, setBackfillingId] = useState<string | null>(null)
+  const [backfillingAll, setBackfillingAll] = useState(false)
   const mockCompletionDatesRef = useRef<Record<string, string[]>>({})
 
   const refresh = useCallback(async () => {
@@ -261,6 +262,68 @@ export function useHabits() {
     [mock, persistenceEnabled, refresh],
   )
 
+  /** Marca o desmarca el mismo día en todos los hábitos (un solo refresco al final). */
+  const completeAllOnDay = useCallback(
+    async (habitIds: string[], completedOnRaw: string) => {
+      const parsed = parseBackfillCompletionDay(completedOnRaw)
+      if (!parsed.ok) {
+        return { ok: false as const, error: parsed.error }
+      }
+
+      if (mock) {
+        const t = utcTodayIso()
+        const map = mockCompletionDatesRef.current
+        for (const id of habitIds) {
+          const prevDates = [...(map[id] ?? [])]
+          const had = prevDates.includes(parsed.day)
+          const nextDates = had ? prevDates.filter((d) => d !== parsed.day) : [...prevDates, parsed.day].sort()
+          map[id] = nextDates
+        }
+        setHabits((prev) => {
+          const next = prev.map((h) => {
+            const dates = map[h.id] ?? []
+            const metrics = computeHabitCompletionMetrics(dates, t, h.metadata ?? null)
+            return { ...h, completed: metrics.completed_today, metrics }
+          })
+          setSummary(aggregateHabitsSummary(next.map((h) => h.metrics)))
+          return next
+        })
+        return { ok: true as const }
+      }
+
+      if (!persistenceEnabled) {
+        return { ok: false as const, error: UI_HABITS_SAVE_OFF }
+      }
+
+      try {
+        setBackfillingAll(true)
+        const headers = await buildJsonHeaders()
+        let firstError: string | undefined
+        for (const id of habitIds) {
+          try {
+            const res = await fetch(`/api/habits/${encodeURIComponent(id)}/complete`, {
+              method: "POST",
+              headers,
+              body: JSON.stringify({ completedOn: parsed.day }),
+            })
+            const json = (await res.json()) as { success?: boolean; error?: string }
+            if (!res.ok || !json.success) {
+              firstError ??= messageForHttpError(res.status, json.error, res.statusText)
+            }
+          } catch {
+            firstError ??= "Error de red"
+          }
+        }
+        await refresh()
+        if (firstError) return { ok: false as const, error: firstError }
+        return { ok: true as const }
+      } finally {
+        setBackfillingAll(false)
+      }
+    },
+    [mock, persistenceEnabled, refresh],
+  )
+
   const createHabit = useCallback(
     async (input: { name: string; domain: OperationalDomain; metadata: HabitMetadata }) => {
       if (mock) {
@@ -404,11 +467,13 @@ export function useHabits() {
       error,
       togglingId,
       backfillingId,
+      backfillingAll,
       persistenceEnabled,
       mock,
       refresh,
       toggleCompleteToday,
       completeOnDay,
+      completeAllOnDay,
       createHabit,
       updateHabit,
       deleteHabit,
@@ -420,11 +485,13 @@ export function useHabits() {
       error,
       togglingId,
       backfillingId,
+      backfillingAll,
       persistenceEnabled,
       mock,
       refresh,
       toggleCompleteToday,
       completeOnDay,
+      completeAllOnDay,
       createHabit,
       updateHabit,
       deleteHabit,
