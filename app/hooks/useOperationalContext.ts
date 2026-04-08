@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import type { OperationalContextData } from "@/lib/operational/types"
@@ -16,6 +16,11 @@ export function useOperationalContext() {
   const [data, setData] = useState<OperationalContextData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [reloadToken, setReloadToken] = useState(0)
+
+  const refetch = useCallback(() => {
+    setReloadToken((n) => n + 1)
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -66,7 +71,7 @@ export function useOperationalContext() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [reloadToken])
 
-  return { data, loading, error }
+  return { data, loading, error, refetch }
 }
