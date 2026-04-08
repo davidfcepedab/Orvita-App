@@ -106,6 +106,15 @@ const viewOptions = [
   { key: "month" as const,   label: "Mes",      description: "Calendario mensual", icon: CalendarRange, color: "var(--color-accent-primary)" },
 ]
 
+/** Estudio unificado de task cards (`/agenda/task-card-studio`), misma ventana que el botón del header. */
+function openTaskCardStudioWindow() {
+  window.open(
+    `${window.location.origin}/agenda/task-card-studio`,
+    "_blank",
+    "noopener,noreferrer,width=1080,height=940",
+  )
+}
+
 export default function AgendaPage() {
   const {
     tasks: agendaTasks,
@@ -461,13 +470,7 @@ export default function AgendaPage() {
           <div className="flex shrink-0 flex-wrap gap-1.5 sm:justify-end">
             <button
               type="button"
-              onClick={() =>
-                window.open(
-                  `${window.location.origin}/agenda/task-card-studio`,
-                  "_blank",
-                  "noopener,noreferrer,width=1080,height=940",
-                )
-              }
+              onClick={() => openTaskCardStudioWindow()}
               className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-primary)] sm:px-3 sm:py-2 sm:text-[11px]"
               style={{ background: "var(--color-surface-alt)" }}
               title="Abre el estudio de la tarjeta en otra ventana: variables, grid y vista previa"
@@ -596,37 +599,54 @@ export default function AgendaPage() {
             </div>
 
             <div className="rounded-lg border border-[var(--color-border)] p-1 sm:p-1.5" style={agendaPanelSurfaceStyle}>
-              <div className="flex flex-row flex-wrap gap-1" role="tablist" aria-label="Vista de agenda">
-                {viewOptions.map((item) => {
-                  const Icon = item.icon
-                  const active = view === item.key
-                  return (
-                    <button
-                      key={item.key}
-                      type="button"
-                      role="tab"
-                      aria-selected={active}
-                      title={item.description}
-                      aria-label={`${item.label}: ${item.description}`}
-                      onClick={() => setView(item.key)}
-                      className="flex min-h-9 min-w-0 flex-1 basis-[calc(50%-2px)] flex-row items-center justify-center gap-1.5 rounded-md px-2 py-1 text-center transition-[background-color,border-color] duration-150 sm:min-h-8 sm:flex-1 sm:basis-0 sm:gap-1.5 sm:px-2.5 sm:py-1.5"
-                      style={{
-                        border: active ? `1.5px solid ${item.color}` : "1px solid var(--color-border)",
-                        background: active
-                          ? `color-mix(in srgb, ${item.color} 12%, var(--color-surface-alt))`
-                          : "var(--color-surface-alt)",
-                      }}
-                    >
-                      <Icon size={14} strokeWidth={2} className="shrink-0" style={{ color: item.color }} aria-hidden />
-                      <span
-                        className="m-0 truncate text-[10px] font-semibold leading-none sm:text-[11px]"
-                        style={{ color: active ? "var(--color-text-primary)" : "var(--color-text-secondary)" }}
+              <div className="flex flex-col gap-1.5 sm:flex-row sm:items-stretch sm:gap-2">
+                <div
+                  className="flex min-w-0 flex-1 flex-row flex-wrap gap-1"
+                  role="tablist"
+                  aria-label="Vista de agenda"
+                >
+                  {viewOptions.map((item) => {
+                    const Icon = item.icon
+                    const active = view === item.key
+                    return (
+                      <button
+                        key={item.key}
+                        type="button"
+                        role="tab"
+                        aria-selected={active}
+                        title={item.description}
+                        aria-label={`${item.label}: ${item.description}`}
+                        onClick={() => setView(item.key)}
+                        className="flex min-h-9 min-w-0 flex-1 basis-[calc(50%-2px)] flex-row items-center justify-center gap-1.5 rounded-md px-2 py-1 text-center transition-[background-color,border-color] duration-150 sm:min-h-8 sm:flex-1 sm:basis-0 sm:gap-1.5 sm:px-2.5 sm:py-1.5"
+                        style={{
+                          border: active ? `1.5px solid ${item.color}` : "1px solid var(--color-border)",
+                          background: active
+                            ? `color-mix(in srgb, ${item.color} 12%, var(--color-surface-alt))`
+                            : "var(--color-surface-alt)",
+                        }}
                       >
-                        {item.label}
-                      </span>
-                    </button>
-                  )
-                })}
+                        <Icon size={14} strokeWidth={2} className="shrink-0" style={{ color: item.color }} aria-hidden />
+                        <span
+                          className="m-0 truncate text-[10px] font-semibold leading-none sm:text-[11px]"
+                          style={{ color: active ? "var(--color-text-primary)" : "var(--color-text-secondary)" }}
+                        >
+                          {item.label}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openTaskCardStudioWindow()}
+                  className="inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-md border border-[var(--color-border)] px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-primary)] sm:min-h-8"
+                  style={{ background: "var(--color-surface-alt)" }}
+                  title="Tarjeta maestra: variables CSS, grid y vistas previas (ventana aparte)"
+                  aria-label="Abrir estudio de tarjeta maestra en nueva ventana"
+                >
+                  <LayoutPanelLeft size={14} className="shrink-0" aria-hidden />
+                  <span className="max-[380px]:sr-only">Estudio</span>
+                </button>
               </div>
             </div>
           </div>
