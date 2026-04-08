@@ -17,3 +17,19 @@ export function siteOrigin(): string {
 
   return "https://orvita.app"
 }
+
+/**
+ * Hostname canónico para redirecciones en Edge.
+ * No usa `VERCEL_URL`: en producción ese host sigue siendo `*.vercel.app` y anularía el redirect.
+ */
+export function canonicalHostname(): string {
+  const explicit = process.env.NEXT_PUBLIC_SITE_URL?.trim()
+  if (explicit) {
+    try {
+      return new URL(explicit).hostname.toLowerCase()
+    } catch {
+      /* fall through */
+    }
+  }
+  return "orvita.app"
+}

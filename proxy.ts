@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { hasUsableOrvitaSessionCookie } from "@/lib/auth/middlewareSession"
+import { canonicalHostname } from "@/lib/site/origin"
 
 /**
  * Next.js 16: este archivo (`proxy.ts`) sustituye a `middleware.ts` para la capa Edge.
@@ -12,6 +13,20 @@ import { hasUsableOrvitaSessionCookie } from "@/lib/auth/middlewareSession"
 export default function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl
   const isMock = process.env.NEXT_PUBLIC_APP_MODE === "mock"
+
+  /**
+   * Un solo dominio público en producción: orvita.app.
+   * Vercel sigue mostrando URLs `*.vercel.app` en el panel; redirigen aquí para usuarios.
+   * Previews (`VERCEL_ENV=preview`) no redirigen.
+   */
+  if (!isMock && process.env.VERCEL_ENV === "production") {
+    const rawHost = req.headers.get("host")?.split(":")[0]?.toLowerCase()
+    const canon = canonicalHostname()
+    if (rawHost && rawHost !== canon) {
+      const target = new URL(req.nextUrl.pathname + req.nextUrl.search, `https://${canon}`)
+      return NextResponse.redirect(target, 308)
+    }
+  }
 
   if (isMock) {
     if (pathname === "/") {

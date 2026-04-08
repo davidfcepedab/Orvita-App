@@ -4,7 +4,9 @@
 
 | Rama | Rol |
 |------|-----|
-| **`main`** | **Producción Vercel** → **https://orvita.app** (dominio canónico; `www` redirige al apex vía `vercel.json`). Es la rama por defecto en GitHub y la única que debe estar configurada como **Production Branch** en Vercel. En Vercel, define **`NEXT_PUBLIC_SITE_URL=https://orvita.app`** para metadatos y URLs absolutas. |
+| **`main`** | **Producción Vercel** → **https://orvita.app**. Es la rama por defecto en GitHub y la **Production Branch** en Vercel. |
+
+**Dominio único (usuarios finales):** En el panel de Vercel, cada despliegue lista siempre varias URLs (`orvita.app`, `*.vercel.app` del proyecto, URL del commit, etc.); es normal y no se pueden “quitar” del listado. Lo importante es que **solo compartas y enlaces `https://orvita.app`**: con **`NEXT_PUBLIC_SITE_URL=https://orvita.app`** en entornos de producción, el **`proxy.ts`** redirige **308** cualquier otro host (p. ej. `orvita-…vercel.app`) al dominio canónico cuando `VERCEL_ENV=production`. Los **previews** (`VERCEL_ENV=preview`) no redirigen. Además, `vercel.json` redirige **`www.orvita.app`** → apex.
 
 ## Otras ramas en el remoto (opcionales)
 

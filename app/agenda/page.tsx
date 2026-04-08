@@ -152,6 +152,10 @@ export default function AgendaPage() {
     let cancelled = false
     const pull = async () => {
       try {
+        if (cancelled) return
+        // Órvita primero: libera `loading` y el hilo antes del sync pesado de Google (mejor INP / CLS percibido).
+        await refresh()
+        if (cancelled) return
         const headers = await browserBearerHeaders(true)
         const doCalSync = canRunGoogleCalendarSyncNow()
         const calRes = doCalSync
@@ -159,13 +163,15 @@ export default function AgendaPage() {
           : null
         if (calRes?.ok) markGoogleCalendarSyncRan()
         if (cancelled) return
-        await refresh()
         await Promise.all([googleCalendar.refresh(), googleTasksFeed.refresh()])
       } catch {}
     }
-    void pull()
+    const t = window.setTimeout(() => {
+      if (!cancelled) void pull()
+    }, 0)
     return () => {
       cancelled = true
+      window.clearTimeout(t)
     }
   }, [refresh, googleCalendar.refresh, googleTasksFeed.refresh])
 
@@ -178,13 +184,13 @@ export default function AgendaPage() {
       lastVisibilityPullRef.current = now
       void (async () => {
         try {
+          await refresh()
           const headers = await browserBearerHeaders(true)
           const doCalSync = canRunGoogleCalendarSyncNow()
           const calRes = doCalSync
             ? await fetch("/api/integrations/google/calendar/sync", { method: "POST", headers })
             : null
           if (calRes?.ok) markGoogleCalendarSyncRan()
-          await refresh()
           await Promise.all([googleCalendar.refresh(), googleTasksFeed.refresh()])
         } catch {}
       })()
