@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import {
   BookOpen,
@@ -107,6 +107,29 @@ const TRAINING_TYPES = [
   "Dia de descanso",
 ] as const
 
+type CheckinViewport = "manana" | "dia" | "noche" | "full"
+
+function hashToViewport(raw: string): CheckinViewport {
+  if (raw === "checkin-manana") return "manana"
+  if (raw === "checkin-dia") return "dia"
+  if (raw === "checkin-noche") return "noche"
+  return "full"
+}
+
+function viewportToHash(vp: CheckinViewport): string {
+  if (vp === "manana") return "checkin-manana"
+  if (vp === "dia") return "checkin-dia"
+  if (vp === "noche") return "checkin-noche"
+  return ""
+}
+
+const VIEWPORT_TABS: { id: CheckinViewport; label: string; hint: string }[] = [
+  { id: "manana", label: "Mañana", hint: "Sueño y energía" },
+  { id: "dia", label: "Día", hint: "Foco, cuerpo y vínculos" },
+  { id: "noche", label: "Noche", hint: "Cierre y medidas" },
+  { id: "full", label: "Completo", hint: "Todo el formulario" },
+]
+
 export default function CheckinPage() {
   const today = new Date().toISOString().split("T")[0]
 
@@ -159,6 +182,7 @@ export default function CheckinPage() {
   const [preloadStatus, setPreloadStatus] = useState<string | null>(null)
   const [apiNotice, setApiNotice] = useState<string | null>(null)
   const [apiFlags, setApiFlags] = useState<CheckinApiFlags | null>(null)
+  const [viewport, setViewport] = useState<CheckinViewport>("full")
 
   const supabaseOnFromEnv = isSupabaseEnabled()
   const mockOnFromEnv = isAppMockMode()
@@ -245,17 +269,28 @@ export default function CheckinPage() {
     }
   }, [today])
 
+  const setViewportAndUrl = useCallback((vp: CheckinViewport) => {
+    setViewport(vp)
+    if (typeof window === "undefined") return
+    const hash = viewportToHash(vp)
+    const path = window.location.pathname + window.location.search
+    const next = hash ? `${path}#${hash}` : path
+    window.history.replaceState(null, "", next)
+  }, [])
+
   useEffect(() => {
-    const scrollToHash = () => {
-      const raw = typeof window !== "undefined" ? window.location.hash.replace(/^#/, "") : ""
-      if (!raw) return
+    const syncFromHash = () => {
+      const raw = window.location.hash.replace(/^#/, "")
+      const vp = hashToViewport(raw)
+      setViewport(vp)
+      if (vp !== "full" || !raw) return
       requestAnimationFrame(() => {
         document.getElementById(raw)?.scrollIntoView({ behavior: "smooth", block: "start" })
       })
     }
-    scrollToHash()
-    window.addEventListener("hashchange", scrollToHash)
-    return () => window.removeEventListener("hashchange", scrollToHash)
+    syncFromHash()
+    window.addEventListener("hashchange", syncFromHash)
+    return () => window.removeEventListener("hashchange", syncFromHash)
   }, [])
 
   const handleChange = (field: keyof FormState, value: FormState[keyof FormState]) => {
@@ -368,7 +403,7 @@ export default function CheckinPage() {
           <div>
             <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">Check-in diario</h1>
             <p className="mt-1 text-sm text-slate-500">
-              Tres momentos (mañana · día · noche) o el formulario completo abajo.
+              Elige un momento o el formulario completo. Los datos se comparten entre vistas.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <button
@@ -415,7 +450,43 @@ export default function CheckinPage() {
         </label>
       </header>
 
+      <nav
+        aria-label="Parte del formulario a mostrar"
+        className="rounded-xl border border-slate-200/90 bg-white/95 p-1 shadow-[var(--shadow-card)] ring-1 ring-slate-100/80"
+      >
+        <div className="grid grid-cols-2 gap-0.5 sm:grid-cols-4 sm:gap-px sm:bg-slate-200/60 sm:p-px">
+          {VIEWPORT_TABS.map((tab) => {
+            const active = viewport === tab.id
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setViewportAndUrl(tab.id)}
+                className={`flex min-h-[48px] flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-2 text-center transition sm:min-h-[52px] sm:rounded-md ${
+                  active
+                    ? "bg-violet-600 text-white shadow-sm"
+                    : "bg-slate-50/80 text-slate-600 hover:bg-slate-100 sm:bg-white"
+                }`}
+              >
+                <span className="text-[11px] font-semibold tracking-tight sm:text-xs">{tab.label}</span>
+                <span
+                  className={`hidden text-[9px] leading-tight sm:block ${active ? "text-violet-100" : "text-slate-400"}`}
+                >
+                  {tab.hint}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+        {viewport !== "full" ? (
+          <p className="m-0 border-t border-slate-100 px-3 py-2 text-center text-[11px] leading-snug text-slate-500">
+            Vista reducida: solo editas este bloque. Al guardar se envía el formulario entero (otros campos conservan lo que ya tenías o valores por defecto).
+          </p>
+        ) : null}
+      </nav>
+
       <div className="space-y-4 sm:space-y-5">
+        {(viewport === "full" || viewport === "manana") && (
         <div
           id="checkin-manana"
           className="scroll-mt-28 space-y-4 sm:scroll-mt-32 sm:space-y-5"
@@ -442,7 +513,9 @@ export default function CheckinPage() {
           />
         </CheckinSection>
         </div>
+        )}
 
+        {(viewport === "full" || viewport === "dia") && (
         <div
           id="checkin-dia"
           className="scroll-mt-28 space-y-4 sm:scroll-mt-32 sm:space-y-5"
@@ -580,7 +653,9 @@ export default function CheckinPage() {
           />
         </CheckinSection>
         </div>
+        )}
 
+        {(viewport === "full" || viewport === "noche") && (
         <div
           id="checkin-noche"
           className="scroll-mt-28 space-y-4 sm:scroll-mt-32 sm:space-y-5"
@@ -654,6 +729,7 @@ export default function CheckinPage() {
           <NumberUnitField label="Glúteos" value={form.gluteos} onChange={(v) => handleChange("gluteos", v)} unit="cm" step="0.1" />
         </CheckinSection>
         </div>
+        )}
       </div>
 
       <div className="sticky bottom-2 z-10 pt-2 sm:bottom-4">
