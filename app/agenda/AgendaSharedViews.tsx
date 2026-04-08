@@ -282,7 +282,7 @@ export function AgendaSharedKanban({
                   googleTaskNeedsDue(row.reminder)
                     ? "Sin fecha en Google Tasks: no aparece en Semana/Mes hasta que tenga vencimiento."
                     : onDeleteGoogleTask
-                      ? "Se elimina en Google Tasks."
+                      ? undefined
                       : "Solo lectura en Órvita · edita en Google Tasks"
                 }
                 footer={
@@ -322,9 +322,7 @@ export function AgendaSharedKanban({
                 statusLabel="Calendario"
                 fuente={calendarEventFuenteLabel(row.event)}
                 footNote={
-                  onDeleteCalendarEvent
-                    ? "Se elimina en Google Calendar."
-                    : "Solo lectura en Órvita · edita en Google Calendar"
+                  onDeleteCalendarEvent ? undefined : "Solo lectura en Órvita · edita en Google Calendar"
                 }
                 badgeLetter="GC"
                 badgeColorVar={AGENDA_COLOR.calendar}
@@ -493,7 +491,7 @@ export function AgendaSharedList({
               googleTaskNeedsDue(row.reminder)
                 ? "Sin fecha en Google Tasks: no se agrupa en calendario. Añade vencimiento abajo o en Google."
                 : onDeleteGoogleTask
-                  ? "Se elimina en Google Tasks."
+                  ? undefined
                   : "Solo lectura en Órvita · edita en Google Tasks"
             }
             footer={
@@ -533,9 +531,7 @@ export function AgendaSharedList({
             statusLabel="Calendario"
             fuente={calendarEventFuenteLabel(row.event)}
             footNote={
-              onDeleteCalendarEvent
-                ? "Se elimina en Google Calendar."
-                : "Solo lectura en Órvita · edita en Google Calendar"
+              onDeleteCalendarEvent ? undefined : "Solo lectura en Órvita · edita en Google Calendar"
             }
             badgeLetter="GC"
             badgeColorVar={AGENDA_COLOR.calendar}

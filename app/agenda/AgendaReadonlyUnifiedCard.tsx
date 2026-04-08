@@ -146,8 +146,18 @@ export function AgendaReadonlyUnifiedCard({
               disabled={deleteBusy}
               onClick={() => void handleDeleteClick()}
               className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-transparent text-[var(--color-text-secondary)] opacity-45 transition-[opacity,color,background-color] hover:bg-[color-mix(in_srgb,var(--color-text-secondary)_10%,transparent)] hover:opacity-100 hover:text-[var(--color-accent-danger)] disabled:opacity-25"
-              aria-label="Eliminar"
-              title="Eliminar"
+              aria-label={
+                googleKind === "calendar"
+                  ? "Eliminar evento también en Google Calendar"
+                  : "Eliminar tarea o recordatorio también en Google Tasks"
+              }
+              title={
+                deleteBusy
+                  ? "Eliminando…"
+                  : googleKind === "calendar"
+                    ? "Eliminar también en Google Calendar"
+                    : "Eliminar también en Google Tasks"
+              }
             >
               <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} aria-hidden />
             </button>

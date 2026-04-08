@@ -446,7 +446,7 @@ export default function AgendaPage() {
             <h1 className="m-0 text-[26px] font-medium tracking-tight text-[var(--color-text-primary)] lg:text-[28px]">
               {agendaTitle}
             </h1>
-            <p className="m-0 mt-1.5 max-w-xl text-[13px] leading-snug text-[var(--color-text-secondary)]">
+            <p className="m-0 mt-1.5 min-h-[3.25rem] max-w-xl text-[13px] leading-snug text-[var(--color-text-secondary)] sm:min-h-[2.75rem]">
               {agendaTagline}
             </p>
           </div>
@@ -462,29 +462,25 @@ export default function AgendaPage() {
           </div>
         </header>
 
-        {(loading || error) && (
+        {error ? (
           <div
             className="flex items-center justify-between gap-3 border-b border-[var(--color-border)] px-5 py-3 text-[13px] lg:px-8"
             style={{
-              background: error
-                ? "color-mix(in srgb, var(--color-accent-danger) 10%, var(--agenda-shell-bg))"
-                : "var(--agenda-inset-bg)",
-              color: error ? "var(--color-accent-danger)" : "var(--color-text-secondary)",
+              background: "color-mix(in srgb, var(--color-accent-danger) 10%, var(--agenda-shell-bg))",
+              color: "var(--color-accent-danger)",
             }}
           >
-            <span>{error ?? "Cargando tareas del tablero Órvita…"}</span>
-            {error && (
-              <button
-                type="button"
-                onClick={() => void refresh()}
-                className="shrink-0 cursor-pointer rounded-lg border border-[var(--color-border)] px-2.5 py-1.5 text-[12px]"
-                style={{ background: "var(--agenda-elevated-bg)" }}
-              >
-                Reintentar
-              </button>
-            )}
+            <span>{error}</span>
+            <button
+              type="button"
+              onClick={() => void refresh()}
+              className="shrink-0 cursor-pointer rounded-lg border border-[var(--color-border)] px-2.5 py-1.5 text-[12px]"
+              style={{ background: "var(--agenda-elevated-bg)" }}
+            >
+              Reintentar
+            </button>
           </div>
-        )}
+        ) : null}
 
         <div
           className="sticky z-10 border-b border-[var(--color-border)] px-5 py-3 lg:px-8"

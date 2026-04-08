@@ -1,5 +1,6 @@
 import "./globals.css"
 import type { Metadata } from "next"
+import Script from "next/script"
 import Providers from "@/app/providers"
 import { ThemeProvider } from "@/src/theme/ThemeProvider"
 import { AppShell } from "@/src/components/layout/AppShell"
@@ -18,9 +19,17 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  const figmaCapture = process.env.NEXT_PUBLIC_FIGMA_CAPTURE === "1"
+
   return (
     <html lang="es">
       <body>
+        {figmaCapture ? (
+          <Script
+            src="https://mcp.figma.com/mcp/html-to-design/capture.js"
+            strategy="afterInteractive"
+          />
+        ) : null}
         <ThemeProvider>
           <Providers>
             <AppShell showSidebar={false}>
