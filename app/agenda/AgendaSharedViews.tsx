@@ -85,16 +85,33 @@ function mergedRowLabel(row: MergedRow): string {
   return row.event.summary || ""
 }
 
+function linkedGoogleTaskIdsFromOrvita(tasks: UiAgendaTask[]): Set<string> {
+  const ids = new Set<string>()
+  for (const t of tasks) {
+    const gid = t.googleTaskId?.trim()
+    if (gid) ids.add(gid)
+  }
+  return ids
+}
+
 function buildMergedTimeline(
   tasks: UiAgendaTask[],
   calendarFeed?: Pick<GoogleCalendarFeedState, "events" | "connected">,
   googleReminders?: GoogleTaskDTO[],
   googleTasksConnected?: boolean,
-  hideBeforeToday = true
+  hideBeforeToday = true,
+  /** Tareas Órvita en otras columnas (p. ej. Kanban pasa `[]` como tasks pero enlaces aquí). */
+  extraOrvitaTasksForGoogleDedupe: UiAgendaTask[] = []
 ): MergedRow[] {
+  const skipGoogleIds = linkedGoogleTaskIdsFromOrvita(tasks)
+  for (const t of extraOrvitaTasksForGoogleDedupe) {
+    const gid = t.googleTaskId?.trim()
+    if (gid) skipGoogleIds.add(gid)
+  }
   const rows: MergedRow[] = tasks.map((task) => ({ kind: "task", task, sortMs: taskDueSortMs(task.due) }))
   if (googleTasksConnected && googleReminders?.length) {
     for (const reminder of googleReminders) {
+      if (skipGoogleIds.has(reminder.id)) continue
       const dueDay = localDateKeyFromIso(reminder.due) ?? ""
       rows.push({ kind: "reminder", reminder, sortMs: taskDueSortMs(dueDay) })
     }
@@ -170,10 +187,29 @@ export function AgendaSharedKanban({
     [googleTasksFeed?.connected, googleTasksFeed?.tasks]
   )
 
+  const allGroupedForDedupe = useMemo(
+    () => [...grouped.personal, ...grouped.recibida, ...grouped.asignada],
+    [grouped.personal, grouped.recibida, grouped.asignada],
+  )
+
   const googleMerged = useMemo(
     () =>
-      buildMergedTimeline([], calendarFeed, googleReminders, googleTasksFeed?.connected, hideBeforeToday),
-    [calendarFeed?.events, calendarFeed?.connected, googleReminders, googleTasksFeed?.connected, hideBeforeToday]
+      buildMergedTimeline(
+        [],
+        calendarFeed,
+        googleReminders,
+        googleTasksFeed?.connected,
+        hideBeforeToday,
+        allGroupedForDedupe
+      ),
+    [
+      calendarFeed?.events,
+      calendarFeed?.connected,
+      googleReminders,
+      googleTasksFeed?.connected,
+      hideBeforeToday,
+      allGroupedForDedupe,
+    ]
   )
 
   const googleConnected = Boolean(calendarFeed?.connected || googleTasksFeed?.connected)

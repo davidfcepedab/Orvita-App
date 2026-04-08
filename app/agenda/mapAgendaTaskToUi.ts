@@ -37,6 +37,8 @@ export type UiAgendaTask = {
   assignmentCaption: string
   /** Texto para pie "Fuente: …". */
   orvitaFuente: string
+  /** Id en Google Tasks si esta fila ya está enlazada (dedupe con feed de Tasks). */
+  googleTaskId?: string | null
   /** Recibida de otro miembro y aún sin aceptar en inicio/agenda. */
   needsAcceptance: boolean
   /** Asigné a otro: pendiente de que acepte. */
@@ -105,6 +107,7 @@ export function mapAgendaTaskToUi(t: AgendaTask): UiAgendaTask {
     relatedPersonInitials,
     assignmentCaption,
     orvitaFuente,
+    googleTaskId: t.googleTaskId ?? null,
     needsAcceptance,
     assigneePendingAccept,
     assigneeAccepted,

@@ -22,6 +22,8 @@ export interface AgendaTask {
   createdAt: string
   /** ISO timestamp cuando el asignatario aceptó (null si aún no o no aplica). */
   assignmentAcceptedAt?: string | null
+  /** Id del task en Google cuando la fila Órvita está sincronizada (evita duplicado en vista unificada). */
+  googleTaskId?: string | null
 }
 
 type AgendaResponse = {

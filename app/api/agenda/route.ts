@@ -27,6 +27,8 @@ type AgendaRow = {
   created_at: string
   domain: OperationalDomain
   assignment_accepted_at: string | null
+  /** Enlazada a Google Tasks (misma tarea: no duplicar en timeline unificado). */
+  google_task_id?: string | null
 }
 
 /**
@@ -108,6 +110,7 @@ function mapTask(row: AgendaRow, currentUserId: string) {
     createdAt: row.created_at,
     assignmentAcceptedAt: row.assignment_accepted_at ?? null,
     type: mapType(row, currentUserId),
+    googleTaskId: row.google_task_id ?? null,
   }
 }
 
