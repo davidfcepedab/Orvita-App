@@ -56,6 +56,7 @@ export default function FinanzasInsights() {
   const [notice, setNotice] = useState<string | null>(null)
 
   const month = finance?.month ?? ""
+  const capitalEpoch = finance?.capitalDataEpoch ?? 0
 
   useEffect(() => {
     if (!month) {
@@ -97,7 +98,7 @@ export default function FinanzasInsights() {
     }
 
     fetchInsights()
-  }, [month])
+  }, [month, capitalEpoch])
 
   if (!finance) {
     return (
