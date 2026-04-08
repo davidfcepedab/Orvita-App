@@ -2,7 +2,16 @@
 
 import { useMemo, useState, type DragEvent, type ReactNode } from "react"
 import Link from "next/link"
-import { Calendar, Check, Copy, GripVertical, RotateCcw, Save } from "lucide-react"
+import {
+  Calendar,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  GripVertical,
+  RotateCcw,
+  Save,
+} from "lucide-react"
 import { AgendaOrvitaMiniCard } from "@/app/agenda/AgendaOrvitaMiniCard"
 import { AgendaOrvitaTaskCard } from "@/app/agenda/AgendaOrvitaTaskCard"
 import { AgendaReadonlyUnifiedCard } from "@/app/agenda/AgendaReadonlyUnifiedCard"
@@ -10,7 +19,6 @@ import { TASK_CARD_STUDIO_SAMPLE } from "@/app/agenda/taskCardStudioSample"
 import {
   TASK_CARD_GRID,
   allTaskCardCssVarKeys,
-  defaultRowOrderForGrid,
   taskCardDensityVars,
   type TaskCardDensity,
   type TaskCardGridKey,
@@ -181,40 +189,69 @@ function ColorPair({
   )
 }
 
-function DraggableRowList({ slot }: { slot: TaskCardGridKey }) {
+/**
+ * Reordenación: HTML5 DnD solo desde el asa (evita conflictos con clicks en el resto de la fila).
+ * Botones ↑↓ para trackpad/táctil y si el navegador bloquea drag.
+ */
+function RowOrderList({ slot }: { slot: TaskCardGridKey }) {
   const { getRowOrder, moveRowInSlot, resetRowOrderForSlot } = useTaskCardDesign()
   const order = getRowOrder(slot)
-  const [dragIndex, setDragIndex] = useState<number | null>(null)
+  const [dragFrom, setDragFrom] = useState<number | null>(null)
 
-  const onDragStart = (e: DragEvent, index: number) => {
-    setDragIndex(index)
+  const onHandleDragStart = (e: DragEvent, index: number) => {
+    e.stopPropagation()
+    setDragFrom(index)
     e.dataTransfer.effectAllowed = "move"
     e.dataTransfer.setData("text/plain", String(index))
+    try {
+      e.dataTransfer.setData("application/x-orvita-row", String(index))
+    } catch {
+      /* ignore */
+    }
   }
 
-  const onDragOver = (e: DragEvent) => {
+  const onListDragOver = (e: DragEvent) => {
     e.preventDefault()
     e.dataTransfer.dropEffect = "move"
   }
 
-  const onDrop = (e: DragEvent, dropIndex: number) => {
+  const onRowDragOver = (e: DragEvent) => {
     e.preventDefault()
-    const from = Number.parseInt(e.dataTransfer.getData("text/plain"), 10)
-    if (!Number.isFinite(from) || from === dropIndex) {
-      setDragIndex(null)
-      return
-    }
-    moveRowInSlot(slot, from, dropIndex)
-    setDragIndex(null)
+    e.stopPropagation()
+    e.dataTransfer.dropEffect = "move"
   }
 
-  const onDragEnd = () => setDragIndex(null)
+  const onRowDrop = (e: DragEvent, dropIndex: number) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const raw =
+      e.dataTransfer.getData("text/plain") || e.dataTransfer.getData("application/x-orvita-row")
+    const from = Number.parseInt(raw, 10)
+    if (!Number.isFinite(from)) {
+      setDragFrom(null)
+      return
+    }
+    if (from !== dropIndex) moveRowInSlot(slot, from, dropIndex)
+    setDragFrom(null)
+  }
+
+  const onDragEnd = () => setDragFrom(null)
+
+  function moveUp(index: number) {
+    if (index <= 0) return
+    moveRowInSlot(slot, index, index - 1)
+  }
+
+  function moveDown(index: number) {
+    if (index >= order.length - 1) return
+    moveRowInSlot(slot, index, index + 1)
+  }
 
   return (
     <div className="grid gap-2">
       <div className="flex items-center justify-between gap-2">
         <p className="m-0 text-[10px] text-[var(--color-text-secondary)]">
-          Arrastra el asa ⋮⋮ para reordenar filas del grid (vista previa en vivo).
+          Arrastra solo el asa ⋮⋮, o usa ↑↓. (El arrastre desde toda la fila falla en algunos navegadores.)
         </p>
         <button
           type="button"
@@ -224,26 +261,55 @@ function DraggableRowList({ slot }: { slot: TaskCardGridKey }) {
           Orden por defecto
         </button>
       </div>
-      <ul className="m-0 list-none space-y-1 p-0" role="list">
+      <ul className="m-0 list-none space-y-1 p-0" role="list" onDragOver={onListDragOver}>
         {order.map((id, index) => (
           <li
             key={id}
-            draggable
-            onDragStart={(e) => onDragStart(e, index)}
-            onDragOver={onDragOver}
-            onDrop={(e) => onDrop(e, index)}
-            onDragEnd={onDragEnd}
-            className="flex cursor-grab items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 active:cursor-grabbing"
+            data-row-index={index}
+            onDragOver={onRowDragOver}
+            onDrop={(e) => onRowDrop(e, index)}
+            className="flex items-center gap-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-1 py-1 sm:gap-2 sm:px-2 sm:py-1.5"
             style={{
-              opacity: dragIndex === index ? 0.55 : 1,
-              outline: "1px dashed color-mix(in srgb, var(--color-accent-health) 35%, transparent)",
+              opacity: dragFrom === index ? 0.65 : 1,
             }}
           >
-            <GripVertical className="h-4 w-4 shrink-0 text-[var(--color-text-secondary)]" aria-hidden />
-            <span className="font-mono text-[10px] text-[var(--color-text-secondary)]">{id}</span>
-            <span className="text-[11px] font-medium text-[var(--color-text-primary)]">
-              {ROW_LABELS[id] ?? id}
-            </span>
+            <div
+              draggable
+              role="button"
+              tabIndex={0}
+              aria-label={`Arrastrar fila ${ROW_LABELS[id] ?? id}`}
+              onDragStart={(e) => onHandleDragStart(e, index)}
+              onDragEnd={onDragEnd}
+              className="touch-none cursor-grab select-none rounded p-1 active:cursor-grabbing"
+            >
+              <GripVertical className="h-4 w-4 shrink-0 text-[var(--color-text-secondary)]" aria-hidden />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className="font-mono text-[10px] text-[var(--color-text-secondary)]">{id}</span>{" "}
+              <span className="text-[11px] font-medium text-[var(--color-text-primary)]">
+                {ROW_LABELS[id] ?? id}
+              </span>
+            </div>
+            <div className="flex shrink-0 flex-col gap-0.5">
+              <button
+                type="button"
+                className="rounded border border-[var(--color-border)] p-0.5 text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-alt)] disabled:opacity-30"
+                aria-label="Subir"
+                disabled={index === 0}
+                onClick={() => moveUp(index)}
+              >
+                <ChevronUp className="h-3.5 w-3.5" aria-hidden />
+              </button>
+              <button
+                type="button"
+                className="rounded border border-[var(--color-border)] p-0.5 text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-alt)] disabled:opacity-30"
+                aria-label="Bajar"
+                disabled={index >= order.length - 1}
+                onClick={() => moveDown(index)}
+              >
+                <ChevronDown className="h-3.5 w-3.5" aria-hidden />
+              </button>
+            </div>
           </li>
         ))}
       </ul>
@@ -267,6 +333,8 @@ export function TaskCardStudioPanel() {
   const [density, setDensity] = useState<TaskCardDensity>("kanban")
   const [saveFlash, setSaveFlash] = useState(false)
   const [showAdvancedGrid, setShowAdvancedGrid] = useState(false)
+  /** Cajas naranjas = regiones del grid (no el texto suelto). Por defecto apagado para ver la tarjeta limpia. */
+  const [showGridGuides, setShowGridGuides] = useState(false)
 
   const defaults = useMemo(() => taskCardDensityVars(density) as Record<string, string>, [density])
   const orvitaVariant = density === "list" ? "list" : "kanban"
@@ -398,26 +466,26 @@ export function TaskCardStudioPanel() {
 
           <Section
             title="Estructura (drag & drop)"
-            hint="Tres plantillas: Órvita (Kanban/Lista), Mini (semana/mes), Google (solo lectura). Cada lista define el orden vertical del grid."
+            hint="Órvita (Kanban/Lista) → plantilla «orvita». Semana/Mes mini → «mini». Todo Google Calendar/Tasks en agenda → «readonly». Cada lista ordena filas del grid; en la agenda real cada tipo de ítem usa ya la plantilla que le toca."
           >
             <div className="flex flex-col gap-5">
               <div>
                 <p className="m-0 mb-2 text-[11px] font-semibold text-[var(--color-text-primary)]">
                   Órvita · tarjeta completa
                 </p>
-                <DraggableRowList slot="orvita" />
+                <RowOrderList slot="orvita" />
               </div>
               <div>
                 <p className="m-0 mb-2 text-[11px] font-semibold text-[var(--color-text-primary)]">
                   Mini · semana / mes
                 </p>
-                <DraggableRowList slot="mini" />
+                <RowOrderList slot="mini" />
               </div>
               <div>
                 <p className="m-0 mb-2 text-[11px] font-semibold text-[var(--color-text-primary)]">
                   Google · unificado
                 </p>
-                <DraggableRowList slot="readonly" />
+                <RowOrderList slot="readonly" />
               </div>
             </div>
           </Section>
@@ -548,11 +616,11 @@ export function TaskCardStudioPanel() {
           <Section title="Color" hint="Prioridad ALTA / MEDIA / BAJA en pastillas Órvita. Fondo y borde de la tarjeta.">
             <div className="flex flex-col gap-3">
               <div className="grid gap-2">
-                <Label className="text-[11px]">Fondo tarjeta</Label>
+                <Label className="text-[11px]">Fondo · todas (fallback)</Label>
                 <div className="flex flex-wrap items-center gap-2">
                   <input
                     type="color"
-                    aria-label="Fondo tarjeta"
+                    aria-label="Fondo tarjeta global"
                     value={cssColorToHex(varOverrides["--task-card-surface-bg"], "#ffffff")}
                     onChange={(e) => setVar("--task-card-surface-bg", hexToCss(e.target.value, "#ffffff"))}
                     className="h-9 w-14 cursor-pointer rounded border border-[var(--color-border)] p-0"
@@ -562,6 +630,42 @@ export function TaskCardStudioPanel() {
                     value={varOverrides["--task-card-surface-bg"] ?? ""}
                     placeholder="vacío = tema"
                     onChange={(e) => setVar("--task-card-surface-bg", e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="grid gap-2 rounded-lg border border-[var(--color-border)] border-dashed p-2">
+                <Label className="text-[11px]">Fondo solo Órvita (tareas creadas / asignadas en Órvita)</Label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="color"
+                    aria-label="Fondo Órvita"
+                    value={cssColorToHex(varOverrides["--task-card-surface-bg-orvita"], "#f8fafc")}
+                    onChange={(e) => setVar("--task-card-surface-bg-orvita", e.target.value)}
+                    className="h-9 w-14 cursor-pointer rounded border border-[var(--color-border)] p-0"
+                  />
+                  <Input
+                    className="min-w-[10rem] flex-1 font-mono text-xs"
+                    value={varOverrides["--task-card-surface-bg-orvita"] ?? ""}
+                    placeholder="opcional"
+                    onChange={(e) => setVar("--task-card-surface-bg-orvita", e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="grid gap-2 rounded-lg border border-[var(--color-border)] border-dashed p-2">
+                <Label className="text-[11px]">Fondo solo Google (Calendar + Tasks / recordatorios)</Label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="color"
+                    aria-label="Fondo Google"
+                    value={cssColorToHex(varOverrides["--task-card-surface-bg-readonly"], "#f8fafc")}
+                    onChange={(e) => setVar("--task-card-surface-bg-readonly", e.target.value)}
+                    className="h-9 w-14 cursor-pointer rounded border border-[var(--color-border)] p-0"
+                  />
+                  <Input
+                    className="min-w-[10rem] flex-1 font-mono text-xs"
+                    value={varOverrides["--task-card-surface-bg-readonly"] ?? ""}
+                    placeholder="opcional"
+                    onChange={(e) => setVar("--task-card-surface-bg-readonly", e.target.value)}
                   />
                 </div>
               </div>
@@ -706,10 +810,26 @@ export function TaskCardStudioPanel() {
         </div>
 
         <div className="flex flex-col gap-6 lg:sticky lg:top-24 lg:self-start">
-          <div className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 py-2 text-[11px] text-[var(--color-text-secondary)]">
-            <Check className="h-4 w-4 shrink-0 text-[var(--color-accent-health)]" aria-hidden />
-            Vista previa en vivo · misma config que Kanban, Lista, Semana y Mes
+          <div className="flex flex-col gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 py-2 text-[11px] text-[var(--color-text-secondary)] sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2">
+              <Check className="h-4 w-4 shrink-0 text-[var(--color-accent-health)]" aria-hidden />
+              <span>Vista previa en vivo · misma config que las 4 vistas de agenda</span>
+            </div>
+            <label className="flex cursor-pointer items-center gap-2 whitespace-nowrap">
+              <input
+                type="checkbox"
+                checked={showGridGuides}
+                onChange={(e) => setShowGridGuides(e.target.checked)}
+                className="h-3.5 w-3.5 rounded border-[var(--color-border)] accent-[var(--color-accent-health)]"
+              />
+              <span>Ver cajas del grid (áreas)</span>
+            </label>
           </div>
+          <p className="m-0 text-[10px] leading-snug text-[var(--color-text-secondary)]">
+            Las guías son bordes punteados por <strong>celda del grid</strong> (title, meta, pills…), no por cada línea
+            de texto. Due date, asignación a household o “realizada” hoy viven en esas filas en código; añadir campos
+            nuevos implica nuevas áreas en el componente y en <code className="rounded bg-[var(--color-surface-alt)] px-1">taskCardConfig</code>.
+          </p>
 
           <Section title="Órvita · Kanban / Lista">
             <div className="max-w-xl">
@@ -717,7 +837,7 @@ export function TaskCardStudioPanel() {
                 task={TASK_CARD_STUDIO_SAMPLE}
                 variant={orvitaVariant}
                 designDensity={density}
-                iterationMode
+                iterationMode={showGridGuides}
                 onSaveComplete={async () => {}}
                 onDelete={async () => {}}
                 onAcceptAssignment={async () => {}}
@@ -727,7 +847,7 @@ export function TaskCardStudioPanel() {
 
           <Section title="Órvita · mini">
             <div className="max-w-sm">
-              <AgendaOrvitaMiniCard task={TASK_CARD_STUDIO_SAMPLE} iterationMode />
+              <AgendaOrvitaMiniCard task={TASK_CARD_STUDIO_SAMPLE} iterationMode={showGridGuides} />
             </div>
           </Section>
 
@@ -746,7 +866,7 @@ export function TaskCardStudioPanel() {
                 badgeLetter="G"
                 badgeColorVar="var(--color-accent-finance)"
                 editUrl="https://calendar.google.com"
-                iterationMode
+                iterationMode={showGridGuides}
               />
             </div>
           </Section>

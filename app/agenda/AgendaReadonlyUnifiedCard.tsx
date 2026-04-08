@@ -83,7 +83,8 @@ export function AgendaReadonlyUnifiedCard({
 
   const shellChrome = {
     borderRadius: "var(--task-card-radius, var(--radius-card))",
-    background: "var(--task-card-surface-bg, var(--color-surface))",
+    background:
+      "var(--task-card-surface-bg-readonly, var(--task-card-surface-bg, var(--color-surface)))",
     fontFamily: "var(--task-card-font-family, inherit)",
     minHeight: "var(--task-card-min-height, unset)",
   } as const
@@ -244,7 +245,8 @@ export function AgendaReadonlyUnifiedCard({
           ...shellChrome,
           border: "1px solid var(--task-card-border-color, var(--color-border))",
           borderLeft,
-          background: "var(--task-card-surface-bg, var(--color-surface-alt))",
+          background:
+            "var(--task-card-surface-bg-readonly, var(--task-card-surface-bg, var(--color-surface-alt)))",
         }}
       >
         {inner}

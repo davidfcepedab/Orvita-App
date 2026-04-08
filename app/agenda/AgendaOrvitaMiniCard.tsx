@@ -40,7 +40,8 @@ export function AgendaOrvitaMiniCard({ task, iterationMode: iterationProp }: Pro
         borderRadius: "var(--task-card-radius)",
         border: "1px solid var(--task-card-border-color, var(--color-border))",
         borderLeft: taskLeftBorder(task.type, 4),
-        background: "var(--task-card-surface-bg, var(--color-surface-alt))",
+        background:
+          "var(--task-card-surface-bg-orvita, var(--task-card-surface-bg, var(--color-surface-alt)))",
         fontFamily: "var(--task-card-font-family, inherit)",
         minHeight: "var(--task-card-min-height, unset)",
       }}

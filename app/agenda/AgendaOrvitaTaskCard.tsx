@@ -123,7 +123,8 @@ export function AgendaOrvitaTaskCard({
         ...agendaCardSurfaceStyle(taskLeftBorder(task.type, 4)),
         ...varStyle,
         borderRadius: "var(--task-card-radius, var(--radius-card))",
-        background: "var(--task-card-surface-bg, var(--color-surface))",
+        background:
+          "var(--task-card-surface-bg-orvita, var(--task-card-surface-bg, var(--color-surface)))",
         border: "var(--task-card-chrome-border, 0.5px solid var(--color-border))",
         fontFamily: "var(--task-card-font-family, inherit)",
         minHeight: "var(--task-card-min-height, unset)",

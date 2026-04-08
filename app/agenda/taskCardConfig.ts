@@ -137,6 +137,8 @@ const STUDIO_OPTIONAL_VAR_KEYS: string[] = [
   "--task-card-font-weight-title",
   "--task-card-min-height",
   "--task-card-surface-bg",
+  "--task-card-surface-bg-orvita",
+  "--task-card-surface-bg-readonly",
   "--task-card-chrome-border",
   "--task-card-border-color",
   "--task-card-title-color",

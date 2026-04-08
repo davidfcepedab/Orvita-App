@@ -5,7 +5,7 @@ import { TaskCardStudioPanel } from "@/app/agenda/TaskCardStudioPanel"
 
 export default function TaskCardStudioPage() {
   return (
-    <TaskCardIterationProvider iterationMode>
+    <TaskCardIterationProvider>
       <TaskCardStudioPanel />
     </TaskCardIterationProvider>
   )
