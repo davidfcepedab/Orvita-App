@@ -6,10 +6,11 @@ import { createBrowserClient } from "@/lib/supabase/browser"
 import { isAppMockMode, isSupabaseEnabled, UI_HABITS_SAVE_OFF } from "@/lib/checkins/flags"
 import {
   aggregateHabitsSummary,
+  addDaysIso,
   computeHabitCompletionMetrics,
   isScheduledOnUtcDay,
+  parseBackfillCompletionDay,
   utcTodayIso,
-  addDaysIso,
 } from "@/lib/habits/habitMetrics"
 import type { HabitMetadata, HabitWithMetrics, OperationalDomain } from "@/lib/operational/types"
 
@@ -109,6 +110,7 @@ export function useHabits() {
   const [loading, setLoading] = useState(!mock)
   const [error, setError] = useState<string | null>(null)
   const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [backfillingId, setBackfillingId] = useState<string | null>(null)
   const mockCompletionDatesRef = useRef<Record<string, string[]>>({})
 
   const refresh = useCallback(async () => {
@@ -203,6 +205,60 @@ export function useHabits() {
       }
     },
     [mock, persistenceEnabled, refresh]
+  )
+
+  /** Marca o desmarca un día concreto (pasado o hoy), p. ej. si olvidaste registrar o viajaste. */
+  const completeOnDay = useCallback(
+    async (id: string, completedOnRaw: string) => {
+      const parsed = parseBackfillCompletionDay(completedOnRaw)
+      if (!parsed.ok) {
+        return { ok: false as const, error: parsed.error }
+      }
+
+      if (mock) {
+        const t = utcTodayIso()
+        const map = mockCompletionDatesRef.current
+        const prevDates = [...(map[id] ?? [])]
+        const had = prevDates.includes(parsed.day)
+        const nextDates = had ? prevDates.filter((d) => d !== parsed.day) : [...prevDates, parsed.day].sort()
+        map[id] = nextDates
+        setHabits((prev) => {
+          const next = prev.map((h) => {
+            if (h.id !== id) return h
+            const metrics = computeHabitCompletionMetrics(nextDates, t, h.metadata ?? null)
+            return { ...h, completed: metrics.completed_today, metrics }
+          })
+          setSummary(aggregateHabitsSummary(next.map((h) => h.metrics)))
+          return next
+        })
+        return { ok: true as const }
+      }
+
+      if (!persistenceEnabled) {
+        return { ok: false as const, error: UI_HABITS_SAVE_OFF }
+      }
+
+      try {
+        setBackfillingId(id)
+        const headers = await buildJsonHeaders()
+        const res = await fetch(`/api/habits/${encodeURIComponent(id)}/complete`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ completedOn: parsed.day }),
+        })
+        const json = (await res.json()) as { success?: boolean; error?: string }
+        if (!res.ok || !json.success) {
+          return { ok: false as const, error: messageForHttpError(res.status, json.error, res.statusText) }
+        }
+        await refresh()
+        return { ok: true as const }
+      } catch {
+        return { ok: false as const, error: "Error de red" }
+      } finally {
+        setBackfillingId(null)
+      }
+    },
+    [mock, persistenceEnabled, refresh],
   )
 
   const createHabit = useCallback(
@@ -347,10 +403,12 @@ export function useHabits() {
       loading,
       error,
       togglingId,
+      backfillingId,
       persistenceEnabled,
       mock,
       refresh,
       toggleCompleteToday,
+      completeOnDay,
       createHabit,
       updateHabit,
       deleteHabit,
@@ -361,10 +419,12 @@ export function useHabits() {
       loading,
       error,
       togglingId,
+      backfillingId,
       persistenceEnabled,
       mock,
       refresh,
       toggleCompleteToday,
+      completeOnDay,
       createHabit,
       updateHabit,
       deleteHabit,

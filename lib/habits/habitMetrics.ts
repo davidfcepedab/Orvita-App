@@ -26,6 +26,36 @@ export function utcTodayIso(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
+/** Límite de antigüedad para registrar un día pasado (viaje, olvido). */
+export const HABIT_BACKFILL_MAX_DAYS_PAST = 730
+
+/**
+ * Valida `YYYY-MM-DD` para completado retroactivo: no futuro, no anterior al límite.
+ */
+export function parseBackfillCompletionDay(
+  completedOnRaw: string,
+  options?: { maxDaysPast?: number },
+): { ok: true; day: string } | { ok: false; error: string } {
+  const trimmed = completedOnRaw.trim()
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return { ok: false, error: "Fecha inválida (usa YYYY-MM-DD)" }
+  }
+  const probe = new Date(`${trimmed}T12:00:00.000Z`)
+  if (Number.isNaN(probe.getTime()) || probe.toISOString().slice(0, 10) !== trimmed) {
+    return { ok: false, error: "Fecha de calendario inválida" }
+  }
+  const t = utcTodayIso()
+  if (trimmed > t) {
+    return { ok: false, error: "No puedes registrar días futuros" }
+  }
+  const maxPast = options?.maxDaysPast ?? HABIT_BACKFILL_MAX_DAYS_PAST
+  const minDay = addDaysIso(t, -maxPast)
+  if (trimmed < minDay) {
+    return { ok: false, error: `Solo se pueden registrar hasta ${maxPast} días atrás` }
+  }
+  return { ok: true, day: trimmed }
+}
+
 export function addDaysIso(iso: string, delta: number): string {
   const d = new Date(`${iso}T12:00:00.000Z`)
   d.setUTCDate(d.getUTCDate() + delta)
