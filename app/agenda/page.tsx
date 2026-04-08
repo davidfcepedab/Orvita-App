@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react"
 import { Card } from "@/src/components/ui/Card"
-import { CalendarDays, CalendarRange, LayoutGrid, ListChecks, Plus, Search } from "lucide-react"
+import { CalendarDays, CalendarRange, LayoutGrid, LayoutPanelLeft, ListChecks, Plus, Search } from "lucide-react"
 
 import { GoogleAgendaPanel } from "@/app/agenda/GoogleAgendaPanel"
 import { AgendaColorLegend } from "@/app/agenda/AgendaColorLegend"
@@ -459,6 +459,22 @@ export default function AgendaPage() {
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap gap-1.5 sm:justify-end">
+            <button
+              type="button"
+              onClick={() =>
+                window.open(
+                  `${window.location.origin}/agenda/task-card-studio`,
+                  "_blank",
+                  "noopener,noreferrer,width=1080,height=940",
+                )
+              }
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-primary)] sm:px-3 sm:py-2 sm:text-[11px]"
+              style={{ background: "var(--color-surface-alt)" }}
+              title="Abre el estudio de la tarjeta en otra ventana: variables, grid y vista previa"
+            >
+              <LayoutPanelLeft size={14} className="shrink-0" aria-hidden />
+              Tarjeta maestra
+            </button>
             <button
               type="button"
               onClick={() => setFormOpen(true)}

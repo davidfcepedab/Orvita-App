@@ -4,8 +4,8 @@ import type { CSSProperties } from "react"
  * ╔══════════════════════════════════════════════════════════════════════════╗
  * ║  ÓRVITA V3 — TASK CARD: variables de diseño (única fuente de verdad)      ║
  * ╠══════════════════════════════════════════════════════════════════════════╣
- * ║  Edita los valores por defecto aquí o en el bloque MODO ITERACIÓN al     ║
- * ║  final de AgendaOrvitaTaskCard.tsx. Todas las vistas leen estos tokens.   ║
+ * ║  Edita valores por defecto aquí, o en vivo en /agenda/task-card-studio    ║
+ * ║  (botón “Tarjeta maestra” en la agenda). Overrides → localStorage.        ║
  * ╠══════════════════════════════════════════════════════════════════════════╣
  * ║  Espaciado                                                               ║
  * ║  • --task-card-pad          padding interno del cuerpo (tarjeta Órvita)   ║
@@ -97,6 +97,39 @@ export const TASK_CARD_GRID = {
     '"title actions" "meta actions" "pills actions" "fuente actions" "footer actions"',
 } as const
 
+export type TaskCardGridKey = keyof typeof TASK_CARD_GRID
+
+/** Une tokens por densidad + overrides no vacíos (estudio / localStorage). */
+export function mergeTaskCardVarOverrides(
+  base: CSSProperties,
+  overrides: Record<string, string>,
+): CSSProperties {
+  const out = { ...(base as Record<string, string | number>) }
+  for (const [key, val] of Object.entries(overrides)) {
+    const t = val.trim()
+    if (t !== "") out[key] = t
+  }
+  return out as CSSProperties
+}
+
+export function resolveTaskCardGridTemplate(
+  slot: TaskCardGridKey,
+  override?: string | null,
+): string {
+  const t = override?.trim()
+  return t || TASK_CARD_GRID[slot]
+}
+
+/** Lista ordenada de todas las variables CSS usadas por las tarjetas (para el estudio). */
+export function allTaskCardCssVarKeys(): string[] {
+  const set = new Set<string>()
+  for (const k of Object.keys(BASE_VARS)) set.add(k)
+  for (const d of Object.keys(DENSITY_VARS) as TaskCardDensity[]) {
+    for (const k of Object.keys(DENSITY_VARS[d])) set.add(k)
+  }
+  return [...set].sort()
+}
+
 export function taskCardDensityVars(density: TaskCardDensity): CSSProperties {
   return {
     ...BASE_VARS,
@@ -130,7 +163,8 @@ export function taskCardMiniGridStyle(templateAreas: string): CSSProperties {
 
 // === MODO ITERACIÓN (diseño) ===================================================
 // Cambia DENSITY_VARS / BASE_VARS arriba y guarda: Kanban, Lista, Semana, Mes leen los mismos tokens.
-// URL: /agenda?taskCardDev=1 → bordes naranjas por área (title, meta, pills, …).
+// URL: /agenda?taskCardDev=1 → bordes por área en la agenda.
+// Estudio: /agenda/task-card-studio → panel con variables, grid y previews.
 //
 // Ejemplo de overrides (copiar a BASE_VARS o a un preset):
 //   "--task-card-pad": "8px",

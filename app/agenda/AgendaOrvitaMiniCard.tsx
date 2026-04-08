@@ -10,8 +10,9 @@ import {
 } from "@/app/agenda/agendaUnifiedCardStyles"
 import { formatPriorityTitle, formatStatusTitle, venceLine } from "@/app/agenda/taskCardFormat"
 import { taskLeftBorder } from "@/app/agenda/taskTypeVisual"
-import { TASK_CARD_GRID, taskCardDensityVars, taskCardMiniGridStyle } from "@/app/agenda/taskCardConfig"
+import { taskCardMiniGridStyle } from "@/app/agenda/taskCardConfig"
 import { TaskCardArea } from "@/app/agenda/TaskCardArea"
+import { useTaskCardDesign } from "@/app/agenda/TaskCardDesignContext"
 import { useTaskCardIterationMode } from "@/app/agenda/TaskCardIterationContext"
 
 type Props = {
@@ -23,8 +24,9 @@ type Props = {
 export function AgendaOrvitaMiniCard({ task, iterationMode: iterationProp }: Props) {
   const fromCtx = useTaskCardIterationMode()
   const iterationMode = iterationProp ?? fromCtx
-  const varStyle = taskCardDensityVars("compact")
-  const gridStyle = taskCardMiniGridStyle(TASK_CARD_GRID.mini)
+  const { getMergedVarStyle, getResolvedGridTemplate } = useTaskCardDesign()
+  const varStyle = getMergedVarStyle("compact")
+  const gridStyle = taskCardMiniGridStyle(getResolvedGridTemplate("mini"))
 
   const statusKey = task.status.toLowerCase()
   const assignShort = assignmentShortLine(task)

@@ -14,13 +14,20 @@ import {
 } from "@/app/agenda/agendaUnifiedCardStyles"
 import { formatPriorityTitle, formatStatusTitle, venceLine } from "@/app/agenda/taskCardFormat"
 import { taskLeftBorder } from "@/app/agenda/taskTypeVisual"
-import { TASK_CARD_GRID, taskCardDensityVars, taskCardGridStyle, type TaskCardDensity } from "@/app/agenda/taskCardConfig"
+import {
+  TASK_CARD_GRID,
+  taskCardGridStyle,
+  type TaskCardDensity,
+} from "@/app/agenda/taskCardConfig"
 import { TaskCardArea } from "@/app/agenda/TaskCardArea"
+import { useTaskCardDesign } from "@/app/agenda/TaskCardDesignContext"
 import { useTaskCardIterationMode } from "@/app/agenda/TaskCardIterationContext"
 
 type Props = {
   task: UiAgendaTask
   variant: "list" | "kanban"
+  /** Estudio: fuerza el preset de tokens (si no, se deriva del variant). */
+  designDensity?: TaskCardDensity
   /** Modo iteración: bordes por área (también `?taskCardDev=1` vía provider). */
   iterationMode?: boolean
   onSaveComplete?: (task: UiAgendaTask, completed: boolean) => Promise<void> | void
@@ -32,6 +39,7 @@ type Props = {
 export function AgendaOrvitaTaskCard({
   task,
   variant,
+  designDensity,
   iterationMode: iterationProp,
   onSaveComplete,
   onDelete,
@@ -40,12 +48,14 @@ export function AgendaOrvitaTaskCard({
 }: Props) {
   const fromCtx = useTaskCardIterationMode()
   const iterationMode = iterationProp ?? fromCtx
+  const { getMergedVarStyle, getResolvedGridTemplate } = useTaskCardDesign()
 
-  const density: TaskCardDensity = variant === "list" ? "list" : "kanban"
-  const varStyle = taskCardDensityVars(density)
+  const density: TaskCardDensity =
+    designDensity ?? (variant === "list" ? "list" : "kanban")
+  const varStyle = getMergedVarStyle(density)
   const hasActions = Boolean(onSaveComplete || onDelete)
   const gridStyle = hasActions
-    ? taskCardGridStyle(TASK_CARD_GRID.orvita)
+    ? taskCardGridStyle(getResolvedGridTemplate("orvita"))
     : ({
         display: "grid",
         gridTemplateColumns: "minmax(0,1fr)",

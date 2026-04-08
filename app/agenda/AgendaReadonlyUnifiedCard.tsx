@@ -10,13 +10,9 @@ import {
   googleSourcePillStyle,
   statusPillStyle,
 } from "@/app/agenda/agendaUnifiedCardStyles"
-import {
-  TASK_CARD_GRID,
-  taskCardDensityVars,
-  taskCardGridStyle,
-  type TaskCardDensity,
-} from "@/app/agenda/taskCardConfig"
+import { taskCardGridStyle, type TaskCardDensity } from "@/app/agenda/taskCardConfig"
 import { TaskCardArea } from "@/app/agenda/TaskCardArea"
+import { useTaskCardDesign } from "@/app/agenda/TaskCardDesignContext"
 import { useTaskCardIterationMode } from "@/app/agenda/TaskCardIterationContext"
 
 type Variant = "list" | "kanban" | "compact"
@@ -72,10 +68,11 @@ export function AgendaReadonlyUnifiedCard({
 }: Props) {
   const fromCtx = useTaskCardIterationMode()
   const iterationMode = iterationProp ?? fromCtx
+  const { getMergedVarStyle, getResolvedGridTemplate } = useTaskCardDesign()
 
   const density = variantToDensity(variant)
-  const varStyle = taskCardDensityVars(density)
-  const gridStyle = taskCardGridStyle(TASK_CARD_GRID.readonly)
+  const varStyle = getMergedVarStyle(density)
+  const gridStyle = taskCardGridStyle(getResolvedGridTemplate("readonly"))
   const showBadge = variant !== "compact"
   const iconCls = variant === "compact" ? "h-2.5 w-2.5" : "h-3 w-3"
 
