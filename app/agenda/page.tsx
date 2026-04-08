@@ -106,9 +106,21 @@ const viewOptions = [
 ]
 
 export default function AgendaPage() {
-  const { tasks: agendaTasks, loading, error, refresh, createTask, updateTask, deleteTask } =
-    useAgendaTasks()
+  const {
+    tasks: agendaTasks,
+    pendingAssignments,
+    loading,
+    error,
+    refresh,
+    createTask,
+    updateTask,
+    deleteTask,
+  } = useAgendaTasks()
   const tasks = useMemo(() => agendaTasks.map(mapAgendaTaskToUi), [agendaTasks])
+  const pendingUi = useMemo(
+    () => pendingAssignments.map(mapAgendaTaskToUi),
+    [pendingAssignments],
+  )
   const googleCalendar = useGoogleCalendar()
   const googleTasksFeed = useGoogleTasks()
 
@@ -127,12 +139,12 @@ export default function AgendaPage() {
   const agendaTitle = viewerFirstName ? `Agenda ${viewerFirstName}` : "Tu agenda diaria"
 
   const agendaTagline = useMemo(() => {
-    if (loading) return "Sincronizando tablero…"
+    if (loading) return "Cargando tu tablero Órvita y datos de Google (Calendar / Tasks)…"
     const n = agendaTasks.length
     const active = agendaTasks.filter((t) => t.status !== "completed").length
-    if (n === 0) return "Órvita y Google en un solo lugar: crea, importa o revisa la lista unificada."
-    if (active === 0) return "Sin pendientes en el tablero compartido."
-    return `${active} pendiente${active === 1 ? "" : "s"} en Órvita. Todas las vistas mezclan o muestran Calendar y recordatorios Google junto al tablero.`
+    if (n === 0) return "Órvita y Google en un solo lugar: crea, importa o revisa la lista unificada (solo tu cuenta y tus asignaciones aceptadas)."
+    if (active === 0) return "Sin pendientes en tu tablero Órvita."
+    return `${active} pendiente${active === 1 ? "" : "s"} en Órvita. Las vistas combinan tu tablero con Calendar y Tasks de tu cuenta Google.`
   }, [loading, agendaTasks])
 
   useEffect(() => {
@@ -287,8 +299,13 @@ export default function AgendaPage() {
     return out
   }, [googleByDay, showPastAgenda])
 
-  const countByTab = (key: string) =>
-    key === "todas" ? filtered.length : filtered.filter((task) => task.type === key).length
+  const countByTab = (key: string) => {
+    if (key === "todas") return tasks.length + pendingUi.length
+    if (key === "recibida") {
+      return tasks.filter((task) => task.type === "recibida").length + pendingUi.length
+    }
+    return tasks.filter((task) => task.type === key).length
+  }
 
   const grouped = useMemo(() => ({
     recibida: filtered.filter((task) => task.type === "recibida"),
@@ -455,7 +472,7 @@ export default function AgendaPage() {
               color: error ? "var(--color-accent-danger)" : "var(--color-text-secondary)",
             }}
           >
-            <span>{error ?? "Cargando tareas compartidas…"}</span>
+            <span>{error ?? "Cargando tareas del tablero Órvita…"}</span>
             {error && (
               <button
                 type="button"
@@ -603,6 +620,7 @@ export default function AgendaPage() {
               {view === "columns" && (
                 <AgendaSharedKanban
                   grouped={grouped}
+                  pendingInvites={pendingUi}
                   calendarFeed={googleCalendar}
                   googleTasksFeed={googleTasksFeed}
                   hideBeforeToday={!showPastAgenda}
@@ -617,6 +635,7 @@ export default function AgendaPage() {
               {view === "list" && (
                 <AgendaSharedList
                   filtered={filtered}
+                  pendingInvites={pendingUi}
                   calendarFeed={googleCalendar}
                   googleTasksFeed={googleTasksFeed}
                   agendaLoading={loading}

@@ -256,28 +256,37 @@ export default function AuthPage() {
     }
   }
 
+  const tabActive = "bg-[var(--color-text-primary)] text-[var(--color-background)]"
+  const tabIdle = "text-orbita-secondary hover:text-orbita-primary motion-safe:transition-colors"
+
   return (
     <div className="mx-auto flex min-h-[70vh] max-w-lg flex-col justify-center gap-6 px-6 py-12">
       <div
-        className="flex flex-col gap-6 rounded-2xl border border-gray-200/90 bg-gray-50/90 p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950/90"
+        className="flex flex-col gap-6 rounded-2xl border border-orbita-border bg-orbita-surface p-6 shadow-card"
         aria-busy={loading}
       >
         <div>
-        <h1 className="text-3xl font-semibold tracking-tight">
-          {isMock ? "Modo demo" : mode === "login" ? "Iniciar sesión" : "Crear cuenta"}
-        </h1>
-        <p className="mt-2 text-sm text-gray-500">
-          {isMock
-            ? "Estás en modo visual. Puedes entrar sin autenticación real."
-            : mode === "login"
-              ? "Accede con tu cuenta de Órvita."
-              : "Regístrate con email y password. Si tienes invite code, úsalo para unirte a tu hogar."}
-        </p>
-      </div>
+          <h1 className="text-3xl font-semibold tracking-tight text-orbita-primary">
+            {isMock ? "Modo demo" : mode === "login" ? "Iniciar sesión" : "Crear cuenta"}
+          </h1>
+          <p className="mt-2 text-sm text-orbita-secondary">
+            {isMock
+              ? "Estás en modo visual. Puedes entrar sin autenticación real."
+              : mode === "login"
+                ? "Accede con tu cuenta de Órvita."
+                : "Regístrate con email y password. Si tienes invite code, úsalo para unirte a tu hogar."}
+          </p>
+        </div>
 
       {isMock ? (
         <div className="space-y-4">
-          <div className="rounded-xl border bg-amber-50 p-4 text-sm text-amber-700">
+          <div
+            className="rounded-xl border p-4 text-sm text-orbita-primary"
+            style={{
+              borderColor: "color-mix(in srgb, var(--color-accent-warning) 40%, var(--color-border))",
+              background: "color-mix(in srgb, var(--color-accent-warning) 14%, var(--color-surface-alt))",
+            }}
+          >
             Auth real desactivada en local. Entrarás con datos de referencia.
           </div>
           <button
@@ -285,63 +294,59 @@ export default function AuthPage() {
             onClick={() => {
               window.location.href = "/hoy"
             }}
-            className="w-full rounded-lg bg-black px-4 py-3 text-sm font-semibold text-white"
+            className="w-full rounded-lg px-4 py-3 text-sm font-semibold text-[var(--color-background)] bg-[var(--color-text-primary)]"
           >
             Entrar en demo
           </button>
         </div>
       ) : (
         <>
-          <div className="flex gap-2 rounded-xl border p-2">
+          <div className="flex gap-2 rounded-xl border border-orbita-border bg-orbita-surface-alt p-2">
             <button
               type="button"
               onClick={() => setMode("login")}
-              className={`flex-1 rounded-lg px-3 py-2 text-sm ${
-                mode === "login" ? "bg-black text-white" : "text-gray-500"
-              }`}
+              className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium ${mode === "login" ? tabActive : tabIdle}`}
             >
               Sign In
             </button>
             <button
               type="button"
               onClick={() => setMode("register")}
-              className={`flex-1 rounded-lg px-3 py-2 text-sm ${
-                mode === "register" ? "bg-black text-white" : "text-gray-500"
-              }`}
+              className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium ${mode === "register" ? tabActive : tabIdle}`}
             >
               Create Account
             </button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <label className="block text-sm font-medium">
+            <label className="block text-sm font-medium text-orbita-primary">
               Email
               <input
                 type="email"
                 required
-                className="mt-2 w-full rounded-lg border px-3 py-2"
+                className="mt-2 w-full rounded-lg border border-orbita-border bg-orbita-surface-alt px-3 py-2 text-orbita-primary outline-none placeholder:text-orbita-secondary/70 focus-visible:ring-2 focus-visible:ring-[var(--color-accent-primary)]"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
               />
             </label>
 
-            <label className="block text-sm font-medium">
+            <label className="block text-sm font-medium text-orbita-primary">
               Password
               <input
                 type="password"
                 required
-                className="mt-2 w-full rounded-lg border px-3 py-2"
+                className="mt-2 w-full rounded-lg border border-orbita-border bg-orbita-surface-alt px-3 py-2 text-orbita-primary outline-none placeholder:text-orbita-secondary/70 focus-visible:ring-2 focus-visible:ring-[var(--color-accent-primary)]"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
               />
             </label>
 
             {mode === "register" && (
-              <label className="block text-sm font-medium">
+              <label className="block text-sm font-medium text-orbita-primary">
                 Invite code (opcional)
                 <input
                   type="text"
-                  className="mt-2 w-full rounded-lg border px-3 py-2"
+                  className="mt-2 w-full rounded-lg border border-orbita-border bg-orbita-surface-alt px-3 py-2 text-orbita-primary outline-none placeholder:text-orbita-secondary/70 focus-visible:ring-2 focus-visible:ring-[var(--color-accent-primary)]"
                   value={inviteCode}
                   onChange={(event) => setInviteCode(event.target.value)}
                 />
@@ -351,7 +356,7 @@ export default function AuthPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-lg bg-black px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+              className="w-full rounded-lg px-4 py-2 text-sm font-semibold text-[var(--color-background)] bg-[var(--color-text-primary)] disabled:opacity-60"
             >
               {loading
                 ? mode === "login"
@@ -366,14 +371,21 @@ export default function AuthPage() {
       )}
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+        <div
+          className="rounded-lg border p-3 text-sm"
+          style={{
+            borderColor: "color-mix(in srgb, var(--color-accent-danger) 45%, var(--color-border))",
+            background: "color-mix(in srgb, var(--color-accent-danger) 12%, var(--color-surface-alt))",
+            color: "var(--color-accent-danger)",
+          }}
+        >
           {error}
         </div>
       )}
 
       {loading && (
         <p
-          className="text-center text-xs text-gray-500 motion-safe:animate-pulse"
+          className="text-center text-xs text-orbita-secondary motion-safe:animate-pulse"
           role="status"
           aria-live="polite"
         >

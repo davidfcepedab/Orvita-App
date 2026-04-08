@@ -66,27 +66,34 @@ export default function HouseholdInvitePage() {
   return (
     <div className="mx-auto flex min-h-[70vh] max-w-lg flex-col justify-center gap-6 px-6 py-12">
       <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Invite code</h1>
-        <p className="mt-2 text-sm text-gray-500">
+        <h1 className="text-3xl font-semibold tracking-tight text-orbita-primary">Invite code</h1>
+        <p className="mt-2 text-sm text-orbita-secondary">
           Comparte este código con tu hogar para invitar nuevos usuarios.
         </p>
       </div>
 
-      {loading && <p className="text-sm text-gray-500">Cargando...</p>}
+      {loading && <p className="text-sm text-orbita-secondary">Cargando...</p>}
 
       {inviteCode && (
-        <div className="rounded-xl border bg-white p-4 text-center text-2xl font-semibold tracking-widest">
+        <div className="rounded-xl border border-orbita-border bg-orbita-surface p-4 text-center text-2xl font-semibold tracking-widest text-orbita-primary shadow-card">
           {inviteCode}
         </div>
       )}
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+        <div
+          className="rounded-lg border p-3 text-sm"
+          style={{
+            borderColor: "color-mix(in srgb, var(--color-accent-danger) 45%, var(--color-border))",
+            background: "color-mix(in srgb, var(--color-accent-danger) 12%, var(--color-surface-alt))",
+            color: "var(--color-accent-danger)",
+          }}
+        >
           {error}
         </div>
       )}
 
-      <Link href="/auth" className="text-sm font-medium text-gray-600 underline">
+      <Link href="/auth" className="text-sm font-medium text-orbita-secondary underline hover:text-orbita-primary motion-safe:transition-colors">
         Ir a login
       </Link>
     </div>

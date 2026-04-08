@@ -10,6 +10,7 @@ import {
   mapGoogleCalendarItem,
 } from "@/lib/google/googleCalendarApi"
 import { insertDefaultListTask, mapGoogleTask } from "@/lib/google/googleTasksApi"
+import { mergeAgendaRowsById } from "@/lib/agenda/mergeOperationalAgendaRows"
 import { createServiceClient } from "@/lib/supabase/server"
 
 type AgendaRow = {
@@ -28,9 +29,12 @@ type AgendaRow = {
   assignment_accepted_at: string | null
 }
 
-/** Solo tareas creadas por el usuario o asignadas a él (agenda no compartida entre miembros del hogar). */
-function agendaVisibilityOrFilter(userId: string) {
-  return `user_id.eq.${userId},assignee_id.eq.${userId}`
+/**
+ * Mutaciones (PATCH/DELETE): dueño de la fila, o asignatario solo tras aceptar.
+ * Las asignaciones pendientes se aceptan vía rama dedicada (sin este filtro).
+ */
+function agendaMutationOrFilter(userId: string) {
+  return `user_id.eq.${userId},and(assignee_id.eq.${userId},assignment_accepted_at.not.is.null)`
 }
 
 function mapType(row: AgendaRow, currentUserId: string) {
@@ -113,6 +117,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({
         success: true,
         data: mockAgendaRows.map((row) => mapTask(row, MOCK_AGENDA_USER_ID)),
+        pendingAssignments: [],
       })
     }
 
@@ -126,22 +131,43 @@ export async function GET(req: NextRequest) {
         { status: 403 }
       )
     }
-    const result = await supabase
-      .from("operational_tasks")
-      .select("*")
-      .eq("domain", "agenda")
-      .eq("household_id", householdId)
-      .or(agendaVisibilityOrFilter(userId))
-      .order("created_at", { ascending: false })
+    const base = () =>
+      supabase
+        .from("operational_tasks")
+        .select("*")
+        .eq("domain", "agenda")
+        .eq("household_id", householdId)
+        .is("deleted_at", null)
 
-    if (result.error) {
-      throw result.error
+    const [ownedRes, acceptedRes, pendingRes] = await Promise.all([
+      base().eq("user_id", userId).order("created_at", { ascending: false }),
+      base()
+        .eq("assignee_id", userId)
+        .not("assignment_accepted_at", "is", null)
+        .order("created_at", { ascending: false }),
+      base().eq("assignee_id", userId).is("assignment_accepted_at", null).order("created_at", { ascending: false }),
+    ])
+
+    const firstErr = ownedRes.error ?? acceptedRes.error ?? pendingRes.error
+    if (firstErr) {
+      throw firstErr
     }
 
-    const rows = (result.data || []) as AgendaRow[]
+    const owned = (ownedRes.data ?? []) as AgendaRow[]
+    const acceptedRecv = (acceptedRes.data ?? []) as AgendaRow[]
+    const pendingRaw = (pendingRes.data ?? []) as AgendaRow[]
+
+    const pendingAssignments = pendingRaw.filter((row) => {
+      const c = row.created_by?.trim() || null
+      return c == null || c !== userId
+    })
+
+    const merged = mergeAgendaRowsById(owned, acceptedRecv)
+
     return NextResponse.json({
       success: true,
-      data: rows.map((row) => mapTask(row, userId)),
+      data: merged.map((row) => mapTask(row, userId)),
+      pendingAssignments: pendingAssignments.map((row) => mapTask(row, userId)),
     })
   } catch (error: unknown) {
     const detail = error instanceof Error ? error.message : "Error desconocido"
@@ -494,7 +520,7 @@ export async function PATCH(req: NextRequest) {
       .eq("id", id)
       .eq("domain", "agenda")
       .eq("household_id", householdId)
-      .or(agendaVisibilityOrFilter(userId))
+      .or(agendaMutationOrFilter(userId))
       .select("id")
 
     if (update.error) {
@@ -554,7 +580,7 @@ export async function DELETE(req: NextRequest) {
       .eq("id", id)
       .eq("domain", "agenda")
       .eq("household_id", householdId)
-      .or(agendaVisibilityOrFilter(userId))
+      .or(agendaMutationOrFilter(userId))
       .select("id")
 
     if (del.error) {

@@ -27,11 +27,14 @@ export interface AgendaTask {
 type AgendaResponse = {
   success: boolean
   data?: AgendaTask[]
+  /** Asignaciones de otros pendientes de aceptar (no entran en el tablero hasta aceptar). */
+  pendingAssignments?: AgendaTask[]
   error?: string
 }
 
 export function useAgendaTasks() {
   const [tasks, setTasks] = useState<AgendaTask[]>([])
+  const [pendingAssignments, setPendingAssignments] = useState<AgendaTask[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -46,10 +49,12 @@ export function useAgendaTasks() {
         throw new Error(messageForHttpError(response.status, json.error, response.statusText))
       }
       setTasks(json.data || [])
+      setPendingAssignments(json.pendingAssignments ?? [])
     } catch (err) {
       const message = err instanceof Error ? err.message : "Error desconocido"
       setError(message)
       setTasks([])
+      setPendingAssignments([])
     } finally {
       setLoading(false)
     }
@@ -87,7 +92,7 @@ export function useAgendaTasks() {
       }
       await refresh()
     },
-    [refresh]
+    [refresh],
   )
 
   const deleteTask = useCallback(
@@ -104,7 +109,7 @@ export function useAgendaTasks() {
       }
       await refresh()
     },
-    [refresh]
+    [refresh],
   )
 
   const updateTask = useCallback(
@@ -119,7 +124,7 @@ export function useAgendaTasks() {
         assigneeId: string | null
         assigneeName: string | null
         acceptAssignment: boolean
-      }>
+      }>,
     ) => {
       const headers = await browserBearerHeaders(true)
       const body =
@@ -137,11 +142,12 @@ export function useAgendaTasks() {
       }
       await refresh()
     },
-    [refresh]
+    [refresh],
   )
 
   return {
     tasks,
+    pendingAssignments,
     loading,
     error,
     refresh,

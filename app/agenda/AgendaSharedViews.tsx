@@ -138,6 +138,7 @@ function googleTaskNeedsDue(t: GoogleTaskDTO) {
 
 export function AgendaSharedKanban({
   grouped,
+  pendingInvites = [],
   calendarFeed,
   googleTasksFeed,
   onSaveComplete,
@@ -149,6 +150,8 @@ export function AgendaSharedKanban({
   onAcceptAssignment,
 }: {
   grouped: GroupedTasks
+  /** Recibidas aún sin aceptar: se muestran arriba en la columna «Tareas Recibidas». */
+  pendingInvites?: UiAgendaTask[]
   calendarFeed?: Pick<GoogleCalendarFeedState, "events" | "connected">
   googleTasksFeed?: Pick<GoogleTasksFeedState, "tasks" | "connected">
   onSaveComplete?: (task: UiAgendaTask, completed: boolean) => Promise<void> | void
@@ -175,10 +178,12 @@ export function AgendaSharedKanban({
 
   const googleConnected = Boolean(calendarFeed?.connected || googleTasksFeed?.connected)
 
+  const recibidasColumnItems = [...pendingInvites, ...grouped.recibida]
+
   return (
     <div className={agendaKanbanGridClass} aria-label="Tres columnas: recibidas, asignadas, personales y Google">
       {[
-        { label: "Tareas Recibidas", items: grouped.recibida, accent: "var(--agenda-received)" },
+        { label: "Tareas Recibidas", items: recibidasColumnItems, accent: "var(--agenda-received)" },
         { label: "Asignadas por Mi", items: grouped.asignada, accent: "var(--agenda-assigned)" },
       ].map((column) => (
         <div key={column.label} className={agendaKanbanColumnClass}>
@@ -188,6 +193,13 @@ export function AgendaSharedKanban({
           >
             {column.label}
           </p>
+          {column.label === "Tareas Recibidas" && pendingInvites.length > 0 ? (
+            <p className="m-0 mb-1 max-w-[18rem] text-[10px] leading-snug text-[var(--color-text-secondary)]">
+              {pendingInvites.length === 1
+                ? "1 asignación pendiente de aceptar (arriba en la columna)."
+                : `${pendingInvites.length} asignaciones pendientes de aceptar (arriba en la columna).`}
+            </p>
+          ) : null}
           {column.items.map((task) => (
             <AgendaOrvitaTaskCard
               key={task.id}
@@ -348,6 +360,7 @@ export function AgendaSharedKanban({
 
 export function AgendaSharedList({
   filtered,
+  pendingInvites = [],
   onSaveComplete,
   calendarFeed,
   googleTasksFeed,
@@ -360,6 +373,8 @@ export function AgendaSharedList({
   onAcceptAssignment,
 }: {
   filtered: UiAgendaTask[]
+  /** Asignaciones de otros pendientes de aceptar (fuera de la cronología hasta aceptar). */
+  pendingInvites?: UiAgendaTask[]
   onSaveComplete: (task: UiAgendaTask, completed: boolean) => Promise<void> | void
   /** Vista lista: mezcla eventos de Google Calendar en la misma cronología. */
   calendarFeed?: Pick<GoogleCalendarFeedState, "events" | "loading" | "connected" | "error">
@@ -408,6 +423,7 @@ export function AgendaSharedList({
 
   const feedsLoading =
     merged.length === 0 &&
+    pendingInvites.length === 0 &&
     !googleErrored &&
     (Boolean(agendaLoading && filtered.length === 0) || waitingGoogle)
 
@@ -421,6 +437,24 @@ export function AgendaSharedList({
           Cargando agenda (Órvita, Calendar y Tasks)…
         </p>
       )}
+      {pendingInvites.length > 0 ? (
+        <div className="flex flex-col gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] p-3 sm:p-4">
+          <p className={`m-0 ${agendaSectionTitleClass}`}>Pendientes de aceptar</p>
+          <p className="m-0 text-[11px] leading-snug text-[var(--color-text-secondary)] sm:text-[12px]">
+            Te asignaron estas tareas desde tu hogar. Al aceptarlas pasan a tu tablero y cronología.
+          </p>
+          <div className="flex flex-col gap-2">
+            {pendingInvites.map((task) => (
+              <AgendaOrvitaTaskCard
+                key={`p-${task.id}`}
+                task={task}
+                variant="list"
+                onAcceptAssignment={onAcceptAssignment}
+              />
+            ))}
+          </div>
+        </div>
+      ) : null}
       {merged.map((row) =>
         row.kind === "task" ? (
           <AgendaOrvitaTaskCard
