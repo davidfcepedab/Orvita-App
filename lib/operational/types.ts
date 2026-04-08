@@ -74,6 +74,10 @@ export interface OperationalContextData {
   next_impact?: string
   next_time_required?: string
   current_block?: string
+  /** Id de `operational_tasks` cuando el foco viene de la cola operativa (PATCH /api/tasks). */
+  next_task_id?: string
+  /** Dominio del foco para acentos de UI (p. ej. /hoy). */
+  command_focus_domain?: OperationalDomain
 }
 
 

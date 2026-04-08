@@ -8,7 +8,10 @@ import {
   Check,
   ChevronRight,
   Loader2,
+  Moon,
   Sparkles,
+  Sun,
+  Sunrise,
   Target,
   TrendingDown,
   TrendingUp,
@@ -29,7 +32,6 @@ import { formatLocalDateKey, localDateKeyFromIso } from "@/lib/agenda/localDateK
 import { isGoogleTaskDone } from "@/lib/agenda/googleTasksUpcoming"
 import {
   bandColor,
-  derivePrimaryCommand,
   domainAccentVar,
   energyPressureFromCheckin,
   moneyPressureFromMonth,
@@ -38,7 +40,7 @@ import {
   totalMeetingMinutes,
   type PressureBand,
 } from "@/lib/hoy/commandDerivation"
-import type { OperationalHabit, OperationalTask } from "@/lib/operational/types"
+import type { OperationalDomain, OperationalHabit, OperationalTask } from "@/lib/operational/types"
 
 const TIMELINE_FALLBACK_EXAMPLE = [
   { time: "08:00", label: "Bloque de trabajo profundo" },
@@ -291,7 +293,24 @@ export default function HoyCommandCenter() {
     void Promise.all([refreshCal(), refreshTasks()])
   }, [refreshCal, refreshTasks])
 
-  const primary = useMemo(() => derivePrimaryCommand(ctx), [ctx])
+  const primary = useMemo(() => {
+    if (!ctx) {
+      return {
+        title: "",
+        subtitle: undefined as string | undefined,
+        timeHint: undefined as string | undefined,
+        taskId: undefined as string | undefined,
+        domain: undefined as OperationalDomain | undefined,
+      }
+    }
+    return {
+      title: ctx.next_action ?? "",
+      subtitle: ctx.next_impact,
+      timeHint: ctx.next_time_required,
+      taskId: ctx.next_task_id,
+      domain: ctx.command_focus_domain,
+    }
+  }, [ctx])
 
   const timeP = useMemo(() => timePressureFromMeetings(meetingMinutes), [meetingMinutes])
   const energyP = useMemo(() => energyPressureFromCheckin(ctx?.score_global ?? 0), [ctx?.score_global])
@@ -358,7 +377,7 @@ export default function HoyCommandCenter() {
               style={{ background: "var(--color-accent-primary)" }}
               aria-hidden
             />
-            <SectionLabel>Órbita · Centro del día</SectionLabel>
+            <SectionLabel>Centro del día</SectionLabel>
           </div>
           <h1 className="m-0 text-2xl font-semibold tracking-tight text-[var(--color-text-primary)] sm:text-[1.75rem]">
             Hoy
@@ -373,13 +392,6 @@ export default function HoyCommandCenter() {
         </div>
         <div className="flex flex-col gap-3 sm:items-end">
           <div className="flex flex-wrap items-center gap-3">
-            <Link
-              href="/checkin"
-              className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-[var(--radius-button)] px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-white motion-safe:transition-opacity motion-safe:hover:opacity-90"
-              style={{ background: "var(--color-accent-health)", textDecoration: "none" }}
-            >
-              Check-in
-            </Link>
             <div
               className="flex items-baseline gap-1.5 rounded-[var(--radius-button)] border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 py-2"
               aria-live="polite"
@@ -407,6 +419,63 @@ export default function HoyCommandCenter() {
           </div>
         </div>
       </header>
+
+      <nav
+        aria-label="Check-in por momento del día"
+        className="rounded-[var(--radius-card)] border border-[color-mix(in_srgb,var(--color-accent-health)_30%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_9%,var(--color-surface))] p-3 sm:p-4"
+      >
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <SectionLabel>Check-in del día</SectionLabel>
+            <p className="m-0 mt-1 max-w-xl text-xs leading-snug text-[var(--color-text-secondary)]">
+              Tres momentos: elige el bloque que toque ahora. En check-in, termina con{" "}
+              <span className="font-medium text-[var(--color-text-primary)]">Guardar check-in completo</span>.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-stretch gap-2 sm:justify-end">
+            {(
+              [
+                {
+                  href: "/checkin#checkin-manana",
+                  label: "Mañana",
+                  hint: "Sueño · energía",
+                  Icon: Sunrise,
+                },
+                {
+                  href: "/checkin#checkin-dia",
+                  label: "Día",
+                  hint: "Foco · cuerpo · vínculos",
+                  Icon: Sun,
+                },
+                {
+                  href: "/checkin#checkin-noche",
+                  label: "Noche",
+                  hint: "Cierre · medidas",
+                  Icon: Moon,
+                },
+              ] as const
+            ).map(({ href, label, hint, Icon }) => (
+              <Link
+                key={href}
+                href={href}
+                className="inline-flex min-h-[48px] min-w-[5.75rem] flex-1 flex-col items-center justify-center gap-0.5 rounded-[var(--radius-button)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-2 text-center motion-safe:transition-[background,transform] motion-safe:active:scale-[0.99] motion-safe:hover:bg-[var(--color-surface-alt)] sm:min-h-[52px] sm:flex-none sm:min-w-[6.5rem] sm:px-3"
+                style={{ textDecoration: "none" }}
+              >
+                <Icon className="h-3.5 w-3.5 shrink-0 text-[var(--color-accent-health)]" aria-hidden />
+                <span className="text-[11px] font-semibold leading-tight text-[var(--color-text-primary)]">{label}</span>
+                <span className="hidden text-[9px] leading-tight text-[var(--color-text-secondary)] sm:block">{hint}</span>
+              </Link>
+            ))}
+            <Link
+              href="/checkin"
+              className="inline-flex min-h-[48px] items-center justify-center self-stretch rounded-[var(--radius-button)] border border-dashed border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-text-secondary)_5%,transparent)] px-3 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--color-text-secondary)] motion-safe:hover:border-[var(--color-accent-health)] motion-safe:hover:text-[var(--color-text-primary)] sm:min-h-[52px] sm:px-4"
+              style={{ textDecoration: "none" }}
+            >
+              Todo el formulario
+            </Link>
+          </div>
+        </div>
+      </nav>
 
       {/* —— Presión operativa —— */}
       <section aria-labelledby="hoy-pressure-heading" className="space-y-3">
@@ -825,22 +894,6 @@ export default function HoyCommandCenter() {
               <p className="mt-2 m-0 text-[10px] text-[var(--color-text-secondary)]">{calNotice}</p>
             ) : null}
           </Card>
-
-          <Link
-            href="/checkin"
-            className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] border border-dashed border-[color-mix(in_srgb,var(--color-accent-health)_45%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_6%,transparent)] px-4 py-3 text-left motion-safe:transition-colors motion-safe:hover:bg-[color-mix(in_srgb,var(--color-accent-health)_10%,transparent)]"
-            style={{ textDecoration: "none" }}
-          >
-            <div>
-              <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
-                Calibrar el día
-              </p>
-              <p className="m-0 mt-0.5 text-sm font-medium text-[var(--color-text-primary)]">
-                Check-in de foco y energía
-              </p>
-            </div>
-            <ArrowRight className="h-4 w-4 shrink-0 text-[var(--color-accent-health)]" aria-hidden />
-          </Link>
         </aside>
       </div>
     </div>

@@ -245,6 +245,19 @@ export default function CheckinPage() {
     }
   }, [today])
 
+  useEffect(() => {
+    const scrollToHash = () => {
+      const raw = typeof window !== "undefined" ? window.location.hash.replace(/^#/, "") : ""
+      if (!raw) return
+      requestAnimationFrame(() => {
+        document.getElementById(raw)?.scrollIntoView({ behavior: "smooth", block: "start" })
+      })
+    }
+    scrollToHash()
+    window.addEventListener("hashchange", scrollToHash)
+    return () => window.removeEventListener("hashchange", scrollToHash)
+  }, [])
+
   const handleChange = (field: keyof FormState, value: FormState[keyof FormState]) => {
     setForm((prev) => ({ ...prev, [field]: value }))
   }
@@ -353,8 +366,10 @@ export default function CheckinPage() {
             <Calendar className="h-6 w-6" strokeWidth={2} aria-hidden />
           </div>
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">Check-in Diario</h1>
-            <p className="mt-1 text-sm text-slate-500">Registro completo de tu día</p>
+            <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">Check-in diario</h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Tres momentos (mañana · día · noche) o el formulario completo abajo.
+            </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <button
                 type="button"
@@ -401,6 +416,10 @@ export default function CheckinPage() {
       </header>
 
       <div className="space-y-4 sm:space-y-5">
+        <div
+          id="checkin-manana"
+          className="scroll-mt-28 space-y-4 sm:scroll-mt-32 sm:space-y-5"
+        >
         <CheckinSection
           title="Despertar & Energía Matinal"
           subtitle="Sueño, descanso percibido y energía al levantarte"
@@ -422,7 +441,12 @@ export default function CheckinPage() {
             accentClass="accent-violet-600"
           />
         </CheckinSection>
+        </div>
 
+        <div
+          id="checkin-dia"
+          className="scroll-mt-28 space-y-4 sm:scroll-mt-32 sm:space-y-5"
+        >
         <CheckinSection
           title="Actividades & Bienestar Diurno"
           subtitle="Hábitos, hidratación y foco profundo"
@@ -555,7 +579,12 @@ export default function CheckinPage() {
             accentClass="accent-pink-500"
           />
         </CheckinSection>
+        </div>
 
+        <div
+          id="checkin-noche"
+          className="scroll-mt-28 space-y-4 sm:scroll-mt-32 sm:space-y-5"
+        >
         <CheckinSection
           title="Balance Nocturno & Descanso"
           subtitle="Cierre del día y regulación emocional"
@@ -624,6 +653,7 @@ export default function CheckinPage() {
           </div>
           <NumberUnitField label="Glúteos" value={form.gluteos} onChange={(v) => handleChange("gluteos", v)} unit="cm" step="0.1" />
         </CheckinSection>
+        </div>
       </div>
 
       <div className="sticky bottom-2 z-10 pt-2 sm:bottom-4">

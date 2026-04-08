@@ -185,7 +185,7 @@ export function AppShell({
                     background: "var(--color-accent-health)",
                   }}
                 />
-                <h1 className="m-0 text-base font-medium sm:text-lg">ÓRVITA</h1>
+                <h1 className="m-0 text-base font-medium sm:text-lg">Órbita</h1>
                 <span className="hidden text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-secondary)] sm:inline">
                   Sistema Operativo Estratégico
                 </span>

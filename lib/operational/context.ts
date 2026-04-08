@@ -4,6 +4,7 @@ import type {
   OperationalHabit,
   OperationalTask,
 } from "@/lib/operational/types"
+import { applyDerivedCommandFocusToContext } from "@/lib/hoy/commandDerivation"
 
 function normalizeScore(value: number | null | undefined) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0
@@ -24,7 +25,7 @@ export function buildOperationalContext(params: {
       ? score_global_raw
       : Math.round((score_fisico + score_salud + score_profesional) / 3)
 
-  return {
+  const base: OperationalContextData = {
     score_global,
     score_fisico,
     score_salud,
@@ -41,4 +42,6 @@ export function buildOperationalContext(params: {
     today_tasks: params.tasks,
     habits: params.habits,
   }
+
+  return applyDerivedCommandFocusToContext(base)
 }

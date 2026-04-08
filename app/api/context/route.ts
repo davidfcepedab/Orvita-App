@@ -51,6 +51,8 @@ export async function GET(req: NextRequest) {
           next_impact: "Alto impacto en pipeline",
           next_time_required: "120 min",
           current_block: "Profesional",
+          command_focus_domain: "profesional",
+          next_task_id: undefined,
         },
       })
     }

@@ -4,6 +4,8 @@ import type { ReactNode } from "react"
 import type { LucideIcon } from "lucide-react"
 
 type CheckinSectionProps = {
+  /** Ancla para `/checkin#id` (p. ej. scroll desde /hoy). */
+  id?: string
   title: string
   subtitle?: string
   icon: LucideIcon
@@ -16,6 +18,7 @@ type CheckinSectionProps = {
  * Bloque de sección estilo Arctic Zen (cabecera tintada + cuerpo en tarjeta blanca).
  */
 export function CheckinSection({
+  id,
   title,
   subtitle,
   icon: Icon,
@@ -24,7 +27,10 @@ export function CheckinSection({
   children,
 }: CheckinSectionProps) {
   return (
-    <section className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[var(--shadow-card)]">
+    <section
+      id={id}
+      className="scroll-mt-28 overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[var(--shadow-card)] sm:scroll-mt-32"
+    >
       <div className={`flex items-start gap-3 px-4 py-3.5 sm:px-5 sm:py-4 ${headerTintClass}`}>
         <div
           className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-sm ${iconBoxClass}`}

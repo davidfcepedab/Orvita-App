@@ -91,6 +91,23 @@ export function derivePrimaryCommand(data: OperationalContextData | null): Prima
   }
 }
 
+/**
+ * Aplica el foco operativo en el payload de contexto (misma lógica en servidor y contrato API).
+ * Si `ctx` ya trae `next_action` (p. ej. override en mock), `derivePrimaryCommand` lo respeta.
+ */
+export function applyDerivedCommandFocusToContext(ctx: OperationalContextData): OperationalContextData {
+  const cmd = derivePrimaryCommand(ctx)
+  return {
+    ...ctx,
+    next_action: cmd.title,
+    next_impact: cmd.subtitle,
+    next_time_required: cmd.timeHint,
+    current_block: cmd.domain ? domainShortLabel(cmd.domain) : undefined,
+    next_task_id: cmd.taskId,
+    command_focus_domain: cmd.domain,
+  }
+}
+
 export function totalMeetingMinutes(
   meetings: { startAt: string | null; endAt: string | null }[],
 ): number {
