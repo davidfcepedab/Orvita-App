@@ -5,14 +5,5 @@
       "path": "/api/cron/checkins/sync",
       "schedule": "0 * * * *"
     }
-  ],
-  "redirects": [
-    {
-      "source": "/:path*",
-      "has": [{ "type": "host", "value": "www.orvita.app" }],
-      "destination": "https://orvita.app/:path*",
-      "permanent": true
-    }
   ]
 }
-
