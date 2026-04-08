@@ -1,8 +1,8 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, type DragEvent, type ReactNode } from "react"
 import Link from "next/link"
-import { Calendar, Copy, RotateCcw } from "lucide-react"
+import { Calendar, Check, Copy, GripVertical, RotateCcw, Save } from "lucide-react"
 import { AgendaOrvitaMiniCard } from "@/app/agenda/AgendaOrvitaMiniCard"
 import { AgendaOrvitaTaskCard } from "@/app/agenda/AgendaOrvitaTaskCard"
 import { AgendaReadonlyUnifiedCard } from "@/app/agenda/AgendaReadonlyUnifiedCard"
@@ -10,6 +10,7 @@ import { TASK_CARD_STUDIO_SAMPLE } from "@/app/agenda/taskCardStudioSample"
 import {
   TASK_CARD_GRID,
   allTaskCardCssVarKeys,
+  defaultRowOrderForGrid,
   taskCardDensityVars,
   type TaskCardDensity,
   type TaskCardGridKey,
@@ -19,36 +20,235 @@ import { Input } from "@/src/components/ui/input"
 import { Label } from "@/src/components/ui/label"
 import { Textarea } from "@/src/components/ui/textarea"
 
-const VAR_LABELS: Record<string, string> = {
-  "--task-card-radius": "Radio (esquinas)",
-  "--task-card-border-left": "Borde izquierdo (ancho token)",
-  "--task-card-line-title": "Interlineado título",
-  "--task-card-line-body": "Interlineado cuerpo",
-  "--task-card-action-col-width": "Ancho columna acciones",
-  "--task-card-check-size": "Tamaño check circular",
-  "--task-card-pad": "Padding interno",
-  "--task-card-gap": "Gap del grid",
-  "--task-card-gap-tight": "Gap pastillas / filas",
-  "--task-card-title-size": "Tamaño título",
-  "--task-card-meta-size": "Tamaño meta / tiempo",
-  "--task-card-pill-size": "Tamaño pastillas",
-  "--task-card-fuente-size": "Tamaño “Fuente:” / notas",
-  "--task-card-action-size": "Tamaño acciones / enlaces",
-  "--task-card-icon-meta": "Icono meta (referencia)",
+const ROW_LABELS: Record<string, string> = {
+  title: "Título",
+  meta: "Metadata (tiempo / timeline)",
+  pills: "Badges (prioridad · estado)",
+  assign: "Asignación / aceptar",
+  extra: "Extra (asignación corta)",
+  footer: "Pie (fuente · notas)",
+  fuente: "Línea fuente (Google)",
 }
 
-const GRID_HELP: Record<TaskCardGridKey, string> = {
-  orvita: "Kanban y lista (columna acciones a la derecha). Áreas: title, meta, pills, assign, footer, actions.",
-  mini: "Semana y mes. Áreas: title, meta, pills, extra, footer.",
-  readonly: "Google unificado. Áreas: title, meta, pills, fuente, footer, actions.",
+const FONT_PRESETS: { value: string; label: string }[] = [
+  { value: "", label: "Predeterminado (tema)" },
+  { value: "ui-sans-serif, system-ui, sans-serif", label: "System UI" },
+  { value: "Inter, ui-sans-serif, system-ui, sans-serif", label: "Inter" },
+  { value: "Georgia, 'Times New Roman', serif", label: "Georgia" },
+  { value: "ui-monospace, SFMono-Regular, monospace", label: "Monospace" },
+]
+
+const WEIGHT_PRESETS = [
+  { value: "", label: "Semibold (600)" },
+  { value: "400", label: "Regular 400" },
+  { value: "500", label: "Medium 500" },
+  { value: "600", label: "Semibold 600" },
+  { value: "700", label: "Bold 700" },
+]
+
+function pxFromVar(v: string | undefined, fallback: number): number {
+  if (!v?.trim()) return fallback
+  const m = /^(\d+(?:\.\d+)?)px$/i.exec(v.trim())
+  return m ? Number(m[1]) : fallback
 }
 
-function labelForVar(key: string): string {
-  return VAR_LABELS[key] ?? key.replace(/^--task-card-/, "").replace(/-/g, " ")
+function hexToCss(hex: string, fallback: string): string {
+  const t = hex.trim()
+  if (/^#[0-9a-fA-F]{6}$/.test(t)) return t
+  return fallback
 }
 
-function defaultsRecord(density: TaskCardDensity): Record<string, string> {
-  return { ...(taskCardDensityVars(density) as Record<string, string>) }
+function cssColorToHex(css: string | undefined, fallback = "#888888"): string {
+  if (!css?.trim()) return fallback
+  const m = /^#([0-9a-fA-F]{6})$/.exec(css.trim())
+  if (m) return `#${m[1]}`
+  return fallback
+}
+
+function Section({
+  title,
+  hint,
+  children,
+}: {
+  title: string
+  hint?: string
+  children: ReactNode
+}) {
+  return (
+    <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] p-4">
+      <h2 className="m-0 text-sm font-semibold">{title}</h2>
+      {hint ? <p className="mt-1 text-[11px] leading-snug text-[var(--color-text-secondary)]">{hint}</p> : null}
+      <div className="mt-3">{children}</div>
+    </section>
+  )
+}
+
+function SliderRow({
+  label,
+  value,
+  min,
+  max,
+  step,
+  unit,
+  onChange,
+  hint,
+}: {
+  label: string
+  value: number
+  min: number
+  max: number
+  step: number
+  unit: "px" | ""
+  onChange: (n: number) => void
+  hint?: string
+}) {
+  return (
+    <div className="grid gap-1.5">
+      <div className="flex items-center justify-between gap-2">
+        <Label className="text-[11px] text-[var(--color-text-primary)]">{label}</Label>
+        <span className="font-mono text-[10px] text-[var(--color-text-secondary)]">
+          {value}
+          {unit}
+        </span>
+      </div>
+      {hint ? <p className="text-[10px] text-[var(--color-text-secondary)]">{hint}</p> : null}
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="h-2 w-full cursor-pointer accent-[var(--color-accent-health)]"
+      />
+    </div>
+  )
+}
+
+function ColorPair({
+  label,
+  bgKey,
+  fgKey,
+  varOverrides,
+  setVar,
+}: {
+  label: string
+  bgKey: string
+  fgKey: string
+  varOverrides: Record<string, string>
+  setVar: (k: string, v: string) => void
+}) {
+  const bg = varOverrides[bgKey] ?? ""
+  const fg = varOverrides[fgKey] ?? ""
+  return (
+    <div className="grid gap-2 rounded-lg border border-[var(--color-border)] p-2">
+      <p className="m-0 text-[11px] font-semibold">{label}</p>
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2">
+          <Label className="text-[10px]">Fondo</Label>
+          <input
+            type="color"
+            aria-label={`${label} fondo`}
+            value={cssColorToHex(bg, "#e2e8f0")}
+            onChange={(e) => setVar(bgKey, e.target.value)}
+            className="h-8 w-10 cursor-pointer rounded border border-[var(--color-border)] bg-transparent p-0"
+          />
+          <Input
+            className="h-8 w-28 font-mono text-[10px]"
+            value={bg}
+            placeholder="auto"
+            onChange={(e) => setVar(bgKey, e.target.value)}
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <Label className="text-[10px]">Texto</Label>
+          <input
+            type="color"
+            aria-label={`${label} texto`}
+            value={cssColorToHex(fg, "#0f172a")}
+            onChange={(e) => setVar(fgKey, e.target.value)}
+            className="h-8 w-10 cursor-pointer rounded border border-[var(--color-border)] bg-transparent p-0"
+          />
+          <Input
+            className="h-8 w-28 font-mono text-[10px]"
+            value={fg}
+            placeholder="auto"
+            onChange={(e) => setVar(fgKey, e.target.value)}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DraggableRowList({ slot }: { slot: TaskCardGridKey }) {
+  const { getRowOrder, moveRowInSlot, resetRowOrderForSlot } = useTaskCardDesign()
+  const order = getRowOrder(slot)
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
+
+  const onDragStart = (e: DragEvent, index: number) => {
+    setDragIndex(index)
+    e.dataTransfer.effectAllowed = "move"
+    e.dataTransfer.setData("text/plain", String(index))
+  }
+
+  const onDragOver = (e: DragEvent) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = "move"
+  }
+
+  const onDrop = (e: DragEvent, dropIndex: number) => {
+    e.preventDefault()
+    const from = Number.parseInt(e.dataTransfer.getData("text/plain"), 10)
+    if (!Number.isFinite(from) || from === dropIndex) {
+      setDragIndex(null)
+      return
+    }
+    moveRowInSlot(slot, from, dropIndex)
+    setDragIndex(null)
+  }
+
+  const onDragEnd = () => setDragIndex(null)
+
+  return (
+    <div className="grid gap-2">
+      <div className="flex items-center justify-between gap-2">
+        <p className="m-0 text-[10px] text-[var(--color-text-secondary)]">
+          Arrastra el asa ⋮⋮ para reordenar filas del grid (vista previa en vivo).
+        </p>
+        <button
+          type="button"
+          onClick={() => resetRowOrderForSlot(slot)}
+          className="shrink-0 text-[10px] font-medium text-[var(--color-accent-primary)] underline-offset-2 hover:underline"
+        >
+          Orden por defecto
+        </button>
+      </div>
+      <ul className="m-0 list-none space-y-1 p-0" role="list">
+        {order.map((id, index) => (
+          <li
+            key={id}
+            draggable
+            onDragStart={(e) => onDragStart(e, index)}
+            onDragOver={onDragOver}
+            onDrop={(e) => onDrop(e, index)}
+            onDragEnd={onDragEnd}
+            className="flex cursor-grab items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 active:cursor-grabbing"
+            style={{
+              opacity: dragIndex === index ? 0.55 : 1,
+              outline: "1px dashed color-mix(in srgb, var(--color-accent-health) 35%, transparent)",
+            }}
+          >
+            <GripVertical className="h-4 w-4 shrink-0 text-[var(--color-text-secondary)]" aria-hidden />
+            <span className="font-mono text-[10px] text-[var(--color-text-secondary)]">{id}</span>
+            <span className="text-[11px] font-medium text-[var(--color-text-primary)]">
+              {ROW_LABELS[id] ?? id}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
 }
 
 export function TaskCardStudioPanel() {
@@ -59,27 +259,51 @@ export function TaskCardStudioPanel() {
     setVarOverride,
     clearVarOverride,
     setGridOverride,
-    clearGridOverride,
     resetAll,
+    saveNow,
+    exportJson,
   } = useTaskCardDesign()
 
   const [density, setDensity] = useState<TaskCardDensity>("kanban")
-  const keys = useMemo(() => allTaskCardCssVarKeys(), [])
-  const defaults = useMemo(() => defaultsRecord(density), [density])
+  const [saveFlash, setSaveFlash] = useState(false)
+  const [showAdvancedGrid, setShowAdvancedGrid] = useState(false)
 
+  const defaults = useMemo(() => taskCardDensityVars(density) as Record<string, string>, [density])
   const orvitaVariant = density === "list" ? "list" : "kanban"
+  const advancedKeys = useMemo(() => allTaskCardCssVarKeys(), [])
+  const fontFamilyValue = varOverrides["--task-card-font-family"] ?? ""
+  const fontSelectValue = FONT_PRESETS.some((f) => f.value === fontFamilyValue)
+    ? fontFamilyValue
+    : "__custom__"
+
+  function setVar(key: string, value: string) {
+    setVarOverride(key, value)
+  }
+
+  const pad = pxFromVar(varOverrides["--task-card-pad"], pxFromVar(defaults["--task-card-pad"], 10))
+  const gap = pxFromVar(varOverrides["--task-card-gap"], pxFromVar(defaults["--task-card-gap"], 6))
+  const gapTight = pxFromVar(
+    varOverrides["--task-card-gap-tight"],
+    pxFromVar(defaults["--task-card-gap-tight"], 4),
+  )
+  const radius = pxFromVar(varOverrides["--task-card-radius"], pxFromVar(defaults["--task-card-radius"], 12))
+  const titlePx = pxFromVar(varOverrides["--task-card-title-size"], pxFromVar(defaults["--task-card-title-size"], 13))
+  const metaPx = pxFromVar(varOverrides["--task-card-meta-size"], pxFromVar(defaults["--task-card-meta-size"], 10))
+  const pillPx = pxFromVar(varOverrides["--task-card-pill-size"], pxFromVar(defaults["--task-card-pill-size"], 9))
+  const minH = pxFromVar(varOverrides["--task-card-min-height"], 0)
 
   async function copyJson() {
-    const payload = {
-      vars: varOverrides,
-      grids: gridOverrides,
-      note: "Pegar valores en taskCardConfig.ts o conservar en localStorage (automático).",
-    }
     try {
-      await navigator.clipboard.writeText(JSON.stringify(payload, null, 2))
+      await navigator.clipboard.writeText(exportJson())
     } catch {
       window.alert("No se pudo copiar al portapapeles.")
     }
+  }
+
+  function handleSave() {
+    saveNow()
+    setSaveFlash(true)
+    window.setTimeout(() => setSaveFlash(false), 1600)
   }
 
   return (
@@ -91,25 +315,39 @@ export function TaskCardStudioPanel() {
         className="sticky top-0 z-20 border-b border-[var(--color-border)] px-4 py-3 lg:px-8"
         style={{ background: "var(--agenda-elevated-bg, var(--color-surface-alt))" }}
       >
-        <div className="mx-auto flex max-w-[1600px] flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mx-auto flex max-w-[1700px] flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h1 className="m-0 text-lg font-semibold tracking-tight">Tarjeta maestra · estudio</h1>
+            <h1 className="m-0 text-lg font-semibold tracking-tight">Modo estudio · tarjetas</h1>
             <p className="m-0 mt-1 max-w-2xl text-[11px] leading-snug text-[var(--color-text-secondary)]">
-              Ajustes en vivo guardados en este navegador (localStorage). Las cuatro vistas de agenda usan los mismos
-              tokens y plantillas. Tras editar, recarga la pestaña de la agenda si está abierta en la misma ventana.
+              Edición visual: arrastra bloques, sliders y colores. Un solo origen de datos (
+              <code className="rounded bg-[var(--color-surface)] px-1">TaskCardDesignProvider</code>
+              ) alimenta Kanban, Lista, Semana y Mes. Autoguardado en localStorage; usa Guardar para forzar escritura.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Link
               href="/agenda"
-              className="inline-flex items-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 py-2 text-[11px] font-semibold text-[var(--color-text-primary)] hover:bg-[color-mix(in_srgb,var(--color-border)_12%,var(--color-surface-alt))]"
+              className="inline-flex items-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 py-2 text-[11px] font-semibold"
             >
               Volver a agenda
             </Link>
             <button
               type="button"
+              onClick={handleSave}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] px-3 py-2 text-[11px] font-semibold"
+              style={{
+                background: saveFlash
+                  ? "color-mix(in srgb, var(--color-accent-health) 22%, var(--color-surface-alt))"
+                  : "var(--color-surface-alt)",
+              }}
+            >
+              <Save className="h-3.5 w-3.5" aria-hidden />
+              {saveFlash ? "Guardado" : "Guardar cambios"}
+            </button>
+            <button
+              type="button"
               onClick={() => void copyJson()}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 py-2 text-[11px] font-semibold text-[var(--color-text-primary)]"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 py-2 text-[11px] font-semibold"
             >
               <Copy className="h-3.5 w-3.5" aria-hidden />
               Copiar JSON
@@ -117,9 +355,7 @@ export function TaskCardStudioPanel() {
             <button
               type="button"
               onClick={() => {
-                if (window.confirm("¿Restaurar valores por defecto del código y borrar overrides guardados?")) {
-                  resetAll()
-                }
+                if (window.confirm("¿Borrar todos los overrides del estudio?")) resetAll()
               }}
               className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] px-3 py-2 text-[11px] font-semibold text-[var(--color-accent-danger)]"
               style={{ background: "color-mix(in srgb, var(--color-accent-danger) 8%, var(--color-surface-alt))" }}
@@ -131,18 +367,15 @@ export function TaskCardStudioPanel() {
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-[1600px] gap-6 px-4 py-5 lg:grid-cols-[minmax(0,420px)_1fr] lg:gap-8 lg:px-8 lg:py-6">
-        <div className="flex min-h-0 flex-col gap-5 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:pr-1">
-          {!hydrated ? (
-            <p className="text-sm text-[var(--color-text-secondary)]">Cargando overrides guardados…</p>
-          ) : null}
+      <div className="mx-auto grid max-w-[1700px] gap-6 px-4 py-5 lg:grid-cols-[minmax(0,440px)_1fr] lg:gap-8 lg:px-8 lg:py-6">
+        <div className="flex flex-col gap-5 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:pr-1">
+          {!hydrated ? <p className="text-sm text-[var(--color-text-secondary)]">Cargando…</p> : null}
 
-          <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] p-4">
-            <h2 className="m-0 text-sm font-semibold">Densidad de la vista previa principal</h2>
-            <p className="mt-1 text-[11px] text-[var(--color-text-secondary)]">
-              La tarjeta mini siempre usa preset compact. Google de muestra sigue la densidad elegida.
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
+          <Section
+            title="Vista previa · densidad"
+            hint="La tarjeta grande usa Kanban/Lista; la mini siempre compacta. Colores y fuente aplican a todas."
+          >
+            <div className="flex flex-wrap gap-2">
               {(["kanban", "list", "compact"] as const).map((d) => (
                 <button
                   key={d}
@@ -151,89 +384,335 @@ export function TaskCardStudioPanel() {
                   className="rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-wide"
                   style={{
                     borderColor: "var(--color-border)",
-                    background: density === d ? "color-mix(in srgb, var(--color-accent-health) 14%, transparent)" : "transparent",
-                    color: density === d ? "var(--color-text-primary)" : "var(--color-text-secondary)",
+                    background:
+                      density === d
+                        ? "color-mix(in srgb, var(--color-accent-health) 14%, transparent)"
+                        : "transparent",
                   }}
                 >
                   {d === "kanban" ? "Kanban" : d === "list" ? "Lista" : "Compacta"}
                 </button>
               ))}
             </div>
-          </section>
+          </Section>
 
-          <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] p-4">
-            <h2 className="m-0 text-sm font-semibold">Variables CSS</h2>
-            <p className="mt-1 text-[11px] text-[var(--color-text-secondary)]">
-              Deja vacío para usar el valor del código. Placeholder = defecto para la densidad seleccionada arriba.
-            </p>
-            <div className="mt-4 flex flex-col gap-3">
-              {keys.map((key) => (
-                <div key={key} className="grid gap-1">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <Label htmlFor={`var-${key}`} className="font-mono text-[10px] text-[var(--color-text-secondary)]">
-                      {key}
-                    </Label>
+          <Section
+            title="Estructura (drag & drop)"
+            hint="Tres plantillas: Órvita (Kanban/Lista), Mini (semana/mes), Google (solo lectura). Cada lista define el orden vertical del grid."
+          >
+            <div className="flex flex-col gap-5">
+              <div>
+                <p className="m-0 mb-2 text-[11px] font-semibold text-[var(--color-text-primary)]">
+                  Órvita · tarjeta completa
+                </p>
+                <DraggableRowList slot="orvita" />
+              </div>
+              <div>
+                <p className="m-0 mb-2 text-[11px] font-semibold text-[var(--color-text-primary)]">
+                  Mini · semana / mes
+                </p>
+                <DraggableRowList slot="mini" />
+              </div>
+              <div>
+                <p className="m-0 mb-2 text-[11px] font-semibold text-[var(--color-text-primary)]">
+                  Google · unificado
+                </p>
+                <DraggableRowList slot="readonly" />
+              </div>
+            </div>
+          </Section>
+
+          <Section title="Espaciado y forma" hint="Valores en píxeles; se escriben como tokens CSS en las variables.">
+            <div className="flex flex-col gap-4">
+              <SliderRow
+                label="Padding interno"
+                value={pad}
+                min={4}
+                max={28}
+                step={1}
+                unit="px"
+                onChange={(n) => setVar("--task-card-pad", `${n}px`)}
+              />
+              <SliderRow
+                label="Gap del grid"
+                value={gap}
+                min={0}
+                max={20}
+                step={1}
+                unit="px"
+                onChange={(n) => setVar("--task-card-gap", `${n}px`)}
+              />
+              <SliderRow
+                label="Gap pastillas / secundario"
+                value={gapTight}
+                min={0}
+                max={14}
+                step={1}
+                unit="px"
+                onChange={(n) => setVar("--task-card-gap-tight", `${n}px`)}
+              />
+              <SliderRow
+                label="Border radius"
+                value={radius}
+                min={0}
+                max={24}
+                step={1}
+                unit="px"
+                onChange={(n) => setVar("--task-card-radius", `${n}px`)}
+              />
+              <SliderRow
+                label="Altura mínima (0 = automático)"
+                value={minH}
+                min={0}
+                max={200}
+                step={4}
+                unit="px"
+                onChange={(n) => setVar("--task-card-min-height", n > 0 ? `${n}px` : "")}
+                hint="Solo afecta si el valor es &gt; 0."
+              />
+            </div>
+          </Section>
+
+          <Section title="Tipografía" hint="Tamaños en px; peso del título como número CSS.">
+            <div className="flex flex-col gap-4">
+              <div className="grid gap-1.5">
+                <Label className="text-[11px]">Familia</Label>
+                <select
+                  className="h-10 w-full rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-[12px] text-[var(--color-text-primary)]"
+                  value={fontSelectValue}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    if (v === "__custom__") return
+                    setVar("--task-card-font-family", v)
+                  }}
+                  aria-label="Familia tipográfica (preset)"
+                >
+                  {FONT_PRESETS.map((f) => (
+                    <option key={f.label} value={f.value}>
+                      {f.label}
+                    </option>
+                  ))}
+                  <option value="__custom__">Personalizada (campo abajo)</option>
+                </select>
+                <Input
+                  className="font-mono text-xs"
+                  placeholder="ej. Inter, sans-serif"
+                  value={varOverrides["--task-card-font-family"] ?? ""}
+                  onChange={(e) => setVar("--task-card-font-family", e.target.value)}
+                />
+              </div>
+              <div className="grid gap-1.5">
+                <Label className="text-[11px]">Peso del título</Label>
+                <select
+                  className="h-10 w-full rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-[12px]"
+                  value={varOverrides["--task-card-font-weight-title"] ?? ""}
+                  onChange={(e) => setVar("--task-card-font-weight-title", e.target.value)}
+                >
+                  {WEIGHT_PRESETS.map((w) => (
+                    <option key={w.label} value={w.value}>
+                      {w.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <SliderRow
+                label="Título"
+                value={titlePx}
+                min={10}
+                max={22}
+                step={1}
+                unit="px"
+                onChange={(n) => setVar("--task-card-title-size", `${n}px`)}
+              />
+              <SliderRow
+                label="Metadata / timeline"
+                value={metaPx}
+                min={8}
+                max={16}
+                step={1}
+                unit="px"
+                onChange={(n) => setVar("--task-card-meta-size", `${n}px`)}
+              />
+              <SliderRow
+                label="Pastillas"
+                value={pillPx}
+                min={7}
+                max={14}
+                step={1}
+                unit="px"
+                onChange={(n) => setVar("--task-card-pill-size", `${n}px`)}
+              />
+            </div>
+          </Section>
+
+          <Section title="Color" hint="Prioridad ALTA / MEDIA / BAJA en pastillas Órvita. Fondo y borde de la tarjeta.">
+            <div className="flex flex-col gap-3">
+              <div className="grid gap-2">
+                <Label className="text-[11px]">Fondo tarjeta</Label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="color"
+                    aria-label="Fondo tarjeta"
+                    value={cssColorToHex(varOverrides["--task-card-surface-bg"], "#ffffff")}
+                    onChange={(e) => setVar("--task-card-surface-bg", hexToCss(e.target.value, "#ffffff"))}
+                    className="h-9 w-14 cursor-pointer rounded border border-[var(--color-border)] p-0"
+                  />
+                  <Input
+                    className="min-w-[12rem] flex-1 font-mono text-xs"
+                    value={varOverrides["--task-card-surface-bg"] ?? ""}
+                    placeholder="vacío = tema"
+                    onChange={(e) => setVar("--task-card-surface-bg", e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label className="text-[11px]">Borde contenedor (tarjeta completa)</Label>
+                <Input
+                  className="font-mono text-xs"
+                  placeholder="0.5px solid var(--color-border)"
+                  value={varOverrides["--task-card-chrome-border"] ?? ""}
+                  onChange={(e) => setVar("--task-card-chrome-border", e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label className="text-[11px]">Color de borde 1px (mini / fallback)</Label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="color"
+                    aria-label="Color borde"
+                    value={cssColorToHex(varOverrides["--task-card-border-color"], "#cbd5e1")}
+                    onChange={(e) => setVar("--task-card-border-color", hexToCss(e.target.value, "#cbd5e1"))}
+                    className="h-9 w-14 cursor-pointer rounded border border-[var(--color-border)] p-0"
+                  />
+                  <Input
+                    className="min-w-[10rem] flex-1 font-mono text-xs"
+                    value={varOverrides["--task-card-border-color"] ?? ""}
+                    placeholder="var(--color-border)"
+                    onChange={(e) => setVar("--task-card-border-color", e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid gap-1">
+                  <Label className="text-[11px]">Color título</Label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={cssColorToHex(varOverrides["--task-card-title-color"], "#0f172a")}
+                      onChange={(e) => setVar("--task-card-title-color", e.target.value)}
+                      className="h-9 w-14 cursor-pointer rounded border p-0"
+                    />
+                    <Input
+                      className="font-mono text-xs"
+                      value={varOverrides["--task-card-title-color"] ?? ""}
+                      onChange={(e) => setVar("--task-card-title-color", e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="grid gap-1">
+                  <Label className="text-[11px]">Color metadata</Label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={cssColorToHex(varOverrides["--task-card-meta-color"], "#64748b")}
+                      onChange={(e) => setVar("--task-card-meta-color", e.target.value)}
+                      className="h-9 w-14 cursor-pointer rounded border p-0"
+                    />
+                    <Input
+                      className="font-mono text-xs"
+                      value={varOverrides["--task-card-meta-color"] ?? ""}
+                      onChange={(e) => setVar("--task-card-meta-color", e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+              <ColorPair
+                label="Prioridad ALTA"
+                bgKey="--task-card-priority-alta-bg"
+                fgKey="--task-card-priority-alta-fg"
+                varOverrides={varOverrides}
+                setVar={setVar}
+              />
+              <ColorPair
+                label="Prioridad MEDIA"
+                bgKey="--task-card-priority-media-bg"
+                fgKey="--task-card-priority-media-fg"
+                varOverrides={varOverrides}
+                setVar={setVar}
+              />
+              <ColorPair
+                label="Prioridad BAJA"
+                bgKey="--task-card-priority-baja-bg"
+                fgKey="--task-card-priority-baja-fg"
+                varOverrides={varOverrides}
+                setVar={setVar}
+              />
+            </div>
+          </Section>
+
+          <Section
+            title="Avanzado · grid CSS crudo"
+            hint="Opcional. Si hay texto aquí para una plantilla, sustituye al orden por arrastre de esa plantilla."
+          >
+            <button
+              type="button"
+              onClick={() => setShowAdvancedGrid((v) => !v)}
+              className="mb-2 text-[11px] font-semibold text-[var(--color-accent-primary)] underline-offset-2 hover:underline"
+            >
+              {showAdvancedGrid ? "Ocultar" : "Mostrar"} editores
+            </button>
+            {showAdvancedGrid ? (
+              <div className="flex flex-col gap-3">
+                {(["orvita", "mini", "readonly"] as const).map((slot) => (
+                  <div key={slot} className="grid gap-1">
+                    <Label className="font-mono text-[10px]">{slot}</Label>
+                    <Textarea
+                      value={gridOverrides[slot] ?? ""}
+                      placeholder={TASK_CARD_GRID[slot]}
+                      onChange={(e) => setGridOverride(slot, e.target.value)}
+                      className="min-h-[64px] font-mono text-[10px]"
+                      spellCheck={false}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </Section>
+
+          <Section title="Todas las variables (lista)" hint="Cualquier token adicional; vacío = código por defecto.">
+            <div className="flex max-h-56 flex-col gap-2 overflow-y-auto pr-1">
+              {advancedKeys.map((key) => (
+                <div key={key} className="grid gap-0.5">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="font-mono text-[9px] text-[var(--color-text-secondary)]">{key}</span>
                     <button
                       type="button"
                       onClick={() => clearVarOverride(key)}
-                      className="shrink-0 text-[10px] font-medium text-[var(--color-accent-primary)] underline-offset-2 hover:underline"
+                      className="text-[9px] text-[var(--color-accent-primary)] hover:underline"
                     >
-                      Defecto
+                      limpiar
                     </button>
                   </div>
-                  <p className="m-0 text-[11px] text-[var(--color-text-primary)]">{labelForVar(key)}</p>
                   <Input
-                    id={`var-${key}`}
+                    className="h-8 font-mono text-[10px]"
                     value={varOverrides[key] ?? ""}
-                    placeholder={defaults[key] ?? "—"}
+                    placeholder={(defaults as Record<string, string>)[key] ?? "—"}
                     onChange={(e) => setVarOverride(key, e.target.value)}
-                    className="h-9 font-mono text-xs"
                   />
                 </div>
               ))}
             </div>
-          </section>
-
-          <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] p-4">
-            <h2 className="m-0 text-sm font-semibold">Grid (grid-template-areas)</h2>
-            <p className="mt-1 text-[11px] text-[var(--color-text-secondary)]">
-              Una fila por comillas en CSS. Vacío = plantilla del código en taskCardConfig.ts.
-            </p>
-            {(["orvita", "mini", "readonly"] as const).map((slot) => (
-              <div key={slot} className="mt-4 grid gap-1.5">
-                <div className="flex items-center justify-between gap-2">
-                  <Label htmlFor={`grid-${slot}`} className="text-xs font-semibold capitalize">
-                    {slot}
-                  </Label>
-                  <button
-                    type="button"
-                    onClick={() => clearGridOverride(slot)}
-                    className="text-[10px] font-medium text-[var(--color-accent-primary)] underline-offset-2 hover:underline"
-                  >
-                    Defecto
-                  </button>
-                </div>
-                <p className="m-0 text-[10px] leading-snug text-[var(--color-text-secondary)]">{GRID_HELP[slot]}</p>
-                <Textarea
-                  id={`grid-${slot}`}
-                  value={gridOverrides[slot] ?? ""}
-                  placeholder={TASK_CARD_GRID[slot]}
-                  onChange={(e) => setGridOverride(slot, e.target.value)}
-                  className="min-h-[72px] font-mono text-[11px] leading-relaxed"
-                  spellCheck={false}
-                />
-              </div>
-            ))}
-          </section>
+          </Section>
         </div>
 
         <div className="flex flex-col gap-6 lg:sticky lg:top-24 lg:self-start">
-          <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] p-4">
-            <h2 className="m-0 text-sm font-semibold">Órvita · tarjeta completa</h2>
-            <p className="mt-1 text-[11px] text-[var(--color-text-secondary)]">
-              Misma pieza que Kanban/Lista. Grid y variables con overlay de áreas.
-            </p>
-            <div className="mt-3 max-w-lg">
+          <div className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 py-2 text-[11px] text-[var(--color-text-secondary)]">
+            <Check className="h-4 w-4 shrink-0 text-[var(--color-accent-health)]" aria-hidden />
+            Vista previa en vivo · misma config que Kanban, Lista, Semana y Mes
+          </div>
+
+          <Section title="Órvita · Kanban / Lista">
+            <div className="max-w-xl">
               <AgendaOrvitaTaskCard
                 task={TASK_CARD_STUDIO_SAMPLE}
                 variant={orvitaVariant}
@@ -244,18 +723,16 @@ export function TaskCardStudioPanel() {
                 onAcceptAssignment={async () => {}}
               />
             </div>
-          </section>
+          </Section>
 
-          <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] p-4">
-            <h2 className="m-0 text-sm font-semibold">Órvita · mini (semana / mes)</h2>
-            <div className="mt-3 max-w-sm">
+          <Section title="Órvita · mini">
+            <div className="max-w-sm">
               <AgendaOrvitaMiniCard task={TASK_CARD_STUDIO_SAMPLE} iterationMode />
             </div>
-          </section>
+          </Section>
 
-          <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] p-4">
-            <h2 className="m-0 text-sm font-semibold">Google · solo lectura</h2>
-            <div className="mt-3 max-w-lg">
+          <Section title="Google · muestra">
+            <div className="max-w-xl">
               <AgendaReadonlyUnifiedCard
                 variant={density === "compact" ? "compact" : density === "list" ? "list" : "kanban"}
                 borderLeft="4px solid color-mix(in srgb, var(--color-accent-finance) 65%, transparent)"
@@ -265,14 +742,14 @@ export function TaskCardStudioPanel() {
                 googleKind="calendar"
                 kindPillLabel="Calendar"
                 fuente="Google Calendar"
-                footNote="Sala virtual · enlace en Calendar"
+                footNote="Sala virtual"
                 badgeLetter="G"
                 badgeColorVar="var(--color-accent-finance)"
                 editUrl="https://calendar.google.com"
                 iterationMode
               />
             </div>
-          </section>
+          </Section>
         </div>
       </div>
     </div>

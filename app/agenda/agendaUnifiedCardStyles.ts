@@ -13,19 +13,22 @@ export function agendaCardSurfaceStyle(borderLeft: string): CSSProperties {
 export function priorityPillStyle(p: UiAgendaTask["priority"]): CSSProperties {
   if (p === "alta") {
     return {
-      background: "color-mix(in srgb, var(--color-accent-danger) 16%, transparent)",
-      color: "var(--color-accent-danger)",
+      background:
+        "var(--task-card-priority-alta-bg, color-mix(in srgb, var(--color-accent-danger) 16%, transparent))",
+      color: "var(--task-card-priority-alta-fg, var(--color-accent-danger))",
     }
   }
   if (p === "media") {
     return {
-      background: "color-mix(in srgb, var(--color-accent-warning) 16%, transparent)",
-      color: "var(--color-accent-warning)",
+      background:
+        "var(--task-card-priority-media-bg, color-mix(in srgb, var(--color-accent-warning) 16%, transparent))",
+      color: "var(--task-card-priority-media-fg, var(--color-accent-warning))",
     }
   }
   return {
-    background: "color-mix(in srgb, var(--color-border) 40%, transparent)",
-    color: "var(--color-text-secondary)",
+    background:
+      "var(--task-card-priority-baja-bg, color-mix(in srgb, var(--color-border) 40%, transparent))",
+    color: "var(--task-card-priority-baja-fg, var(--color-text-secondary))",
   }
 }
 

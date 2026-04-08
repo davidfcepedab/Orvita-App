@@ -81,14 +81,23 @@ export function AgendaReadonlyUnifiedCard({
     await onDelete()
   }
 
+  const shellChrome = {
+    borderRadius: "var(--task-card-radius, var(--radius-card))",
+    background: "var(--task-card-surface-bg, var(--color-surface))",
+    fontFamily: "var(--task-card-font-family, inherit)",
+    minHeight: "var(--task-card-min-height, unset)",
+  } as const
+
   const inner = (
-    <div style={{ ...varStyle, ...gridStyle }}>
+    <div style={{ ...varStyle, ...gridStyle, fontFamily: "var(--task-card-font-family, inherit)" }}>
       <TaskCardArea area="title" iterationMode={iterationMode}>
         <p
-          className="m-0 font-semibold tracking-tight text-[var(--color-text-primary)]"
+          className="m-0 tracking-tight"
           style={{
             fontSize: "var(--task-card-title-size)",
             lineHeight: "var(--task-card-line-title)",
+            fontWeight: "var(--task-card-font-weight-title, 600)",
+            color: "var(--task-card-title-color, var(--color-text-primary))",
           }}
         >
           {title}
@@ -97,10 +106,11 @@ export function AgendaReadonlyUnifiedCard({
 
       <TaskCardArea area="meta" iterationMode={iterationMode}>
         <p
-          className="m-0 flex items-center gap-1 text-[var(--color-text-secondary)]"
+          className="m-0 flex items-center gap-1"
           style={{
             fontSize: "var(--task-card-meta-size)",
             lineHeight: "var(--task-card-line-body)",
+            color: "var(--task-card-meta-color, var(--color-text-secondary))",
           }}
         >
           <TimelineIcon className={`${iconCls} shrink-0 opacity-70`} strokeWidth={2} aria-hidden />
@@ -231,10 +241,10 @@ export function AgendaReadonlyUnifiedCard({
         className="overflow-hidden"
         style={{
           overflow: "hidden",
-          borderRadius: "var(--task-card-radius)",
-          border: "1px solid var(--color-border)",
-          background: "var(--color-surface-alt)",
+          ...shellChrome,
+          border: "1px solid var(--task-card-border-color, var(--color-border))",
           borderLeft,
+          background: "var(--task-card-surface-bg, var(--color-surface-alt))",
         }}
       >
         {inner}
@@ -243,7 +253,17 @@ export function AgendaReadonlyUnifiedCard({
   }
 
   return (
-    <Card hover className="p-0 overflow-hidden" style={agendaCardSurfaceStyle(borderLeft)}>
+    <Card
+      hover
+      className="p-0 overflow-hidden"
+      style={{
+        ...agendaCardSurfaceStyle(borderLeft),
+        ...varStyle,
+        ...shellChrome,
+        border: "var(--task-card-chrome-border, 0.5px solid var(--color-border))",
+        borderLeft,
+      }}
+    >
       {inner}
     </Card>
   )

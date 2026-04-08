@@ -119,15 +119,25 @@ export function AgendaOrvitaTaskCard({
     <Card
       hover
       className="p-0 overflow-hidden"
-      style={{ ...agendaCardSurfaceStyle(taskLeftBorder(task.type, 4)), ...varStyle }}
+      style={{
+        ...agendaCardSurfaceStyle(taskLeftBorder(task.type, 4)),
+        ...varStyle,
+        borderRadius: "var(--task-card-radius, var(--radius-card))",
+        background: "var(--task-card-surface-bg, var(--color-surface))",
+        border: "var(--task-card-chrome-border, 0.5px solid var(--color-border))",
+        fontFamily: "var(--task-card-font-family, inherit)",
+        minHeight: "var(--task-card-min-height, unset)",
+      }}
     >
       <div style={gridStyle}>
         <TaskCardArea area="title" iterationMode={iterationMode} className="flex min-w-0 flex-wrap items-start gap-x-2 gap-y-1">
           <p
-            className="m-0 min-w-0 flex-1 font-semibold tracking-tight text-[var(--color-text-primary)]"
+            className="m-0 min-w-0 flex-1 tracking-tight"
             style={{
               fontSize: "var(--task-card-title-size)",
               lineHeight: "var(--task-card-line-title)",
+              fontWeight: "var(--task-card-font-weight-title, 600)",
+              color: "var(--task-card-title-color, var(--color-text-primary))",
             }}
           >
             {task.title}
@@ -137,10 +147,11 @@ export function AgendaOrvitaTaskCard({
 
         <TaskCardArea area="meta" iterationMode={iterationMode}>
           <p
-            className="m-0 flex items-center gap-1 text-[var(--color-text-secondary)]"
+            className="m-0 flex items-center gap-1"
             style={{
               fontSize: "var(--task-card-meta-size)",
               lineHeight: "var(--task-card-line-body)",
+              color: "var(--task-card-meta-color, var(--color-text-secondary))",
             }}
           >
             <Clock className="h-3 w-3 shrink-0 opacity-70" strokeWidth={2} aria-hidden />

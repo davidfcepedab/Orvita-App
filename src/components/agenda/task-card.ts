@@ -5,7 +5,12 @@
 export {
   TASK_CARD_GRID,
   TASK_CARD_ITERATION_QUERY,
+  TASK_CARD_MINI_ROWS,
+  TASK_CARD_ORVITA_ROWS,
+  TASK_CARD_READONLY_ROWS,
   allTaskCardCssVarKeys,
+  buildGridTemplateFromRows,
+  defaultRowOrderForGrid,
   mergeTaskCardVarOverrides,
   resolveTaskCardGridTemplate,
   taskCardDensityVars,

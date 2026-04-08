@@ -99,6 +99,56 @@ export const TASK_CARD_GRID = {
 
 export type TaskCardGridKey = keyof typeof TASK_CARD_GRID
 
+/** Filas de contenido (sin columna `actions`) para armar grid-template-areas en el estudio. */
+export const TASK_CARD_ORVITA_ROWS = ["title", "meta", "pills", "assign", "footer"] as const
+export const TASK_CARD_MINI_ROWS = ["title", "meta", "pills", "extra", "footer"] as const
+export const TASK_CARD_READONLY_ROWS = ["title", "meta", "pills", "fuente", "footer"] as const
+
+export function defaultRowOrderForGrid(slot: TaskCardGridKey): string[] {
+  if (slot === "orvita") return [...TASK_CARD_ORVITA_ROWS]
+  if (slot === "mini") return [...TASK_CARD_MINI_ROWS]
+  return [...TASK_CARD_READONLY_ROWS]
+}
+
+/** Kanban/Lista: cada fila comparte columna `actions` a la derecha. */
+export function buildOrvitaGridTemplateFromRows(rows: string[]): string {
+  return rows.map((r) => `"${r} actions"`).join(" ")
+}
+
+/** Semana/Mes: una sola columna. */
+export function buildMiniGridTemplateFromRows(rows: string[]): string {
+  return rows.map((r) => `"${r}"`).join(" ")
+}
+
+/** Google: igual que orvita (acciones a la derecha). */
+export function buildReadonlyGridTemplateFromRows(rows: string[]): string {
+  return rows.map((r) => `"${r} actions"`).join(" ")
+}
+
+export function buildGridTemplateFromRows(slot: TaskCardGridKey, rows: string[]): string {
+  if (slot === "mini") return buildMiniGridTemplateFromRows(rows)
+  if (slot === "readonly") return buildReadonlyGridTemplateFromRows(rows)
+  return buildOrvitaGridTemplateFromRows(rows)
+}
+
+/** Variables opcionales del estudio (no están en BASE/DENSITY hasta que las guardes). */
+const STUDIO_OPTIONAL_VAR_KEYS: string[] = [
+  "--task-card-font-family",
+  "--task-card-font-weight-title",
+  "--task-card-min-height",
+  "--task-card-surface-bg",
+  "--task-card-chrome-border",
+  "--task-card-border-color",
+  "--task-card-title-color",
+  "--task-card-meta-color",
+  "--task-card-priority-alta-bg",
+  "--task-card-priority-alta-fg",
+  "--task-card-priority-media-bg",
+  "--task-card-priority-media-fg",
+  "--task-card-priority-baja-bg",
+  "--task-card-priority-baja-fg",
+]
+
 /** Une tokens por densidad + overrides no vacíos (estudio / localStorage). */
 export function mergeTaskCardVarOverrides(
   base: CSSProperties,
@@ -127,6 +177,7 @@ export function allTaskCardCssVarKeys(): string[] {
   for (const d of Object.keys(DENSITY_VARS) as TaskCardDensity[]) {
     for (const k of Object.keys(DENSITY_VARS[d])) set.add(k)
   }
+  for (const k of STUDIO_OPTIONAL_VAR_KEYS) set.add(k)
   return [...set].sort()
 }
 
@@ -173,4 +224,10 @@ export function taskCardMiniGridStyle(templateAreas: string): CSSProperties {
 //   "--task-card-radius": "10px",
 //
 // Reordenar bloques: edita TASK_CARD_GRID.orvita | .mini | .readonly (grid-template-areas).
+// ===============================================================================
+//
+// === MODO ESTUDIO ACTIVADO ===
+// Abre /agenda/task-card-studio
+// Arrastra filas en “Estructura”, usa sliders y colores; todo se replica en Kanban, Lista, Semana y Mes.
+// Los cambios se guardan en localStorage (iteración rápida) y puedes “Copiar JSON” para llevarlo al repo.
 // ===============================================================================

@@ -33,20 +33,26 @@ export function AgendaOrvitaMiniCard({ task, iterationMode: iterationProp }: Pro
 
   return (
     <div
-      className="overflow-hidden border border-[var(--color-border)] bg-[var(--color-surface-alt)]"
+      className="overflow-hidden"
       style={{
         ...varStyle,
         ...gridStyle,
         borderRadius: "var(--task-card-radius)",
+        border: "1px solid var(--task-card-border-color, var(--color-border))",
         borderLeft: taskLeftBorder(task.type, 4),
+        background: "var(--task-card-surface-bg, var(--color-surface-alt))",
+        fontFamily: "var(--task-card-font-family, inherit)",
+        minHeight: "var(--task-card-min-height, unset)",
       }}
     >
       <TaskCardArea area="title" iterationMode={iterationMode}>
         <p
-          className="m-0 font-semibold tracking-tight text-[var(--color-text-primary)]"
+          className="m-0 tracking-tight"
           style={{
             fontSize: "var(--task-card-title-size)",
             lineHeight: "var(--task-card-line-title)",
+            fontWeight: "var(--task-card-font-weight-title, 600)",
+            color: "var(--task-card-title-color, var(--color-text-primary))",
           }}
         >
           {task.title}
@@ -55,10 +61,11 @@ export function AgendaOrvitaMiniCard({ task, iterationMode: iterationProp }: Pro
 
       <TaskCardArea area="meta" iterationMode={iterationMode}>
         <p
-          className="m-0 flex items-center gap-1 text-[var(--color-text-secondary)]"
+          className="m-0 flex items-center gap-1"
           style={{
             fontSize: "var(--task-card-meta-size)",
             lineHeight: "var(--task-card-line-body)",
+            color: "var(--task-card-meta-color, var(--color-text-secondary))",
           }}
         >
           <Clock className="h-2.5 w-2.5 shrink-0 opacity-70" strokeWidth={2} aria-hidden />
