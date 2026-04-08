@@ -4,7 +4,7 @@
 
 | Rama | Rol |
 |------|-----|
-| **`main`** | **Producción Vercel** → **https://orvita.app**. Es la rama por defecto en GitHub y la única que debe estar configurada como **Production Branch** en Vercel. |
+| **`main`** | **Producción Vercel** → **https://orvita.app** (dominio canónico; `www` redirige al apex vía `vercel.json`). Es la rama por defecto en GitHub y la única que debe estar configurada como **Production Branch** en Vercel. En Vercel, define **`NEXT_PUBLIC_SITE_URL=https://orvita.app`** para metadatos y URLs absolutas. |
 
 ## Otras ramas en el remoto (opcionales)
 

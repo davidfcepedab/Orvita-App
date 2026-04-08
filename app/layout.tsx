@@ -5,8 +5,10 @@ import Providers from "@/app/providers"
 import { ThemeProvider } from "@/src/theme/ThemeProvider"
 import { AppShell } from "@/src/components/layout/AppShell"
 import BottomNav from "@/app/components/BottomNav"
+import { siteOrigin } from "@/lib/site/origin"
 
 export const metadata: Metadata = {
+  metadataBase: new URL(siteOrigin()),
   title: {
     default: "Órvita",
     template: "%s · Órvita",
