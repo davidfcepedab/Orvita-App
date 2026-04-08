@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js"
 import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
 import { isAppMockMode, isSupabaseEnabled, UI_SYNC_OFF_SHORT } from "@/lib/checkins/flags"
@@ -9,6 +10,7 @@ import type { FinanceTransaction, FinanceTxType } from "@/lib/finanzas/types"
 import { getHouseholdId } from "@/lib/households/getHouseholdId"
 import { formatPostgrestError } from "@/lib/finanzas/subcategoryCatalog"
 import { getTransactionsByRange } from "@/lib/services/finanzasService"
+import { createServiceClient } from "@/lib/supabase/server"
 
 export const runtime = "nodejs"
 
@@ -23,6 +25,44 @@ function isLikelySupabaseRlsDenial(err: unknown): boolean {
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+const RLS_AUDIT_HELP =
+  "Migración recomendada en Supabase: 20260408140000_finance_tx_rls_split_and_audit_row_security.sql (o supabase db push). Si persiste, verifica 20260404120000 y el trigger finance_audit_trigger."
+
+/**
+ * Soft-delete ya validado en capa API (hogar + tipo). Si RLS/audit del JWT falla,
+ * reintenta con service_role solo cuando existe SUPABASE_SERVICE_ROLE_KEY.
+ */
+async function softDeleteReconciliationRows(
+  userClient: SupabaseClient,
+  householdId: string,
+  ids: string[],
+  now: string,
+) {
+  const q = userClient
+    .from("orbita_finance_transactions")
+    .update({ deleted_at: now, updated_at: now })
+    .eq("household_id", householdId)
+
+  const { error } =
+    ids.length === 1 ? await q.eq("id", ids[0]!) : await q.in("id", ids)
+
+  if (!error) return { error: null as typeof error }
+  if (!isLikelySupabaseRlsDenial(error)) return { error }
+
+  try {
+    const svc = createServiceClient()
+    const q2 = svc
+      .from("orbita_finance_transactions")
+      .update({ deleted_at: now, updated_at: now })
+      .eq("household_id", householdId)
+    return ids.length === 1
+      ? await q2.eq("id", ids[0]!)
+      : await q2.in("id", ids)
+  } catch {
+    return { error }
+  }
+}
 
 function resolvedTxType(tx: FinanceTransaction): FinanceTxType {
   if (tx.type === "income" || tx.type === "expense") return tx.type
@@ -270,11 +310,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     const now = new Date().toISOString()
-    const { error: upErr } = await auth.supabase
-      .from("orbita_finance_transactions")
-      .update({ deleted_at: now, updated_at: now })
-      .eq("id", id)
-      .eq("household_id", householdId)
+    const { error: upErr } = await softDeleteReconciliationRows(auth.supabase, householdId, [id], now)
 
     if (upErr) throw upErr
 
@@ -286,8 +322,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error:
-            "La base de datos rechazó el borrado (RLS/audit). En Supabase ejecuta la migración 20260403180000 (row_security off en el trigger) o supabase db push.",
+          error: `La base de datos rechazó el borrado (RLS/audit). ${RLS_AUDIT_HELP}`,
         },
         { status: 403 },
       )
@@ -369,11 +404,12 @@ export async function POST(req: NextRequest) {
     }
 
     if (eligible.length > 0) {
-      const { error: upErr } = await auth.supabase
-        .from("orbita_finance_transactions")
-        .update({ deleted_at: now, updated_at: now })
-        .in("id", eligible)
-        .eq("household_id", householdId)
+      const { error: upErr } = await softDeleteReconciliationRows(
+        auth.supabase,
+        householdId,
+        eligible,
+        now,
+      )
 
       if (upErr) throw upErr
     }
@@ -389,8 +425,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error:
-            "La base de datos rechazó el borrado (RLS/audit). Ejecuta en Supabase 20260403180000 o supabase db push.",
+          error: `La base de datos rechazó el borrado (RLS/audit). ${RLS_AUDIT_HELP}`,
         },
         { status: 403 },
       )
