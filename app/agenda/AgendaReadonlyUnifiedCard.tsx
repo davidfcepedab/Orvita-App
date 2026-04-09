@@ -25,7 +25,10 @@ function variantToDensity(v: Variant): TaskCardDensity {
 }
 
 const moveBtnClass =
-  "rounded-full bg-[color-mix(in_srgb,var(--color-accent-primary)_10%,transparent)] px-2 py-0.5 text-[10px] font-medium tracking-tight text-[var(--color-text-secondary)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-accent-primary)_16%,transparent)] hover:text-[var(--color-text-primary)]"
+  "rounded-full bg-[color-mix(in_srgb,var(--color-accent-primary)_10%,transparent)] px-1.5 py-0 text-[9px] font-medium tracking-tight text-[var(--color-text-secondary)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-accent-primary)_16%,transparent)] hover:text-[var(--color-text-primary)]"
+
+const topActionBtnClass =
+  "inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--color-text-secondary)] transition-[opacity,color,background-color] hover:bg-[color-mix(in_srgb,var(--color-text-secondary)_8%,transparent)]"
 
 type Props = {
   variant: Variant
@@ -94,10 +97,10 @@ export function AgendaReadonlyUnifiedCard({
   const iconCls = variant === "compact" ? "h-2.5 w-2.5" : "h-3 w-3"
   const titleClass =
     variant === "compact"
-      ? "text-[12px] font-semibold leading-snug"
+      ? "text-[11px] font-semibold leading-snug"
       : variant === "list"
-        ? "text-[16px] font-semibold leading-snug sm:text-[17px]"
-        : "text-[15px] font-semibold leading-snug sm:text-[16px]"
+        ? "text-[14px] font-semibold leading-snug sm:text-[15px]"
+        : "text-[13px] font-semibold leading-snug sm:text-[14px]"
 
   const showComplete =
     googleKind === "reminder" && Boolean(onToggleGoogleComplete)
@@ -116,24 +119,55 @@ export function AgendaReadonlyUnifiedCard({
 
   const inner = (
     <div
-      className="flex flex-col gap-2 px-4 py-3 sm:gap-2.5 sm:px-4 sm:py-3.5"
+      className="flex flex-col gap-1.5 px-3 py-2 sm:gap-2 sm:px-3 sm:py-2.5"
       style={{ ...varStyle, fontFamily: "var(--task-card-font-family, inherit)" }}
     >
-      <div className="flex items-center gap-2">
-        <p className="m-0 flex min-w-0 flex-1 items-center gap-1 text-[10px] leading-tight text-[var(--color-text-secondary)]">
+      <div className="flex items-center justify-between gap-2">
+        <p className="m-0 flex min-w-0 flex-1 items-center gap-1 text-[9px] leading-tight text-[var(--color-text-secondary)] sm:text-[10px]">
           <MetaIcon className={`${iconCls} shrink-0 opacity-55`} strokeWidth={2} aria-hidden />
           <span className="truncate">{metaText}</span>
         </p>
+        {onDelete || onEdit ? (
+          <div className="flex shrink-0 items-center gap-0.5">
+            {onDelete ? (
+              <button
+                type="button"
+                disabled={deleteBusy}
+                onClick={() => void handleDeleteClick()}
+                className={`${topActionBtnClass} opacity-45 hover:opacity-100 hover:text-[var(--color-accent-danger)] disabled:opacity-25`}
+                aria-label={
+                  googleKind === "calendar"
+                    ? "Eliminar evento también en Google Calendar"
+                    : "Eliminar tarea o recordatorio también en Google Tasks"
+                }
+                title={deleteBusy ? "Eliminando…" : "Eliminar"}
+              >
+                <Trash2 className="h-2.5 w-2.5" strokeWidth={2} aria-hidden />
+              </button>
+            ) : null}
+            {onEdit ? (
+              <button
+                type="button"
+                className={`${topActionBtnClass} opacity-55 hover:opacity-100 hover:text-[var(--color-text-primary)]`}
+                aria-label="Editar"
+                title="Editar"
+                onClick={onEdit}
+              >
+                <Pencil className="h-3 w-3" strokeWidth={1.75} aria-hidden />
+              </button>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       {showRightChrome ? (
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center justify-between gap-2">
           <p
             className={`m-0 min-w-0 flex-1 tracking-tight text-[var(--color-text-primary)] ${titleClass}`}
           >
             {title}
           </p>
-          <div className="flex shrink-0 flex-col items-end gap-1.5">
+          <div className="flex shrink-0 flex-col items-end gap-1">
             {showComplete ? (
               <button
                 type="button"
@@ -142,7 +176,7 @@ export function AgendaReadonlyUnifiedCard({
                 disabled={googleCompleteBusy}
                 aria-label={doneVisual ? "Marcar como pendiente" : "Marcar como realizada"}
                 onClick={() => onToggleGoogleComplete?.()}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-border)] text-[var(--agenda-reminder)] transition-[transform,background-color,border-color] duration-300 hover:border-[var(--agenda-reminder)] disabled:opacity-45"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-border)] text-[var(--agenda-reminder)] transition-[transform,background-color,border-color] duration-300 hover:border-[var(--agenda-reminder)] disabled:opacity-45"
                 style={
                   doneVisual
                     ? {
@@ -153,7 +187,7 @@ export function AgendaReadonlyUnifiedCard({
                 }
               >
                 {doneVisual ? (
-                  <Check className="h-4 w-4 animate-agenda-check-pop text-[#15803d]" strokeWidth={2.75} aria-hidden />
+                  <Check className="h-3.5 w-3.5 animate-agenda-check-pop text-[#15803d]" strokeWidth={2.75} aria-hidden />
                 ) : null}
               </button>
             ) : null}
@@ -164,7 +198,7 @@ export function AgendaReadonlyUnifiedCard({
                 aria-checked={calendarUiDone}
                 aria-label={calendarUiDone ? "Quitar marca de visto" : "Marcar como visto"}
                 onClick={() => onToggleCalendarUiDone?.()}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-border)] text-[var(--agenda-calendar)] transition-[transform,background-color,border-color] duration-300 hover:border-[var(--agenda-calendar)]"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-border)] text-[var(--agenda-calendar)] transition-[transform,background-color,border-color] duration-300 hover:border-[var(--agenda-calendar)]"
                 style={
                   calendarUiDone
                     ? {
@@ -175,13 +209,13 @@ export function AgendaReadonlyUnifiedCard({
                 }
               >
                 {calendarUiDone ? (
-                  <Check className="h-4 w-4 animate-agenda-check-pop text-[#15803d]" strokeWidth={2.75} aria-hidden />
+                  <Check className="h-3.5 w-3.5 animate-agenda-check-pop text-[#15803d]" strokeWidth={2.75} aria-hidden />
                 ) : null}
               </button>
             ) : null}
             {showCornerBadge && variant !== "compact" ? (
               <div
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[8px] font-bold text-white"
                 style={{
                   background: `color-mix(in srgb, ${badgeColorVar} 78%, #0f172a)`,
                   boxShadow: `0 0 0 2px color-mix(in srgb, ${badgeColorVar} 28%, transparent)`,
@@ -197,7 +231,7 @@ export function AgendaReadonlyUnifiedCard({
         <p className={`m-0 min-w-0 tracking-tight text-[var(--color-text-primary)] ${titleClass}`}>{title}</p>
       )}
 
-      <div className="flex flex-wrap items-center gap-1.5">
+      <div className="flex flex-wrap items-center gap-1">
         <span
           className={agendaPillBaseClass}
           style={{
@@ -246,7 +280,7 @@ export function AgendaReadonlyUnifiedCard({
       </div>
 
       {showMoveDue && (onMoveTomorrow || onMoveAfterTomorrow) ? (
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1">
           {onMoveTomorrow ? (
             <button
               type="button"
@@ -271,41 +305,9 @@ export function AgendaReadonlyUnifiedCard({
       ) : null}
 
       {assigneeSubtle ? (
-        <p className="m-0 truncate text-[10px] leading-snug text-[var(--color-text-secondary)] opacity-90">
+        <p className="m-0 truncate text-[9px] leading-snug text-[var(--color-text-secondary)] opacity-90 sm:text-[10px]">
           {assigneeSubtle}
         </p>
-      ) : null}
-
-      {onDelete || onEdit ? (
-        <div className="flex items-center justify-start gap-2">
-          {onDelete ? (
-            <button
-              type="button"
-              disabled={deleteBusy}
-              onClick={() => void handleDeleteClick()}
-              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[var(--color-text-secondary)] opacity-40 transition-[opacity,color,background-color] hover:bg-[color-mix(in_srgb,var(--color-text-secondary)_8%,transparent)] hover:opacity-100 hover:text-[var(--color-accent-danger)] disabled:opacity-25"
-              aria-label={
-                googleKind === "calendar"
-                  ? "Eliminar evento también en Google Calendar"
-                  : "Eliminar tarea o recordatorio también en Google Tasks"
-              }
-              title={deleteBusy ? "Eliminando…" : "Eliminar"}
-            >
-              <Trash2 className="h-3 w-3" strokeWidth={1.5} aria-hidden />
-            </button>
-          ) : null}
-          {onEdit ? (
-            <button
-              type="button"
-              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md p-0 text-[var(--color-text-secondary)] opacity-50 transition-[opacity,color,background-color] hover:bg-[color-mix(in_srgb,var(--color-text-secondary)_8%,transparent)] hover:opacity-100 hover:text-[var(--color-text-primary)]"
-              aria-label="Editar"
-              title="Editar"
-              onClick={onEdit}
-            >
-              <Pencil className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
-            </button>
-          ) : null}
-        </div>
       ) : null}
     </div>
   )
