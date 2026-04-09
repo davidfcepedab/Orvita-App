@@ -15,9 +15,9 @@ type PredictiveStrategicProps = {
 }
 
 function insightIcon(sev: OrbitaInsight["severity"]) {
-  if (sev === "oportunidad") return <Target className="h-4 w-4 text-emerald-200" />
-  if (sev === "presion") return <ShieldAlert className="h-4 w-4 text-rose-200" />
-  return <TriangleAlert className="h-4 w-4 text-amber-200" />
+  if (sev === "oportunidad") return <Target className="h-4 w-4" style={{ color: "var(--color-accent-health)" }} />
+  if (sev === "presion") return <ShieldAlert className="h-4 w-4" style={{ color: "var(--color-accent-danger)" }} />
+  return <TriangleAlert className="h-4 w-4" style={{ color: "var(--color-accent-warning)" }} />
 }
 
 export function PredictiveStrategic({ points, insights, onRequestAiRefresh }: PredictiveStrategicProps) {
@@ -136,7 +136,13 @@ export function PredictiveStrategic({ points, insights, onRequestAiRefresh }: Pr
               <Card className="p-4 sm:p-5 h-full flex flex-col">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-2">
-                    <span className="h-9 w-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+                    <span
+                      className="h-9 w-9 rounded-xl border flex items-center justify-center"
+                      style={{
+                        background: "var(--color-surface-alt)",
+                        borderColor: "var(--color-border)",
+                      }}
+                    >
                       {insightIcon(ins.severity)}
                     </span>
                     <div>

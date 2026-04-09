@@ -6,7 +6,6 @@ import { Sparkles, TrendingUp } from "lucide-react"
 import { CircularProgressbar, buildStyles } from "react-circular-progressbar"
 import "react-circular-progressbar/dist/styles.css"
 
-import { Button } from "@/src/components/ui/Button"
 import { flowToneClasses, formatBogotaDateParts, greetingForWeekday } from "@/app/home/_lib/orbita-home-format"
 import type { OrbitaHomeModel } from "@/app/home/_lib/orbita-home-types"
 
@@ -24,7 +23,13 @@ export function StrategicHeader({ model, onGenerateAi, isGenerating }: Strategic
   const tone = flowToneClasses(model.flow.color)
 
   return (
-    <div className="sticky top-0 z-20 -mx-4 px-4 pt-4 pb-3 backdrop-blur supports-[backdrop-filter]:bg-black/20 border-b border-white/5">
+    <div
+      className="sticky top-0 z-20 -mx-4 px-4 pt-4 pb-3 backdrop-blur"
+      style={{
+        background: "color-mix(in srgb, var(--color-surface) 88%, transparent)",
+        borderBottom: "0.5px solid var(--color-border)",
+      }}
+    >
       <div className="mx-auto max-w-6xl">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
@@ -52,23 +57,27 @@ export function StrategicHeader({ model, onGenerateAi, isGenerating }: Strategic
           <div className="flex items-center gap-3">
             <div
               className={[
-                "hidden sm:flex items-center gap-3 rounded-2xl border border-white/10 bg-orbita-surface px-3 py-2",
+                "hidden sm:flex items-center gap-3 rounded-2xl border px-3 py-2",
                 tone.glow,
               ].join(" ")}
+              style={{
+                background: "var(--color-surface)",
+                borderColor: "color-mix(in srgb, var(--color-border) 85%, transparent)",
+              }}
             >
               <div className="h-10 w-10">
                 <CircularProgressbar
                   value={model.flow.score}
                   text={`${model.flow.score}`}
                   styles={buildStyles({
-                    textColor: "rgba(255,255,255,0.92)",
+                    textColor: "var(--color-text-primary)",
                     pathColor:
                       model.flow.color === "green"
                         ? "rgb(52 211 153)"
                         : model.flow.color === "yellow"
                           ? "rgb(251 191 36)"
                           : "rgb(251 113 133)",
-                    trailColor: "rgba(255,255,255,0.06)",
+                    trailColor: "color-mix(in srgb, var(--color-border) 55%, transparent)",
                     textSize: "32px",
                   })}
                 />
@@ -89,19 +98,33 @@ export function StrategicHeader({ model, onGenerateAi, isGenerating }: Strategic
               </div>
             </div>
 
-            <Button
+            <button
+              type="button"
               onClick={() => void onGenerateAi()}
               disabled={isGenerating}
-              className="h-10 !px-4 rounded-xl inline-flex items-center gap-2"
+              className="h-10 rounded-xl px-4 inline-flex items-center gap-2 text-sm font-semibold"
+              style={{
+                background: "var(--color-accent-health)",
+                color: "white",
+                border: "0.5px solid color-mix(in srgb, var(--color-accent-health) 35%, var(--color-border))",
+                opacity: isGenerating ? 0.75 : 1,
+                cursor: isGenerating ? "wait" : "pointer",
+              }}
             >
               <Sparkles className="h-4 w-4" />
               {isGenerating ? "Generando…" : "Generar Análisis IA"}
-            </Button>
+            </button>
           </div>
         </div>
 
         <div className="sm:hidden mt-3 flex items-center justify-between gap-3">
-          <div className={["flex-1 rounded-2xl border border-white/10 bg-orbita-surface px-3 py-2", tone.glow].join(" ")}>
+          <div
+            className={["flex-1 rounded-2xl border px-3 py-2", tone.glow].join(" ")}
+            style={{
+              background: "var(--color-surface)",
+              borderColor: "color-mix(in srgb, var(--color-border) 85%, transparent)",
+            }}
+          >
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">{model.flow.label}</p>
@@ -112,14 +135,14 @@ export function StrategicHeader({ model, onGenerateAi, isGenerating }: Strategic
                   value={model.flow.score}
                   text={`${model.flow.score}`}
                   styles={buildStyles({
-                    textColor: "rgba(255,255,255,0.92)",
+                    textColor: "var(--color-text-primary)",
                     pathColor:
                       model.flow.color === "green"
                         ? "rgb(52 211 153)"
                         : model.flow.color === "yellow"
                           ? "rgb(251 191 36)"
                           : "rgb(251 113 133)",
-                    trailColor: "rgba(255,255,255,0.06)",
+                    trailColor: "color-mix(in srgb, var(--color-border) 55%, transparent)",
                     textSize: "32px",
                   })}
                 />

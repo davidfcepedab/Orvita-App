@@ -30,7 +30,10 @@ export function MiniWidgets({ decisions, agendaToday, habits }: MiniWidgetsProps
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
           <Card className="p-4 sm:p-5 h-full">
             <div className="flex items-center gap-2">
-              <span className="h-9 w-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+              <span
+                className="h-9 w-9 rounded-xl border flex items-center justify-center"
+                style={{ background: "var(--color-surface-alt)", borderColor: "var(--color-border)" }}
+              >
                 <Gavel className="h-4 w-4 text-rose-200" />
               </span>
               <div>
@@ -73,7 +76,10 @@ export function MiniWidgets({ decisions, agendaToday, habits }: MiniWidgetsProps
         >
           <Card className="p-4 sm:p-5 h-full">
             <div className="flex items-center gap-2">
-              <span className="h-9 w-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+              <span
+                className="h-9 w-9 rounded-xl border flex items-center justify-center"
+                style={{ background: "var(--color-surface-alt)", borderColor: "var(--color-border)" }}
+              >
                 <CalendarClock className="h-4 w-4 text-sky-200" />
               </span>
               <div>
@@ -106,7 +112,10 @@ export function MiniWidgets({ decisions, agendaToday, habits }: MiniWidgetsProps
         >
           <Card className="p-4 sm:p-5 h-full">
             <div className="flex items-center gap-2">
-              <span className="h-9 w-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+              <span
+                className="h-9 w-9 rounded-xl border flex items-center justify-center"
+                style={{ background: "var(--color-surface-alt)", borderColor: "var(--color-border)" }}
+              >
                 <Gauge className="h-4 w-4 text-emerald-200" />
               </span>
               <div>

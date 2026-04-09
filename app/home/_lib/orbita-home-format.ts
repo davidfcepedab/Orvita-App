@@ -5,20 +5,29 @@ export function flowToneClasses(color: FlowColor) {
     case "green":
       return {
         ring: "ring-1 ring-emerald-400/25",
-        chip: "bg-emerald-400/10 text-emerald-200 border-emerald-400/20",
+        chip:
+          "bg-[color-mix(in_srgb,var(--color-accent-health)_12%,transparent)] " +
+          "text-[color-mix(in_srgb,var(--color-accent-health)_82%,var(--color-text-primary))] " +
+          "border-[color-mix(in_srgb,var(--color-accent-health)_28%,var(--color-border))]",
         glow: "shadow-[0_0_0_1px_rgba(52,211,153,0.18),0_0_30px_rgba(52,211,153,0.08)]",
       }
     case "yellow":
       return {
         ring: "ring-1 ring-amber-400/25",
-        chip: "bg-amber-400/10 text-amber-200 border-amber-400/20",
+        chip:
+          "bg-[color-mix(in_srgb,var(--color-accent-warning)_12%,transparent)] " +
+          "text-[color-mix(in_srgb,var(--color-accent-warning)_82%,var(--color-text-primary))] " +
+          "border-[color-mix(in_srgb,var(--color-accent-warning)_28%,var(--color-border))]",
         glow: "shadow-[0_0_0_1px_rgba(251,191,36,0.18),0_0_30px_rgba(251,191,36,0.08)]",
       }
     case "red":
     default:
       return {
         ring: "ring-1 ring-rose-400/25",
-        chip: "bg-rose-400/10 text-rose-200 border-rose-400/20",
+        chip:
+          "bg-[color-mix(in_srgb,var(--color-accent-danger)_12%,transparent)] " +
+          "text-[color-mix(in_srgb,var(--color-accent-danger)_82%,var(--color-text-primary))] " +
+          "border-[color-mix(in_srgb,var(--color-accent-danger)_28%,var(--color-border))]",
         glow: "shadow-[0_0_0_1px_rgba(251,113,133,0.18),0_0_30px_rgba(251,113,133,0.08)]",
       }
   }
@@ -26,14 +35,32 @@ export function flowToneClasses(color: FlowColor) {
 
 export function impactClasses(impact: "alto" | "medio") {
   if (impact === "alto") {
-    return "bg-rose-400/10 text-rose-200 border-rose-400/20"
+    return (
+      "bg-[color-mix(in_srgb,var(--color-accent-danger)_14%,transparent)] " +
+      "text-[color-mix(in_srgb,var(--color-accent-danger)_78%,var(--color-text-primary))] " +
+      "border-[color-mix(in_srgb,var(--color-accent-danger)_28%,var(--color-border))]"
+    )
   }
-  return "bg-sky-400/10 text-sky-200 border-sky-400/20"
+  return (
+    "bg-[color-mix(in_srgb,var(--color-accent-finance)_14%,transparent)] " +
+    "text-[color-mix(in_srgb,var(--color-accent-finance)_78%,var(--color-text-primary))] " +
+    "border-[color-mix(in_srgb,var(--color-accent-finance)_28%,var(--color-border))]"
+  )
 }
 
 export function pressureClasses(level: "alta" | "media") {
-  if (level === "alta") return "bg-rose-400/10 text-rose-200 border-rose-400/20"
-  return "bg-amber-400/10 text-amber-200 border-amber-400/20"
+  if (level === "alta") {
+    return (
+      "bg-[color-mix(in_srgb,var(--color-accent-danger)_14%,transparent)] " +
+      "text-[color-mix(in_srgb,var(--color-accent-danger)_78%,var(--color-text-primary))] " +
+      "border-[color-mix(in_srgb,var(--color-accent-danger)_28%,var(--color-border))]"
+    )
+  }
+  return (
+    "bg-[color-mix(in_srgb,var(--color-accent-warning)_14%,transparent)] " +
+    "text-[color-mix(in_srgb,var(--color-accent-warning)_78%,var(--color-text-primary))] " +
+    "border-[color-mix(in_srgb,var(--color-accent-warning)_28%,var(--color-border))]"
+  )
 }
 
 export function energyWindowDot(window: "alta" | "media" | "baja") {

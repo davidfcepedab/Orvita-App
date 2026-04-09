@@ -41,7 +41,13 @@ export function CapitalOperativoPanel({ model, formatCOP }: CapitalOperativoPane
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="h-9 w-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+                  <span
+                    className="h-9 w-9 rounded-xl border flex items-center justify-center"
+                    style={{
+                      background: "var(--color-surface-alt)",
+                      borderColor: "var(--color-border)",
+                    }}
+                  >
                     <Clock3 className="h-4 w-4 text-sky-200" />
                   </span>
                   <div>
@@ -82,7 +88,13 @@ export function CapitalOperativoPanel({ model, formatCOP }: CapitalOperativoPane
           <Card className="p-4 sm:p-5 h-full flex flex-col">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-2">
-                <span className="h-9 w-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+                <span
+                  className="h-9 w-9 rounded-xl border flex items-center justify-center"
+                  style={{
+                    background: "var(--color-surface-alt)",
+                    borderColor: "var(--color-border)",
+                  }}
+                >
                   <Flame className="h-4 w-4 text-amber-200" />
                 </span>
                 <div>
@@ -140,7 +152,13 @@ export function CapitalOperativoPanel({ model, formatCOP }: CapitalOperativoPane
           <Card className="p-4 sm:p-5 h-full flex flex-col">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-2">
-                <span className="h-9 w-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+                <span
+                  className="h-9 w-9 rounded-xl border flex items-center justify-center"
+                  style={{
+                    background: "var(--color-surface-alt)",
+                    borderColor: "var(--color-border)",
+                  }}
+                >
                   <DollarSign className="h-4 w-4 text-emerald-200" />
                 </span>
                 <div>
