@@ -49,9 +49,20 @@ export default function proxy(req: NextRequest) {
   }
 
   if (pathname === "/") {
+    // Inicio (/) es el centro de control. Si no hay sesión, manda a Auth.
+    if (!authed) {
+      const url = req.nextUrl.clone()
+      url.pathname = "/auth"
+      return NextResponse.redirect(url)
+    }
+    return NextResponse.next()
+  }
+
+  // Alias para URLs antiguas/marketing: /inicio -> /
+  if (pathname === "/inicio") {
     const url = req.nextUrl.clone()
-    url.pathname = authed ? "/hoy" : "/auth"
-    return NextResponse.redirect(url)
+    url.pathname = "/"
+    return NextResponse.redirect(url, 308)
   }
 
   if (!authed) {
