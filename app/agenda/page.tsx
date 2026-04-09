@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react"
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type FormEvent } from "react"
 import { Card } from "@/src/components/ui/Card"
 import { CalendarDays, CalendarRange, LayoutGrid, LayoutPanelLeft, ListChecks, Plus, Search } from "lucide-react"
 
@@ -164,27 +164,27 @@ export default function AgendaPage() {
     const pull = async () => {
       try {
         if (cancelled) return
-        // Órvita primero: libera `loading` y el hilo antes del sync pesado de Google (mejor INP / CLS percibido).
-        await refresh()
-        if (cancelled) return
+        // No llamar `refresh()` aquí: `useAgendaTasks` ya carga en mount; duplicar bloqueaba el hilo e inflaba INP.
         const headers = await browserBearerHeaders(true)
         const doCalSync = canRunGoogleCalendarSyncNow()
         const calRes = doCalSync
           ? await fetch("/api/integrations/google/calendar/sync", { method: "POST", headers })
           : null
+        if (cancelled) return
         if (calRes?.ok) markGoogleCalendarSyncRan()
         if (cancelled) return
         await Promise.all([googleCalendar.refresh(), googleTasksFeed.refresh()])
       } catch {}
     }
+    // Retrasar sync/refresco Google para no competir con el primer pintado y la primera interacción.
     const t = window.setTimeout(() => {
       if (!cancelled) void pull()
-    }, 0)
+    }, 2000)
     return () => {
       cancelled = true
       window.clearTimeout(t)
     }
-  }, [refresh, googleCalendar.refresh, googleTasksFeed.refresh])
+  }, [googleCalendar.refresh, googleTasksFeed.refresh])
 
   useEffect(() => {
     if (isAppMockMode() || !isSupabaseEnabled()) return
@@ -214,6 +214,7 @@ export default function AgendaPage() {
   const [priority, setPriority] = useState<Priority | "">("")
   const [view, setView] = useState<AgendaMainView>("list")
   const [query, setQuery] = useState("")
+  const deferredQuery = useDeferredValue(query)
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
   const [monthViewDate, setMonthViewDate] = useState(() => {
     const n = new Date()
@@ -233,8 +234,9 @@ export default function AgendaPage() {
     priority: "media" as "alta" | "media" | "baja",
   })
 
+  // Cargar miembros al entrar en la agenda (no solo al abrir el formulario): sin esto no hay
+  // selector de responsable ni barra rápida en recordatorios Google.
   useEffect(() => {
-    if (!formOpen) return
     let cancelled = false
     void (async () => {
       setMembersLoadError(null)
@@ -263,7 +265,7 @@ export default function AgendaPage() {
     return () => {
       cancelled = true
     }
-  }, [formOpen])
+  }, [])
 
   useEffect(() => {
     if (view !== "month") return
@@ -288,10 +290,11 @@ export default function AgendaPage() {
 
   const filtered = useMemo(() => {
     const todayYmd = formatLocalDateKey(new Date())
+    const q = deferredQuery.trim().toLowerCase()
     return tasks.filter((task) => {
       const tabMatch = tab === "todas" || task.type === tab
       const priorityMatch = !priority || task.priority === priority
-      const queryMatch = !query || task.title.toLowerCase().includes(query.toLowerCase())
+      const queryMatch = !q || task.title.toLowerCase().includes(q)
       const dateOk =
         showPastAgenda ||
         !task.due ||
@@ -299,7 +302,7 @@ export default function AgendaPage() {
         task.due.slice(0, 10) >= todayYmd
       return tabMatch && priorityMatch && queryMatch && dateOk
     })
-  }, [tab, priority, query, tasks, showPastAgenda])
+  }, [tab, priority, deferredQuery, tasks, showPastAgenda])
 
   const googleByDay = useMemo(
     () => buildGoogleByDayIndex(googleCalendar, googleTasksFeed),

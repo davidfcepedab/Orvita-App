@@ -120,7 +120,8 @@ export function TaskCardDesignProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!hydrated) return
-    persistToDisk(snapshot)
+    const id = window.setTimeout(() => persistToDisk(snapshot), 400)
+    return () => window.clearTimeout(id)
   }, [snapshot, hydrated])
 
   useEffect(() => {

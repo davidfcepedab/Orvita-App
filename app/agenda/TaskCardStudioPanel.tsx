@@ -3,6 +3,7 @@
 import { useMemo, useState, type DragEvent, type ReactNode } from "react"
 import Link from "next/link"
 import {
+  Bell,
   Calendar,
   Check,
   ChevronDown,
@@ -15,7 +16,14 @@ import {
 import { AgendaOrvitaMiniCard } from "@/app/agenda/AgendaOrvitaMiniCard"
 import { AgendaOrvitaTaskCard } from "@/app/agenda/AgendaOrvitaTaskCard"
 import { AgendaReadonlyUnifiedCard } from "@/app/agenda/AgendaReadonlyUnifiedCard"
-import { TASK_CARD_STUDIO_SAMPLE } from "@/app/agenda/taskCardStudioSample"
+import { googleReadonlyCardChrome } from "@/app/agenda/agendaCardChrome"
+import { GoogleReminderQuickBar } from "@/app/agenda/GoogleReminderQuickBar"
+import {
+  getTaskCardStudioGoogleReminderSample,
+  TASK_CARD_STUDIO_HOUSEHOLD_MEMBERS,
+  TASK_CARD_STUDIO_SAMPLE,
+  TASK_CARD_STUDIO_SAMPLE_COMPLETED,
+} from "@/app/agenda/taskCardStudioSample"
 import {
   TASK_CARD_GRID,
   allTaskCardCssVarKeys,
@@ -339,6 +347,7 @@ export function TaskCardStudioPanel() {
   const defaults = useMemo(() => taskCardDensityVars(density) as Record<string, string>, [density])
   const orvitaVariant = density === "list" ? "list" : "kanban"
   const advancedKeys = useMemo(() => allTaskCardCssVarKeys(), [])
+  const studioGoogleReminder = useMemo(() => getTaskCardStudioGoogleReminderSample(), [])
   const fontFamilyValue = varOverrides["--task-card-font-family"] ?? ""
   const fontSelectValue = FONT_PRESETS.some((f) => f.value === fontFamilyValue)
     ? fontFamilyValue
@@ -827,20 +836,38 @@ export function TaskCardStudioPanel() {
           </div>
           <p className="m-0 text-[10px] leading-snug text-[var(--color-text-secondary)]">
             Las guías son bordes punteados por <strong>celda del grid</strong> (title, meta, pills…), no por cada línea
-            de texto. Due date, asignación a household o “realizada” hoy viven en esas filas en código; añadir campos
-            nuevos implica nuevas áreas en el componente y en <code className="rounded bg-[var(--color-surface-alt)] px-1">taskCardConfig</code>.
+            de texto. En <Link href="/agenda" className="font-semibold text-[var(--color-accent-primary)] underline">/agenda</Link>{" "}
+            (Lista o Columnas) los controles de vence, prioridad, responsable y “marcar hecha” son reales; aquí la vista
+            previa usa datos de muestra y no guarda en servidor.
           </p>
 
-          <Section title="Órvita · Kanban / Lista">
+          <Section title="Órvita · Kanban / Lista (controles como en producción)">
             <div className="max-w-xl">
               <AgendaOrvitaTaskCard
                 task={TASK_CARD_STUDIO_SAMPLE}
                 variant={orvitaVariant}
                 designDensity={density}
                 iterationMode={showGridGuides}
+                householdMembers={TASK_CARD_STUDIO_HOUSEHOLD_MEMBERS}
+                onPatchOrvita={async () => {}}
                 onSaveComplete={async () => {}}
                 onDelete={async () => {}}
                 onAcceptAssignment={async () => {}}
+              />
+            </div>
+          </Section>
+
+          <Section title="Órvita · completada (verde suave)">
+            <div className="max-w-xl">
+              <AgendaOrvitaTaskCard
+                task={TASK_CARD_STUDIO_SAMPLE_COMPLETED}
+                variant={orvitaVariant}
+                designDensity={density}
+                iterationMode={showGridGuides}
+                householdMembers={TASK_CARD_STUDIO_HOUSEHOLD_MEMBERS}
+                onPatchOrvita={async () => {}}
+                onSaveComplete={async () => {}}
+                onDelete={async () => {}}
               />
             </div>
           </Section>
@@ -851,21 +878,50 @@ export function TaskCardStudioPanel() {
             </div>
           </Section>
 
-          <Section title="Google · muestra">
+          <Section title="Google Calendar · muestra (morado suave)">
             <div className="max-w-xl">
               <AgendaReadonlyUnifiedCard
                 variant={density === "compact" ? "compact" : density === "list" ? "list" : "kanban"}
-                borderLeft="4px solid color-mix(in srgb, var(--color-accent-finance) 65%, transparent)"
+                borderLeft="4px solid var(--agenda-calendar)"
+                chromeOverlay={googleReadonlyCardChrome({ kind: "calendar", completed: false })}
                 title="Reunión · Planificación Q2"
                 TimelineIcon={Calendar}
                 timelineText="Hoy 16:00 · 1 h"
                 googleKind="calendar"
                 kindPillLabel="Calendar"
                 fuente="Google Calendar"
-                footNote="Sala virtual"
-                badgeLetter="G"
-                badgeColorVar="var(--color-accent-finance)"
+                footNote="En /agenda no se edita responsable ni prioridad en Calendar (solo Tasks + Órvita)."
+                badgeLetter="GC"
+                badgeColorVar="var(--agenda-calendar)"
                 editUrl="https://calendar.google.com"
+                iterationMode={showGridGuides}
+              />
+            </div>
+          </Section>
+
+          <Section title="Google Tasks · recordatorio (navy suave + barra rápida)">
+            <div className="max-w-xl">
+              <AgendaReadonlyUnifiedCard
+                variant={density === "compact" ? "compact" : density === "list" ? "list" : "kanban"}
+                borderLeft="4px solid var(--agenda-reminder)"
+                chromeOverlay={googleReadonlyCardChrome({ kind: "reminder", completed: false })}
+                title={studioGoogleReminder.title}
+                TimelineIcon={Bell}
+                timelineText="Vence hoy · ejemplo"
+                googleKind="reminder"
+                kindPillLabel="Recordatorio"
+                fuente="Google Tasks"
+                footNote="Vista previa: en /agenda, con Google conectado y hogar cargado, esta barra guarda en Tasks y metadatos locales."
+                footer={
+                  <GoogleReminderQuickBar
+                    task={studioGoogleReminder}
+                    householdMembers={TASK_CARD_STUDIO_HOUSEHOLD_MEMBERS}
+                    patchTask={async () => {}}
+                  />
+                }
+                badgeLetter="GT"
+                badgeColorVar="var(--agenda-reminder)"
+                editUrl="https://tasks.google.com"
                 iterationMode={showGridGuides}
               />
             </div>

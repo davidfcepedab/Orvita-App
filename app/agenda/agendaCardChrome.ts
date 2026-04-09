@@ -35,5 +35,6 @@ export function googleReadonlyCardChrome(opts: {
   if (opts.kind === "calendar") {
     return { background: mix(AGENDA_COLOR.calendar, 11) }
   }
-  return { background: mix(AGENDA_COLOR.reminder, 12) }
+  // Google Tasks: tinte navy suave en el lienzo (pills/borde siguen usando --agenda-reminder).
+  return { background: mix("#1e3a5f", 12) }
 }

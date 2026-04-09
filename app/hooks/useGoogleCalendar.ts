@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { startTransition, useCallback, useEffect, useRef, useState } from "react"
 import { isAppMockMode } from "@/lib/checkins/flags"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
@@ -48,14 +48,34 @@ export function useGoogleCalendar(): GoogleCalendarFeedState {
       if (!res.ok || !payload.success) {
         throw new Error(messageForHttpError(res.status, payload.error, res.statusText))
       }
-      setEvents(payload.events ?? [])
-      setConnected(payload.connected ?? false)
-      setNotice(payload.notice ?? null)
-      initialCalendarFetchDoneRef.current = true
+      const ev = payload.events ?? []
+      const conn = payload.connected ?? false
+      const n = payload.notice ?? null
+      if (initialCalendarFetchDoneRef.current) {
+        startTransition(() => {
+          setEvents(ev)
+          setConnected(conn)
+          setNotice(n)
+        })
+      } else {
+        setEvents(ev)
+        setConnected(conn)
+        setNotice(n)
+        initialCalendarFetchDoneRef.current = true
+      }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error")
-      setEvents([])
-      setConnected(false)
+      const msg = e instanceof Error ? e.message : "Error"
+      if (initialCalendarFetchDoneRef.current) {
+        startTransition(() => {
+          setError(msg)
+          setEvents([])
+          setConnected(false)
+        })
+      } else {
+        setError(msg)
+        setEvents([])
+        setConnected(false)
+      }
     } finally {
       if (showBlockingSpinner) setLoading(false)
     }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { startTransition, useCallback, useEffect, useRef, useState } from "react"
 import { isAppMockMode } from "@/lib/checkins/flags"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
@@ -50,14 +50,34 @@ export function useGoogleTasks(): GoogleTasksFeedState {
       if (!res.ok || !payload.success) {
         throw new Error(messageForHttpError(res.status, payload.error, res.statusText))
       }
-      setTasks(payload.tasks ?? [])
-      setConnected(payload.connected ?? false)
-      setNotice(payload.notice ?? null)
-      initialTasksFetchDoneRef.current = true
+      const list = payload.tasks ?? []
+      const conn = payload.connected ?? false
+      const n = payload.notice ?? null
+      if (initialTasksFetchDoneRef.current) {
+        startTransition(() => {
+          setTasks(list)
+          setConnected(conn)
+          setNotice(n)
+        })
+      } else {
+        setTasks(list)
+        setConnected(conn)
+        setNotice(n)
+        initialTasksFetchDoneRef.current = true
+      }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error")
-      setTasks([])
-      setConnected(false)
+      const msg = e instanceof Error ? e.message : "Error"
+      if (initialTasksFetchDoneRef.current) {
+        startTransition(() => {
+          setError(msg)
+          setTasks([])
+          setConnected(false)
+        })
+      } else {
+        setError(msg)
+        setTasks([])
+        setConnected(false)
+      }
     } finally {
       if (showBlockingSpinner) setLoading(false)
     }

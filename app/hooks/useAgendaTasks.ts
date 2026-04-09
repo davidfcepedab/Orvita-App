@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { startTransition, useCallback, useEffect, useRef, useState } from "react"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 
@@ -39,10 +39,15 @@ export function useAgendaTasks() {
   const [pendingAssignments, setPendingAssignments] = useState<AgendaTask[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  /** Tras la primera carga OK: refetch sin pantalla de carga y con startTransition (mejor INP). */
+  const initialFetchDoneRef = useRef(false)
 
   const refresh = useCallback(async () => {
+    const showBlockingLoading = !initialFetchDoneRef.current
     try {
-      setLoading(true)
+      if (showBlockingLoading) {
+        setLoading(true)
+      }
       setError(null)
       const headers = await browserBearerHeaders()
       const response = await fetch("/api/agenda", { cache: "no-store", headers })
@@ -50,15 +55,35 @@ export function useAgendaTasks() {
       if (!response.ok || !json.success) {
         throw new Error(messageForHttpError(response.status, json.error, response.statusText))
       }
-      setTasks(json.data || [])
-      setPendingAssignments(json.pendingAssignments ?? [])
+      const nextTasks = json.data || []
+      const nextPending = json.pendingAssignments ?? []
+      if (initialFetchDoneRef.current) {
+        startTransition(() => {
+          setTasks(nextTasks)
+          setPendingAssignments(nextPending)
+        })
+      } else {
+        setTasks(nextTasks)
+        setPendingAssignments(nextPending)
+        initialFetchDoneRef.current = true
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Error desconocido"
-      setError(message)
-      setTasks([])
-      setPendingAssignments([])
+      if (initialFetchDoneRef.current) {
+        startTransition(() => {
+          setError(message)
+          setTasks([])
+          setPendingAssignments([])
+        })
+      } else {
+        setError(message)
+        setTasks([])
+        setPendingAssignments([])
+      }
     } finally {
-      setLoading(false)
+      if (showBlockingLoading) {
+        setLoading(false)
+      }
     }
   }, [])
 
