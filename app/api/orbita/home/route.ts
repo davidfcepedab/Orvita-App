@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from "next/server"
 
 import { requireUser } from "@/lib/api/requireUser"
 import { isAppMockMode } from "@/lib/checkins/flags"
-import type { FlowColor, OrbitaHomeModel, PredictivePoint } from "@/app/home/_lib/orbita-home-types"
+import type {
+  FlowColor,
+  OrbitaAlert,
+  OrbitaHomeModel,
+  PredictivePoint,
+  SmartAction,
+} from "@/app/home/_lib/orbita-home-types"
 import { getOrbitaHomeMock } from "@/app/home/_lib/orbita-home-mock"
 
 export const runtime = "nodejs"
@@ -202,6 +208,59 @@ export async function GET(req: NextRequest) {
         .map((r) => r.smart_action_id),
     )
 
+    const alerts: OrbitaAlert[] = [
+      {
+        id: "a-wip",
+        title: openTasks > 12 ? `Demasiado abierto: ${openTasks} tareas activas` : "Evita fragmentación de agenda",
+        description:
+          openTasks > 12
+            ? "Cuando el WIP sube, la energía cae y la ejecución se vuelve reactiva. Elimina 2 frentes hoy."
+            : "Protege 1 bloque profundo y cierra lo crítico para liberar carga cognitiva.",
+        impact: openTasks > 12 ? "alto" : "medio",
+        oneClickActionLabel: openTasks > 12 ? "Recortar 2 gastos hoy" : "Defender 1 bloque profundo",
+      },
+      {
+        id: "a-energy",
+        title: "Energía: protege recuperación",
+        description:
+          "Tu flujo depende más de tu recuperación que de tu disciplina. Bloquea un espacio corto y constante.",
+        impact: "alto",
+        oneClickActionLabel: "Bloquear 90m recuperación",
+      },
+      {
+        id: "a-close",
+        title: completedTasks > 0 ? `Cierres hoy: ${completedTasks}` : "Cierre pendiente: define el siguiente paso",
+        description:
+          "Cada día sin cierre multiplica fricción. Decide: cerrar, renegociar o eliminar compromiso.",
+        impact: "medio",
+        oneClickActionLabel: "Redactar cierre (20m)",
+      },
+    ]
+
+    const smartActions: SmartAction[] = [
+      {
+        id: "s-focus",
+        title: "Blindar 1 bloque profundo (90m) en ventana de energía alta",
+        roi: "ROI estratégico: +alto (dirección 90D)",
+        timeRequiredMin: 5,
+        primaryAction: "Agendar",
+      },
+      {
+        id: "s-close",
+        title: "Cerrar 1 frente abierto (definir siguiente paso en 20m)",
+        roi: "ROI estratégico: alto (reduce fricción + libera mente)",
+        timeRequiredMin: 20,
+        primaryAction: "Ejecutar",
+      },
+      {
+        id: "s-trim",
+        title: "Recortar fricción: elimina 2 pendientes de baja palanca",
+        roi: "ROI estratégico: medio (baja carga y ruido)",
+        timeRequiredMin: 10,
+        primaryAction: "Ignorar",
+      },
+    ]
+
     const model: OrbitaHomeModel = {
       user: {
         firstName,
@@ -219,34 +278,7 @@ export async function GET(req: NextRequest) {
               ? "Buen pulso. Mantén cierres y protege energía."
               : "Estable, pero con presión latente. Compra claridad.",
       },
-      alerts: [
-        {
-          id: "a-wip",
-          title: openTasks > 12 ? `Demasiado abierto: ${openTasks} tareas activas` : "Evita fragmentación de agenda",
-          description:
-            openTasks > 12
-              ? "Cuando el WIP sube, la energía cae y la ejecución se vuelve reactiva. Elimina 2 frentes hoy."
-              : "Protege 1 bloque profundo y cierra lo crítico para liberar carga cognitiva.",
-          impact: openTasks > 12 ? "alto" : "medio",
-          oneClickActionLabel: openTasks > 12 ? "Recortar 2 gastos hoy" : "Defender 1 bloque profundo",
-        },
-        {
-          id: "a-energy",
-          title: "Energía: protege recuperación",
-          description:
-            "Tu flujo depende más de tu recuperación que de tu disciplina. Bloquea un espacio corto y constante.",
-          impact: "alto",
-          oneClickActionLabel: "Bloquear 90m recuperación",
-        },
-        {
-          id: "a-close",
-          title: completedTasks > 0 ? `Cierres hoy: ${completedTasks}` : "Cierre pendiente: define el siguiente paso",
-          description:
-            "Cada día sin cierre multiplica fricción. Decide: cerrar, renegociar o eliminar compromiso.",
-          impact: "medio",
-          oneClickActionLabel: "Redactar cierre (20m)",
-        },
-      ].filter((a) => !hiddenAlerts.has(a.id)),
+      alerts: alerts.filter((a) => !hiddenAlerts.has(a.id)),
       capital: {
         time: {
           availableHours: 9.0,
@@ -292,29 +324,7 @@ export async function GET(req: NextRequest) {
           },
         ],
       },
-      smartActions: [
-        {
-          id: "s-focus",
-          title: "Blindar 1 bloque profundo (90m) en ventana de energía alta",
-          roi: "ROI estratégico: +alto (dirección 90D)",
-          timeRequiredMin: 5,
-          primaryAction: "Agendar",
-        },
-        {
-          id: "s-close",
-          title: "Cerrar 1 frente abierto (definir siguiente paso en 20m)",
-          roi: "ROI estratégico: alto (reduce fricción + libera mente)",
-          timeRequiredMin: 20,
-          primaryAction: "Ejecutar",
-        },
-        {
-          id: "s-trim",
-          title: "Recortar fricción: elimina 2 pendientes de baja palanca",
-          roi: "ROI estratégico: medio (baja carga y ruido)",
-          timeRequiredMin: 10,
-          primaryAction: "Ignorar",
-        },
-      ].filter((a) => !hiddenSmartActions.has(a.id)),
+      smartActions: smartActions.filter((a) => !hiddenSmartActions.has(a.id)),
       widgets: {
         decisions: [
           { id: "d-1", title: "Elegir 1 cierre visible hoy", deadline: "Hoy 17:00", pressure: "alta" },
