@@ -141,43 +141,20 @@ export function AgendaOrvitaTaskCard({
       }}
     >
       <div className="flex flex-col gap-2 px-4 py-3 sm:gap-2.5 sm:px-4 sm:py-3.5">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
           <p className="m-0 flex min-w-0 flex-1 items-center gap-1 text-[10px] leading-tight text-[var(--color-text-secondary)]">
             <Clock className="h-3 w-3 shrink-0 opacity-55" strokeWidth={2} aria-hidden />
             <span className="truncate">{dueMetaCompact(task.due)}</span>
           </p>
-          {canEditModal ? (
-            <button
-              type="button"
-              className="shrink-0 rounded-md p-1 text-[var(--color-text-secondary)] opacity-50 transition-[opacity,color,background-color] hover:bg-[color-mix(in_srgb,var(--color-text-secondary)_8%,transparent)] hover:opacity-100 hover:text-[var(--color-text-primary)]"
-              aria-label="Editar tarea"
-              title="Editar"
-              onClick={() => onOpenEdit?.(task)}
-            >
-              <Pencil className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
-            </button>
-          ) : null}
         </div>
 
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center justify-between gap-3">
           <p
             className={`m-0 min-w-0 flex-1 tracking-tight text-[var(--color-text-primary)] ${titleClass}`}
           >
             {task.title}
           </p>
           <div className="flex shrink-0 flex-col items-end gap-1.5">
-            {onDelete ? (
-              <button
-                type="button"
-                disabled={deleting || Boolean(deleteBusy)}
-                onClick={() => void handleDelete()}
-                className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[var(--color-text-secondary)] opacity-40 transition-[opacity,color,background-color] hover:bg-[color-mix(in_srgb,var(--color-text-secondary)_8%,transparent)] hover:opacity-100 hover:text-[var(--color-accent-danger)] disabled:opacity-25"
-                aria-label="Eliminar tarea"
-                title="Eliminar"
-              >
-                <Trash2 className="h-3 w-3" strokeWidth={1.5} aria-hidden />
-              </button>
-            ) : null}
             {onSaveComplete ? (
               <button
                 type="button"
@@ -236,6 +213,34 @@ export function AgendaOrvitaTaskCard({
             {statusTitle}
           </span>
         </div>
+
+        {onDelete || canEditModal ? (
+          <div className="flex items-center justify-start gap-2">
+            {onDelete ? (
+              <button
+                type="button"
+                disabled={deleting || Boolean(deleteBusy)}
+                onClick={() => void handleDelete()}
+                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[var(--color-text-secondary)] opacity-40 transition-[opacity,color,background-color] hover:bg-[color-mix(in_srgb,var(--color-text-secondary)_8%,transparent)] hover:opacity-100 hover:text-[var(--color-accent-danger)] disabled:opacity-25"
+                aria-label="Eliminar tarea"
+                title="Eliminar"
+              >
+                <Trash2 className="h-3 w-3" strokeWidth={1.5} aria-hidden />
+              </button>
+            ) : null}
+            {canEditModal ? (
+              <button
+                type="button"
+                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md p-0 text-[var(--color-text-secondary)] opacity-50 transition-[opacity,color,background-color] hover:bg-[color-mix(in_srgb,var(--color-text-secondary)_8%,transparent)] hover:opacity-100 hover:text-[var(--color-text-primary)]"
+                aria-label="Editar tarea"
+                title="Editar"
+                onClick={() => onOpenEdit?.(task)}
+              >
+                <Pencil className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
+              </button>
+            ) : null}
+          </div>
+        ) : null}
 
         {task.assigneeContact ? (
           <p className="m-0 truncate text-[10px] leading-snug text-[var(--color-text-secondary)] opacity-90">

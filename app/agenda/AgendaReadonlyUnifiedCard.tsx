@@ -117,47 +117,20 @@ export function AgendaReadonlyUnifiedCard({
       className="flex flex-col gap-2 px-4 py-3 sm:gap-2.5 sm:px-4 sm:py-3.5"
       style={{ ...varStyle, fontFamily: "var(--task-card-font-family, inherit)" }}
     >
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center gap-2">
         <p className="m-0 flex min-w-0 flex-1 items-center gap-1 text-[10px] leading-tight text-[var(--color-text-secondary)]">
           <MetaIcon className={`${iconCls} shrink-0 opacity-55`} strokeWidth={2} aria-hidden />
           <span className="truncate">{metaText}</span>
         </p>
-        {onEdit ? (
-          <button
-            type="button"
-            className="shrink-0 rounded-md p-1 text-[var(--color-text-secondary)] opacity-50 transition-[opacity,color,background-color] hover:bg-[color-mix(in_srgb,var(--color-text-secondary)_8%,transparent)] hover:opacity-100 hover:text-[var(--color-text-primary)]"
-            aria-label="Editar"
-            title="Editar"
-            onClick={onEdit}
-          >
-            <Pencil className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
-          </button>
-        ) : null}
       </div>
 
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-center justify-between gap-3">
         <p
           className={`m-0 min-w-0 flex-1 tracking-tight text-[var(--color-text-primary)] ${titleClass}`}
         >
           {title}
         </p>
         <div className="flex shrink-0 flex-col items-end gap-1.5">
-          {onDelete ? (
-            <button
-              type="button"
-              disabled={deleteBusy}
-              onClick={() => void handleDeleteClick()}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[var(--color-text-secondary)] opacity-40 transition-[opacity,color,background-color] hover:bg-[color-mix(in_srgb,var(--color-text-secondary)_8%,transparent)] hover:opacity-100 hover:text-[var(--color-accent-danger)] disabled:opacity-25"
-              aria-label={
-                googleKind === "calendar"
-                  ? "Eliminar evento también en Google Calendar"
-                  : "Eliminar tarea o recordatorio también en Google Tasks"
-              }
-              title={deleteBusy ? "Eliminando…" : "Eliminar"}
-            >
-              <Trash2 className="h-3 w-3" strokeWidth={1.5} aria-hidden />
-            </button>
-          ) : null}
           {showComplete ? (
             <button
               type="button"
@@ -265,6 +238,38 @@ export function AgendaReadonlyUnifiedCard({
           </>
         ) : null}
       </div>
+
+      {onDelete || onEdit ? (
+        <div className="flex items-center justify-start gap-2">
+          {onDelete ? (
+            <button
+              type="button"
+              disabled={deleteBusy}
+              onClick={() => void handleDeleteClick()}
+              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[var(--color-text-secondary)] opacity-40 transition-[opacity,color,background-color] hover:bg-[color-mix(in_srgb,var(--color-text-secondary)_8%,transparent)] hover:opacity-100 hover:text-[var(--color-accent-danger)] disabled:opacity-25"
+              aria-label={
+                googleKind === "calendar"
+                  ? "Eliminar evento también en Google Calendar"
+                  : "Eliminar tarea o recordatorio también en Google Tasks"
+              }
+              title={deleteBusy ? "Eliminando…" : "Eliminar"}
+            >
+              <Trash2 className="h-3 w-3" strokeWidth={1.5} aria-hidden />
+            </button>
+          ) : null}
+          {onEdit ? (
+            <button
+              type="button"
+              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md p-0 text-[var(--color-text-secondary)] opacity-50 transition-[opacity,color,background-color] hover:bg-[color-mix(in_srgb,var(--color-text-secondary)_8%,transparent)] hover:opacity-100 hover:text-[var(--color-text-primary)]"
+              aria-label="Editar"
+              title="Editar"
+              onClick={onEdit}
+            >
+              <Pencil className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       {assigneeSubtle ? (
         <p className="m-0 truncate text-[10px] leading-snug text-[var(--color-text-secondary)] opacity-90">
