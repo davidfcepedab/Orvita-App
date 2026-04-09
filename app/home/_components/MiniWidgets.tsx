@@ -16,6 +16,8 @@ type MiniWidgetsProps = {
 }
 
 export function MiniWidgets({ decisions, agendaToday, habits }: MiniWidgetsProps) {
+  const widgetIconBase = "h-9 w-9 rounded-xl border flex items-center justify-center"
+
   return (
     <section className="mx-auto max-w-6xl px-4 mt-6 pb-10">
       <div>
@@ -31,10 +33,13 @@ export function MiniWidgets({ decisions, agendaToday, habits }: MiniWidgetsProps
           <Card className="p-4 sm:p-5 h-full">
             <div className="flex items-center gap-2">
               <span
-                className="h-9 w-9 rounded-xl border flex items-center justify-center"
-                style={{ background: "var(--color-surface-alt)", borderColor: "var(--color-border)" }}
+                className={widgetIconBase}
+                style={{
+                  background: "color-mix(in srgb, var(--color-accent-danger) 10%, var(--color-surface))",
+                  borderColor: "color-mix(in srgb, var(--color-accent-danger) 26%, var(--color-border))",
+                }}
               >
-                <Gavel className="h-4 w-4 text-rose-200" />
+                <Gavel className="h-4 w-4" style={{ color: "var(--color-accent-danger)" }} />
               </span>
               <div>
                 <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Decisiones críticas</p>
@@ -77,10 +82,13 @@ export function MiniWidgets({ decisions, agendaToday, habits }: MiniWidgetsProps
           <Card className="p-4 sm:p-5 h-full">
             <div className="flex items-center gap-2">
               <span
-                className="h-9 w-9 rounded-xl border flex items-center justify-center"
-                style={{ background: "var(--color-surface-alt)", borderColor: "var(--color-border)" }}
+                className={widgetIconBase}
+                style={{
+                  background: "color-mix(in srgb, var(--color-accent-agenda) 10%, var(--color-surface))",
+                  borderColor: "color-mix(in srgb, var(--color-accent-agenda) 26%, var(--color-border))",
+                }}
               >
-                <CalendarClock className="h-4 w-4 text-sky-200" />
+                <CalendarClock className="h-4 w-4" style={{ color: "var(--color-accent-agenda)" }} />
               </span>
               <div>
                 <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Agenda de hoy</p>
@@ -113,10 +121,13 @@ export function MiniWidgets({ decisions, agendaToday, habits }: MiniWidgetsProps
           <Card className="p-4 sm:p-5 h-full">
             <div className="flex items-center gap-2">
               <span
-                className="h-9 w-9 rounded-xl border flex items-center justify-center"
-                style={{ background: "var(--color-surface-alt)", borderColor: "var(--color-border)" }}
+                className={widgetIconBase}
+                style={{
+                  background: "color-mix(in srgb, var(--color-accent-health) 10%, var(--color-surface))",
+                  borderColor: "color-mix(in srgb, var(--color-accent-health) 26%, var(--color-border))",
+                }}
               >
-                <Gauge className="h-4 w-4 text-emerald-200" />
+                <Gauge className="h-4 w-4" style={{ color: "var(--color-accent-health)" }} />
               </span>
               <div>
                 <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Hábitos clave</p>

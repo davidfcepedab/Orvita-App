@@ -102,7 +102,7 @@ export function StrategicHeader({ model, onGenerateAi, isGenerating }: Strategic
               type="button"
               onClick={() => void onGenerateAi()}
               disabled={isGenerating}
-              className="h-10 rounded-xl px-4 inline-flex items-center gap-2 text-sm font-semibold"
+              className="h-10 rounded-xl px-3 sm:px-4 inline-flex items-center gap-2 text-sm font-semibold whitespace-nowrap shrink-0 min-w-[168px] justify-center"
               style={{
                 background: "var(--color-accent-health)",
                 color: "white",

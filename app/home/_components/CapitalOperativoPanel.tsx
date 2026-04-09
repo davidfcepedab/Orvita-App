@@ -23,6 +23,8 @@ export function CapitalOperativoPanel({ model, formatCOP }: CapitalOperativoPane
   const netTone =
     money.netMonthlyCOP >= 0 ? "text-emerald-200" : money.netMonthlyCOP <= -2000000 ? "text-rose-200" : "text-amber-200"
 
+  const tileIconBase = "h-9 w-9 rounded-xl border flex items-center justify-center"
+
   return (
     <section className="mx-auto max-w-6xl px-4 mt-6">
       <div className="flex items-end justify-between gap-3">
@@ -42,13 +44,15 @@ export function CapitalOperativoPanel({ model, formatCOP }: CapitalOperativoPane
               <div>
                 <div className="flex items-center gap-2">
                   <span
-                    className="h-9 w-9 rounded-xl border flex items-center justify-center"
+                    className={tileIconBase}
                     style={{
-                      background: "var(--color-surface-alt)",
-                      borderColor: "var(--color-border)",
+                      background:
+                        "color-mix(in srgb, var(--color-accent-finance) 10%, var(--color-surface))",
+                      borderColor:
+                        "color-mix(in srgb, var(--color-accent-finance) 26%, var(--color-border))",
                     }}
                   >
-                    <Clock3 className="h-4 w-4 text-sky-200" />
+                    <Clock3 className="h-4 w-4" style={{ color: "var(--color-accent-finance)" }} />
                   </span>
                   <div>
                     <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Tiempo</p>
@@ -89,13 +93,15 @@ export function CapitalOperativoPanel({ model, formatCOP }: CapitalOperativoPane
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-2">
                 <span
-                  className="h-9 w-9 rounded-xl border flex items-center justify-center"
+                  className={tileIconBase}
                   style={{
-                    background: "var(--color-surface-alt)",
-                    borderColor: "var(--color-border)",
+                    background:
+                      "color-mix(in srgb, var(--color-accent-warning) 10%, var(--color-surface))",
+                    borderColor:
+                      "color-mix(in srgb, var(--color-accent-warning) 26%, var(--color-border))",
                   }}
                 >
-                  <Flame className="h-4 w-4 text-amber-200" />
+                  <Flame className="h-4 w-4" style={{ color: "var(--color-accent-warning)" }} />
                 </span>
                 <div>
                   <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Energía</p>
@@ -153,13 +159,15 @@ export function CapitalOperativoPanel({ model, formatCOP }: CapitalOperativoPane
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-2">
                 <span
-                  className="h-9 w-9 rounded-xl border flex items-center justify-center"
+                  className={tileIconBase}
                   style={{
-                    background: "var(--color-surface-alt)",
-                    borderColor: "var(--color-border)",
+                    background:
+                      "color-mix(in srgb, var(--color-accent-health) 10%, var(--color-surface))",
+                    borderColor:
+                      "color-mix(in srgb, var(--color-accent-health) 26%, var(--color-border))",
                   }}
                 >
-                  <DollarSign className="h-4 w-4 text-emerald-200" />
+                  <DollarSign className="h-4 w-4" style={{ color: "var(--color-accent-health)" }} />
                 </span>
                 <div>
                   <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Dinero</p>

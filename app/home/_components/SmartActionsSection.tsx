@@ -48,9 +48,17 @@ export function SmartActionsSection({ actions, onAction }: SmartActionsSectionPr
                     <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Tiempo</p>
                     <p className="mt-1 text-sm font-semibold text-orbita-primary">{a.timeRequiredMin} min</p>
                   </div>
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                  <div
+                    className="rounded-2xl border p-3"
+                    style={{
+                      background: "color-mix(in srgb, var(--color-accent-health) 8%, var(--color-surface))",
+                      borderColor: "color-mix(in srgb, var(--color-accent-health) 22%, var(--color-border))",
+                    }}
+                  >
                     <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Impacto</p>
-                    <p className="mt-1 text-sm font-semibold text-emerald-200">Alto</p>
+                    <p className="mt-1 text-sm font-semibold" style={{ color: "var(--color-accent-health)" }}>
+                      Alto
+                    </p>
                   </div>
                 </div>
               </div>
