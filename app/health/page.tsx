@@ -74,6 +74,8 @@ export default function HealthPage() {
     editMode,
     setEditMode,
     updateSupplement,
+    addSupplement,
+    removeSupplement,
     takenToday,
     toggleComplianceToday,
     loading: suppLoading,
@@ -219,6 +221,8 @@ export default function HealthPage() {
         editMode={editMode}
         setEditMode={setEditMode}
         updateSupplement={updateSupplement}
+        addSupplement={addSupplement}
+        removeSupplement={removeSupplement}
         takenToday={takenToday}
         toggleComplianceToday={toggleComplianceToday}
       />

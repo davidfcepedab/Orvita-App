@@ -229,6 +229,33 @@ export function useHealthSupplements() {
     [supplements, complianceMap, persistBoth],
   )
 
+  const addSupplement = useCallback(() => {
+    const id =
+      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `sup-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+    const row: HealthSupplement = {
+      id,
+      name: "Nuevo protocolo",
+      amount: "",
+      active: false,
+      daypart: "apenas_me_levanto",
+      indispensable: false,
+    }
+    persistBoth([...supplements, row], complianceMap)
+  }, [supplements, complianceMap, persistBoth])
+
+  const removeSupplement = useCallback(
+    (id: string) => {
+      let nextS = supplements.filter((s) => s.id !== id)
+      if (nextS.length === 0) {
+        nextS = DEFAULT_HEALTH_SUPPLEMENTS.map((s) => ({ ...s }))
+      }
+      persistBoth(nextS, complianceMap)
+    },
+    [supplements, complianceMap, persistBoth],
+  )
+
   const toggleComplianceToday = useCallback(
     (id: string) => {
       const ymd = todayYmdLocal()
@@ -260,6 +287,8 @@ export function useHealthSupplements() {
     setEditMode,
     toggleActive,
     updateSupplement,
+    addSupplement,
+    removeSupplement,
     toggleComplianceToday,
     takenToday,
     refreshRemote: mergeRemote,

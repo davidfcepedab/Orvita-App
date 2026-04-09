@@ -148,14 +148,14 @@ export function AgendaOrvitaTaskCard({
           </p>
         </div>
 
-        <div className="flex items-center justify-between gap-3">
-          <p
-            className={`m-0 min-w-0 flex-1 tracking-tight text-[var(--color-text-primary)] ${titleClass}`}
-          >
-            {task.title}
-          </p>
-          <div className="flex shrink-0 flex-col items-end gap-1.5">
-            {onSaveComplete ? (
+        {onSaveComplete ? (
+          <div className="flex items-center justify-between gap-3">
+            <p
+              className={`m-0 min-w-0 flex-1 tracking-tight text-[var(--color-text-primary)] ${titleClass}`}
+            >
+              {task.title}
+            </p>
+            <div className="flex shrink-0 flex-col items-end gap-1.5">
               <button
                 type="button"
                 role="checkbox"
@@ -182,9 +182,11 @@ export function AgendaOrvitaTaskCard({
                   />
                 ) : null}
               </button>
-            ) : null}
+            </div>
           </div>
-        </div>
+        ) : (
+          <p className={`m-0 min-w-0 tracking-tight text-[var(--color-text-primary)] ${titleClass}`}>{task.title}</p>
+        )}
 
         <div className="flex flex-wrap items-center gap-1.5">
           <span
@@ -214,6 +216,35 @@ export function AgendaOrvitaTaskCard({
           </span>
         </div>
 
+        {showShiftDue ? (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              className={moveBtnClass}
+              onClick={() =>
+                void onPatchOrvita?.(task.id, { dueDate: addDaysToYmd(dueYmd, 1) })
+              }
+            >
+              Mañana
+            </button>
+            <button
+              type="button"
+              className={moveBtnClass}
+              onClick={() =>
+                void onPatchOrvita?.(task.id, { dueDate: addDaysToYmd(dueYmd, 2) })
+              }
+            >
+              Pasado mañana
+            </button>
+          </div>
+        ) : null}
+
+        {task.assigneeContact ? (
+          <p className="m-0 truncate text-[10px] leading-snug text-[var(--color-text-secondary)] opacity-90">
+            {task.assigneeContact}
+          </p>
+        ) : null}
+
         {onDelete || canEditModal ? (
           <div className="flex items-center justify-start gap-2">
             {onDelete ? (
@@ -239,35 +270,6 @@ export function AgendaOrvitaTaskCard({
                 <Pencil className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
               </button>
             ) : null}
-          </div>
-        ) : null}
-
-        {task.assigneeContact ? (
-          <p className="m-0 truncate text-[10px] leading-snug text-[var(--color-text-secondary)] opacity-90">
-            {task.assigneeContact}
-          </p>
-        ) : null}
-
-        {showShiftDue ? (
-          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-            <button
-              type="button"
-              className={moveBtnClass}
-              onClick={() =>
-                void onPatchOrvita?.(task.id, { dueDate: addDaysToYmd(dueYmd, 1) })
-              }
-            >
-              Mañana
-            </button>
-            <button
-              type="button"
-              className={moveBtnClass}
-              onClick={() =>
-                void onPatchOrvita?.(task.id, { dueDate: addDaysToYmd(dueYmd, 2) })
-              }
-            >
-              Pasado mañana
-            </button>
           </div>
         ) : null}
 

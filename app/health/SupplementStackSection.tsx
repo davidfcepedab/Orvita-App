@@ -1,6 +1,6 @@
 "use client"
 
-import { Check, Pencil, Save, Zap } from "lucide-react"
+import { Check, Pencil, Plus, Save, Trash2, Zap } from "lucide-react"
 import type { HealthSupplement, SupplementMomentId } from "@/lib/health/healthPrefsTypes"
 import { SUPPLEMENT_DAYPART_LABELS, SUPPLEMENT_DAYPART_ORDER } from "@/lib/health/supplementDayparts"
 import { Card } from "@/src/components/ui/Card"
@@ -17,6 +17,8 @@ type Props = {
     id: string,
     patch: Partial<Pick<HealthSupplement, "name" | "amount" | "daypart" | "indispensable" | "active">>,
   ) => void
+  addSupplement: () => void
+  removeSupplement: (id: string) => void
   takenToday: (id: string) => boolean
   toggleComplianceToday: (id: string) => void
 }
@@ -102,6 +104,8 @@ export function SupplementStackSection({
   editMode,
   setEditMode,
   updateSupplement,
+  addSupplement,
+  removeSupplement,
   takenToday,
   toggleComplianceToday,
 }: Props) {
@@ -173,7 +177,8 @@ export function SupplementStackSection({
                     key={row.id}
                     className="grid gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/40 p-3"
                   >
-                    <div className="flex flex-wrap gap-3 text-[11px] text-[var(--color-text-secondary)]">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex flex-wrap gap-3 text-[11px] text-[var(--color-text-secondary)]">
                       <label className="inline-flex items-center gap-2">
                         <input
                           type="checkbox"
@@ -190,6 +195,16 @@ export function SupplementStackSection({
                         />
                         Vital
                       </label>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeSupplement(row.id)}
+                        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[var(--color-text-secondary)] opacity-60 transition hover:bg-[color-mix(in_srgb,var(--color-accent-danger)_12%,transparent)] hover:text-[var(--color-accent-danger)] hover:opacity-100"
+                        aria-label={`Eliminar fila: ${row.name}`}
+                        title="Eliminar fila"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+                      </button>
                     </div>
                     <input
                       value={row.name}
@@ -221,7 +236,7 @@ export function SupplementStackSection({
 
             <div className="hidden md:block">
               <div className="w-full min-w-0 overflow-x-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/50">
-                <table className="w-full min-w-[640px] border-collapse text-left text-[12px]">
+                <table className="w-full min-w-[700px] border-collapse text-left text-[12px]">
                   <thead>
                     <tr className="border-b border-[var(--color-border)] text-[10px] uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
                       <th className="px-2 py-2 font-semibold">En stack</th>
@@ -229,6 +244,9 @@ export function SupplementStackSection({
                       <th className="px-2 py-2 font-semibold">Nombre</th>
                       <th className="px-2 py-2 font-semibold">Dosis</th>
                       <th className="px-2 py-2 font-semibold">Momento</th>
+                      <th className="w-10 px-1 py-2 font-semibold">
+                        <span className="sr-only">Eliminar</span>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -279,6 +297,17 @@ export function SupplementStackSection({
                             ))}
                           </select>
                         </td>
+                        <td className="px-1 py-2 align-middle">
+                          <button
+                            type="button"
+                            onClick={() => removeSupplement(row.id)}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--color-text-secondary)] opacity-55 transition hover:bg-[color-mix(in_srgb,var(--color-accent-danger)_12%,transparent)] hover:text-[var(--color-accent-danger)] hover:opacity-100"
+                            aria-label={`Eliminar fila: ${row.name}`}
+                            title="Eliminar fila"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -286,9 +315,19 @@ export function SupplementStackSection({
               </div>
             </div>
 
+            <button
+              type="button"
+              onClick={addSupplement}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface-alt)]/30 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)] transition hover:border-[var(--color-accent-health)] hover:bg-[color-mix(in_srgb,var(--color-accent-health)_8%,var(--color-surface-alt))] hover:text-[var(--color-accent-health)] md:w-auto md:self-start md:px-6"
+            >
+              <Plus className="h-4 w-4" strokeWidth={2.25} aria-hidden />
+              Añadir protocolo
+            </button>
+
             <p className="text-[10px] leading-snug text-[var(--color-text-secondary)]">
-              Pulsa cada protocolo en la vista de lectura para marcar si ya lo tomaste hoy. Los datos se sincronizan con
-              tu perfil cuando Supabase está activo.
+              Usa <span className="font-semibold">Añadir protocolo</span> para nuevas filas; el icono de papelera elimina
+              una entrada (si borras todas, se restauran los protocolos por defecto). En lectura, pulsa cada tarjeta para
+              marcar si ya lo tomaste hoy. Sincronización con tu perfil si Supabase está activo.
             </p>
           </div>
         ) : actives.length === 0 ? (

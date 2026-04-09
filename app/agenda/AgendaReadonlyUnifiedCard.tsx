@@ -102,6 +102,8 @@ export function AgendaReadonlyUnifiedCard({
   const showComplete =
     googleKind === "reminder" && Boolean(onToggleGoogleComplete)
   const showCalToggle = googleKind === "calendar" && Boolean(onToggleCalendarUiDone)
+  const showRightChrome =
+    showComplete || showCalToggle || (showCornerBadge && variant !== "compact")
   const doneVisual =
     googleKind === "reminder"
       ? statusKey.includes("complet")
@@ -124,72 +126,76 @@ export function AgendaReadonlyUnifiedCard({
         </p>
       </div>
 
-      <div className="flex items-center justify-between gap-3">
-        <p
-          className={`m-0 min-w-0 flex-1 tracking-tight text-[var(--color-text-primary)] ${titleClass}`}
-        >
-          {title}
-        </p>
-        <div className="flex shrink-0 flex-col items-end gap-1.5">
-          {showComplete ? (
-            <button
-              type="button"
-              role="checkbox"
-              aria-checked={doneVisual}
-              disabled={googleCompleteBusy}
-              aria-label={doneVisual ? "Marcar como pendiente" : "Marcar como realizada"}
-              onClick={() => onToggleGoogleComplete?.()}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-border)] text-[var(--agenda-reminder)] transition-[transform,background-color,border-color] duration-300 hover:border-[var(--agenda-reminder)] disabled:opacity-45"
-              style={
-                doneVisual
-                  ? {
-                      borderColor: "color-mix(in srgb, #4ade80 70%, var(--color-border))",
-                      background: "color-mix(in srgb, #86efac 55%, transparent)",
-                    }
-                  : undefined
-              }
-            >
-              {doneVisual ? (
-                <Check className="h-4 w-4 animate-agenda-check-pop text-[#15803d]" strokeWidth={2.75} aria-hidden />
-              ) : null}
-            </button>
-          ) : null}
-          {showCalToggle ? (
-            <button
-              type="button"
-              role="checkbox"
-              aria-checked={calendarUiDone}
-              aria-label={calendarUiDone ? "Quitar marca de visto" : "Marcar como visto"}
-              onClick={() => onToggleCalendarUiDone?.()}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-border)] text-[var(--agenda-calendar)] transition-[transform,background-color,border-color] duration-300 hover:border-[var(--agenda-calendar)]"
-              style={
-                calendarUiDone
-                  ? {
-                      borderColor: "color-mix(in srgb, #4ade80 70%, var(--color-border))",
-                      background: "color-mix(in srgb, #86efac 55%, transparent)",
-                    }
-                  : undefined
-              }
-            >
-              {calendarUiDone ? (
-                <Check className="h-4 w-4 animate-agenda-check-pop text-[#15803d]" strokeWidth={2.75} aria-hidden />
-              ) : null}
-            </button>
-          ) : null}
-          {showCornerBadge && variant !== "compact" ? (
-            <div
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
-              style={{
-                background: `color-mix(in srgb, ${badgeColorVar} 78%, #0f172a)`,
-                boxShadow: `0 0 0 2px color-mix(in srgb, ${badgeColorVar} 28%, transparent)`,
-              }}
-              aria-hidden
-            >
-              {badgeLetter}
-            </div>
-          ) : null}
+      {showRightChrome ? (
+        <div className="flex items-center justify-between gap-3">
+          <p
+            className={`m-0 min-w-0 flex-1 tracking-tight text-[var(--color-text-primary)] ${titleClass}`}
+          >
+            {title}
+          </p>
+          <div className="flex shrink-0 flex-col items-end gap-1.5">
+            {showComplete ? (
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked={doneVisual}
+                disabled={googleCompleteBusy}
+                aria-label={doneVisual ? "Marcar como pendiente" : "Marcar como realizada"}
+                onClick={() => onToggleGoogleComplete?.()}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-border)] text-[var(--agenda-reminder)] transition-[transform,background-color,border-color] duration-300 hover:border-[var(--agenda-reminder)] disabled:opacity-45"
+                style={
+                  doneVisual
+                    ? {
+                        borderColor: "color-mix(in srgb, #4ade80 70%, var(--color-border))",
+                        background: "color-mix(in srgb, #86efac 55%, transparent)",
+                      }
+                    : undefined
+                }
+              >
+                {doneVisual ? (
+                  <Check className="h-4 w-4 animate-agenda-check-pop text-[#15803d]" strokeWidth={2.75} aria-hidden />
+                ) : null}
+              </button>
+            ) : null}
+            {showCalToggle ? (
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked={calendarUiDone}
+                aria-label={calendarUiDone ? "Quitar marca de visto" : "Marcar como visto"}
+                onClick={() => onToggleCalendarUiDone?.()}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-border)] text-[var(--agenda-calendar)] transition-[transform,background-color,border-color] duration-300 hover:border-[var(--agenda-calendar)]"
+                style={
+                  calendarUiDone
+                    ? {
+                        borderColor: "color-mix(in srgb, #4ade80 70%, var(--color-border))",
+                        background: "color-mix(in srgb, #86efac 55%, transparent)",
+                      }
+                    : undefined
+                }
+              >
+                {calendarUiDone ? (
+                  <Check className="h-4 w-4 animate-agenda-check-pop text-[#15803d]" strokeWidth={2.75} aria-hidden />
+                ) : null}
+              </button>
+            ) : null}
+            {showCornerBadge && variant !== "compact" ? (
+              <div
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
+                style={{
+                  background: `color-mix(in srgb, ${badgeColorVar} 78%, #0f172a)`,
+                  boxShadow: `0 0 0 2px color-mix(in srgb, ${badgeColorVar} 28%, transparent)`,
+                }}
+                aria-hidden
+              >
+                {badgeLetter}
+              </div>
+            ) : null}
+          </div>
         </div>
-      </div>
+      ) : (
+        <p className={`m-0 min-w-0 tracking-tight text-[var(--color-text-primary)] ${titleClass}`}>{title}</p>
+      )}
 
       <div className="flex flex-wrap items-center gap-1.5">
         <span
@@ -239,6 +245,37 @@ export function AgendaReadonlyUnifiedCard({
         ) : null}
       </div>
 
+      {showMoveDue && (onMoveTomorrow || onMoveAfterTomorrow) ? (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {onMoveTomorrow ? (
+            <button
+              type="button"
+              disabled={moveDueBusy}
+              className={moveBtnClass}
+              onClick={() => onMoveTomorrow()}
+            >
+              Mañana
+            </button>
+          ) : null}
+          {onMoveAfterTomorrow ? (
+            <button
+              type="button"
+              disabled={moveDueBusy}
+              className={moveBtnClass}
+              onClick={() => onMoveAfterTomorrow()}
+            >
+              Pasado mañana
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {assigneeSubtle ? (
+        <p className="m-0 truncate text-[10px] leading-snug text-[var(--color-text-secondary)] opacity-90">
+          {assigneeSubtle}
+        </p>
+      ) : null}
+
       {onDelete || onEdit ? (
         <div className="flex items-center justify-start gap-2">
           {onDelete ? (
@@ -266,37 +303,6 @@ export function AgendaReadonlyUnifiedCard({
               onClick={onEdit}
             >
               <Pencil className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
-            </button>
-          ) : null}
-        </div>
-      ) : null}
-
-      {assigneeSubtle ? (
-        <p className="m-0 truncate text-[10px] leading-snug text-[var(--color-text-secondary)] opacity-90">
-          {assigneeSubtle}
-        </p>
-      ) : null}
-
-      {showMoveDue && (onMoveTomorrow || onMoveAfterTomorrow) ? (
-        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-          {onMoveTomorrow ? (
-            <button
-              type="button"
-              disabled={moveDueBusy}
-              className={moveBtnClass}
-              onClick={() => onMoveTomorrow()}
-            >
-              Mañana
-            </button>
-          ) : null}
-          {onMoveAfterTomorrow ? (
-            <button
-              type="button"
-              disabled={moveDueBusy}
-              className={moveBtnClass}
-              onClick={() => onMoveAfterTomorrow()}
-            >
-              Pasado mañana
             </button>
           ) : null}
         </div>
