@@ -1,13 +1,23 @@
-export type SupplementDaypart = "manana" | "mediodia" | "tarde" | "noche"
+/** Momento del protocolo (6 franjas; el campo persistido sigue siendo `daypart` por compatibilidad). */
+export type SupplementMomentId =
+  | "apenas_me_levanto"
+  | "en_ayunas"
+  | "dia_manana"
+  | "mediodia"
+  | "tarde"
+  | "antes_de_dormir"
+
+/** @deprecated Usar SupplementMomentId; se mantiene alias por imports antiguos. */
+export type SupplementDaypart = SupplementMomentId
 
 export type HealthSupplement = {
   id: string
   name: string
   amount: string
   active: boolean
-  /** Momento del día recomendado (4 franjas). */
-  daypart: SupplementDaypart
-  /** Si es crítico en tu protocolo (solo etiqueta visual). */
+  /** Momento del día (id interno; API/JSON pueden enviar también `moment`). */
+  daypart: SupplementMomentId
+  /** Alta prioridad en el protocolo (visual «VITAL» / crítico). */
   indispensable: boolean
 }
 

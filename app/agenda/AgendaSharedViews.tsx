@@ -12,7 +12,6 @@ import {
   formatLocalDateKey,
   localDateKeyFromIso,
 } from "@/lib/agenda/localDateKey"
-import { GOOGLE_CALENDAR_WEB_APP, GOOGLE_TASKS_WEB_APP } from "@/lib/agenda/googleEditUrls"
 import { googleTasksForTimelineMerge, isGoogleTaskDone } from "@/lib/agenda/googleTasksUpcoming"
 import type { GoogleDayBucket } from "@/lib/agenda/googleAgendaByDay"
 import { countGoogleDayItems } from "@/lib/agenda/googleAgendaByDay"
@@ -29,19 +28,18 @@ import {
 } from "@/app/agenda/agendaUiTokens"
 import { AgendaOrvitaMiniCard } from "@/app/agenda/AgendaOrvitaMiniCard"
 import { AgendaOrvitaTaskCard } from "@/app/agenda/AgendaOrvitaTaskCard"
-import { GoogleTaskDueSetter } from "@/app/agenda/GoogleTaskDueSetter"
 import { AgendaReadonlyUnifiedCard } from "@/app/agenda/AgendaReadonlyUnifiedCard"
 import {
   calendarEventFuenteLabel,
-  calendarEventUnifiedTimeline,
-  reminderFuenteLabel,
-  venceLine,
+  calendarEventMetaCompact,
+  dueMetaCompact,
 } from "@/app/agenda/taskCardFormat"
 import { AGENDA_COLOR, taskTypeAccentVar } from "@/app/agenda/taskTypeVisual"
 import type { HouseholdMemberDTO } from "@/lib/household/memberTypes"
 import type { AgendaTaskPriority } from "@/app/hooks/useAgendaTasks"
-import { googleReadonlyCardChrome } from "@/app/agenda/agendaCardChrome"
-import { GoogleReminderQuickBar } from "@/app/agenda/GoogleReminderQuickBar"
+import { googleAgendaCardShell } from "@/app/agenda/agendaCardChrome"
+import type { AgendaEditModalTarget } from "@/app/agenda/AgendaTaskEditModal"
+import { addDaysToYmd, isYmdTodayLocal } from "@/lib/agenda/agendaDueShift"
 
 function taskDueSortMs(due: string): number {
   if (!due || due.length < 10) return Number.MAX_SAFE_INTEGER - 10_000
@@ -151,10 +149,6 @@ export type GroupedTasks = {
   personal: UiAgendaTask[]
 }
 
-function googleTaskNeedsDue(t: GoogleTaskDTO) {
-  return !t.due || t.due.length < 10
-}
-
 type GoogleReminderPatchHandler = (
   id: string,
   patch: {
@@ -166,26 +160,31 @@ type GoogleReminderPatchHandler = (
   },
 ) => Promise<unknown>
 
-function reminderUnifiedFooter(
-  reminder: GoogleTaskDTO,
-  onGoogleTaskSetDue: ((taskId: string, dueYmd: string) => Promise<void>) | undefined,
-  onGoogleReminderPatch: GoogleReminderPatchHandler | undefined,
-  householdMembers: HouseholdMemberDTO[] | undefined,
-) {
-  const members = householdMembers ?? []
-  if (onGoogleReminderPatch && members.length > 0) {
-    return (
-      <GoogleReminderQuickBar
-        task={reminder}
-        householdMembers={members}
-        patchTask={onGoogleReminderPatch}
-      />
-    )
-  }
-  if (onGoogleTaskSetDue && googleTaskNeedsDue(reminder)) {
-    return <GoogleTaskDueSetter taskId={reminder.id} patchDue={onGoogleTaskSetDue} />
-  }
-  return undefined
+function googleReminderAssigneeLabel(
+  r: GoogleTaskDTO,
+  members: HouseholdMemberDTO[],
+): string | null {
+  const id = r.localAssigneeUserId?.trim()
+  if (!id) return null
+  const m = members.find((x) => x.id === id)
+  return m ? (m.displayName?.trim() || m.email || null) : null
+}
+
+function googleLocalPriorityUi(
+  p: GoogleTaskLocalPriority | null | undefined,
+): UiAgendaTask["priority"] | null {
+  if (!p) return null
+  if (p === "Alta") return "alta"
+  if (p === "Baja") return "baja"
+  return "media"
+}
+
+type AgendaCardBridge = {
+  viewerUserId?: string | null
+  onOpenAgendaEdit?: (target: AgendaEditModalTarget) => void
+  isCalendarUiDone?: (id: string) => boolean
+  toggleCalendarUiDone?: (id: string) => void
+  onGoogleReminderToggleComplete?: (id: string, completed: boolean) => Promise<void>
 }
 
 export function AgendaSharedKanban({
@@ -203,6 +202,11 @@ export function AgendaSharedKanban({
   householdMembers,
   onPatchOrvitaTask,
   onGoogleReminderPatch,
+  viewerUserId = null,
+  onOpenAgendaEdit,
+  isCalendarUiDone,
+  toggleCalendarUiDone,
+  onGoogleReminderToggleComplete,
 }: {
   grouped: GroupedTasks
   /** Recibidas aún sin aceptar: se muestran arriba en la columna «Tareas Recibidas». */
@@ -228,8 +232,9 @@ export function AgendaSharedKanban({
     }>,
   ) => Promise<void> | void
   onGoogleReminderPatch?: GoogleReminderPatchHandler
-}) {
+} & AgendaCardBridge) {
   const [busyDel, setBusyDel] = useState<string | null>(null)
+  const members = householdMembers ?? []
 
   const googleReminders = useMemo(
     () => (googleTasksFeed?.connected ? googleTasksForTimelineMerge(googleTasksFeed.tasks) : []),
@@ -290,6 +295,8 @@ export function AgendaSharedKanban({
               key={task.id}
               task={task}
               variant="kanban"
+              viewerUserId={viewerUserId}
+              onOpenEdit={onOpenAgendaEdit ? (t) => onOpenAgendaEdit({ kind: "orvita", task: t }) : undefined}
               householdMembers={householdMembers}
               onPatchOrvita={onPatchOrvitaTask}
               onSaveComplete={onSaveComplete}
@@ -324,6 +331,8 @@ export function AgendaSharedKanban({
             key={task.id}
             task={task}
             variant="kanban"
+            viewerUserId={viewerUserId}
+            onOpenEdit={onOpenAgendaEdit ? (t) => onOpenAgendaEdit({ kind: "orvita", task: t }) : undefined}
             householdMembers={householdMembers}
             onPatchOrvita={onPatchOrvitaTask}
             onSaveComplete={onSaveComplete}
@@ -360,36 +369,89 @@ export function AgendaSharedKanban({
               <AgendaReadonlyUnifiedCard
                 key={`r-${row.reminder.id}`}
                 variant="kanban"
-                borderLeft={`4px solid ${AGENDA_COLOR.reminder}`}
-                chromeOverlay={googleReadonlyCardChrome({
+                shell={googleAgendaCardShell({
                   kind: "reminder",
                   completed: isGoogleTaskDone(row.reminder.status),
+                  assignedToViewer: Boolean(
+                    viewerUserId && row.reminder.localAssigneeUserId === viewerUserId,
+                  ),
                 })}
+                MetaIcon={Bell}
+                metaText={dueMetaCompact(localDateKeyFromIso(row.reminder.due) ?? "")}
                 title={row.reminder.title || "(Sin título)"}
-                TimelineIcon={Bell}
-                timelineText={venceLine(localDateKeyFromIso(row.reminder.due) ?? "")}
                 googleKind="reminder"
                 kindPillLabel="Recordatorio"
-                fuente={reminderFuenteLabel()}
-                footNote={
-                  onGoogleReminderPatch && (householdMembers?.length ?? 0) > 0
-                    ? undefined
-                    : googleTaskNeedsDue(row.reminder)
-                      ? "Sin fecha en Google Tasks: no aparece en Semana/Mes hasta que tenga vencimiento."
-                      : onDeleteGoogleTask
-                        ? undefined
-                        : "Solo lectura en Órvita · edita en Google Tasks"
+                statusLabel={isGoogleTaskDone(row.reminder.status) ? "Completada" : "Pendiente"}
+                statusKey={
+                  isGoogleTaskDone(row.reminder.status) ? "completada" : "pendiente"
                 }
-                footer={reminderUnifiedFooter(
-                  row.reminder,
-                  onGoogleTaskSetDue,
-                  onGoogleReminderPatch,
-                  householdMembers,
+                priorityUi={googleLocalPriorityUi(row.reminder.localPriority)}
+                assigneeSubtle={googleReminderAssigneeLabel(row.reminder, members)}
+                onEdit={
+                  onOpenAgendaEdit && onGoogleReminderPatch
+                    ? () => onOpenAgendaEdit({ kind: "google-reminder", task: row.reminder })
+                    : undefined
+                }
+                onToggleGoogleComplete={
+                  onGoogleReminderToggleComplete
+                    ? () =>
+                        void (async () => {
+                          const r = row.reminder
+                          const done = isGoogleTaskDone(r.status)
+                          setBusyDel(`tc-r-${r.id}`)
+                          try {
+                            await onGoogleReminderToggleComplete(r.id, !done)
+                          } finally {
+                            setBusyDel(null)
+                          }
+                        })()
+                    : undefined
+                }
+                googleCompleteBusy={busyDel === `tc-r-${row.reminder.id}`}
+                showMoveDue={Boolean(
+                  onGoogleReminderPatch &&
+                    (() => {
+                      const y = localDateKeyFromIso(row.reminder.due) ?? ""
+                      return y && isYmdTodayLocal(y) && !isGoogleTaskDone(row.reminder.status)
+                    })(),
                 )}
-                badgeLetter="GT"
-                badgeColorVar={AGENDA_COLOR.reminder}
-                editUrl={GOOGLE_TASKS_WEB_APP}
-                editTitle="Editar en Google Tasks"
+                onMoveTomorrow={
+                  onGoogleReminderPatch
+                    ? () =>
+                        void (async () => {
+                          const r = row.reminder
+                          const y = localDateKeyFromIso(r.due) ?? ""
+                          if (!y) return
+                          setBusyDel(`mv-r-${r.id}`)
+                          try {
+                            await onGoogleReminderPatch(r.id, {
+                              due: `${addDaysToYmd(y, 1)}T12:00:00.000Z`,
+                            })
+                          } finally {
+                            setBusyDel(null)
+                          }
+                        })()
+                    : undefined
+                }
+                onMoveAfterTomorrow={
+                  onGoogleReminderPatch
+                    ? () =>
+                        void (async () => {
+                          const r = row.reminder
+                          const y = localDateKeyFromIso(r.due) ?? ""
+                          if (!y) return
+                          setBusyDel(`mv-r-${r.id}`)
+                          try {
+                            await onGoogleReminderPatch(r.id, {
+                              due: `${addDaysToYmd(y, 2)}T12:00:00.000Z`,
+                            })
+                          } finally {
+                            setBusyDel(null)
+                          }
+                        })()
+                    : undefined
+                }
+                moveDueBusy={busyDel === `mv-r-${row.reminder.id}`}
                 onDelete={
                   onDeleteGoogleTask
                     ? async () => {
@@ -409,22 +471,23 @@ export function AgendaSharedKanban({
               <AgendaReadonlyUnifiedCard
                 key={`e-${row.event.id}`}
                 variant="kanban"
-                borderLeft={`4px solid ${AGENDA_COLOR.calendar}`}
-                chromeOverlay={googleReadonlyCardChrome({ kind: "calendar", completed: false })}
+                shell={googleAgendaCardShell({
+                  kind: "calendar",
+                  completed: Boolean(isCalendarUiDone?.(row.event.id)),
+                })}
+                MetaIcon={Calendar}
+                metaText={calendarEventMetaCompact(row.event)}
                 title={row.event.summary || "(Sin título)"}
-                TimelineIcon={Calendar}
-                timelineText={calendarEventUnifiedTimeline(row.event)}
                 googleKind="calendar"
                 kindPillLabel={calendarEventFuenteLabel(row.event)}
-                statusLabel="Calendario"
-                fuente={calendarEventFuenteLabel(row.event)}
-                footNote={
-                  onDeleteCalendarEvent ? undefined : "Solo lectura en Órvita · edita en Google Calendar"
+                statusLabel={isCalendarUiDone?.(row.event.id) ? "Listo" : "Pendiente"}
+                statusKey={isCalendarUiDone?.(row.event.id) ? "completada" : "pendiente"}
+                priorityUi={null}
+                onEdit={onOpenAgendaEdit ? () => onOpenAgendaEdit({ kind: "google-calendar", event: row.event }) : undefined}
+                calendarUiDone={Boolean(isCalendarUiDone?.(row.event.id))}
+                onToggleCalendarUiDone={
+                  toggleCalendarUiDone ? () => toggleCalendarUiDone(row.event.id) : undefined
                 }
-                badgeLetter="GC"
-                badgeColorVar={AGENDA_COLOR.calendar}
-                editUrl={GOOGLE_CALENDAR_WEB_APP}
-                editTitle="Editar en Google Calendar"
                 onDelete={
                   onDeleteCalendarEvent
                     ? async () => {
@@ -469,6 +532,11 @@ export function AgendaSharedList({
   householdMembers,
   onPatchOrvitaTask,
   onGoogleReminderPatch,
+  viewerUserId = null,
+  onOpenAgendaEdit,
+  isCalendarUiDone,
+  toggleCalendarUiDone,
+  onGoogleReminderToggleComplete,
 }: {
   filtered: UiAgendaTask[]
   /** Asignaciones de otros pendientes de aceptar (fuera de la cronología hasta aceptar). */
@@ -497,8 +565,9 @@ export function AgendaSharedList({
     }>,
   ) => Promise<void> | void
   onGoogleReminderPatch?: GoogleReminderPatchHandler
-}) {
+} & AgendaCardBridge) {
   const [busyDel, setBusyDel] = useState<string | null>(null)
+  const members = householdMembers ?? []
 
   const googleReminders = useMemo(
     () => (googleTasksFeed?.connected ? googleTasksForTimelineMerge(googleTasksFeed.tasks) : []),
@@ -576,6 +645,7 @@ export function AgendaSharedList({
                 key={`p-${task.id}`}
                 task={task}
                 variant="list"
+                viewerUserId={viewerUserId}
                 onAcceptAssignment={onAcceptAssignment}
               />
             ))}
@@ -588,6 +658,8 @@ export function AgendaSharedList({
             key={`t-${row.task.id}`}
             task={row.task}
             variant="list"
+            viewerUserId={viewerUserId}
+            onOpenEdit={onOpenAgendaEdit ? (t) => onOpenAgendaEdit({ kind: "orvita", task: t }) : undefined}
             householdMembers={householdMembers}
             onPatchOrvita={onPatchOrvitaTask}
             onSaveComplete={onSaveComplete}
@@ -611,36 +683,87 @@ export function AgendaSharedList({
           <AgendaReadonlyUnifiedCard
             key={`r-${row.reminder.id}`}
             variant="list"
-            borderLeft={`4px solid ${AGENDA_COLOR.reminder}`}
-            chromeOverlay={googleReadonlyCardChrome({
+            shell={googleAgendaCardShell({
               kind: "reminder",
               completed: isGoogleTaskDone(row.reminder.status),
+              assignedToViewer: Boolean(
+                viewerUserId && row.reminder.localAssigneeUserId === viewerUserId,
+              ),
             })}
+            MetaIcon={Bell}
+            metaText={dueMetaCompact(localDateKeyFromIso(row.reminder.due) ?? "")}
             title={row.reminder.title || "(Sin título)"}
-            TimelineIcon={Bell}
-            timelineText={venceLine(localDateKeyFromIso(row.reminder.due) ?? "")}
             googleKind="reminder"
             kindPillLabel="Recordatorio"
-            fuente={reminderFuenteLabel()}
-            footNote={
-              onGoogleReminderPatch && (householdMembers?.length ?? 0) > 0
-                ? undefined
-                : googleTaskNeedsDue(row.reminder)
-                  ? "Sin fecha en Google Tasks: no se agrupa en calendario. Añade vencimiento abajo o en Google."
-                  : onDeleteGoogleTask
-                    ? undefined
-                    : "Solo lectura en Órvita · edita en Google Tasks"
+            statusLabel={isGoogleTaskDone(row.reminder.status) ? "Completada" : "Pendiente"}
+            statusKey={isGoogleTaskDone(row.reminder.status) ? "completada" : "pendiente"}
+            priorityUi={googleLocalPriorityUi(row.reminder.localPriority)}
+            assigneeSubtle={googleReminderAssigneeLabel(row.reminder, members)}
+            onEdit={
+              onOpenAgendaEdit && onGoogleReminderPatch
+                ? () => onOpenAgendaEdit({ kind: "google-reminder", task: row.reminder })
+                : undefined
             }
-            footer={reminderUnifiedFooter(
-              row.reminder,
-              onGoogleTaskSetDue,
-              onGoogleReminderPatch,
-              householdMembers,
+            onToggleGoogleComplete={
+              onGoogleReminderToggleComplete
+                ? () =>
+                    void (async () => {
+                      const r = row.reminder
+                      const done = isGoogleTaskDone(r.status)
+                      setBusyDel(`tc-r-${r.id}`)
+                      try {
+                        await onGoogleReminderToggleComplete(r.id, !done)
+                      } finally {
+                        setBusyDel(null)
+                      }
+                    })()
+                : undefined
+            }
+            googleCompleteBusy={busyDel === `tc-r-${row.reminder.id}`}
+            showMoveDue={Boolean(
+              onGoogleReminderPatch &&
+                (() => {
+                  const y = localDateKeyFromIso(row.reminder.due) ?? ""
+                  return y && isYmdTodayLocal(y) && !isGoogleTaskDone(row.reminder.status)
+                })(),
             )}
-            badgeLetter="GT"
-            badgeColorVar={AGENDA_COLOR.reminder}
-            editUrl={GOOGLE_TASKS_WEB_APP}
-            editTitle="Editar en Google Tasks"
+            onMoveTomorrow={
+              onGoogleReminderPatch
+                ? () =>
+                    void (async () => {
+                      const r = row.reminder
+                      const y = localDateKeyFromIso(r.due) ?? ""
+                      if (!y) return
+                      setBusyDel(`mv-r-${r.id}`)
+                      try {
+                        await onGoogleReminderPatch(r.id, {
+                          due: `${addDaysToYmd(y, 1)}T12:00:00.000Z`,
+                        })
+                      } finally {
+                        setBusyDel(null)
+                      }
+                    })()
+                : undefined
+            }
+            onMoveAfterTomorrow={
+              onGoogleReminderPatch
+                ? () =>
+                    void (async () => {
+                      const r = row.reminder
+                      const y = localDateKeyFromIso(r.due) ?? ""
+                      if (!y) return
+                      setBusyDel(`mv-r-${r.id}`)
+                      try {
+                        await onGoogleReminderPatch(r.id, {
+                          due: `${addDaysToYmd(y, 2)}T12:00:00.000Z`,
+                        })
+                      } finally {
+                        setBusyDel(null)
+                      }
+                    })()
+                : undefined
+            }
+            moveDueBusy={busyDel === `mv-r-${row.reminder.id}`}
             onDelete={
               onDeleteGoogleTask
                 ? async () => {
@@ -660,22 +783,23 @@ export function AgendaSharedList({
           <AgendaReadonlyUnifiedCard
             key={`e-${row.event.id}`}
             variant="list"
-            borderLeft={`4px solid ${AGENDA_COLOR.calendar}`}
-            chromeOverlay={googleReadonlyCardChrome({ kind: "calendar", completed: false })}
+            shell={googleAgendaCardShell({
+              kind: "calendar",
+              completed: Boolean(isCalendarUiDone?.(row.event.id)),
+            })}
+            MetaIcon={Calendar}
+            metaText={calendarEventMetaCompact(row.event)}
             title={row.event.summary || "(Sin título)"}
-            TimelineIcon={Calendar}
-            timelineText={calendarEventUnifiedTimeline(row.event)}
             googleKind="calendar"
             kindPillLabel={calendarEventFuenteLabel(row.event)}
-            statusLabel="Calendario"
-            fuente={calendarEventFuenteLabel(row.event)}
-            footNote={
-              onDeleteCalendarEvent ? undefined : "Solo lectura en Órvita · edita en Google Calendar"
+            statusLabel={isCalendarUiDone?.(row.event.id) ? "Listo" : "Pendiente"}
+            statusKey={isCalendarUiDone?.(row.event.id) ? "completada" : "pendiente"}
+            priorityUi={null}
+            onEdit={onOpenAgendaEdit ? () => onOpenAgendaEdit({ kind: "google-calendar", event: row.event }) : undefined}
+            calendarUiDone={Boolean(isCalendarUiDone?.(row.event.id))}
+            onToggleCalendarUiDone={
+              toggleCalendarUiDone ? () => toggleCalendarUiDone(row.event.id) : undefined
             }
-            badgeLetter="GC"
-            badgeColorVar={AGENDA_COLOR.calendar}
-            editUrl={GOOGLE_CALENDAR_WEB_APP}
-            editTitle="Editar en Google Calendar"
             onDelete={
               onDeleteCalendarEvent
                 ? async () => {
@@ -707,6 +831,13 @@ export function AgendaSharedWeek({
   formatDateKey,
   formatDayLabel,
   googleByDay,
+  viewerUserId = null,
+  onOpenAgendaEdit,
+  isCalendarUiDone,
+  toggleCalendarUiDone,
+  onGoogleReminderToggleComplete,
+  onGoogleReminderPatch,
+  householdMembers,
 }: {
   weekDays: Date[]
   weekMap: Record<string, UiAgendaTask[]>
@@ -717,7 +848,11 @@ export function AgendaSharedWeek({
   formatDateKey: (d: Date) => string
   formatDayLabel: (d: Date) => string
   googleByDay?: Record<string, GoogleDayBucket>
-}) {
+  householdMembers?: HouseholdMemberDTO[]
+  onGoogleReminderPatch?: GoogleReminderPatchHandler
+} & Partial<AgendaCardBridge>) {
+  const [busyDel, setBusyDel] = useState<string | null>(null)
+  const members = householdMembers ?? []
   return (
     <div className={agendaSectionStackClass} aria-label="Semana: Órvita y Google por día">
       <Card className={agendaCardPadClass}>
@@ -766,26 +901,30 @@ export function AgendaSharedWeek({
                 </div>
                 <div className="flex max-h-[min(52dvh,28rem)] min-h-0 flex-col gap-1.5 overflow-y-auto pr-0.5 lg:max-h-[min(58dvh,36rem)] lg:gap-1.5">
                   {dayTasks.map((task) => (
-                    <AgendaOrvitaMiniCard key={task.id} task={task} />
+                    <AgendaOrvitaMiniCard key={task.id} task={task} viewerUserId={viewerUserId} />
                   ))}
                   {(g?.events ?? []).map((ev) => (
                     <AgendaReadonlyUnifiedCard
                       key={`gcal-${ev.id}`}
                       variant="compact"
                       embedded
-                      borderLeft={`4px solid ${AGENDA_COLOR.calendar}`}
-                      chromeOverlay={googleReadonlyCardChrome({ kind: "calendar", completed: false })}
+                      shell={googleAgendaCardShell({
+                        kind: "calendar",
+                        completed: Boolean(isCalendarUiDone?.(ev.id)),
+                      })}
+                      MetaIcon={Calendar}
+                      metaText={calendarEventMetaCompact(ev)}
                       title={ev.summary || "(Evento)"}
-                      TimelineIcon={Calendar}
-                      timelineText={calendarEventUnifiedTimeline(ev)}
                       googleKind="calendar"
                       kindPillLabel={calendarEventFuenteLabel(ev)}
-                      statusLabel="Calendario"
-                      fuente={calendarEventFuenteLabel(ev)}
-                      badgeLetter="GC"
-                      badgeColorVar={AGENDA_COLOR.calendar}
-                      editUrl={GOOGLE_CALENDAR_WEB_APP}
-                      editTitle="Editar en Google Calendar"
+                      statusLabel={isCalendarUiDone?.(ev.id) ? "Listo" : "Pendiente"}
+                      statusKey={isCalendarUiDone?.(ev.id) ? "completada" : "pendiente"}
+                      priorityUi={null}
+                      onEdit={onOpenAgendaEdit ? () => onOpenAgendaEdit({ kind: "google-calendar", event: ev }) : undefined}
+                      calendarUiDone={Boolean(isCalendarUiDone?.(ev.id))}
+                      onToggleCalendarUiDone={
+                        toggleCalendarUiDone ? () => toggleCalendarUiDone(ev.id) : undefined
+                      }
                     />
                   ))}
                   {(g?.reminders ?? []).map((r) => (
@@ -793,21 +932,84 @@ export function AgendaSharedWeek({
                       key={`gt-${r.id}`}
                       variant="compact"
                       embedded
-                      borderLeft={`4px solid ${AGENDA_COLOR.reminder}`}
-                      chromeOverlay={googleReadonlyCardChrome({
+                      shell={googleAgendaCardShell({
                         kind: "reminder",
                         completed: isGoogleTaskDone(r.status),
+                        assignedToViewer: Boolean(
+                          viewerUserId && r.localAssigneeUserId === viewerUserId,
+                        ),
                       })}
+                      MetaIcon={Bell}
+                      metaText={dueMetaCompact(localDateKeyFromIso(r.due) ?? "")}
                       title={r.title || "(Recordatorio)"}
-                      TimelineIcon={Bell}
-                      timelineText={venceLine(localDateKeyFromIso(r.due) ?? "")}
                       googleKind="reminder"
                       kindPillLabel="Recordatorio"
-                      fuente={reminderFuenteLabel()}
-                      badgeLetter="GT"
-                      badgeColorVar={AGENDA_COLOR.reminder}
-                      editUrl={GOOGLE_TASKS_WEB_APP}
-                      editTitle="Editar en Google Tasks"
+                      statusLabel={isGoogleTaskDone(r.status) ? "Completada" : "Pendiente"}
+                      statusKey={isGoogleTaskDone(r.status) ? "completada" : "pendiente"}
+                      priorityUi={googleLocalPriorityUi(r.localPriority)}
+                      assigneeSubtle={googleReminderAssigneeLabel(r, members)}
+                      onEdit={
+                        onOpenAgendaEdit && onGoogleReminderPatch
+                          ? () => onOpenAgendaEdit({ kind: "google-reminder", task: r })
+                          : undefined
+                      }
+                      onToggleGoogleComplete={
+                        onGoogleReminderToggleComplete
+                          ? () =>
+                              void (async () => {
+                                const done = isGoogleTaskDone(r.status)
+                                setBusyDel(`tc-w-${r.id}`)
+                                try {
+                                  await onGoogleReminderToggleComplete(r.id, !done)
+                                } finally {
+                                  setBusyDel(null)
+                                }
+                              })()
+                          : undefined
+                      }
+                      googleCompleteBusy={busyDel === `tc-w-${r.id}`}
+                      showMoveDue={Boolean(
+                        onGoogleReminderPatch &&
+                          (() => {
+                            const y = localDateKeyFromIso(r.due) ?? ""
+                            return y && isYmdTodayLocal(y) && !isGoogleTaskDone(r.status)
+                          })(),
+                      )}
+                      onMoveTomorrow={
+                        onGoogleReminderPatch
+                          ? () =>
+                              void (async () => {
+                                const y = localDateKeyFromIso(r.due) ?? ""
+                                if (!y) return
+                                setBusyDel(`mv-w-${r.id}`)
+                                try {
+                                  await onGoogleReminderPatch(r.id, {
+                                    due: `${addDaysToYmd(y, 1)}T12:00:00.000Z`,
+                                  })
+                                } finally {
+                                  setBusyDel(null)
+                                }
+                              })()
+                          : undefined
+                      }
+                      onMoveAfterTomorrow={
+                        onGoogleReminderPatch
+                          ? () =>
+                              void (async () => {
+                                const y = localDateKeyFromIso(r.due) ?? ""
+                                if (!y) return
+                                setBusyDel(`mv-w-${r.id}`)
+                                try {
+                                  await onGoogleReminderPatch(r.id, {
+                                    due: `${addDaysToYmd(y, 2)}T12:00:00.000Z`,
+                                  })
+                                } finally {
+                                  setBusyDel(null)
+                                }
+                              })()
+                          : undefined
+                      }
+                      moveDueBusy={busyDel === `mv-w-${r.id}`}
                     />
                   ))}
                   {dayTasks.length === 0 && gCount === 0 && (
@@ -837,8 +1039,14 @@ export function AgendaSharedMonth({
   onNextMonth,
   onGoThisMonth,
   householdMembers,
-  onGoogleTaskSetDue,
   onGoogleReminderPatch,
+  onDeleteGoogleTask,
+  onDeleteCalendarEvent,
+  viewerUserId = null,
+  onOpenAgendaEdit,
+  isCalendarUiDone,
+  toggleCalendarUiDone,
+  onGoogleReminderToggleComplete,
 }: {
   monthGrid: { date: Date | null; key: string }[]
   monthLabel: string
@@ -853,9 +1061,12 @@ export function AgendaSharedMonth({
   onNextMonth?: () => void
   onGoThisMonth?: () => void
   householdMembers?: HouseholdMemberDTO[]
-  onGoogleTaskSetDue?: (taskId: string, dueYmd: string) => Promise<void>
   onGoogleReminderPatch?: GoogleReminderPatchHandler
-}) {
+  onDeleteGoogleTask?: (taskId: string) => Promise<void> | void
+  onDeleteCalendarEvent?: (eventId: string) => Promise<void> | void
+} & Partial<AgendaCardBridge>) {
+  const [busyDel, setBusyDel] = useState<string | null>(null)
+  const members = householdMembers ?? []
   const selectedGoogle = selectedDay ? googleByDay?.[selectedDay] : undefined
   const selectedGoogleCount = countGoogleDayItems(selectedGoogle)
 
@@ -1021,26 +1232,44 @@ export function AgendaSharedMonth({
                   <p className="m-0 text-[11px] text-[var(--color-text-secondary)] sm:text-[12px]">Sin ítems este día</p>
                 )}
                 {dayDetails.map((task) => (
-                  <AgendaOrvitaMiniCard key={task.id} task={task} />
+                  <AgendaOrvitaMiniCard key={task.id} task={task} viewerUserId={viewerUserId} />
                 ))}
                 {(selectedGoogle?.events ?? []).map((ev) => (
                   <AgendaReadonlyUnifiedCard
                     key={`m-cal-${ev.id}`}
                     variant="compact"
                     embedded
-                    borderLeft={`4px solid ${AGENDA_COLOR.calendar}`}
-                    chromeOverlay={googleReadonlyCardChrome({ kind: "calendar", completed: false })}
+                    shell={googleAgendaCardShell({
+                      kind: "calendar",
+                      completed: Boolean(isCalendarUiDone?.(ev.id)),
+                    })}
+                    MetaIcon={Calendar}
+                    metaText={calendarEventMetaCompact(ev)}
                     title={ev.summary || "(Evento)"}
-                    TimelineIcon={Calendar}
-                    timelineText={calendarEventUnifiedTimeline(ev)}
                     googleKind="calendar"
                     kindPillLabel={calendarEventFuenteLabel(ev)}
-                    statusLabel="Calendario"
-                    fuente={calendarEventFuenteLabel(ev)}
-                    badgeLetter="GC"
-                    badgeColorVar={AGENDA_COLOR.calendar}
-                    editUrl={GOOGLE_CALENDAR_WEB_APP}
-                    editTitle="Editar en Google Calendar"
+                    statusLabel={isCalendarUiDone?.(ev.id) ? "Listo" : "Pendiente"}
+                    statusKey={isCalendarUiDone?.(ev.id) ? "completada" : "pendiente"}
+                    priorityUi={null}
+                    onEdit={onOpenAgendaEdit ? () => onOpenAgendaEdit({ kind: "google-calendar", event: ev }) : undefined}
+                    calendarUiDone={Boolean(isCalendarUiDone?.(ev.id))}
+                    onToggleCalendarUiDone={
+                      toggleCalendarUiDone ? () => toggleCalendarUiDone(ev.id) : undefined
+                    }
+                    onDelete={
+                      onDeleteCalendarEvent
+                        ? async () => {
+                            if (!confirm("¿Eliminar este evento en Google Calendar?")) return
+                            setBusyDel(`e-${ev.id}`)
+                            try {
+                              await onDeleteCalendarEvent(ev.id)
+                            } finally {
+                              setBusyDel(null)
+                            }
+                          }
+                        : undefined
+                    }
+                    deleteBusy={busyDel === `e-${ev.id}`}
                   />
                 ))}
                 {(selectedGoogle?.reminders ?? []).map((r) => (
@@ -1048,22 +1277,93 @@ export function AgendaSharedMonth({
                     key={`m-gt-${r.id}`}
                     variant="compact"
                     embedded
-                    borderLeft={`4px solid ${AGENDA_COLOR.reminder}`}
-                    chromeOverlay={googleReadonlyCardChrome({
+                    shell={googleAgendaCardShell({
                       kind: "reminder",
                       completed: isGoogleTaskDone(r.status),
+                      assignedToViewer: Boolean(
+                        viewerUserId && r.localAssigneeUserId === viewerUserId,
+                      ),
                     })}
+                    MetaIcon={Bell}
+                    metaText={dueMetaCompact(localDateKeyFromIso(r.due) ?? "")}
                     title={r.title || "(Recordatorio)"}
-                    TimelineIcon={Bell}
-                    timelineText={venceLine(localDateKeyFromIso(r.due) ?? "")}
                     googleKind="reminder"
                     kindPillLabel="Recordatorio"
-                    fuente={reminderFuenteLabel()}
-                    footer={reminderUnifiedFooter(r, onGoogleTaskSetDue, onGoogleReminderPatch, householdMembers)}
-                    badgeLetter="GT"
-                    badgeColorVar={AGENDA_COLOR.reminder}
-                    editUrl={GOOGLE_TASKS_WEB_APP}
-                    editTitle="Editar en Google Tasks"
+                    statusLabel={isGoogleTaskDone(r.status) ? "Completada" : "Pendiente"}
+                    statusKey={isGoogleTaskDone(r.status) ? "completada" : "pendiente"}
+                    priorityUi={googleLocalPriorityUi(r.localPriority)}
+                    assigneeSubtle={googleReminderAssigneeLabel(r, members)}
+                    onEdit={
+                      onOpenAgendaEdit && onGoogleReminderPatch
+                        ? () => onOpenAgendaEdit({ kind: "google-reminder", task: r })
+                        : undefined
+                    }
+                    onToggleGoogleComplete={
+                      onGoogleReminderToggleComplete
+                        ? () =>
+                            void (async () => {
+                              const done = isGoogleTaskDone(r.status)
+                              setBusyDel(`tc-m-${r.id}`)
+                              try {
+                                await onGoogleReminderToggleComplete(r.id, !done)
+                              } finally {
+                                setBusyDel(null)
+                              }
+                            })()
+                        : undefined
+                    }
+                    googleCompleteBusy={busyDel === `tc-m-${r.id}`}
+                    showMoveDue={Boolean(
+                      onGoogleReminderPatch &&
+                        selectedDay &&
+                        isYmdTodayLocal(selectedDay) &&
+                        !isGoogleTaskDone(r.status),
+                    )}
+                    onMoveTomorrow={
+                      onGoogleReminderPatch && selectedDay
+                        ? () =>
+                            void (async () => {
+                              setBusyDel(`mv-m-${r.id}`)
+                              try {
+                                await onGoogleReminderPatch(r.id, {
+                                  due: `${addDaysToYmd(selectedDay, 1)}T12:00:00.000Z`,
+                                })
+                              } finally {
+                                setBusyDel(null)
+                              }
+                            })()
+                        : undefined
+                    }
+                    onMoveAfterTomorrow={
+                      onGoogleReminderPatch && selectedDay
+                        ? () =>
+                            void (async () => {
+                              setBusyDel(`mv-m-${r.id}`)
+                              try {
+                                await onGoogleReminderPatch(r.id, {
+                                  due: `${addDaysToYmd(selectedDay, 2)}T12:00:00.000Z`,
+                                })
+                              } finally {
+                                setBusyDel(null)
+                              }
+                            })()
+                        : undefined
+                    }
+                    moveDueBusy={busyDel === `mv-m-${r.id}`}
+                    onDelete={
+                      onDeleteGoogleTask
+                        ? async () => {
+                            if (!confirm("¿Eliminar esta tarea/recordatorio en Google Tasks?")) return
+                            setBusyDel(`r-${r.id}`)
+                            try {
+                              await onDeleteGoogleTask(r.id)
+                            } finally {
+                              setBusyDel(null)
+                            }
+                          }
+                        : undefined
+                    }
+                    deleteBusy={busyDel === `r-${r.id}`}
                   />
                 ))}
               </div>

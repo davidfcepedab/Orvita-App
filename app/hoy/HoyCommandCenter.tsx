@@ -6,6 +6,7 @@ import {
   ArrowRight,
   Calendar,
   Check,
+  ChevronDown,
   ChevronRight,
   Loader2,
   Moon,
@@ -198,6 +199,7 @@ export default function HoyCommandCenter() {
   }, [refreshCal, refreshTasks])
 
   const [timelineNow, setTimelineNow] = useState(() => Date.now())
+  const [googleTasksAsideOpen, setGoogleTasksAsideOpen] = useState(true)
   useEffect(() => {
     const id = window.setInterval(() => setTimelineNow(Date.now()), 60_000)
     return () => window.clearInterval(id)
@@ -391,28 +393,25 @@ export default function HoyCommandCenter() {
           ) : null}
         </div>
         <div className="flex flex-col gap-3 sm:items-end">
-          <div className="flex flex-wrap items-center gap-3">
-            <div
-              className="flex items-baseline gap-1.5 rounded-[var(--radius-button)] border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 py-2"
-              aria-live="polite"
-            >
-              <span className="text-xl font-semibold tabular-nums text-[var(--color-text-primary)]">
+          <div className="flex flex-wrap items-end gap-8 sm:gap-10">
+            <div className="flex flex-col gap-1" aria-live="polite">
+              <span className="text-[2.5rem] font-semibold leading-[0.95] tabular-nums tracking-tight text-[var(--color-text-primary)] sm:text-[2.85rem]">
                 {ctxLoading ? "…" : habitsLabel}
               </span>
-              <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
                 hábitos · hoy
               </span>
             </div>
-            <div
-              className="flex items-baseline gap-1.5 rounded-[var(--radius-button)] border border-[var(--color-border)] px-3 py-2"
-              style={{
-                borderColor: "color-mix(in srgb, var(--color-accent-agenda) 35%, var(--color-border))",
-              }}
-            >
-              <span className="text-lg font-semibold tabular-nums text-[var(--color-text-primary)]">
+            <div className="flex flex-col gap-1">
+              <span
+                className="text-[2.5rem] font-semibold leading-[0.95] tabular-nums tracking-tight sm:text-[2.85rem]"
+                style={{
+                  color: "color-mix(in srgb, var(--color-accent-agenda) 78%, var(--color-text-primary))",
+                }}
+              >
                 {ctxLoading ? "…" : openTasks}
               </span>
-              <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
                 tareas abiertas
               </span>
             </div>
@@ -855,7 +854,27 @@ export default function HoyCommandCenter() {
 
           <Card className="p-4">
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <SectionLabel>Google Tasks · vence hoy</SectionLabel>
+              <button
+                type="button"
+                id="hoy-google-tasks-toggle"
+                aria-expanded={googleTasksAsideOpen}
+                aria-controls="hoy-google-tasks-panel"
+                onClick={() => setGoogleTasksAsideOpen((o) => !o)}
+                className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border-0 bg-transparent p-0 text-left motion-safe:transition-opacity hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color-mix(in_srgb,var(--color-accent-primary)_35%,transparent)]"
+              >
+                <ChevronDown
+                  className={`h-4 w-4 shrink-0 text-[var(--color-text-secondary)] motion-safe:transition-transform motion-safe:duration-200 ${googleTasksAsideOpen ? "" : "-rotate-90"}`}
+                  aria-hidden
+                />
+                <span className="m-0 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-text-secondary)]">
+                  Google Tasks · vence hoy
+                </span>
+                {!googleTasksAsideOpen && tasksConnected && googleTasksToday.length > 0 ? (
+                  <span className="text-[10px] tabular-nums text-[var(--color-text-secondary)]">
+                    ({googleTasksToday.length})
+                  </span>
+                ) : null}
+              </button>
               <button
                 type="button"
                 disabled={calLoading || tasksLoading}
@@ -865,34 +884,41 @@ export default function HoyCommandCenter() {
                 Actualizar
               </button>
             </div>
-            {tasksLoading && !tasksError ? (
-              <p className="m-0 text-xs text-[var(--color-text-secondary)]">Cargando…</p>
-            ) : tasksError ? (
-              <p className="m-0 text-xs text-[var(--color-accent-danger)]">{tasksError}</p>
-            ) : !tasksConnected ? (
-              <p className="m-0 text-xs text-[var(--color-text-secondary)]">
-                {tasksNotice ?? "Conecta Google Tasks."}{" "}
-                <Link href="/configuracion" className="font-medium text-[var(--color-accent-primary)] underline">
-                  Configuración
-                </Link>
-              </p>
-            ) : googleTasksToday.length === 0 ? (
-              <p className="m-0 text-xs text-[var(--color-text-secondary)]">Nada con vencimiento hoy.</p>
-            ) : (
-              <ul className="m-0 list-none space-y-1.5 p-0">
-                {googleTasksToday.map((gt) => (
-                  <li
-                    key={gt.id}
-                    className="text-xs leading-snug text-[var(--color-text-primary)] motion-safe:transition-colors motion-safe:hover:text-[var(--color-accent-agenda)]"
-                  >
-                    · {gt.title}
-                  </li>
-                ))}
-              </ul>
-            )}
-            {calNotice ? (
-              <p className="mt-2 m-0 text-[10px] text-[var(--color-text-secondary)]">{calNotice}</p>
-            ) : null}
+            <div
+              id="hoy-google-tasks-panel"
+              role="region"
+              aria-labelledby="hoy-google-tasks-toggle"
+              hidden={!googleTasksAsideOpen}
+            >
+              {tasksLoading && !tasksError ? (
+                <p className="m-0 text-xs text-[var(--color-text-secondary)]">Cargando…</p>
+              ) : tasksError ? (
+                <p className="m-0 text-xs text-[var(--color-accent-danger)]">{tasksError}</p>
+              ) : !tasksConnected ? (
+                <p className="m-0 text-xs text-[var(--color-text-secondary)]">
+                  {tasksNotice ?? "Conecta Google Tasks."}{" "}
+                  <Link href="/configuracion" className="font-medium text-[var(--color-accent-primary)] underline">
+                    Configuración
+                  </Link>
+                </p>
+              ) : googleTasksToday.length === 0 ? (
+                <p className="m-0 text-xs text-[var(--color-text-secondary)]">Nada con vencimiento hoy.</p>
+              ) : (
+                <ul className="m-0 list-none space-y-1.5 p-0">
+                  {googleTasksToday.map((gt) => (
+                    <li
+                      key={gt.id}
+                      className="text-xs leading-snug text-[var(--color-text-primary)] motion-safe:transition-colors motion-safe:hover:text-[var(--color-accent-agenda)]"
+                    >
+                      · {gt.title}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {calNotice ? (
+                <p className="mt-2 m-0 text-[10px] text-[var(--color-text-secondary)]">{calNotice}</p>
+              ) : null}
+            </div>
           </Card>
         </aside>
       </div>

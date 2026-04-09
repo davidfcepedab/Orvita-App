@@ -6,7 +6,7 @@ import { createBrowserClient } from "@/lib/supabase/browser"
 import { isAppMockMode, isSupabaseEnabled } from "@/lib/checkins/flags"
 import { DEFAULT_HEALTH_SUPPLEMENTS } from "@/lib/health/defaultSupplements"
 import type { HealthPreferencesPayload, HealthSupplement, SupplementComplianceMap } from "@/lib/health/healthPrefsTypes"
-import { isSupplementDaypart } from "@/lib/health/supplementDayparts"
+import { normalizeSupplementMomentId } from "@/lib/health/supplementDayparts"
 import { normalizeCompliance, todayYmdLocal, trimComplianceMap } from "@/lib/health/supplementComplianceUtils"
 
 const LS_KEY = "orbita:health:prefs:v1"
@@ -21,14 +21,16 @@ function normalizeList(list: unknown): HealthSupplement[] {
     const name = typeof o.name === "string" ? o.name : ""
     const amount = typeof o.amount === "string" ? o.amount : ""
     if (!id || !name) continue
-    const dp = typeof o.daypart === "string" && isSupplementDaypart(o.daypart) ? o.daypart : "manana"
+    const momentRaw = o.moment ?? o.daypart
+    const daypart = normalizeSupplementMomentId(momentRaw)
+    const indispensable = o.indispensable === true || o.critical === true
     out.push({
       id,
       name,
       amount,
       active: o.active === true,
-      daypart: dp,
-      indispensable: o.indispensable === true,
+      daypart,
+      indispensable,
     })
   }
   return out.length > 0 ? out : DEFAULT_HEALTH_SUPPLEMENTS

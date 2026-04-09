@@ -2,7 +2,7 @@
 
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type FormEvent } from "react"
 import { Card } from "@/src/components/ui/Card"
-import { CalendarDays, CalendarRange, LayoutGrid, LayoutPanelLeft, ListChecks, Plus, Search } from "lucide-react"
+import { CalendarDays, CalendarRange, LayoutGrid, ListChecks, Plus, Search } from "lucide-react"
 
 import { GoogleAgendaPanel } from "@/app/agenda/GoogleAgendaPanel"
 import { AgendaColorLegend } from "@/app/agenda/AgendaColorLegend"
@@ -21,7 +21,9 @@ import {
   AgendaSharedMonth,
   AgendaSharedWeek,
 } from "@/app/agenda/AgendaSharedViews"
+import { AgendaTaskEditModal, type AgendaEditModalTarget } from "@/app/agenda/AgendaTaskEditModal"
 import { TaskCardIterationProvider } from "@/app/agenda/TaskCardIterationContext"
+import { useSessionCalendarDone } from "@/app/hooks/useSessionCalendarDone"
 
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import { isAppMockMode, isSupabaseEnabled } from "@/lib/checkins/flags"
@@ -107,15 +109,6 @@ const viewOptions = [
   { key: "month" as const,   label: "Mes",      description: "Calendario mensual", icon: CalendarRange, color: "var(--color-accent-primary)" },
 ]
 
-/** Estudio unificado de task cards (`/agenda/task-card-studio`), misma ventana que el botón del header. */
-function openTaskCardStudioWindow() {
-  window.open(
-    `${window.location.origin}/agenda/task-card-studio`,
-    "_blank",
-    "noopener,noreferrer,width=1080,height=940",
-  )
-}
-
 export default function AgendaPage() {
   const {
     tasks: agendaTasks,
@@ -134,8 +127,11 @@ export default function AgendaPage() {
   )
   const googleCalendar = useGoogleCalendar()
   const googleTasksFeed = useGoogleTasks()
+  const { isCalendarUiDone, toggleCalendarUiDone } = useSessionCalendarDone()
 
   const [viewerFirstName, setViewerFirstName] = useState<string | null>(null)
+  const [viewerUserId, setViewerUserId] = useState<string | null>(null)
+  const [agendaEditTarget, setAgendaEditTarget] = useState<AgendaEditModalTarget | null>(null)
   const lastVisibilityPullRef = useRef(0)
 
   useEffect(() => {
@@ -143,8 +139,15 @@ export default function AgendaPage() {
     const getUser = supabase.auth?.getUser
     if (typeof getUser !== "function") return
     void getUser()
-      .then(({ data }) => setViewerFirstName(pickViewerFirstName(data?.user)))
-      .catch(() => setViewerFirstName(null))
+      .then(({ data }) => {
+        setViewerFirstName(pickViewerFirstName(data?.user))
+        const uid = data?.user && "id" in data.user ? String(data.user.id) : null
+        setViewerUserId(uid)
+      })
+      .catch(() => {
+        setViewerFirstName(null)
+        setViewerUserId(null)
+      })
   }, [])
 
   const agendaTitle = viewerFirstName ? `Agenda ${viewerFirstName}` : "Tu agenda diaria"
@@ -429,6 +432,18 @@ export default function AgendaPage() {
     [updateTask],
   )
 
+  const onGoogleReminderToggleComplete = useCallback(
+    async (id: string, completed: boolean) => {
+      const result = await googleTasksFeed.patchTask(id, {
+        status: completed ? "completed" : "needsAction",
+      })
+      if (!result) {
+        throw new Error(googleTasksFeed.error || "No se pudo actualizar el recordatorio")
+      }
+    },
+    [googleTasksFeed],
+  )
+
   const onGoogleReminderPatch = useCallback(
     async (
       id: string,
@@ -504,16 +519,6 @@ export default function AgendaPage() {
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap gap-1.5 sm:justify-end">
-            <button
-              type="button"
-              onClick={() => openTaskCardStudioWindow()}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-primary)] sm:px-3 sm:py-2 sm:text-[11px]"
-              style={{ background: "var(--color-surface-alt)" }}
-              title="Abre el estudio de la tarjeta en otra ventana: variables, grid y vista previa"
-            >
-              <LayoutPanelLeft size={14} className="shrink-0" aria-hidden />
-              Tarjeta maestra
-            </button>
             <button
               type="button"
               onClick={() => setFormOpen(true)}
@@ -672,17 +677,6 @@ export default function AgendaPage() {
                     )
                   })}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => openTaskCardStudioWindow()}
-                  className="inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-md border border-[var(--color-border)] px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-primary)] sm:min-h-8"
-                  style={{ background: "var(--color-surface-alt)" }}
-                  title="Tarjeta maestra: variables CSS, grid y vistas previas (ventana aparte)"
-                  aria-label="Abrir estudio de tarjeta maestra en nueva ventana"
-                >
-                  <LayoutPanelLeft size={14} className="shrink-0" aria-hidden />
-                  <span className="max-[380px]:sr-only">Estudio</span>
-                </button>
               </div>
             </div>
           </div>
@@ -705,6 +699,13 @@ export default function AgendaPage() {
                   googleTasksFeed={googleTasksFeed}
                   hideBeforeToday={!showPastAgenda}
                   householdMembers={householdMembers}
+                  viewerUserId={viewerUserId}
+                  onOpenAgendaEdit={(t) => setAgendaEditTarget(t)}
+                  isCalendarUiDone={isCalendarUiDone}
+                  toggleCalendarUiDone={toggleCalendarUiDone}
+                  onGoogleReminderToggleComplete={
+                    googleTasksFeed.connected ? onGoogleReminderToggleComplete : undefined
+                  }
                   onPatchOrvitaTask={onPatchOrvitaTask}
                   onGoogleReminderPatch={googleTasksFeed.connected ? onGoogleReminderPatch : undefined}
                   onSaveComplete={(task, completed) => saveTaskComplete(task.id, completed)}
@@ -724,6 +725,13 @@ export default function AgendaPage() {
                   agendaLoading={loading}
                   hideBeforeToday={!showPastAgenda}
                   householdMembers={householdMembers}
+                  viewerUserId={viewerUserId}
+                  onOpenAgendaEdit={(t) => setAgendaEditTarget(t)}
+                  isCalendarUiDone={isCalendarUiDone}
+                  toggleCalendarUiDone={toggleCalendarUiDone}
+                  onGoogleReminderToggleComplete={
+                    googleTasksFeed.connected ? onGoogleReminderToggleComplete : undefined
+                  }
                   onPatchOrvitaTask={onPatchOrvitaTask}
                   onGoogleReminderPatch={googleTasksFeed.connected ? onGoogleReminderPatch : undefined}
                   onSaveComplete={(task, completed) => saveTaskComplete(task.id, completed)}
@@ -745,6 +753,15 @@ export default function AgendaPage() {
                   formatDateKey={formatDateKey}
                   formatDayLabel={formatDayLabel}
                   googleByDay={googleByDayForViews}
+                  householdMembers={householdMembers}
+                  viewerUserId={viewerUserId}
+                  onOpenAgendaEdit={(t) => setAgendaEditTarget(t)}
+                  isCalendarUiDone={isCalendarUiDone}
+                  toggleCalendarUiDone={toggleCalendarUiDone}
+                  onGoogleReminderToggleComplete={
+                    googleTasksFeed.connected ? onGoogleReminderToggleComplete : undefined
+                  }
+                  onGoogleReminderPatch={googleTasksFeed.connected ? onGoogleReminderPatch : undefined}
                 />
               )}
               {view === "month" && (
@@ -759,8 +776,16 @@ export default function AgendaPage() {
                   formatDateKey={formatDateKey}
                   googleByDay={googleByDayForViews}
                   householdMembers={householdMembers}
-                  onGoogleTaskSetDue={googleTasksFeed.connected ? onGoogleTaskSetDue : undefined}
+                  viewerUserId={viewerUserId}
+                  onOpenAgendaEdit={(t) => setAgendaEditTarget(t)}
+                  isCalendarUiDone={isCalendarUiDone}
+                  toggleCalendarUiDone={toggleCalendarUiDone}
+                  onGoogleReminderToggleComplete={
+                    googleTasksFeed.connected ? onGoogleReminderToggleComplete : undefined
+                  }
                   onGoogleReminderPatch={googleTasksFeed.connected ? onGoogleReminderPatch : undefined}
+                  onDeleteGoogleTask={googleTasksFeed.connected ? onDeleteGoogleTask : undefined}
+                  onDeleteCalendarEvent={googleCalendar.connected ? onDeleteCalendarEvent : undefined}
                   onPrevMonth={() =>
                     setMonthViewDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))
                   }
@@ -778,6 +803,16 @@ export default function AgendaPage() {
         </div>
       </section>
       </TaskCardIterationProvider>
+
+      <AgendaTaskEditModal
+        target={agendaEditTarget}
+        onClose={() => setAgendaEditTarget(null)}
+        householdMembers={householdMembers}
+        onSaveOrvita={async (id, patch) => {
+          await updateTask(id, patch)
+        }}
+        onSaveGoogleReminder={onGoogleReminderPatch}
+      />
 
       {formOpen && (
         <div

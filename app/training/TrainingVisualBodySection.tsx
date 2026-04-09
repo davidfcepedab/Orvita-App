@@ -3,7 +3,7 @@
 import type { ChangeEvent, Ref, RefObject } from "react"
 import { useMemo } from "react"
 import Image from "next/image"
-import { Activity, ArrowDown, ArrowUp, Calendar, Sparkles, Zap } from "lucide-react"
+import { Activity, ArrowDown, ArrowUp, Calendar, Loader2, Sparkles, Zap } from "lucide-react"
 import { Card } from "@/src/components/ui/Card"
 import type { BodyMetricDisplayRow, VisualGoalPriority } from "@/lib/training/trainingPrefsTypes"
 
@@ -53,7 +53,9 @@ export type TrainingVisualBodySectionProps = {
   fileInputRef: RefObject<HTMLInputElement | null> | Ref<HTMLInputElement>
   onPickImage: () => void
   onFileChange: (e: ChangeEvent<HTMLInputElement>) => void
-  onGenerateGoalWithAI: () => void
+  onVisualGoalDescriptionChange: (value: string) => void
+  goalImageGenerating: boolean
+  onGenerateGoalWithAI: () => void | Promise<void>
 }
 
 function priorityLabel(p: VisualGoalPriority): string {
@@ -75,6 +77,8 @@ export function TrainingVisualBodySection({
   fileInputRef,
   onPickImage,
   onFileChange,
+  onVisualGoalDescriptionChange,
+  goalImageGenerating,
   onGenerateGoalWithAI,
 }: TrainingVisualBodySectionProps) {
   const deadlineBadge = useMemo(() => formatDeadlineBadge(visualGoalDeadlineYm), [visualGoalDeadlineYm])
@@ -110,17 +114,46 @@ export function TrainingVisualBodySection({
             {" "}
             -{" "}
           </span>
-          <button type="button" onClick={onGenerateGoalWithAI} className={ghostActionClass}>
-            Generar con IA
+          <button
+            type="button"
+            disabled={goalImageGenerating || !visualGoalDescription.trim()}
+            onClick={() => void onGenerateGoalWithAI()}
+            className={`${ghostActionClass} disabled:pointer-events-none disabled:opacity-40`}
+          >
+            {goalImageGenerating ? (
+              <span className="inline-flex items-center gap-1.5 normal-case tracking-normal">
+                <Loader2 className="h-3 w-3 animate-spin" strokeWidth={2.5} aria-hidden />
+                Generando…
+              </span>
+            ) : (
+              "Generar con IA"
+            )}
           </button>
         </p>
         {prefsLoading && remotePrefs && (
           <p className="text-[10px] text-slate-400">Cargando preferencias…</p>
         )}
+        <div className="mt-3 space-y-1.5">
+          <label className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500" htmlFor="training-visual-ai-prompt">
+            Prompt para la IA
+          </label>
+          <textarea
+            id="training-visual-ai-prompt"
+            value={visualGoalDescription}
+            onChange={(e) => onVisualGoalDescriptionChange(e.target.value)}
+            maxLength={900}
+            rows={3}
+            placeholder="Describe el objetivo visual: musculatura, composición corporal, iluminación, estilo de foto…"
+            className="w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm leading-relaxed text-slate-800 shadow-sm placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+          />
+          <p className="text-[10px] text-slate-400">
+            {visualGoalDescription.length}/900 · Base: tu imagen subida, o la referencia por defecto si no hay foto.
+          </p>
+        </div>
       </header>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8 lg:items-stretch">
-        <div className="flex min-h-0 flex-col lg:col-span-5">
+      <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8 lg:items-stretch">
+        <div className="flex min-h-0 min-w-0 flex-col lg:col-span-5">
           <div
             className="relative flex min-h-0 w-full flex-1 overflow-hidden rounded-3xl"
             style={{
@@ -193,8 +226,8 @@ export function TrainingVisualBodySection({
           </div>
         </div>
 
-        <div className="flex min-h-0 flex-col lg:col-span-7">
-          <Card className="h-full min-h-0 flex-1 border-slate-200/80 bg-white/90 p-5 shadow-sm backdrop-blur-sm sm:p-7">
+        <div className="flex min-h-0 min-w-0 flex-col lg:col-span-7">
+          <Card className="h-full min-h-0 min-w-0 flex-1 border-slate-200/80 bg-white/90 p-5 shadow-sm backdrop-blur-sm sm:p-7">
             <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex items-center gap-2">
                 <Activity className="h-4 w-4 text-slate-500" strokeWidth={2.2} />
@@ -230,39 +263,83 @@ export function TrainingVisualBodySection({
                 const positive = isTrendPositive(row.label, row.trend)
                 const arrowColor = positive ? GOOD : BAD
                 const Arrow = row.trend === "up" ? ArrowUp : ArrowDown
+                const barPct = Math.min(100, Math.max(0, row.progressPct))
+                const barFillStyle = {
+                  width: `${barPct}%`,
+                  background: `linear-gradient(90deg, ${MINT} 0%, color-mix(in srgb, ${MINT} 75%, #22C55E) 100%)`,
+                  boxShadow: `0 0 12px color-mix(in srgb, ${MINT} 40%, transparent)`,
+                } as const
+
                 return (
                   <div
                     key={row.label}
-                    className="grid gap-3 rounded-2xl bg-slate-50/90 p-3.5 sm:p-4 lg:grid lg:grid-cols-[minmax(0,1.5fr)_minmax(0,0.85fr)_minmax(0,0.75fr)_minmax(0,0.75fr)_minmax(0,0.75fr)_minmax(0,0.75fr)_minmax(0,1.35fr)] lg:items-center lg:gap-2"
+                    className="rounded-2xl bg-slate-50/90 p-3.5 sm:p-4"
                     style={{ border: "0.5px solid rgba(148,163,184,0.2)" }}
                   >
-                    <span className="text-sm font-semibold text-slate-800">{row.label}</span>
-                    <div className="flex items-center gap-1.5 lg:justify-start">
-                      <span className="text-sm tabular-nums text-slate-700">
-                        {row.current}
-                        {row.label === "% de Grasa" ? "%" : ""}
-                      </span>
-                      <Arrow className="h-4 w-4 shrink-0" strokeWidth={2.5} style={{ color: arrowColor }} aria-hidden />
-                    </div>
-                    <span className="text-xs text-slate-500 lg:text-sm">{row.previous}</span>
-                    <span className="text-sm font-medium tabular-nums text-slate-700">{targetUnitLabel(row)}</span>
-                    <span className="text-xs text-slate-500 lg:text-sm">{row.projection}</span>
-                    <div className="flex items-center gap-3 lg:col-span-2">
-                      <span className="w-9 shrink-0 text-right text-xs font-semibold tabular-nums text-slate-600">
-                        {row.progressPct}%
-                      </span>
-                      <div
-                        className="h-2 min-w-0 flex-1 overflow-hidden rounded-full"
-                        style={{ background: "rgba(148,163,184,0.35)" }}
-                      >
+                    <div className="space-y-3 lg:hidden">
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="min-w-0 text-sm font-semibold leading-snug text-slate-800">{row.label}</span>
+                        <div className="flex shrink-0 items-center gap-1.5">
+                          <span className="text-sm tabular-nums text-slate-700">
+                            {row.current}
+                            {row.label === "% de Grasa" ? "%" : ""}
+                          </span>
+                          <Arrow className="h-4 w-4 shrink-0" strokeWidth={2.5} style={{ color: arrowColor }} aria-hidden />
+                        </div>
+                      </div>
+                      <dl className="grid grid-cols-2 gap-x-3 gap-y-2.5 text-sm">
+                        <div className="min-w-0">
+                          <dt className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Previo</dt>
+                          <dd className="mt-0.5 tabular-nums text-slate-700">{row.previous}</dd>
+                        </div>
+                        <div className="min-w-0">
+                          <dt className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Objetivo</dt>
+                          <dd className="mt-0.5 font-medium tabular-nums text-slate-700">{targetUnitLabel(row)}</dd>
+                        </div>
+                        <div className="min-w-0">
+                          <dt className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Proyección</dt>
+                          <dd className="mt-0.5 text-slate-600">{row.projection}</dd>
+                        </div>
+                        <div className="min-w-0">
+                          <dt className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Progreso</dt>
+                          <dd className="mt-0.5 font-semibold tabular-nums text-slate-600">{row.progressPct}%</dd>
+                        </div>
+                      </dl>
+                      <div className="flex items-center gap-3">
+                        <span className="w-10 shrink-0 text-right text-xs font-semibold tabular-nums text-slate-600">
+                          {row.progressPct}%
+                        </span>
                         <div
-                          className="h-full rounded-full transition-all"
-                          style={{
-                            width: `${Math.min(100, Math.max(0, row.progressPct))}%`,
-                            background: `linear-gradient(90deg, ${MINT} 0%, color-mix(in srgb, ${MINT} 75%, #22C55E) 100%)`,
-                            boxShadow: `0 0 12px color-mix(in srgb, ${MINT} 40%, transparent)`,
-                          }}
-                        />
+                          className="h-2 min-w-0 flex-1 overflow-hidden rounded-full"
+                          style={{ background: "rgba(148,163,184,0.35)" }}
+                        >
+                          <div className="h-full rounded-full transition-all" style={barFillStyle} />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="hidden gap-2 lg:grid lg:grid-cols-[minmax(0,1.5fr)_minmax(0,0.85fr)_minmax(0,0.75fr)_minmax(0,0.75fr)_minmax(0,0.75fr)_minmax(0,0.75fr)_minmax(0,1.35fr)] lg:items-center">
+                      <span className="text-sm font-semibold text-slate-800">{row.label}</span>
+                      <div className="flex items-center gap-1.5 lg:justify-start">
+                        <span className="text-sm tabular-nums text-slate-700">
+                          {row.current}
+                          {row.label === "% de Grasa" ? "%" : ""}
+                        </span>
+                        <Arrow className="h-4 w-4 shrink-0" strokeWidth={2.5} style={{ color: arrowColor }} aria-hidden />
+                      </div>
+                      <span className="text-xs text-slate-500 lg:text-sm">{row.previous}</span>
+                      <span className="text-sm font-medium tabular-nums text-slate-700">{targetUnitLabel(row)}</span>
+                      <span className="text-xs text-slate-500 lg:text-sm">{row.projection}</span>
+                      <div className="flex items-center gap-3 lg:col-span-2">
+                        <span className="w-9 shrink-0 text-right text-xs font-semibold tabular-nums text-slate-600">
+                          {row.progressPct}%
+                        </span>
+                        <div
+                          className="h-2 min-w-0 flex-1 overflow-hidden rounded-full"
+                          style={{ background: "rgba(148,163,184,0.35)" }}
+                        >
+                          <div className="h-full rounded-full transition-all" style={barFillStyle} />
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -282,7 +359,7 @@ export function TrainingVisualBodySection({
                 <Sparkles className="h-3.5 w-3.5 text-orange-500" strokeWidth={2.4} />
                 Qué debo ajustar esta semana
               </div>
-              <ul className="list-disc space-y-2 pl-4 text-sm leading-snug text-red-700/90 marker:text-orange-400">
+              <ul className="list-disc space-y-2 pl-4 text-sm leading-snug text-pretty text-red-700/90 marker:text-orange-400">
                 {hints.map((h) => (
                   <li key={h}>{h}</li>
                 ))}

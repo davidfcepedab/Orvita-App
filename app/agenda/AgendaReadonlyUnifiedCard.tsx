@@ -1,45 +1,22 @@
 "use client"
 
-import type { CSSProperties, ReactNode } from "react"
 import type { LucideIcon } from "lucide-react"
-import { Pencil, Trash2 } from "lucide-react"
+import { Check, Pencil, Trash2 } from "lucide-react"
 import { Card } from "@/src/components/ui/Card"
+import type { AgendaCardShell } from "@/app/agenda/agendaCardChrome"
+import { agendaCardChrome } from "@/app/agenda/agendaUnifiedCardStyles"
 import {
-  agendaCardSurfaceStyle,
   agendaPillBaseClass,
   googleSourcePillStyle,
+  priorityPillStyle,
   statusPillStyle,
 } from "@/app/agenda/agendaUnifiedCardStyles"
-import { taskCardGridStyle, type TaskCardDensity } from "@/app/agenda/taskCardConfig"
-import { TaskCardArea } from "@/app/agenda/TaskCardArea"
+import { formatPriorityTitle } from "@/app/agenda/taskCardFormat"
+import type { UiAgendaTask } from "@/app/agenda/mapAgendaTaskToUi"
 import { useTaskCardDesign } from "@/app/agenda/TaskCardDesignContext"
-import { useTaskCardIterationMode } from "@/app/agenda/TaskCardIterationContext"
+import type { TaskCardDensity } from "@/app/agenda/taskCardConfig"
 
 type Variant = "list" | "kanban" | "compact"
-
-type Props = {
-  variant: Variant
-  borderLeft: string
-  title: string
-  TimelineIcon: LucideIcon
-  timelineText: string
-  googleKind: "reminder" | "calendar"
-  kindPillLabel: string
-  statusLabel?: string
-  fuente: string
-  footNote?: string
-  badgeLetter: string
-  badgeColorVar: string
-  embedded?: boolean
-  footer?: ReactNode
-  onDelete?: () => void | Promise<void>
-  deleteBusy?: boolean
-  editUrl?: string
-  editTitle?: string
-  iterationMode?: boolean
-  /** Capa de color de estado/fuente (p. ej. verde si completada, morado calendario). */
-  chromeOverlay?: Pick<CSSProperties, "background">
-}
 
 function variantToDensity(v: Variant): TaskCardDensity {
   if (v === "compact") return "compact"
@@ -47,183 +24,186 @@ function variantToDensity(v: Variant): TaskCardDensity {
   return "kanban"
 }
 
+const moveBtnClass =
+  "rounded-full bg-[color-mix(in_srgb,var(--color-accent-primary)_10%,transparent)] px-2 py-0.5 text-[10px] font-medium tracking-tight text-[var(--color-text-secondary)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-accent-primary)_16%,transparent)] hover:text-[var(--color-text-primary)]"
+
+type Props = {
+  variant: Variant
+  embedded?: boolean
+  shell: AgendaCardShell
+  MetaIcon: LucideIcon
+  metaText: string
+  title: string
+  googleKind: "reminder" | "calendar"
+  kindPillLabel: string
+  statusLabel: string
+  statusKey: string
+  /** Prioridad local (Google Tasks); si es null, no se muestra píldora extra. */
+  priorityUi?: UiAgendaTask["priority"] | null
+  assigneeSubtle?: string | null
+  onEdit?: () => void
+  /** Recordatorio Google: alternar completado en API. */
+  onToggleGoogleComplete?: () => void
+  googleCompleteBusy?: boolean
+  /** Evento Calendar: hecho solo en sesión. */
+  calendarUiDone?: boolean
+  onToggleCalendarUiDone?: () => void
+  showMoveDue?: boolean
+  onMoveTomorrow?: () => void
+  onMoveAfterTomorrow?: () => void
+  moveDueBusy?: boolean
+  onDelete?: () => void | Promise<void>
+  deleteBusy?: boolean
+  /** Insignia GT/GC (desactivada por defecto para una tarjeta más limpia). */
+  showCornerBadge?: boolean
+  badgeLetter?: string
+  badgeColorVar?: string
+}
+
 export function AgendaReadonlyUnifiedCard({
   variant,
-  borderLeft,
+  embedded = false,
+  shell,
+  MetaIcon,
+  metaText,
   title,
-  TimelineIcon,
-  timelineText,
   googleKind,
   kindPillLabel,
-  statusLabel = "Pendiente",
-  fuente,
-  footNote,
-  badgeLetter,
-  badgeColorVar,
-  embedded = false,
-  footer,
+  statusLabel,
+  statusKey,
+  priorityUi = null,
+  assigneeSubtle = null,
+  onEdit,
+  onToggleGoogleComplete,
+  googleCompleteBusy = false,
+  calendarUiDone = false,
+  onToggleCalendarUiDone,
+  showMoveDue = false,
+  onMoveTomorrow,
+  onMoveAfterTomorrow,
+  moveDueBusy = false,
   onDelete,
   deleteBusy = false,
-  editUrl,
-  editTitle = "Editar en Google",
-  iterationMode: iterationProp,
-  chromeOverlay,
+  showCornerBadge = false,
+  badgeLetter = "",
+  badgeColorVar = "var(--color-text-secondary)",
 }: Props) {
-  const fromCtx = useTaskCardIterationMode()
-  const iterationMode = iterationProp ?? fromCtx
-  const { getMergedVarStyle, getResolvedGridTemplate } = useTaskCardDesign()
-
+  const { getMergedVarStyle } = useTaskCardDesign()
   const density = variantToDensity(variant)
   const varStyle = getMergedVarStyle(density)
-  const gridStyle = taskCardGridStyle(getResolvedGridTemplate("readonly"))
-  const showBadge = variant !== "compact"
   const iconCls = variant === "compact" ? "h-2.5 w-2.5" : "h-3 w-3"
+  const titleClass =
+    variant === "compact"
+      ? "text-[12px] font-semibold leading-snug"
+      : variant === "list"
+        ? "text-[16px] font-semibold leading-snug sm:text-[17px]"
+        : "text-[15px] font-semibold leading-snug sm:text-[16px]"
+
+  const showComplete =
+    googleKind === "reminder" && Boolean(onToggleGoogleComplete)
+  const showCalToggle = googleKind === "calendar" && Boolean(onToggleCalendarUiDone)
+  const doneVisual =
+    googleKind === "reminder"
+      ? statusKey.includes("complet")
+      : calendarUiDone
 
   async function handleDeleteClick() {
     if (!onDelete || deleteBusy) return
     await onDelete()
   }
 
-  const shellChrome = {
-    borderRadius: "var(--task-card-radius, var(--radius-card))",
-    background:
-      chromeOverlay?.background ??
-      "var(--task-card-surface-bg-readonly, var(--task-card-surface-bg, var(--color-surface)))",
-    fontFamily: "var(--task-card-font-family, inherit)",
-    minHeight: "var(--task-card-min-height, unset)",
-  } as const
-
   const inner = (
-    <div style={{ ...varStyle, ...gridStyle, fontFamily: "var(--task-card-font-family, inherit)" }}>
-      <TaskCardArea area="title" iterationMode={iterationMode}>
+    <div
+      className="flex flex-col gap-2 px-4 py-3 sm:gap-2.5 sm:px-4 sm:py-3.5"
+      style={{ ...varStyle, fontFamily: "var(--task-card-font-family, inherit)" }}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <p className="m-0 flex min-w-0 flex-1 items-center gap-1 text-[10px] leading-tight text-[var(--color-text-secondary)]">
+          <MetaIcon className={`${iconCls} shrink-0 opacity-55`} strokeWidth={2} aria-hidden />
+          <span className="truncate">{metaText}</span>
+        </p>
+        {onEdit ? (
+          <button
+            type="button"
+            className="shrink-0 rounded-md p-1 text-[var(--color-text-secondary)] opacity-50 transition-[opacity,color,background-color] hover:bg-[color-mix(in_srgb,var(--color-text-secondary)_8%,transparent)] hover:opacity-100 hover:text-[var(--color-text-primary)]"
+            aria-label="Editar"
+            title="Editar"
+            onClick={onEdit}
+          >
+            <Pencil className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
+          </button>
+        ) : null}
+      </div>
+
+      <div className="flex items-start justify-between gap-3">
         <p
-          className="m-0 tracking-tight"
-          style={{
-            fontSize: "var(--task-card-title-size)",
-            lineHeight: "var(--task-card-line-title)",
-            fontWeight: "var(--task-card-font-weight-title, 600)",
-            color: "var(--task-card-title-color, var(--color-text-primary))",
-          }}
+          className={`m-0 min-w-0 flex-1 tracking-tight text-[var(--color-text-primary)] ${titleClass}`}
         >
           {title}
         </p>
-      </TaskCardArea>
-
-      <TaskCardArea area="meta" iterationMode={iterationMode}>
-        <p
-          className="m-0 flex items-center gap-1"
-          style={{
-            fontSize: "var(--task-card-meta-size)",
-            lineHeight: "var(--task-card-line-body)",
-            color: "var(--task-card-meta-color, var(--color-text-secondary))",
-          }}
-        >
-          <TimelineIcon className={`${iconCls} shrink-0 opacity-70`} strokeWidth={2} aria-hidden />
-          <span>{timelineText}</span>
-        </p>
-      </TaskCardArea>
-
-      <TaskCardArea area="pills" iterationMode={iterationMode}>
-        <div className="flex flex-wrap items-center" style={{ gap: "var(--task-card-gap-tight)" }}>
-          <span
-            className={agendaPillBaseClass}
-            style={{ ...googleSourcePillStyle(googleKind), fontSize: "var(--task-card-pill-size)" }}
-            title="Tipo (Google)"
-          >
-            {kindPillLabel}
-          </span>
-          <span
-            className="text-[var(--color-text-secondary)]"
-            style={{ fontSize: "var(--task-card-pill-size)" }}
-            aria-hidden
-          >
-            |
-          </span>
-          <span
-            className={agendaPillBaseClass}
-            style={{ ...statusPillStyle(statusLabel.toLowerCase()), fontSize: "var(--task-card-pill-size)" }}
-            title="Estado"
-          >
-            {statusLabel}
-          </span>
-        </div>
-      </TaskCardArea>
-
-      <TaskCardArea area="fuente" iterationMode={iterationMode}>
-        <p
-          className="m-0 text-[var(--color-text-secondary)]"
-          style={{
-            fontSize: "var(--task-card-fuente-size)",
-            lineHeight: "var(--task-card-line-body)",
-          }}
-        >
-          Fuente: {fuente}
-        </p>
-      </TaskCardArea>
-
-      <TaskCardArea area="footer" iterationMode={iterationMode}>
-        {footNote ? (
-          <p
-            className="m-0 text-[var(--color-text-secondary)]"
-            style={{
-              fontSize: "var(--task-card-fuente-size)",
-              lineHeight: "var(--task-card-line-body)",
-            }}
-          >
-            {footNote}
-          </p>
-        ) : null}
-        {footer ? (
-          <div style={{ marginTop: footNote ? "var(--task-card-gap-tight)" : 0 }}>{footer}</div>
-        ) : null}
-      </TaskCardArea>
-
-      <TaskCardArea
-        area="actions"
-        iterationMode={iterationMode}
-        className="flex shrink-0 flex-col items-stretch gap-1.5 sm:items-end"
-      >
-        {editUrl ? (
-          <button
-            type="button"
-            onClick={() => window.open(editUrl, "_blank", "noopener,noreferrer")}
-            className="group inline-flex max-w-full items-center gap-1 rounded-md border-0 bg-transparent font-normal text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color-mix(in_srgb,var(--color-text-secondary)_35%,transparent)]"
-            style={{ fontSize: "var(--task-card-meta-size)" }}
-            aria-label={editTitle}
-            title={editTitle}
-          >
-            <Pencil
-              className={`shrink-0 opacity-45 transition-opacity group-hover:opacity-80 ${variant === "list" ? "h-3 w-3" : "h-2.5 w-2.5"}`}
-              strokeWidth={1.75}
-              aria-hidden
-            />
-            <span className="underline-offset-2 group-hover:underline">Editar</span>
-          </button>
-        ) : null}
-        <div className="flex items-center justify-end gap-1">
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
           {onDelete ? (
             <button
               type="button"
               disabled={deleteBusy}
               onClick={() => void handleDeleteClick()}
-              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-transparent text-[var(--color-text-secondary)] opacity-45 transition-[opacity,color,background-color] hover:bg-[color-mix(in_srgb,var(--color-text-secondary)_10%,transparent)] hover:opacity-100 hover:text-[var(--color-accent-danger)] disabled:opacity-25"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[var(--color-text-secondary)] opacity-40 transition-[opacity,color,background-color] hover:bg-[color-mix(in_srgb,var(--color-text-secondary)_8%,transparent)] hover:opacity-100 hover:text-[var(--color-accent-danger)] disabled:opacity-25"
               aria-label={
                 googleKind === "calendar"
                   ? "Eliminar evento también en Google Calendar"
                   : "Eliminar tarea o recordatorio también en Google Tasks"
               }
-              title={
-                deleteBusy
-                  ? "Eliminando…"
-                  : googleKind === "calendar"
-                    ? "Eliminar también en Google Calendar"
-                    : "Eliminar también en Google Tasks"
-              }
+              title={deleteBusy ? "Eliminando…" : "Eliminar"}
             >
-              <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} aria-hidden />
+              <Trash2 className="h-3 w-3" strokeWidth={1.5} aria-hidden />
             </button>
           ) : null}
-          {showBadge ? (
+          {showComplete ? (
+            <button
+              type="button"
+              role="checkbox"
+              aria-checked={doneVisual}
+              disabled={googleCompleteBusy}
+              aria-label={doneVisual ? "Marcar como pendiente" : "Marcar como realizada"}
+              onClick={() => onToggleGoogleComplete?.()}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-border)] text-[var(--agenda-reminder)] transition-[transform,background-color,border-color] duration-300 hover:border-[var(--agenda-reminder)] disabled:opacity-45"
+              style={
+                doneVisual
+                  ? {
+                      borderColor: "color-mix(in srgb, #4ade80 70%, var(--color-border))",
+                      background: "color-mix(in srgb, #86efac 55%, transparent)",
+                    }
+                  : undefined
+              }
+            >
+              {doneVisual ? (
+                <Check className="h-4 w-4 animate-agenda-check-pop text-[#15803d]" strokeWidth={2.75} aria-hidden />
+              ) : null}
+            </button>
+          ) : null}
+          {showCalToggle ? (
+            <button
+              type="button"
+              role="checkbox"
+              aria-checked={calendarUiDone}
+              aria-label={calendarUiDone ? "Quitar marca de visto" : "Marcar como visto"}
+              onClick={() => onToggleCalendarUiDone?.()}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-border)] text-[var(--agenda-calendar)] transition-[transform,background-color,border-color] duration-300 hover:border-[var(--agenda-calendar)]"
+              style={
+                calendarUiDone
+                  ? {
+                      borderColor: "color-mix(in srgb, #4ade80 70%, var(--color-border))",
+                      background: "color-mix(in srgb, #86efac 55%, transparent)",
+                    }
+                  : undefined
+              }
+            >
+              {calendarUiDone ? (
+                <Check className="h-4 w-4 animate-agenda-check-pop text-[#15803d]" strokeWidth={2.75} aria-hidden />
+              ) : null}
+            </button>
+          ) : null}
+          {showCornerBadge && variant !== "compact" ? (
             <div
               className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
               style={{
@@ -236,19 +216,120 @@ export function AgendaReadonlyUnifiedCard({
             </div>
           ) : null}
         </div>
-      </TaskCardArea>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span
+          className={agendaPillBaseClass}
+          style={{
+            ...googleSourcePillStyle(googleKind),
+            fontSize: "var(--task-card-pill-size, 9px)",
+          }}
+        >
+          {kindPillLabel}
+        </span>
+        <span
+          className="text-[var(--color-text-secondary)]"
+          style={{ fontSize: "var(--task-card-pill-size, 9px)" }}
+          aria-hidden
+        >
+          |
+        </span>
+        <span
+          className={agendaPillBaseClass}
+          style={{
+            ...statusPillStyle(statusKey),
+            fontSize: "var(--task-card-pill-size, 9px)",
+          }}
+        >
+          {statusLabel}
+        </span>
+        {priorityUi ? (
+          <>
+            <span
+              className="text-[var(--color-text-secondary)]"
+              style={{ fontSize: "var(--task-card-pill-size, 9px)" }}
+              aria-hidden
+            >
+              |
+            </span>
+            <span
+              className={agendaPillBaseClass}
+              style={{
+                ...priorityPillStyle(priorityUi),
+                fontSize: "var(--task-card-pill-size, 9px)",
+              }}
+            >
+              {formatPriorityTitle(priorityUi)}
+            </span>
+          </>
+        ) : null}
+      </div>
+
+      {assigneeSubtle ? (
+        <p className="m-0 truncate text-[10px] leading-snug text-[var(--color-text-secondary)] opacity-90">
+          {assigneeSubtle}
+        </p>
+      ) : null}
+
+      {showMoveDue && (onMoveTomorrow || onMoveAfterTomorrow) ? (
+        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+          {onMoveTomorrow ? (
+            <button
+              type="button"
+              disabled={moveDueBusy}
+              className={moveBtnClass}
+              onClick={() => onMoveTomorrow()}
+            >
+              Mañana
+            </button>
+          ) : null}
+          {onMoveAfterTomorrow ? (
+            <button
+              type="button"
+              disabled={moveDueBusy}
+              className={moveBtnClass}
+              onClick={() => onMoveAfterTomorrow()}
+            >
+              Pasado mañana
+            </button>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   )
+
+  const shellStyle = {
+    ...agendaCardChrome,
+    background: shell.background,
+    borderRadius: "var(--task-card-radius, var(--radius-card))",
+    fontFamily: "var(--task-card-font-family, inherit)",
+    minHeight: "var(--task-card-min-height, unset)",
+  } as const
+
+  const chromeBorderVar = "var(--task-card-border-color, var(--color-border))"
+  const thinEdge = "var(--task-card-chrome-border, 0.5px solid var(--color-border))"
+  const embeddedEdge = `1px solid ${chromeBorderVar}`
+  const frameEmbedded = {
+    borderTop: embeddedEdge,
+    borderRight: embeddedEdge,
+    borderBottom: embeddedEdge,
+    borderLeft: shell.borderLeft,
+  } as const
+  const frameCard = {
+    borderTop: thinEdge,
+    borderRight: thinEdge,
+    borderBottom: thinEdge,
+    borderLeft: shell.borderLeft,
+  } as const
 
   if (embedded) {
     return (
       <div
-        className="overflow-hidden"
+        className="overflow-hidden transition-[background-color] duration-500 ease-out"
         style={{
-          overflow: "hidden",
-          ...shellChrome,
-          border: "1px solid var(--task-card-border-color, var(--color-border))",
-          borderLeft,
+          ...shellStyle,
+          ...frameEmbedded,
         }}
       >
         {inner}
@@ -259,13 +340,10 @@ export function AgendaReadonlyUnifiedCard({
   return (
     <Card
       hover
-      className="p-0 overflow-hidden"
+      className="p-0 overflow-hidden transition-[background-color,box-shadow] duration-500 ease-out"
       style={{
-        ...agendaCardSurfaceStyle(borderLeft),
-        ...varStyle,
-        ...shellChrome,
-        border: "var(--task-card-chrome-border, 0.5px solid var(--color-border))",
-        borderLeft,
+        ...shellStyle,
+        ...frameCard,
       }}
     >
       {inner}

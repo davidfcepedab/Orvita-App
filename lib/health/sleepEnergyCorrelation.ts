@@ -15,6 +15,10 @@ export type BiometricCorrelationChartPoint = {
   /** Índice invertido respecto al sueño (más alto = más fatiga / deuda perceptual). */
   fatigue: number
   energy: number
+  /** Etiqueta corta del día (L, M, X…). */
+  dayAbbrev: string
+  /** Texto para tooltips: aclara que son 7 muestras diarias, no telemetría horaria. */
+  sequenceHint: string
 }
 
 function clamp(n: number, lo: number, hi: number) {
@@ -63,6 +67,8 @@ export function buildBiometricCorrelationChartSeries(
   return daily.map((p, i) => {
     const hour = BIOMETRIC_CORRELATION_HOUR_LABELS[i] ?? BIOMETRIC_CORRELATION_HOUR_LABELS[0]
     const fatigue = Math.round(clamp(100 - p.sueno * 0.92 + (i % 3) * 2, 18, 88))
-    return { hour, fatigue, energy: p.energia }
+    const dayAbbrev = p.name
+    const sequenceHint = `Muestra ${i + 1} de 7 · día ${dayAbbrev} (eje inferior solo referencia visual)`
+    return { hour, fatigue, energy: p.energia, dayAbbrev, sequenceHint }
   })
 }

@@ -36,9 +36,18 @@ function formatStatus(status: TrainingStatus) {
 
 export default function TrainingPage() {
   const { today, days, loading, error, manualStatus, setManualStatus } = useTraining()
-  const { bodyRows, mealDays, prefs, setGoalImageUrl, setMealNotes, loading: prefsLoading } = useTrainingPreferences()
+  const {
+    bodyRows,
+    mealDays,
+    prefs,
+    setGoalImageUrl,
+    setMealNotes,
+    loading: prefsLoading,
+    updatePrefs,
+  } = useTrainingPreferences()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [trainingNotice, setTrainingNotice] = useState<string | null>(null)
+  const [goalImageGenerating, setGoalImageGenerating] = useState(false)
   const trainingNoticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const showTrainingNotice = useCallback((message: string) => {
@@ -100,10 +109,47 @@ export default function TrainingPage() {
     )
   }
 
-  const onGenerateGoalWithAI = () => {
-    showTrainingNotice(
-      "Imagen de referencia con IA (placeholder Bloque 3): aquí enlazaremos generación o edición de imagen objetivo.",
-    )
+  const onGenerateGoalWithAI = async () => {
+    const prompt = (prefs.visualGoalDescription ?? "").trim()
+    if (!prompt) {
+      showTrainingNotice("Escribe un prompt en «Prompt para la IA» antes de generar.")
+      return
+    }
+    setGoalImageGenerating(true)
+    try {
+      const payload: { prompt: string; imageBase64?: string } = { prompt }
+      if (goalUrl.startsWith("data:")) {
+        payload.imageBase64 = goalUrl
+      }
+      const res = await fetch("/api/training/goal-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      const data = (await res.json()) as {
+        ok?: boolean
+        imageDataUrl?: string
+        error?: string
+        detail?: string
+        code?: string
+      }
+      if (!data.ok) {
+        if (data.code === "NO_AI_KEY") {
+          showTrainingNotice("Falta OPENAI_API_KEY en el servidor. Añádela al entorno de despliegue para usar esta función.")
+        } else {
+          showTrainingNotice(data.detail || data.error || "No se pudo generar la imagen.")
+        }
+        return
+      }
+      if (data.imageDataUrl) {
+        setGoalImageUrl(data.imageDataUrl)
+        showTrainingNotice("Imagen generada a partir de tu referencia y el prompt. Ya está guardada como objetivo visual.")
+      }
+    } catch {
+      showTrainingNotice("Error de red al generar. Revisa la conexión e inténtalo de nuevo.")
+    } finally {
+      setGoalImageGenerating(false)
+    }
   }
 
   const chartEmpty = chartRows.every((r) => r.volumen === 0)
@@ -128,16 +174,8 @@ export default function TrainingPage() {
       </div>
 
       <Card>
-        <div
-          style={{
-            padding: "var(--spacing-lg)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "var(--spacing-lg)",
-          }}
-        >
-          <div style={{ display: "grid", gap: "var(--spacing-sm)" }}>
+        <div className="flex min-w-0 flex-col gap-5 p-[var(--spacing-lg)] sm:flex-row sm:items-center sm:justify-between sm:gap-[var(--spacing-lg)]">
+          <div className="min-w-0 flex-1" style={{ display: "grid", gap: "var(--spacing-sm)" }}>
             <p
               style={{
                 margin: 0,
@@ -149,12 +187,14 @@ export default function TrainingPage() {
             >
               Capacidad diaria
             </p>
-            <h2 style={{ margin: 0, fontSize: "22px" }}>{formatStatus(today?.status ?? manualStatus ?? "rest")}</h2>
-            <p style={{ margin: 0, fontSize: "12px", color: "var(--color-text-secondary)" }}>
+            <h2 className="text-xl font-medium sm:text-[22px]" style={{ margin: 0 }}>
+              {formatStatus(today?.status ?? manualStatus ?? "rest")}
+            </h2>
+            <p className="max-w-prose text-pretty" style={{ margin: 0, fontSize: "12px", color: "var(--color-text-secondary)" }}>
               Recuperación estimada ~{recoveryPct}% · Carga (strain) {strain} según volumen Hevy últimos 7 días y hoy.
             </p>
             {showManual && (
-              <div style={{ display: "flex", gap: "10px", marginTop: "var(--spacing-sm)" }}>
+              <div className="flex flex-wrap gap-2 pt-1 sm:gap-2.5" style={{ marginTop: "var(--spacing-sm)" }}>
                 {[
                   { label: "Descanso", value: "rest" },
                   { label: "Pausar", value: "skip" },
@@ -186,6 +226,7 @@ export default function TrainingPage() {
             )}
           </div>
           <div
+            className="mx-auto shrink-0 sm:mx-0"
             style={{
               width: "120px",
               height: "120px",
@@ -224,7 +265,7 @@ export default function TrainingPage() {
         </div>
       </Card>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "var(--layout-gap)" }}>
+      <div className="grid grid-cols-1 gap-[var(--layout-gap)] lg:grid-cols-2">
         <Card>
           <div style={{ padding: "var(--spacing-md)", display: "grid", gap: "var(--spacing-sm)" }}>
             <p
@@ -355,6 +396,8 @@ export default function TrainingPage() {
         fileInputRef={fileInputRef}
         onPickImage={onPickImage}
         onFileChange={onFileChange}
+        onVisualGoalDescriptionChange={(v) => updatePrefs({ visualGoalDescription: v })}
+        goalImageGenerating={goalImageGenerating}
         onGenerateGoalWithAI={onGenerateGoalWithAI}
       />
 
@@ -399,10 +442,11 @@ export default function TrainingPage() {
             </button>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: "var(--spacing-sm)" }}>
+          <div className="grid grid-cols-1 gap-[var(--spacing-sm)] min-[380px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-7">
             {mealDays.map((day) => (
               <div
                 key={day.day}
+                className="min-w-0"
                 style={{
                   padding: "12px",
                   borderRadius: "14px",
@@ -412,14 +456,20 @@ export default function TrainingPage() {
                   border: "0.5px solid var(--color-border)",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <span style={{ fontSize: "12px", fontWeight: 600 }}>{day.day}</span>
-                  <span style={{ fontSize: "10px", color: "var(--color-text-secondary)" }}>{day.kcal} KCAL</span>
+                <div className="flex min-w-0 flex-wrap items-center justify-between gap-1">
+                  <span className="text-xs font-semibold sm:text-[12px]">{day.day}</span>
+                  <span className="shrink-0 text-[10px] text-[var(--color-text-secondary)]">{day.kcal} kcal</span>
                 </div>
-                <div style={{ display: "grid", gap: "4px", fontSize: "11px" }}>
-                  <span style={{ color: "var(--color-accent-health)" }}>P {day.pro}g</span>
-                  <span style={{ color: "var(--color-accent-warning)" }}>C {day.carb}g</span>
-                  <span style={{ color: "var(--color-accent-primary)" }}>G {day.fat}g</span>
+                <div className="grid grid-cols-3 gap-1 text-[10px] sm:flex sm:flex-col sm:gap-1 sm:text-[11px]">
+                  <span className="truncate text-center sm:text-left" style={{ color: "var(--color-accent-health)" }}>
+                    P {day.pro}g
+                  </span>
+                  <span className="truncate text-center sm:text-left" style={{ color: "var(--color-accent-warning)" }}>
+                    C {day.carb}g
+                  </span>
+                  <span className="truncate text-center sm:text-left" style={{ color: "var(--color-accent-primary)" }}>
+                    G {day.fat}g
+                  </span>
                 </div>
                 <div style={{ height: "6px", borderRadius: "999px", background: "var(--color-border)" }}>
                   <div
@@ -436,35 +486,35 @@ export default function TrainingPage() {
           </div>
 
           <div
+            className="grid grid-cols-1 gap-4 sm:gap-[var(--spacing-sm)] md:grid-cols-3"
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-              gap: "var(--spacing-sm)",
               background: "#FFF3ED",
               border: "0.5px solid #FDE5DA",
               borderRadius: "12px",
               padding: "12px",
             }}
           >
-            <div>
+            <div className="min-w-0">
               <p style={{ margin: 0, fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--color-text-secondary)" }}>
                 Resumen semanal
               </p>
-              <p style={{ margin: "6px 0 0", fontSize: "12px" }}>
+              <p className="text-pretty" style={{ margin: "6px 0 0", fontSize: "12px" }}>
                 {avgKcal} kcal promedio · objetivo coherente con plan guardado
               </p>
             </div>
-            <div>
+            <div className="min-w-0">
               <p style={{ margin: 0, fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--color-text-secondary)" }}>
                 Recomendación actual
               </p>
-              <p style={{ margin: "6px 0 0", fontSize: "12px" }}>Mantener. Si el peso no baja en varios días, usa &quot;Ajustar con IA&quot; (próximo) o −150 kcal en días suaves.</p>
+              <p className="text-pretty" style={{ margin: "6px 0 0", fontSize: "12px" }}>
+                Mantener. Si el peso no baja en varios días, usa &quot;Ajustar con IA&quot; (próximo) o −150 kcal en días suaves.
+              </p>
             </div>
-            <div>
+            <div className="min-w-0 md:min-h-0">
               <p style={{ margin: 0, fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--color-text-secondary)" }}>
                 Notas
               </p>
-              <label style={{ display: "block", marginTop: "6px" }}>
+              <label className="mt-1.5 block min-w-0">
                 <span style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>
                   Notas semanales
                 </span>

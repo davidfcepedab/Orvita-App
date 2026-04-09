@@ -19,7 +19,10 @@ import { useHealthSupplements } from "@/app/hooks/useHealthSupplements"
 import { SupplementStackSection } from "@/app/health/SupplementStackSection"
 import { calculateRecovery } from "@/src/modules/health/recoveryEngine"
 import { buildRecoveryInputs } from "@/lib/health/recoveryFromContext"
-import { buildBiometricCorrelationChartSeries } from "@/lib/health/sleepEnergyCorrelation"
+import {
+  buildBiometricCorrelationChartSeries,
+  type BiometricCorrelationChartPoint,
+} from "@/lib/health/sleepEnergyCorrelation"
 import { rechartsTooltipContentStyle } from "@/lib/charts/rechartsShared"
 import { isAppMockMode, isSupabaseEnabled, UI_HEALTH_SUPPLEMENTS_LOCAL } from "@/lib/checkins/flags"
 import { useHealthSummaryNarrative } from "@/app/health/useHealthSummaryNarrative"
@@ -68,7 +71,6 @@ export default function HealthPage() {
   const {
     supplements,
     activeCount,
-    toggleActive,
     editMode,
     setEditMode,
     updateSupplement,
@@ -177,7 +179,7 @@ export default function HealthPage() {
         </div>
       </Card>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: "var(--layout-gap)" }}>
+      <div className="grid grid-cols-1 gap-[var(--layout-gap)] sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {salud.loading
           ? Array.from({ length: 5 }).map((_, i) => (
               <Card key={i}>
@@ -216,7 +218,6 @@ export default function HealthPage() {
         suppError={suppError}
         editMode={editMode}
         setEditMode={setEditMode}
-        toggleActive={toggleActive}
         updateSupplement={updateSupplement}
         takenToday={takenToday}
         toggleComplianceToday={toggleComplianceToday}
@@ -237,10 +238,11 @@ export default function HealthPage() {
             Biometric correlation: sleep vs daily energy
           </p>
           <p style={{ margin: 0, fontSize: "11px", lineHeight: 1.45, color: "var(--color-text-secondary)" }}>
-            Misma correlación de 7 puntos que tus datos (tendencia + recuperación), mostrada en franjas horarias tipo jornada.
+            Siete muestras seguidas (últimos días de tu tendencia de energía y un proxy de sueño a partir de recuperación).
+            Las etiquetas del eje inferior son solo referencia visual tipo jornada, no la hora real de cada registro.
           </p>
           <div className="w-full min-w-0 overflow-x-auto overscroll-x-contain">
-            <div style={{ height: "240px", width: "100%", minWidth: "280px" }}>
+            <div className="h-[260px] min-h-[220px] w-full min-w-[280px] sm:h-[280px]">
               {salud.loading ? (
                 <div
                   style={{
@@ -276,7 +278,11 @@ export default function HealthPage() {
                         if (n === "energy") return [value, "Energy level"]
                         return [value, n]
                       }}
-                      labelFormatter={(label) => label}
+                      labelFormatter={(_, payload) => {
+                        const row = payload?.[0]?.payload as BiometricCorrelationChartPoint | undefined
+                        if (!row) return ""
+                        return `${row.dayAbbrev} · ${row.sequenceHint}`
+                      }}
                     />
                     <Legend content={() => <BiometricCorrelationLegend />} verticalAlign="bottom" />
                     <Area

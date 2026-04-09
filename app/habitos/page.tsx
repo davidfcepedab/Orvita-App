@@ -17,6 +17,7 @@ import {
   Sunset,
   Target,
   TrendingDown,
+  Zap,
 } from "lucide-react"
 import { UI_HABITS_MUTATIONS_OFF, UI_HABITS_SAVE_OFF } from "@/lib/checkins/flags"
 import { groupHabitsByDaypart, orderedDaypartBlocks, type HabitTimeBlockId } from "@/lib/habits/habitStackGroups"
@@ -461,10 +462,11 @@ export default function HabitosPage() {
                   ) : null}
                   {blockHabits.map((habit, habitIdx) => {
                     const idx = animStart + habitIdx
+                    const isSuperhabit = Boolean(habit.metadata?.is_superhabit)
                     const freq = habit.metadata?.frequency ?? "diario"
                     const streakDays = habit.metrics.current_streak
                     const doneToday = habit.metrics.completed_today
-                    const reward = habit.metadata?.is_superhabit ? rewardMessage(streakDays) : null
+                    const reward = isSuperhabit ? rewardMessage(streakDays) : null
                     const weekMarks = weekMarksForHabit(habit)
                     const intention = habit.metadata?.intention?.trim()
                     const triggerOrTime = habit.metadata?.trigger_or_time?.trim()
@@ -475,45 +477,65 @@ export default function HabitosPage() {
                       <Card
                         key={habit.id}
                         hover
-                        className="group/habit motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1 motion-safe:fill-mode-both motion-safe:duration-500 hover:-translate-y-0.5"
+                        className={`group/habit motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1 motion-safe:fill-mode-both motion-safe:duration-500 hover:-translate-y-0.5 ${
+                          isSuperhabit
+                            ? "relative overflow-hidden ring-1 ring-[color-mix(in_srgb,var(--color-accent-warning)_42%,transparent)] motion-safe:hover:ring-[color-mix(in_srgb,var(--color-accent-warning)_55%,transparent)]"
+                            : ""
+                        }`}
                         style={{
                           animationDelay: `${Math.min(idx, 14) * 42}ms`,
-                          background: habit.metadata?.is_superhabit
-                            ? "color-mix(in srgb, var(--color-accent-warning) 8%, var(--color-surface))"
+                          background: isSuperhabit
+                            ? "linear-gradient(165deg, color-mix(in srgb, var(--color-accent-warning) 16%, var(--color-surface)) 0%, color-mix(in srgb, #F59E0B 7%, var(--color-surface)) 48%, var(--color-surface) 100%)"
                             : "var(--color-surface)",
                           borderColor: habit.metrics.at_risk
                             ? "color-mix(in srgb, var(--color-accent-danger) 40%, var(--color-border))"
-                            : habit.metadata?.is_superhabit
-                              ? "color-mix(in srgb, var(--color-accent-warning) 30%, var(--color-border))"
+                            : isSuperhabit
+                              ? "color-mix(in srgb, var(--color-accent-warning) 38%, var(--color-border))"
                               : "var(--color-border)",
-                          borderWidth: "1px",
+                          borderWidth: isSuperhabit ? "1px 1px 1px 4px" : "1px",
                           borderStyle: "solid",
-                          boxShadow: "0 4px 14px rgba(15, 23, 42, 0.07)",
+                          borderLeftColor: isSuperhabit
+                            ? "color-mix(in srgb, var(--color-accent-warning) 72%, #c2410c)"
+                            : undefined,
+                          boxShadow: isSuperhabit
+                            ? "0 6px 22px color-mix(in srgb, var(--color-accent-warning) 14%, transparent), 0 1px 0 color-mix(in srgb, var(--color-accent-warning) 22%, transparent) inset"
+                            : "0 4px 14px rgba(15, 23, 42, 0.07)",
                         }}
                       >
                         <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:gap-3 sm:px-3 sm:py-2.5">
                           <div className="min-w-0 space-y-1 px-3 pt-3 sm:max-w-[min(100%,22rem)] sm:flex-none sm:px-0 sm:pt-0">
-                            {habit.metadata?.is_superhabit && (
+                            {isSuperhabit && (
                               <span
-                                className="inline-flex items-center gap-1"
+                                className="inline-flex items-center gap-1.5 shadow-sm"
                                 style={{
-                                  fontSize: "10px",
+                                  fontSize: "11px",
+                                  fontWeight: 700,
                                   textTransform: "uppercase",
-                                  letterSpacing: "0.12em",
-                                  padding: "2px 8px",
+                                  letterSpacing: "0.14em",
+                                  padding: "5px 12px",
                                   borderRadius: "999px",
-                                  background: "color-mix(in srgb, var(--color-accent-warning) 12%, transparent)",
-                                  color: "var(--color-accent-warning)",
+                                  background: "color-mix(in srgb, var(--color-accent-warning) 22%, var(--color-surface))",
+                                  color: "color-mix(in srgb, var(--color-accent-warning) 92%, #7c2d12)",
+                                  border: "1px solid color-mix(in srgb, var(--color-accent-warning) 45%, transparent)",
+                                  boxShadow:
+                                    "0 0 0 1px color-mix(in srgb, var(--color-accent-warning) 12%, transparent), 0 2px 8px color-mix(in srgb, var(--color-accent-warning) 10%, transparent)",
                                 }}
                               >
-                                <span aria-hidden>⚡</span>
+                                <Zap className="h-3.5 w-3.5 shrink-0 fill-[color-mix(in_srgb,var(--color-accent-warning)_35%,transparent)]" strokeWidth={2.25} aria-hidden />
                                 Superhábito
                               </span>
                             )}
                             <div className="flex flex-wrap items-center gap-1.5 sm:flex-nowrap sm:items-center sm:gap-2">
                               <p
                                 className="min-w-0 max-w-full sm:min-w-0 sm:flex-1 sm:truncate"
-                                style={{ margin: 0, fontWeight: 600, fontSize: "15px", color: "var(--color-text-primary)", lineHeight: 1.35 }}
+                                style={{
+                                  margin: 0,
+                                  fontWeight: isSuperhabit ? 700 : 600,
+                                  fontSize: isSuperhabit ? "17px" : "15px",
+                                  color: "var(--color-text-primary)",
+                                  lineHeight: 1.35,
+                                  letterSpacing: isSuperhabit ? "-0.02em" : undefined,
+                                }}
                                 title={habit.name}
                               >
                                 {habit.name}

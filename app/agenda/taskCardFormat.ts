@@ -26,6 +26,42 @@ export function venceLine(dueDateKey: string): string {
   return `Vence: el ${weekday} (próx. semana) · ${civil}`
 }
 
+/** Meta corta arriba a la izquierda (sin prefijo «Vence:»). */
+export function dueMetaCompact(dueDateKey: string): string {
+  if (!dueDateKey || dueDateKey.length < 10) return "Sin fecha"
+  const y = Number(dueDateKey.slice(0, 4))
+  const mo = Number(dueDateKey.slice(5, 7)) - 1
+  const d = Number(dueDateKey.slice(8, 10))
+  if (!Number.isFinite(y) || !Number.isFinite(mo) || !Number.isFinite(d)) return "Sin fecha"
+  const today = new Date()
+  const target = new Date(y, mo, d)
+  const todayKey = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()
+  const targetKey = new Date(target.getFullYear(), target.getMonth(), target.getDate()).getTime()
+  const diffDays = Math.round((targetKey - todayKey) / (1000 * 60 * 60 * 24))
+  const civil = formatLocalDateLabelEsCo(dueDateKey)
+
+  if (diffDays === 0) return `Hoy · ${civil}`
+  if (diffDays === 1) return `Mañana · ${civil}`
+  if (diffDays === -1) return `Ayer · ${civil}`
+  if (diffDays < -1) return `Atrasada · ${civil}`
+
+  const weekday = target.toLocaleDateString("es-CO", { weekday: "long" })
+  if (diffDays <= 7) return `${weekday} · ${civil}`
+  return `${weekday} (próx. sem.) · ${civil}`
+}
+
+/** Meta compacta para eventos (día local + horario breve si aplica). */
+export function calendarEventMetaCompact(ev: GoogleCalendarEventDTO): string {
+  if (!ev.startAt) return "Sin fecha"
+  const k = localDateKeyFromIso(ev.startAt) ?? ev.startAt.slice(0, 10)
+  if (k.length < 10) return "Sin fecha"
+  if (ev.allDay) return dueMetaCompact(k)
+  const start = new Date(ev.startAt)
+  if (Number.isNaN(start.getTime())) return dueMetaCompact(k)
+  const tf = start.toLocaleTimeString("es-CO", { hour: "numeric", minute: "2-digit", hour12: true })
+  return `${dueMetaCompact(k)} · ${tf}`
+}
+
 export function formatPriorityTitle(p: UiAgendaTask["priority"]): string {
   if (p === "alta") return "Alta"
   if (p === "baja") return "Baja"

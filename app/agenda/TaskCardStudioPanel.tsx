@@ -16,8 +16,8 @@ import {
 import { AgendaOrvitaMiniCard } from "@/app/agenda/AgendaOrvitaMiniCard"
 import { AgendaOrvitaTaskCard } from "@/app/agenda/AgendaOrvitaTaskCard"
 import { AgendaReadonlyUnifiedCard } from "@/app/agenda/AgendaReadonlyUnifiedCard"
-import { googleReadonlyCardChrome } from "@/app/agenda/agendaCardChrome"
-import { GoogleReminderQuickBar } from "@/app/agenda/GoogleReminderQuickBar"
+import { googleAgendaCardShell } from "@/app/agenda/agendaCardChrome"
+import { calendarEventMetaCompact, dueMetaCompact } from "@/app/agenda/taskCardFormat"
 import {
   getTaskCardStudioGoogleReminderSample,
   TASK_CARD_STUDIO_HOUSEHOLD_MEMBERS,
@@ -847,7 +847,7 @@ export function TaskCardStudioPanel() {
                 task={TASK_CARD_STUDIO_SAMPLE}
                 variant={orvitaVariant}
                 designDensity={density}
-                iterationMode={showGridGuides}
+                onOpenEdit={() => {}}
                 householdMembers={TASK_CARD_STUDIO_HOUSEHOLD_MEMBERS}
                 onPatchOrvita={async () => {}}
                 onSaveComplete={async () => {}}
@@ -863,7 +863,7 @@ export function TaskCardStudioPanel() {
                 task={TASK_CARD_STUDIO_SAMPLE_COMPLETED}
                 variant={orvitaVariant}
                 designDensity={density}
-                iterationMode={showGridGuides}
+                onOpenEdit={() => {}}
                 householdMembers={TASK_CARD_STUDIO_HOUSEHOLD_MEMBERS}
                 onPatchOrvita={async () => {}}
                 onSaveComplete={async () => {}}
@@ -882,47 +882,46 @@ export function TaskCardStudioPanel() {
             <div className="max-w-xl">
               <AgendaReadonlyUnifiedCard
                 variant={density === "compact" ? "compact" : density === "list" ? "list" : "kanban"}
-                borderLeft="4px solid var(--agenda-calendar)"
-                chromeOverlay={googleReadonlyCardChrome({ kind: "calendar", completed: false })}
+                shell={googleAgendaCardShell({ kind: "calendar", completed: false })}
+                MetaIcon={Calendar}
+                metaText={calendarEventMetaCompact({
+                  id: "studio",
+                  summary: "",
+                  startAt: new Date().toISOString(),
+                  endAt: null,
+                  allDay: false,
+                })}
                 title="Reunión · Planificación Q2"
-                TimelineIcon={Calendar}
-                timelineText="Hoy 16:00 · 1 h"
                 googleKind="calendar"
-                kindPillLabel="Calendar"
-                fuente="Google Calendar"
-                footNote="En /agenda no se edita responsable ni prioridad en Calendar (solo Tasks + Órvita)."
-                badgeLetter="GC"
-                badgeColorVar="var(--agenda-calendar)"
-                editUrl="https://calendar.google.com"
-                iterationMode={showGridGuides}
+                kindPillLabel="Reunión"
+                statusLabel="Pendiente"
+                statusKey="pendiente"
+                priorityUi={null}
+                onEdit={() => {}}
               />
             </div>
           </Section>
 
-          <Section title="Google Tasks · recordatorio (navy suave + barra rápida)">
+          <Section title="Google Tasks · recordatorio (azul pastel)">
             <div className="max-w-xl">
               <AgendaReadonlyUnifiedCard
                 variant={density === "compact" ? "compact" : density === "list" ? "list" : "kanban"}
-                borderLeft="4px solid var(--agenda-reminder)"
-                chromeOverlay={googleReadonlyCardChrome({ kind: "reminder", completed: false })}
+                shell={googleAgendaCardShell({ kind: "reminder", completed: false })}
                 title={studioGoogleReminder.title}
-                TimelineIcon={Bell}
-                timelineText="Vence hoy · ejemplo"
+                MetaIcon={Bell}
+                metaText={dueMetaCompact(
+                  studioGoogleReminder.due?.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
+                )}
                 googleKind="reminder"
                 kindPillLabel="Recordatorio"
-                fuente="Google Tasks"
-                footNote="Vista previa: en /agenda, con Google conectado y hogar cargado, esta barra guarda en Tasks y metadatos locales."
-                footer={
-                  <GoogleReminderQuickBar
-                    task={studioGoogleReminder}
-                    householdMembers={TASK_CARD_STUDIO_HOUSEHOLD_MEMBERS}
-                    patchTask={async () => {}}
-                  />
-                }
-                badgeLetter="GT"
-                badgeColorVar="var(--agenda-reminder)"
-                editUrl="https://tasks.google.com"
-                iterationMode={showGridGuides}
+                statusLabel="Pendiente"
+                statusKey="pendiente"
+                priorityUi="media"
+                onEdit={() => {}}
+                onToggleGoogleComplete={() => {}}
+                showMoveDue
+                onMoveTomorrow={() => {}}
+                onMoveAfterTomorrow={() => {}}
               />
             </div>
           </Section>
