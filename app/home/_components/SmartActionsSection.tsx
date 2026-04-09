@@ -10,6 +10,7 @@ import type { SmartAction } from "@/app/home/_lib/orbita-home-types"
 type SmartActionsSectionProps = {
   actions: SmartAction[]
   onAction: (id: string, action: SmartAction["primaryAction"]) => Promise<void> | void
+  pendingActionId?: string | null
 }
 
 function actionIcon(a: SmartAction["primaryAction"]) {
@@ -18,7 +19,7 @@ function actionIcon(a: SmartAction["primaryAction"]) {
   return <Slash className="h-4 w-4" />
 }
 
-export function SmartActionsSection({ actions, onAction }: SmartActionsSectionProps) {
+export function SmartActionsSection({ actions, onAction, pendingActionId }: SmartActionsSectionProps) {
   return (
     <section className="mx-auto max-w-6xl px-4 mt-6">
       <div>
@@ -66,6 +67,7 @@ export function SmartActionsSection({ actions, onAction }: SmartActionsSectionPr
               <div className="mt-4 flex items-center justify-between gap-2">
                 <Button
                   onClick={() => void onAction(a.id, a.primaryAction)}
+                  disabled={pendingActionId === a.id}
                   className="rounded-xl inline-flex items-center gap-2 !px-4"
                 >
                   {actionIcon(a.primaryAction)}
@@ -75,6 +77,7 @@ export function SmartActionsSection({ actions, onAction }: SmartActionsSectionPr
                 <button
                   type="button"
                   onClick={() => void onAction(a.id, "Ignorar")}
+                  disabled={pendingActionId === a.id}
                   className="h-10 rounded-xl px-4 border border-white/10 bg-orbita-surface hover:bg-white/5 transition text-sm font-semibold text-orbita-primary"
                 >
                   Ignorar

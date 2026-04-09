@@ -12,6 +12,7 @@ type PredictiveStrategicProps = {
   points: PredictivePoint[]
   insights: OrbitaInsight[]
   onRequestAiRefresh: () => Promise<void> | void
+  isRefreshing?: boolean
 }
 
 function insightIcon(sev: OrbitaInsight["severity"]) {
@@ -20,7 +21,7 @@ function insightIcon(sev: OrbitaInsight["severity"]) {
   return <TriangleAlert className="h-4 w-4" style={{ color: "var(--color-accent-warning)" }} />
 }
 
-export function PredictiveStrategic({ points, insights, onRequestAiRefresh }: PredictiveStrategicProps) {
+export function PredictiveStrategic({ points, insights, onRequestAiRefresh, isRefreshing }: PredictiveStrategicProps) {
   return (
     <section className="mx-auto max-w-6xl px-4 mt-6">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
@@ -34,10 +35,11 @@ export function PredictiveStrategic({ points, insights, onRequestAiRefresh }: Pr
         <button
           type="button"
           onClick={() => void onRequestAiRefresh()}
+          disabled={isRefreshing}
           className="h-10 rounded-xl px-4 border border-white/10 bg-orbita-surface hover:bg-white/5 transition text-sm font-semibold text-orbita-primary inline-flex items-center gap-2 w-fit"
         >
           <Bot className="h-4 w-4 text-sky-200" />
-          Actualizar análisis
+          {isRefreshing ? "Actualizando…" : "Actualizar análisis"}
         </button>
       </div>
 

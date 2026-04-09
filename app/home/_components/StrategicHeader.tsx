@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { motion } from "framer-motion"
 import { Sparkles, TrendingUp } from "lucide-react"
 import { CircularProgressbar, buildStyles } from "react-circular-progressbar"
@@ -16,8 +16,12 @@ type StrategicHeaderProps = {
 }
 
 export function StrategicHeader({ model, onGenerateAi, isGenerating }: StrategicHeaderProps) {
-  const now = useMemo(() => new Date(), [])
-  const parts = useMemo(() => formatBogotaDateParts(now), [now])
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(new Date()), 60_000)
+    return () => window.clearInterval(id)
+  }, [])
+  const parts = useMemo(() => formatBogotaDateParts(now, model.user.tz), [now, model.user.tz])
   const greeting = useMemo(() => greetingForWeekday(parts.weekday.toLowerCase()), [parts.weekday])
 
   const tone = flowToneClasses(model.flow.color)

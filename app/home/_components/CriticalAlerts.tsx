@@ -12,9 +12,10 @@ type CriticalAlertsProps = {
   alerts: OrbitaAlert[]
   onOneClickAction: (id: string) => Promise<void> | void
   onResolveWithAi: (id: string) => Promise<void> | void
+  pendingAlertId?: string | null
 }
 
-export function CriticalAlerts({ alerts, onOneClickAction, onResolveWithAi }: CriticalAlertsProps) {
+export function CriticalAlerts({ alerts, onOneClickAction, onResolveWithAi, pendingAlertId }: CriticalAlertsProps) {
   const top = alerts.slice(0, 4)
 
   return (
@@ -67,8 +68,12 @@ export function CriticalAlerts({ alerts, onOneClickAction, onResolveWithAi }: Cr
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
+                    {pendingAlertId === a.id ? (
+                      <span className="text-xs text-orbita-secondary">Aplicando acción…</span>
+                    ) : null}
                     <Button
                       onClick={() => void onOneClickAction(a.id)}
+                      disabled={pendingAlertId === a.id}
                       className="h-10 rounded-xl !px-4 inline-flex items-center gap-2"
                     >
                       <CheckCircle2 className="h-4 w-4" />
@@ -77,6 +82,7 @@ export function CriticalAlerts({ alerts, onOneClickAction, onResolveWithAi }: Cr
                     <button
                       type="button"
                       onClick={() => void onResolveWithAi(a.id)}
+                      disabled={pendingAlertId === a.id}
                       className="h-10 rounded-xl px-4 border border-white/10 bg-orbita-surface hover:bg-white/5 transition text-sm font-semibold text-orbita-primary inline-flex items-center gap-2"
                     >
                       <Bot className="h-4 w-4 text-sky-200" />

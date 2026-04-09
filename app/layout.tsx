@@ -14,6 +14,21 @@ export const metadata: Metadata = {
     template: "%s · Órvita",
   },
   description: "Sistema operativo estratégico — salud, capital, agenda y decisión.",
+  manifest: "/manifest.json",
+  applicationName: "ÓRVITA",
+  appleWebApp: {
+    capable: true,
+    title: "ÓRVITA",
+    statusBarStyle: "black-translucent",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  icons: {
+    icon: [{ url: "/icon", type: "image/png" }],
+    apple: [{ url: "/apple-icon", type: "image/png" }],
+    shortcut: ["/icon"],
+  },
 }
 
 export default function RootLayout({

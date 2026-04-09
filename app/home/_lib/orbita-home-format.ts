@@ -69,9 +69,9 @@ export function energyWindowDot(window: "alta" | "media" | "baja") {
   return "bg-slate-500"
 }
 
-export function formatBogotaDateParts(date: Date) {
-  const weekday = date.toLocaleDateString("es-CO", { weekday: "long", timeZone: "America/Bogota" })
-  const day = date.toLocaleDateString("es-CO", { day: "2-digit", month: "long", year: "numeric", timeZone: "America/Bogota" })
+export function formatBogotaDateParts(date: Date, tz = "America/Bogota") {
+  const weekday = date.toLocaleDateString("es-CO", { weekday: "long", timeZone: tz })
+  const day = date.toLocaleDateString("es-CO", { day: "2-digit", month: "long", year: "numeric", timeZone: tz })
   return { weekday, day }
 }
 
