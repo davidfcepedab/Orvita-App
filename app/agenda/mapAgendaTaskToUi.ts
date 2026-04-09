@@ -45,6 +45,10 @@ export type UiAgendaTask = {
   assigneePendingAccept: boolean
   /** Asigné a otro: ya aceptó. */
   assigneeAccepted: boolean
+  /** Id del asignatario en auth (para selector). */
+  assigneeUserId: string | null
+  /** Quien creó la fila (auth id). */
+  createdByUserId: string
 }
 
 export function assignmentShortLine(task: UiAgendaTask): string | null {
@@ -111,6 +115,8 @@ export function mapAgendaTaskToUi(t: AgendaTask): UiAgendaTask {
     needsAcceptance,
     assigneePendingAccept,
     assigneeAccepted,
+    assigneeUserId: t.assigneeId ?? null,
+    createdByUserId: t.createdBy,
   }
 }
 

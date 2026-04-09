@@ -7,6 +7,13 @@ type ExternalTaskRow = {
   title: string | null
   status: string | null
   due_date: string | null
+  local_assignee_user_id?: string | null
+  local_priority?: string | null
+}
+
+function normalizeLocalPriority(v: string | null | undefined): GoogleTaskDTO["localPriority"] {
+  if (v === "Alta" || v === "Media" || v === "Baja") return v
+  return null
 }
 
 export function externalTaskRowToDto(row: ExternalTaskRow): GoogleTaskDTO {
@@ -19,6 +26,8 @@ export function externalTaskRowToDto(row: ExternalTaskRow): GoogleTaskDTO {
     title: row.title?.trim() ? row.title.trim() : "(Sin título)",
     status: row.status,
     due,
+    localAssigneeUserId: row.local_assignee_user_id ?? null,
+    localPriority: normalizeLocalPriority(row.local_priority ?? null),
   }
 }
 
@@ -32,7 +41,7 @@ export async function fetchTasksFromExternalTable(
 ): Promise<{ tasks: GoogleTaskDTO[]; dbError: string | null }> {
   const { data, error } = await supabase
     .from("external_tasks")
-    .select("google_task_id, title, status, due_date")
+    .select("google_task_id, title, status, due_date, local_assignee_user_id, local_priority")
     .eq("user_id", userId)
     .is("deleted_at", null)
     .order("due_date", { ascending: true, nullsFirst: false })
@@ -48,4 +57,21 @@ export async function fetchTasksFromExternalTable(
   }
 
   return { tasks: rows.map(externalTaskRowToDto), dbError: null }
+}
+
+export async function fetchExternalTaskDtoByGoogleId(
+  supabase: SupabaseClient,
+  userId: string,
+  googleTaskId: string,
+): Promise<GoogleTaskDTO | null> {
+  const { data, error } = await supabase
+    .from("external_tasks")
+    .select("google_task_id, title, status, due_date, local_assignee_user_id, local_priority")
+    .eq("user_id", userId)
+    .eq("google_task_id", googleTaskId)
+    .is("deleted_at", null)
+    .maybeSingle()
+
+  if (error || !data) return null
+  return externalTaskRowToDto(data as ExternalTaskRow)
 }

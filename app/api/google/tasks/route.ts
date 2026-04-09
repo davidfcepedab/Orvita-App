@@ -13,7 +13,10 @@ import {
   mapGoogleTask,
   patchDefaultListTask,
 } from "@/lib/google/googleTasksApi"
-import { fetchTasksFromExternalTable } from "@/lib/google/tasksFromExternalTable"
+import {
+  fetchExternalTaskDtoByGoogleId,
+  fetchTasksFromExternalTable,
+} from "@/lib/google/tasksFromExternalTable"
 import { getGoogleAccessTokenForUser } from "@/lib/google/loadAccessToken"
 import { MOCK_GOOGLE_TASKS } from "@/lib/google/mockGoogleData"
 
@@ -188,9 +191,16 @@ export async function PATCH(req: NextRequest) {
   const auth = await requireUser(req)
   if (auth instanceof NextResponse) return auth
 
-  let body: { id?: string; due?: string | null; title?: string; status?: string }
+  let body: {
+    id?: string
+    due?: string | null
+    title?: string
+    status?: string
+    localAssigneeUserId?: string | null
+    localPriority?: string | null
+  }
   try {
-    body = (await req.json()) as { id?: string; due?: string | null; title?: string; status?: string }
+    body = (await req.json()) as typeof body
   } catch {
     return NextResponse.json({ success: false, error: "JSON inválido" }, { status: 400 })
   }
@@ -200,46 +210,105 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ success: false, error: "id es obligatorio" }, { status: 400 })
   }
 
-  if (body.due === undefined && body.title === undefined && body.status === undefined) {
+  const wantsGooglePatch =
+    body.due !== undefined || body.title !== undefined || body.status !== undefined
+  const wantsLocal =
+    body.localAssigneeUserId !== undefined || body.localPriority !== undefined
+
+  if (!wantsGooglePatch && !wantsLocal) {
     return NextResponse.json({ success: false, error: "Nada que actualizar" }, { status: 400 })
   }
 
-  const tokenResult = await getGoogleAccessTokenForUser(auth.supabase, auth.userId)
-  if ("error" in tokenResult) {
-    return NextResponse.json(
-      { success: false, error: tokenResult.error },
-      { status: tokenResult.status === 404 ? 400 : tokenResult.status },
-    )
+  if (
+    body.localPriority !== undefined &&
+    body.localPriority !== null &&
+    body.localPriority !== "" &&
+    body.localPriority !== "Alta" &&
+    body.localPriority !== "Media" &&
+    body.localPriority !== "Baja"
+  ) {
+    return NextResponse.json({ success: false, error: "localPriority inválida" }, { status: 400 })
   }
 
   try {
-    const updated = await patchDefaultListTask(tokenResult.token, id, {
-      due: body.due,
-      title: body.title,
-      status: body.status,
-    })
-    const mapped = mapGoogleTask(updated)
-    if (mapped) {
-      const now = new Date().toISOString()
-      await auth.supabase.from("external_tasks").upsert(
-        {
-          user_id: auth.userId,
-          google_task_id: mapped.id,
-          title: mapped.title,
-          status: mapped.status,
-          due_date: mapped.due,
-          raw: updated as Record<string, unknown>,
-          synced_at: now,
-          deleted_at: null,
-        },
-        { onConflict: "user_id,google_task_id" },
-      )
+    if (wantsGooglePatch) {
+      const tokenResult = await getGoogleAccessTokenForUser(auth.supabase, auth.userId)
+      if ("error" in tokenResult) {
+        return NextResponse.json(
+          { success: false, error: tokenResult.error },
+          { status: tokenResult.status === 404 ? 400 : tokenResult.status },
+        )
+      }
+
+      const updated = await patchDefaultListTask(tokenResult.token, id, {
+        due: body.due,
+        title: body.title,
+        status: body.status,
+      })
+      const mapped = mapGoogleTask(updated)
+      if (mapped) {
+        const now = new Date().toISOString()
+        await auth.supabase.from("external_tasks").upsert(
+          {
+            user_id: auth.userId,
+            google_task_id: mapped.id,
+            title: mapped.title,
+            status: mapped.status,
+            due_date: mapped.due,
+            raw: updated as Record<string, unknown>,
+            synced_at: now,
+            deleted_at: null,
+          },
+          { onConflict: "user_id,google_task_id" },
+        )
+      }
     }
-    return NextResponse.json({ success: true, task: mapped ?? updated })
+
+    if (wantsLocal) {
+      const localUp: Record<string, string | null> = {}
+      if (body.localAssigneeUserId !== undefined) {
+        const v = body.localAssigneeUserId
+        localUp.local_assignee_user_id =
+          v === null || (typeof v === "string" && v.trim() === "") ? null : String(v).trim()
+      }
+      if (body.localPriority !== undefined) {
+        const p = body.localPriority
+        localUp.local_priority =
+          p === null || p === "" ? null : p === "Alta" || p === "Media" || p === "Baja" ? p : null
+      }
+
+      const loc = await auth.supabase
+        .from("external_tasks")
+        .update(localUp)
+        .eq("user_id", auth.userId)
+        .eq("google_task_id", id)
+        .is("deleted_at", null)
+        .select("google_task_id")
+        .maybeSingle()
+
+      if (loc.error) {
+        throw loc.error
+      }
+      if (!loc.data && !wantsGooglePatch) {
+        return NextResponse.json(
+          { success: false, error: "Tarea no encontrada en Órvita (sincroniza desde Google primero)." },
+          { status: 404 },
+        )
+      }
+    }
+
+    const dto = await fetchExternalTaskDtoByGoogleId(auth.supabase, auth.userId, id)
+    return NextResponse.json({ success: true, task: dto })
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Error actualizando tarea"
     console.error("GOOGLE TASKS PATCH:", msg)
-    return NextResponse.json({ success: false, error: "No se pudo actualizar la tarea en Google" }, { status: 502 })
+    return NextResponse.json(
+      {
+        success: false,
+        error: wantsGooglePatch ? "No se pudo actualizar la tarea en Google" : msg,
+      },
+      { status: wantsGooglePatch ? 502 : 500 },
+    )
   }
 }
 

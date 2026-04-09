@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { Check, Clock, Trash2 } from "lucide-react"
 import { Card } from "@/src/components/ui/Card"
 import type { UiAgendaTask } from "@/app/agenda/mapAgendaTaskToUi"
-import { assignmentShortLine } from "@/app/agenda/mapAgendaTaskToUi"
+import { assignmentShortLine, priorityFormToApi } from "@/app/agenda/mapAgendaTaskToUi"
 import { TaskSourceBadge } from "@/app/agenda/TaskSourceBadge"
 import {
   agendaCardSurfaceStyle,
@@ -14,14 +14,16 @@ import {
 } from "@/app/agenda/agendaUnifiedCardStyles"
 import { formatPriorityTitle, formatStatusTitle, venceLine } from "@/app/agenda/taskCardFormat"
 import { taskLeftBorder } from "@/app/agenda/taskTypeVisual"
-import {
-  TASK_CARD_GRID,
-  taskCardGridStyle,
-  type TaskCardDensity,
-} from "@/app/agenda/taskCardConfig"
+import { taskCardGridStyle, type TaskCardDensity } from "@/app/agenda/taskCardConfig"
 import { TaskCardArea } from "@/app/agenda/TaskCardArea"
 import { useTaskCardDesign } from "@/app/agenda/TaskCardDesignContext"
 import { useTaskCardIterationMode } from "@/app/agenda/TaskCardIterationContext"
+import { orvitaTaskCardChrome } from "@/app/agenda/agendaCardChrome"
+import type { HouseholdMemberDTO } from "@/lib/household/memberTypes"
+import type { AgendaTaskPriority } from "@/app/hooks/useAgendaTasks"
+
+const quickInputClass =
+  "max-w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-[10px] text-[var(--color-text-primary)]"
 
 type Props = {
   task: UiAgendaTask
@@ -34,6 +36,16 @@ type Props = {
   onDelete?: (task: UiAgendaTask) => Promise<void> | void
   deleteBusy?: boolean
   onAcceptAssignment?: (task: UiAgendaTask) => Promise<void> | void
+  householdMembers?: HouseholdMemberDTO[]
+  onPatchOrvita?: (
+    taskId: string,
+    patch: Partial<{
+      dueDate: string | null
+      assigneeId: string | null
+      assigneeName: string | null
+      priority: AgendaTaskPriority
+    }>,
+  ) => Promise<void> | void
 }
 
 export function AgendaOrvitaTaskCard({
@@ -45,6 +57,8 @@ export function AgendaOrvitaTaskCard({
   onDelete,
   deleteBusy,
   onAcceptAssignment,
+  householdMembers = [],
+  onPatchOrvita,
 }: Props) {
   const fromCtx = useTaskCardIterationMode()
   const iterationMode = iterationProp ?? fromCtx
@@ -65,14 +79,12 @@ export function AgendaOrvitaTaskCard({
       } as const)
 
   const [done, setDone] = useState(task.completed)
-  const [dirty, setDirty] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [accepting, setAccepting] = useState(false)
 
   useEffect(() => {
     setDone(task.completed)
-    setDirty(false)
   }, [task.id, task.completed])
 
   const durationVenceLine = `${task.duration} min | ${venceLine(task.due)}`
@@ -84,12 +96,20 @@ export function AgendaOrvitaTaskCard({
     task.assigneeAccepted ||
     (task.needsAcceptance && onAcceptAssignment)
 
-  async function handleGuardar() {
-    if (!onSaveComplete || !dirty) return
+  const showAssigneeSelect =
+    Boolean(onPatchOrvita) &&
+    householdMembers.length > 0 &&
+    (task.type === "personal" || task.type === "asignada")
+
+  async function toggleComplete() {
+    if (!onSaveComplete) return
+    const next = !done
+    setDone(next)
     setSaving(true)
     try {
-      await onSaveComplete(task, done)
-      setDirty(false)
+      await onSaveComplete(task, next)
+    } catch {
+      setDone(!next)
     } finally {
       setSaving(false)
     }
@@ -122,9 +142,8 @@ export function AgendaOrvitaTaskCard({
       style={{
         ...agendaCardSurfaceStyle(taskLeftBorder(task.type, 4)),
         ...varStyle,
+        ...orvitaTaskCardChrome(task),
         borderRadius: "var(--task-card-radius, var(--radius-card))",
-        background:
-          "var(--task-card-surface-bg-orvita, var(--task-card-surface-bg, var(--color-surface)))",
         border: "var(--task-card-chrome-border, 0.5px solid var(--color-border))",
         fontFamily: "var(--task-card-font-family, inherit)",
         minHeight: "var(--task-card-min-height, unset)",
@@ -193,6 +212,70 @@ export function AgendaOrvitaTaskCard({
         </TaskCardArea>
 
         <TaskCardArea area="assign" iterationMode={iterationMode}>
+          {onPatchOrvita ? (
+            <div
+              className="mb-1.5 flex min-w-0 flex-wrap items-end gap-2"
+              style={{ gap: "var(--task-card-gap-tight)" }}
+            >
+              <label className="grid gap-0.5 text-[10px] text-[var(--color-text-secondary)]">
+                <span>Vence</span>
+                <input
+                  key={`${task.id}-${task.due}`}
+                  type="date"
+                  defaultValue={task.due}
+                  className={quickInputClass}
+                  aria-label="Cambiar fecha de vencimiento"
+                  onBlur={(e) => {
+                    const v = e.target.value.trim() || null
+                    if (v !== (task.due || null)) {
+                      void onPatchOrvita(task.id, { dueDate: v })
+                    }
+                  }}
+                />
+              </label>
+              <label className="grid gap-0.5 text-[10px] text-[var(--color-text-secondary)]">
+                <span>Prioridad</span>
+                <select
+                  className={quickInputClass}
+                  value={task.priority}
+                  aria-label="Cambiar prioridad"
+                  onChange={(e) => {
+                    const ui = e.target.value as UiAgendaTask["priority"]
+                    void onPatchOrvita(task.id, { priority: priorityFormToApi(ui) })
+                  }}
+                >
+                  <option value="alta">Alta</option>
+                  <option value="media">Media</option>
+                  <option value="baja">Baja</option>
+                </select>
+              </label>
+              {showAssigneeSelect ? (
+                <label className="grid min-w-0 gap-0.5 text-[10px] text-[var(--color-text-secondary)]">
+                  <span>Responsable</span>
+                  <select
+                    className={quickInputClass}
+                    value={task.assigneeUserId ?? ""}
+                    aria-label="Asignar responsable del hogar"
+                    onChange={(e) => {
+                      const mid = e.target.value.trim() || null
+                      const m = mid ? householdMembers.find((h) => h.id === mid) : null
+                      void onPatchOrvita(task.id, {
+                        assigneeId: mid,
+                        assigneeName: m ? (m.displayName?.trim() || m.email || null) : null,
+                      })
+                    }}
+                  >
+                    {task.type === "personal" ? <option value="">Para mí</option> : null}
+                    {householdMembers.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.displayName?.trim() || m.email || m.id.slice(0, 8)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+            </div>
+          ) : null}
           {showAssignRow ? (
             <div
               className="flex flex-wrap items-center"
@@ -280,41 +363,28 @@ export function AgendaOrvitaTaskCard({
                 </button>
               ) : null}
               {onSaveComplete ? (
-                <>
-                  <button
-                    type="button"
-                    disabled={!dirty || saving}
-                    onClick={() => void handleGuardar()}
-                    className="min-w-0 border-0 bg-transparent p-0 font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)] underline decoration-[var(--color-border)] underline-offset-2 transition-colors hover:text-[var(--color-text-primary)] disabled:cursor-not-allowed disabled:no-underline disabled:opacity-40"
-                    style={{ fontSize: "var(--task-card-action-size)" }}
-                  >
-                    {saving ? "Guardando…" : "Guardar"}
-                  </button>
-                  <button
-                    type="button"
-                    role="checkbox"
-                    aria-checked={done}
-                    aria-label={done ? "Marcar como pendiente" : "Marcar como realizada"}
-                    onClick={() => {
-                      setDone((v) => !v)
-                      setDirty(true)
-                    }}
-                    className="flex shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-border)] text-[var(--agenda-assigned)] transition-colors hover:border-[var(--agenda-assigned)]"
-                    style={{
-                      width: "var(--task-card-check-size)",
-                      height: "var(--task-card-check-size)",
-                      ...(done
-                        ? {
-                            borderColor: "var(--agenda-assigned)",
-                            background:
-                              "color-mix(in srgb, var(--agenda-assigned) 22%, transparent)",
-                          }
-                        : {}),
-                    }}
-                  >
-                    {done ? <Check className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden /> : null}
-                  </button>
-                </>
+                <button
+                  type="button"
+                  role="checkbox"
+                  aria-checked={done}
+                  disabled={saving}
+                  aria-label={done ? "Marcar como pendiente" : "Marcar como realizada"}
+                  onClick={() => void toggleComplete()}
+                  className="flex shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-border)] text-[var(--agenda-assigned)] transition-colors hover:border-[var(--agenda-assigned)] disabled:opacity-45"
+                  style={{
+                    width: "var(--task-card-check-size)",
+                    height: "var(--task-card-check-size)",
+                    ...(done
+                      ? {
+                          borderColor: "var(--agenda-assigned)",
+                          background:
+                            "color-mix(in srgb, var(--agenda-assigned) 22%, transparent)",
+                        }
+                      : {}),
+                  }}
+                >
+                  {done ? <Check className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden /> : null}
+                </button>
               ) : null}
             </div>
           </TaskCardArea>

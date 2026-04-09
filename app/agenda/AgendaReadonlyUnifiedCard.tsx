@@ -1,6 +1,6 @@
 "use client"
 
-import type { ReactNode } from "react"
+import type { CSSProperties, ReactNode } from "react"
 import type { LucideIcon } from "lucide-react"
 import { Pencil, Trash2 } from "lucide-react"
 import { Card } from "@/src/components/ui/Card"
@@ -37,6 +37,8 @@ type Props = {
   editUrl?: string
   editTitle?: string
   iterationMode?: boolean
+  /** Capa de color de estado/fuente (p. ej. verde si completada, morado calendario). */
+  chromeOverlay?: Pick<CSSProperties, "background">
 }
 
 function variantToDensity(v: Variant): TaskCardDensity {
@@ -65,6 +67,7 @@ export function AgendaReadonlyUnifiedCard({
   editUrl,
   editTitle = "Editar en Google",
   iterationMode: iterationProp,
+  chromeOverlay,
 }: Props) {
   const fromCtx = useTaskCardIterationMode()
   const iterationMode = iterationProp ?? fromCtx
@@ -84,6 +87,7 @@ export function AgendaReadonlyUnifiedCard({
   const shellChrome = {
     borderRadius: "var(--task-card-radius, var(--radius-card))",
     background:
+      chromeOverlay?.background ??
       "var(--task-card-surface-bg-readonly, var(--task-card-surface-bg, var(--color-surface)))",
     fontFamily: "var(--task-card-font-family, inherit)",
     minHeight: "var(--task-card-min-height, unset)",
@@ -245,8 +249,6 @@ export function AgendaReadonlyUnifiedCard({
           ...shellChrome,
           border: "1px solid var(--task-card-border-color, var(--color-border))",
           borderLeft,
-          background:
-            "var(--task-card-surface-bg-readonly, var(--task-card-surface-bg, var(--color-surface-alt)))",
         }}
       >
         {inner}

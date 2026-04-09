@@ -7,7 +7,7 @@ import { CalendarDays, CalendarRange, LayoutGrid, LayoutPanelLeft, ListChecks, P
 import { GoogleAgendaPanel } from "@/app/agenda/GoogleAgendaPanel"
 import { AgendaColorLegend } from "@/app/agenda/AgendaColorLegend"
 
-import { useAgendaTasks } from "@/app/hooks/useAgendaTasks"
+import { useAgendaTasks, type AgendaTaskPriority } from "@/app/hooks/useAgendaTasks"
 import { useGoogleCalendar } from "@/app/hooks/useGoogleCalendar"
 import { useGoogleTasks } from "@/app/hooks/useGoogleTasks"
 import { mapAgendaTaskToUi, priorityFormToApi, type UiAgendaTask } from "@/app/agenda/mapAgendaTaskToUi"
@@ -32,6 +32,7 @@ import {
 import type { HouseholdMemberDTO } from "@/lib/household/memberTypes"
 import { createBrowserClient } from "@/lib/supabase/browser"
 import { buildGoogleByDayIndex, type GoogleDayBucket } from "@/lib/agenda/googleAgendaByDay"
+import type { GoogleTaskLocalPriority } from "@/lib/google/types"
 import { formatLocalDateKey } from "@/lib/agenda/localDateKey"
 
 function pickViewerFirstName(
@@ -412,6 +413,38 @@ export default function AgendaPage() {
   const saveTaskComplete = (taskId: string, completed: boolean) =>
     updateTask(taskId, { status: completed ? "completed" : "pending" })
 
+  const onPatchOrvitaTask = useCallback(
+    (
+      taskId: string,
+      patch: Partial<{
+        dueDate: string | null
+        assigneeId: string | null
+        assigneeName: string | null
+        priority: AgendaTaskPriority
+      }>,
+    ) => updateTask(taskId, patch),
+    [updateTask],
+  )
+
+  const onGoogleReminderPatch = useCallback(
+    async (
+      id: string,
+      patch: {
+        due?: string | null
+        title?: string
+        status?: string
+        localAssigneeUserId?: string | null
+        localPriority?: GoogleTaskLocalPriority | null
+      },
+    ) => {
+      const result = await googleTasksFeed.patchTask(id, patch)
+      if (!result) {
+        throw new Error(googleTasksFeed.error || "No se pudo guardar el recordatorio")
+      }
+    },
+    [googleTasksFeed],
+  )
+
   const onGoogleTaskSetDue = useCallback(
     async (taskId: string, dueYmd: string) => {
       const result = await googleTasksFeed.patchTask(taskId, { due: dueYmd })
@@ -668,6 +701,9 @@ export default function AgendaPage() {
                   calendarFeed={googleCalendar}
                   googleTasksFeed={googleTasksFeed}
                   hideBeforeToday={!showPastAgenda}
+                  householdMembers={householdMembers}
+                  onPatchOrvitaTask={onPatchOrvitaTask}
+                  onGoogleReminderPatch={googleTasksFeed.connected ? onGoogleReminderPatch : undefined}
                   onSaveComplete={(task, completed) => saveTaskComplete(task.id, completed)}
                   onGoogleTaskSetDue={googleTasksFeed.connected ? onGoogleTaskSetDue : undefined}
                   onDeleteOrvitaTask={onDeleteOrvitaTask}
@@ -684,6 +720,9 @@ export default function AgendaPage() {
                   googleTasksFeed={googleTasksFeed}
                   agendaLoading={loading}
                   hideBeforeToday={!showPastAgenda}
+                  householdMembers={householdMembers}
+                  onPatchOrvitaTask={onPatchOrvitaTask}
+                  onGoogleReminderPatch={googleTasksFeed.connected ? onGoogleReminderPatch : undefined}
                   onSaveComplete={(task, completed) => saveTaskComplete(task.id, completed)}
                   onGoogleTaskSetDue={googleTasksFeed.connected ? onGoogleTaskSetDue : undefined}
                   onDeleteOrvitaTask={onDeleteOrvitaTask}
@@ -716,6 +755,9 @@ export default function AgendaPage() {
                   dayDetails={dayDetails}
                   formatDateKey={formatDateKey}
                   googleByDay={googleByDayForViews}
+                  householdMembers={householdMembers}
+                  onGoogleTaskSetDue={googleTasksFeed.connected ? onGoogleTaskSetDue : undefined}
+                  onGoogleReminderPatch={googleTasksFeed.connected ? onGoogleReminderPatch : undefined}
                   onPrevMonth={() =>
                     setMonthViewDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))
                   }

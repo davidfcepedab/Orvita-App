@@ -18,4 +18,6 @@ export const TASK_CARD_STUDIO_SAMPLE: UiAgendaTask = {
   needsAcceptance: false,
   assigneePendingAccept: true,
   assigneeAccepted: false,
+  assigneeUserId: "00000000-0000-0000-0000-0000000000aa",
+  createdByUserId: "00000000-0000-0000-0000-0000000000bb",
 }

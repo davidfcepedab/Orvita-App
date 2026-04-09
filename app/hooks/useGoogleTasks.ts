@@ -5,7 +5,7 @@ import { isAppMockMode } from "@/lib/checkins/flags"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { fetchGoogleTasksGetCoalesced } from "@/lib/google/googleTasksInflightGet"
-import type { GoogleTaskDTO } from "@/lib/google/types"
+import type { GoogleTaskDTO, GoogleTaskLocalPriority } from "@/lib/google/types"
 
 export type GoogleTasksFeedState = {
   tasks: GoogleTaskDTO[]
@@ -17,7 +17,16 @@ export type GoogleTasksFeedState = {
   refresh: () => Promise<void>
   createTask: (input: { title: string; notes?: string; due?: string | null }) => Promise<GoogleTaskDTO | null>
   /** Actualiza vencimiento (YYYY-MM-DD) u otros campos en Google Tasks. */
-  patchTask: (id: string, patch: { due?: string | null; title?: string; status?: string }) => Promise<GoogleTaskDTO | null>
+  patchTask: (
+    id: string,
+    patch: {
+      due?: string | null
+      title?: string
+      status?: string
+      localAssigneeUserId?: string | null
+      localPriority?: GoogleTaskLocalPriority | null
+    },
+  ) => Promise<GoogleTaskDTO | null>
   removeTask: (id: string) => Promise<boolean>
 }
 
@@ -59,7 +68,16 @@ export function useGoogleTasks(): GoogleTasksFeedState {
   }, [load])
 
   const patchTask = useCallback(
-    async (id: string, patch: { due?: string | null; title?: string; status?: string }) => {
+    async (
+      id: string,
+      patch: {
+        due?: string | null
+        title?: string
+        status?: string
+        localAssigneeUserId?: string | null
+        localPriority?: GoogleTaskLocalPriority | null
+      },
+    ) => {
       try {
         setError(null)
         const headers = await browserBearerHeaders(true)

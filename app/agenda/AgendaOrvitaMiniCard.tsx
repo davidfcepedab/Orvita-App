@@ -10,6 +10,7 @@ import {
 } from "@/app/agenda/agendaUnifiedCardStyles"
 import { formatPriorityTitle, formatStatusTitle, venceLine } from "@/app/agenda/taskCardFormat"
 import { taskLeftBorder } from "@/app/agenda/taskTypeVisual"
+import { orvitaTaskCardChrome } from "@/app/agenda/agendaCardChrome"
 import { taskCardMiniGridStyle } from "@/app/agenda/taskCardConfig"
 import { TaskCardArea } from "@/app/agenda/TaskCardArea"
 import { useTaskCardDesign } from "@/app/agenda/TaskCardDesignContext"
@@ -40,8 +41,7 @@ export function AgendaOrvitaMiniCard({ task, iterationMode: iterationProp }: Pro
         borderRadius: "var(--task-card-radius)",
         border: "1px solid var(--task-card-border-color, var(--color-border))",
         borderLeft: taskLeftBorder(task.type, 4),
-        background:
-          "var(--task-card-surface-bg-orvita, var(--task-card-surface-bg, var(--color-surface-alt)))",
+        ...orvitaTaskCardChrome(task),
         fontFamily: "var(--task-card-font-family, inherit)",
         minHeight: "var(--task-card-min-height, unset)",
       }}
