@@ -41,6 +41,8 @@ function nextSundayShortLabel(): string {
 
 export type TrainingVisualBodySectionProps = {
   goalImageUrl: string
+  /** Sube en cada generación con IA para forzar remount del visor (evita que la miniatura quede «congelada» con data URLs). */
+  goalImageDisplayKey?: number
   /** Imagen por defecto si no hay foto del usuario (p. ej. `/training/visual-goal-placeholder.png`). */
   placeholderImageSrc: string
   visualGoalDescription: string
@@ -55,6 +57,8 @@ export type TrainingVisualBodySectionProps = {
   onFileChange: (e: ChangeEvent<HTMLInputElement>) => void
   onVisualGoalDescriptionChange: (value: string) => void
   goalImageGenerating: boolean
+  goalImageAiMode: "create" | "edit"
+  onGoalImageAiModeChange: (mode: "create" | "edit") => void
   onGenerateGoalWithAI: () => void | Promise<void>
 }
 
@@ -66,6 +70,7 @@ function priorityLabel(p: VisualGoalPriority): string {
 
 export function TrainingVisualBodySection({
   goalImageUrl,
+  goalImageDisplayKey = 0,
   placeholderImageSrc,
   visualGoalDescription,
   visualGoalDeadlineYm,
@@ -79,12 +84,16 @@ export function TrainingVisualBodySection({
   onFileChange,
   onVisualGoalDescriptionChange,
   goalImageGenerating,
+  goalImageAiMode,
+  onGoalImageAiModeChange,
   onGenerateGoalWithAI,
 }: TrainingVisualBodySectionProps) {
   const deadlineBadge = useMemo(() => formatDeadlineBadge(visualGoalDeadlineYm), [visualGoalDeadlineYm])
   const nextCheck = useMemo(() => nextSundayShortLabel(), [])
   const imageSrc = goalImageUrl || placeholderImageSrc
   const useUserImage = Boolean(goalImageUrl)
+  const heroImageKey =
+    useUserImage && imageSrc.startsWith("data:") ? `goal-${goalImageDisplayKey}` : imageSrc
 
   const ghostActionClass =
     "rounded px-0 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-slate-400 underline-offset-2 transition hover:text-slate-700 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-300"
@@ -146,8 +155,39 @@ export function TrainingVisualBodySection({
             placeholder="Describe el objetivo visual: musculatura, composición corporal, iluminación, estilo de foto…"
             className="w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm leading-relaxed text-slate-800 shadow-sm placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
           />
+          <fieldset className="mt-2 space-y-1.5 border-0 p-0">
+            <legend className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+              Modo IA
+            </legend>
+            <label className="flex cursor-pointer items-start gap-2 text-[11px] leading-snug text-slate-600">
+              <input
+                type="radio"
+                name="training-goal-ai-mode"
+                className="mt-0.5"
+                checked={goalImageAiMode === "create"}
+                onChange={() => onGoalImageAiModeChange("create")}
+              />
+              <span>
+                <span className="font-medium text-slate-800">Imagen nueva desde el prompt</span> (DALL·E 3) — escena distinta,
+                recomendado para objetivos visuales llamativos. No usa tu foto.
+              </span>
+            </label>
+            <label className="flex cursor-pointer items-start gap-2 text-[11px] leading-snug text-slate-600">
+              <input
+                type="radio"
+                name="training-goal-ai-mode"
+                className="mt-0.5"
+                checked={goalImageAiMode === "edit"}
+                onChange={() => onGoalImageAiModeChange("edit")}
+              />
+              <span>
+                <span className="font-medium text-slate-800">Editar referencia</span> (DALL·E 2) — ajuste sobre tu imagen o el
+                placeholder; suele cambiar poco.
+              </span>
+            </label>
+          </fieldset>
           <p className="text-[10px] text-slate-400">
-            {visualGoalDescription.length}/900 · Base: tu imagen subida, o la referencia por defecto si no hay foto.
+            {visualGoalDescription.length}/900 · En modo edición, la base es tu imagen o el placeholder si no hay foto.
           </p>
         </div>
       </header>
@@ -165,6 +205,7 @@ export function TrainingVisualBodySection({
             {/* Móvil: 4:5 · Desktop: misma altura que la tarjeta (stretch) */}
             <div className="relative aspect-[4/5] w-full lg:absolute lg:inset-0 lg:aspect-auto lg:h-full">
               <Image
+                key={heroImageKey}
                 src={imageSrc}
                 alt={useUserImage ? "Tu imagen de objetivo corporal" : "Referencia visual de objetivo corporal"}
                 fill

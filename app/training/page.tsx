@@ -48,6 +48,9 @@ export default function TrainingPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [trainingNotice, setTrainingNotice] = useState<string | null>(null)
   const [goalImageGenerating, setGoalImageGenerating] = useState(false)
+  const [goalImageDisplayKey, setGoalImageDisplayKey] = useState(0)
+  /** `create` = DALL·E 3 solo texto (cambios fuertes). `edit` = DALL·E 2 sobre imagen (cambios leves). */
+  const [goalImageAiMode, setGoalImageAiMode] = useState<"create" | "edit">("create")
   const trainingNoticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const showTrainingNotice = useCallback((message: string) => {
@@ -97,7 +100,10 @@ export default function TrainingPage() {
     const reader = new FileReader()
     reader.onload = () => {
       const r = reader.result
-      if (typeof r === "string") setGoalImageUrl(r)
+      if (typeof r === "string") {
+        setGoalImageDisplayKey((k) => k + 1)
+        setGoalImageUrl(r)
+      }
     }
     reader.readAsDataURL(file)
     e.target.value = ""
@@ -117,8 +123,11 @@ export default function TrainingPage() {
     }
     setGoalImageGenerating(true)
     try {
-      const payload: { prompt: string; imageBase64?: string } = { prompt }
-      if (goalUrl.startsWith("data:")) {
+      const payload: { prompt: string; mode: "create" | "edit"; imageBase64?: string } = {
+        prompt,
+        mode: goalImageAiMode,
+      }
+      if (goalImageAiMode === "edit" && goalUrl.startsWith("data:")) {
         payload.imageBase64 = goalUrl
       }
       const res = await fetch("/api/training/goal-image", {
@@ -132,18 +141,50 @@ export default function TrainingPage() {
         error?: string
         detail?: string
         code?: string
+        mode?: "create" | "edit"
       }
       if (!data.ok) {
         if (data.code === "NO_AI_KEY") {
-          showTrainingNotice("Falta OPENAI_API_KEY en el servidor. Añádela al entorno de despliegue para usar esta función.")
+          showTrainingNotice(
+            [
+              "Falta la variable de entorno OPENAI_API_KEY en el servidor (Next.js solo la lee al arrancar).",
+              "",
+              "• Local: en la raíz del repo crea .env.local con una línea OPENAI_API_KEY=sk-… (claves en platform.openai.com/api-keys). Guarda y reinicia npm run dev. Puedes partir de .env.example.",
+              "",
+              "• Producción: en Vercel/Render/etc. añade OPENAI_API_KEY en Environment Variables y vuelve a desplegar.",
+            ].join("\n"),
+          )
+        } else if (data.code === "CONTENT_POLICY") {
+          showTrainingNotice(
+            [
+              data.error ??
+                "La generación fue rechazada por el filtro de seguridad del proveedor de IA.",
+              "",
+              "Puedes probar: generar sin subir foto (solo referencia por defecto), acortar o suavizar el prompt, o usar otra imagen. También puedes crear la imagen fuera de la app y subirla con «Agregar imagen».",
+            ].join("\n"),
+          )
         } else {
           showTrainingNotice(data.detail || data.error || "No se pudo generar la imagen.")
         }
         return
       }
       if (data.imageDataUrl) {
+        setGoalImageDisplayKey((k) => k + 1)
         setGoalImageUrl(data.imageDataUrl)
-        showTrainingNotice("Imagen generada a partir de tu referencia y el prompt. Ya está guardada como objetivo visual.")
+        const usedMode = data.mode ?? goalImageAiMode
+        if (usedMode === "create") {
+          showTrainingNotice(
+            "Imagen nueva generada con DALL·E 3 a partir de tu prompt y guardada como objetivo visual (WebP optimizado).",
+          )
+        } else {
+          showTrainingNotice(
+            [
+              "Imagen guardada como objetivo visual (edición con DALL·E 2 sobre tu referencia).",
+              "",
+              "Este modo suele parecerse mucho a la foto base. Para escenas claramente distintas, elige «Imagen nueva desde el prompt».",
+            ].join("\n"),
+          )
+        }
       }
     } catch {
       showTrainingNotice("Error de red al generar. Revisa la conexión e inténtalo de nuevo.")
@@ -365,7 +406,7 @@ export default function TrainingPage() {
             color: "var(--color-text-primary)",
           }}
         >
-          <p className="m-0 min-w-0 flex-1">{trainingNotice}</p>
+          <p className="m-0 min-w-0 flex-1 whitespace-pre-line">{trainingNotice}</p>
           <button
             type="button"
             className="shrink-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)] transition hover:bg-[var(--color-surface-alt)]"
@@ -382,6 +423,9 @@ export default function TrainingPage() {
 
       <TrainingVisualBodySection
         goalImageUrl={goalUrl}
+        goalImageDisplayKey={goalImageDisplayKey}
+        goalImageAiMode={goalImageAiMode}
+        onGoalImageAiModeChange={setGoalImageAiMode}
         placeholderImageSrc="/training/visual-goal-placeholder.png"
         visualGoalDescription={
           prefs.visualGoalDescription ??
