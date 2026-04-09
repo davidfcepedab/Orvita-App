@@ -40,6 +40,18 @@ Si no existe, el código usa `https://orvita.app` por defecto (`Config.swift`).
 
 Prueba en Safari en el simulador: `orvita://checkin/dia` (debe abrir la app si está instalada).
 
+## Icono de la app (AppIcon)
+
+Si en el simulador ves el **icono gris en blanco** (placeholder), es porque `Assets.xcassets` → **AppIcon** no tiene imágenes.
+
+1. En el repo hay un PNG de partida: `native/ios/OrvitaMobile/orvita-app-icon-1024.png` (1024×1024). Cópialo a tu carpeta del proyecto Xcode si no está.
+2. En Xcode: abre **Assets** → **AppIcon**.
+3. Arrastra el PNG al hueco **1024×1024** (App Store / marketing) si aparece.
+4. Para iPhone, Xcode 15+ suele aceptar **una sola imagen** en “Single Size” / asistente; si tu plantilla pide más tamaños, usa [appicon.co](https://www.appicon.co) subiendo el mismo 1024×1024 y descarga el paquete generado, luego arrastra cada tamaño a su casilla.
+5. **Product → Clean Build Folder**, borra la app del simulador (mantén pulsado el icono → Remove App) y vuelve a **Run** para refrescar el icono en el SpringBoard.
+
+Si más adelante quieres el logo oficial de marca, sustituye ese PNG por tu asset final (idealmente 1024×1024, sin transparencia para evitar sorpresas en App Store).
+
 ## API para WidgetKit (siguiente paso)
 
 `GET /api/mobile/widget-summary` con header `Authorization: Bearer <access_token>`.
