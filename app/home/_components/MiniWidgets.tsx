@@ -20,9 +20,9 @@ export function MiniWidgets({ decisions, agendaToday, habits }: MiniWidgetsProps
     <section className="mx-auto max-w-6xl px-4 mt-6 pb-10">
       <div>
         <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Mini-widgets rápidos</p>
-        <h2 className="mt-1 text-lg font-semibold text-orbita-primary">Señales accionables en 30 segundos</h2>
+        <h2 className="mt-1 text-lg font-semibold text-orbita-primary">Señales rápidas</h2>
         <p className="mt-1 text-sm text-orbita-secondary">
-          Tres paneles para decidir con claridad: decisiones críticas, agenda con energía, hábitos que sostienen el sistema.
+          Tres paneles para ver lo importante sin perder tiempo.
         </p>
       </div>
 
@@ -35,7 +35,7 @@ export function MiniWidgets({ decisions, agendaToday, habits }: MiniWidgetsProps
               </span>
               <div>
                 <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Decisiones críticas</p>
-                <p className="text-sm text-orbita-primary/90 font-medium">Las 3 que mueven dirección</p>
+                <p className="text-sm text-orbita-primary/90 font-medium">Las 3 que cambian la semana</p>
               </div>
             </div>
 
@@ -78,7 +78,7 @@ export function MiniWidgets({ decisions, agendaToday, habits }: MiniWidgetsProps
               </span>
               <div>
                 <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Agenda de hoy</p>
-                <p className="text-sm text-orbita-primary/90 font-medium">Bloques en ventana de energía</p>
+                <p className="text-sm text-orbita-primary/90 font-medium">En tu mejor hora</p>
               </div>
             </div>
 

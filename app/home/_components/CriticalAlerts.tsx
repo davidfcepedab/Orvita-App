@@ -21,10 +21,10 @@ export function CriticalAlerts({ alerts, onOneClickAction, onResolveWithAi }: Cr
     <section className="mx-auto max-w-6xl px-4">
       <div className="flex items-end justify-between gap-3">
         <div>
-          <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Top priority</p>
+          <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Primero lo primero</p>
           <h2 className="mt-1 text-lg font-semibold text-orbita-primary">Alertas críticas</h2>
           <p className="mt-1 text-sm text-orbita-secondary">
-            No es ruido: son puntos de presión que alteran dirección y capacidad de decisión.
+            Son pocos puntos. Si los bajas, recuperas calma y control.
           </p>
         </div>
         <div className="hidden sm:flex items-center gap-2 text-xs text-orbita-secondary">
@@ -37,17 +37,18 @@ export function CriticalAlerts({ alerts, onOneClickAction, onResolveWithAi }: Cr
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3">
+      <div className="mt-4 grid gap-3 md:grid-cols-2 md:items-stretch">
         {top.map((a, idx) => (
           <motion.div
             key={a.id}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.05 * idx }}
+            className="h-full"
           >
-            <Card className="group overflow-hidden">
-              <div className="p-4 sm:p-5">
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <Card className="group overflow-hidden h-full">
+              <div className="p-4 sm:p-5 h-full flex flex-col">
+                <div className="flex-1 flex flex-col gap-3">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <span
@@ -59,13 +60,13 @@ export function CriticalAlerts({ alerts, onOneClickAction, onResolveWithAi }: Cr
                         <Zap className="h-3.5 w-3.5" />
                         Impacto {a.impact}
                       </span>
-                      <span className="text-xs text-orbita-secondary">1 acción → baja presión hoy</span>
+                      <span className="text-xs text-orbita-secondary">Un paso y baja presión</span>
                     </div>
                     <h3 className="mt-2 text-base sm:text-lg font-semibold text-orbita-primary">{a.title}</h3>
                     <p className="mt-1 text-sm text-orbita-secondary max-w-3xl">{a.description}</p>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Button
                       onClick={() => void onOneClickAction(a.id)}
                       className="h-10 rounded-xl !px-4 inline-flex items-center gap-2"
@@ -88,10 +89,10 @@ export function CriticalAlerts({ alerts, onOneClickAction, onResolveWithAi }: Cr
               <div className="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
               <div className="px-4 sm:px-5 py-3 flex items-center justify-between gap-3">
                 <p className="text-xs text-orbita-secondary">
-                  Resultado esperado: <span className="text-orbita-primary/90 font-medium">más claridad</span>, menos fricción.
+                  Resultado: <span className="text-orbita-primary/90 font-medium">claridad</span> sin apuro.
                 </p>
                 <span className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">
-                  Órbita sugiere: cierre &gt; volumen
+                  Órbita: cierre &gt; volumen
                 </span>
               </div>
             </Card>

@@ -23,9 +23,9 @@ export function SmartActionsSection({ actions, onAction }: SmartActionsSectionPr
     <section className="mx-auto max-w-6xl px-4 mt-6">
       <div>
         <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Inputs generados con IA</p>
-        <h2 className="mt-1 text-lg font-semibold text-orbita-primary">Acciones inteligentes sugeridas por Órbita</h2>
+        <h2 className="mt-1 text-lg font-semibold text-orbita-primary">Acciones sugeridas</h2>
         <p className="mt-1 text-sm text-orbita-secondary">
-          Aquí no se “tacha” tarea. Aquí se <span className="text-orbita-primary/90 font-medium">mueve</span> el sistema.
+          Menos tareas. Más decisiones que cambian tu semana.
         </p>
       </div>
 
@@ -36,6 +36,7 @@ export function SmartActionsSection({ actions, onAction }: SmartActionsSectionPr
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.05 * idx }}
+            className="h-full"
           >
             <Card className="p-4 sm:p-5 h-full flex flex-col">
               <div className="flex-1">
