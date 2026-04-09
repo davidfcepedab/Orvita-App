@@ -105,7 +105,7 @@ using (
   )
 );
 
--- Plantilla global Casa Mambo / Órbita (idempotente; alinea con hoja Categorias)
+-- Plantilla global Casa Mambo / Órvita (idempotente; alinea con hoja Categorias)
 insert into public.orbita_finance_subcategory_catalog (
   household_id, subcategory, category, expense_type, financial_impact, budgetable, active, comment
 )

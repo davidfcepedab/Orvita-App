@@ -4,7 +4,7 @@ Next.js (App Router) — sistema operativo estratégico personal y hogar.
 
 ## Documentación
 
-- **Órbita en iPhone** (widgets, Live Activities, notificaciones, Shortcuts, pareja): [docs/ORBITA_IOS_COPILOT.md](docs/ORBITA_IOS_COPILOT.md)
+- **Órvita en iPhone** (widgets, Live Activities, notificaciones, Shortcuts, pareja): [docs/ORVITA_IOS_COPILOT.md](docs/ORVITA_IOS_COPILOT.md)
 - Despliegue y ramas (`main` producción, `preview` / `production` / `built` opcionales): [docs/RELEASE_STRATEGY.md](docs/RELEASE_STRATEGY.md)
 - Rutas V3 y checklist productivo: [V3_PRODUCTION.md](V3_PRODUCTION.md)
 - Contrato API finanzas: [API_CONTRACT.md](API_CONTRACT.md)

@@ -1,4 +1,4 @@
-# Órbita en iPhone: capa de copiloto (iOS 18/19)
+# Órvita en iPhone: capa de copiloto (iOS 18/19)
 
 **Documento maestro de producto** — Capa nativa que integra tiempo, energía y dinero bajo prioridades, impacto y flujo. Pensado para dos iPhones y vida compartida.
 
@@ -15,7 +15,7 @@
 
 **Early Warning** no compite con Pulso: Pulso = estado actual; Early Warning = **tendencia o pre-alerta** (solo visible cuando hay inclinación antes de romperse). Si no hay señal, el widget Early Warning permanece neutro o oculto según política de producto.
 
-**Smart Stack Órbita** rota *dentro de esta misma familia* (Pulso, Siguiente, fragmentos de cierre), nunca introduce un “octavo concepto” nuevo: reduce deslizamientos, no añade decisiones.
+**Smart Stack Órvita** rota *dentro de esta misma familia* (Pulso, Siguiente, fragmentos de cierre), nunca introduce un “octavo concepto” nuevo: reduce deslizamientos, no añade decisiones.
 
 ---
 
@@ -58,12 +58,12 @@
 - **Visual:** Dos iniciales discretas arriba; línea de tiempo abajo; verde = hueco claro; ámbar = fragmentos.
 - **Extra Large (opcional, post-MVP):** “Pared de comando” en la primera pantalla; **no** forma parte del MVP de implementación.
 
-### 1.5 **Smart Stack Órbita Contextual**
+### 1.5 **Smart Stack Órvita Contextual**
 
-- **Qué hace:** Rota **solo** widgets de la familia Órbita ya definida (Pulso, Siguiente, Cierre semanal/streak, entradas resumidas del Mapa si el sistema lo permite sin duplicar el 4×4 completo). Mañana → agenda/impacto; noche → cierre, gasto, descanso.
+- **Qué hace:** Rota **solo** widgets de la familia Órvita ya definida (Pulso, Siguiente, Cierre semanal/streak, entradas resumidas del Mapa si el sistema lo permite sin duplicar el 4×4 completo). Mañana → agenda/impacto; noche → cierre, gasto, descanso.
 - **Pilares:** Flujo y contexto temporal.
 - **Presión / flujo:** El usuario no elige qué subir: el stack **ordena** lo ya acordado en este documento.
-- **Trigger:** Hora del día + reglas Órbita (ej. lunes más agenda, viernes más hogar/dinero social).
+- **Trigger:** Hora del día + reglas Órvita (ej. lunes más agenda, viernes más hogar/dinero social).
 - **Visual:** Misma retícula y paleta que el resto de la familia.
 
 ### 1.6 **Cierre semanal + Streak de intención** (Mediano o grande — domingo)
@@ -90,7 +90,7 @@ Misma lógica: **cada Live Activity responde a una pregunta única**; no dos act
 
 ### 2.1 **Bloque profundo en curso**
 
-- **Qué hace:** Cuenta regresiva de concentración; tap → pausar o completar en Órbita.
+- **Qué hace:** Cuenta regresiva de concentración; tap → pausar o completar en Órvita.
 - **Pilares:** Tiempo, impacto, flujo de ejecución.
 - **Presión / flujo:** Ancla la intención sin abrir listas.
 - **Trigger:** Inicio desde app o Shortcut “Inicio de bloque profundo”.
@@ -109,7 +109,7 @@ Misma lógica: **cada Live Activity responde a una pregunta única**; no dos act
 - **Qué hace:** Tiempo hasta deadline de decisión importante + enlace a criterios en app.
 - **Pilares:** Prioridades, impacto.
 - **Presión / flujo:** Evita decidir en pánico.
-- **Trigger:** Decisión con fecha límite en Órbita.
+- **Trigger:** Decisión con fecha límite en Órvita.
 - **Visual:** Neutro lejos del plazo; ámbar en ventana final.
 
 ### 2.4 **Modo pareja — Handoff**
@@ -194,7 +194,7 @@ Misma lógica: **cada Live Activity responde a una pregunta única**; no dos act
 
 - **Qué hace:** En Focus Sueño o Personal, solo **riesgo real** (fraude, vencimiento hoy, etc.); resto a resumen o silencio.
 - **Pilares:** Energía, confianza en el producto.
-- **Presión / flujo:** Órbita no compite con el descanso.
+- **Presión / flujo:** Órvita no compite con el descanso.
 - **Trigger:** Focus activo + lista blanca de tipos.
 - **Visual / canal:** Texto plano nocturno.
 
@@ -214,14 +214,14 @@ Los Shortcuts **no añaden nuevas preguntas**: disparan flujos ya nombrados arri
 
 | ID | Nombre | Qué dispara / conecta |
 |----|--------|------------------------|
-| 4.1 | Cierre de Día Órbita | Loop diario; opcional resumen a pareja |
+| 4.1 | Cierre de Día Órvita | Loop diario; opcional resumen a pareja |
 | 4.2 | Salgo de Casa | Checklist + Handoff / Live Activity si aplica |
 | 4.3 | Llegada al Supermercado | Lista compartida + techo de compra |
 | 4.4 | Después de Pago | Prompt 2 toques → Viaje financiero / Mapa actualizado |
 | 4.5 | Modo Fin de Semana | Focus + orden de stacks (misma familia visual) |
 | 4.6 | Inicio de Bloque Profundo | Focus + Live Activity §2.1 |
 | 4.7 | Semana que Entra | Domingo 19:00 → Cierre semanal / prioridades |
-| 4.8 | Entrada a Focus Sueño | Silencio Órbita no crítico + Lock mínimo |
+| 4.8 | Entrada a Focus Sueño | Silencio Órvita no crítico + Lock mínimo |
 
 ---
 
@@ -246,9 +246,9 @@ Los Shortcuts **no añaden nuevas preguntas**: disparan flujos ya nombrados arri
 3. **Siguiente Movimiento** — Acción única cuando hace falta ejecutar.
 4. **Ventana Compartida** (grande 4×4) — Valor pareja; **Extra Large explícitamente post-MVP**.
 5. **Resumen único de tarde** — Antídoto al spam.
-6. **Cierre de Día Órbita** (Shortcut) — Loop diario.
+6. **Cierre de Día Órvita** (Shortcut) — Loop diario.
 7. **Umbral del 70%** — Alerta financiera temprana, calmada.
-8. **Smart Stack Órbita Contextual** — Orden sin nuevos conceptos.
+8. **Smart Stack Órvita Contextual** — Orden sin nuevos conceptos.
 9. **Bloque profundo en curso** (Live Activity) — Presencia en Island.
 10. **Reconciliación pendiente + Focus-aware** — Higiene y descanso.
 
@@ -256,7 +256,7 @@ Los Shortcuts **no añaden nuevas preguntas**: disparan flujos ya nombrados arri
 
 ## Disciplina de notificaciones (regla de oro)
 
-Órbita trata el push como **capital escaso**: máximo **3–4 interrupciones activas por persona y día** (excepción: riesgo real acordado). El resto → Scheduled Summary, colas silenciosas o digestivos fijos. En Focus (especialmente Sueño y Personal) solo lista blanca de riesgo. Pings entre pareja con **tope explícito** y preferencia por resumen compartido. Así la capa iOS se siente **copiloto**, no más ruido.
+Órvita trata el push como **capital escaso**: máximo **3–4 interrupciones activas por persona y día** (excepción: riesgo real acordado). El resto → Scheduled Summary, colas silenciosas o digestivos fijos. En Focus (especialmente Sueño y Personal) solo lista blanca de riesgo. Pings entre pareja con **tope explícito** y preferencia por resumen compartido. Así la capa iOS se siente **copiloto**, no más ruido.
 
 ---
 
@@ -269,7 +269,7 @@ Los Shortcuts **no añaden nuevas preguntas**: disparan flujos ya nombrados arri
 | Siguiente Movimiento | Impacto, tiempo | Home S/M | Una acción |
 | Mapa de Capitales | Tiempo, energía, dinero | Home L | Incluye espejo hogar en modo compartido |
 | Ventana Compartida | Tiempo, hogar | Home L / XL post-MVP | Incluye agenda entrelazada |
-| Smart Stack | Flujo temporal | Stack iOS | Solo familia Órbita |
+| Smart Stack | Flujo temporal | Stack iOS | Solo familia Órvita |
 | Cierre + Streak | Impacto | Home M/G domingo | — |
 | Bloque profundo | Tiempo, impacto | Island | Shortcut 4.6 |
 | Viaje financiero | Dinero | Island | Shortcut 4.4 |
@@ -281,4 +281,4 @@ Los Shortcuts **no añaden nuevas preguntas**: disparan flujos ya nombrados arri
 
 ---
 
-*Documento unificado para producto, diseño e iOS. Revisiones: alinear con roadmap de app Órbita / Órvita y con capacidades reales de extensiones en cada fase.*
+*Documento unificado para producto, diseño e iOS. Revisiones: alinear con roadmap de app Órvita y con capacidades reales de extensiones en cada fase.*

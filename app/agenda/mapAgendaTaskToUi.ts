@@ -49,6 +49,8 @@ export type UiAgendaTask = {
   assigneeUserId: string | null
   /** Quien creó la fila (auth id). */
   createdByUserId: string
+  /** Nombre o contacto del asignado/origen para línea sutil (null en personal sin asignatario). */
+  assigneeContact: string | null
 }
 
 export function assignmentShortLine(task: UiAgendaTask): string | null {
@@ -117,6 +119,8 @@ export function mapAgendaTaskToUi(t: AgendaTask): UiAgendaTask {
     assigneeAccepted,
     assigneeUserId: t.assigneeId ?? null,
     createdByUserId: t.createdBy,
+    assigneeContact:
+      t.type === "personal" && !String(t.assigneeId ?? "").trim() ? null : name || null,
   }
 }
 

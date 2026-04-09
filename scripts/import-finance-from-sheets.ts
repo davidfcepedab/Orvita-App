@@ -1,7 +1,7 @@
 /**
  * Import rows from Google Sheets "Movimientos" into Supabase `orbita_finance_transactions`.
  *
- * Row mapping (Órbita Movimientos; 0-based columns, cabecera estándar):
+ * Row mapping (Órvita Movimientos; 0-based columns, cabecera estándar):
  *   [0]  Fecha
  *   [1]  Cuenta
  *   [2]  Tipo (Ingreso/Gasto/Transferencia)
@@ -27,9 +27,9 @@
  *                                 primer usuario del hogar (misma fila household_id)
  *
  * Optional:
- *   FINANCE_SHEETS_SPREADSHEET_ID — default: Órbita control financiero (1A8uc…)
- *   FINANZAS_SPREADSHEET_ID       — mismo libro Órbita si no usas FINANCE_SHEETS_SPREADSHEET_ID
- *   FINANCE_SHEETS_GID            — gid de la URL (?gid=) = sheetId API; default 761723801 en libro Órbita
+ *   FINANCE_SHEETS_SPREADSHEET_ID — default: Órvita control financiero (1A8uc…)
+ *   FINANZAS_SPREADSHEET_ID       — mismo libro Órvita si no usas FINANCE_SHEETS_SPREADSHEET_ID
+ *   FINANCE_SHEETS_GID            — gid de la URL (?gid=) = sheetId API; default 761723801 en libro Órvita
  *   FINANCE_SHEETS_RANGE          — rango A1 completo, ej. 'Mi hoja'!A2:U5000
  *   FINANCE_SHEETS_TAB            — solo nombre de pestaña (se combina con FINANCE_SHEETS_CELLS)
  *   FINANCE_SHEETS_CELLS          — default A2:U5000 si usas FINANCE_SHEETS_TAB
@@ -65,7 +65,7 @@ import {
   normalizeFinanceCatalogKey,
 } from "@/lib/finanzas/subcategoryCatalog"
 
-/** Libro "00. Orbita | Control financiero | Casa Mambo" (Movimientos). */
+/** Libro "00. Órvita | Control financiero | Casa Mambo" (Movimientos). */
 const ORBITA_FINANCE_SPREADSHEET_ID = "1A8ucJUgSvxP2JLbPf1Z5PlB5UytbO4aKdJLf_ctaUz4"
 /** Pestaña de movimientos (gid de la URL = sheetId). */
 const ORBITA_MOVIMIENTOS_SHEET_GID = 761723801
@@ -166,7 +166,7 @@ function validateSupabaseUrlForClient(url: string): void {
   }
 }
 
-/** 0-based column indices — Órbita Movimientos (ver fila cabecera del libro) */
+/** 0-based column indices — Órvita Movimientos (ver fila cabecera del libro) */
 const COL = {
   date: 0,
   account: 1,
@@ -487,7 +487,7 @@ function monthBoundsYm(ym: string): { start: string; end: string } | null {
 
 function printHelp(): void {
   console.error(`
-Import Órbita Movimientos → Supabase orbita_finance_transactions
+Import Órvita Movimientos → Supabase orbita_finance_transactions
 
 Flags:
   --dry-run              Solo parsea y muestra muestra (no Supabase)

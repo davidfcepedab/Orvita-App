@@ -1,8 +1,8 @@
 # Orvita Architecture
 
-## Producto: capa copiloto iOS (Órbita)
+## Producto: capa copiloto iOS (Órvita)
 
-Especificación maestra unificada (widgets Home/Lock, Dynamic Island, push, Shortcuts, pareja, MVP y disciplina de notificaciones): **[ORBITA_IOS_COPILOT.md](./ORBITA_IOS_COPILOT.md)**.
+Especificación maestra unificada (widgets Home/Lock, Dynamic Island, push, Shortcuts, pareja, MVP y disciplina de notificaciones): **[ORVITA_IOS_COPILOT.md](./ORVITA_IOS_COPILOT.md)**.
 
 ## Overview
 Orvita is a Next.js App Router application with a modular, domain-driven layout. Each domain (Finanzas, Salud, Fisico, Profesional) owns its UI, data contracts, and server routes. Shared operational logic lives in `lib/operational`.

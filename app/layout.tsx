@@ -10,8 +10,8 @@ import { siteOrigin } from "@/lib/site/origin"
 export const metadata: Metadata = {
   metadataBase: new URL(siteOrigin()),
   title: {
-    default: "Órbita",
-    template: "%s · Órbita",
+    default: "Órvita",
+    template: "%s · Órvita",
   },
   description: "Sistema operativo estratégico — salud, capital, agenda y decisión.",
 }

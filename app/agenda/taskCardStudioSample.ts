@@ -38,6 +38,7 @@ export const TASK_CARD_STUDIO_SAMPLE: UiAgendaTask = {
   assigneeAccepted: false,
   assigneeUserId: "00000000-0000-0000-0000-0000000000aa",
   createdByUserId: "00000000-0000-0000-0000-0000000000bb",
+  assigneeContact: "María López",
 }
 
 /** Misma tarjeta pero completada → cromado verde como en producción. */
