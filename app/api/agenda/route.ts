@@ -12,6 +12,7 @@ import {
 import { insertDefaultListTask, mapGoogleTask } from "@/lib/google/googleTasksApi"
 import { mergeAgendaRowsById } from "@/lib/agenda/mergeOperationalAgendaRows"
 import { createServiceClient } from "@/lib/supabase/server"
+import { agendaTodayYmd } from "@/lib/agenda/localDateKey"
 
 type AgendaRow = {
   id: string
@@ -59,7 +60,7 @@ const MOCK_AGENDA_USER_ID = "00000000-0000-0000-0000-0000000000aa"
 
 function seedMockAgendaRows(): AgendaRow[] {
   const now = new Date().toISOString()
-  const today = now.slice(0, 10)
+  const today = agendaTodayYmd()
   return [
     {
       id: "mock-agenda-1",

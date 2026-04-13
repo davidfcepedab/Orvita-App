@@ -12,6 +12,14 @@ export function formatLocalDateKey(d: Date): string {
 }
 
 /**
+ * “Hoy” civil único para Órvita: hábitos, due de tareas, filtros de agenda, training.
+ * Usa `NEXT_PUBLIC_AGENDA_DISPLAY_TZ` (no `toISOString()` UTC).
+ */
+export function agendaTodayYmd(): string {
+  return formatLocalDateKey(new Date())
+}
+
+/**
  * Día civil para agrupar / comparar:
  * - `YYYY-MM-DD` solo (Tasks): no usar Date.parse (en UTC− queda el día anterior).
  * - `YYYY-MM-DDT00:00:00.000Z`: mismo día que el prefijo (eventos all-day normalizados así en API).
@@ -51,7 +59,7 @@ export function formatLocalDateLabelEsCo(isoOrYmd: string | null | undefined): s
   const m = Number(key.slice(5, 7)) - 1
   const d = Number(key.slice(8, 10))
   if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return "—"
-  const nowY = Number(formatLocalDateKey(new Date()).slice(0, 4))
+  const nowY = Number(agendaTodayYmd().slice(0, 4))
   const civilNoon = new Date(Date.UTC(y, m, d, 12, 0, 0))
   return new Intl.DateTimeFormat("es-CO", {
     timeZone: getAgendaDisplayTimeZone(),

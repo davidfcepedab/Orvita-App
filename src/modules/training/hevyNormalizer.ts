@@ -1,3 +1,4 @@
+import { agendaTodayYmd, formatLocalDateKey } from "@/lib/agenda/localDateKey"
 import type { TrainingDay } from "@/src/modules/training/types"
 
 type HevyExercise = {
@@ -13,11 +14,12 @@ type HevyWorkout = {
   title?: string
 }
 
+/** Día civil en zona de agenda (no UTC) a partir del instante del workout en Hevy. */
 function toDateOnly(value?: string) {
-  if (!value) return new Date().toISOString().slice(0, 10)
+  if (!value) return agendaTodayYmd()
   const parsed = Date.parse(value)
-  if (Number.isNaN(parsed)) return new Date().toISOString().slice(0, 10)
-  return new Date(parsed).toISOString().slice(0, 10)
+  if (Number.isNaN(parsed)) return agendaTodayYmd()
+  return formatLocalDateKey(new Date(parsed))
 }
 
 export function normalizeHevyWorkout(workoutInput: unknown): TrainingDay {

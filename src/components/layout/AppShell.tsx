@@ -2,10 +2,13 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import clsx from "clsx"
 import { useEffect, useMemo, useState } from "react"
 import { useTheme } from "@/src/theme/ThemeProvider"
 import { designTokens } from "@/src/theme/design-tokens"
 import { Button } from "@/src/components/ui/Button"
+import { getAgendaDisplayTimeZone } from "@/lib/agenda/agendaTimeZone"
+import { agendaTodayYmd } from "@/lib/agenda/localDateKey"
 import { isAppMockMode } from "@/lib/checkins/flags"
 import {
   Activity,
@@ -146,6 +149,18 @@ export function AppShell({
     }
   }
 
+  const headerDateLabel = useMemo(
+    () =>
+      new Intl.DateTimeFormat("es-CO", {
+        timeZone: getAgendaDisplayTimeZone(),
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      }).format(new Date()),
+    [],
+  )
+
   const navItems = useMemo(
     () => [
       { path: "/", label: "Inicio", icon: LayoutDashboard },
@@ -203,21 +218,19 @@ export function AppShell({
             </div>
 
             <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end sm:gap-[var(--spacing-md)]">
-              <span className="w-full shrink-0 text-[11px] text-[var(--color-text-secondary)] sm:w-auto sm:text-xs">
-                {new Date().toLocaleDateString("es-CO", {
-                  weekday: "short",
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              </span>
+              <time
+                dateTime={agendaTodayYmd()}
+                className="w-full shrink-0 text-[11px] capitalize text-[var(--color-text-secondary)] sm:w-auto sm:text-xs"
+              >
+                {headerDateLabel}
+              </time>
 
               <button
-                className="inline-flex min-h-[40px] items-center gap-2 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] sm:min-h-0 sm:px-3 sm:py-1.5"
+                className="orbita-header-action orbita-focus-ring sm:min-h-0 sm:py-1.5"
                 onClick={cycleTheme}
                 type="button"
               >
-                <SunMoon size={14} />
+                <SunMoon size={14} aria-hidden />
                 Tema
               </button>
 
@@ -226,7 +239,7 @@ export function AppShell({
                 disabled
                 title="Próximamente"
                 aria-disabled="true"
-                className="hidden min-h-[40px] cursor-not-allowed items-center gap-2 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--color-text-secondary)] opacity-60 md:inline-flex md:min-h-0 md:py-1.5"
+                className="orbita-header-action orbita-focus-ring hidden cursor-not-allowed opacity-60 md:inline-flex sm:min-h-0 sm:py-1.5"
               >
                 Exportar
               </button>
@@ -234,9 +247,9 @@ export function AppShell({
                 type="button"
                 onClick={handleLogout}
                 disabled={loggingOut}
-                className="inline-flex min-h-[40px] items-center gap-2 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--color-text-primary)] sm:min-h-0 sm:py-1.5"
+                className="orbita-header-action orbita-header-action--surface orbita-focus-ring sm:min-h-0 sm:py-1.5"
               >
-                <LogOut size={14} />
+                <LogOut size={14} aria-hidden />
                 {loggingOut ? "Saliendo..." : "Salir"}
               </button>
 
@@ -244,10 +257,11 @@ export function AppShell({
                 <button
                   type="button"
                   onClick={() => setOpen((prev) => !prev)}
-                  className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface-alt)] sm:h-9 sm:w-9"
+                  className="orbita-icon-button orbita-focus-ring h-11 w-11 sm:h-9 sm:w-9"
                   aria-label="Menú de usuario"
+                  aria-expanded={open}
                 >
-                  <User size={16} />
+                  <User size={16} aria-hidden />
                 </button>
                 {open && (
                   <div
@@ -266,20 +280,14 @@ export function AppShell({
                     <Link
                       href="/health"
                       onClick={() => setOpen(false)}
-                      className="block rounded-[var(--radius-button)] px-2 py-2 text-[13px] no-underline transition-colors hover:bg-[var(--color-surface-alt)] hover:text-[var(--color-text-primary)]"
-                      style={{
-                        color: "var(--color-text-secondary)",
-                      }}
+                      className="orbita-focus-ring block rounded-[var(--radius-button)] px-2 py-2 text-[13px] text-[var(--color-text-secondary)] no-underline transition-colors hover:bg-[var(--color-surface-alt)] hover:text-[var(--color-text-primary)]"
                     >
                       Perfil
                     </Link>
                     <Link
                       href="/configuracion"
                       onClick={() => setOpen(false)}
-                      className="block rounded-[var(--radius-button)] px-2 py-2 text-[13px] no-underline transition-colors hover:bg-[var(--color-surface-alt)] hover:text-[var(--color-text-primary)]"
-                      style={{
-                        color: "var(--color-text-secondary)",
-                      }}
+                      className="orbita-focus-ring block rounded-[var(--radius-button)] px-2 py-2 text-[13px] text-[var(--color-text-secondary)] no-underline transition-colors hover:bg-[var(--color-surface-alt)] hover:text-[var(--color-text-primary)]"
                     >
                       Configuración
                     </Link>
@@ -290,7 +298,7 @@ export function AppShell({
                         void handleLogout()
                       }}
                       disabled={loggingOut}
-                      className="w-full rounded-[var(--radius-button)] px-2 py-2 text-left text-[13px] transition-colors hover:bg-[var(--color-surface-alt)] hover:text-[var(--color-text-primary)] disabled:opacity-60"
+                      className="orbita-focus-ring w-full rounded-[var(--radius-button)] px-2 py-2 text-left text-[13px] text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-surface-alt)] hover:text-[var(--color-text-primary)] disabled:opacity-60"
                       style={{
                         border: "none",
                         background: "transparent",
@@ -329,16 +337,10 @@ export function AppShell({
                 <Link
                   key={item.path}
                   href={item.path}
-                  className="flex min-h-[44px] items-center gap-2 whitespace-nowrap rounded-full px-3.5 py-2 text-[13px] font-medium no-underline transition-colors sm:px-4"
-                  style={{
-                    color: isActive ? "var(--color-text-primary)" : "var(--color-text-secondary)",
-                    background: isActive
-                      ? "color-mix(in srgb, var(--color-surface-alt) 88%, var(--color-surface))"
-                      : "transparent",
-                    boxShadow: isActive
-                      ? "inset 0 0 0 0.5px color-mix(in srgb, var(--color-border) 70%, transparent)"
-                      : "none",
-                  }}
+                  className={clsx(
+                    "orbita-focus-ring flex min-h-[44px] items-center gap-2 whitespace-nowrap rounded-full px-3.5 py-2 text-[13px] font-medium no-underline transition-[color,background,box-shadow] sm:px-4",
+                    isActive ? "orbita-chrome-tab-active" : "orbita-chrome-tab-idle",
+                  )}
                 >
                   <Icon size={17} strokeWidth={isActive ? 2.35 : 2} aria-hidden />
                   {item.label}

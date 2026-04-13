@@ -14,10 +14,10 @@ export default function HomeV3() {
   const { data } = useOperationalContext()
 
   const clusters = [
-    { id: "hoy", title: "Hoy (Siguiente Accion)" },
-    { id: "habitos", title: "Habitos & Streaks" },
-    { id: "foco", title: "Foco Operativo" },
-    { id: "checkin", title: "Check-in Narrativo" },
+    { id: "hoy", title: "Hoy (siguiente acción)" },
+    { id: "habitos", title: "Hábitos y rachas" },
+    { id: "foco", title: "Foco operativo" },
+    { id: "checkin", title: "Check-in narrativo" },
   ]
 
   const nextAction = data?.next_action ?? "Sin accion prioritaria definida"
@@ -184,7 +184,7 @@ export default function HomeV3() {
                     className="text-xs"
                     style={{ color: theme.textMuted }}
                   >
-                    Energia
+                    Energía
                   </p>
                   <p
                     className="text-lg"

@@ -26,6 +26,7 @@ import {
 import { rechartsDefaultMargin, rechartsTooltipContentStyle } from "@/lib/charts/rechartsShared"
 import { isAppMockMode, isSupabaseEnabled, UI_TRAINING_PREFS_LOCAL } from "@/lib/checkins/flags"
 import { TrainingVisualBodySection } from "./TrainingVisualBodySection"
+import { agendaTodayYmd } from "@/lib/agenda/localDateKey"
 
 function formatStatus(status: TrainingStatus) {
   if (status === "trained") return "Zona óptima de entrenamiento"
@@ -68,7 +69,7 @@ export default function TrainingPage() {
     }
   }, [])
 
-  const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), [])
+  const todayIso = agendaTodayYmd()
   const weekPoints = useMemo(() => buildWeeklyVolumeIntensity(days, todayIso), [days, todayIso])
   const weekSum = useMemo(() => weeklyVolumeSum(weekPoints), [weekPoints])
   const todayVol = today?.volumeScore ?? 0

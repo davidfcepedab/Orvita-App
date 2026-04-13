@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { motion } from "framer-motion"
 import { Sparkles, TrendingUp } from "lucide-react"
 import { CircularProgressbar, buildStyles } from "react-circular-progressbar"
 import "react-circular-progressbar/dist/styles.css"
@@ -37,28 +36,14 @@ export function StrategicHeader({ model, onGenerateAi, isGenerating }: Strategic
       <div className="mx-auto max-w-6xl">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <motion.p
-              initial={{ opacity: 0, y: -6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35 }}
-              className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary"
-            >
-              {parts.weekday} · {parts.day} · {model.user.city}
-            </motion.p>
-            <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <h1
-                className="text-[22px] sm:text-[26px] font-semibold tracking-tight text-orbita-primary"
-                style={{ fontFamily: "var(--font-display)" }}
-              >
-                Órvita — Centro de Control
-              </h1>
-              <p className="text-sm text-orbita-secondary">
-                <span className="text-orbita-primary/90 font-medium">
-                  {greeting}, {model.user.firstName}
-                </span>
-                <span className="hidden sm:inline">. Mantén el rumbo. Reduce fricción. Compra claridad.</span>
-              </p>
-            </div>
+            <p className="m-0 text-sm leading-snug text-orbita-secondary sm:text-[15px]">
+              <span className="font-semibold text-orbita-primary">
+                {greeting}, {model.user.firstName}
+              </span>
+              <span className="hidden sm:inline">
+                . Mantén el rumbo. Reduce fricción. Compra claridad.
+              </span>
+            </p>
           </div>
 
           <div className="flex items-center gap-3">

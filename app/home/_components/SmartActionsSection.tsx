@@ -66,22 +66,25 @@ export function SmartActionsSection({ actions, onAction, pendingActionId }: Smar
 
               <div className="mt-4 flex items-center justify-between gap-2">
                 <Button
+                  size="sm"
                   onClick={() => void onAction(a.id, a.primaryAction)}
                   disabled={pendingActionId === a.id}
-                  className="rounded-xl inline-flex items-center gap-2 !px-4"
+                  className="rounded-xl !min-h-10 !px-4"
                 >
                   {actionIcon(a.primaryAction)}
                   {a.primaryAction}
                 </Button>
 
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => void onAction(a.id, "Ignorar")}
                   disabled={pendingActionId === a.id}
-                  className="h-10 rounded-xl px-4 border border-white/10 bg-orbita-surface hover:bg-white/5 transition text-sm font-semibold text-orbita-primary"
+                  className="rounded-xl !min-h-10 !px-4 border border-white/10"
                 >
                   Ignorar
-                </button>
+                </Button>
               </div>
             </Card>
           </motion.div>

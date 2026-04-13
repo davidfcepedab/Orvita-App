@@ -39,7 +39,7 @@ import {
   ToggleRow,
 } from "./CheckinFields"
 import { CheckinSection } from "./CheckinSection"
-import { formatLocalDateKey } from "@/lib/agenda/localDateKey"
+import { agendaTodayYmd } from "@/lib/agenda/localDateKey"
 import { addDaysIso } from "@/lib/habits/habitMetrics"
 
 async function buildJsonHeaders(): Promise<HeadersInit> {
@@ -134,7 +134,7 @@ const VIEWPORT_TABS: { id: CheckinViewport; label: string; hint: string }[] = [
 
 export default function CheckinPage() {
   /** Día civil en la zona de agenda (no UTC), para no adelantar “mañana” por la noche. */
-  const today = formatLocalDateKey(new Date())
+  const today = agendaTodayYmd()
   const yesterday = addDaysIso(today, -1)
 
   const [form, setForm] = useState<FormState>({

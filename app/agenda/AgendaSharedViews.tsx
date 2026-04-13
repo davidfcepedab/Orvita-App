@@ -8,8 +8,8 @@ import type { GoogleCalendarFeedState } from "@/app/hooks/useGoogleCalendar"
 import type { GoogleCalendarEventDTO, GoogleTaskDTO, GoogleTaskLocalPriority } from "@/lib/google/types"
 import type { GoogleTasksFeedState } from "@/app/hooks/useGoogleTasks"
 import {
+  agendaTodayYmd,
   calendarEventLocalDayKey,
-  formatLocalDateKey,
   localDateKeyFromIso,
 } from "@/lib/agenda/localDateKey"
 import { googleTasksForTimelineMerge, isGoogleTaskDone } from "@/lib/agenda/googleTasksUpcoming"
@@ -128,7 +128,7 @@ function buildMergedTimeline(
     return mergedRowLabel(a).localeCompare(mergedRowLabel(b), "es")
   })
   if (!hideBeforeToday) return rows
-  const todayYmd = formatLocalDateKey(new Date())
+  const todayYmd = agendaTodayYmd()
   return rows.filter((row) => {
     const k = mergedRowDayKey(row)
     if (k == null) return true

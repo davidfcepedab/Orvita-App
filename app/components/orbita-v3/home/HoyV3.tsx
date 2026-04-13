@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useApp, themes } from "@/app/contexts/AppContext"
 import { Calendar, CheckCircle2, Circle, Clock, Flame } from "lucide-react"
+import { getAgendaDisplayTimeZone } from "@/lib/agenda/agendaTimeZone"
 import { useOperationalContext } from "@/app/hooks/useOperationalContext"
 import type { OperationalTask } from "@/lib/operational/types"
 
@@ -11,6 +12,17 @@ export default function HoyV3() {
   const theme = themes[colorTheme]
   const [completed, setCompleted] = useState<string[]>([])
   const { data } = useOperationalContext()
+
+  const todayLabel = useMemo(
+    () =>
+      new Intl.DateTimeFormat("es-CO", {
+        timeZone: getAgendaDisplayTimeZone(),
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+      }).format(new Date()),
+    [],
+  )
 
   const tasks: OperationalTask[] = data?.today_tasks ?? []
   const nextTask = tasks.find((task) => !completed.includes(task.id))
@@ -25,10 +37,10 @@ export default function HoyV3() {
     <div className="mx-auto max-w-5xl space-y-8">
       <div className="flex items-center justify-between border-b pb-6" style={{ borderColor: theme.border }}>
         <div>
-          <h2 className="text-3xl tracking-tight">Ejecucion: Hoy</h2>
-          <p className="mt-2 flex items-center gap-2 text-sm" style={{ color: theme.textMuted }}>
-            <Calendar className="h-4 w-4" />
-            {new Date().toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}
+          <h2 className="text-3xl tracking-tight">Ejecución: hoy</h2>
+          <p className="mt-2 flex items-center gap-2 text-sm capitalize" style={{ color: theme.textMuted }}>
+            <Calendar className="h-4 w-4 shrink-0" aria-hidden />
+            {todayLabel}
           </p>
           {typeof data?.delta_tendencia === "number" && (
             <p className="mt-2 text-xs" style={{ color: theme.textMuted }}>

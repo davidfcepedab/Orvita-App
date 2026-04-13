@@ -1,4 +1,5 @@
-import { formatLocalDateLabelEsCo, localDateKeyFromIso } from "@/lib/agenda/localDateKey"
+import { diffCalendarDaysYmd } from "@/lib/agenda/calendarMath"
+import { agendaTodayYmd, formatLocalDateLabelEsCo, localDateKeyFromIso } from "@/lib/agenda/localDateKey"
 import type { GoogleCalendarEventDTO } from "@/lib/google/types"
 import type { UiAgendaTask } from "@/app/agenda/mapAgendaTaskToUi"
 
@@ -9,11 +10,9 @@ export function venceLine(dueDateKey: string): string {
   const mo = Number(dueDateKey.slice(5, 7)) - 1
   const d = Number(dueDateKey.slice(8, 10))
   if (!Number.isFinite(y) || !Number.isFinite(mo) || !Number.isFinite(d)) return "Vence: sin fecha"
-  const today = new Date()
-  const target = new Date(y, mo, d)
-  const todayKey = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()
-  const targetKey = new Date(target.getFullYear(), target.getMonth(), target.getDate()).getTime()
-  const diffDays = Math.round((targetKey - todayKey) / (1000 * 60 * 60 * 24))
+  const today = agendaTodayYmd()
+  const key = dueDateKey.slice(0, 10)
+  const diffDays = diffCalendarDaysYmd(today, key)
   const civil = formatLocalDateLabelEsCo(dueDateKey)
 
   if (diffDays === 0) return `Vence: Hoy · ${civil}`
@@ -21,6 +20,7 @@ export function venceLine(dueDateKey: string): string {
   if (diffDays === -1) return `Vence: Ayer · ${civil}`
   if (diffDays < -1) return `Vence: Atrasada · ${civil}`
 
+  const target = new Date(y, mo, d)
   const weekday = target.toLocaleDateString("es-CO", { weekday: "long" })
   if (diffDays <= 7) return `Vence: el ${weekday} · ${civil}`
   return `Vence: el ${weekday} (próx. semana) · ${civil}`
@@ -33,11 +33,9 @@ export function dueMetaCompact(dueDateKey: string): string {
   const mo = Number(dueDateKey.slice(5, 7)) - 1
   const d = Number(dueDateKey.slice(8, 10))
   if (!Number.isFinite(y) || !Number.isFinite(mo) || !Number.isFinite(d)) return "Sin fecha"
-  const today = new Date()
-  const target = new Date(y, mo, d)
-  const todayKey = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()
-  const targetKey = new Date(target.getFullYear(), target.getMonth(), target.getDate()).getTime()
-  const diffDays = Math.round((targetKey - todayKey) / (1000 * 60 * 60 * 24))
+  const today = agendaTodayYmd()
+  const key = dueDateKey.slice(0, 10)
+  const diffDays = diffCalendarDaysYmd(today, key)
   const civil = formatLocalDateLabelEsCo(dueDateKey)
 
   if (diffDays === 0) return `Hoy · ${civil}`
@@ -45,6 +43,7 @@ export function dueMetaCompact(dueDateKey: string): string {
   if (diffDays === -1) return `Ayer · ${civil}`
   if (diffDays < -1) return `Atrasada · ${civil}`
 
+  const target = new Date(y, mo, d)
   const weekday = target.toLocaleDateString("es-CO", { weekday: "long" })
   if (diffDays <= 7) return `${weekday} · ${civil}`
   return `${weekday} (próx. sem.) · ${civil}`

@@ -29,7 +29,7 @@ import {
   canRunGoogleCalendarSyncNow,
   markGoogleCalendarSyncRan,
 } from "@/lib/google/googleCalendarSyncThrottle"
-import { formatLocalDateKey, localDateKeyFromIso } from "@/lib/agenda/localDateKey"
+import { agendaTodayYmd, localDateKeyFromIso } from "@/lib/agenda/localDateKey"
 import { isGoogleTaskDone } from "@/lib/agenda/googleTasksUpcoming"
 import {
   bandColor,
@@ -206,7 +206,7 @@ export default function HoyCommandCenter() {
   }, [])
 
   const googleTasksToday = useMemo(() => {
-    const todayKey = formatLocalDateKey(new Date())
+    const todayKey = agendaTodayYmd()
     return googleTasks
       .filter((t) => {
         if (isGoogleTaskDone(t.status)) return false
@@ -216,7 +216,7 @@ export default function HoyCommandCenter() {
   }, [googleTasks])
 
   const meetings = useMemo(() => {
-    const todayKey = formatLocalDateKey(new Date())
+    const todayKey = agendaTodayYmd()
     return calendarEvents
       .filter((e) => localDateKeyFromIso(e.startAt) === todayKey)
       .map((e) => ({

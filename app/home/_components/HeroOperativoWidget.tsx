@@ -110,7 +110,11 @@ export function HeroOperativoWidget({ model }: HeroOperativoWidgetProps) {
   const flow = flowMomentumLine(money)
 
   return (
-    <section className="mx-auto mt-2 max-w-6xl px-4">
+    <section
+      id="inicio-capital"
+      className="mx-auto max-w-6xl px-4"
+      aria-label="Capital operativo y energía"
+    >
       <Card className="relative overflow-hidden border-[color-mix(in_srgb,var(--color-border)_75%,transparent)] p-5 shadow-[var(--shadow-card)] sm:p-6">
         <div
           className="pointer-events-none absolute -right-8 -top-10 h-36 w-36 rounded-full opacity-90 blur-2xl"

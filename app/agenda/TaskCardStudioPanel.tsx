@@ -32,6 +32,7 @@ import {
   type TaskCardGridKey,
 } from "@/app/agenda/taskCardConfig"
 import { useTaskCardDesign } from "@/app/agenda/TaskCardDesignContext"
+import { agendaTodayYmd } from "@/lib/agenda/localDateKey"
 import { Input } from "@/src/components/ui/input"
 import { Label } from "@/src/components/ui/label"
 import { Textarea } from "@/src/components/ui/textarea"
@@ -910,7 +911,7 @@ export function TaskCardStudioPanel() {
                 title={studioGoogleReminder.title}
                 MetaIcon={Bell}
                 metaText={dueMetaCompact(
-                  studioGoogleReminder.due?.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
+                  studioGoogleReminder.due?.slice(0, 10) ?? agendaTodayYmd(),
                 )}
                 googleKind="reminder"
                 kindPillLabel="Recordatorio"

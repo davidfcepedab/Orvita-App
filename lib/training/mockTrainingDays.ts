@@ -1,6 +1,8 @@
+import { addCalendarDaysYmd } from "@/lib/agenda/calendarMath"
+import { formatLocalDateKey } from "@/lib/agenda/localDateKey"
 import type { TrainingDay } from "@/src/modules/training/types"
 
-/** Últimos 7 días calendario: mezcla descansos y sesiones con nombres útiles para hitos heurísticos. */
+/** Últimos 7 días calendario en zona de agenda: mezcla descansos y sesiones con nombres útiles para hitos heurísticos. */
 export function buildMockTrainingDays(reference = new Date()): TrainingDay[] {
   const templates: { sets: number; name: string }[] = [
     { sets: 14, name: "Push fuerza" },
@@ -12,11 +14,10 @@ export function buildMockTrainingDays(reference = new Date()): TrainingDay[] {
     { sets: 11, name: "Natación técnica" },
   ]
 
+  const endYmd = formatLocalDateKey(reference)
   const out: TrainingDay[] = []
   for (let i = 6; i >= 0; i--) {
-    const d = new Date(reference)
-    d.setDate(d.getDate() - i)
-    const iso = d.toISOString().slice(0, 10)
+    const iso = addCalendarDaysYmd(endYmd, -i)
     const t = templates[6 - i]
     if (!t || t.sets === 0) continue
     out.push({

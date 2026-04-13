@@ -1,6 +1,7 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import clsx from "clsx"
+import { twMerge } from "tailwind-merge"
 
 type ButtonProps = {
   children: React.ReactNode
@@ -8,41 +9,54 @@ type ButtonProps = {
   onClick?: () => void
   disabled?: boolean
   type?: "button" | "submit" | "reset"
+  /** Estilo por defecto: acento primario (CTA). */
+  variant?: "primary" | "secondary" | "outline" | "ghost"
+  /** `md` equilibra área táctil (44px) en móvil. */
+  size?: "sm" | "md" | "lg"
 }
 
-export function Button({ children, className, onClick, disabled, type = "button" }: ButtonProps) {
-  const [isHovering, setIsHovering] = useState(false)
+const sizeClasses: Record<NonNullable<ButtonProps["size"]>, string> = {
+  sm: "min-h-[40px] gap-1.5 px-3.5 text-[13px]",
+  md: "min-h-[44px] gap-2 px-5 text-sm sm:min-h-[40px]",
+  lg: "min-h-[48px] gap-2 px-6 text-base",
+}
 
-  const background = useMemo(() => {
-    if (isHovering && !disabled) {
-      return "color-mix(in srgb, var(--color-accent-primary) 95%, var(--color-surface) 5%)"
-    }
-    return "var(--color-accent-primary)"
-  }, [isHovering, disabled])
+const variantClasses: Record<NonNullable<ButtonProps["variant"]>, string> = {
+  primary:
+    "border border-[color-mix(in_srgb,var(--color-border)_40%,transparent)] bg-[var(--color-accent-primary)] text-[var(--color-surface)] shadow-sm hover:brightness-[1.05] active:brightness-[0.98]",
+  secondary:
+    "border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-primary)] hover:bg-[color-mix(in_srgb,var(--color-surface-alt)_88%,var(--color-accent-primary)_12%)]",
+  outline:
+    "border border-[color-mix(in_srgb,var(--color-border)_75%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_92%,transparent)] text-[var(--color-text-primary)] hover:bg-[var(--color-surface-alt)]",
+  ghost:
+    "border border-transparent bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-alt)] hover:text-[var(--color-text-primary)]",
+}
 
+export function Button({
+  children,
+  className,
+  onClick,
+  disabled,
+  type = "button",
+  variant = "primary",
+  size = "md",
+}: ButtonProps) {
   return (
     <button
       type={type}
-      className={className}
+      className={twMerge(
+        clsx(
+          "inline-flex items-center justify-center rounded-[var(--radius-button)] font-semibold leading-none tracking-tight",
+          "transition-[background-color,border-color,color,opacity,box-shadow,filter] duration-200",
+          "orbita-focus-ring",
+          "disabled:pointer-events-none disabled:opacity-[0.55]",
+          sizeClasses[size],
+          variantClasses[variant],
+        ),
+        className,
+      )}
       onClick={onClick}
       disabled={disabled}
-      onMouseEnter={() => setIsHovering(true)}
-      onMouseLeave={() => setIsHovering(false)}
-      style={{
-        height: "40px",
-        padding: "0 20px",
-        borderRadius: "var(--radius-button)",
-        background,
-        color: "var(--color-surface)",
-        border: "0.5px solid var(--color-border)",
-        fontFamily: "var(--font-sans)",
-        fontSize: "14px",
-        fontWeight: 600,
-        lineHeight: 1.25,
-        transition: "background-color 300ms ease, color 300ms ease",
-        cursor: disabled ? "not-allowed" : "pointer",
-        opacity: disabled ? 0.6 : 1,
-      }}
     >
       {children}
     </button>

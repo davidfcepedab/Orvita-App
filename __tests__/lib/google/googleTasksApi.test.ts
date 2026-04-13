@@ -1,5 +1,5 @@
 import { fetchDefaultTaskList, mapGoogleTask, normalizeGoogleTaskDueToIso } from "@/lib/google/googleTasksApi"
-import { formatLocalDateKey, localDateKeyFromIso } from "@/lib/agenda/localDateKey"
+import { agendaTodayYmd, localDateKeyFromIso } from "@/lib/agenda/localDateKey"
 
 describe("normalizeGoogleTaskDueToIso", () => {
   it("acepta fecha solo YYYY-MM-DD", () => {
@@ -62,7 +62,7 @@ describe("fetchDefaultTaskList", () => {
 
 describe("filtro hoy (integración ligera)", () => {
   it("coincide prefijo YYYY-MM-DD con hoy en agenda", () => {
-    const today = formatLocalDateKey(new Date())
+    const today = agendaTodayYmd()
     const key = localDateKeyFromIso(`${today}T12:00:00.000Z`)
     expect(key).toBe(today)
   })

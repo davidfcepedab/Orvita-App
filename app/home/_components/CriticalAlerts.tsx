@@ -72,22 +72,25 @@ export function CriticalAlerts({ alerts, onOneClickAction, onResolveWithAi, pend
                       <span className="text-xs text-orbita-secondary">Aplicando acción…</span>
                     ) : null}
                     <Button
+                      size="sm"
                       onClick={() => void onOneClickAction(a.id)}
                       disabled={pendingAlertId === a.id}
-                      className="h-10 rounded-xl !px-4 inline-flex items-center gap-2"
+                      className="rounded-xl !min-h-10"
                     >
                       <CheckCircle2 className="h-4 w-4" />
                       {a.oneClickActionLabel}
                     </Button>
-                    <button
+                    <Button
                       type="button"
+                      variant="outline"
+                      size="sm"
                       onClick={() => void onResolveWithAi(a.id)}
                       disabled={pendingAlertId === a.id}
-                      className="h-10 rounded-xl px-4 border border-white/10 bg-orbita-surface hover:bg-white/5 transition text-sm font-semibold text-orbita-primary inline-flex items-center gap-2"
+                      className="rounded-xl !min-h-10 inline-flex items-center gap-2"
                     >
-                      <Bot className="h-4 w-4 text-sky-200" />
+                      <Bot className="h-4 w-4 text-sky-400/90" aria-hidden />
                       Resolver con IA
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>

@@ -10,7 +10,7 @@ import { useHabits } from "@/app/hooks/useHabits"
 import { useOperationalContext } from "@/app/hooks/useOperationalContext"
 import { Card } from "@/src/components/ui/Card"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
-import { formatLocalDateKey, localDateKeyFromIso } from "@/lib/agenda/localDateKey"
+import { agendaTodayYmd, localDateKeyFromIso } from "@/lib/agenda/localDateKey"
 import { isGoogleTaskDone } from "@/lib/agenda/googleTasksUpcoming"
 
 type TimelineItem = {
@@ -27,7 +27,7 @@ function toTimeLabel(iso: string | null) {
 }
 
 export function OperationalTodayWidget() {
-  const todayKey = formatLocalDateKey(new Date())
+  const todayKey = agendaTodayYmd()
   const { events, loading: calendarLoading, connected: calendarConnected, notice: calendarNotice } = useGoogleCalendar()
   const {
     tasks: googleTasks,
@@ -114,8 +114,12 @@ export function OperationalTodayWidget() {
   }, [patchTask])
 
   return (
-    <section className="mx-auto mt-6 max-w-6xl px-4">
-      <Card className="p-4 sm:p-5">
+    <section
+      id="inicio-operacion"
+      className="mx-auto max-w-6xl px-4"
+      aria-label="Timeline de hoy, tareas operativas y hábitos"
+    >
+      <Card className="border-[color-mix(in_srgb,var(--color-border)_75%,transparent)] p-4 shadow-[var(--shadow-card)] sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="m-0 text-[11px] uppercase tracking-[0.14em] text-orbita-secondary">Operación rápida</p>

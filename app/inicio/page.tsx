@@ -9,7 +9,7 @@ import HabitosV3 from "@/app/components/orbita-v3/habitos/HabitosV3"
  */
 export default function InicioPage() {
   return (
-    <div className="space-y-16 pb-24">
+    <div className="mx-auto max-w-6xl space-y-12 px-4 pb-24 pt-4">
       <HomeV3 />
       <HoyV3 />
       <AgendaV3 />

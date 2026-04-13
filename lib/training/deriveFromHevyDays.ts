@@ -1,4 +1,6 @@
 import type { TrainingMilestoneSeed } from "@/app/data/training/visualSeeds"
+import { addCalendarDaysYmd } from "@/lib/agenda/calendarMath"
+import { agendaTodayYmd } from "@/lib/agenda/localDateKey"
 import type { TrainingDay } from "@/src/modules/training/types"
 
 export type WeekVolumePoint = {
@@ -6,12 +8,6 @@ export type WeekVolumePoint = {
   iso: string
   volume: number
   intensity: number
-}
-
-function addDaysIso(isoBase: string, deltaDays: number): string {
-  const d = new Date(`${isoBase}T12:00:00.000Z`)
-  d.setUTCDate(d.getUTCDate() + deltaDays)
-  return d.toISOString().slice(0, 10)
 }
 
 const WEEKDAY_ES = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"] as const
@@ -22,7 +18,7 @@ function weekdayLabelEs(iso: string): string {
 }
 
 export function buildWeeklyVolumeIntensity(days: TrainingDay[], todayIso?: string): WeekVolumePoint[] {
-  const end = todayIso ?? new Date().toISOString().slice(0, 10)
+  const end = todayIso ?? agendaTodayYmd()
   const byDate = new Map<string, number>()
   for (const day of days) {
     const v = day.volumeScore ?? 0
@@ -30,12 +26,12 @@ export function buildWeeklyVolumeIntensity(days: TrainingDay[], todayIso?: strin
   }
   const volumes: number[] = []
   for (let i = 6; i >= 0; i--) {
-    volumes.push(byDate.get(addDaysIso(end, -i)) ?? 0)
+    volumes.push(byDate.get(addCalendarDaysYmd(end, -i)) ?? 0)
   }
   const maxVol = Math.max(1, ...volumes)
   const points: WeekVolumePoint[] = []
   for (let i = 6; i >= 0; i--) {
-    const iso = addDaysIso(end, -i)
+    const iso = addCalendarDaysYmd(end, -i)
     const volume = byDate.get(iso) ?? 0
     points.push({
       label: weekdayLabelEs(iso),
@@ -66,7 +62,7 @@ export type MilestoneView = {
 }
 
 export function buildMilestoneViews(days: TrainingDay[], seeds: TrainingMilestoneSeed[]): MilestoneView[] {
-  const cutoff = addDaysIso(new Date().toISOString().slice(0, 10), -14)
+  const cutoff = addCalendarDaysYmd(agendaTodayYmd(), -14)
   const recent = days.filter((d) => d.date >= cutoff && d.source === "hevy")
 
   return seeds.map((seed) => {

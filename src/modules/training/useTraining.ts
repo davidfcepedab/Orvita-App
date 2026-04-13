@@ -7,7 +7,7 @@ import { buildMockTrainingDays } from "@/lib/training/mockTrainingDays"
 import { createBrowserClient } from "@/lib/supabase/browser"
 import type { TrainingDay, TrainingStatus } from "@/src/modules/training/types"
 
-const todayKey = () => new Date().toISOString().slice(0, 10)
+import { agendaTodayYmd } from "@/lib/agenda/localDateKey"
 
 async function buildAuthHeaders(): Promise<HeadersInit> {
   if (isAppMockMode()) return {}
@@ -83,18 +83,18 @@ export function useTraining(): TrainingState {
     }
   }, [])
 
+  const todayYmd = agendaTodayYmd()
   const today = useMemo(() => {
-    const key = todayKey()
-    const fromHevy = days.find((day) => day.date === key) || null
+    const fromHevy = days.find((day) => day.date === todayYmd) || null
     if (fromHevy) return fromHevy
     if (!manualStatus) return null
     const manualDay: TrainingDay = {
-      date: key,
+      date: todayYmd,
       source: "manual",
       status: manualStatus,
     }
     return manualDay
-  }, [days, manualStatus])
+  }, [days, manualStatus, todayYmd])
 
   const setManualStatusSafe = useCallback((status: TrainingStatus) => {
     setManualStatus(status)

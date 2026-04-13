@@ -35,7 +35,7 @@ import type { HouseholdMemberDTO } from "@/lib/household/memberTypes"
 import { createBrowserClient } from "@/lib/supabase/browser"
 import { buildGoogleByDayIndex, type GoogleDayBucket } from "@/lib/agenda/googleAgendaByDay"
 import type { GoogleTaskLocalPriority } from "@/lib/google/types"
-import { formatLocalDateKey } from "@/lib/agenda/localDateKey"
+import { agendaTodayYmd, formatLocalDateKey } from "@/lib/agenda/localDateKey"
 
 function pickViewerFirstName(
   user: { user_metadata?: Record<string, unknown>; email?: string | null } | null | undefined
@@ -50,7 +50,7 @@ function pickViewerFirstName(
 }
 
 function todayDateInputValue() {
-  return formatLocalDateKey(new Date())
+  return agendaTodayYmd()
 }
 
 const tabs = [
@@ -292,7 +292,7 @@ export default function AgendaPage() {
   }, [view, googleCalendar.refresh])
 
   const filtered = useMemo(() => {
-    const todayYmd = formatLocalDateKey(new Date())
+    const todayYmd = agendaTodayYmd()
     const q = deferredQuery.trim().toLowerCase()
     return tasks.filter((task) => {
       const tabMatch = tab === "todas" || task.type === tab
@@ -314,7 +314,7 @@ export default function AgendaPage() {
 
   const googleByDayForViews = useMemo(() => {
     if (showPastAgenda) return googleByDay
-    const todayYmd = formatLocalDateKey(new Date())
+    const todayYmd = agendaTodayYmd()
     const out: Record<string, GoogleDayBucket> = {}
     for (const [k, v] of Object.entries(googleByDay)) {
       if (k.length === 10 && k >= todayYmd) out[k] = v
