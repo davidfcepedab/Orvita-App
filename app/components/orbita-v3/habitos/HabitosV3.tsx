@@ -11,7 +11,7 @@ export default function HabitosV3() {
   const { data } = useOperationalContext()
 
   return (
-    <div className="mx-auto max-w-5xl space-y-10">
+    <div className="mx-auto min-w-0 max-w-5xl space-y-10 overflow-x-hidden">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
         <div>
           <h2 className="text-3xl tracking-tight">Sistema de Habitos</h2>

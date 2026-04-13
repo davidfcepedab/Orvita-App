@@ -14,7 +14,7 @@ export default function AgendaV3() {
   const { data } = useOperationalContext()
 
   return (
-    <div className="mx-auto max-w-6xl space-y-8">
+    <div className="mx-auto min-w-0 max-w-6xl space-y-8 overflow-x-hidden">
       <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
         <div>
           <h2 className="text-3xl tracking-tight">Horizonte Temporal</h2>

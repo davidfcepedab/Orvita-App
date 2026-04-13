@@ -402,3 +402,46 @@ body.orbita-app-root {
   background: transparent;
   box-shadow: none;
 }
+
+/* —— Safe area (iPhone notch / Dynamic Island / home indicator) + referencia ~430px —— */
+.orbita-shell-inline {
+  padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
+  padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
+}
+@media (min-width: 640px) {
+  .orbita-shell-inline {
+    padding-left: max(1rem, env(safe-area-inset-left, 0px));
+    padding-right: max(1rem, env(safe-area-inset-right, 0px));
+  }
+}
+@media (min-width: 768px) {
+  .orbita-shell-inline {
+    padding-left: max(1.5rem, env(safe-area-inset-left, 0px));
+    padding-right: max(1.5rem, env(safe-area-inset-right, 0px));
+  }
+}
+
+.orbita-header-bar {
+  padding-top: max(0.875rem, env(safe-area-inset-top, 0px));
+  padding-bottom: 0.875rem;
+}
+@media (min-width: 640px) {
+  .orbita-header-bar {
+    padding-bottom: 1rem;
+  }
+}
+
+.orbita-bottom-nav-safe {
+  padding-left: max(0.25rem, env(safe-area-inset-left, 0px));
+  padding-right: max(0.25rem, env(safe-area-inset-right, 0px));
+}
+
+/** Contenedor de página: evita scroll horizontal en tablas/gráficos dentro del grid principal */
+.orbita-page-stack {
+  display: grid;
+  gap: var(--spacing-lg);
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}

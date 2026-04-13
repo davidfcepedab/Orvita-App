@@ -1,5 +1,5 @@
 import "./globals.css"
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import Script from "next/script"
 import Providers from "@/app/providers"
 import { ThemeProvider } from "@/src/theme/ThemeProvider"
@@ -31,6 +31,13 @@ export const metadata: Metadata = {
   },
 }
 
+/** Escalado correcto en móvil + `env(safe-area-inset-*)` en iPhone (viewport-fit=cover). */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+}
+
 export default function RootLayout({
   children,
 }: {
@@ -51,7 +58,7 @@ export default function RootLayout({
           <Providers>
             <AppShell showSidebar={false}>
               {/* ← V3 RECONSTRUIDO: fiel a captura + navegación preservada */}
-              <div className="min-w-0 max-w-full w-full pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))]">
+              <div className="min-w-0 max-w-full w-full overflow-x-hidden pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))]">
                 {children}
               </div>
             </AppShell>

@@ -240,7 +240,7 @@ export default function HabitosPage() {
   }
 
   return (
-    <div style={{ display: "grid", gap: "var(--spacing-lg)" }}>
+    <div className="orbita-page-stack">
       {!persistenceEnabled && !mock && (
         <p
           role="alert"

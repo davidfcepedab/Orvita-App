@@ -34,7 +34,7 @@ export default function HoyV3() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8">
+    <div className="mx-auto min-w-0 max-w-5xl space-y-8 overflow-x-hidden">
       <div className="flex items-center justify-between border-b pb-6" style={{ borderColor: theme.border }}>
         <div>
           <h2 className="text-3xl tracking-tight">Ejecución: hoy</h2>

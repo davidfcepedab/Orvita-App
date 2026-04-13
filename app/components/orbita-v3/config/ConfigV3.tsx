@@ -413,7 +413,7 @@ export default function ConfigV3() {
   ]
 
   return (
-    <div className="mx-auto max-w-5xl space-y-12">
+    <div className="mx-auto min-w-0 max-w-5xl space-y-12 overflow-x-hidden">
       <header>
         <h2 className="text-3xl font-medium tracking-tight" style={{ color: theme.text }}>
           Configuración del sistema

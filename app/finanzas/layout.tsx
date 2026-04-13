@@ -35,7 +35,7 @@ function FinanzasLayoutContent({
   ] as const
 
   return (
-    <div className="min-w-0 max-w-full space-y-4 sm:space-y-6">
+    <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden sm:space-y-6">
       <Card className="min-w-0 border-[color-mix(in_srgb,var(--color-border)_70%,transparent)] p-4 shadow-[var(--shadow-card)] sm:p-8">
         <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-6">
           <div className="min-w-0 max-w-full">

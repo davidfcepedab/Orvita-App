@@ -29,6 +29,7 @@ import {
   canRunGoogleCalendarSyncNow,
   markGoogleCalendarSyncRan,
 } from "@/lib/google/googleCalendarSyncThrottle"
+import { getAgendaDisplayTimeZone } from "@/lib/agenda/agendaTimeZone"
 import { agendaTodayYmd, localDateKeyFromIso } from "@/lib/agenda/localDateKey"
 import { isGoogleTaskDone } from "@/lib/agenda/googleTasksUpcoming"
 import {
@@ -361,15 +362,20 @@ export default function HoyCommandCenter() {
     }
   }, [primary.taskId, refetchCtx])
 
-  const dateLine = new Date().toLocaleDateString("es-CO", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  })
+  const dateLine = useMemo(
+    () =>
+      new Intl.DateTimeFormat("es-CO", {
+        timeZone: getAgendaDisplayTimeZone(),
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }).format(new Date()),
+    [],
+  )
 
   return (
-    <div className="flex w-full min-w-0 flex-col gap-[var(--layout-gap)]">
+    <div className="flex w-full min-w-0 max-w-full flex-col gap-[var(--layout-gap)] overflow-x-hidden">
       {/* —— Cabecera —— */}
       <header className="flex flex-col gap-4 border-b border-[var(--color-border)] pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0 space-y-2">

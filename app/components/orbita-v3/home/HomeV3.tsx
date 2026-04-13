@@ -27,7 +27,7 @@ export default function HomeV3() {
   const energy = data?.score_salud ?? 0
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8">
+    <div className="mx-auto min-w-0 max-w-5xl space-y-8 overflow-x-hidden">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-3xl tracking-tight">Órvita Control</h2>

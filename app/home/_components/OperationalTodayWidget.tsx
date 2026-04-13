@@ -1,7 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import { useCallback, useMemo, useState } from "react"
+import clsx from "clsx"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { Check, Loader2, Moon, Sun, Sunrise } from "lucide-react"
 
 import { useGoogleCalendar } from "@/app/hooks/useGoogleCalendar"
@@ -12,6 +13,7 @@ import { Card } from "@/src/components/ui/Card"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import { agendaTodayYmd, localDateKeyFromIso } from "@/lib/agenda/localDateKey"
 import { isGoogleTaskDone } from "@/lib/agenda/googleTasksUpcoming"
+import type { GoogleCalendarEventDTO } from "@/lib/google/types"
 
 type TimelineItem = {
   id: string
@@ -19,11 +21,32 @@ type TimelineItem = {
   title: string
   hint: string
   sortTime: number
+  /** Task completada en Google, o evento con hora de fin ya pasada. */
+  done: boolean
+}
+
+function eventIsPast(ev: GoogleCalendarEventDTO, nowMs: number): boolean {
+  if (!ev.endAt) return false
+  const end = Date.parse(ev.endAt)
+  if (!Number.isFinite(end)) return false
+  return end < nowMs
+}
+
+function rowSurfaceClass(done: boolean) {
+  return done
+    ? "border-[color-mix(in_srgb,var(--color-accent-health)_40%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_12%,var(--color-background))]"
+    : "border-white/10 bg-black/10"
 }
 
 function toTimeLabel(iso: string | null) {
   if (!iso) return "Todo el día"
   return new Date(iso).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" })
+}
+
+function taskDueSortMs(due: string | null): number {
+  if (!due) return Number.MAX_SAFE_INTEGER - 1000
+  const t = Date.parse(due)
+  return Number.isFinite(t) ? t : Number.MAX_SAFE_INTEGER - 1000
 }
 
 export function OperationalTodayWidget() {
@@ -42,34 +65,63 @@ export function OperationalTodayWidget() {
   const [taskPendingId, setTaskPendingId] = useState<string | null>(null)
   const [googleTaskPendingId, setGoogleTaskPendingId] = useState<string | null>(null)
   const [inlineError, setInlineError] = useState<string | null>(null)
+  const [nowMs, setNowMs] = useState(() => Date.now())
+
+  useEffect(() => {
+    const id = window.setInterval(() => setNowMs(Date.now()), 60_000)
+    return () => window.clearInterval(id)
+  }, [])
 
   const timeline = useMemo(() => {
     const eventRows: TimelineItem[] = events
       .filter((event) => localDateKeyFromIso(event.startAt) === todayKey)
-      .map((event) => ({
-        id: `event:${event.id}`,
-        type: "evento",
-        title: event.summary || "Evento sin título",
-        hint: toTimeLabel(event.startAt),
-        sortTime: event.startAt ? Date.parse(event.startAt) : Number.MAX_SAFE_INTEGER - 1,
-      }))
+      .map((event) => {
+        const done = eventIsPast(event, nowMs)
+        return {
+          id: `event:${event.id}`,
+          type: "evento" as const,
+          title: event.summary || "Evento sin título",
+          hint: done ? `${toTimeLabel(event.startAt)} · Listo` : toTimeLabel(event.startAt),
+          sortTime: event.startAt ? Date.parse(event.startAt) : Number.MAX_SAFE_INTEGER - 1,
+          done,
+        }
+      })
 
     const taskRows: TimelineItem[] = googleTasks
-      .filter((task) => !isGoogleTaskDone(task.status) && localDateKeyFromIso(task.due) === todayKey)
-      .map((task) => ({
-        id: `task:${task.id}`,
-        type: "task",
-        title: task.title || "Task sin título",
-        hint: "Google Tasks · hoy",
-        sortTime: Number.MAX_SAFE_INTEGER,
-      }))
+      .filter((task) => localDateKeyFromIso(task.due) === todayKey)
+      .map((task) => {
+        const done = isGoogleTaskDone(task.status)
+        return {
+          id: `task:${task.id}`,
+          type: "task" as const,
+          title: task.title || "Task sin título",
+          hint: done ? "Google Tasks · hecha" : "Google Tasks · hoy",
+          sortTime: taskDueSortMs(task.due),
+          done,
+        }
+      })
 
-    return [...eventRows, ...taskRows].sort((a, b) => a.sortTime - b.sortTime).slice(0, 8)
-  }, [events, googleTasks, todayKey])
+    return [...eventRows, ...taskRows]
+      .sort((a, b) => {
+        if (a.done !== b.done) return a.done ? 1 : -1
+        return a.sortTime - b.sortTime
+      })
+      .slice(0, 8)
+  }, [events, googleTasks, todayKey, nowMs])
 
-  const operationalTasks = useMemo(() => {
-    return (operationalContext?.today_tasks ?? []).filter((task) => !task.completed).slice(0, 5)
+  const operationalSplit = useMemo(() => {
+    const all = operationalContext?.today_tasks ?? []
+    const pending = all.filter((t) => !t.completed)
+    const completed = all.filter((t) => t.completed)
+    return { pending: pending.slice(0, 5), completed: completed.slice(0, 5) }
   }, [operationalContext?.today_tasks])
+
+  const googleTasksTodaySplit = useMemo(() => {
+    const today = googleTasks.filter((t) => localDateKeyFromIso(t.due) === todayKey)
+    const pending = today.filter((t) => !isGoogleTaskDone(t.status))
+    const completed = today.filter((t) => isGoogleTaskDone(t.status))
+    return { pending: pending.slice(0, 5), completed: completed.slice(0, 5) }
+  }, [googleTasks, todayKey])
 
   const visibleHabits = useMemo(() => habits.slice(0, 5), [habits])
 
@@ -154,14 +206,36 @@ export function OperationalTodayWidget() {
             </p>
             <ul className="m-0 mt-2 list-none space-y-2 p-0">
               {timeline.map((item) => (
-                <li key={item.id} className="rounded-xl border border-white/10 bg-black/10 px-2.5 py-2">
+                <li
+                  key={item.id}
+                  className={clsx("rounded-xl border px-2.5 py-2", rowSurfaceClass(item.done))}
+                >
                   <div className="flex items-center justify-between gap-2">
-                    <p className="m-0 truncate text-sm font-medium text-orbita-primary">{item.title}</p>
-                    <span className="shrink-0 text-[10px] uppercase tracking-[0.1em] text-orbita-secondary">
-                      {item.type}
+                    <p
+                      className={clsx(
+                        "m-0 truncate text-sm font-medium",
+                        item.done ? "text-[var(--color-accent-health)]" : "text-orbita-primary",
+                      )}
+                    >
+                      {item.title}
+                    </p>
+                    <span
+                      className={clsx(
+                        "shrink-0 text-[10px] uppercase tracking-[0.1em]",
+                        item.done ? "text-[var(--color-accent-health)]" : "text-orbita-secondary",
+                      )}
+                    >
+                      {item.done ? "Listo" : item.type}
                     </span>
                   </div>
-                  <p className="m-0 mt-1 text-[11px] text-orbita-secondary">{item.hint}</p>
+                  <p
+                    className={clsx(
+                      "m-0 mt-1 text-[11px]",
+                      item.done ? "text-[color-mix(in_srgb,var(--color-accent-health)_88%,var(--color-text-secondary))]" : "text-orbita-secondary",
+                    )}
+                  >
+                    {item.hint}
+                  </p>
                 </li>
               ))}
               {timeline.length === 0 ? (
@@ -187,8 +261,11 @@ export function OperationalTodayWidget() {
               Tasks para cerrar
             </p>
             <ul className="m-0 mt-2 list-none space-y-2 p-0">
-              {operationalTasks.map((task) => (
-                <li key={task.id} className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/10 px-2.5 py-2">
+              {operationalSplit.pending.map((task) => (
+                <li
+                  key={task.id}
+                  className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/10 px-2.5 py-2"
+                >
                   <p className="m-0 min-w-0 flex-1 truncate text-sm text-orbita-primary">{task.title}</p>
                   <button
                     type="button"
@@ -201,8 +278,25 @@ export function OperationalTodayWidget() {
                   </button>
                 </li>
               ))}
-              {operationalTasks.length === 0 ? (
-                <li className="text-xs text-orbita-secondary">No hay tareas operativas pendientes.</li>
+              {operationalSplit.completed.map((task) => (
+                <li
+                  key={task.id}
+                  className={clsx(
+                    "flex items-center justify-between gap-2 rounded-xl border px-2.5 py-2",
+                    rowSurfaceClass(true),
+                  )}
+                >
+                  <p className="m-0 min-w-0 flex-1 truncate text-sm font-medium text-[var(--color-accent-health)]">
+                    {task.title}
+                  </p>
+                  <span className="inline-flex min-h-[32px] items-center gap-1 rounded-[var(--radius-button)] border border-[color-mix(in_srgb,var(--color-accent-health)_35%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_10%,transparent)] px-2 text-[11px] font-semibold text-[var(--color-accent-health)]">
+                    <Check className="h-3.5 w-3.5" aria-hidden />
+                    Hecha
+                  </span>
+                </li>
+              ))}
+              {operationalSplit.pending.length === 0 && operationalSplit.completed.length === 0 ? (
+                <li className="text-xs text-orbita-secondary">No hay tareas operativas para hoy.</li>
               ) : null}
             </ul>
 
@@ -210,27 +304,47 @@ export function OperationalTodayWidget() {
               Google Tasks de hoy
             </p>
             <ul className="m-0 mt-2 list-none space-y-2 p-0">
-              {googleTasks
-                .filter((task) => !isGoogleTaskDone(task.status) && localDateKeyFromIso(task.due) === todayKey)
-                .slice(0, 3)
-                .map((task) => (
-                  <li key={task.id} className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/10 px-2.5 py-2">
-                    <p className="m-0 min-w-0 flex-1 truncate text-sm text-orbita-primary">{task.title}</p>
-                    <button
-                      type="button"
-                      onClick={() => void completeGoogleTask(task.id)}
-                      disabled={googleTaskPendingId === task.id}
-                      className="inline-flex min-h-[32px] items-center gap-1 rounded-[var(--radius-button)] border border-white/15 px-2 text-[11px] font-semibold text-white disabled:opacity-50"
-                    >
-                      {googleTaskPendingId === task.id ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
-                      ) : (
-                        <Check className="h-3.5 w-3.5" aria-hidden />
-                      )}
-                      Hecha
-                    </button>
-                  </li>
-                ))}
+              {googleTasksTodaySplit.pending.map((task) => (
+                <li
+                  key={task.id}
+                  className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/10 px-2.5 py-2"
+                >
+                  <p className="m-0 min-w-0 flex-1 truncate text-sm text-orbita-primary">{task.title}</p>
+                  <button
+                    type="button"
+                    onClick={() => void completeGoogleTask(task.id)}
+                    disabled={googleTaskPendingId === task.id}
+                    className="inline-flex min-h-[32px] items-center gap-1 rounded-[var(--radius-button)] border border-white/15 px-2 text-[11px] font-semibold text-white disabled:opacity-50"
+                  >
+                    {googleTaskPendingId === task.id ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                    ) : (
+                      <Check className="h-3.5 w-3.5" aria-hidden />
+                    )}
+                    Hecha
+                  </button>
+                </li>
+              ))}
+              {googleTasksTodaySplit.completed.map((task) => (
+                <li
+                  key={task.id}
+                  className={clsx(
+                    "flex items-center justify-between gap-2 rounded-xl border px-2.5 py-2",
+                    rowSurfaceClass(true),
+                  )}
+                >
+                  <p className="m-0 min-w-0 flex-1 truncate text-sm font-medium text-[var(--color-accent-health)]">
+                    {task.title}
+                  </p>
+                  <span className="inline-flex min-h-[32px] items-center gap-1 rounded-[var(--radius-button)] border border-[color-mix(in_srgb,var(--color-accent-health)_35%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_10%,transparent)] px-2 text-[11px] font-semibold text-[var(--color-accent-health)]">
+                    <Check className="h-3.5 w-3.5" aria-hidden />
+                    Listo
+                  </span>
+                </li>
+              ))}
+              {googleTasksTodaySplit.pending.length === 0 && googleTasksTodaySplit.completed.length === 0 ? (
+                <li className="text-xs text-orbita-secondary">No hay Google Tasks con vencimiento hoy.</li>
+              ) : null}
             </ul>
           </div>
 
@@ -240,13 +354,31 @@ export function OperationalTodayWidget() {
             </p>
             <ul className="m-0 mt-2 list-none space-y-2 p-0">
               {visibleHabits.map((habit) => (
-                <li key={habit.id} className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/10 px-2.5 py-2">
-                  <p className="m-0 min-w-0 flex-1 truncate text-sm text-orbita-primary">{habit.name}</p>
+                <li
+                  key={habit.id}
+                  className={clsx(
+                    "flex items-center justify-between gap-2 rounded-xl border px-2.5 py-2",
+                    rowSurfaceClass(Boolean(habit.completed)),
+                  )}
+                >
+                  <p
+                    className={clsx(
+                      "m-0 min-w-0 flex-1 truncate text-sm",
+                      habit.completed ? "font-medium text-[var(--color-accent-health)]" : "text-orbita-primary",
+                    )}
+                  >
+                    {habit.name}
+                  </p>
                   <button
                     type="button"
                     onClick={() => void toggleCompleteToday(habit.id)}
                     disabled={togglingId === habit.id}
-                    className="inline-flex min-h-[32px] items-center gap-1 rounded-[var(--radius-button)] border border-white/15 px-2 text-[11px] font-semibold text-white disabled:opacity-50"
+                    className={clsx(
+                      "inline-flex min-h-[32px] items-center gap-1 rounded-[var(--radius-button)] border px-2 text-[11px] font-semibold disabled:opacity-50",
+                      habit.completed
+                        ? "border-[color-mix(in_srgb,var(--color-accent-health)_40%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_8%,transparent)] text-[var(--color-accent-health)]"
+                        : "border-white/15 text-white",
+                    )}
                   >
                     {togglingId === habit.id ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />

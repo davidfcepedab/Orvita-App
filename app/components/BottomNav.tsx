@@ -21,7 +21,7 @@ export default function BottomNav() {
       className="orbita-chrome-surface fixed bottom-0 left-0 right-0 z-[100] border-t border-[color-mix(in_srgb,var(--color-border)_85%,transparent)] pb-[env(safe-area-inset-bottom,0px)] shadow-nav"
       aria-label="Navegación principal"
     >
-      <div className="mx-auto grid max-w-[1400px] grid-cols-5 gap-0.5 px-2 py-2 text-center text-[11px] leading-tight sm:gap-1 sm:px-4 sm:py-3 sm:text-xs sm:leading-normal">
+      <div className="orbita-bottom-nav-safe mx-auto grid max-w-[1400px] grid-cols-5 gap-0.5 px-1 py-2 text-center text-[11px] leading-tight sm:gap-1 sm:px-3 sm:py-3 sm:text-xs sm:leading-normal">
         {tabs.map((tab) => {
           const Icon = tab.icon
           const saludActive =

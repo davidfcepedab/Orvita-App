@@ -31,9 +31,11 @@ export default function DecisionPage() {
   const statusLabel = derived.overall >= 70 ? "Recomendado" : derived.overall >= 50 ? "Revisar" : "No recomendado"
   const energyLabel = weeklyHours >= 22 ? "Alta" : weeklyHours >= 14 ? "Media" : "Baja"
   return (
-      <div style={{ display: "grid", gap: "var(--spacing-lg)" }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: "26px", fontWeight: 500 }}>Motor de decisiones estratégicas</h1>
+      <div className="orbita-page-stack">
+        <div className="min-w-0">
+          <h1 className="m-0 text-xl font-medium tracking-tight text-[var(--color-text-primary)] phone:text-[1.625rem] sm:text-[1.75rem]">
+            Motor de decisiones estratégicas
+          </h1>
           <p style={{ margin: "6px 0 0", fontSize: "13px", color: "var(--color-text-secondary)" }}>
             Evalúa decisiones por impacto en capital, tiempo y energía.
           </p>

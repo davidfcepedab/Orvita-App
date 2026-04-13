@@ -159,7 +159,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="relative">
+    <div className="relative min-w-0 overflow-x-hidden">
       {/* Fondo sutil “centro de mando” */}
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute -top-40 left-1/2 h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-gradient-to-br from-sky-500/10 via-emerald-500/6 to-rose-500/10 blur-3xl" />

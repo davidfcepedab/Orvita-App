@@ -128,9 +128,11 @@ export default function HealthPage() {
   })
 
   return (
-    <div style={{ display: "grid", gap: "var(--spacing-lg)" }}>
-      <div>
-        <h1 style={{ margin: 0, fontSize: "28px", fontWeight: 500 }}>Operaciones de Salud</h1>
+    <div className="orbita-page-stack">
+      <div className="min-w-0">
+        <h1 className="m-0 text-2xl font-medium tracking-tight text-[var(--color-text-primary)] phone:text-[1.75rem]">
+          Operaciones de Salud
+        </h1>
         <p style={{ margin: "6px 0 0", fontSize: "13px", color: "var(--color-text-secondary)" }}>
           Biotelemetría, gestión de energía y optimización operativa
         </p>

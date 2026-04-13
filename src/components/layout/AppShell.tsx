@@ -186,7 +186,7 @@ export function AppShell({
           zIndex: 20,
         }}
       >
-        <div className="mx-auto max-w-[1400px] px-4 py-3.5 sm:px-6 sm:py-4">
+        <div className="orbita-shell-inline orbita-header-bar mx-auto max-w-[1400px]">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-[var(--spacing-lg)]">
             <div className="flex min-w-0 flex-col gap-1">
               <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
@@ -320,7 +320,7 @@ export function AppShell({
         className="orbita-chrome-surface border-b border-[color-mix(in_srgb,var(--color-border)_85%,transparent)]"
         style={{ overflowX: "auto" }}
       >
-        <div className="mx-auto max-w-[1400px] px-3 py-1.5 sm:px-4 md:px-6">
+        <div className="orbita-shell-inline mx-auto max-w-[1400px] py-1.5">
           <div className="flex min-h-[48px] items-stretch gap-1 sm:gap-1.5">
             {navItems.map((item) => {
               const saludActive =
@@ -352,7 +352,7 @@ export function AppShell({
       </nav>
 
       <div
-        className="mx-auto grid min-w-0 max-w-[1400px] gap-[var(--layout-gap)] px-3 pb-10 pt-5 sm:px-6 sm:pt-7 md:px-8"
+        className="orbita-shell-inline mx-auto grid min-w-0 max-w-[1400px] gap-[var(--layout-gap)] pb-10 pt-5 sm:pt-7"
         style={{
           gridTemplateColumns: showSidebar ? "280px minmax(0, 1fr)" : "minmax(0, 1fr)",
         }}
