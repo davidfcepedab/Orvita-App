@@ -156,13 +156,12 @@ export default function FinanzasInsights() {
   }
 
   return (
-    <div className="min-w-0 space-y-6 sm:space-y-8">
+    <div className="min-w-0 space-y-5 sm:space-y-7">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-xs uppercase tracking-[0.18em] text-orbita-secondary">Perspectivas</p>
-          <p className="text-lg font-semibold text-orbita-primary">Lectura estratégica</p>
-          <p className="mt-1 text-sm text-orbita-secondary">
-            Señales de estabilidad, riesgo operativo y proyección táctica.
+          <h2 className="m-0 text-base font-semibold tracking-tight text-orbita-primary sm:text-lg">Perspectivas</h2>
+          <p className="mt-0.5 hidden text-sm text-orbita-secondary sm:block">
+            Estabilidad, riesgo y proyección.
           </p>
         </div>
         {notice && (

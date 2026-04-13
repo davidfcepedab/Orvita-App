@@ -104,14 +104,21 @@ function isIncomeCommitmentRow(c: FlowCommitment) {
   return c.flowType === "income"
 }
 
+/** Colores de serie: ingresos (verde) vs flujo neto (azul finanzas) vs gasto (rojo) — evita confundir flujo con ingreso. */
+const FLOW_SERIES_COLORS = {
+  ingresos: "var(--color-accent-health)",
+  gasto_operativo: "var(--color-accent-danger)",
+  flujo: "var(--color-accent-finance)",
+} as const
+
 function FlowChartLegend() {
   const items = [
-    { key: "flujo", label: "Flujo", color: "var(--color-accent-primary)" },
-    { key: "gasto", label: "Gasto operativo", color: "var(--color-accent-danger)" },
-    { key: "ingresos", label: "Ingresos", color: "var(--color-accent-health)" },
+    { key: "ingresos", label: "Ingresos", color: FLOW_SERIES_COLORS.ingresos },
+    { key: "gasto", label: "Gasto operativo", color: FLOW_SERIES_COLORS.gasto_operativo },
+    { key: "flujo", label: "Flujo neto", color: FLOW_SERIES_COLORS.flujo },
   ]
   return (
-    <ul className="mt-2 flex flex-wrap justify-center gap-x-3 gap-y-2 px-0.5 text-[10px] text-orbita-secondary sm:gap-x-5 sm:text-[11px]">
+    <ul className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-2 px-0.5 text-[10px] text-orbita-secondary sm:gap-x-6 sm:text-[11px]">
       {items.map((item) => (
         <li key={item.key} className="flex max-w-full items-center gap-1.5">
           <span
@@ -123,6 +130,102 @@ function FlowChartLegend() {
         </li>
       ))}
     </ul>
+  )
+}
+
+function FlowEvolutionTable({
+  rows,
+  formatMoney,
+}: {
+  rows: MonthlyRow[]
+  formatMoney: (value: number) => string
+}) {
+  if (rows.length === 0) return null
+
+  const thBase =
+    "px-2 py-2 font-semibold text-orbita-primary first:rounded-tl-lg last:rounded-tr-lg sm:px-3 sm:py-2.5"
+  const tdBase = "border-t border-orbita-border/60 px-2 py-1.5 tabular-nums sm:px-3 sm:py-2"
+  const tdLabel = `${tdBase} max-w-[min(40vw,11rem)] text-orbita-primary [overflow-wrap:anywhere] sm:max-w-none`
+
+  return (
+    <div className="mt-4 overflow-x-auto rounded-lg border border-orbita-border/70 [scrollbar-gutter:stable]">
+      <table className="w-full min-w-[min(100%,380px)] border-collapse text-[11px] sm:min-w-[420px] sm:text-xs">
+        <caption className="sr-only">
+          Valores numéricos por periodo: ingresos, gasto operativo y flujo neto en pesos colombianos
+        </caption>
+        <thead>
+          <tr>
+            <th
+              scope="col"
+              className={thBase}
+              style={{
+                background: "color-mix(in srgb, var(--color-surface-alt) 88%, var(--color-text-primary) 4%)",
+              }}
+            >
+              Periodo
+            </th>
+            <th
+              scope="col"
+              className={`${thBase} text-right`}
+              style={{
+                background: "color-mix(in srgb, var(--color-surface) 72%, var(--color-accent-health) 28%)",
+              }}
+            >
+              Ingresos
+            </th>
+            <th
+              scope="col"
+              className={`${thBase} text-right`}
+              style={{
+                background: "color-mix(in srgb, var(--color-surface) 78%, var(--color-accent-danger) 22%)",
+              }}
+            >
+              Gasto op.
+            </th>
+            <th
+              scope="col"
+              className={`${thBase} text-right`}
+              style={{
+                background: "color-mix(in srgb, var(--color-surface) 72%, var(--color-accent-finance) 28%)",
+              }}
+            >
+              Flujo neto
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => {
+            const net = row.flujo
+            const flowTone =
+              net < -0.5
+                ? "var(--color-accent-danger)"
+                : net > 0.5
+                  ? "var(--color-accent-finance)"
+                  : "var(--color-text-secondary)"
+            return (
+              <tr
+                key={row.month}
+                className="odd:bg-orbita-surface-alt/35 hover:bg-orbita-surface-alt/55"
+              >
+                <th scope="row" className={tdLabel}>
+                  {row.month}
+                </th>
+                <td className={`${tdBase} text-right`} style={{ color: "var(--color-accent-health)" }}>
+                  {formatMoney(row.ingresos)}
+                </td>
+                <td className={`${tdBase} text-right`} style={{ color: "var(--color-accent-danger)" }}>
+                  {formatMoney(row.gasto_operativo)}
+                </td>
+                <td className={`${tdBase} text-right font-semibold`} style={{ color: flowTone }}>
+                  {net >= 0 ? "+" : ""}
+                  {formatMoney(net)}
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
   )
 }
 
@@ -336,23 +439,18 @@ export default function FinanzasOverview() {
   const flowChartMargin = { top: 8, right: 2, left: 2, bottom: xAxisHeight + 6 } as const
 
   return (
-    <div className="min-w-0 max-w-full space-y-6 sm:space-y-8">
-      <section className="min-w-0 space-y-3" aria-labelledby="fin-overview-kpis-heading">
-        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div className="min-w-0 max-w-full space-y-1">
-            <h2
-              id="fin-overview-kpis-heading"
-              className="text-sm font-semibold tracking-tight text-orbita-primary"
-            >
-              Indicadores operativos del mes
-            </h2>
-            <p className="max-w-2xl text-[11px] leading-snug text-orbita-secondary sm:text-xs">
-              Solo cuenta el gasto catalogado como <span className="font-medium text-orbita-primary">operativo</span>
-              ; inversión y ajustes no entran en estas tarjetas si vienen del catálogo.
-            </p>
-          </div>
-          <p className="shrink-0 text-[10px] font-medium uppercase tracking-[0.14em] text-orbita-secondary">
-            4 métricas
+    <div className="min-w-0 max-w-full space-y-5 sm:space-y-7">
+      <section className="min-w-0 space-y-2.5" aria-labelledby="fin-overview-kpis-heading">
+        <div className="min-w-0 max-w-full space-y-1">
+          <h2
+            id="fin-overview-kpis-heading"
+            className="text-sm font-semibold tracking-tight text-orbita-primary"
+          >
+            Indicadores operativos del mes
+          </h2>
+          <p className="hidden max-w-2xl text-[11px] leading-snug text-orbita-secondary sm:block sm:text-xs">
+            Gasto <span className="font-medium text-orbita-primary">operativo</span> según catálogo (inversión y
+            ajustes no operativos fuera de estas tarjetas).
           </p>
         </div>
         <div className="grid min-w-0 max-w-full grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -417,9 +515,12 @@ export default function FinanzasOverview() {
               <span className="break-words text-xs leading-snug text-orbita-secondary [overflow-wrap:anywhere]">
                 {flowSubtitle}
               </span>
-              <span className="text-[11px] leading-snug text-orbita-secondary/90">
-                La serie roja es <strong className="font-medium text-orbita-primary">gasto operativo</strong> (misma
-                lógica que los KPI de arriba).
+              <span className="hidden text-[11px] leading-snug text-orbita-secondary/90 md:inline">
+                Verde <span style={{ color: FLOW_SERIES_COLORS.ingresos }}>ingresos</span>
+                {" · "}
+                <span style={{ color: FLOW_SERIES_COLORS.gasto_operativo }}>gasto operativo</span>
+                {" · "}
+                <span style={{ color: FLOW_SERIES_COLORS.flujo }}>flujo neto</span> (COP, misma lógica que KPI).
               </span>
             </div>
             <div
@@ -479,7 +580,13 @@ export default function FinanzasOverview() {
                         contentStyle={rechartsTooltipContentStyle}
                         formatter={(value, name) => [
                           formatMoney(financeTooltipNumber(value)),
-                          String(name ?? ""),
+                          name === "ingresos"
+                            ? "Ingresos"
+                            : name === "gasto_operativo"
+                              ? "Gasto operativo"
+                              : name === "flujo"
+                                ? "Flujo neto"
+                                : String(name ?? ""),
                         ]}
                       />
                       <ReferenceLine y={0} stroke="var(--color-border)" />
@@ -487,7 +594,7 @@ export default function FinanzasOverview() {
                         type="monotone"
                         dataKey="ingresos"
                         name="ingresos"
-                        stroke="var(--color-accent-health)"
+                        stroke={FLOW_SERIES_COLORS.ingresos}
                         strokeWidth={2}
                         dot={{ r: 3 }}
                       />
@@ -495,16 +602,16 @@ export default function FinanzasOverview() {
                         type="monotone"
                         dataKey="gasto_operativo"
                         name="gasto_operativo"
-                        stroke="var(--color-accent-danger)"
-                        strokeWidth={2}
+                        stroke={FLOW_SERIES_COLORS.gasto_operativo}
+                        strokeWidth={2.25}
                         dot={{ r: 3 }}
                       />
                       <Line
                         type="monotone"
                         dataKey="flujo"
                         name="flujo"
-                        stroke="var(--color-accent-primary)"
-                        strokeWidth={2}
+                        stroke={FLOW_SERIES_COLORS.flujo}
+                        strokeWidth={2.5}
                         dot={{ r: 3 }}
                       />
                     </LineChart>
@@ -518,7 +625,12 @@ export default function FinanzasOverview() {
                 )}
               </div>
             </div>
-            {chartData.length > 0 ? <FlowChartLegend /> : null}
+            {chartData.length > 0 ? (
+              <>
+                <FlowChartLegend />
+                <FlowEvolutionTable rows={chartData} formatMoney={formatMoney} />
+              </>
+            ) : null}
           </div>
         </div>
       </Card>

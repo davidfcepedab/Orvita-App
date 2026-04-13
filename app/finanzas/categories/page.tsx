@@ -410,12 +410,12 @@ export default function FinanzasCategories() {
   }
 
   return (
-    <div className="min-w-0 space-y-6 sm:space-y-8">
+    <div className="min-w-0 space-y-5 sm:space-y-7">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <h1 className="text-lg font-semibold text-orbita-primary">Mapa de gasto por categorías</h1>
-          <p className="mt-1 text-sm text-orbita-secondary">
-            Totales del mes en bloques fijos y variables; cada fila agrupa subcategorías con movimiento.
+          <h1 className="text-base font-semibold text-orbita-primary sm:text-lg">Mapa de gasto por categorías</h1>
+          <p className="mt-0.5 hidden text-sm text-orbita-secondary sm:block">
+            Fijo y variable; cada fila agrupa subcategorías con movimiento.
           </p>
         </div>
         {notice && (

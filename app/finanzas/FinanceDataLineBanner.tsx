@@ -2,6 +2,7 @@
 
 import { Card } from "@/src/components/ui/Card"
 import type { FinanceModuleMeta } from "@/lib/finanzas/financeModuleMeta"
+import { financeInsetBarClass } from "./_components/financeChrome"
 import { useFinance } from "./FinanceContext"
 
 function formatYmLongEs(ym: string) {
@@ -34,12 +35,9 @@ export function FinanceDataLineBanner() {
 
   if (financeMetaLoading && !financeMeta) {
     return (
-      <Card className="min-w-0 border border-orbita-border/80 bg-[color-mix(in_srgb,var(--color-surface-alt)_55%,var(--color-surface))] p-3 sm:p-4">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
-          Línea de datos
-        </p>
-        <p className="mt-1.5 text-xs text-orbita-secondary">Cargando trazabilidad del periodo…</p>
-      </Card>
+      <div className={`min-w-0 ${financeInsetBarClass}`} role="status" aria-live="polite">
+        <p className="m-0 text-[11px] text-orbita-secondary">Sincronizando trazabilidad del periodo…</p>
+      </div>
     )
   }
 
@@ -50,58 +48,69 @@ export function FinanceDataLineBanner() {
     meta.kpiSource === "transactions"
       ? "Movimientos del mes"
       : meta.kpiSource === "snapshot"
-        ? "Resumen almacenado (snapshot)"
-        : "Sin fuente numérica"
+        ? "Snapshot"
+        : "Sin fuente"
 
   const kpiHasSignal = meta.kpiHasSignal
 
+  const updatedShort = meta.lastTransactionUpdatedAt
+    ? new Date(meta.lastTransactionUpdatedAt).toLocaleString("es-CO", {
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : null
+
   return (
-    <div className="min-w-0 space-y-3">
+    <div className="min-w-0 space-y-2">
       {financeMetaNotice ? (
-        <p className="rounded-lg border border-orbita-border bg-orbita-surface px-3 py-2 text-xs leading-snug text-orbita-secondary">
+        <p className="m-0 rounded-lg border border-orbita-border bg-orbita-surface px-3 py-1.5 text-[11px] leading-snug text-orbita-secondary">
           {financeMetaNotice}
         </p>
       ) : null}
 
-      <Card className="min-w-0 border border-orbita-border/80 bg-[color-mix(in_srgb,var(--color-surface-alt)_55%,var(--color-surface))] p-3 sm:p-4">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
-          Línea de datos
+      <div
+        className={`min-w-0 ${financeInsetBarClass} text-orbita-primary`}
+        role="region"
+        aria-label="Trazabilidad del periodo seleccionado"
+      >
+        <p className="m-0 flex flex-wrap items-baseline gap-x-1.5 gap-y-1 text-[11px] leading-relaxed sm:text-xs">
+          <span className="font-semibold uppercase tracking-[0.12em] text-orbita-secondary">Datos</span>
+          <span className="text-orbita-secondary">·</span>
+          <span>
+            <span className="text-orbita-secondary">Movimientos:</span> {meta.transactionsInSelectedMonth ?? 0}
+          </span>
+          <span className="text-orbita-secondary">·</span>
+          <span>
+            <span className="text-orbita-secondary">KPI:</span> {kpiSourceLabel}
+          </span>
+          {meta.lastTransactionDate ? (
+            <>
+              <span className="text-orbita-secondary">·</span>
+              <span>
+                <span className="text-orbita-secondary">Último:</span> {formatDayEs(meta.lastTransactionDate)}
+                {updatedShort ? (
+                  <span className="text-orbita-secondary"> (sync {updatedShort})</span>
+                ) : null}
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="text-orbita-secondary">·</span>
+              <span className="text-orbita-secondary">Sin movimientos en base para tu hogar.</span>
+            </>
+          )}
         </p>
-        <p className="mt-1.5 text-xs leading-relaxed text-orbita-primary">
-          <span className="font-medium">Periodo:</span> {formatYmLongEs(month)} ·{" "}
-          <span className="font-medium">Movimientos en el mes:</span> {meta.transactionsInSelectedMonth ?? 0} ·{" "}
-          <span className="font-medium">KPI:</span> {kpiSourceLabel}
-        </p>
-        {meta.lastTransactionDate ? (
-          <p className="mt-1 text-xs text-orbita-secondary">
-            <span className="font-medium text-orbita-primary">Último movimiento en base:</span>{" "}
-            {formatDayEs(meta.lastTransactionDate)}
-            {meta.lastTransactionUpdatedAt
-              ? ` · registro actualizado ${new Date(meta.lastTransactionUpdatedAt).toLocaleString("es-CO", {
-                  day: "numeric",
-                  month: "short",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}`
-              : null}
-          </p>
-        ) : (
-          <p className="mt-1 text-xs text-orbita-secondary">
-            Aún no hay movimientos financieros en la base para tu hogar.
-          </p>
-        )}
-      </Card>
+      </div>
 
       {!kpiHasSignal && meta.reference ? (
-        <Card className="min-w-0 border border-dashed border-[color-mix(in_srgb,var(--color-accent-finance)_40%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-finance)_6%,var(--color-surface))] p-4 sm:p-5">
-          <p className="text-sm font-semibold text-orbita-primary">
-            Sin cifras para {formatYmLongEs(month)}
+        <Card className="min-w-0 border border-dashed border-[color-mix(in_srgb,var(--color-accent-finance)_40%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-finance)_6%,var(--color-surface))] p-3 sm:p-4">
+          <p className="m-0 text-sm font-semibold text-orbita-primary">Sin cifras para {formatYmLongEs(month)}</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-orbita-secondary">
+            Último mes con resumen guardado:
           </p>
-          <p className="mt-1 text-xs leading-relaxed text-orbita-secondary">
-            No mostramos &quot;0&quot; como si fuera un cierre real. Este es el{" "}
-            <span className="font-medium text-orbita-primary">último mes con resumen guardado</span> en el sistema:
-          </p>
-          <div className="mt-3 grid gap-2 rounded-xl border border-orbita-border bg-orbita-surface px-3 py-3 text-sm sm:grid-cols-3">
+          <div className="mt-2 grid gap-2 rounded-xl border border-orbita-border bg-orbita-surface px-3 py-2.5 text-sm sm:grid-cols-3">
             <div>
               <p className="text-[10px] uppercase tracking-[0.12em] text-orbita-secondary">Mes</p>
               <p className="font-medium text-orbita-primary">{formatYmLongEs(meta.reference.month)}</p>
@@ -120,9 +129,9 @@ export function FinanceDataLineBanner() {
           <button
             type="button"
             onClick={() => setMonth(meta.reference!.month)}
-            className="mt-3 min-h-[44px] w-full rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-orbita-primary transition hover:bg-orbita-surface-alt sm:w-auto"
+            className="mt-2 min-h-[44px] w-full rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-orbita-primary transition hover:bg-orbita-surface-alt sm:mt-3 sm:w-auto"
           >
-            Abrir {meta.reference.month} en el periodo
+            Abrir {meta.reference.month}
           </button>
         </Card>
       ) : null}

@@ -3,6 +3,7 @@
 import { ReactNode } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { FinanceProvider, useFinance } from "./FinanceContext"
+import { financeModuleHeroClass } from "./_components/financeChrome"
 import { FinanceDataLineBanner } from "./FinanceDataLineBanner"
 import { Card } from "@/src/components/ui/Card"
 
@@ -35,32 +36,25 @@ function FinanzasLayoutContent({
   ] as const
 
   return (
-    <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden sm:space-y-6">
-      <Card className="min-w-0 border-[color-mix(in_srgb,var(--color-border)_70%,transparent)] p-4 shadow-[var(--shadow-card)] sm:p-8">
-        <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-6">
+    <div className="min-w-0 max-w-full space-y-3 overflow-x-hidden sm:space-y-4">
+      <Card className={financeModuleHeroClass}>
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <div className="min-w-0 max-w-full">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-orbita-secondary">Capital</p>
-            <h1 className="orbita-large-title mt-2 break-words text-orbita-primary">
-              Capital operativo
-            </h1>
-            <p className="orbita-footnote mt-2 max-w-prose break-words [overflow-wrap:anywhere]">
-              Liquidez, quema mensual y decisiones con contexto — siempre respecto al periodo que eliges arriba.
+            <h1 className="orbita-large-title m-0 break-words text-orbita-primary">Capital operativo</h1>
+            <p className="mt-1 max-w-prose text-xs leading-snug text-orbita-secondary [overflow-wrap:anywhere] sm:text-[13px]">
+              Liquidez y decisiones según el mes activo; el detalle de trazabilidad va debajo.
             </p>
           </div>
-          <div className="flex w-full min-w-0 shrink-0 flex-col gap-2 sm:w-auto sm:max-w-[min(100%,20rem)] sm:flex-row sm:items-stretch sm:gap-3">
-            <label className="grid min-w-0 gap-1.5">
-              <span className="text-center text-[11px] uppercase tracking-[0.14em] text-orbita-secondary sm:text-left">
-                Periodo activo
-              </span>
-              <input
-                type="month"
-                value={month}
-                onChange={(e) => setMonth(e.target.value)}
-                className="min-h-[44px] w-full min-w-0 rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface px-3 py-2 text-sm text-orbita-primary sm:min-w-[11rem]"
-                aria-label="Seleccionar mes"
-              />
-            </label>
-          </div>
+          <label className="grid w-full min-w-0 shrink-0 gap-1 sm:w-auto sm:min-w-[11.5rem]">
+            <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-orbita-secondary">Mes</span>
+            <input
+              type="month"
+              value={month}
+              onChange={(e) => setMonth(e.target.value)}
+              className="min-h-[44px] w-full min-w-0 rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface px-3 py-2 text-sm text-orbita-primary"
+              aria-label="Seleccionar mes del periodo"
+            />
+          </label>
         </div>
       </Card>
 

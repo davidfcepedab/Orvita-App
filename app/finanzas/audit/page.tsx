@@ -66,13 +66,11 @@ export default function FinanzasAuditPage() {
   }
 
   return (
-    <div className="min-w-0 space-y-4">
-      <Card className="min-w-0 p-4 sm:p-6">
-        <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Auditoría</p>
-        <h2 className="mt-2 text-lg font-semibold text-orbita-primary">Cambios en movimientos</h2>
-        <p className="mt-2 text-sm text-orbita-secondary">
-          Registros de actualización y borrado en <code className="text-xs">orbita_finance_transactions</code>{" "}
-          del periodo activo (UTC), filtrados por tu hogar vía RLS.
+    <div className="min-w-0 space-y-3 sm:space-y-4">
+      <Card className="min-w-0 p-3 sm:p-5">
+        <h2 className="m-0 text-base font-semibold text-orbita-primary sm:text-lg">Auditoría de movimientos</h2>
+        <p className="mt-1 hidden text-sm text-orbita-secondary sm:block">
+          Altas/bajas en <code className="text-xs">orbita_finance_transactions</code> del periodo (RLS por hogar).
         </p>
       </Card>
 

@@ -1487,7 +1487,7 @@ export default function CuentasClient() {
   }
 
   return (
-    <div className="min-w-0 space-y-8 pb-10 sm:space-y-10">
+    <div className="min-w-0 space-y-6 pb-10 sm:space-y-8">
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
@@ -1513,26 +1513,20 @@ export default function CuentasClient() {
                 {cuentasReorderMode ? "Listo" : "Orden"}
               </button>
             </div>
-            <p className="mt-1 text-sm text-orbita-secondary sm:text-[15px]">
-              Liquidez, exposición y disponibilidad por cuenta
+            <p className="mt-1 hidden text-sm text-orbita-secondary sm:block sm:text-[15px]">
+              Liquidez y disponibilidad por cuenta
             </p>
             {cuentasReorderMode ? (
               <div
-                className="mt-4 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt/55 p-4 text-sm shadow-sm"
+                className="mt-3 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt/55 p-3 text-sm shadow-sm sm:mt-4 sm:p-4"
                 role="region"
-                aria-label="Contexto capital operativo"
+                aria-label="Modo reordenar bloques"
               >
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">Capital</p>
-                <p className="mt-1 text-base font-semibold tracking-tight text-orbita-primary">Capital operativo</p>
-                <p className="mt-1 text-xs leading-relaxed text-orbita-secondary">
-                  Misma visión que el resto del módulo: liquidez, quema y decisiones según el periodo activo.
-                </p>
-                <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
-                  Periodo activo{" "}
-                  <span className="tabular-nums text-orbita-primary">{month ? month : "—"}</span>
-                </p>
-                <p className="mt-2 text-xs text-orbita-secondary">
-                  Arrastra la barra ⋮⋮ de cada bloque para subirlo o bajarlo. El orden se guarda en este dispositivo.
+                <p className="m-0 text-xs leading-relaxed text-orbita-secondary">
+                  <span className="font-medium text-orbita-primary">Periodo:</span>{" "}
+                  <span className="tabular-nums">{month ? month : "—"}</span>
+                  {" · "}
+                  Arrastra ⋮⋮ para ordenar (guardado en este dispositivo).
                 </p>
               </div>
             ) : null}

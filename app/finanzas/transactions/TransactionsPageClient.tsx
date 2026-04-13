@@ -509,10 +509,12 @@ export default function TransactionsPageClient() {
   return (
     <div className="min-w-0 space-y-5 sm:space-y-7">
       <Card className="min-w-0 overflow-hidden p-0">
-        <div className="border-b border-orbita-border/70 bg-orbita-surface-alt/30 px-4 py-3 sm:px-5">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">Filtros y datos</p>
-          <p className="mt-0.5 text-[11px] leading-snug text-orbita-secondary/90">
-            Ajusta la vista del periodo; importa o exporta sin salir de la pantalla.
+        <div className="border-b border-orbita-border/70 bg-orbita-surface-alt/30 px-4 py-2.5 sm:px-5">
+          <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">
+            Filtros
+            <span className="ml-2 hidden font-normal normal-case tracking-normal text-orbita-secondary/85 sm:inline">
+              · Importar / exportar abajo
+            </span>
           </p>
         </div>
         <div className="grid gap-5 px-4 py-4 sm:gap-6 sm:px-5 sm:py-5">
