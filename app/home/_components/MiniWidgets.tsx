@@ -131,16 +131,25 @@ export function MiniWidgets({ decisions, agendaToday, habits }: MiniWidgetsProps
               </span>
               <div>
                 <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Hábitos clave</p>
-                <p className="text-sm text-orbita-primary/90 font-medium">Tendencia semanal</p>
+                <p className="text-sm text-orbita-primary/90 font-medium">Cómo vas esta semana</p>
               </div>
             </div>
 
-            <div className="mt-4 grid gap-3">
+            <p className="mt-2 text-[11px] leading-snug text-orbita-secondary">
+              Cada barra es un día (L–D). Altura ≈ cumplimiento del hábito (0–100).
+            </p>
+
+            <div className="mt-3 grid gap-3">
               {habits.slice(0, 3).map((h) => (
-                <div key={h.id} className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                <div key={h.id} className="rounded-2xl border border-orbita-border/60 bg-orbita-surface-alt/40 p-3">
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-semibold text-orbita-primary">{h.name}</p>
-                    <span className="text-xs text-orbita-secondary">7D</span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold leading-snug text-orbita-primary">{h.name}</p>
+                      <p className="mt-0.5 text-[11px] text-orbita-secondary">Ventana: últimos 7 días</p>
+                    </div>
+                    <span className="shrink-0 rounded-md border border-orbita-border/70 bg-orbita-surface px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-orbita-secondary">
+                      7D
+                    </span>
                   </div>
                   <div className="mt-3 h-16">
                     <ClientOnly
@@ -157,7 +166,7 @@ export function MiniWidgets({ decisions, agendaToday, habits }: MiniWidgetsProps
                               color: "rgba(255,255,255,0.92)",
                               fontSize: 12,
                             }}
-                            formatter={(value) => [`${value}%`, "Score"]}
+                            formatter={(value) => [`${Math.round(Number(value))}%`, "Cumplimiento"]}
                           />
                           <Bar dataKey="score" fill="rgba(52, 211, 153, 0.35)" radius={[6, 6, 0, 0]} />
                         </BarChart>

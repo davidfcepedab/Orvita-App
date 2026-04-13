@@ -16,12 +16,22 @@ type CapitalOperativoPanelProps = {
 export function CapitalOperativoPanel({ model, formatCOP }: CapitalOperativoPanelProps) {
   const { time, energy, money } = model.capital
 
-  const timeUsedPct = Math.round((time.consumedHours / Math.max(1, time.availableHours)) * 100)
+  /** Cupo de horas del día (denominador del % usado en API). */
+  const dayCapacityH = Math.max(0.25, time.availableHours)
+  const timeUsedPct = Math.min(100, Math.round((time.consumedHours / dayCapacityH) * 100))
+  const hoursLeftToday = Math.max(0, dayCapacityH - time.consumedHours)
+  const focusPctRounded = Math.round(time.strategicFocusPct)
 
   const energySeries = energy.trend7d.map((v, i) => ({ i, v }))
+  const burnoutRounded = Math.round(energy.burnoutRiskPct)
+  const trendDelta = Math.round((energy.trend7d[6] ?? 0) - (energy.trend7d[0] ?? 0))
 
   const netTone =
-    money.netMonthlyCOP >= 0 ? "text-emerald-200" : money.netMonthlyCOP <= -2000000 ? "text-rose-200" : "text-amber-200"
+    money.netMonthlyCOP >= 0
+      ? "text-emerald-600 dark:text-emerald-400"
+      : money.netMonthlyCOP <= -2000000
+        ? "text-rose-600 dark:text-rose-400"
+        : "text-amber-700 dark:text-amber-300"
 
   const tileIconBase = "h-9 w-9 rounded-xl border flex items-center justify-center"
 
@@ -56,33 +66,43 @@ export function CapitalOperativoPanel({ model, formatCOP }: CapitalOperativoPane
                   </span>
                   <div>
                     <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Tiempo</p>
-                    <p className="text-sm text-orbita-primary/90 font-medium">Lo que te queda hoy</p>
+                    <p className="text-sm text-orbita-primary/90 font-medium">Horas del día</p>
                   </div>
                 </div>
               </div>
-              <span className="text-xs text-orbita-secondary">{timeUsedPct}% usado</span>
+              <span className="shrink-0 rounded-full border border-orbita-border/80 bg-orbita-surface-alt/80 px-2 py-0.5 text-[11px] font-medium tabular-nums text-orbita-secondary">
+                {timeUsedPct}% ocupado
+              </span>
             </div>
 
             <div className="mt-4 flex-1 flex flex-col">
-              <div className="flex items-baseline justify-between">
-                <p className="text-2xl font-semibold text-orbita-primary">
-                  {time.availableHours.toFixed(1)}h <span className="text-orbita-secondary text-sm font-medium">hoy</span>
-                </p>
-                <p className="text-sm text-orbita-secondary">
-                  Consumidas: <span className="text-orbita-primary/90 font-semibold">{time.consumedHours.toFixed(1)}h</span>
-                </p>
-              </div>
-              <div className="mt-3 h-2 rounded-full bg-white/5 overflow-hidden border border-white/10">
+              <p className="text-3xl font-semibold tabular-nums text-orbita-primary">
+                {hoursLeftToday.toFixed(1)} h
+                <span className="ml-1.5 text-base font-medium text-orbita-secondary">libres ahora</span>
+              </p>
+              <p className="mt-1 text-sm text-orbita-secondary">
+                Cupo hoy: <span className="font-semibold text-orbita-primary/90">{dayCapacityH.toFixed(1)} h</span>
+                {" · "}
+                Ya usaste <span className="font-semibold text-orbita-primary/90">{time.consumedHours.toFixed(1)} h</span>
+              </p>
+              <p className="mt-2 text-[11px] leading-snug text-orbita-secondary">
+                La barra es cuánto del cupo ya está consumido (trabajo, reuniones, etc.).
+              </p>
+              <div className="mt-2 h-2 overflow-hidden rounded-full border border-orbita-border/60 bg-orbita-surface-alt">
                 <div
-                  className="h-full bg-gradient-to-r from-sky-400/70 to-sky-200/40"
+                  className="h-full bg-gradient-to-r from-sky-500/80 to-sky-400/50 dark:from-sky-400/70 dark:to-sky-300/40"
                   style={{ width: `${Math.min(100, Math.max(0, timeUsedPct))}%` }}
                 />
               </div>
-              <div className="mt-3 flex items-center justify-between">
+              <div className="mt-4 space-y-1.5 border-t border-orbita-border/50 pt-3">
                 <p className="text-xs text-orbita-secondary">
-                  Enfoque clave: <span className="text-orbita-primary/90 font-semibold">{time.strategicFocusPct}%</span>
+                  <span className="font-medium text-orbita-primary">Trabajo estratégico</span> ·{" "}
+                  <span className="tabular-nums font-semibold text-orbita-primary/90">{focusPctRounded}%</span> del día
+                  (estimado)
                 </p>
-                <p className="text-xs text-orbita-secondary">Protege 1 bloque sin interrupciones.</p>
+                <p className="text-[11px] leading-snug text-orbita-secondary">
+                  Consejo: reserva un bloque sin interrupciones para subir ese %.
+                </p>
               </div>
             </div>
           </Card>
@@ -105,19 +125,31 @@ export function CapitalOperativoPanel({ model, formatCOP }: CapitalOperativoPane
                 </span>
                 <div>
                   <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Energía</p>
-                  <p className="text-sm text-orbita-primary/90 font-medium">Cómo vienes esta semana</p>
+                  <p className="text-sm text-orbita-primary/90 font-medium">Nivel esta semana</p>
                 </div>
               </div>
-              <span className="text-xs text-orbita-secondary">Burnout {energy.burnoutRiskPct}%</span>
+              <span
+                className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-medium tabular-nums ${
+                  burnoutRounded >= 60
+                    ? "border-rose-300/80 bg-rose-50 text-rose-800 dark:border-rose-500/40 dark:bg-rose-950/40 dark:text-rose-200"
+                    : burnoutRounded >= 35
+                      ? "border-amber-300/80 bg-amber-50 text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/30 dark:text-amber-100"
+                      : "border-orbita-border/80 bg-orbita-surface-alt/80 text-orbita-secondary"
+                }`}
+                title="Probabilidad de agotamiento (modelo)"
+              >
+                Riesgo burnout {burnoutRounded}%
+              </span>
             </div>
 
             <div className="mt-4 flex-1 flex items-end justify-between gap-3">
               <div>
-                <p className="text-2xl font-semibold text-orbita-primary">
-                  {energy.currentLevelPct}% <span className="text-orbita-secondary text-sm font-medium">actual</span>
+                <p className="text-2xl font-semibold tabular-nums text-orbita-primary">
+                  {Math.round(energy.currentLevelPct)}%
+                  <span className="ml-1.5 text-base font-medium text-orbita-secondary">de tu energía hoy</span>
                 </p>
-                <p className="mt-1 text-xs text-orbita-secondary">
-                  Si baja 5 días seguidos, toca soltar una carga y recuperar.
+                <p className="mt-1 text-xs leading-snug text-orbita-secondary">
+                  Si este nivel cae 5 días seguidos, conviene bajar carga y recuperar.
                 </p>
               </div>
               <div className="h-14 w-28">
@@ -144,12 +176,16 @@ export function CapitalOperativoPanel({ model, formatCOP }: CapitalOperativoPane
               </div>
             </div>
 
-            <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-3">
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-orbita-border/50 pt-3">
               <div className="flex items-center gap-2 text-xs text-orbita-secondary">
-                <Activity className="h-4 w-4 text-amber-200" />
-                Tendencia: {Math.round(energy.trend7d[6] - energy.trend7d[0]) >= 0 ? "sube" : "cae"} en 7D
+                <Activity className="h-4 w-4 text-amber-600 dark:text-amber-300" aria-hidden />
+                <span>
+                  Últimos 7 días:{" "}
+                  <span className="font-medium text-orbita-primary">
+                    {trendDelta >= 0 ? "sube" : "baja"} {Math.abs(trendDelta)} pts
+                  </span>
+                </span>
               </div>
-              <p className="text-xs text-orbita-secondary">Riesgo: {energy.burnoutRiskPct}%</p>
             </div>
           </Card>
         </motion.div>
@@ -171,31 +207,36 @@ export function CapitalOperativoPanel({ model, formatCOP }: CapitalOperativoPane
                 </span>
                 <div>
                   <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Dinero</p>
-                  <p className="text-sm text-orbita-primary/90 font-medium">Qué tan apretado está</p>
+                  <p className="text-sm text-orbita-primary/90 font-medium">Liquidez y presión</p>
                 </div>
               </div>
-              <span className="text-xs text-orbita-secondary">Runway {money.runwayDays} días</span>
+              <span className="shrink-0 rounded-full border border-orbita-border/80 bg-orbita-surface-alt/80 px-2 py-0.5 text-[11px] font-medium tabular-nums text-orbita-secondary">
+                Runway ~{money.runwayDays} d
+              </span>
             </div>
 
             <div className="mt-4 flex-1 flex flex-col">
-              <p className={["text-2xl font-semibold", netTone].join(" ")}>
-                {formatCOP(money.netMonthlyCOP)}
-                <span className="ml-2 text-orbita-secondary text-sm font-medium">/ mes</span>
+              <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-orbita-secondary">
+                Flujo neto mensual (estimado)
               </p>
-              <p className="mt-1 text-xs text-orbita-secondary">
-                Presión financiera: <span className="text-orbita-primary/90 font-semibold">{money.financialPressurePct}%</span>
+              <p className={["mt-1 text-2xl font-semibold tabular-nums", netTone].join(" ")}>{formatCOP(money.netMonthlyCOP)}</p>
+              <p className="mt-2 text-xs text-orbita-secondary">
+                Presión sobre ingresos:{" "}
+                <span className="tabular-nums font-semibold text-orbita-primary">{Math.round(money.financialPressurePct)}%</span>
               </p>
 
-              <div className="mt-3 h-2 rounded-full bg-white/5 overflow-hidden border border-white/10">
+              <div className="mt-3 h-2 overflow-hidden rounded-full border border-orbita-border/60 bg-orbita-surface-alt">
                 <div
-                  className="h-full bg-gradient-to-r from-rose-400/70 via-amber-300/40 to-emerald-400/30"
+                  className="h-full bg-gradient-to-r from-rose-500/70 via-amber-400/50 to-emerald-500/40"
                   style={{ width: `${Math.min(100, Math.max(0, money.financialPressurePct))}%` }}
                 />
               </div>
 
-              <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3">
-                <p className="text-xs text-orbita-secondary">Si quedan &lt; 21 días: toca modo caja.</p>
-                <p className="text-xs text-orbita-secondary">Paso: cobro + recorte mínimo.</p>
+              <div className="mt-3 space-y-1 border-t border-orbita-border/50 pt-3 text-[11px] leading-snug text-orbita-secondary">
+                <p>
+                  <span className="font-medium text-orbita-primary">Si el runway cae por debajo de ~21 días</span>, activa
+                  modo caja: cobros primero y recorte mínimo de gasto.
+                </p>
               </div>
             </div>
           </Card>
