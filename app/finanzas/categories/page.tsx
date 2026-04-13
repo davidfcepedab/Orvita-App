@@ -574,9 +574,22 @@ export default function FinanzasCategories() {
             </>
           )}
 
-          <Card className="p-4 sm:p-6">
-            <h2 className="text-sm font-semibold text-orbita-primary">Catálogo de tu hogar</h2>
-            <p className="mt-1 text-xs leading-relaxed text-orbita-secondary">
+          <Card className="overflow-hidden p-0">
+            <details className="group">
+              <summary className="flex cursor-pointer list-none items-start justify-between gap-3 px-4 py-3 sm:px-5 sm:py-3.5 [&::-webkit-details-marker]:hidden">
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-sm font-semibold text-orbita-primary">Catálogo de tu hogar</h2>
+                  <p className="mt-0.5 text-[11px] leading-snug text-orbita-secondary">
+                    Sobrescrituras por subcategoría y tipo de gasto — desplegar para ver tabla y formulario.
+                  </p>
+                </div>
+                <ChevronDown
+                  className="mt-0.5 h-4 w-4 shrink-0 text-orbita-secondary transition-transform duration-200 group-open:rotate-180"
+                  aria-hidden
+                />
+              </summary>
+              <div className="space-y-4 border-t border-orbita-border/70 bg-[color-mix(in_srgb,var(--color-surface-alt)_40%,var(--color-surface))] px-4 pb-4 pt-3 sm:px-5 sm:pb-5">
+            <p className="text-xs leading-relaxed text-orbita-secondary">
               Las filas globales (plantilla) no se editan aquí: crea una fila con el mismo nombre de subcategoría para
               tu hogar y elige <span className="font-medium">expense_type</span>. Usa{" "}
               <span className={`inline ${sheetTipoPillClass("modulo_finanzas")} px-1 py-0`}>Módulo finanzas</span> para
@@ -689,6 +702,8 @@ export default function FinanzasCategories() {
                 </button>
               </div>
             </form>
+              </div>
+            </details>
           </Card>
         </div>
       )}
