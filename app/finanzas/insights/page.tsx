@@ -111,7 +111,7 @@ export default function FinanzasInsights() {
   if (loading) {
     return (
       <div className="p-6 text-center text-orbita-secondary">
-        <p>Cargando insights...</p>
+        <p>Cargando perspectivas...</p>
       </div>
     )
   }
@@ -126,7 +126,7 @@ export default function FinanzasInsights() {
           color: "var(--color-accent-danger)",
         }}
       >
-        <p className="font-semibold">Error al cargar insights</p>
+        <p className="font-semibold">Error al cargar perspectivas</p>
         <p className="mt-1 text-sm opacity-90">{error}</p>
       </div>
     )
@@ -135,7 +135,7 @@ export default function FinanzasInsights() {
   if (!data) {
     return (
       <div className="space-y-2 p-6 text-center text-orbita-secondary">
-        <p>Sin insights disponibles para este período.</p>
+        <p>Sin datos de análisis para este periodo.</p>
         {notice && <p className="text-xs text-orbita-secondary">{notice}</p>}
       </div>
     )
@@ -159,7 +159,7 @@ export default function FinanzasInsights() {
     <div className="min-w-0 space-y-6 sm:space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-xs uppercase tracking-[0.18em] text-orbita-secondary">Insights</p>
+          <p className="text-xs uppercase tracking-[0.18em] text-orbita-secondary">Perspectivas</p>
           <p className="text-lg font-semibold text-orbita-primary">Lectura estratégica</p>
           <p className="mt-1 text-sm text-orbita-secondary">
             Señales de estabilidad, riesgo operativo y proyección táctica.

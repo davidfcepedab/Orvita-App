@@ -1,9 +1,12 @@
-import Combine
 import Foundation
 
-/// Resuelve `orvita://…` hacia rutas dentro de la web app.
-final class OrvitaWebRouter: ObservableObject {
-    @Published var targetURL: URL
+// MARK: - Deep links y rutas web
+
+/// Rutas resueltas hacia la web app. `@Observable` para integrarse con SwiftUI sin `ObservableObject`.
+@Observable
+final class OrvitaWebRouter {
+    /// URL del `WKWebView` compartido (Centro `/` y Tu día `/inicio` comparten instancia en split view).
+    var targetURL: URL
 
     init() {
         self.targetURL = OrvitaConfig.webBaseURL
@@ -17,7 +20,7 @@ final class OrvitaWebRouter: ObservableObject {
 
         switch host {
         case "home", "":
-            targetURL = OrvitaConfig.webBaseURL
+            loadHome()
         case "checkin":
             let fragment: String
             switch path {
@@ -36,11 +39,28 @@ final class OrvitaWebRouter: ObservableObject {
                 targetURL = u
             }
         default:
-            targetURL = OrvitaConfig.webBaseURL
+            loadHome()
         }
     }
 
     func loadHome() {
         targetURL = OrvitaConfig.webBaseURL
+    }
+
+    /// Módulo día / agenda / hábitos — ruta canónica en web: `/inicio`.
+    func loadInicio() {
+        targetURL = OrvitaConfig.webBaseURL.appendingPathComponent("inicio")
+    }
+
+    /// Sincroniza la URL con el panel del shell (sidebar / detalle).
+    func applyPane(_ pane: OrvitaPane) {
+        switch pane {
+        case .home:
+            loadHome()
+        case .inicio:
+            loadInicio()
+        case .capital:
+            break
+        }
     }
 }

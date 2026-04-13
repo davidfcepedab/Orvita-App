@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { StrategicHeader } from "@/app/home/_components/StrategicHeader"
 import { CriticalAlerts } from "@/app/home/_components/CriticalAlerts"
+import { HeroOperativoWidget } from "@/app/home/_components/HeroOperativoWidget"
 import { OperationalTodayWidget } from "@/app/home/_components/OperationalTodayWidget"
 import { CapitalOperativoPanel } from "@/app/home/_components/CapitalOperativoPanel"
 import { PredictiveStrategic } from "@/app/home/_components/PredictiveStrategic"
@@ -192,6 +193,8 @@ export default function HomePage() {
             pendingAlertId={pendingAlertId}
           />
         ) : null}
+
+        {model ? <HeroOperativoWidget model={model} /> : null}
 
         {model ? <OperationalTodayWidget /> : null}
 

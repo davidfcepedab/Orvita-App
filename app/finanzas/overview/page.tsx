@@ -376,10 +376,10 @@ export default function FinanzasOverview() {
                 accent: "var(--color-accent-primary)",
               },
               {
-                label: "Runway (superávit / gasto)",
+                label: "Cobertura (superávit ÷ gasto)",
                 value: runwayLabel,
                 sub: kpiHasSignal
-                  ? "Meses de superávit cubriendo el gasto operativo del mes"
+                  ? "Meses que cubrirían el gasto operativo con el flujo positivo del mes"
                   : "Sin superávit/gasto comparable este mes.",
                 accent: "var(--color-text-primary)",
               },

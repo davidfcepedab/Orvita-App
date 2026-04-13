@@ -24,8 +24,14 @@ export interface FinanceContextType {
 
 const FinanceContext = createContext<FinanceContextType | null>(null)
 
+function currentMonthYm(): string {
+  const today = new Date()
+  return today.toISOString().slice(0, 7)
+}
+
 export function FinanceProvider({ children }: { children: ReactNode }) {
-  const [month, setMonth] = useState<string>("")
+  /** Mes activo desde el primer render (evita `""` y peticiones duplicadas al hidratar). */
+  const [month, setMonth] = useState<string>(currentMonthYm)
   const [capitalDataEpoch, setCapitalDataEpoch] = useState(0)
   const [financeMeta, setFinanceMeta] = useState<FinanceModuleMeta | null>(null)
   const [financeMetaNotice, setFinanceMetaNotice] = useState<string | null>(null)
@@ -34,13 +40,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   const touchCapitalData = useCallback(() => {
     setCapitalDataEpoch((n) => n + 1)
-  }, [])
-
-  // Inicializar con el mes actual
-  useEffect(() => {
-    const today = new Date()
-    const currentMonth = today.toISOString().slice(0, 7) // Formato: YYYY-MM
-    setMonth(currentMonth)
   }, [])
 
   useEffect(() => {

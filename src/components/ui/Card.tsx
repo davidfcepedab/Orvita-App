@@ -16,7 +16,7 @@ export function Card({
   children,
   className,
   hover = false,
-  shadow = designTokens.elevation.card,
+  shadow = designTokens.elevation["arctic-soft"] ?? designTokens.elevation.card,
   hoverShadow = designTokens.elevation.hover,
   style,
 }: CardProps) {

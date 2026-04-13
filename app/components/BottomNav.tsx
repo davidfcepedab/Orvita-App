@@ -17,10 +17,7 @@ export default function BottomNav() {
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-[100] border-t border-[var(--color-border)] pb-[env(safe-area-inset-bottom,0px)] shadow-nav backdrop-blur-xl"
-      style={{
-        background: "color-mix(in srgb, var(--color-surface) 88%, transparent)",
-      }}
+      className="orbita-chrome-surface fixed bottom-0 left-0 right-0 z-[100] border-t border-[color-mix(in_srgb,var(--color-border)_80%,transparent)] pb-[env(safe-area-inset-bottom,0px)] shadow-nav"
     >
       <div className="mx-auto grid max-w-2xl grid-cols-5 gap-0.5 px-1 py-2 text-center text-[11px] leading-tight sm:gap-1 sm:px-3 sm:py-3 sm:text-xs sm:leading-normal">
 
@@ -41,15 +38,22 @@ export default function BottomNav() {
               key={tab.name}
               onClick={() => router.push(tab.route)}
               type="button"
-              className="flex min-h-[48px] flex-col items-center justify-center gap-0.5 rounded-[var(--radius-button)] transition active:opacity-80 sm:min-h-[52px] sm:gap-1"
+              className="flex min-h-[48px] flex-col items-center justify-center gap-0.5 rounded-[14px] transition active:opacity-85 sm:min-h-[52px] sm:gap-1"
               style={{
                 color: active ? tab.accent : "var(--color-text-secondary)",
                 backgroundColor: active
-                  ? "color-mix(in srgb, var(--color-surface-alt) 65%, var(--color-surface))"
+                  ? "color-mix(in srgb, var(--color-surface-alt) 82%, var(--color-surface))"
                   : "transparent",
+                boxShadow: active
+                  ? "inset 0 0 0 0.5px color-mix(in srgb, var(--color-border) 65%, transparent)"
+                  : "none",
               }}
             >
-              <Icon className="h-[18px] w-[18px] sm:h-4 sm:w-4" strokeWidth={active ? 2.25 : 2} aria-hidden />
+              <Icon
+                className="h-[20px] w-[20px] sm:h-[19px] sm:w-[19px]"
+                strokeWidth={active ? 2.4 : 2}
+                aria-hidden
+              />
               <span className={active ? "font-semibold" : "font-medium"}>{tab.name}</span>
             </button>
           )

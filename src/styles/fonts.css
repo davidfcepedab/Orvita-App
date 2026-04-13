@@ -1,0 +1,31 @@
+/**
+ * Órvita — tipografía
+ * Misma cadena que el scaffold tipo «Widget Design»: `fonts.css` → tokens globales.
+ * Referencia visual: jerarquía SF (rótulos en versalitas, métricas display densas, cuerpo legible).
+ */
+
+:root {
+  /* SF / sistema: prioridad Apple, fallback Windows/Android */
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+    "Helvetica Neue", "Segoe UI", sans-serif;
+  --font-display: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+    "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono",
+    monospace;
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --font-size-root: 16px;
+
+  /* Escala tipo dashboard / widget */
+  --tracking-overline: 0.14em;
+  --tracking-display-tight: -0.03em;
+  --text-hero-metric: clamp(1.85rem, 4.2vw, 2.45rem);
+}
+
+html {
+  font-size: var(--font-size-root);
+}

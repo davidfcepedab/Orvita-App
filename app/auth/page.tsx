@@ -151,7 +151,7 @@ export default function AuthPage() {
     event.preventDefault()
 
     if (isMock) {
-      window.location.href = "/hoy"
+      window.location.href = "/"
       return
     }
 
@@ -238,7 +238,7 @@ export default function AuthPage() {
       if (mode === "register") {
         window.location.href = "/household/invite"
       } else {
-        window.location.href = "/hoy"
+        window.location.href = "/"
       }
     } catch (err) {
       let message: string
@@ -292,7 +292,7 @@ export default function AuthPage() {
           <button
             type="button"
             onClick={() => {
-              window.location.href = "/hoy"
+              window.location.href = "/"
             }}
             className="w-full rounded-lg px-4 py-3 text-sm font-semibold text-[var(--color-background)] bg-[var(--color-text-primary)]"
           >

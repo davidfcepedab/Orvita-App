@@ -29,11 +29,7 @@ export default function proxy(req: NextRequest) {
   }
 
   if (isMock) {
-    if (pathname === "/") {
-      const url = req.nextUrl.clone()
-      url.pathname = "/hoy"
-      return NextResponse.redirect(url)
-    }
+    // `/` es el centro de control (Hero + Inicio); no redirigir a `/hoy` para que el mock vea la misma home.
     return NextResponse.next()
   }
 
@@ -42,7 +38,7 @@ export default function proxy(req: NextRequest) {
   if (pathname.startsWith("/auth")) {
     if (authed) {
       const url = req.nextUrl.clone()
-      url.pathname = "/hoy"
+      url.pathname = "/"
       return NextResponse.redirect(url)
     }
     return NextResponse.next()
@@ -56,13 +52,6 @@ export default function proxy(req: NextRequest) {
       return NextResponse.redirect(url)
     }
     return NextResponse.next()
-  }
-
-  // Alias para URLs antiguas/marketing: /inicio -> /
-  if (pathname === "/inicio") {
-    const url = req.nextUrl.clone()
-    url.pathname = "/"
-    return NextResponse.redirect(url, 308)
   }
 
   if (!authed) {

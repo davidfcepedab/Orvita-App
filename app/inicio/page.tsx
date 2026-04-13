@@ -1,6 +1,19 @@
-import { redirect } from "next/navigation"
+import HomeV3 from "@/app/components/orbita-v3/home/HomeV3"
+import HoyV3 from "@/app/components/orbita-v3/home/HoyV3"
+import AgendaV3 from "@/app/components/orbita-v3/agenda/AgendaV3"
+import HabitosV3 from "@/app/components/orbita-v3/habitos/HabitosV3"
 
-export default function InicioAliasPage() {
-  redirect("/")
+/**
+ * Vista “día / ritmo”: HomeV3, Hoy, agenda y hábitos.
+ * Ruta canónica acordada: `/inicio` (no usar `/operacional` en enlaces nuevos).
+ */
+export default function InicioPage() {
+  return (
+    <div className="space-y-16 pb-24">
+      <HomeV3 />
+      <HoyV3 />
+      <AgendaV3 />
+      <HabitosV3 />
+    </div>
+  )
 }
-

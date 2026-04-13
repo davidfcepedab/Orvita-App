@@ -29,10 +29,10 @@ export function CapitalOperativoPanel({ model, formatCOP }: CapitalOperativoPane
     <section className="mx-auto max-w-6xl px-4 mt-6">
       <div className="flex items-end justify-between gap-3">
         <div>
-          <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Capital operativo</p>
-          <h2 className="mt-1 text-lg font-semibold text-orbita-primary">Tus 3 palancas hoy</h2>
+          <p className="orvita-overline-caps">Desglose</p>
+          <h2 className="mt-1 text-lg font-semibold tracking-tight text-orbita-primary">Las tres palancas</h2>
           <p className="mt-1 text-sm text-orbita-secondary">
-            Son tus tres recursos. Si uno cae, todo se siente más pesado.
+            Tiempo, energía y dinero — si uno cae, el sistema entero se nota.
           </p>
         </div>
       </div>

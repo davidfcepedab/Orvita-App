@@ -1520,12 +1520,12 @@ export default function CuentasClient() {
               <div
                 className="mt-4 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt/55 p-4 text-sm shadow-sm"
                 role="region"
-                aria-label="Contexto Capital Operations"
+                aria-label="Contexto capital operativo"
               >
                 <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">Capital</p>
-                <p className="mt-1 text-base font-semibold tracking-tight text-orbita-primary">Capital Operations</p>
+                <p className="mt-1 text-base font-semibold tracking-tight text-orbita-primary">Capital operativo</p>
                 <p className="mt-1 text-xs leading-relaxed text-orbita-secondary">
-                  Liquidity flow, burn rate, and strategic financial decisions.
+                  Misma visión que el resto del módulo: liquidez, quema y decisiones según el periodo activo.
                 </p>
                 <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
                   Periodo activo{" "}

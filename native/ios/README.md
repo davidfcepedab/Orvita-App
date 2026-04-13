@@ -1,6 +1,22 @@
-# Órvita — shell iOS (WKWebView)
+# Órvita — shell iOS (WKWebView + SwiftUI)
 
-Código base para un contenedor nativo mínimo que abre la web en pantalla completa y admite deep links `orvita://`.
+Contenedor nativo que envuelve la web, admite deep links `orvita://` e incluye una **vista de capital operativo** con **Swift Charts** (datos demo hasta conectar API o bridge).
+
+Código Swift nativo (SwiftUI + WKWebView) vive en **`OrvitaMobile/AppleShell/`** para separarlo del icono y del futuro proyecto Xcode; la web sigue en Vercel.
+
+## Arquitectura (2025–2026)
+
+- **`OrvitaRootView`**: iPhone → `TabView` (Centro `/` + Capital nativo); iPad/ancho regular → `NavigationSplitView` (Centro, Tu día `/inicio`, Capital) con **un solo** `WKWebView` para `/` y `/inicio` (misma sesión, distinta URL).
+- **`OrvitaWebRouter`**: `@Observable`, sincroniza URL con el panel seleccionado.
+- **`OperationalCapitalOverviewView`**: métricas y gráficos nativos (`Charts`) alineados al modelo mental del dashboard web.
+
+### Comportamiento seguro (WKWebView)
+
+- **iPhone**: la URL de la web **no** se fuerza al cambiar de pestaña Capital → Centro (se preserva scroll y navegación). Centro / Tu día (`/inicio`) explícitos siguen en el menú **Secciones**.
+- **iPad (sidebar)**: solo al alternar **Centro ↔ Tu día** se llama a `loadHome()` / `loadInicio()`. Pasar por **Capital** no recarga la web.
+- **Multiventana / ancho compacto**: si el panel lateral quedaba en Tu día y pasas a layout compacto, la selección vuelve a Centro y la URL a home para no desincronizar el `TabView`.
+
+Añade al target Xcode todos los `.swift` de `OrvitaMobile/AppleShell/` (incluidos los nuevos).
 
 ## Requisitos
 
@@ -11,7 +27,7 @@ Código base para un contenedor nativo mínimo que abre la web en pantalla compl
 
 1. **File → New → Project → App** (iOS).
 2. Nombre: `OrvitaMobile`, Interface: **SwiftUI**, Language: **Swift**.
-3. Arrastra los archivos de `native/ios/OrvitaMobile/*.swift` al target y marca **Copy items if needed** y el target `OrvitaMobile`.
+3. Arrastra los archivos de `native/ios/OrvitaMobile/AppleShell/*.swift` al target y marca **Copy items if needed** y el target `OrvitaMobile`.
 
 ## URL base (producción / preview)
 

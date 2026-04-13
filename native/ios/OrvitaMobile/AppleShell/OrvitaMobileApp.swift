@@ -2,12 +2,14 @@ import SwiftUI
 
 @main
 struct OrvitaMobileApp: App {
-    @StateObject private var router = OrvitaWebRouter()
+    @State private var shell = OrvitaShellState()
+    @State private var router = OrvitaWebRouter()
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environmentObject(router)
+            OrvitaRootView()
+                .environment(shell)
+                .environment(router)
                 .onOpenURL { url in
                     router.handleOrvitaURL(url)
                 }

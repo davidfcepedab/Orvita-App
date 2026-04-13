@@ -35,7 +35,7 @@ export default function V3Shell({ children }: { children: React.ReactNode }) {
     { path: "/", icon: LayoutDashboard, label: "Control" },
     { path: "/hoy", icon: Target, label: "Hoy" },
     { path: "/agenda", icon: Calendar, label: "Agenda" },
-    { path: "/habitos", icon: Activity, label: "Habitos" },
+    { path: "/habitos", icon: Activity, label: "Hábitos" },
     { path: "/salud", icon: HeartPulse, label: "Salud" },
     { path: "/finanzas/overview", icon: Landmark, label: "Finanzas" },
     { path: "/profesional", icon: BriefcaseBusiness, label: "Coach" },
@@ -59,7 +59,7 @@ export default function V3Shell({ children }: { children: React.ReactNode }) {
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-xs uppercase tracking-[0.22em]" style={{ color: theme.textMuted }}>
-                Orvita V3
+                Órvita V3
               </p>
               <h1 className="text-xl tracking-tight">Strategic Operating System</h1>
             </div>

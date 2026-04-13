@@ -1,38 +1,43 @@
+@import "../src/styles/fonts.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --color-background: #F4F7F9;
-  --color-surface: #FFFFFF;
-  --color-surface-alt: #EDF1F5;
-  --color-border: #E2E8F0;
-  --color-text-primary: #1E293B;
-  --color-text-secondary: #64748B;
-  --color-accent-primary: #6366F1;
-  --color-accent-health: #10B981;
-  --color-accent-finance: #38BDF8;
-  --color-accent-agenda: #6366F1;
-  --color-accent-warning: #F97316;
-  --color-accent-danger: #EF4444;
+  /* Fondo “grouped” (estilo iOS) + tarjetas elevadas */
+  --color-background: #f2f2f7;
+  --color-surface: #ffffff;
+  --color-surface-alt: #e9eef5;
+  --color-border: #d1d5db;
+  --color-text-primary: #1c1c1e;
+  --color-text-secondary: #636366;
+  --color-accent-primary: #0d9488;
+  --color-accent-health: #0f9f7a;
+  --color-accent-finance: #0ea5e9;
+  --color-accent-agenda: #6366f1;
+  --color-accent-warning: #f97316;
+  --color-accent-danger: #ef4444;
   /* Agenda: tipo de tarea + Google (Arctic Zen) */
   --agenda-personal: #0ea5e9;
   --agenda-received: #ea580c;
   --agenda-assigned: #059669;
   --agenda-calendar: #7c3aed;
   --agenda-reminder: #d97706;
-  --radius-card: 16px;
-  --radius-button: 10px;
+  --radius-card: 14px;
+  --radius-button: 12px;
   --spacing-xs: 4px;
   --spacing-sm: 8px;
   --spacing-md: 16px;
   --spacing-lg: 24px;
   --spacing-xl: 32px;
   --spacing-2xl: 48px;
-  --shadow-card: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.02);
-  --shadow-hover: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.03);
-  --shadow-nav: 0 -8px 28px color-mix(in srgb, var(--color-text-primary) 6%, transparent);
+  /* Elevación suave (HIG: sombra casi imperceptible + borde hairline) */
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(15, 23, 42, 0.06);
+  --shadow-hover: 0 4px 12px rgba(15, 23, 42, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-nav: 0 -1px 0 color-mix(in srgb, var(--color-border) 80%, transparent),
+    0 -12px 32px color-mix(in srgb, var(--color-text-primary) 5%, transparent);
+  --chrome-blur: saturate(180%) blur(20px);
   --layout-padding: var(--spacing-xl);
   --layout-gap: var(--spacing-xl);
   /* Agenda unificada: capas suaves sin blanco puro (#fff) */
@@ -152,6 +157,45 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "kern" 1, "liga" 1;
+}
+
+/* Capa ambiental (HIG: profundidad sin ruido; respeta tokens por tema) */
+body.orbita-app-root {
+  background-color: var(--color-background);
+  background-image: radial-gradient(
+      ellipse 130% 85% at 50% -32%,
+      color-mix(in srgb, var(--color-accent-primary) 12%, transparent),
+      transparent 58%
+    ),
+    radial-gradient(
+      ellipse 70% 42% at 100% -5%,
+      color-mix(in srgb, var(--color-accent-finance) 10%, transparent),
+      transparent 50%
+    );
+  background-attachment: fixed;
+}
+
+[data-theme="carbon"] body.orbita-app-root,
+[data-theme="midnight"] body.orbita-app-root {
+  background-image: radial-gradient(
+      ellipse 120% 72% at 50% -20%,
+      color-mix(in srgb, var(--color-accent-primary) 24%, transparent),
+      transparent 56%
+    ),
+    radial-gradient(
+      ellipse 55% 36% at 6% 6%,
+      color-mix(in srgb, var(--color-accent-health) 14%, transparent),
+      transparent 48%
+    );
+}
+
+[data-theme="sand"] body.orbita-app-root {
+  background-image: radial-gradient(
+    ellipse 125% 80% at 50% -28%,
+    color-mix(in srgb, var(--color-accent-primary) 8%, transparent),
+    transparent 58%
+  );
 }
 
 /* ===================================================== */
@@ -175,9 +219,9 @@ body {
   transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 
-/* Micro-interacción sutil */
+/* Micro-interacción sutil (HIG: casi estático; menos “salto” que hover web genérico) */
 .card:hover {
-  transform: translateY(-2px);
+  transform: translateY(-1px);
   box-shadow: var(--shadow-hover);
 }
 
@@ -241,4 +285,50 @@ body {
 :where(button, a, input, select, textarea, [role="button"], [role="tab"]) {
   transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease,
     box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+/* ===================================================== */
+/* Utilidades HIG (jerarquía + listados)                  */
+/* ===================================================== */
+
+.orbita-large-title {
+  font-size: clamp(1.35rem, 2.8vw, 1.75rem);
+  font-weight: 600;
+  letter-spacing: -0.022em;
+  line-height: 1.2;
+  color: var(--color-text-primary);
+}
+
+/* Órvita — utilidades alineadas al sistema SF (rótulos / métricas) */
+.orvita-overline-caps {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--tracking-overline);
+  line-height: 1.25;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.orvita-metric-hero {
+  font-family: var(--font-display);
+  font-size: var(--text-hero-metric);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--tracking-display-tight);
+  line-height: 1.05;
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.orbita-footnote {
+  font-size: 0.8125rem;
+  line-height: 1.38;
+  letter-spacing: -0.01em;
+  color: var(--color-text-secondary);
+}
+
+.orbita-chrome-surface {
+  background: color-mix(in srgb, var(--color-surface) 78%, transparent);
+  backdrop-filter: var(--chrome-blur);
+  -webkit-backdrop-filter: var(--chrome-blur);
 }

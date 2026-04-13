@@ -46,8 +46,11 @@ export function StrategicHeader({ model, onGenerateAi, isGenerating }: Strategic
               {parts.weekday} · {parts.day} · {model.user.city}
             </motion.p>
             <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <h1 className="text-[22px] sm:text-[26px] font-semibold text-orbita-primary">
-                Órbita — Centro de Control
+              <h1
+                className="text-[22px] sm:text-[26px] font-semibold tracking-tight text-orbita-primary"
+                style={{ fontFamily: "var(--font-display)" }}
+              >
+                Órvita — Centro de Control
               </h1>
               <p className="text-sm text-orbita-secondary">
                 <span className="text-orbita-primary/90 font-medium">

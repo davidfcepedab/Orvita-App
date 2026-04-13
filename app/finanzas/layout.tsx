@@ -26,25 +26,25 @@ function FinanzasLayoutContent({
   const { month, setMonth } = finance
 
   const tabs = [
-    { name: "Overview", path: "/finanzas/overview" },
+    { name: "Resumen", path: "/finanzas/overview" },
     { name: "Movimientos", path: "/finanzas/transactions" },
     { name: "Categorías", path: "/finanzas/categories" },
     { name: "Cuentas", path: "/finanzas/cuentas" },
-    { name: "Insights", path: "/finanzas/insights" },
+    { name: "Perspectivas", path: "/finanzas/insights" },
     { name: "Auditoría", path: "/finanzas/audit" },
-  ]
+  ] as const
 
   return (
     <div className="min-w-0 max-w-full space-y-4 sm:space-y-6">
-      <Card className="min-w-0 p-3 sm:p-8">
+      <Card className="min-w-0 border-[color-mix(in_srgb,var(--color-border)_70%,transparent)] p-4 shadow-[var(--shadow-card)] sm:p-8">
         <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-6">
           <div className="min-w-0 max-w-full">
-            <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Capital</p>
-            <h1 className="mt-2 break-words text-xl font-semibold text-orbita-primary sm:text-2xl">
-              Capital Operations
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-orbita-secondary">Capital</p>
+            <h1 className="orbita-large-title mt-2 break-words text-orbita-primary">
+              Capital operativo
             </h1>
-            <p className="mt-2 break-words text-sm leading-snug text-orbita-secondary [overflow-wrap:anywhere]">
-              Liquidity flow, burn rate, and strategic financial decisions.
+            <p className="orbita-footnote mt-2 max-w-prose break-words [overflow-wrap:anywhere]">
+              Liquidez, quema mensual y decisiones con contexto — siempre respecto al periodo que eliges arriba.
             </p>
           </div>
           <div className="flex w-full min-w-0 shrink-0 flex-col gap-2 sm:w-auto sm:max-w-[min(100%,20rem)] sm:flex-row sm:items-stretch sm:gap-3">
@@ -65,24 +65,30 @@ function FinanzasLayoutContent({
       </Card>
 
       <div
-        className="flex w-full min-w-0 max-w-full touch-pan-x snap-x snap-mandatory gap-1.5 overflow-x-auto overflow-y-hidden overscroll-x-contain rounded-full border border-orbita-border p-1.5 [-webkit-overflow-scrolling:touch] sm:flex-wrap sm:overflow-x-visible sm:snap-none"
+        className="flex w-full min-w-0 max-w-full touch-pan-x snap-x snap-mandatory gap-1 overflow-x-auto overflow-y-hidden overscroll-x-contain rounded-[13px] border border-[color-mix(in_srgb,var(--color-border)_75%,transparent)] p-1 [-webkit-overflow-scrolling:touch] sm:flex-wrap sm:overflow-x-visible sm:snap-none"
         style={{
-          background: "color-mix(in srgb, var(--color-surface) 82%, transparent)",
+          background: "color-mix(in srgb, var(--color-surface-alt) 55%, var(--color-background))",
+          boxShadow: "inset 0 1px 0 color-mix(in srgb, #fff 40%, transparent)",
         }}
+        role="tablist"
+        aria-label="Secciones de finanzas"
       >
         {tabs.map((tab) => {
-          const active = pathname === tab.path
+          const active = pathname === tab.path || pathname.startsWith(`${tab.path}/`)
 
           return (
             <button
-              key={tab.name}
+              key={tab.path}
+              type="button"
               onClick={() => router.push(tab.path)}
-              className={`min-h-[44px] flex-shrink-0 snap-start px-3 py-2.5 text-[11px] uppercase tracking-[0.14em] transition sm:min-h-0 sm:px-4 sm:py-2 sm:text-xs sm:tracking-[0.16em] rounded-full whitespace-nowrap ${
+              className={`min-h-[44px] flex-shrink-0 snap-start rounded-[10px] px-3.5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition sm:min-h-0 sm:px-4 sm:py-2 sm:text-[12px] sm:tracking-[0.14em] whitespace-nowrap ${
                 active
-                  ? "bg-orbita-surface text-orbita-primary shadow-card"
+                  ? "bg-orbita-surface text-orbita-primary shadow-[var(--shadow-card)]"
                   : "text-orbita-secondary hover:text-orbita-primary"
               }`}
               aria-current={active ? "page" : undefined}
+              role="tab"
+              aria-selected={active}
             >
               {tab.name}
             </button>

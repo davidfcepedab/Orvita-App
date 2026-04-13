@@ -164,33 +164,34 @@ export function AppShell({
   return (
     <div style={{ background: "var(--color-background)", minHeight: "100vh" }}>
       <header
+        className="orbita-chrome-surface border-b border-[color-mix(in_srgb,var(--color-border)_85%,transparent)]"
         style={{
-          borderBottom: "0.5px solid var(--color-border)",
-          background: "color-mix(in srgb, var(--color-surface) 95%, transparent)",
-          backdropFilter: "blur(6px)",
           position: "sticky",
           top: 0,
           zIndex: 20,
         }}
       >
-        <div className="mx-auto max-w-[1400px] px-4 py-3 sm:px-6 sm:py-4">
+        <div className="mx-auto max-w-[1400px] px-4 py-3.5 sm:px-6 sm:py-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-[var(--spacing-lg)]">
             <div className="flex min-w-0 flex-col gap-1">
               <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
                 <span
                   style={{
-                    width: "8px",
-                    height: "8px",
+                    width: "9px",
+                    height: "9px",
                     borderRadius: "999px",
-                    background: "var(--color-accent-health)",
+                    background:
+                      "linear-gradient(145deg, color-mix(in srgb, var(--color-accent-primary) 92%, #fff), var(--color-accent-primary))",
+                    boxShadow: "0 0 0 1px color-mix(in srgb, var(--color-accent-primary) 35%, transparent)",
                   }}
+                  aria-hidden
                 />
-                <h1 className="m-0 text-base font-medium sm:text-lg">Órvita</h1>
+                <h1 className="orbita-large-title m-0">Órvita</h1>
                 <span className="hidden text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-secondary)] sm:inline">
-                  Sistema Operativo Estratégico
+                  Sistema operativo estratégico
                 </span>
               </div>
-              <span className="pl-[18px] text-sm text-[var(--color-text-primary)]">
+              <span className="pl-[22px] text-[15px] leading-snug tracking-[-0.01em] text-[var(--color-text-primary)]">
                 {pathname.startsWith("/auth") && !isAppMockMode()
                   ? "Inicia sesión para continuar"
                   : userName == null
@@ -308,14 +309,11 @@ export function AppShell({
       </header>
 
       <nav
-        style={{
-          borderBottom: "0.5px solid var(--color-border)",
-          background: "var(--color-surface)",
-          overflowX: "auto",
-        }}
+        className="orbita-chrome-surface border-b border-[color-mix(in_srgb,var(--color-border)_85%,transparent)]"
+        style={{ overflowX: "auto" }}
       >
-        <div className="mx-auto max-w-[1400px] px-3 sm:px-4 md:px-6">
-          <div className="flex gap-[var(--spacing-xs)]">
+        <div className="mx-auto max-w-[1400px] px-3 py-1.5 sm:px-4 md:px-6">
+          <div className="flex min-h-[48px] items-stretch gap-1 sm:gap-1.5">
             {navItems.map((item) => {
               const saludActive =
                 pathname === "/health" ||
@@ -331,13 +329,18 @@ export function AppShell({
                 <Link
                   key={item.path}
                   href={item.path}
-                  className="flex items-center gap-2 whitespace-nowrap px-4 py-3 text-[13px] no-underline sm:px-5"
+                  className="flex min-h-[44px] items-center gap-2 whitespace-nowrap rounded-full px-3.5 py-2 text-[13px] font-medium no-underline transition-colors sm:px-4"
                   style={{
-                    borderBottom: isActive ? "2px solid var(--color-text-primary)" : "2px solid transparent",
                     color: isActive ? "var(--color-text-primary)" : "var(--color-text-secondary)",
+                    background: isActive
+                      ? "color-mix(in srgb, var(--color-surface-alt) 88%, var(--color-surface))"
+                      : "transparent",
+                    boxShadow: isActive
+                      ? "inset 0 0 0 0.5px color-mix(in srgb, var(--color-border) 70%, transparent)"
+                      : "none",
                   }}
                 >
-                  <Icon size={16} strokeWidth={isActive ? 2.25 : 2} aria-hidden />
+                  <Icon size={17} strokeWidth={isActive ? 2.35 : 2} aria-hidden />
                   {item.label}
                 </Link>
               )
