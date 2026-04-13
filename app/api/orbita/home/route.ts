@@ -108,34 +108,35 @@ type SmartActionStateRow = {
 export async function GET(req: NextRequest) {
   try {
     const now = new Date()
-
-    if (isAppMockMode()) {
-      const mock = getOrbitaHomeMock()
-      const points30d = genPredictive30d(now)
-      const score = Math.max(40, Math.min(92, points30d[0]?.flowScore ?? mock.flow.score))
-      const model: OrbitaHomeModel = {
-        ...mock,
-        flow: {
-          ...mock.flow,
-          score,
-          color: flowColor(score),
-          microcopy:
-            score >= 75
-              ? "Buen pulso. Mantén cierres y protege energía."
-              : score >= 55
-                ? "Estable, pero con presión latente. Reduce fricción."
-                : "Zona roja. Compra claridad: recorta, cierra, recupera.",
-        },
-        predictive: {
-          ...mock.predictive,
-          points30d,
-        },
-      }
-      return NextResponse.json({ success: true, source: "mock", data: model })
-    }
-
     const auth = await requireUser(req)
-    if (auth instanceof NextResponse) return auth
+
+    if (auth instanceof NextResponse) {
+      if (isAppMockMode()) {
+        const mock = getOrbitaHomeMock()
+        const points30d = genPredictive30d(now)
+        const score = Math.max(40, Math.min(92, points30d[0]?.flowScore ?? mock.flow.score))
+        const model: OrbitaHomeModel = {
+          ...mock,
+          flow: {
+            ...mock.flow,
+            score,
+            color: flowColor(score),
+            microcopy:
+              score >= 75
+                ? "Buen pulso. Mantén cierres y protege energía."
+                : score >= 55
+                  ? "Estable, pero con presión latente. Reduce fricción."
+                  : "Zona roja. Compra claridad: recorta, cierra, recupera.",
+          },
+          predictive: {
+            ...mock.predictive,
+            points30d,
+          },
+        }
+        return NextResponse.json({ success: true, source: "mock", data: model })
+      }
+      return auth
+    }
     const { supabase, userId } = auth
 
     const [{ data: userRes }, checkinRes, tasksRes, habitsRes, alertStatesRes, smartStatesRes] = await Promise.all([
