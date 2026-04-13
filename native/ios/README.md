@@ -4,6 +4,8 @@ Contenedor nativo que envuelve la web, admite deep links `orvita://` e incluye u
 
 Código Swift nativo (SwiftUI + WKWebView) vive en **`OrvitaMobile/AppleShell/`** para separarlo del icono y del futuro proyecto Xcode; la web sigue en Vercel.
 
+**WidgetKit / sesión compartida / contrato API:** ver **[WIDGET_EXTENSION.md](./WIDGET_EXTENSION.md)** (proyecto Xcode aparte, p. ej. `Orvita-Apple`).
+
 ## Arquitectura (2025–2026)
 
 - **`OrvitaRootView`**: iPhone → `TabView` (Centro `/` + Capital nativo); iPad/ancho regular → `NavigationSplitView` (Centro, Tu día `/inicio`, Capital) con **un solo** `WKWebView` para `/` y `/inicio` (misma sesión, distinta URL).
