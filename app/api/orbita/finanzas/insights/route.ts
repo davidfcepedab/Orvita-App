@@ -39,7 +39,12 @@ export async function GET(req: NextRequest) {
         slices.push({ month: mk, rows })
       }
       const data = buildInsightsFromHistory(slices)
-      return NextResponse.json({ success: true, source: "mock", data })
+      return NextResponse.json({
+        success: true,
+        source: "mock",
+        meta: { months: slices.length, throughMonth: month },
+        data,
+      })
     }
 
     if (!isSupabaseEnabled()) {
@@ -62,7 +67,11 @@ export async function GET(req: NextRequest) {
     }
 
     const data = buildInsightsFromHistory(slices)
-    return NextResponse.json({ success: true, data })
+    return NextResponse.json({
+      success: true,
+      meta: { months: slices.length, throughMonth: month },
+      data,
+    })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Error"
     console.error("INSIGHTS ERROR:", message)

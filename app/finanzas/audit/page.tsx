@@ -18,6 +18,14 @@ type AuditRow = {
   new_data?: unknown
 }
 
+function formatYmLongEs(ym: string) {
+  const [ys, ms] = ym.split("-")
+  const y = Number(ys)
+  const m = Number(ms)
+  if (!ys || !ms || !Number.isFinite(y) || !Number.isFinite(m)) return ym
+  return new Date(y, m - 1, 15).toLocaleDateString("es-CO", { month: "long", year: "numeric" })
+}
+
 export default function FinanzasAuditPage() {
   const finance = useFinance()
   const month = finance?.month ?? ""
@@ -71,11 +79,15 @@ export default function FinanzasAuditPage() {
     <div className={financeViewRootClass}>
       <FinanceViewHeader
         kicker="Trazabilidad"
-        title="Auditoría de movimientos"
-        subtitle={`Altas/bajas en orbita_finance_transactions del periodo (RLS por hogar).`}
+        title="Historial de cambios"
+        subtitle={
+          month
+            ? `Cambios registrados en movimientos de ${formatYmLongEs(month)}. Visible solo para tu hogar (Supabase + RLS).`
+            : "Elige un mes en la barra superior para filtrar el historial."
+        }
       />
 
-      {loading && <p className="text-sm text-orbita-secondary">Cargando…</p>}
+      {loading && <p className="text-sm text-orbita-secondary">Cargando eventos…</p>}
       {error && (
         <Card className="border border-red-200 p-4 text-sm text-red-600">
           {error}
@@ -83,7 +95,15 @@ export default function FinanzasAuditPage() {
       )}
 
       {!loading && !error && rows.length === 0 && (
-        <p className="text-sm text-orbita-secondary">Sin eventos de auditoría todavía.</p>
+        <Card className="border border-dashed border-orbita-border/80 bg-orbita-surface-alt/40 p-4 sm:p-5">
+          <p className="m-0 text-sm font-medium text-orbita-primary">Aún no hay eventos en este periodo</p>
+          <p className="mt-2 text-sm leading-relaxed text-orbita-secondary">
+            Aquí aparecen altas, ediciones y borrados sobre movimientos financieros cuando la app registra el cambio en
+            base de datos. Si acabas de empezar o no has editado movimientos en{" "}
+            <span className="font-medium text-orbita-primary">{month ? formatYmLongEs(month) : "este mes"}</span>, la
+            lista puede estar vacía.
+          </p>
+        </Card>
       )}
 
       {!loading && rows.length > 0 && (

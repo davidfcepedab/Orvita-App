@@ -513,30 +513,27 @@ export default function TransactionsPageClient() {
       <FinanceViewHeader
         kicker="Ledger"
         title="Movimientos"
-        subtitle="Filtra, importa o exporta sin salir de la pantalla."
+        subtitle="Filtra por cuenta y tipo; importación y exportación van al final de la página."
       />
 
       <Card className="min-w-0 overflow-hidden p-0">
-        <div className="border-b border-orbita-border/70 bg-orbita-surface-alt/35 px-3 py-2 sm:px-4">
+        <div className="border-b border-orbita-border/70 bg-orbita-surface-alt/35 px-3 py-1.5 sm:px-4">
           <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.13em] text-orbita-secondary">
-            Filtros
-            <span className="ml-2 hidden font-normal normal-case tracking-normal text-orbita-secondary/85 sm:inline">
-              · Importar / exportar abajo
-            </span>
+            Filtros del periodo
           </p>
         </div>
-        <div className="grid gap-4 px-3 py-3 sm:gap-5 sm:px-4 sm:py-4">
+        <div className="grid gap-2 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3">
           <div
-            className={`grid min-w-0 grid-cols-1 gap-3 sm:gap-4 ${supabaseEnabled ? "lg:grid-cols-12 lg:items-end lg:gap-x-4" : "lg:grid-cols-2 lg:items-end lg:gap-x-4"}`}
+            className={`grid min-w-0 grid-cols-1 items-end gap-2 sm:gap-3 ${supabaseEnabled ? "sm:grid-cols-2" : "sm:grid-cols-1"}`}
           >
             {supabaseEnabled ? (
-              <label className="grid min-w-0 gap-1.5 lg:col-span-5">
-                <span className="text-[11px] uppercase tracking-[0.14em] text-orbita-secondary">Cuenta (ledger)</span>
+              <label className="grid min-w-0 gap-1">
+                <span className="text-[10px] uppercase tracking-[0.12em] text-orbita-secondary">Cuenta</span>
                 <select
                   value={financeAccountId}
                   onChange={(e) => setFinanceAccountId(e.target.value)}
                   disabled={contentLoading}
-                  className="min-h-11 w-full min-w-0 rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface px-3 py-2 text-sm text-orbita-primary disabled:cursor-wait disabled:opacity-60"
+                  className="min-h-10 w-full min-w-0 rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface px-2.5 py-1.5 text-xs text-orbita-primary disabled:cursor-wait disabled:opacity-60 sm:text-sm"
                   aria-label="Filtrar por cuenta"
                 >
                   <option value="">Todas las cuentas</option>
@@ -548,13 +545,13 @@ export default function TransactionsPageClient() {
                 </select>
               </label>
             ) : null}
-            <label className={`grid min-w-0 gap-1.5 ${supabaseEnabled ? "lg:col-span-2" : ""}`}>
-              <span className="text-[11px] uppercase tracking-[0.14em] text-orbita-secondary">Tipo</span>
+            <label className="grid min-w-0 gap-1">
+              <span className="text-[10px] uppercase tracking-[0.12em] text-orbita-secondary">Tipo de movimiento</span>
               <select
                 value={tipoFilterUrl}
                 onChange={(e) => setTipoFilter(e.target.value as "" | "ingreso" | "gasto")}
                 disabled={contentLoading}
-                className="min-h-11 w-full max-w-full rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface px-3 py-2 text-sm text-orbita-primary disabled:cursor-wait disabled:opacity-60 sm:max-w-xs lg:max-w-none"
+                className="min-h-10 w-full max-w-full rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface px-2.5 py-1.5 text-xs text-orbita-primary disabled:cursor-wait disabled:opacity-60 sm:text-sm"
                 aria-label="Filtrar por ingreso o gasto"
               >
                 <option value="">Todos</option>
@@ -562,73 +559,6 @@ export default function TransactionsPageClient() {
                 <option value="gasto">Gasto</option>
               </select>
             </label>
-            <div className={`grid min-w-0 gap-2 ${supabaseEnabled ? "lg:col-span-5" : "lg:col-span-1"}`}>
-              <span className="text-[11px] uppercase tracking-[0.14em] text-orbita-secondary">Importar / exportar</span>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  disabled={templateDownloading}
-                  onClick={() => void downloadTemplateXlsx()}
-                  className="min-h-10 flex-1 rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface-alt px-3 py-2 text-center text-xs font-semibold text-orbita-primary transition [flex-basis:12rem] enabled:hover:bg-orbita-surface disabled:cursor-wait disabled:opacity-60 sm:flex-none sm:min-w-0"
-                >
-                  {templateDownloading ? "Generando…" : "Plantilla (.xlsx)"}
-                </button>
-                {supabaseEnabled ? (
-                  <>
-                    <input
-                      ref={csvFileInputRef}
-                      type="file"
-                      accept=".csv,text/csv,text/plain"
-                      className="hidden"
-                      aria-hidden
-                      tabIndex={-1}
-                      onChange={(e) => {
-                        const f = e.target.files?.[0]
-                        e.target.value = ""
-                        if (f) void importCsvFile(f)
-                      }}
-                    />
-                    <button
-                      type="button"
-                      disabled={importingCsv || contentLoading || !periodReady}
-                      onClick={() => csvFileInputRef.current?.click()}
-                      className="min-h-10 flex-1 rounded-[var(--radius-button)] border border-emerald-600/40 bg-emerald-500/10 px-3 py-2 text-center text-xs font-semibold text-emerald-800 transition [flex-basis:10rem] enabled:hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50 dark:text-emerald-300 sm:flex-none"
-                    >
-                      {importingCsv ? "Importando…" : "Importar CSV"}
-                    </button>
-                  </>
-                ) : null}
-                <button
-                  type="button"
-                  disabled={!contentReady || transactions.length === 0}
-                  onClick={() => {
-                    const rows = transactions.map((tx) => {
-                      const tipoResolved = tx.tipo ?? (tx.monto > 0 ? ("income" as const) : ("expense" as const))
-                      return {
-                        fecha: tx.fecha,
-                        tipoLabel: tipoResolved === "income" ? ("Ingreso" as const) : ("Gasto" as const),
-                        categoria: tx.categoria,
-                        subcategoria: tx.subcategoria,
-                        cuenta: (tx.cuenta ?? "").trim(),
-                        concepto: tx.descripcion,
-                        monto: tx.monto,
-                      }
-                    })
-                    const csv = buildTransactionsExportCsv(rows)
-                    const suf = tipoFilterUrl ? `-${tipoFilterUrl}` : "-todos"
-                    downloadCsv(`movimientos-${month}${suf}.csv`, csv)
-                  }}
-                  className="min-h-10 w-full rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface px-3 py-2 text-xs font-semibold text-orbita-primary transition enabled:hover:bg-orbita-surface-alt disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:flex-1 [flex-basis:11rem]"
-                >
-                  Exportar vista
-                </button>
-              </div>
-              <p className="text-[10px] leading-relaxed text-orbita-secondary [text-wrap:pretty]">
-                La plantilla Excel incluye desplegables; para importar aquí, exporta esa hoja como CSV (UTF-8) con la
-                misma cabecera que «Exportar vista», o usa el CSV exportado. Máximo 300 filas por carga; se crean
-                cuentas nuevas si la etiqueta no existía.
-              </p>
-            </div>
           </div>
         </div>
       </Card>
@@ -977,6 +907,83 @@ export default function TransactionsPageClient() {
               </div>
             </div>
           )}
+
+          <Card className="min-w-0 overflow-hidden p-0">
+            <div className="border-b border-orbita-border/70 bg-orbita-surface-alt/35 px-3 py-1.5 sm:px-4">
+              <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.13em] text-orbita-secondary">
+                Importar y exportar
+              </p>
+              <p className="mt-0.5 text-[11px] leading-snug text-orbita-secondary">
+                Plantilla Excel, CSV o descarga de la vista actual ({month || "periodo"}).
+              </p>
+            </div>
+            <div className="grid gap-3 p-3 sm:p-4">
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={templateDownloading}
+                  onClick={() => void downloadTemplateXlsx()}
+                  className="min-h-9 flex-1 rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface-alt px-3 py-2 text-center text-xs font-semibold text-orbita-primary transition [flex-basis:10rem] enabled:hover:bg-orbita-surface disabled:cursor-wait disabled:opacity-60 sm:flex-none sm:min-w-0"
+                >
+                  {templateDownloading ? "Generando…" : "Plantilla (.xlsx)"}
+                </button>
+                {supabaseEnabled ? (
+                  <>
+                    <input
+                      ref={csvFileInputRef}
+                      type="file"
+                      accept=".csv,text/csv,text/plain"
+                      className="hidden"
+                      aria-hidden
+                      tabIndex={-1}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0]
+                        e.target.value = ""
+                        if (f) void importCsvFile(f)
+                      }}
+                    />
+                    <button
+                      type="button"
+                      disabled={importingCsv || contentLoading || !periodReady}
+                      onClick={() => csvFileInputRef.current?.click()}
+                      className="min-h-9 flex-1 rounded-[var(--radius-button)] border border-emerald-600/40 bg-emerald-500/10 px-3 py-2 text-center text-xs font-semibold text-emerald-800 transition [flex-basis:9rem] enabled:hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50 dark:text-emerald-300 sm:flex-none"
+                    >
+                      {importingCsv ? "Importando…" : "Importar CSV"}
+                    </button>
+                  </>
+                ) : null}
+                <button
+                  type="button"
+                  disabled={!contentReady || transactions.length === 0}
+                  onClick={() => {
+                    const rows = transactions.map((tx) => {
+                      const tipoResolved = tx.tipo ?? (tx.monto > 0 ? ("income" as const) : ("expense" as const))
+                      return {
+                        fecha: tx.fecha,
+                        tipoLabel: tipoResolved === "income" ? ("Ingreso" as const) : ("Gasto" as const),
+                        categoria: tx.categoria,
+                        subcategoria: tx.subcategoria,
+                        cuenta: (tx.cuenta ?? "").trim(),
+                        concepto: tx.descripcion,
+                        monto: tx.monto,
+                      }
+                    })
+                    const csv = buildTransactionsExportCsv(rows)
+                    const suf = tipoFilterUrl ? `-${tipoFilterUrl}` : "-todos"
+                    downloadCsv(`movimientos-${month}${suf}.csv`, csv)
+                  }}
+                  className="min-h-9 w-full rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface px-3 py-2 text-xs font-semibold text-orbita-primary transition enabled:hover:bg-orbita-surface-alt disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:flex-1 [flex-basis:10rem]"
+                >
+                  Exportar vista (CSV)
+                </button>
+              </div>
+              <p className="m-0 text-[10px] leading-relaxed text-orbita-secondary [text-wrap:pretty]">
+                La plantilla Excel trae desplegables. Para importar aquí, exporta esa hoja como CSV (UTF-8) con la misma
+                cabecera que «Exportar vista», o reutiliza un CSV ya exportado. Máximo 300 filas por carga; si la cuenta
+                no existía, se crea al importar.
+              </p>
+            </div>
+          </Card>
         </>
       )}
     </div>

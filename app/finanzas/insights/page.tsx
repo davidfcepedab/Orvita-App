@@ -22,37 +22,29 @@ interface InsightsResponse {
   error?: string
 }
 
-const mockInsights: InsightsResponse = {
-  score: 74,
-  insight: {
-    type: "alert",
-    message: "Liquidez controlada, pero el gasto variable subió 12%.",
-    all: [
-      "Liquidez controlada, pero el gasto variable subió 12%.",
-      "Reducir gastos discrecionales durante 2 semanas.",
-      "Priorizar ingresos recurrentes vs puntuales.",
-    ],
-  },
-  stability: {
-    stabilityIndex: 68,
-    status: "yellow",
-    scoreOperativo: 72,
-    scoreLiquidez: 64,
-    scoreRiesgo: 56,
-  },
-  prediction: {
-    projection: [
-      { month: "Abr", projectedBalance: 4200000 },
-      { month: "May", projectedBalance: 3800000 },
-      { month: "Jun", projectedBalance: 4500000 },
-    ],
-  },
+interface InsightsMeta {
+  months: number
+  throughMonth: string
+}
+
+function formatYmLongEs(ym: string) {
+  const [ys, ms] = ym.split("-")
+  const y = Number(ys)
+  const m = Number(ms)
+  if (!ys || !ms || !Number.isFinite(y) || !Number.isFinite(m)) return ym
+  return new Date(y, m - 1, 15).toLocaleDateString("es-CO", { month: "long", year: "numeric" })
+}
+
+function formatMoneyCOP(n: number) {
+  return new Intl.NumberFormat("es-CO", { maximumFractionDigits: 0 }).format(Math.round(n))
 }
 
 export default function FinanzasInsights() {
   const finance = useFinance()
 
   const [data, setData] = useState<InsightsResponse | null>(null)
+  const [meta, setMeta] = useState<InsightsMeta | null>(null)
+  const [source, setSource] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -63,6 +55,8 @@ export default function FinanzasInsights() {
   useEffect(() => {
     if (!month) {
       setData(null)
+      setMeta(null)
+      setSource(null)
       setLoading(false)
       setError(null)
       return
@@ -82,6 +76,8 @@ export default function FinanzasInsights() {
           data?: InsightsResponse | null
           error?: string
           notice?: string
+          meta?: InsightsMeta
+          source?: string
         }
 
         if (!response.ok || !json.success) {
@@ -89,11 +85,15 @@ export default function FinanzasInsights() {
         }
 
         setNotice(json.notice ?? null)
+        setMeta(json.meta ?? null)
+        setSource(json.source ?? null)
         setData((json.data as InsightsResponse) ?? null)
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Error desconocido"
         setError(errorMessage)
         setData(null)
+        setMeta(null)
+        setSource(null)
       } finally {
         setLoading(false)
       }
@@ -161,27 +161,44 @@ export default function FinanzasInsights() {
     <div className={financeViewRootClass}>
       <FinanceViewHeader
         kicker="Perspectivas"
-        title="Tu panel de riesgo"
-        subtitle="Estabilidad, riesgo y proyección a partir del periodo activo."
+        title="Lectura de tu flujo"
+        subtitle="Índices calculados con los movimientos reales del hogar (ventana de varios meses hasta el mes activo)."
         action={
-          notice ? (
-            <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-800">
-              {notice}
-            </span>
-          ) : null
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {source === "mock" ? (
+              <span className="rounded-full border border-orbita-border bg-orbita-surface-alt px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-orbita-secondary">
+                Demo
+              </span>
+            ) : null}
+            {notice ? (
+              <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-900">
+                {notice}
+              </span>
+            ) : null}
+          </div>
         }
       />
+
+      <Card className="border border-orbita-border/80 bg-[color-mix(in_srgb,var(--color-accent-finance)_6%,var(--color-surface))] p-3 sm:p-4">
+        <p className="m-0 text-sm leading-relaxed text-orbita-primary">
+          <span className="font-semibold">Datos reales.</span> El motor toma el flujo neto mes a mes (ingresos − gastos
+          operativos) en los últimos{" "}
+          <span className="tabular-nums font-semibold">{meta?.months ?? 6}</span> meses y lo ancla al cierre{" "}
+          <span className="font-semibold">{formatYmLongEs(meta?.throughMonth ?? month)}</span>. El score y la
+          estabilidad suben si ahorras más respecto a ingresos y si el flujo no salta demasiado mes a mes.
+        </p>
+      </Card>
 
       <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-[1.15fr_1fr]">
         <div className="grid gap-3 sm:gap-4">
           {score !== undefined && (
             <Card hover className="p-3 sm:p-5">
-              <div className="grid gap-3 text-center">
+              <div className="grid gap-2 text-center">
                 <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">
-                  Score financiero
+                  Salud financiera (índice)
                 </p>
                 <p
-                  className={`text-4xl font-semibold sm:text-5xl ${
+                  className={`text-4xl font-semibold tabular-nums sm:text-5xl ${
                     score >= 70
                       ? "text-emerald-600"
                       : score >= 40
@@ -189,23 +206,26 @@ export default function FinanzasInsights() {
                       : "text-rose-600"
                   }`}
                 >
-                  {score}
+                  {Math.round(score)}
                 </p>
-                <p className="text-xs text-orbita-secondary">sobre 100</p>
+                <p className="text-xs text-orbita-secondary">Escala 0–100 · mezcla ahorro/volatilidad</p>
               </div>
             </Card>
           )}
 
           <Card hover className="p-3 sm:p-5">
             <div className="grid gap-3">
-              <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">
-                Índice de estabilidad
-              </p>
+              <div>
+                <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Estabilidad del flujo</p>
+                <p className="mt-1 text-[11px] leading-snug text-orbita-secondary">
+                  Un solo número resume qué tan predecible es tu caja en el historial analizado.
+                </p>
+              </div>
               {stability ? (
                 <>
                   <div className="flex flex-wrap items-end justify-between gap-2">
                     <p
-                      className={`text-3xl font-semibold ${
+                      className={`text-3xl font-semibold tabular-nums ${
                         stability.status === "green"
                           ? "text-emerald-600"
                           : stability.status === "yellow"
@@ -213,7 +233,7 @@ export default function FinanzasInsights() {
                           : "text-rose-600"
                       }`}
                     >
-                      {stability.stabilityIndex}
+                      {Math.round(stability.stabilityIndex)}
                     </p>
                     <span
                       className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.16em] ${stabilityBg[stability.status]} ${stabilityColor[stability.status]}`}
@@ -225,18 +245,24 @@ export default function FinanzasInsights() {
                         : "riesgo"}
                     </span>
                   </div>
-                  <div className="grid gap-2 text-xs text-orbita-secondary">
-                    <div className="flex items-center justify-between">
-                      <span>Operativo</span>
-                      <span className="font-semibold text-orbita-primary">{stability.scoreOperativo}</span>
+                  <div className="grid gap-2.5 text-xs">
+                    <div className="flex items-start justify-between gap-2 border-b border-orbita-border/50 pb-2">
+                      <span className="text-orbita-secondary">Operativo (cobertura de gastos)</span>
+                      <span className="shrink-0 tabular-nums font-semibold text-orbita-primary">
+                        {Math.round(stability.scoreOperativo)}
+                      </span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span>Liquidez</span>
-                      <span className="font-semibold text-orbita-primary">{stability.scoreLiquidez}</span>
+                    <div className="flex items-start justify-between gap-2 border-b border-orbita-border/50 pb-2">
+                      <span className="text-orbita-secondary">Liquidez (flujo vs ingresos)</span>
+                      <span className="shrink-0 tabular-nums font-semibold text-orbita-primary">
+                        {Math.round(stability.scoreLiquidez)}
+                      </span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span>Riesgo</span>
-                      <span className="font-semibold text-orbita-primary">{stability.scoreRiesgo}</span>
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-orbita-secondary">Riesgo (inverso a estabilidad)</span>
+                      <span className="shrink-0 tabular-nums font-semibold text-orbita-primary">
+                        {Math.round(stability.scoreRiesgo)}
+                      </span>
                     </div>
                   </div>
                 </>
@@ -251,10 +277,8 @@ export default function FinanzasInsights() {
           {insight && (
             <Card hover className="p-3 sm:p-5">
               <div className="grid gap-3">
-                <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">
-                  Insight principal
-                </p>
-                <p className="break-words text-sm font-medium text-orbita-primary">{insight.message}</p>
+                <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Qué destacaría el sistema</p>
+                <p className="break-words text-sm font-medium leading-relaxed text-orbita-primary">{insight.message}</p>
                 {insight.all && insight.all.length > 1 && (
                   <ul className="mt-2 space-y-1 text-xs text-orbita-secondary">
                     {insight.all.slice(1).map((msg, i) => (
@@ -278,20 +302,18 @@ export default function FinanzasInsights() {
           {prediction?.projection && (
             <Card hover className="p-3 sm:p-5">
               <div className="grid gap-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">
-                    Proyección 3 meses
+                <div>
+                  <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Proyección simple (3 meses)</p>
+                  <p className="mt-1 text-[11px] leading-snug text-orbita-secondary">
+                    Suma el flujo neto medio mes a mes; es una referencia, no un saldo bancario.
                   </p>
-                  <span className="text-xs text-orbita-secondary">Escenario base</span>
                 </div>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
                   {prediction.projection.slice(0, 3).map((p, i) => (
-                    <div key={i} className="rounded-xl bg-orbita-surface-alt px-3 py-3 text-center">
-                      <p className="text-xs text-orbita-secondary">{p.month}</p>
-                      <p className="mt-2 break-all text-sm font-semibold text-orbita-primary sm:break-normal">
-                        ${p.projectedBalance.toLocaleString("es-CO", {
-                          maximumFractionDigits: 0,
-                        })}
+                    <div key={i} className="rounded-xl border border-orbita-border/60 bg-orbita-surface-alt/80 px-3 py-3 text-center">
+                      <p className="text-xs font-medium text-orbita-secondary">{p.month}</p>
+                      <p className="mt-2 text-sm font-semibold tabular-nums text-orbita-primary">
+                        ${formatMoneyCOP(p.projectedBalance)} COP
                       </p>
                     </div>
                   ))}
@@ -303,21 +325,18 @@ export default function FinanzasInsights() {
       </div>
 
       <Card className="p-3 sm:p-5">
-        <div className="grid gap-2.5">
-          <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Lectura ejecutiva</p>
-          <p className="text-sm text-orbita-secondary">
+        <div className="grid gap-2">
+          <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Resumen en una línea</p>
+          <p className="text-sm leading-relaxed text-orbita-primary">
             {insight?.message ??
-              "Resumen basado en los últimos 6 meses de transacciones del hogar (proyección lineal simple)."}
+              "Sin mensaje automático: revisa que haya movimientos en el periodo y que Supabase esté activo."}
           </p>
-          <div className="flex flex-wrap gap-2 text-[11px] text-orbita-secondary">
+          <div className="flex flex-wrap gap-2 pt-1 text-[11px] text-orbita-secondary">
             <span className="rounded-full border border-orbita-border bg-orbita-surface-alt px-3 py-1">
-              Estabilidad: {stability?.status ?? "—"}
+              Estado: {stability?.status === "green" ? "favorable" : stability?.status === "yellow" ? "atención" : stability?.status === "red" ? "crítico" : "—"}
             </span>
             <span className="rounded-full border border-orbita-border bg-orbita-surface-alt px-3 py-1">
-              Score {score ?? "—"}
-            </span>
-            <span className="rounded-full border border-orbita-border bg-orbita-surface-alt px-3 py-1">
-              Proyección 3m activa
+              Índice {score != null ? Math.round(score) : "—"}/100
             </span>
           </div>
         </div>
