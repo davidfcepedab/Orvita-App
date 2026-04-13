@@ -81,11 +81,11 @@ const STACK_BLOCK_SURFACE: Record<
   },
   noche: {
     section: {
-      background: "color-mix(in srgb, var(--color-accent-primary) 12%, var(--color-surface))",
-      borderColor: "color-mix(in srgb, var(--color-accent-primary) 26%, var(--color-border))",
+      background: "color-mix(in srgb, #7c3aed 12%, var(--color-surface))",
+      borderColor: "color-mix(in srgb, #7c3aed 26%, var(--color-border))",
     },
-    iconWrap: "bg-[color-mix(in_srgb,var(--color-accent-primary)_16%,transparent)]",
-    iconClass: "text-indigo-600 dark:text-indigo-300",
+    iconWrap: "bg-[color-mix(in_srgb,#7c3aed_18%,transparent)]",
+    iconClass: "text-violet-600 dark:text-violet-300",
   },
   sin_hora: {
     section: {
