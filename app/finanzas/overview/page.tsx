@@ -3,6 +3,8 @@
 import Link from "next/link"
 import { useEffect, useRef, useState } from "react"
 import { useFinance } from "../FinanceContext"
+import { FinanceViewHeader } from "../_components/FinanceViewHeader"
+import { financeSubnavTabClass, financeViewRootClass } from "../_components/financeChrome"
 import { Card } from "@/src/components/ui/Card"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { rechartsTooltipContentStyle } from "@/lib/charts/rechartsShared"
@@ -439,21 +441,15 @@ export default function FinanzasOverview() {
   const flowChartMargin = { top: 8, right: 2, left: 2, bottom: xAxisHeight + 6 } as const
 
   return (
-    <div className="min-w-0 max-w-full space-y-5 sm:space-y-7">
+    <div className={`${financeViewRootClass} max-w-full`}>
       <section className="min-w-0 space-y-2.5" aria-labelledby="fin-overview-kpis-heading">
-        <div className="min-w-0 max-w-full space-y-1">
-          <h2
-            id="fin-overview-kpis-heading"
-            className="text-sm font-semibold tracking-tight text-orbita-primary"
-          >
-            Indicadores operativos del mes
-          </h2>
-          <p className="hidden max-w-2xl text-[11px] leading-snug text-orbita-secondary sm:block sm:text-xs">
-            Gasto <span className="font-medium text-orbita-primary">operativo</span> según catálogo (inversión y
-            ajustes no operativos fuera de estas tarjetas).
-          </p>
-        </div>
-        <div className="grid min-w-0 max-w-full grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <FinanceViewHeader
+          kicker="Resumen"
+          title="Indicadores del mes"
+          titleId="fin-overview-kpis-heading"
+          subtitle="Gasto operativo según catálogo; inversión y ajustes fuera de estas tarjetas."
+        />
+        <div className="grid min-w-0 max-w-full grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-4">
           {(
             [
               {
@@ -471,7 +467,7 @@ export default function FinanzasOverview() {
                 sub: kpiHasSignal
                   ? `Gasto operativo ${formatMoney(expense)} · Ingresos ${formatMoney(income)}`
                   : "Importa movimientos o elige un mes con resumen guardado.",
-                accent: "var(--color-accent-primary)",
+                accent: "var(--color-accent-finance)",
               },
               {
                 label: "Cobertura (superávit ÷ gasto)",
@@ -491,7 +487,7 @@ export default function FinanzasOverview() {
               },
             ] as const
           ).map((metric) => (
-            <Card key={metric.label} hover className="min-w-0 border border-orbita-border/70 p-4 sm:p-6">
+            <Card key={metric.label} hover className="min-w-0 border border-orbita-border/70 p-3 sm:p-4">
               <div className="grid min-w-0 gap-2">
                 <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">{metric.label}</p>
                 <p className="break-words text-2xl font-semibold tabular-nums" style={{ color: metric.accent }}>
@@ -507,8 +503,8 @@ export default function FinanzasOverview() {
         </div>
       </section>
 
-      <Card className="min-w-0 overflow-x-clip p-4 sm:p-8">
-        <div className="grid min-w-0 max-w-full gap-4">
+      <Card className="min-w-0 overflow-x-clip p-3 sm:p-5">
+        <div className="grid min-w-0 max-w-full gap-3">
           <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="grid min-w-0 max-w-full gap-1">
               <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Evolución de flujo</p>
@@ -524,11 +520,7 @@ export default function FinanzasOverview() {
               </span>
             </div>
             <div
-              className="flex max-w-full min-w-0 flex-wrap gap-1 rounded-xl p-0.5"
-              style={{
-                background: "color-mix(in srgb, var(--color-border) 35%, transparent)",
-                border: "0.5px solid var(--color-border)",
-              }}
+              className="flex max-w-full min-w-0 flex-wrap gap-0.5 rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_65%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_45%,var(--color-surface))] p-0.5"
               role="tablist"
               aria-label="Vista del gráfico de flujo"
             >
@@ -541,12 +533,7 @@ export default function FinanzasOverview() {
                     role="tab"
                     aria-selected={active}
                     onClick={() => setFlowView(tab.id)}
-                    className="min-h-9 shrink-0 rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-colors sm:min-h-10 sm:px-3 sm:text-xs"
-                    style={{
-                      background: active ? "var(--color-surface)" : "transparent",
-                      color: active ? "var(--color-text-primary)" : "var(--color-text-secondary)",
-                      boxShadow: active ? "0 1px 2px rgba(0,0,0,0.06)" : "none",
-                    }}
+                    className={`${financeSubnavTabClass(active)} min-h-8 shrink-0 px-2 py-1.5 text-[10px] normal-case tracking-normal sm:min-h-9 sm:px-2.5 sm:text-[11px]`}
                   >
                     {tab.label}
                   </button>
@@ -635,8 +622,8 @@ export default function FinanzasOverview() {
         </div>
       </Card>
 
-      <div className="grid min-w-0 max-w-full grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2">
-        <Card className="min-w-0 overflow-x-clip p-4 sm:p-5">
+      <div className="grid min-w-0 max-w-full grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
+        <Card className="min-w-0 overflow-x-clip p-3 sm:p-4">
           <div className="grid min-w-0 max-w-full gap-3">
             <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
               <div className="min-w-0">
@@ -725,7 +712,7 @@ export default function FinanzasOverview() {
           </div>
         </Card>
 
-        <Card className="min-w-0 overflow-x-clip p-4 sm:p-5">
+        <Card className="min-w-0 overflow-x-clip p-3 sm:p-4">
           <div className="grid min-w-0 max-w-full gap-3">
             <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
               <div className="min-w-0">

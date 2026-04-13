@@ -3,6 +3,8 @@
 import { type FormEvent, useCallback, useEffect, useState } from "react"
 import { ChevronDown } from "lucide-react"
 import { useFinance } from "../FinanceContext"
+import { FinanceViewHeader } from "../_components/FinanceViewHeader"
+import { financeViewRootClass } from "../_components/financeChrome"
 import { useRouter } from "next/navigation"
 import { Card } from "@/src/components/ui/Card"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
@@ -410,22 +412,21 @@ export default function FinanzasCategories() {
   }
 
   return (
-    <div className="min-w-0 space-y-5 sm:space-y-7">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-base font-semibold text-orbita-primary sm:text-lg">Mapa de gasto por categorías</h1>
-          <p className="mt-0.5 hidden text-sm text-orbita-secondary sm:block">
-            Fijo y variable; cada fila agrupa subcategorías con movimiento.
-          </p>
-        </div>
-        {notice && (
-          <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-amber-800">
-            {notice}
-          </span>
-        )}
-      </div>
+    <div className={financeViewRootClass}>
+      <FinanceViewHeader
+        kicker="Catálogo"
+        title="Mapa de gasto"
+        subtitle="Fijo y variable; cada fila agrupa subcategorías con movimiento."
+        action={
+          notice ? (
+            <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-800">
+              {notice}
+            </span>
+          ) : null
+        }
+      />
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <label className="grid min-w-0 max-w-full gap-1.5 sm:max-w-md sm:flex-1">
           <span className="text-[11px] uppercase tracking-[0.14em] text-orbita-secondary">Buscar categoría o subcategoría</span>
           <input
@@ -458,7 +459,7 @@ export default function FinanzasCategories() {
       </div>
 
       {viewMode === "estrategica" && (
-        <Card className="p-4 sm:p-8">
+        <Card className="p-3 sm:p-5">
           <div className="grid gap-2 text-center">
             <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Vista estratégica</p>
             <p className="text-sm text-orbita-secondary">En desarrollo…</p>
@@ -467,7 +468,7 @@ export default function FinanzasCategories() {
       )}
 
       {viewMode === "predictiva" && (
-        <Card className="p-4 sm:p-8">
+        <Card className="p-3 sm:p-5">
           <div className="grid gap-2 text-center">
             <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Vista predictiva</p>
             <p className="text-sm text-orbita-secondary">En desarrollo…</p>
@@ -510,7 +511,7 @@ export default function FinanzasCategories() {
           {!noExpenses && (
             <>
               <div className="grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                <Card hover className="p-4 sm:p-8">
+                <Card hover className="p-3 sm:p-5">
                   <div className="grid gap-2">
                     <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Total operativo</p>
                     <p className="text-3xl font-semibold text-orbita-primary">
@@ -523,7 +524,7 @@ export default function FinanzasCategories() {
                     </p>
                   </div>
                 </Card>
-                <Card hover className="p-4 sm:p-8">
+                <Card hover className="p-3 sm:p-5">
                   <div className="grid gap-2">
                     <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Total fijo</p>
                     <p className="text-3xl font-semibold text-orbita-primary">
@@ -534,7 +535,7 @@ export default function FinanzasCategories() {
                     <p className="text-xs text-orbita-secondary">Base operativa</p>
                   </div>
                 </Card>
-                <Card hover className="p-4 sm:p-8">
+                <Card hover className="p-3 sm:p-5">
                   <div className="grid gap-2">
                     <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Total variable</p>
                     <p className="text-3xl font-semibold text-orbita-primary">

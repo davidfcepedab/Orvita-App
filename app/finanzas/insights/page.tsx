@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react"
 import { useFinance } from "../FinanceContext"
+import { FinanceViewHeader } from "../_components/FinanceViewHeader"
+import { financeViewRootClass } from "../_components/financeChrome"
 import { Card } from "@/src/components/ui/Card"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { financeApiGet } from "@/lib/finanzas/financeClientFetch"
@@ -156,25 +158,24 @@ export default function FinanzasInsights() {
   }
 
   return (
-    <div className="min-w-0 space-y-5 sm:space-y-7">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <h2 className="m-0 text-base font-semibold tracking-tight text-orbita-primary sm:text-lg">Perspectivas</h2>
-          <p className="mt-0.5 hidden text-sm text-orbita-secondary sm:block">
-            Estabilidad, riesgo y proyección.
-          </p>
-        </div>
-        {notice && (
-          <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-amber-800">
-            {notice}
-          </span>
-        )}
-      </div>
+    <div className={financeViewRootClass}>
+      <FinanceViewHeader
+        kicker="Perspectivas"
+        title="Tu panel de riesgo"
+        subtitle="Estabilidad, riesgo y proyección a partir del periodo activo."
+        action={
+          notice ? (
+            <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-800">
+              {notice}
+            </span>
+          ) : null
+        }
+      />
 
-      <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-[1.15fr_1fr]">
-        <div className="grid gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-[1.15fr_1fr]">
+        <div className="grid gap-3 sm:gap-4">
           {score !== undefined && (
-            <Card hover className="p-4 sm:p-8">
+            <Card hover className="p-3 sm:p-5">
               <div className="grid gap-3 text-center">
                 <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">
                   Score financiero
@@ -195,8 +196,8 @@ export default function FinanzasInsights() {
             </Card>
           )}
 
-          <Card hover className="p-4 sm:p-8">
-            <div className="grid gap-4">
+          <Card hover className="p-3 sm:p-5">
+            <div className="grid gap-3">
               <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">
                 Índice de estabilidad
               </p>
@@ -246,9 +247,9 @@ export default function FinanzasInsights() {
           </Card>
         </div>
 
-        <div className="grid gap-4 sm:gap-6">
+        <div className="grid gap-3 sm:gap-4">
           {insight && (
-            <Card hover className="p-4 sm:p-8">
+            <Card hover className="p-3 sm:p-5">
               <div className="grid gap-3">
                 <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">
                   Insight principal
@@ -275,8 +276,8 @@ export default function FinanzasInsights() {
           )}
 
           {prediction?.projection && (
-            <Card hover className="p-4 sm:p-8">
-              <div className="grid gap-4">
+            <Card hover className="p-3 sm:p-5">
+              <div className="grid gap-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">
                     Proyección 3 meses
@@ -301,8 +302,8 @@ export default function FinanzasInsights() {
         </div>
       </div>
 
-      <Card className="p-4 sm:p-8">
-        <div className="grid gap-3">
+      <Card className="p-3 sm:p-5">
+        <div className="grid gap-2.5">
           <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Lectura ejecutiva</p>
           <p className="text-sm text-orbita-secondary">
             {insight?.message ??

@@ -3,7 +3,12 @@
 import { ReactNode } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { FinanceProvider, useFinance } from "./FinanceContext"
-import { financeModuleHeroClass } from "./_components/financeChrome"
+import {
+  financeModuleHeroClass,
+  financeModuleSubnavClass,
+  financeModuleSubnavStyle,
+  financeSubnavTabClass,
+} from "./_components/financeChrome"
 import { FinanceDataLineBanner } from "./FinanceDataLineBanner"
 import { Card } from "@/src/components/ui/Card"
 
@@ -36,22 +41,22 @@ function FinanzasLayoutContent({
   ] as const
 
   return (
-    <div className="min-w-0 max-w-full space-y-3 overflow-x-hidden sm:space-y-4">
+    <div className="min-w-0 max-w-full space-y-2.5 overflow-x-hidden sm:space-y-3">
       <Card className={financeModuleHeroClass}>
-        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <div className="flex min-w-0 flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <div className="min-w-0 max-w-full">
             <h1 className="orbita-large-title m-0 break-words text-orbita-primary">Capital operativo</h1>
-            <p className="mt-1 max-w-prose text-xs leading-snug text-orbita-secondary [overflow-wrap:anywhere] sm:text-[13px]">
-              Liquidez y decisiones según el mes activo; el detalle de trazabilidad va debajo.
+            <p className="mt-0.5 max-w-prose text-[11px] leading-snug text-orbita-secondary [overflow-wrap:anywhere] sm:text-xs sm:leading-snug">
+              Liquidez y decisiones según el mes; el detalle sigue abajo.
             </p>
           </div>
-          <label className="grid w-full min-w-0 shrink-0 gap-1 sm:w-auto sm:min-w-[11.5rem]">
-            <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-orbita-secondary">Mes</span>
+          <label className="grid w-full min-w-0 shrink-0 gap-1 sm:w-auto sm:min-w-[11rem]">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">Mes</span>
             <input
               type="month"
               value={month}
               onChange={(e) => setMonth(e.target.value)}
-              className="min-h-[44px] w-full min-w-0 rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface px-3 py-2 text-sm text-orbita-primary"
+              className="min-h-[42px] w-full min-w-0 rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface px-3 py-2 text-sm text-orbita-primary shadow-sm transition focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--color-accent-finance)_35%,transparent)]"
               aria-label="Seleccionar mes del periodo"
             />
           </label>
@@ -59,11 +64,8 @@ function FinanzasLayoutContent({
       </Card>
 
       <div
-        className="flex w-full min-w-0 max-w-full touch-pan-x snap-x snap-mandatory gap-1 overflow-x-auto overflow-y-hidden overscroll-x-contain rounded-[13px] border border-[color-mix(in_srgb,var(--color-border)_75%,transparent)] p-1 [-webkit-overflow-scrolling:touch] sm:flex-wrap sm:overflow-x-visible sm:snap-none"
-        style={{
-          background: "color-mix(in srgb, var(--color-surface-alt) 55%, var(--color-background))",
-          boxShadow: "inset 0 1px 0 color-mix(in srgb, #fff 40%, transparent)",
-        }}
+        className={financeModuleSubnavClass}
+        style={financeModuleSubnavStyle}
         role="tablist"
         aria-label="Secciones de finanzas"
       >
@@ -75,11 +77,7 @@ function FinanzasLayoutContent({
               key={tab.path}
               type="button"
               onClick={() => router.push(tab.path)}
-              className={`min-h-[44px] flex-shrink-0 snap-start rounded-[10px] px-3.5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition sm:min-h-0 sm:px-4 sm:py-2 sm:text-[12px] sm:tracking-[0.14em] whitespace-nowrap ${
-                active
-                  ? "bg-orbita-surface text-orbita-primary shadow-[var(--shadow-card)]"
-                  : "text-orbita-secondary hover:text-orbita-primary"
-              }`}
+              className={`${financeSubnavTabClass(active)} whitespace-nowrap`}
               aria-current={active ? "page" : undefined}
               role="tab"
               aria-selected={active}

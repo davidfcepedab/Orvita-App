@@ -3,6 +3,8 @@
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useFinance } from "../FinanceContext"
+import { FinanceViewHeader } from "../_components/FinanceViewHeader"
+import { financeViewRootClass } from "../_components/financeChrome"
 import { useLedgerAccounts } from "../useLedgerAccounts"
 import { Card } from "@/src/components/ui/Card"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
@@ -507,19 +509,25 @@ export default function TransactionsPageClient() {
   }
 
   return (
-    <div className="min-w-0 space-y-5 sm:space-y-7">
+    <div className={financeViewRootClass}>
+      <FinanceViewHeader
+        kicker="Ledger"
+        title="Movimientos"
+        subtitle="Filtra, importa o exporta sin salir de la pantalla."
+      />
+
       <Card className="min-w-0 overflow-hidden p-0">
-        <div className="border-b border-orbita-border/70 bg-orbita-surface-alt/30 px-4 py-2.5 sm:px-5">
-          <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">
+        <div className="border-b border-orbita-border/70 bg-orbita-surface-alt/35 px-3 py-2 sm:px-4">
+          <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.13em] text-orbita-secondary">
             Filtros
             <span className="ml-2 hidden font-normal normal-case tracking-normal text-orbita-secondary/85 sm:inline">
               · Importar / exportar abajo
             </span>
           </p>
         </div>
-        <div className="grid gap-5 px-4 py-4 sm:gap-6 sm:px-5 sm:py-5">
+        <div className="grid gap-4 px-3 py-3 sm:gap-5 sm:px-4 sm:py-4">
           <div
-            className={`grid min-w-0 grid-cols-1 gap-4 sm:gap-5 ${supabaseEnabled ? "lg:grid-cols-12 lg:items-end lg:gap-x-5" : "lg:grid-cols-2 lg:items-end lg:gap-x-5"}`}
+            className={`grid min-w-0 grid-cols-1 gap-3 sm:gap-4 ${supabaseEnabled ? "lg:grid-cols-12 lg:items-end lg:gap-x-4" : "lg:grid-cols-2 lg:items-end lg:gap-x-4"}`}
           >
             {supabaseEnabled ? (
               <label className="grid min-w-0 gap-1.5 lg:col-span-5">

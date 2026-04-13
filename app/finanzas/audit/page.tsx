@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react"
 import { useFinance } from "../FinanceContext"
+import { FinanceViewHeader } from "../_components/FinanceViewHeader"
+import { financeViewRootClass } from "../_components/financeChrome"
 import { Card } from "@/src/components/ui/Card"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { financeApiGet } from "@/lib/finanzas/financeClientFetch"
@@ -66,13 +68,12 @@ export default function FinanzasAuditPage() {
   }
 
   return (
-    <div className="min-w-0 space-y-3 sm:space-y-4">
-      <Card className="min-w-0 p-3 sm:p-5">
-        <h2 className="m-0 text-base font-semibold text-orbita-primary sm:text-lg">Auditoría de movimientos</h2>
-        <p className="mt-1 hidden text-sm text-orbita-secondary sm:block">
-          Altas/bajas en <code className="text-xs">orbita_finance_transactions</code> del periodo (RLS por hogar).
-        </p>
-      </Card>
+    <div className={financeViewRootClass}>
+      <FinanceViewHeader
+        kicker="Trazabilidad"
+        title="Auditoría de movimientos"
+        subtitle={`Altas/bajas en orbita_finance_transactions del periodo (RLS por hogar).`}
+      />
 
       {loading && <p className="text-sm text-orbita-secondary">Cargando…</p>}
       {error && (

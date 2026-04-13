@@ -18,6 +18,8 @@ import {
 } from "lucide-react"
 import { Card } from "@/src/components/ui/Card"
 import { useFinance } from "../FinanceContext"
+import { FinanceViewHeader } from "../_components/FinanceViewHeader"
+import { financeViewRootClass } from "../_components/financeChrome"
 import { useLedgerAccounts } from "../useLedgerAccounts"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { financeApiDelete, financeApiGet, financeApiJson } from "@/lib/finanzas/financeClientFetch"
@@ -1487,35 +1489,36 @@ export default function CuentasClient() {
   }
 
   return (
-    <div className="min-w-0 space-y-6 pb-10 sm:space-y-8">
+    <div className={`${financeViewRootClass} pb-10`}>
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-2 sm:gap-3">
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              <h1 className="text-2xl font-bold tracking-tight text-orbita-primary sm:text-[28px]">Cuentas</h1>
-              <button
-                type="button"
-                onClick={() => {
-                  setCuentasReorderMode((v) => {
-                    const next = !v
-                    if (!next) setDraggingCuentasSectionIdx(null)
-                    return next
-                  })
-                }}
-                className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] transition ${
-                  cuentasReorderMode
-                    ? "border-orbita-primary bg-orbita-primary text-white shadow-sm"
-                    : "border-orbita-border/70 bg-transparent text-orbita-secondary/80 hover:border-orbita-border hover:text-orbita-primary"
-                }`}
-                aria-pressed={cuentasReorderMode}
-                title="Reordenar bloques de esta página"
-              >
-                {cuentasReorderMode ? "Listo" : "Orden"}
-              </button>
-            </div>
-            <p className="mt-1 hidden text-sm text-orbita-secondary sm:block sm:text-[15px]">
-              Liquidez y disponibilidad por cuenta
-            </p>
+            <FinanceViewHeader
+              kicker="Balance"
+              title="Cuentas y exposición"
+              subtitle="Liquidez y disponibilidad por cuenta."
+              action={
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCuentasReorderMode((v) => {
+                      const next = !v
+                      if (!next) setDraggingCuentasSectionIdx(null)
+                      return next
+                    })
+                  }}
+                  className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] transition ${
+                    cuentasReorderMode
+                      ? "border-orbita-primary bg-orbita-primary text-white shadow-sm"
+                      : "border-orbita-border/70 bg-transparent text-orbita-secondary/80 hover:border-orbita-border hover:text-orbita-primary"
+                  }`}
+                  aria-pressed={cuentasReorderMode}
+                  title="Reordenar bloques de esta página"
+                >
+                  {cuentasReorderMode ? "Listo" : "Orden"}
+                </button>
+              }
+            />
             {cuentasReorderMode ? (
               <div
                 className="mt-3 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt/55 p-3 text-sm shadow-sm sm:mt-4 sm:p-4"
