@@ -39,6 +39,8 @@ import {
   ToggleRow,
 } from "./CheckinFields"
 import { CheckinSection } from "./CheckinSection"
+import { formatLocalDateKey } from "@/lib/agenda/localDateKey"
+import { addDaysIso } from "@/lib/habits/habitMetrics"
 
 async function buildJsonHeaders(): Promise<HeadersInit> {
   const base: HeadersInit = { "Content-Type": "application/json" }
@@ -131,7 +133,9 @@ const VIEWPORT_TABS: { id: CheckinViewport; label: string; hint: string }[] = [
 ]
 
 export default function CheckinPage() {
-  const today = new Date().toISOString().split("T")[0]
+  /** Día civil en la zona de agenda (no UTC), para no adelantar “mañana” por la noche. */
+  const today = formatLocalDateKey(new Date())
+  const yesterday = addDaysIso(today, -1)
 
   const [form, setForm] = useState<FormState>({
     fecha: today,
@@ -421,10 +425,7 @@ export default function CheckinPage() {
                 type="button"
                 className={`${chipBase} ${form.ayer ? "border-violet-300 bg-violet-50 text-violet-800" : "border-slate-200 bg-white text-slate-600"}`}
                 onClick={() => {
-                  const d = new Date()
-                  d.setDate(d.getDate() - 1)
-                  const y = d.toISOString().split("T")[0]
-                  handleChange("fecha", y)
+                  handleChange("fecha", yesterday)
                   handleChange("ayer", true)
                   handleChange("hoy", false)
                 }}

@@ -18,11 +18,12 @@ import {
   resolveCheckinSheetRangeA1,
   resolveCheckinSpreadsheetId,
 } from "@/lib/checkins/sheetsAccess"
+import { formatLocalDateKey } from "@/lib/agenda/localDateKey"
 
 export const runtime = "nodejs"
 
 function mockPreloadPayload() {
-  const today = new Date().toISOString().split("T")[0]
+  const today = formatLocalDateKey(new Date())
   return {
     fecha: today,
     energia: 7,

@@ -1,6 +1,9 @@
 /**
- * Métricas de hábitos a partir de fechas YYYY-MM-DD (UTC) en habit_completions.
+ * Métricas de hábitos a partir de fechas YYYY-MM-DD (día civil en la zona de agenda, p. ej. America/Bogota).
+ * Importante: no usar solo UTC (`toISOString().slice(0,10)`), o por la noche en América el “hoy” salta al día siguiente.
  */
+
+import { formatLocalDateKey } from "@/lib/agenda/localDateKey"
 
 export type HabitFrequency = "diario" | "semanal"
 
@@ -22,8 +25,9 @@ export type HabitCompletionMetrics = {
   week_marks: HabitWeekDayMark[]
 }
 
+/** Día civil “hoy” según `NEXT_PUBLIC_AGENDA_DISPLAY_TZ` (default America/Bogota). */
 export function utcTodayIso(): string {
-  return new Date().toISOString().slice(0, 10)
+  return formatLocalDateKey(new Date())
 }
 
 /** Límite de antigüedad para registrar un día pasado (viaje, olvido). */
@@ -57,6 +61,16 @@ export function parseBackfillCompletionDay(
 }
 
 export function addDaysIso(iso: string, delta: number): string {
+  const temporal = (globalThis as Record<string, unknown>).Temporal as
+    | { PlainDate: { from(s: string): { add(o: { days: number }): { toString(): string } } } }
+    | undefined
+  if (temporal?.PlainDate) {
+    try {
+      return temporal.PlainDate.from(iso).add({ days: delta }).toString()
+    } catch {
+      // continuar con fallback
+    }
+  }
   const d = new Date(`${iso}T12:00:00.000Z`)
   d.setUTCDate(d.getUTCDate() + delta)
   return d.toISOString().slice(0, 10)
