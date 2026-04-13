@@ -31,30 +31,46 @@ function yieldToNextPaint(): Promise<void> {
   })
 }
 
-function categoryOptionList(rows: FinanceSubcategoryCatalogRow[], currentCategory: string): string[] {
-  const s = new Set<string>()
-  for (const r of rows) {
-    if (r.category) s.add(r.category)
-  }
-  const cur = currentCategory.trim()
-  if (cur) s.add(cur)
-  return [...s].sort((a, b) => a.localeCompare(b, "es"))
+/** Separador improbable en nombres de categoría/subcategoría */
+const CAT_SUB_SEP = "\u001f"
+
+function pairKey(category: string, subcategory: string) {
+  return `${category.trim()}${CAT_SUB_SEP}${subcategory.trim()}`
 }
 
-function subcategoryOptionList(
-  rows: FinanceSubcategoryCatalogRow[],
-  category: string,
-  currentSub: string,
-): string[] {
-  const list = rows
-    .filter((r) => r.category === category)
-    .map((r) => r.subcategory.trim())
-    .filter(Boolean)
-  const uniq = [...new Set(list)].sort((a, b) => a.localeCompare(b, "es"))
-  const cur = currentSub.trim()
-  if (cur && !uniq.includes(cur)) return [cur, ...uniq]
-  return uniq
+/** Pares únicos (categoría, subcategoría) del catálogo; la categoría queda determinada por la sub fila elegida. */
+function catalogPairRows(rows: FinanceSubcategoryCatalogRow[]): { category: string; subcategory: string }[] {
+  const m = new Map<string, { category: string; subcategory: string }>()
+  for (const r of rows) {
+    const c = r.category?.trim() ?? ""
+    const s = r.subcategory?.trim() ?? ""
+    if (!c || !s) continue
+    const key = pairKey(c, s)
+    if (!m.has(key)) m.set(key, { category: c, subcategory: s })
+  }
+  return [...m.values()].sort(
+    (a, b) =>
+      a.subcategory.localeCompare(b.subcategory, "es") || a.category.localeCompare(b.category, "es"),
+  )
 }
+
+function pairsForRow(
+  base: { category: string; subcategory: string }[],
+  cat: string,
+  sub: string,
+): { category: string; subcategory: string }[] {
+  const k = pairKey(cat, sub)
+  if (base.some((p) => pairKey(p.category, p.subcategory) === k)) return base
+  if (cat.trim() || sub.trim()) {
+    return [{ category: cat.trim(), subcategory: sub.trim() }, ...base]
+  }
+  return base
+}
+
+const txSelectGhost =
+  "w-full max-w-full cursor-pointer rounded-md border border-orbita-border/35 bg-[color-mix(in_srgb,var(--color-text-primary)_4%,transparent)] py-1 pl-1.5 pr-6 text-[10px] font-medium text-orbita-primary shadow-none outline-none transition-[border-color,background-color] hover:bg-[color-mix(in_srgb,var(--color-text-primary)_8%,transparent)] focus:border-orbita-border/70 focus:bg-[color-mix(in_srgb,var(--color-surface-alt)_65%,transparent)] sm:text-[11px]"
+const txSelectTipo =
+  "w-full max-w-full cursor-pointer rounded-md border border-orbita-border/35 bg-[color-mix(in_srgb,var(--color-text-primary)_4%,transparent)] py-0.5 pl-1 pr-5 text-[9px] font-semibold uppercase tracking-wide shadow-none outline-none transition hover:bg-[color-mix(in_srgb,var(--color-text-primary)_8%,transparent)] focus:border-orbita-border/70 sm:text-[10px]"
 
 interface Transaction {
   id?: string
@@ -100,6 +116,7 @@ export default function TransactionsPageClient() {
   const [bulkDeleting, setBulkDeleting] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
   const [catalogRows, setCatalogRows] = useState<FinanceSubcategoryCatalogRow[]>([])
+  const catalogPairs = useMemo(() => catalogPairRows(catalogRows), [catalogRows])
   const [templateDownloading, setTemplateDownloading] = useState(false)
   const [importingCsv, setImportingCsv] = useState(false)
   const [importNotice, setImportNotice] = useState<string | null>(null)
@@ -657,7 +674,7 @@ export default function TransactionsPageClient() {
               <p>No hay movimientos para esta selección</p>
             </div>
           ) : (
-            <div className="min-w-0 max-w-full overflow-hidden rounded-[var(--radius-card)] border border-orbita-border bg-[var(--color-surface)] shadow-sm">
+            <div className="min-w-0 max-w-full overflow-hidden rounded-[var(--radius-card)] border border-orbita-border/80 bg-[color-mix(in_srgb,var(--color-surface-alt)_22%,var(--color-surface))] shadow-[0_2px_12px_rgba(15,23,42,0.06)]">
               {supabaseEnabled && reconciliationRowIds.length > 0 ? (
                 <div className="flex flex-col gap-2 border-b border-orbita-border/80 bg-orbita-surface-alt/45 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-4">
                   <p className="min-w-0 text-[11px] leading-snug text-orbita-secondary [text-wrap:pretty]">
@@ -687,7 +704,7 @@ export default function TransactionsPageClient() {
                     <col style={{ width: "12%" }} />
                     <col style={{ width: "10%" }} />
                   </colgroup>
-                  <thead className="sticky top-0 z-[1] border-b border-orbita-border bg-orbita-surface-alt text-[9px] font-semibold uppercase tracking-[0.08em] text-orbita-secondary sm:text-[10px]">
+                  <thead className="sticky top-0 z-[1] border-b border-orbita-border/80 bg-[color-mix(in_srgb,var(--color-surface-alt)_92%,var(--color-surface))] text-[9px] font-semibold uppercase tracking-[0.08em] text-orbita-secondary backdrop-blur-sm sm:text-[10px]">
                     <tr>
                       {supabaseEnabled ? (
                         <th scope="col" className="w-9 px-1 py-1.5 text-center sm:py-2">
@@ -710,7 +727,7 @@ export default function TransactionsPageClient() {
                         Tipo
                       </th>
                       <th scope="col" className="px-1.5 py-1.5 text-left sm:px-2 sm:py-2">
-                        Categoría
+                        Clasificación
                       </th>
                       <th scope="col" className="px-1.5 py-1.5 text-left sm:px-2 sm:py-2">
                         Cuenta
@@ -740,25 +757,18 @@ export default function TransactionsPageClient() {
                       })}`
                       const isIngreso = tipoResolved === "income"
                       const isReconciliationAdjustment = isReconciliationAdjustmentDescription(tx.descripcion)
-                      const rowBorder = "border-b border-orbita-border/60"
-                      const rowStyle = isIngreso
-                        ? {
-                            background:
-                              "color-mix(in srgb, var(--color-accent-health) 14%, var(--color-surface))",
-                          }
-                        : {
-                            background:
-                              "color-mix(in srgb, var(--color-accent-danger) 12%, var(--color-surface))",
-                          }
+                      const rowBorder = "border-b border-orbita-border/50"
+                      const rowTint = isIngreso
+                        ? "border-l-[3px] border-l-[color-mix(in_srgb,var(--color-accent-health)_58%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_6%,var(--color-surface))] hover:bg-[color-mix(in_srgb,var(--color-accent-health)_9%,var(--color-surface))]"
+                        : "border-l-[3px] border-l-[color-mix(in_srgb,var(--color-accent-danger)_52%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-danger)_5%,var(--color-surface))] hover:bg-[color-mix(in_srgb,var(--color-accent-danger)_8%,var(--color-surface))]"
                       const editable = Boolean(supabaseEnabled && tx.id)
-                      const catOptions = categoryOptionList(catalogRows, tx.categoria)
-                      const subOptions = subcategoryOptionList(catalogRows, tx.categoria, tx.subcategoria)
+                      const pairOpts = pairsForRow(catalogPairs, tx.categoria, tx.subcategoria)
+                      const currentPairKey = pairKey(tx.categoria, tx.subcategoria)
 
                       return (
                         <tr
                           key={tx.id ?? idx}
-                          className={`${rowBorder} last:border-b-0 transition-opacity hover:opacity-95`}
-                          style={rowStyle}
+                          className={`${rowBorder} ${rowTint} last:border-b-0 transition-colors`}
                         >
                           {supabaseEnabled ? (
                             <td className="px-1 py-1 align-middle text-center sm:py-1.5">
@@ -789,7 +799,7 @@ export default function TransactionsPageClient() {
                             {editable ? (
                               <select
                                 aria-label="Tipo de movimiento"
-                                className="w-full max-w-full rounded border border-orbita-border bg-orbita-surface py-0.5 pl-0.5 text-[9px] font-semibold sm:text-[10px]"
+                                className={txSelectTipo}
                                 value={tipoResolved}
                                 onChange={(e) => {
                                   const t = e.target.value as "income" | "expense"
@@ -815,20 +825,25 @@ export default function TransactionsPageClient() {
                           </td>
                           <td className="min-w-0 px-1.5 py-1 align-middle text-orbita-primary sm:px-2 sm:py-1.5">
                             {editable ? (
-                              <div className="grid min-w-0 gap-1">
+                              pairOpts.length === 0 ? (
+                                <span className="text-[10px] text-orbita-secondary">Sin catálogo</span>
+                              ) : (
                                 <select
-                                  aria-label="Categoría"
-                                  className="w-full min-w-0 rounded border border-orbita-border bg-orbita-surface px-1 py-0.5 text-[10px] sm:text-[11px]"
-                                  value={tx.categoria}
+                                  aria-label="Subcategoría (define la categoría)"
+                                  className={txSelectGhost}
+                                  value={
+                                    pairOpts.some((p) => pairKey(p.category, p.subcategory) === currentPairKey)
+                                      ? currentPairKey
+                                      : pairKey(pairOpts[0]!.category, pairOpts[0]!.subcategory)
+                                  }
                                   onChange={(e) => {
-                                    const newCat = e.target.value
-                                    const subs = subcategoryOptionList(catalogRows, newCat, "")
-                                    const newSub = subs[0] ?? ""
+                                    const v = e.target.value
+                                    const i = v.indexOf(CAT_SUB_SEP)
+                                    const newCat = i >= 0 ? v.slice(0, i).trim() : ""
+                                    const newSub = i >= 0 ? v.slice(i + CAT_SUB_SEP.length).trim() : ""
                                     setTxRows((rs) =>
                                       rs.map((r) =>
-                                        r.id === tx.id
-                                          ? { ...r, categoria: newCat, subcategoria: newSub }
-                                          : r,
+                                        r.id === tx.id ? { ...r, categoria: newCat, subcategoria: newSub } : r,
                                       ),
                                     )
                                     schedulePatch(tx.id!, {
@@ -837,32 +852,16 @@ export default function TransactionsPageClient() {
                                     })
                                   }}
                                 >
-                                  {catOptions.map((c) => (
-                                    <option key={c} value={c}>
-                                      {c}
-                                    </option>
-                                  ))}
-                                </select>
-                                <select
-                                  aria-label="Subcategoría"
-                                  className="w-full min-w-0 rounded border border-orbita-border bg-orbita-surface px-1 py-0.5 text-[9px] text-orbita-secondary sm:text-[10px]"
-                                  value={tx.subcategoria || ""}
-                                  onChange={(e) => {
-                                    const v = e.target.value
-                                    setTxRows((rs) =>
-                                      rs.map((r) => (r.id === tx.id ? { ...r, subcategoria: v } : r)),
+                                  {pairOpts.map((p) => {
+                                    const pk = pairKey(p.category, p.subcategory)
+                                    return (
+                                      <option key={pk} value={pk}>
+                                        {p.subcategory} · {p.category}
+                                      </option>
                                     )
-                                    schedulePatch(tx.id!, { subcategory: v || null })
-                                  }}
-                                >
-                                  <option value="">—</option>
-                                  {subOptions.map((s) => (
-                                    <option key={s} value={s}>
-                                      {s}
-                                    </option>
-                                  ))}
+                                  })}
                                 </select>
-                              </div>
+                              )
                             ) : (
                               <span className="truncate block" title={catLine}>
                                 {catLine}

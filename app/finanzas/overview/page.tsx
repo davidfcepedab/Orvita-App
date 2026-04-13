@@ -623,32 +623,47 @@ export default function FinanzasOverview() {
       </Card>
 
       <div className="grid min-w-0 max-w-full grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
-        <Card className="min-w-0 overflow-x-clip p-3 sm:p-4">
-          <div className="grid min-w-0 max-w-full gap-3">
+        <Card
+          className="relative min-w-0 overflow-hidden p-0"
+          style={{
+            background:
+              "linear-gradient(165deg, color-mix(in srgb, var(--color-surface-alt) 58%, var(--color-surface)) 0%, var(--color-surface) 38%, var(--color-surface) 100%)",
+            border: "0.5px solid color-mix(in srgb, var(--color-border) 78%, transparent)",
+            boxShadow:
+              "0 4px 22px color-mix(in srgb, var(--color-text-primary) 6%, transparent), inset 0 1px 0 color-mix(in srgb, #fff 8%, transparent)",
+          }}
+        >
+          <div
+            className="h-1 w-full bg-gradient-to-r from-[color-mix(in_srgb,var(--color-accent-health)_55%,transparent)] via-[color-mix(in_srgb,var(--color-accent-finance)_38%,transparent)] to-[color-mix(in_srgb,var(--color-accent-health)_18%,transparent)]"
+            aria-hidden
+          />
+          <div className="grid min-w-0 max-w-full gap-3 p-3 sm:p-4">
             <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Suscripciones registradas</p>
-                <p className="mt-0.5 text-[11px] leading-snug text-orbita-secondary">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-orbita-secondary">
+                  Suscripciones registradas
+                </p>
+                <p className="mt-1 text-[11px] leading-snug text-orbita-secondary">
                   Misma lista que en Capital → Cuentas (suscripciones recurrentes).
                 </p>
               </div>
               <Link
                 href="/finanzas/cuentas#capital-suscripciones"
-                className="shrink-0 text-[11px] font-medium text-orbita-secondary underline decoration-orbita-border/80 underline-offset-4 hover:text-orbita-primary"
+                className="shrink-0 rounded-full border border-orbita-border/45 bg-[color-mix(in_srgb,var(--color-text-primary)_4%,transparent)] px-2.5 py-1 text-[11px] font-medium text-orbita-primary transition hover:border-orbita-border/70 hover:bg-[color-mix(in_srgb,var(--color-text-primary)_7%,transparent)]"
                 prefetch={false}
               >
                 Editar
               </Link>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-orbita-border bg-orbita-surface px-3 py-2.5 sm:px-3.5">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-orbita-border/45 bg-[color-mix(in_srgb,var(--color-surface-alt)_42%,transparent)] px-3 py-2.5 shadow-[inset_0_1px_0_color-mix(in_srgb,#fff_10%,transparent)] backdrop-blur-[2px] sm:px-3.5">
               <div className="min-w-0">
-                <p className="text-[10px] uppercase tracking-[0.12em] text-orbita-secondary">Total mensual</p>
+                <p className="text-[10px] uppercase tracking-[0.14em] text-orbita-secondary">Total mensual</p>
                 <p className="mt-0.5 text-[11px] text-orbita-secondary">
                   {managedActive.length === 0 ? "Sin ítems" : `${managedActive.length} activa${managedActive.length === 1 ? "" : "s"}`}
                 </p>
               </div>
-              <span className="shrink-0 tabular-nums text-base font-semibold text-orbita-primary">
+              <span className="shrink-0 tabular-nums text-lg font-semibold tracking-tight text-orbita-primary">
                 ${formatMoney(managedTotal)}
               </span>
             </div>
@@ -656,8 +671,8 @@ export default function FinanzasOverview() {
             {managedActive.length === 0 ? (
               <p className="text-sm text-orbita-secondary">No hay suscripciones activas en tu registro.</p>
             ) : (
-              <details className="group rounded-xl border border-orbita-border/80 bg-orbita-surface-alt/35">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-sm font-medium text-orbita-primary transition-colors hover:bg-orbita-surface-alt/60 [&::-webkit-details-marker]:hidden">
+              <details className="group rounded-2xl border border-orbita-border/50 bg-[color-mix(in_srgb,var(--color-surface-alt)_28%,transparent)]">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-sm font-medium text-orbita-primary transition-colors hover:bg-[color-mix(in_srgb,var(--color-text-primary)_4%,transparent)] [&::-webkit-details-marker]:hidden">
                   <span className="flex min-w-0 items-center gap-2">
                     <ChevronDown
                       className="h-4 w-4 shrink-0 text-orbita-secondary transition-transform duration-200 group-open:rotate-180"
@@ -667,11 +682,11 @@ export default function FinanzasOverview() {
                   </span>
                   <span className="shrink-0 text-[11px] tabular-nums text-orbita-secondary">{managedActive.length} ítems</span>
                 </summary>
-                <div className="space-y-1.5 border-t border-orbita-border/50 px-3 pb-3 pt-2">
+                <div className="space-y-1.5 border-t border-orbita-border/40 px-3 pb-3 pt-2">
                   {managedActive.map((s) => (
                     <div
                       key={s.id}
-                      className="flex min-w-0 items-start justify-between gap-2 rounded-lg bg-orbita-surface-alt px-2.5 py-2"
+                      className="flex min-w-0 items-start justify-between gap-2 rounded-xl border border-orbita-border/35 bg-[color-mix(in_srgb,var(--color-text-primary)_3.5%,transparent)] px-2.5 py-2 transition hover:border-orbita-border/55 hover:bg-[color-mix(in_srgb,var(--color-text-primary)_5.5%,transparent)]"
                     >
                       <span className="min-w-0 break-words text-sm font-medium leading-snug text-orbita-primary">
                         {s.name}
@@ -683,7 +698,7 @@ export default function FinanzasOverview() {
               </details>
             )}
 
-            <details className="rounded-xl border border-orbita-border/70 bg-orbita-surface-alt/40 px-3 py-2 text-xs text-orbita-secondary">
+            <details className="rounded-2xl border border-orbita-border/45 bg-[color-mix(in_srgb,var(--color-surface-alt)_22%,transparent)] px-3 py-2 text-xs text-orbita-secondary backdrop-blur-[1px]">
               <summary className="cursor-pointer list-none font-medium text-orbita-primary [&::-webkit-details-marker]:hidden">
                 Patrones en movimientos (operativo, mes)
               </summary>
@@ -697,7 +712,7 @@ export default function FinanzasOverview() {
                   {subs.map((item) => (
                     <li
                       key={item.name}
-                      className="flex justify-between gap-2 rounded-lg bg-orbita-surface-alt/60 px-2 py-1.5 tabular-nums"
+                      className="flex justify-between gap-2 rounded-lg border border-orbita-border/30 bg-[color-mix(in_srgb,var(--color-text-primary)_3%,transparent)] px-2 py-1.5 tabular-nums"
                     >
                       <span className="min-w-0 break-words">{item.name}</span>
                       <span>${formatMoney(item.amount)}</span>
@@ -705,19 +720,34 @@ export default function FinanzasOverview() {
                   ))}
                 </ul>
               )}
-              <p className="mt-2 border-t border-orbita-border/50 pt-2 text-[11px]">
+              <p className="mt-2 border-t border-orbita-border/40 pt-2 text-[11px]">
                 Subtotal heurístico: ${formatMoney(subsTotal)}
               </p>
             </details>
           </div>
         </Card>
 
-        <Card className="min-w-0 overflow-x-clip p-3 sm:p-4">
-          <div className="grid min-w-0 max-w-full gap-3">
+        <Card
+          className="relative min-w-0 overflow-hidden p-0"
+          style={{
+            background:
+              "linear-gradient(165deg, color-mix(in srgb, var(--color-surface-alt) 58%, var(--color-surface)) 0%, var(--color-surface) 38%, var(--color-surface) 100%)",
+            border: "0.5px solid color-mix(in srgb, var(--color-border) 78%, transparent)",
+            boxShadow:
+              "0 4px 22px color-mix(in srgb, var(--color-text-primary) 6%, transparent), inset 0 1px 0 color-mix(in srgb, #fff 8%, transparent)",
+          }}
+        >
+          <div
+            className="h-1 w-full bg-gradient-to-r from-[color-mix(in_srgb,var(--color-accent-finance)_48%,transparent)] via-[color-mix(in_srgb,var(--color-accent-health)_28%,transparent)] to-[color-mix(in_srgb,var(--color-accent-finance)_15%,transparent)]"
+            aria-hidden
+          />
+          <div className="grid min-w-0 max-w-full gap-3 p-3 sm:p-4">
             <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Compromisos (lista corta)</p>
-                <p className="mt-0.5 text-[11px] leading-snug text-orbita-secondary">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-orbita-secondary">
+                  Compromisos (lista corta)
+                </p>
+                <p className="mt-1 text-[11px] leading-snug text-orbita-secondary">
                   {supabaseEnabled
                     ? "Misma lista que el simulador en Capital → Cuentas (guardada por hogar)."
                     : "Sincronizado con el simulador en Capital → Cuentas (este navegador)."}
@@ -725,16 +755,16 @@ export default function FinanzasOverview() {
               </div>
               <Link
                 href="/finanzas/cuentas#capital-compromisos"
-                className="shrink-0 text-[11px] font-medium text-orbita-secondary underline decoration-orbita-border/80 underline-offset-4 hover:text-orbita-primary"
+                className="shrink-0 rounded-full border border-orbita-border/45 bg-[color-mix(in_srgb,var(--color-text-primary)_4%,transparent)] px-2.5 py-1 text-[11px] font-medium text-orbita-primary transition hover:border-orbita-border/70 hover:bg-[color-mix(in_srgb,var(--color-text-primary)_7%,transparent)]"
                 prefetch={false}
               >
                 Editar
               </Link>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-orbita-border bg-orbita-surface px-3 py-2.5 sm:px-3.5">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-orbita-border/45 bg-[color-mix(in_srgb,var(--color-surface-alt)_42%,transparent)] px-3 py-2.5 shadow-[inset_0_1px_0_color-mix(in_srgb,#fff_10%,transparent)] backdrop-blur-[2px] sm:px-3.5">
               <div className="min-w-0">
-                <p className="text-[10px] uppercase tracking-[0.12em] text-orbita-secondary">Impacto neto (mes)</p>
+                <p className="text-[10px] uppercase tracking-[0.14em] text-orbita-secondary">Impacto neto (mes)</p>
                 <p className="mt-0.5 text-[11px] text-orbita-secondary">
                   {commitmentsSorted.length === 0
                     ? "Sin ítems"
@@ -742,7 +772,7 @@ export default function FinanzasOverview() {
                 </p>
               </div>
               <span
-                className={`shrink-0 tabular-nums text-base font-semibold ${
+                className={`shrink-0 tabular-nums text-lg font-semibold tracking-tight ${
                   commitmentsNetMonthly >= 0 ? "text-emerald-700" : "text-orbita-primary"
                 }`}
               >
@@ -755,8 +785,8 @@ export default function FinanzasOverview() {
             {commitmentsSorted.length === 0 ? (
               <p className="text-sm text-orbita-secondary">Aún no hay compromisos guardados.</p>
             ) : (
-              <details className="group rounded-xl border border-orbita-border/80 bg-orbita-surface-alt/35">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-sm font-medium text-orbita-primary transition-colors hover:bg-orbita-surface-alt/60 [&::-webkit-details-marker]:hidden">
+              <details className="group rounded-2xl border border-orbita-border/50 bg-[color-mix(in_srgb,var(--color-surface-alt)_28%,transparent)]">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-sm font-medium text-orbita-primary transition-colors hover:bg-[color-mix(in_srgb,var(--color-text-primary)_4%,transparent)] [&::-webkit-details-marker]:hidden">
                   <span className="flex min-w-0 items-center gap-2">
                     <ChevronDown
                       className="h-4 w-4 shrink-0 text-orbita-secondary transition-transform duration-200 group-open:rotate-180"
@@ -768,13 +798,13 @@ export default function FinanzasOverview() {
                     {commitmentsSorted.length} ítems
                   </span>
                 </summary>
-                <div className="space-y-1.5 border-t border-orbita-border/50 px-3 pb-3 pt-2">
+                <div className="space-y-1.5 border-t border-orbita-border/40 px-3 pb-3 pt-2">
                   {commitmentsSorted.map((c) => {
                     const inc = isIncomeCommitmentRow(c)
                     return (
                       <div
                         key={c.id}
-                        className="flex min-w-0 items-start justify-between gap-2 rounded-lg bg-orbita-surface-alt px-2.5 py-2"
+                        className="flex min-w-0 items-start justify-between gap-2 rounded-xl border border-orbita-border/35 bg-[color-mix(in_srgb,var(--color-text-primary)_3.5%,transparent)] px-2.5 py-2 transition hover:border-orbita-border/55 hover:bg-[color-mix(in_srgb,var(--color-text-primary)_5.5%,transparent)]"
                       >
                         <div className="min-w-0">
                           <p className="break-words text-sm font-medium leading-snug text-orbita-primary">
@@ -799,7 +829,7 @@ export default function FinanzasOverview() {
               </details>
             )}
 
-            <details className="rounded-xl border border-orbita-border/70 bg-orbita-surface-alt/40 px-3 py-2 text-xs text-orbita-secondary">
+            <details className="rounded-2xl border border-orbita-border/45 bg-[color-mix(in_srgb,var(--color-surface-alt)_22%,transparent)] px-3 py-2 text-xs text-orbita-secondary backdrop-blur-[1px]">
               <summary className="cursor-pointer list-none font-medium text-orbita-primary [&::-webkit-details-marker]:hidden">
                 Sugerencias desde movimientos (operativo)
               </summary>
@@ -813,7 +843,7 @@ export default function FinanzasOverview() {
                   {obls.map((item) => (
                     <li
                       key={item.name + item.due}
-                      className="flex justify-between gap-2 rounded-lg bg-orbita-surface-alt/60 px-2 py-1.5 tabular-nums"
+                      className="flex justify-between gap-2 rounded-lg border border-orbita-border/30 bg-[color-mix(in_srgb,var(--color-text-primary)_3%,transparent)] px-2 py-1.5 tabular-nums"
                     >
                       <span className="min-w-0 break-words">{item.name}</span>
                       <span>${formatMoney(item.amount)}</span>
@@ -821,7 +851,7 @@ export default function FinanzasOverview() {
                   ))}
                 </ul>
               )}
-              <p className="mt-2 border-t border-orbita-border/50 pt-2 text-[11px]">
+              <p className="mt-2 border-t border-orbita-border/40 pt-2 text-[11px]">
                 Subtotal sugerido: ${formatMoney(oblsTotal)}
               </p>
             </details>
