@@ -115,6 +115,8 @@ export type CategoryAnalyticsParams = {
   antMinTx: number
   historyMonths: number
   forecastHorizon: number
+  /** true: KPIs y categorías excluyen módulo financiero (solo vista operativa). */
+  scopeOperational?: boolean
 }
 
 const DEFAULT_PARAMS: CategoryAnalyticsParams = {
@@ -189,6 +191,8 @@ export type BuildCategoryAnalyticsInput = {
   txs: FinanceTransaction[]
   anchorMonth: string
   params?: Partial<CategoryAnalyticsParams>
+  /** Marca el payload como análisis solo operativo (sin módulo finanzas). */
+  scopeOperational?: boolean
 }
 
 export function buildCategoryAnalyticsPayload(input: BuildCategoryAnalyticsInput) {
@@ -445,6 +449,7 @@ export function buildCategoryAnalyticsPayload(input: BuildCategoryAnalyticsInput
       momWatchPct: p.momWatchPct,
       antShareMin: p.antShareMin,
       antTicketMax: p.antTicketMax,
+      scopeOperational: input.scopeOperational === true,
     },
     kpis: {
       totalExpenseAnchor,

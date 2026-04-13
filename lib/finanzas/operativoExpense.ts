@@ -5,6 +5,56 @@ import {
   type FinanceSubcategoryCatalogEntry,
 } from "@/lib/finanzas/subcategoryCatalog"
 
+/** Normaliza nombre de categoría en UI/hoja para heurísticas sin acentos. */
+function normalizeCategoryLabel(s: string | undefined): string {
+  return (s ?? "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+}
+
+/**
+ * Categorías agregadas del módulo financiero (transferencias, deuda, ajustes contables): no son gasto operativo.
+ */
+function isModuleFinanceCategoryName(category: string | undefined): boolean {
+  const c = normalizeCategoryLabel(category)
+  if (!c) return false
+  if (c === "finanzas") return true
+  if (c.includes("modulo financiero")) return true
+  if (c.includes("movimientos financieros")) return true
+  return false
+}
+
+/**
+ * Excluye movimientos del módulo financiero del análisis estratégico/predictivo (insights operativos).
+ * Prioridad: catálogo (expense_type / financial_impact); refuerzo por nombre de categoría en el movimiento.
+ */
+export function isExcludedFromOperationalAnalytics(
+  tx: FinanceTransaction,
+  impactBySub: Map<string, string>,
+  expenseTypeBySub: Map<string, FinanceSubcategoryCatalogEntry["expense_type"]>,
+): boolean {
+  const rawSub = tx.subcategory?.trim()
+  if (rawSub) {
+    const key = normalizeFinanceCatalogKey(rawSub)
+    if (expenseTypeBySub.get(key) === "modulo_finanzas") return true
+    const impact = (impactBySub.get(key) ?? "").trim().toLowerCase()
+    if (impact === "financiero") return true
+  }
+  return isModuleFinanceCategoryName(tx.category)
+}
+
+/** Lista de movimientos aptos para KPIs de categorías, hormiga, flujo operativo (sin módulo finanzas). */
+export function filterTransactionsForOperationalAnalytics(
+  txs: FinanceTransaction[],
+  catalog: FinanceSubcategoryCatalogEntry[],
+): FinanceTransaction[] {
+  const impactMap = financialImpactBySubcategory(catalog)
+  const expenseTypeMap = expenseTypeBySubcategory(catalog)
+  return txs.filter((tx) => !isExcludedFromOperationalAnalytics(tx, impactMap, expenseTypeMap))
+}
+
 /** Mapa subcategoría normalizada → impacto financiero en minúsculas. */
 export function financialImpactBySubcategory(catalog: FinanceSubcategoryCatalogEntry[]): Map<string, string> {
   const m = new Map<string, string>()

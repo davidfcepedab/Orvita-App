@@ -44,12 +44,15 @@ function rowFromDb(r: Record<string, unknown>): FinanceSubcategoryCatalogRow {
     household_id: (r.household_id as string | null) ?? null,
     subcategory: String(r.subcategory ?? ""),
     category: String(r.category ?? ""),
-    expense_type:
-      r.expense_type === "variable"
-        ? "variable"
-        : r.expense_type === "modulo_finanzas"
-          ? "modulo_finanzas"
-          : "fijo",
+    expense_type: (() => {
+      const raw = String(r.expense_type ?? "")
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "_")
+      if (raw === "variable") return "variable" as const
+      if (raw === "modulo_finanzas") return "modulo_finanzas" as const
+      return "fijo" as const
+    })(),
     financial_impact: String(r.financial_impact ?? ""),
     budgetable: Boolean(r.budgetable),
     active: r.active !== false,

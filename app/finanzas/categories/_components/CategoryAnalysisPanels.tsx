@@ -324,6 +324,13 @@ export function CategoryAnalysisPanels({
         <p className="text-center text-[11px] text-amber-800 dark:text-amber-200">{notice}</p>
       ) : null}
 
+      {data.params.scopeOperational ? (
+        <p className="text-center text-[10px] leading-snug text-orbita-secondary">
+          Solo operativo: este análisis excluye el módulo financiero (subcategorías «modulo_finanzas», impacto
+          «financiero» y categorías tipo Finanzas / movimientos financieros) para no mezclar con hábitos y agenda.
+        </p>
+      ) : null}
+
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
         <label className="grid max-w-xs gap-1">
           <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">

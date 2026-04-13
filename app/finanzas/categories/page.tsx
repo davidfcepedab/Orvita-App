@@ -11,12 +11,17 @@ import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { sheetTipoPillClass } from "@/lib/finanzas/catalogTagStyles"
 import { applyClientCategoryBudgets, type CategoryBudgetSource } from "@/lib/finanzas/applyClientCategoryBudgets"
 import {
+  applyBudgetTemplateFromRemote,
   categoryBudgetKey,
+  loadBudgetStore,
   loadMonthBudgets,
+  markBudgetRemoteSynced,
   saveMonthBudgets,
+  shouldApplyRemotePull,
   subcategoryBudgetKey,
   type MonthCategoryBudgetsV1,
 } from "@/lib/finanzas/categoryBudgetStorage"
+import { isAppMockMode, isSupabaseEnabled } from "@/lib/checkins/flags"
 import { financeApiGet, financeApiJson } from "@/lib/finanzas/financeClientFetch"
 import type { FinanceSubcategoryCatalogRow } from "@/lib/finanzas/subcategoryCatalog"
 import { CategoryAnalysisPanels } from "./_components/CategoryAnalysisPanels"
@@ -283,6 +288,14 @@ const mockCategories: CategoriesData = {
   ],
 }
 
+function formatBudgetTimestamp(iso: string) {
+  try {
+    return new Intl.DateTimeFormat("es-CO", { dateStyle: "short", timeStyle: "short" }).format(new Date(iso))
+  } catch {
+    return iso
+  }
+}
+
 export default function FinanzasCategories() {
   const finance = useFinance()
   const router = useRouter()
@@ -309,6 +322,9 @@ export default function FinanzasCategories() {
     category: {},
     subcategory: {},
   })
+  const [householdPushNeeded, setHouseholdPushNeeded] = useState(false)
+  const [householdSaving, setHouseholdSaving] = useState(false)
+  const [householdSyncHint, setHouseholdSyncHint] = useState<string | null>(null)
 
   const loadCategories = useCallback(
     async (opts?: { quiet?: boolean }) => {
@@ -358,6 +374,67 @@ export default function FinanzasCategories() {
     if (month_value) setBudgetDraft(loadMonthBudgets(month_value))
   }, [month_value, budgetRevision])
 
+  useEffect(() => {
+    if (!month_value || !isSupabaseEnabled() || isAppMockMode()) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await financeApiGet("/api/orbita/finanzas/category-budgets")
+        const json = (await res.json()) as {
+          success?: boolean
+          data: { template: MonthCategoryBudgetsV1; updated_at: string } | null
+          error?: string
+        }
+        if (!res.ok || !json.success || cancelled) return
+        if (!json.data) return
+        const local = loadBudgetStore()
+        if (!shouldApplyRemotePull(local, json.data.updated_at)) return
+        applyBudgetTemplateFromRemote(json.data.template, json.data.updated_at)
+        setBudgetDraft(loadMonthBudgets(month_value))
+        setBudgetRevision((x) => x + 1)
+        setHouseholdPushNeeded(false)
+        setHouseholdSyncHint("Sincronizado desde el hogar.")
+      } catch {
+        /* offline u error silencioso */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [month_value, capitalEpoch])
+
+  const pushBudgetsToHousehold = useCallback(async () => {
+    if (!isSupabaseEnabled() || isAppMockMode()) {
+      setHouseholdSyncHint("Activa la sincronización con cuenta para guardar en el hogar.")
+      return
+    }
+    setHouseholdSaving(true)
+    setHouseholdSyncHint(null)
+    try {
+      const store = loadBudgetStore()
+      const res = await financeApiJson("/api/orbita/finanzas/category-budgets", {
+        method: "POST",
+        body: { template: store.template },
+      })
+      const json = (await res.json()) as {
+        success?: boolean
+        data?: { updated_at?: string }
+        error?: string
+      }
+      if (!res.ok || !json.success || !json.data?.updated_at) {
+        throw new Error(messageForHttpError(res.status, json.error, res.statusText))
+      }
+      markBudgetRemoteSynced(json.data.updated_at)
+      setHouseholdPushNeeded(false)
+      setBudgetRevision((r) => r + 1)
+      setHouseholdSyncHint("Guardado en el hogar.")
+    } catch (e) {
+      setHouseholdSyncHint(e instanceof Error ? e.message : "No se pudo guardar en el hogar.")
+    } finally {
+      setHouseholdSaving(false)
+    }
+  }, [])
+
   const structuralCategoriesRaw = data?.structuralCategories ?? []
 
   const storedMonthBudgets = useMemo(() => {
@@ -375,6 +452,8 @@ export default function FinanzasCategories() {
     [structuralCategoriesUi, storedMonthBudgets],
   )
 
+  const budgetStoreSnapshot = useMemo(() => loadBudgetStore(), [budgetRevision])
+
   const commitCategoryBudget = useCallback((cat: Category, raw: string) => {
     if (!month_value) return
     const n = parseMoneyInput(raw)
@@ -390,6 +469,10 @@ export default function FinanzasCategories() {
     saveMonthBudgets(month_value, next)
     setBudgetDraft(next)
     setBudgetRevision((r) => r + 1)
+    if (isSupabaseEnabled() && !isAppMockMode()) {
+      setHouseholdPushNeeded(true)
+      setHouseholdSyncHint(null)
+    }
   }, [month_value])
 
   const commitSubcategoryBudget = useCallback((cat: Category, subName: string, raw: string) => {
@@ -407,6 +490,10 @@ export default function FinanzasCategories() {
     saveMonthBudgets(month_value, next)
     setBudgetDraft(next)
     setBudgetRevision((r) => r + 1)
+    if (isSupabaseEnabled() && !isAppMockMode()) {
+      setHouseholdPushNeeded(true)
+      setHouseholdSyncHint(null)
+    }
   }, [month_value])
 
   if (!finance) {
@@ -854,10 +941,11 @@ export default function FinanzasCategories() {
             <details className="group" open>
               <summary className="flex cursor-pointer list-none items-start justify-between gap-3 px-4 py-3 sm:px-5 sm:py-3.5 [&::-webkit-details-marker]:hidden">
                 <div className="min-w-0 flex-1">
-                  <h2 className="text-sm font-semibold text-orbita-primary">Presupuestos del mes (COP)</h2>
+                  <h2 className="text-sm font-semibold text-orbita-primary">Presupuestos (COP, lineal mensual)</h2>
                   <p className="mt-0.5 text-[11px] leading-snug text-orbita-secondary">
-                    Define topes por categoría o subcategoría para el mes {month_value ?? "—"}. Las barras de «Presupuesto»
-                    usan estos montos; si dejas vacío, se mantiene la estimación automática (antes todos caían ~93%).
+                    Mismo tope en COP para todos los meses (lineal). Las barras de «Presupuesto» usan estos montos; si
+                    dejas vacío, se mantiene la estimación automática. Vista mes {month_value ?? "—"} como referencia de
+                    gasto.
                   </p>
                 </div>
                 <ChevronDown
@@ -866,10 +954,52 @@ export default function FinanzasCategories() {
                 />
               </summary>
               <div className="space-y-3 border-t border-orbita-border/60 bg-[color-mix(in_srgb,var(--color-surface-alt)_32%,var(--color-surface))] px-4 pb-4 pt-3 sm:px-5 sm:pb-5">
-                <p className="text-[11px] leading-relaxed text-orbita-secondary">
-                  Los datos se guardan en este navegador (localStorage), por mes. Borra el campo y guarda con tab o clic
-                  fuera para volver a la estimación.
-                </p>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0 space-y-1 text-[11px] leading-relaxed text-orbita-secondary">
+                    <p>
+                      Los cambios se guardan en este dispositivo al salir del campo (tab o clic fuera). Borra el tope y
+                      confirma con tab o fuera para volver a la estimación automática.
+                    </p>
+                    <p className="tabular-nums text-orbita-primary">
+                      Última modificación:{" "}
+                      <span className="font-medium">{formatBudgetTimestamp(budgetStoreSnapshot.updatedAt)}</span>
+                      {budgetStoreSnapshot.lastRemoteUpdatedAt ? (
+                        <>
+                          {" "}
+                          · Hogar:{" "}
+                          <span className="font-medium">
+                            {formatBudgetTimestamp(budgetStoreSnapshot.lastRemoteUpdatedAt)}
+                          </span>
+                        </>
+                      ) : null}
+                    </p>
+                    {householdPushNeeded && isSupabaseEnabled() && !isAppMockMode() ? (
+                      <p className="text-amber-800 dark:text-amber-200">Cambios pendientes de subir al hogar.</p>
+                    ) : null}
+                    {householdSyncHint ? (
+                      <p className="text-[11px] text-emerald-800 dark:text-emerald-200">{householdSyncHint}</p>
+                    ) : null}
+                  </div>
+                  <div className="flex shrink-0 flex-col items-stretch gap-1.5 sm:items-end">
+                    <button
+                      type="button"
+                      disabled={householdSaving || !isSupabaseEnabled() || isAppMockMode()}
+                      onClick={() => void pushBudgetsToHousehold()}
+                      className="rounded-[var(--radius-button)] border border-orbita-border/80 bg-orbita-surface px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-orbita-primary transition hover:bg-[color-mix(in_srgb,var(--color-accent-finance)_12%,var(--color-surface))] disabled:cursor-not-allowed disabled:opacity-45"
+                    >
+                      {householdSaving ? "Guardando…" : "Guardar en el hogar"}
+                    </button>
+                    {isSupabaseEnabled() && !isAppMockMode() ? (
+                      <p className="max-w-[14rem] text-right text-[10px] text-orbita-secondary">
+                        Replica la plantilla en la nube para todo el hogar (mismo COP cada mes).
+                      </p>
+                    ) : (
+                      <p className="max-w-[14rem] text-right text-[10px] text-orbita-secondary">
+                        Activa la sincronización con cuenta para guardar también en el hogar.
+                      </p>
+                    )}
+                  </div>
+                </div>
                 <div className="overflow-x-auto rounded-xl border border-orbita-border/45">
                   <table className="w-full min-w-[min(100%,560px)] border-collapse text-left text-[11px]">
                     <thead>

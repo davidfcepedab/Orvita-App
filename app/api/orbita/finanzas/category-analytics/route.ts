@@ -7,7 +7,9 @@ import {
 } from "@/lib/finanzas/categoryAnalyticsEngine"
 import { mockTransactionsForMonth } from "@/lib/finanzas/mockFinancePayloads"
 import { monthBounds } from "@/lib/finanzas/monthRange"
+import { filterTransactionsForOperationalAnalytics } from "@/lib/finanzas/operativoExpense"
 import type { FinanceTransaction } from "@/lib/finanzas/types"
+import { fetchSubcategoryCatalogMerged } from "@/lib/finanzas/subcategoryCatalog"
 import { getHouseholdId } from "@/lib/households/getHouseholdId"
 import { getTransactionsByRange } from "@/lib/services/finanzasService"
 
@@ -43,9 +45,11 @@ export async function GET(req: NextRequest) {
       for (const ym of months) {
         txs = txs.concat(mockTransactionsForMonth(ym))
       }
+      txs = filterTransactionsForOperationalAnalytics(txs, [])
       const payload = buildCategoryAnalyticsPayload({
         txs,
         anchorMonth: monthParam,
+        scopeOperational: true,
         params: {
           momAlertPct: Number.isFinite(momAlertPct) ? momAlertPct : 15,
           antShareMin: Number.isFinite(antShare) ? antShare : 0.035,
@@ -74,9 +78,13 @@ export async function GET(req: NextRequest) {
 
     txs = await getTransactionsByRange(auth.supabase, startBounds.startStr, anchorBounds.endStr)
 
+    const catalog = await fetchSubcategoryCatalogMerged(auth.supabase, householdId)
+    txs = filterTransactionsForOperationalAnalytics(txs, catalog)
+
     const payload = buildCategoryAnalyticsPayload({
       txs,
       anchorMonth: monthParam,
+      scopeOperational: true,
       params: {
         momAlertPct: Number.isFinite(momAlertPct) ? momAlertPct : 15,
         antShareMin: Number.isFinite(antShare) ? antShare : 0.035,
