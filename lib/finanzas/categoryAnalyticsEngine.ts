@@ -101,6 +101,10 @@ export type StrategicInsight = {
   savingsAnnual?: number
   ctaHref?: string
   ctaLabel?: string
+  /** Enriquecido en cliente: vínculo con hábitos/agenda (opcional). */
+  rootCauseOperational?: string
+  agendaAction?: string
+  energyOrTimeNote?: string
 }
 
 export type CategoryAnalyticsParams = {

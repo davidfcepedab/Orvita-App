@@ -604,9 +604,13 @@ export default function FinanzasCategories() {
         <span className="text-xs text-orbita-secondary sm:shrink-0">Lectura mensual</span>
       </div>
 
-      {viewMode === "estrategica" && <CategoryAnalysisPanels mode="estrategica" />}
+      {viewMode === "estrategica" && (
+        <CategoryAnalysisPanels mode="estrategica" budgetRevision={budgetRevision} />
+      )}
 
-      {viewMode === "predictiva" && <CategoryAnalysisPanels mode="predictiva" />}
+      {viewMode === "predictiva" && (
+        <CategoryAnalysisPanels mode="predictiva" budgetRevision={budgetRevision} />
+      )}
 
       {viewMode === "operativa" && q && fixedCategories.length === 0 && variableCategories.length === 0 ? (
         <div className="rounded-xl border border-orbita-border bg-orbita-surface-alt px-4 py-6 text-center text-sm text-orbita-secondary">
