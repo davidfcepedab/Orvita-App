@@ -1,6 +1,6 @@
 "use client"
 
-import { type FormEvent, useCallback, useEffect, useState } from "react"
+import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react"
 import { ChevronDown } from "lucide-react"
 import { useFinance } from "../FinanceContext"
 import { FinanceViewHeader } from "../_components/FinanceViewHeader"
@@ -9,6 +9,14 @@ import { useRouter } from "next/navigation"
 import { Card } from "@/src/components/ui/Card"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { sheetTipoPillClass } from "@/lib/finanzas/catalogTagStyles"
+import { applyClientCategoryBudgets } from "@/lib/finanzas/applyClientCategoryBudgets"
+import {
+  categoryBudgetKey,
+  loadMonthBudgets,
+  saveMonthBudgets,
+  subcategoryBudgetKey,
+  type MonthCategoryBudgetsV1,
+} from "@/lib/finanzas/categoryBudgetStorage"
 import { financeApiGet, financeApiJson } from "@/lib/finanzas/financeClientFetch"
 import type { FinanceSubcategoryCatalogRow } from "@/lib/finanzas/subcategoryCatalog"
 
@@ -20,6 +28,10 @@ interface Subcategory {
   budgetable?: boolean
   catalogCategory?: string
   categoryMismatch?: boolean
+  /** Presupuesto en COP (solo si el usuario lo definió en «Presupuestos del mes»). */
+  budgetCap?: number
+  budgetUsedPercent?: number
+  budgetStatus?: "green" | "yellow" | "red"
 }
 
 interface Category {
@@ -49,9 +61,22 @@ interface CategoriesResponse {
   error?: string
 }
 
+function parseMoneyInput(s: string): number | null {
+  const d = s.replace(/[^\d]/g, "")
+  if (!d) return null
+  const n = parseInt(d, 10)
+  return Number.isFinite(n) && n > 0 ? n : null
+}
+
 /** Bloque agregado en servidor para subs `modulo_finanzas`; no se muestra en el mapa fijo/variable. */
 function isModuloFinancieroCatalogCategory(cat: Pick<Category, "name">): boolean {
   return cat.name.includes("Módulo financiero")
+}
+
+function budgetBarTone(status: Category["budgetStatus"]) {
+  if (status === "red") return "bg-rose-500"
+  if (status === "yellow") return "bg-amber-500"
+  return "bg-emerald-500"
 }
 
 function OperativaCategoryCard({
@@ -64,35 +89,50 @@ function OperativaCategoryCard({
   const pillTipo = cat.type === "fixed" ? "fijo" : "variable"
   const typeLabel = cat.type === "fixed" ? "Fijo" : "Variable"
   const subCount = cat.subcategories?.length ?? 0
+  const accent =
+    cat.type === "fixed"
+      ? "from-[color-mix(in_srgb,var(--color-accent-finance)_42%,transparent)] via-[color-mix(in_srgb,var(--color-accent-health)_22%,transparent)]"
+      : "from-[color-mix(in_srgb,var(--color-accent-health)_38%,transparent)] via-[color-mix(in_srgb,var(--color-accent-finance)_28%,transparent)]"
 
   return (
-    <Card hover className="p-3 sm:p-4">
-      <div className="grid gap-2 text-left">
-        <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+    <Card
+      className="relative overflow-hidden p-0 transition-shadow hover:shadow-[0_10px_36px_color-mix(in_srgb,var(--color-text-primary)_8%,transparent)]"
+      style={{
+        background:
+          "linear-gradient(168deg, color-mix(in srgb, var(--color-surface-alt) 52%, var(--color-surface)) 0%, var(--color-surface) 45%)",
+        border: "0.5px solid color-mix(in srgb, var(--color-border) 78%, transparent)",
+        boxShadow: "0 2px 16px color-mix(in srgb, var(--color-text-primary) 5%, transparent)",
+      }}
+    >
+      <div className={`h-0.5 w-full bg-gradient-to-r ${accent} to-transparent`} aria-hidden />
+      <div className="grid gap-2.5 p-3 text-left sm:gap-3 sm:p-4">
+        <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <p className="break-words text-sm font-semibold leading-snug text-orbita-primary">{cat.name}</p>
+              <p className="break-words text-[15px] font-semibold leading-snug tracking-tight text-orbita-primary">
+                {cat.name}
+              </p>
               <span
-                className={`shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${sheetTipoPillClass(pillTipo)}`}
+                className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] ${sheetTipoPillClass(pillTipo)}`}
               >
                 {typeLabel}
               </span>
             </div>
             {cat.delta !== undefined ? (
-              <p className={`mt-0.5 text-[10px] ${cat.delta > 0 ? "text-emerald-600" : "text-rose-600"}`}>
+              <p className={`mt-1 text-[10px] font-medium ${cat.delta > 0 ? "text-emerald-600" : "text-rose-600"}`}>
                 {cat.delta > 0 ? "+" : ""}
                 {cat.delta.toFixed(0)} vs mes anterior
               </p>
             ) : null}
           </div>
           <div className="shrink-0 text-right">
-            <p className="tabular-nums text-base font-semibold text-orbita-primary">
+            <p className="tabular-nums text-lg font-semibold tracking-tight text-orbita-primary">
               ${Math.abs(cat.total).toLocaleString("es-CO", { maximumFractionDigits: 0 })}
             </p>
             <button
               type="button"
               onClick={() => onViewMovements(cat.name)}
-              className="mt-0.5 text-[10px] uppercase tracking-[0.12em] text-orbita-secondary hover:text-orbita-primary"
+              className="mt-1 inline-flex rounded-full border border-orbita-border/40 bg-[color-mix(in_srgb,var(--color-text-primary)_4%,transparent)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary transition hover:border-orbita-border/65 hover:text-orbita-primary"
             >
               Ver movimientos
             </button>
@@ -100,30 +140,28 @@ function OperativaCategoryCard({
         </div>
 
         {cat.budget && cat.budget > 0 && (
-          <div className="grid gap-1">
-            <div className="flex items-center justify-between text-xs text-orbita-secondary">
-              <span>Presupuesto</span>
-              <span className="font-semibold text-orbita-primary">{cat.budgetUsedPercent?.toFixed(0)}%</span>
+          <div className="grid gap-1.5 rounded-xl border border-orbita-border/35 bg-[color-mix(in_srgb,var(--color-text-primary)_3%,transparent)] px-2.5 py-2">
+            <div className="flex items-center justify-between gap-2 text-[11px] text-orbita-secondary">
+              <span className="font-medium">Presupuesto</span>
+              <span className="tabular-nums font-semibold text-orbita-primary">{cat.budgetUsedPercent?.toFixed(0)}%</span>
             </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-orbita-surface-alt">
+            <div className="h-2 overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--color-surface-alt)_55%,transparent)] ring-1 ring-orbita-border/25">
               <div
-                className={`${
-                  cat.budgetStatus === "red"
-                    ? "bg-rose-500"
-                    : cat.budgetStatus === "yellow"
-                      ? "bg-amber-500"
-                      : "bg-emerald-500"
-                } h-full`}
+                className={`${budgetBarTone(cat.budgetStatus)} h-full rounded-full transition-[width]`}
                 style={{ width: `${Math.min(cat.budgetUsedPercent || 0, 100)}%` }}
               />
             </div>
+            <p className="text-[9px] leading-tight text-orbita-secondary/90">
+              Tope mensual ${cat.budget.toLocaleString("es-CO", { maximumFractionDigits: 0 })} COP. Sin valor en «Presupuestos
+              del mes» se usa una estimación (≈108% del gasto).
+            </p>
           </div>
         )}
 
         {cat.subcategories && subCount > 0 ? (
-          <details className="group border-t border-orbita-border pt-2">
+          <details className="group border-t border-orbita-border/50 pt-2">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
-              <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">
+              <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
                 Subcategorías ({subCount})
               </span>
               <ChevronDown
@@ -131,23 +169,42 @@ function OperativaCategoryCard({
                 aria-hidden
               />
             </summary>
-            <div className="mt-2 grid gap-1">
+            <div className="mt-2 grid gap-2">
               {cat.subcategories.map((sub, idx) => (
                 <div
                   key={idx}
-                  className="flex min-w-0 flex-col gap-0.5 text-xs sm:flex-row sm:items-start sm:justify-between sm:gap-2"
+                  className="rounded-lg border border-orbita-border/30 bg-[color-mix(in_srgb,var(--color-text-primary)_2.5%,transparent)] px-2 py-1.5"
                 >
-                  <div className="min-w-0 flex-1">
-                    <span className="break-words text-orbita-secondary">{sub.name}</span>
-                    {sub.categoryMismatch && sub.catalogCategory ? (
-                      <p className="mt-0.5 text-[9px] text-amber-800 dark:text-amber-300" title="La categoría del movimiento no coincide con la del catálogo">
-                        Cat. catálogo: {sub.catalogCategory}
-                      </p>
-                    ) : null}
+                  <div className="flex min-w-0 flex-col gap-0.5 text-xs sm:flex-row sm:items-start sm:justify-between sm:gap-2">
+                    <div className="min-w-0 flex-1">
+                      <span className="break-words font-medium text-orbita-primary">{sub.name}</span>
+                      {sub.categoryMismatch && sub.catalogCategory ? (
+                        <p
+                          className="mt-0.5 text-[9px] text-amber-800 dark:text-amber-300"
+                          title="La categoría del movimiento no coincide con la del catálogo"
+                        >
+                          Cat. catálogo: {sub.catalogCategory}
+                        </p>
+                      ) : null}
+                    </div>
+                    <span className="shrink-0 tabular-nums font-semibold text-orbita-primary sm:text-right">
+                      ${Math.abs(sub.total).toLocaleString("es-CO", { maximumFractionDigits: 0 })}
+                    </span>
                   </div>
-                  <span className="shrink-0 font-semibold text-orbita-primary sm:text-right">
-                    ${Math.abs(sub.total).toLocaleString("es-CO", { maximumFractionDigits: 0 })}
-                  </span>
+                  {sub.budgetCap != null && sub.budgetCap > 0 && sub.budgetUsedPercent != null ? (
+                    <div className="mt-1.5 grid gap-1">
+                      <div className="flex items-center justify-between text-[9px] text-orbita-secondary">
+                        <span>Sub presupuesto</span>
+                        <span className="tabular-nums font-medium text-orbita-primary">{sub.budgetUsedPercent}%</span>
+                      </div>
+                      <div className="h-1 overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--color-surface-alt)_50%,transparent)]">
+                        <div
+                          className={`${budgetBarTone(sub.budgetStatus)} h-full`}
+                          style={{ width: `${Math.min(sub.budgetUsedPercent, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               ))}
             </div>
@@ -240,6 +297,12 @@ export default function FinanzasCategories() {
     financial_impact: "operativo",
   })
   const [creatingOverride, setCreatingOverride] = useState(false)
+  const [budgetRevision, setBudgetRevision] = useState(0)
+  const [budgetDraft, setBudgetDraft] = useState<MonthCategoryBudgetsV1>({
+    version: 1,
+    category: {},
+    subcategory: {},
+  })
 
   const loadCategories = useCallback(
     async (opts?: { quiet?: boolean }) => {
@@ -285,6 +348,61 @@ export default function FinanzasCategories() {
     void loadCategories()
   }, [loadCategories])
 
+  useEffect(() => {
+    if (month_value) setBudgetDraft(loadMonthBudgets(month_value))
+  }, [month_value, budgetRevision])
+
+  const structuralCategoriesRaw = data?.structuralCategories ?? []
+
+  const storedMonthBudgets = useMemo(() => {
+    if (!month_value) return { version: 1 as const, category: {}, subcategory: {} }
+    return loadMonthBudgets(month_value)
+  }, [month_value, budgetRevision])
+
+  const structuralCategoriesUi = useMemo(
+    () => structuralCategoriesRaw.filter((c) => !isModuloFinancieroCatalogCategory(c)),
+    [structuralCategoriesRaw],
+  )
+
+  const structuralWithBudgets = useMemo(
+    () => applyClientCategoryBudgets(structuralCategoriesUi, storedMonthBudgets),
+    [structuralCategoriesUi, storedMonthBudgets],
+  )
+
+  const commitCategoryBudget = useCallback((cat: Category, raw: string) => {
+    if (!month_value) return
+    const n = parseMoneyInput(raw)
+    const key = categoryBudgetKey(cat.type, cat.name)
+    const base = loadMonthBudgets(month_value)
+    const next: MonthCategoryBudgetsV1 = {
+      version: 1,
+      category: { ...base.category },
+      subcategory: { ...base.subcategory },
+    }
+    if (n == null || n <= 0) delete next.category[key]
+    else next.category[key] = n
+    saveMonthBudgets(month_value, next)
+    setBudgetDraft(next)
+    setBudgetRevision((r) => r + 1)
+  }, [month_value])
+
+  const commitSubcategoryBudget = useCallback((cat: Category, subName: string, raw: string) => {
+    if (!month_value) return
+    const n = parseMoneyInput(raw)
+    const key = subcategoryBudgetKey(cat.type, cat.name, subName)
+    const base = loadMonthBudgets(month_value)
+    const next: MonthCategoryBudgetsV1 = {
+      version: 1,
+      category: { ...base.category },
+      subcategory: { ...base.subcategory },
+    }
+    if (n == null || n <= 0) delete next.subcategory[key]
+    else next.subcategory[key] = n
+    saveMonthBudgets(month_value, next)
+    setBudgetDraft(next)
+    setBudgetRevision((r) => r + 1)
+  }, [month_value])
+
   if (!finance) {
     return (
       <div className="p-6 text-center text-orbita-secondary">
@@ -317,14 +435,12 @@ export default function FinanzasCategories() {
     )
   }
 
-  const structuralCategories = data?.structuralCategories ?? []
   const totalFixed = data?.totalFixed ?? 0
   const totalVariable = data?.totalVariable ?? 0
   const unknownSubcategories = data?.unknownSubcategories ?? []
   const householdCatalogRows = data?.subcategoryCatalog ?? []
 
-  const structuralCategoriesUi = structuralCategories.filter((c) => !isModuloFinancieroCatalogCategory(c))
-  const moduloCategory = structuralCategories.find((c) => isModuloFinancieroCatalogCategory(c))
+  const moduloCategory = structuralCategoriesRaw.find((c) => isModuloFinancieroCatalogCategory(c))
   const moduloTotalAbs = moduloCategory ? Math.abs(moduloCategory.total) : 0
   const totalVariableUi = Math.max(0, totalVariable - moduloTotalAbs)
   const totalStructuralUi = totalFixed + totalVariableUi
@@ -389,12 +505,12 @@ export default function FinanzasCategories() {
     return (cat.subcategories ?? []).some((s) => s.name.toLowerCase().includes(q))
   }
 
-  const fixedCategories = (structuralCategoriesUi || [])
+  const fixedCategories = (structuralWithBudgets || [])
     .filter((c): c is Category => c?.type === "fixed" && Math.abs(c.total) > 0)
     .filter(matchesQuery)
     .sort((a, b) => Math.abs(b.total) - Math.abs(a.total))
 
-  const variableCategories = (structuralCategoriesUi || [])
+  const variableCategories = (structuralWithBudgets || [])
     .filter((c): c is Category => c?.type === "variable" && Math.abs(c.total) > 0)
     .filter(matchesQuery)
     .sort((a, b) => Math.abs(b.total) - Math.abs(a.total))
@@ -557,7 +673,7 @@ export default function FinanzasCategories() {
                 ).map((group) => (
                     <div key={group.label} className="space-y-3">
                       <span
-                        className={`inline-flex rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${sheetTipoPillClass(group.label === "Fijo" ? "fijo" : "variable")}`}
+                        className={`inline-flex rounded-full border border-orbita-border/35 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] shadow-sm ${sheetTipoPillClass(group.label === "Fijo" ? "fijo" : "variable")}`}
                       >
                         {group.label}
                       </span>
@@ -702,6 +818,132 @@ export default function FinanzasCategories() {
                 </button>
               </div>
             </form>
+              </div>
+            </details>
+          </Card>
+
+          <Card
+            className="overflow-hidden p-0"
+            style={{
+              background:
+                "linear-gradient(175deg, color-mix(in srgb, var(--color-surface-alt) 45%, var(--color-surface)) 0%, var(--color-surface) 55%)",
+              border: "0.5px solid color-mix(in srgb, var(--color-border) 78%, transparent)",
+              boxShadow: "0 2px 18px color-mix(in srgb, var(--color-text-primary) 5%, transparent)",
+            }}
+          >
+            <details className="group" open>
+              <summary className="flex cursor-pointer list-none items-start justify-between gap-3 px-4 py-3 sm:px-5 sm:py-3.5 [&::-webkit-details-marker]:hidden">
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-sm font-semibold text-orbita-primary">Presupuestos del mes (COP)</h2>
+                  <p className="mt-0.5 text-[11px] leading-snug text-orbita-secondary">
+                    Define topes por categoría o subcategoría para el mes {month_value ?? "—"}. Las barras de «Presupuesto»
+                    usan estos montos; si dejas vacío, se mantiene la estimación automática (antes todos caían ~93%).
+                  </p>
+                </div>
+                <ChevronDown
+                  className="mt-0.5 h-4 w-4 shrink-0 text-orbita-secondary transition-transform duration-200 group-open:rotate-180"
+                  aria-hidden
+                />
+              </summary>
+              <div className="space-y-3 border-t border-orbita-border/60 bg-[color-mix(in_srgb,var(--color-surface-alt)_32%,var(--color-surface))] px-4 pb-4 pt-3 sm:px-5 sm:pb-5">
+                <p className="text-[11px] leading-relaxed text-orbita-secondary">
+                  Los datos se guardan en este navegador (localStorage), por mes. Borra el campo y guarda con tab o clic
+                  fuera para volver a la estimación.
+                </p>
+                <div className="overflow-x-auto rounded-xl border border-orbita-border/45">
+                  <table className="w-full min-w-[min(100%,560px)] border-collapse text-left text-[11px]">
+                    <thead>
+                      <tr
+                        className="border-b border-orbita-border/60 text-orbita-secondary"
+                        style={{
+                          background: "color-mix(in srgb, var(--color-surface-alt) 88%, var(--color-surface))",
+                        }}
+                      >
+                        <th className="px-2 py-2 font-semibold sm:px-3">Tipo</th>
+                        <th className="px-2 py-2 font-semibold sm:px-3">Nombre</th>
+                        <th className="px-2 py-2 text-right font-semibold sm:px-3">Gasto mes</th>
+                        <th className="min-w-[8.5rem] px-2 py-2 font-semibold sm:px-3">Tope (COP)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...structuralWithBudgets]
+                        .filter((c) => Math.abs(c.total) > 0)
+                        .sort((a, b) => {
+                          const ta = a.type === "fixed" ? 0 : 1
+                          const tb = b.type === "fixed" ? 0 : 1
+                          if (ta !== tb) return ta - tb
+                          return Math.abs(b.total) - Math.abs(a.total)
+                        })
+                        .flatMap((cat) => {
+                          const ck = categoryBudgetKey(cat.type, cat.name)
+                          const catRow = (
+                            <tr key={`c-${ck}`} className="border-b border-orbita-border/40 bg-[color-mix(in_srgb,var(--color-text-primary)_2%,transparent)]">
+                              <td className="px-2 py-2 align-middle sm:px-3">
+                                <span
+                                  className={`inline-flex rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${sheetTipoPillClass(cat.type === "fixed" ? "fijo" : "variable")}`}
+                                >
+                                  {cat.type === "fixed" ? "Fijo" : "Variable"}
+                                </span>
+                              </td>
+                              <td className="px-2 py-2 align-middle font-medium text-orbita-primary sm:px-3">{cat.name}</td>
+                              <td className="px-2 py-2 align-middle text-right tabular-nums text-orbita-secondary sm:px-3">
+                                ${Math.abs(cat.total).toLocaleString("es-CO", { maximumFractionDigits: 0 })}
+                              </td>
+                              <td className="px-2 py-2 align-middle sm:px-3">
+                                <input
+                                  key={`cat-inp-${ck}-${budgetRevision}`}
+                                  type="text"
+                                  inputMode="numeric"
+                                  placeholder="Auto"
+                                  defaultValue={
+                                    budgetDraft.category[ck] != null ? String(budgetDraft.category[ck]) : ""
+                                  }
+                                  onBlur={(e) => commitCategoryBudget(cat, e.target.value)}
+                                  className="w-full min-w-0 rounded-lg border border-orbita-border/50 bg-[color-mix(in_srgb,var(--color-text-primary)_4%,transparent)] px-2 py-1.5 text-xs tabular-nums text-orbita-primary outline-none ring-orbita-border/30 focus:border-orbita-border/80 focus:ring-1"
+                                  aria-label={`Presupuesto categoría ${cat.name}`}
+                                />
+                              </td>
+                            </tr>
+                          )
+                          const subRows = (cat.subcategories ?? []).map((sub) => {
+                            const sk = subcategoryBudgetKey(cat.type, cat.name, sub.name)
+                            return (
+                              <tr
+                                key={`s-${sk}`}
+                                className="border-b border-orbita-border/35 bg-[color-mix(in_srgb,var(--color-surface-alt)_22%,transparent)]"
+                              >
+                                <td className="px-2 py-1.5 sm:px-3" />
+                                <td className="px-2 py-1.5 pl-4 text-orbita-secondary sm:px-3 sm:pl-6">
+                                  <span className="text-[10px] font-medium uppercase tracking-wide text-orbita-secondary/80">
+                                    Sub
+                                  </span>{" "}
+                                  <span className="text-orbita-primary">{sub.name}</span>
+                                </td>
+                                <td className="px-2 py-1.5 text-right tabular-nums text-orbita-secondary sm:px-3">
+                                  ${Math.abs(sub.total).toLocaleString("es-CO", { maximumFractionDigits: 0 })}
+                                </td>
+                                <td className="px-2 py-1.5 sm:px-3">
+                                  <input
+                                    key={`sub-inp-${sk}-${budgetRevision}`}
+                                    type="text"
+                                    inputMode="numeric"
+                                    placeholder="—"
+                                    defaultValue={
+                                      budgetDraft.subcategory[sk] != null ? String(budgetDraft.subcategory[sk]) : ""
+                                    }
+                                    onBlur={(e) => commitSubcategoryBudget(cat, sub.name, e.target.value)}
+                                    className="w-full min-w-0 rounded-lg border border-orbita-border/40 bg-[color-mix(in_srgb,var(--color-text-primary)_3%,transparent)] px-2 py-1 text-[11px] tabular-nums text-orbita-primary outline-none focus:border-orbita-border/75 focus:ring-1"
+                                    aria-label={`Presupuesto subcategoría ${sub.name}`}
+                                  />
+                                </td>
+                              </tr>
+                            )
+                          })
+                          return [catRow, ...subRows]
+                        })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </details>
           </Card>
