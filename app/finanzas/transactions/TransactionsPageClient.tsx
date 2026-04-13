@@ -127,6 +127,7 @@ export default function TransactionsPageClient() {
   const month = finance?.month ?? searchParams.get("month") ?? ""
   const capitalEpoch = finance?.capitalDataEpoch ?? 0
   const category = searchParams.get("category") || ""
+  const subcategoryParam = searchParams.get("subcategory")?.trim() ?? ""
 
   const accountParam = searchParams.get("account")?.trim() ?? ""
   const financeAccountId = UUID_RE.test(accountParam) ? accountParam : ""
@@ -159,6 +160,9 @@ export default function TransactionsPageClient() {
         if (category) {
           url += `&category=${encodeURIComponent(category)}`
         }
+        if (subcategoryParam) {
+          url += `&subcategory=${encodeURIComponent(subcategoryParam)}`
+        }
         if (financeAccountId) {
           url += `&finance_account_id=${encodeURIComponent(financeAccountId)}`
         }
@@ -189,7 +193,7 @@ export default function TransactionsPageClient() {
         if (opts.showLoading) setLoading(false)
       }
     },
-    [month, category, financeAccountId, tipoFilterUrl, capitalEpoch],
+    [month, category, subcategoryParam, financeAccountId, tipoFilterUrl, capitalEpoch],
   )
 
   const fetchTransactions = useCallback(async () => {
@@ -208,7 +212,7 @@ export default function TransactionsPageClient() {
 
   useEffect(() => {
     setSelectedIds(new Set())
-  }, [month, category, financeAccountId, tipoFilterUrl])
+  }, [month, category, subcategoryParam, financeAccountId, tipoFilterUrl])
 
   useEffect(() => {
     if (!supabaseEnabled) {

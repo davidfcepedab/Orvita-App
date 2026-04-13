@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation"
 import { Card } from "@/src/components/ui/Card"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { sheetTipoPillClass } from "@/lib/finanzas/catalogTagStyles"
-import { applyClientCategoryBudgets } from "@/lib/finanzas/applyClientCategoryBudgets"
+import { applyClientCategoryBudgets, type CategoryBudgetSource } from "@/lib/finanzas/applyClientCategoryBudgets"
 import {
   categoryBudgetKey,
   loadMonthBudgets,
@@ -19,6 +19,7 @@ import {
 } from "@/lib/finanzas/categoryBudgetStorage"
 import { financeApiGet, financeApiJson } from "@/lib/finanzas/financeClientFetch"
 import type { FinanceSubcategoryCatalogRow } from "@/lib/finanzas/subcategoryCatalog"
+import { CategoryAnalysisPanels } from "./_components/CategoryAnalysisPanels"
 
 interface Subcategory {
   name: string
@@ -43,6 +44,7 @@ interface Category {
   budget?: number
   budgetUsedPercent?: number
   budgetStatus?: "green" | "yellow" | "red"
+  budgetSource?: CategoryBudgetSource
   subcategories?: Subcategory[]
 }
 
@@ -152,8 +154,12 @@ function OperativaCategoryCard({
               />
             </div>
             <p className="text-[9px] leading-tight text-orbita-secondary/90">
-              Tope mensual ${cat.budget.toLocaleString("es-CO", { maximumFractionDigits: 0 })} COP. Sin valor en «Presupuestos
-              del mes» se usa una estimación (≈108% del gasto).
+              Tope mensual ${cat.budget.toLocaleString("es-CO", { maximumFractionDigits: 0 })} COP.{" "}
+              {cat.budgetSource === "manual"
+                ? "Definido en la fila de esta categoría en «Presupuestos del mes»."
+                : cat.budgetSource === "subs"
+                  ? "Suma de los topes que pusiste en las subcategorías de esta categoría."
+                  : "Sin tope en categoría ni subs: estimación automática (≈108% del gasto → ~93% usado)."}
             </p>
           </div>
         )}
@@ -530,9 +536,27 @@ export default function FinanzasCategories() {
   return (
     <div className={financeViewRootClass}>
       <FinanceViewHeader
-        kicker="Catálogo"
-        title="Mapa de gasto"
-        subtitle="Fijo y variable; cada fila agrupa subcategorías con movimiento."
+        kicker={
+          viewMode === "operativa"
+            ? "Catálogo"
+            : viewMode === "estrategica"
+              ? "Análisis"
+              : "Forecast"
+        }
+        title={
+          viewMode === "operativa"
+            ? "Mapa de gasto"
+            : viewMode === "estrategica"
+              ? "Control estratégico por categorías"
+              : "Lectura predictiva del flujo"
+        }
+        subtitle={
+          viewMode === "operativa"
+            ? "Fijo y variable; cada fila agrupa subcategorías con movimiento."
+            : viewMode === "estrategica"
+              ? "Crecimiento, gastos hormiga y distribución con insights accionables."
+              : "Proyección de flujo y escenarios sobre tu capital operativo."
+        }
         action={
           notice ? (
             <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-800">
@@ -543,17 +567,23 @@ export default function FinanzasCategories() {
       />
 
       <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <label className="grid min-w-0 max-w-full gap-1.5 sm:max-w-md sm:flex-1">
-          <span className="text-[11px] uppercase tracking-[0.14em] text-orbita-secondary">Buscar categoría o subcategoría</span>
-          <input
-            type="search"
-            value={categoryQuery}
-            onChange={(e) => setCategoryQuery(e.target.value)}
-            placeholder="Ej. Hogar, Mercado…"
-            className="min-h-11 w-full rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface px-3 py-2 text-sm text-orbita-primary"
-            aria-label="Filtrar categorías"
-          />
-        </label>
+        {viewMode === "operativa" ? (
+          <label className="grid min-w-0 max-w-full gap-1.5 sm:max-w-md sm:flex-1">
+            <span className="text-[11px] uppercase tracking-[0.14em] text-orbita-secondary">Buscar categoría o subcategoría</span>
+            <input
+              type="search"
+              value={categoryQuery}
+              onChange={(e) => setCategoryQuery(e.target.value)}
+              placeholder="Ej. Hogar, Mercado…"
+              className="min-h-11 w-full rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface px-3 py-2 text-sm text-orbita-primary"
+              aria-label="Filtrar categorías"
+            />
+          </label>
+        ) : (
+          <div className="min-w-0 flex-1 text-[11px] leading-snug text-orbita-secondary sm:max-w-xl">
+            Usa el mes global (arriba) para anclar el análisis. Los enlaces abren Movimientos filtrados.
+          </div>
+        )}
         <div className="flex flex-wrap gap-2">
           {(["operativa", "estrategica", "predictiva"] as const).map((mode) => (
             <button
@@ -574,23 +604,9 @@ export default function FinanzasCategories() {
         <span className="text-xs text-orbita-secondary sm:shrink-0">Lectura mensual</span>
       </div>
 
-      {viewMode === "estrategica" && (
-        <Card className="p-3 sm:p-5">
-          <div className="grid gap-2 text-center">
-            <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Vista estratégica</p>
-            <p className="text-sm text-orbita-secondary">En desarrollo…</p>
-          </div>
-        </Card>
-      )}
+      {viewMode === "estrategica" && <CategoryAnalysisPanels mode="estrategica" />}
 
-      {viewMode === "predictiva" && (
-        <Card className="p-3 sm:p-5">
-          <div className="grid gap-2 text-center">
-            <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Vista predictiva</p>
-            <p className="text-sm text-orbita-secondary">En desarrollo…</p>
-          </div>
-        </Card>
-      )}
+      {viewMode === "predictiva" && <CategoryAnalysisPanels mode="predictiva" />}
 
       {viewMode === "operativa" && q && fixedCategories.length === 0 && variableCategories.length === 0 ? (
         <div className="rounded-xl border border-orbita-border bg-orbita-surface-alt px-4 py-6 text-center text-sm text-orbita-secondary">
