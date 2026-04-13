@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 
+import type { AuthedRequest } from "@/lib/api/requireUser"
 import { requireUser } from "@/lib/api/requireUser"
 import { isAppMockMode } from "@/lib/checkins/flags"
 import { buildOperationalContext } from "@/lib/operational/context"
@@ -28,86 +29,90 @@ type MobileWidgetSummary = {
   }
 }
 
+const DEEP_LINKS = {
+  home: "/",
+  checkin: {
+    manana: "/checkin#checkin-manana",
+    dia: "/checkin#checkin-dia",
+    noche: "/checkin#checkin-noche",
+  },
+} as const
+
+/** Solo sin sesión en modo demo: la extensión WidgetKit no envía Bearer. */
+function mockWidgetPayload(webBaseUrl: string): MobileWidgetSummary {
+  return {
+    generatedAt: new Date().toISOString(),
+    webBaseUrl,
+    operationalOpenTasks: 2,
+    habitsDone: 1,
+    habitsTotal: 3,
+    nextActionTitle: "Completar propuesta para cliente",
+    deepLinks: { ...DEEP_LINKS },
+  }
+}
+
+async function widgetPayloadForUser(auth: AuthedRequest, webBaseUrl: string): Promise<MobileWidgetSummary> {
+  const { supabase, userId } = auth
+
+  const [{ data: tasks }, { data: habits }, { data: latestCheckin }] = await Promise.all([
+    supabase
+      .from("operational_tasks")
+      .select("id,title,completed,domain,created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(120),
+    supabase
+      .from("operational_habits")
+      .select("id,name,completed,domain,created_at,metadata")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(80),
+    supabase
+      .from("checkins")
+      .select("id,score_global,score_fisico,score_salud,score_profesional,created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ])
+
+  const mappedTasks = (tasks ?? []).map((row) => mapOperationalTask(row as OperationalTaskRow))
+  const mappedHabits = (habits ?? []).map((row) => mapOperationalHabit(row as OperationalHabitRow))
+
+  const context = buildOperationalContext({
+    tasks: mappedTasks,
+    habits: mappedHabits,
+    latestCheckin: latestCheckin ? mapCheckin(latestCheckin as CheckinRow) : null,
+  })
+
+  const operationalOpenTasks = mappedTasks.filter((t) => !t.completed).length
+  const habitsTotal = mappedHabits.length
+  const habitsDone = mappedHabits.filter((h) => h.completed).length
+
+  return {
+    generatedAt: new Date().toISOString(),
+    webBaseUrl,
+    operationalOpenTasks,
+    habitsDone,
+    habitsTotal,
+    nextActionTitle: context.next_action?.trim() ? context.next_action.trim() : null,
+    deepLinks: { ...DEEP_LINKS },
+  }
+}
+
 export async function GET(req: NextRequest) {
   try {
     const webBaseUrl = siteOrigin()
-
-    if (isAppMockMode()) {
-      const payload: MobileWidgetSummary = {
-        generatedAt: new Date().toISOString(),
-        webBaseUrl,
-        operationalOpenTasks: 2,
-        habitsDone: 1,
-        habitsTotal: 3,
-        nextActionTitle: "Completar propuesta para cliente",
-        deepLinks: {
-          home: "/",
-          checkin: {
-            manana: "/checkin#checkin-manana",
-            dia: "/checkin#checkin-dia",
-            noche: "/checkin#checkin-noche",
-          },
-        },
-      }
-      return NextResponse.json({ success: true, data: payload })
-    }
-
     const auth = await requireUser(req)
-    if (auth instanceof NextResponse) return auth
-    const { supabase, userId } = auth
 
-    const [{ data: tasks }, { data: habits }, { data: latestCheckin }] = await Promise.all([
-      supabase
-        .from("operational_tasks")
-        .select("id,title,completed,domain,created_at")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(120),
-      supabase
-        .from("operational_habits")
-        .select("id,name,completed,domain,created_at,metadata")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(80),
-      supabase
-        .from("checkins")
-        .select("id,score_global,score_fisico,score_salud,score_profesional,created_at")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-    ])
-
-    const mappedTasks = (tasks ?? []).map((row) => mapOperationalTask(row as OperationalTaskRow))
-    const mappedHabits = (habits ?? []).map((row) => mapOperationalHabit(row as OperationalHabitRow))
-
-    const context = buildOperationalContext({
-      tasks: mappedTasks,
-      habits: mappedHabits,
-      latestCheckin: latestCheckin ? mapCheckin(latestCheckin as CheckinRow) : null,
-    })
-
-    const operationalOpenTasks = mappedTasks.filter((t) => !t.completed).length
-    const habitsTotal = mappedHabits.length
-    const habitsDone = mappedHabits.filter((h) => h.completed).length
-
-    const payload: MobileWidgetSummary = {
-      generatedAt: new Date().toISOString(),
-      webBaseUrl,
-      operationalOpenTasks,
-      habitsDone,
-      habitsTotal,
-      nextActionTitle: context.next_action?.trim() ? context.next_action.trim() : null,
-      deepLinks: {
-        home: "/",
-        checkin: {
-          manana: "/checkin#checkin-manana",
-          dia: "/checkin#checkin-dia",
-          noche: "/checkin#checkin-noche",
-        },
-      },
+    if (auth instanceof NextResponse) {
+      if (isAppMockMode()) {
+        return NextResponse.json({ success: true, data: mockWidgetPayload(webBaseUrl) })
+      }
+      return auth
     }
 
+    const payload = await widgetPayloadForUser(auth, webBaseUrl)
     return NextResponse.json({ success: true, data: payload })
   } catch (error: unknown) {
     const detail = error instanceof Error ? error.message : "Error desconocido"

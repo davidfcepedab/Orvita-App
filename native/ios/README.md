@@ -70,7 +70,7 @@ Si más adelante quieres el logo oficial de marca, sustituye ese PNG por tu asse
 
 ## API para WidgetKit (siguiente paso)
 
-`GET /api/mobile/widget-summary` con header `Authorization: Bearer <access_token>`.
+`GET /api/mobile/widget-summary` con header **`Authorization: Bearer <access_token>`** (mismo JWT de sesión que la web). Sin Bearer, si el servidor está en **modo demo** (`NEXT_PUBLIC_APP_MODE=mock`), la API devuelve números de ejemplo; con Bearer válido siempre se usan **datos reales** de Supabase.
 
 Respuesta incluye contadores compactos y `deepLinks` relativos; concatena con `webBaseUrl` en el widget.
 
