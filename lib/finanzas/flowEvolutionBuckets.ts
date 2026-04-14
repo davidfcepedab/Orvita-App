@@ -1,6 +1,7 @@
 import type { FinanceTransaction } from "@/lib/finanzas/types"
 import { expenseAmount, incomeAmount } from "@/lib/finanzas/calculations/txMath"
 import { filterMonth } from "@/lib/finanzas/deriveFromTransactions"
+import { excludeReconciliationFromOperativoAnalysis } from "@/lib/finanzas/reconciliationTxFilter"
 
 export type FlowEvolutionRow = {
   month: string
@@ -73,8 +74,9 @@ export function buildMonthlyFlowBuckets(
   rows: FinanceTransaction[],
   expenseFn: (tx: FinanceTransaction) => number = expenseAmount,
 ): FlowEvolutionRow[] {
+  const rowsOp = excludeReconciliationFromOperativoAnalysis(rows)
   return months.map((mm) => {
-    const inM = filterMonth(rows, mm)
+    const inM = filterMonth(rowsOp, mm)
     const ing = inM.reduce((a, t) => a + incomeAmount(t), 0)
     const exp = inM.reduce((a, t) => a + expenseFn(t), 0)
     return {

@@ -1,4 +1,5 @@
 import type { FinanceTransaction } from "@/lib/finanzas/types"
+import { excludeReconciliationFromOperativoAnalysis } from "@/lib/finanzas/reconciliationTxFilter"
 import { monthBounds } from "@/lib/finanzas/monthRange"
 import { expenseAmount, incomeAmount, netCashFlow } from "@/lib/finanzas/calculations/txMath"
 import {
@@ -102,7 +103,12 @@ export function buildWeeklyBuckets(
   const bounds = monthBounds(month)
   if (!bounds) return []
 
-  const inMonth = filterMonth(rows, month)
+  const rowsOp = excludeReconciliationFromOperativoAnalysis(rows)
+  const pool = options?.allRowsForWeekWindow
+    ? excludeReconciliationFromOperativoAnalysis(options.allRowsForWeekWindow)
+    : rowsOp
+
+  const inMonth = filterMonth(rowsOp, month)
   let refDateStr = bounds.endStr
   for (const tx of inMonth) {
     if (tx.date > refDateStr) refDateStr = tx.date
@@ -112,7 +118,6 @@ export function buildWeeklyBuckets(
   if (!refD) return []
 
   const week4Monday = startOfIsoWeekContaining(refD)
-  const pool = options?.allRowsForWeekWindow ?? rows
 
   const out: WeeklyBucketRow[] = []
   for (let i = 0; i < 4; i += 1) {
@@ -152,8 +157,10 @@ export function buildStructuralCategories(
   totalVariable: number
   totalStructural: number
 } {
-  const curExp = current.filter((r) => expenseAmount(r) > 0)
-  const prevExp = previous.filter((r) => expenseAmount(r) > 0)
+  const cur = excludeReconciliationFromOperativoAnalysis(current)
+  const prev = excludeReconciliationFromOperativoAnalysis(previous)
+  const curExp = cur.filter((r) => expenseAmount(r) > 0)
+  const prevExp = prev.filter((r) => expenseAmount(r) > 0)
 
   const byCat = (rows: FinanceTransaction[]) => {
     const m = new Map<string, Map<string, number>>()
@@ -402,6 +409,7 @@ export function pickSubscriptionExpenses(
   rows: FinanceTransaction[],
   expenseFn: (tx: FinanceTransaction) => number = expenseAmount,
 ) {
+  rows = excludeReconciliationFromOperativoAnalysis(rows)
   return rows.filter(
     (r) => expenseFn(r) > 0 && SUBS_RE.test(`${r.category} ${r.subcategory} ${r.description}`),
   )
@@ -413,7 +421,8 @@ export function pickObligationExpenses(
   rows: FinanceTransaction[],
   expenseFn: (tx: FinanceTransaction) => number = expenseAmount,
 ) {
-  const list = rows.filter(
+  const rowsOp = excludeReconciliationFromOperativoAnalysis(rows)
+  const list = rowsOp.filter(
     (r) => expenseFn(r) > 0 && (isFixedCategoryName(r.category) || OBL_RE.test(r.description)),
   )
   return list.sort((a, b) => expenseFn(b) - expenseFn(a)).slice(0, 8)
@@ -435,7 +444,11 @@ export type InsightPayload = {
 const MONTH_SHORT = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
 
 export function buildInsightsFromHistory(monthSlices: { month: string; rows: FinanceTransaction[] }[]): InsightPayload {
-  const nets = monthSlices.map((s) => ({ month: s.month, net: netCashFlow(s.rows) }))
+  const slices = monthSlices.map((s) => ({
+    month: s.month,
+    rows: excludeReconciliationFromOperativoAnalysis(s.rows),
+  }))
+  const nets = slices.map((s) => ({ month: s.month, net: netCashFlow(s.rows) }))
   const avgNet = nets.length ? nets.reduce((a, n) => a + n.net, 0) / nets.length : 0
   const lastNet = nets.length ? nets[nets.length - 1]!.net : 0
   const volatility =
@@ -445,8 +458,8 @@ export function buildInsightsFromHistory(monthSlices: { month: string; rows: Fin
         )
       : 0
 
-  const savingsLike = monthSlices.length
-    ? monthSlices.map((s) => {
+  const savingsLike = slices.length
+    ? slices.map((s) => {
         const inc = s.rows.reduce((a, t) => a + incomeAmount(t), 0)
         const net = netCashFlow(s.rows)
         return inc > 0 ? (net / inc) * 100 : 0
@@ -471,8 +484,8 @@ export function buildInsightsFromHistory(monthSlices: { month: string; rows: Fin
   if (volatility > 800_000) messages.push("Alta variación mes a mes en flujo: conviene buffer de liquidez de 1–2 meses.")
   if (messages.length === 0) messages.push("Patrón de flujo estable. Mantén categorización para afinar proyecciones.")
 
-  const [Y, M] = monthSlices.length
-    ? monthSlices[monthSlices.length - 1]!.month.split("-").map(Number)
+  const [Y, M] = slices.length
+    ? slices[slices.length - 1]!.month.split("-").map(Number)
     : [new Date().getFullYear(), new Date().getMonth() + 1]
   let balanceCursor = lastNet
   const projection: { month: string; projectedBalance: number }[] = []

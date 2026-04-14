@@ -10,6 +10,7 @@ import {
   fetchReconciliationHintEma,
   HINT_KEY_KPI_STRUCTURAL_UNEXPLAINED_EMA,
 } from "@/lib/finanzas/reconciliationHints"
+import { excludeReconciliationFromOperativoAnalysis } from "@/lib/finanzas/reconciliationTxFilter"
 
 export type FinanceMonthOpex = (tx: FinanceTransaction) => number
 
@@ -50,7 +51,10 @@ export async function computeFinanceMonthState(
   const opex = createOperativoExpenseFn(catalogRows)
   const hasOperativoCatalog = catalogRows.length > 0
 
-  let overview = calculateOverview(currentRows, previousRows, { expenseAmount: opex })
+  const operativoCurrent = excludeReconciliationFromOperativoAnalysis(currentRows)
+  const operativoPrevious = excludeReconciliationFromOperativoAnalysis(previousRows)
+
+  let overview = calculateOverview(operativoCurrent, operativoPrevious, { expenseAmount: opex })
   const txMagBeforeMerge = overview.income + overview.expense
 
   const [yStr, mStr] = month.split("-")
@@ -156,7 +160,7 @@ export async function computeFinanceMonthState(
   }
 
   let coherence: FinanceModuleMeta["coherence"] = null
-  if (currentRows.length > 0) {
+  if (operativoCurrent.length > 0) {
     let bridgeEntries: MonthBridgeEntryLite[] = []
     let hintEma: number | null = null
     try {
@@ -187,8 +191,8 @@ export async function computeFinanceMonthState(
     }
 
     coherence = buildCompleteMonthFinanceCoherence(
-      currentRows,
-      previousRows,
+      operativoCurrent,
+      operativoPrevious,
       catalogRows,
       bridgeEntries,
       hintEma,
@@ -199,7 +203,7 @@ export async function computeFinanceMonthState(
     selectedMonth: month,
     lastTransactionDate,
     lastTransactionUpdatedAt,
-    transactionsInSelectedMonth: currentRows.length,
+    transactionsInSelectedMonth: operativoCurrent.length,
     kpiSource,
     kpiHasSignal,
     reference,
@@ -214,7 +218,7 @@ export async function computeFinanceMonthState(
     txMagBeforeMerge,
     snapMag,
     hasOperativoCatalog,
-    transactionsInSelectedMonth: currentRows.length,
+    transactionsInSelectedMonth: operativoCurrent.length,
     meta,
   }
 }

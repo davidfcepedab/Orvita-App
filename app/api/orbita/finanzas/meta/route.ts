@@ -10,6 +10,7 @@ import { mockTransactionsForMonth } from "@/lib/finanzas/mockFinancePayloads"
 import { monthBounds } from "@/lib/finanzas/monthRange"
 import { getHouseholdId } from "@/lib/households/getHouseholdId"
 import { getTransactionsByRange } from "@/lib/services/finanzasService"
+import { excludeReconciliationFromOperativoAnalysis } from "@/lib/finanzas/reconciliationTxFilter"
 
 export const runtime = "nodejs"
 
@@ -34,7 +35,9 @@ export async function GET(req: NextRequest) {
       const currentRows = all.filter((r) => r.date >= startStr && r.date <= endStr)
       const previousRows = all.filter((r) => r.date >= prevStartStr && r.date <= prevEndStr)
       const opex = createOperativoExpenseFn([])
-      const overview = calculateOverview(currentRows, previousRows, { expenseAmount: opex })
+      const curOp = excludeReconciliationFromOperativoAnalysis(currentRows)
+      const prevOp = excludeReconciliationFromOperativoAnalysis(previousRows)
+      const overview = calculateOverview(curOp, prevOp, { expenseAmount: opex })
       const sortedByDate = [...all].sort((a, b) => b.date.localeCompare(a.date))
       const last = sortedByDate[0]
       const lastTransactionDate =
@@ -47,10 +50,10 @@ export async function GET(req: NextRequest) {
           selectedMonth: month,
           lastTransactionDate,
           lastTransactionUpdatedAt: new Date().toISOString(),
-          transactionsInSelectedMonth: currentRows.length,
+          transactionsInSelectedMonth: curOp.length,
           kpiSource: "transactions" as const,
           kpiHasSignal: overview.income > 0.5 || overview.expense > 0.5,
-          coherence: buildCompleteMonthFinanceCoherence(currentRows, previousRows, [], [], null),
+          coherence: buildCompleteMonthFinanceCoherence(curOp, prevOp, [], [], null),
         },
       })
     }

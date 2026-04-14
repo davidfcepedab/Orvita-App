@@ -452,10 +452,10 @@ function CreditPlasticCard({
         {card.conciliacionPendiente ? (
           <p
             className="mt-2 max-w-[95%] rounded-lg border border-amber-300/35 bg-black/25 px-2 py-1.5 text-[10px] font-medium leading-snug text-amber-50/95"
-            title="Concilia en la lista de cuentas para alinear el saldo con tu banco."
+            title="En la lista ledger puedes introducir a mano el disponible o saldo real (sin conexión al banco)."
           >
             Hay una diferencia notable con el ledger. Usa{" "}
-            <strong className="font-semibold">Conciliar con banco</strong> en la lista de cuentas ledger.
+            <strong className="font-semibold">Registrar cifra (manual)</strong> en la lista de cuentas ledger.
           </p>
         ) : null}
       </div>
@@ -602,7 +602,7 @@ function AutoFieldHint({ ledgerLinked }: { ledgerLinked?: boolean }) {
   return (
     <p className="mt-1 text-[10px] leading-snug text-orbita-secondary">
       {ledgerLinked
-        ? "Viene del catálogo (hoja Cuentas) y movimientos. Para ajustar el saldo usa Conciliar en la lista inferior."
+        ? "Viene del catálogo (hoja Cuentas) y movimientos. Para ajustar el saldo usa Registrar cifra (manual) en la lista inferior."
         : "Automático desde movimientos del mes, ledger y panel de cuentas."}
     </p>
   )
@@ -635,14 +635,15 @@ function CuentasReconcileCallout() {
     <div className="rounded-xl border border-[color-mix(in_srgb,var(--color-accent-finance)_34%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-finance)_9%,var(--color-surface))] p-3 shadow-sm sm:p-4">
       <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">Disponible / saldo real</p>
       <p className="mt-1.5 text-xs leading-relaxed text-orbita-primary">
-        Aquí no se editan montos a mano en cada tarjeta grande: la cifra que ves en el banco la cargas con{" "}
+        Aquí no se editan montos a mano en cada tarjeta grande: introduces tú la cifra (extracto o app del banco) con{" "}
         <span className="font-semibold text-[color-mix(in_srgb,var(--color-accent-finance)_75%,var(--color-text-primary))]">
-          Conciliar
+          Registrar cifra (manual)
         </span>{" "}
-        en el listado de <span className="font-medium">cuentas ledger</span> (sección siguiente).{" "}
+        en el listado de <span className="font-medium">cuentas ledger</span> (sección siguiente). No hay conexión automática
+        con entidades financieras.{" "}
         <strong>Tarjeta:</strong> disponible para compras hoy. <strong>Ahorro:</strong> saldo de la cuenta.{" "}
-        <strong>Crédito estructural:</strong> saldo pendiente.         Cada conciliación deja un ancla en la fecha; los movimientos posteriores se suman encima hasta que la desviación
-        sea 0. Es un flujo continuo: el saldo/cupo que cierra un día es la referencia del siguiente (mismo criterio mes a mes).
+        <strong>Crédito estructural:</strong> saldo pendiente. Cada conciliación deja un ancla en la fecha; los movimientos posteriores se suman encima hasta que la desviación
+        sea 0. Es un flujo continuo: el saldo/cupo que cierra un día es la referencia del siguiente (mismo criterio mes a mes). Los ajustes alinean el modelo con la cifra que registraste; no se usan en KPI, categorías ni P&L operativo por movimientos (evitan doble conteo con el modelo).
       </p>
     </div>
   )
@@ -693,8 +694,8 @@ function LedgerRowReconcileMeta({ a }: { a: LedgerAccountRow }) {
         )
       ) : (
         <p className="text-orbita-muted">
-          <span className="font-medium text-orbita-primary">Conciliar</span> para cargar la cifra del banco y generar el
-          ajuste hasta cuadrar (Δ → 0).
+          <span className="font-medium text-orbita-primary">Registrar cifra (manual)</span> para escribir el disponible o
+          saldo que ves en tu app o extracto; se genera el ajuste hasta cuadrar (Δ → 0). Sin conexión automática al banco.
         </p>
       )}
     </div>
@@ -889,11 +890,15 @@ export default function CuentasClient() {
       const isCreditCard = account.account_class === "tarjeta_credito"
       const limit = Number(account.credit_limit ?? NaN)
       const hasLimit = Number.isFinite(limit) && limit >= 0
+      if (isCreditCard && !hasLimit) {
+        setNotice(
+          `Define el cupo de "${account.label}" en la ficha o en el catálogo; luego podrás escribir aquí el disponible a mano (no hay conexión automática al banco).`,
+        )
+        return
+      }
       const promptLabel = isCreditCard
-        ? hasLimit
-          ? `Disponible actual en tarjeta "${account.label}" (cupo ${formatMoney(Math.round(limit))})`
-          : `Deuda actual en tarjeta "${account.label}" (sin cupo definido; fallback seguro)`
-        : `Saldo real bancario para "${account.label}"`
+        ? `[Entrada manual — sin conexión al banco]\nDisponible que ves hoy en "${account.label}" (cupo ${formatMoney(Math.round(limit))}). Escribe solo el número:`
+        : `[Entrada manual — sin conexión al banco]\nSaldo real que ves hoy en "${account.label}". Escribe solo el número:`
       const rawBalance = window.prompt(promptLabel, "0")
       if (rawBalance == null) return
       const sanitized = rawBalance.replace(/[^\d,.-]/g, "").replace(",", ".")
@@ -911,17 +916,12 @@ export default function CuentasClient() {
         const realDebt = clampedLimit - realBalance
         const usagePct = clampedLimit > 0 ? Math.round((realDebt / clampedLimit) * 1000) / 10 : 0
         const ok = window.confirm(
-          `Confirmar conciliación\nCupo: ${formatMoney(clampedLimit)}\nDisponible: ${formatMoney(realBalance)}\nDeuda calculada: ${formatMoney(realDebt)}\nUso: ${usagePct}%`,
+          `Confirmar registro manual (sin API bancaria)\nCupo: ${formatMoney(clampedLimit)}\nDisponible: ${formatMoney(realBalance)}\nDeuda calculada: ${formatMoney(realDebt)}\nUso: ${usagePct}%`,
         )
         if (!ok) return
       }
-      if (isCreditCard && !hasLimit) {
-        setNotice("No se puede conciliar disponible sin cupo definido en la tarjeta.")
-        return
-      }
       const reason =
-        window.prompt("Motivo de conciliación (opcional, recomendado para auditoría)", "Ajuste por diferencia bancaria") ??
-        ""
+        window.prompt("Motivo del ajuste (opcional, auditoría)", "Ajuste por diferencia vs extracto") ?? ""
 
       setLedgerReconcileBusyId(account.id)
       try {
@@ -965,9 +965,8 @@ export default function CuentasClient() {
             ),
           )
         }
-        await refetchLedger()
-        await refetchAccountsDashboard()
         touchCapitalData?.()
+        await Promise.all([refetchLedger(), refetchAccountsDashboard()])
         if (json.data?.inserted) {
           const d = Number(json.data?.delta ?? 0)
           if (json.data?.needsAttention) {
@@ -1579,7 +1578,7 @@ export default function CuentasClient() {
             <FinanceViewHeader
               kicker="Balance"
               title="Cuentas y exposición"
-              subtitle="Modelo desde movimientos y catálogo; la cifra del banco se alinea con Conciliar (listado ledger)."
+              subtitle="Modelo desde movimientos y catálogo; la cifra real la introduces tú a mano en el listado ledger (sin API bancaria)."
               action={
                 <button
                   type="button"
@@ -1635,11 +1634,11 @@ export default function CuentasClient() {
           <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 sm:px-4 sm:py-2 [&::-webkit-details-marker]:hidden">
             <div className="min-w-0 text-left">
               <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">
-                Cuentas ledger — disponible / saldo real
+                Cuentas ledger — disponible / saldo real (entrada manual)
               </h2>
               <p className="mt-0.5 text-[10px] leading-tight text-orbita-secondary">
                 {ledgerAccounts.length > 0
-                  ? `${ledgerAccounts.length} cuenta${ledgerAccounts.length === 1 ? "" : "s"} · Conciliar = cifra banco`
+                  ? `${ledgerAccounts.length} cuenta${ledgerAccounts.length === 1 ? "" : "s"} · sin conexión al banco: tú escribes la cifra`
                   : "Supabase · orden y conciliación"}
               </p>
             </div>
@@ -1652,8 +1651,8 @@ export default function CuentasClient() {
             <p className="text-[10px] leading-snug text-orbita-secondary">
               Filas de <code className="rounded bg-orbita-surface-alt px-1 text-[9px]">orbita_finance_accounts</code> al
               importar Movimientos (columna Cuenta). Arrastra ⋮⋮ para orden. Las tarjetas de arriba son vista resumen; aquí
-              defines la <strong className="text-orbita-primary">cifra real</strong> con Conciliar (TC = disponible hoy,
-              ahorro = saldo).
+              defines la <strong className="text-orbita-primary">cifra real</strong> con el botón de abajo (TC = disponible
+              hoy, ahorro = saldo), todo a mano.
             </p>
             {ledgerReorderMessage ? (
               <p
@@ -1721,9 +1720,10 @@ export default function CuentasClient() {
                           type="button"
                           onClick={() => void reconcileLedgerAccount(a)}
                           disabled={ledgerReconcileBusyId === a.id}
+                          title="Abre un cuadro para escribir el disponible (TC) o saldo (ahorro) que ves en tu app o extracto. No hay sincronización con el banco."
                           className="min-h-[40px] rounded-full border border-[color-mix(in_srgb,var(--color-accent-finance)_38%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-finance)_11%,var(--color-surface))] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-orbita-primary shadow-sm transition hover:bg-[color-mix(in_srgb,var(--color-accent-finance)_16%,var(--color-surface))] disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          {ledgerReconcileBusyId === a.id ? "Conciliando..." : "Conciliar con banco"}
+                          {ledgerReconcileBusyId === a.id ? "Aplicando…" : "Registrar cifra (manual)"}
                         </button>
                       </div>
                     </div>
@@ -1794,7 +1794,7 @@ export default function CuentasClient() {
                         <span className="block space-y-1">
                           <span>{kpis.creditoUsoPromedioPct}% uso promedio (tarjetas)</span>
                           <span className="block text-[10px] font-normal leading-snug text-orbita-muted">
-                            Por tarjeta: movimientos + conciliación en la sección ledger arriba.
+                            Por tarjeta: movimientos + registro manual de disponible en la sección ledger arriba.
                           </span>
                         </span>
                       }
@@ -2331,8 +2331,9 @@ export default function CuentasClient() {
           {lockCatalogCreditIdentity ? (
             <p className="rounded-xl border border-orbita-border/70 bg-orbita-surface-alt/35 px-3 py-2.5 text-xs leading-relaxed text-orbita-secondary sm:col-span-2">
               Deuda, cupo y salud % salen del <strong className="text-orbita-primary">catálogo</strong> y movimientos. Para
-              alinear el saldo con tu banco usa <strong className="text-orbita-primary">Conciliar</strong> en la fila de esta
-              cuenta en la lista inferior (no se sobrescriben aquí).
+              alinear con la cifra que ves en tu app o extracto usa{" "}
+              <strong className="text-orbita-primary">Registrar cifra (manual)</strong> en la fila de esta cuenta en la lista
+              inferior (entrada manual; no se sobrescriben aquí).
             </p>
           ) : null}
           <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary sm:col-span-2">

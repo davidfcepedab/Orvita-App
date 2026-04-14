@@ -11,6 +11,7 @@ import {
 } from "@/lib/finanzas/reconciliation"
 import { getHouseholdId } from "@/lib/households/getHouseholdId"
 import { getTransactionsByRange } from "@/lib/services/finanzasService"
+import { upsertReconcileDeltaAbsEma } from "@/lib/finanzas/reconciliationHints"
 
 export const runtime = "nodejs"
 
@@ -128,6 +129,12 @@ export async function POST(req: NextRequest) {
       .select("id, amount, type, date, description")
       .maybeSingle()
     if (insErr) throw insErr
+
+    try {
+      await upsertReconcileDeltaAbsEma(auth.supabase, householdId, delta)
+    } catch (e) {
+      console.warn("RECONCILE_DELTA_EMA:", e)
+    }
 
     const from30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
     const { count: adjustmentsLast30d } = await auth.supabase

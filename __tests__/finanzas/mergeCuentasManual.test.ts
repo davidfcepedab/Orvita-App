@@ -119,6 +119,60 @@ describe("mergeCuentasDashboard", () => {
     expect(out.creditCards[0]!.fuenteDatos).toBe("ledger")
   })
 
+  test("con ancla de conciliación en ledger: no marca conciliación pendiente aunque el manual difiera", () => {
+    const base: CuentasDashboardPayload = {
+      kpis: {
+        totalLiquidez: 0,
+        liquidezTrendPct: 0,
+        creditoDisponible: 0,
+        creditoUsoPromedioPct: 0,
+        deudaTotal: 0,
+        deudaCuotaMensual: 0,
+      },
+      savings: [],
+      creditCards: [
+        {
+          id: "ledger-c1",
+          bankLabel: "Itau",
+          network: "Visa",
+          last4: "9485",
+          balance: 9_000_000,
+          limit: 19_400_000,
+          usagePct: 46,
+          paymentDueLabel: "Pago: Abr 5",
+          paymentDay: 5,
+          score: 70,
+          theme: "itau",
+          fechaUltimaReconciliacion: "2026-04-10",
+        },
+      ],
+      loans: [],
+    }
+    const manual: ManualFinanceBundle = {
+      ...emptyManual(),
+      creditCards: [
+        {
+          id: "manual-cc-xyz",
+          bankLabel: "Itau",
+          network: "Visa",
+          last4: "9485",
+          balance: 500_000,
+          limit: 19_400_000,
+          usagePct: 3,
+          paymentDueLabel: "Pago: Abr 5",
+          paymentDay: 5,
+          score: 88,
+          theme: "itau",
+          replacesSyntheticId: "ledger-c1",
+        },
+      ],
+    }
+    const out = mergeCuentasDashboard(base, manual)
+    expect(out.creditCards[0]!.balance).toBe(9_000_000)
+    expect(out.creditCards[0]!.conciliacionPendiente).toBe(false)
+    expect(out.creditCards[0]!.fuenteDatos).toBe("ledger")
+  })
+
   test("manualFinancialOverride: conserva saldo manual aunque el ledger difiera", () => {
     const base: CuentasDashboardPayload = {
       kpis: {

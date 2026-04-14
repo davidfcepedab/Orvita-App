@@ -27,6 +27,12 @@ function todayIso() {
   return new Date().toISOString().slice(0, 10)
 }
 
+/** `manual_balance_on` en cuenta ledger: ya hubo al menos un cierre manual (extracto / app). */
+function hasReconcileAnchor(L: { fechaUltimaReconciliacion?: string | null }): boolean {
+  const d = String(L.fechaUltimaReconciliacion ?? "").trim()
+  return /^\d{4}-\d{2}-\d{2}$/.test(d)
+}
+
 function buildCreditFromLedger(
   L: CuentasCreditCard,
   manual: CuentasCreditCard,
@@ -63,7 +69,8 @@ function buildCreditFromLedger(
 /**
  * Prioridad: ledger (catálogo + movimientos) salvo `manualFinancialOverride`.
  * Diferencia pequeña → alinear a ledger con `ajuste-auto` (menos fricción con el tiempo).
- * Diferencia grande → mostrar ledger pero `conciliacionPendiente` para que la UI avise.
+ * Diferencia grande → mostrar ledger pero `conciliacionPendiente` para que la UI avise (salvo que el ledger ya tenga
+ * ancla `fechaUltimaReconciliacion` / `manual_balance_on`: entonces se confía en el cierre manual y se oculta el aviso).
  */
 function enrichManualCreditWithLedger(
   manual: CuentasCreditCard,
@@ -109,6 +116,13 @@ function enrichManualCreditWithLedger(
   }
 
   if (lb === 0 && mb > 0) {
+    if (hasReconcileAnchor(L)) {
+      return buildCreditFromLedger(L, manual, {
+        fuenteDatos: "ledger",
+        diferenciaReconciliacion: mb - lb,
+        conciliacionPendiente: false,
+      })
+    }
     return {
       ...manual,
       fuenteDatos: "manual",
@@ -129,7 +143,7 @@ function enrichManualCreditWithLedger(
   return buildCreditFromLedger(L, manual, {
     fuenteDatos: "ledger",
     diferenciaReconciliacion: mb - lb,
-    conciliacionPendiente: true,
+    conciliacionPendiente: !hasReconcileAnchor(L),
   })
 }
 
@@ -188,6 +202,14 @@ function enrichManualSavingsWithLedger(
   }
 
   if (la === 0 && ma > 0) {
+    if (hasReconcileAnchor(L)) {
+      return {
+        ...fromLedger(),
+        fuenteDatos: "ledger",
+        diferenciaReconciliacion: ma - la,
+        conciliacionPendiente: false,
+      }
+    }
     return {
       ...manual,
       fuenteDatos: "manual",
@@ -210,7 +232,7 @@ function enrichManualSavingsWithLedger(
     ...fromLedger(),
     fuenteDatos: "ledger",
     diferenciaReconciliacion: ma - la,
-    conciliacionPendiente: true,
+    conciliacionPendiente: !hasReconcileAnchor(L),
   }
 }
 
@@ -272,6 +294,14 @@ function enrichManualLoanWithLedger(
   }
 
   if (ls === 0 && ms > 0) {
+    if (hasReconcileAnchor(L)) {
+      return {
+        ...fromLedger(),
+        fuenteDatos: "ledger",
+        diferenciaReconciliacion: ms - ls,
+        conciliacionPendiente: false,
+      }
+    }
     return {
       ...manual,
       fuenteDatos: "manual",
@@ -294,7 +324,7 @@ function enrichManualLoanWithLedger(
     ...fromLedger(),
     fuenteDatos: "ledger",
     diferenciaReconciliacion: ms - ls,
-    conciliacionPendiente: true,
+    conciliacionPendiente: !hasReconcileAnchor(L),
   }
 }
 
