@@ -352,7 +352,7 @@ export default function AuthPage() {
       >
       <a
         href="#auth-form"
-        className="sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:block focus:h-auto focus:w-auto focus:overflow-visible focus:rounded-[var(--radius-button)] focus:bg-white focus:px-4 focus:py-2.5 focus:text-sm focus:font-semibold focus:text-orbita-primary focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--color-accent-primary)_45%,transparent)]"
+        className="sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:block focus:h-auto focus:w-auto focus:overflow-visible focus:rounded-[var(--radius-button)] focus:bg-orbita-surface focus:px-4 focus:py-2.5 focus:text-sm focus:font-semibold focus:text-orbita-primary focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--color-accent-primary)_45%,transparent)]"
       >
         Saltar al formulario de acceso
       </a>

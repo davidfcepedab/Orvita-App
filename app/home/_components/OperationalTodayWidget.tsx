@@ -189,7 +189,7 @@ export function OperationalTodayWidget() {
               <Link
                 key={href}
                 href={href}
-                className="inline-flex min-h-[42px] items-center gap-1 rounded-[var(--radius-button)] border border-[var(--color-border)] px-3 text-xs font-semibold text-orbita-primary motion-safe:hover:bg-white/5"
+                className="inline-flex min-h-[42px] items-center gap-1 rounded-[var(--radius-button)] border border-[var(--color-border)] px-3 text-xs font-semibold text-orbita-primary motion-safe:hover:bg-orbita-surface-alt/60"
                 style={{ textDecoration: "none" }}
               >
                 <Icon className="h-3.5 w-3.5" aria-hidden />
@@ -200,7 +200,7 @@ export function OperationalTodayWidget() {
         </div>
 
         <div className="mt-4 grid gap-4 lg:grid-cols-3">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+          <div className="rounded-2xl border border-orbita-border/40 bg-orbita-surface/35 p-3">
             <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
               Timeline operativo
             </p>
@@ -256,7 +256,7 @@ export function OperationalTodayWidget() {
             ) : null}
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+          <div className="rounded-2xl border border-orbita-border/40 bg-orbita-surface/35 p-3">
             <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
               Tasks para cerrar
             </p>
@@ -348,7 +348,7 @@ export function OperationalTodayWidget() {
             </ul>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+          <div className="rounded-2xl border border-orbita-border/40 bg-orbita-surface/35 p-3">
             <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
               Hábitos de hoy
             </p>

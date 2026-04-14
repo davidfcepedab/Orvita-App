@@ -123,7 +123,7 @@ export default function HealthOperationsV3() {
                   className="rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-muted)] p-3 text-left transition hover:-translate-y-0.5"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="rounded-full bg-white/80 p-2">
+                    <span className="rounded-full bg-orbita-surface/85 p-2">
                       {isDone ? (
                         <CheckCircle2 className="h-4 w-4 text-[var(--accent-health-strong)]" />
                       ) : (
@@ -154,7 +154,7 @@ export default function HealthOperationsV3() {
                   / {health.hydrationTarget} L
                 </span>
               </p>
-              <div className="mt-4 h-2 rounded-full bg-white/70">
+              <div className="mt-4 h-2 rounded-full bg-orbita-surface/70">
                 <div
                   className="h-full rounded-full bg-[var(--accent-finance-strong)]"
                   style={{ width: `${Math.min(100, (health.hydrationCurrent / health.hydrationTarget) * 100)}%` }}

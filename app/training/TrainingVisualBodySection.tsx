@@ -96,7 +96,7 @@ export function TrainingVisualBodySection({
     useUserImage && imageSrc.startsWith("data:") ? `goal-${goalImageDisplayKey}` : imageSrc
 
   const ghostActionClass =
-    "rounded px-0 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-slate-400 underline-offset-2 transition hover:text-slate-700 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-300"
+    "rounded px-0 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-orbita-secondary underline-offset-2 transition hover:text-orbita-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orbita-border"
 
   return (
     <section aria-labelledby="training-visual-body-heading" className="grid gap-6">
@@ -111,15 +111,15 @@ export function TrainingVisualBodySection({
       <header className="space-y-1">
         <h2
           id="training-visual-body-heading"
-          className="text-lg font-semibold tracking-tight text-slate-900 sm:text-xl"
+          className="text-lg font-semibold tracking-tight text-orbita-primary sm:text-xl"
         >
           Objetivo Visual & Seguimiento Corporal
         </h2>
-        <p className="flex flex-wrap items-baseline gap-x-1 text-[10px] uppercase tracking-[0.12em] text-slate-400">
+        <p className="flex flex-wrap items-baseline gap-x-1 text-[10px] uppercase tracking-[0.12em] text-orbita-secondary">
           <button type="button" onClick={onPickImage} className={ghostActionClass}>
             Agregar imagen
           </button>
-          <span className="select-none text-slate-300" aria-hidden>
+          <span className="select-none text-orbita-border" aria-hidden>
             {" "}
             -{" "}
           </span>
@@ -140,10 +140,10 @@ export function TrainingVisualBodySection({
           </button>
         </p>
         {prefsLoading && remotePrefs && (
-          <p className="text-[10px] text-slate-400">Cargando preferencias…</p>
+          <p className="text-[10px] text-orbita-secondary">Cargando preferencias…</p>
         )}
         <div className="mt-3 space-y-1.5">
-          <label className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500" htmlFor="training-visual-ai-prompt">
+          <label className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary" htmlFor="training-visual-ai-prompt">
             Prompt para la IA
           </label>
           <textarea
@@ -153,13 +153,13 @@ export function TrainingVisualBodySection({
             maxLength={900}
             rows={3}
             placeholder="Describe el objetivo visual: musculatura, composición corporal, iluminación, estilo de foto…"
-            className="w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm leading-relaxed text-slate-800 shadow-sm placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+            className="w-full resize-y rounded-xl border border-orbita-border bg-orbita-surface px-3 py-2.5 text-sm leading-relaxed text-orbita-primary shadow-sm placeholder:text-orbita-secondary focus:border-[color-mix(in_srgb,var(--color-accent-primary)_38%,var(--color-border))] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--color-accent-primary)_26%,transparent)]"
           />
           <fieldset className="mt-2 space-y-1.5 border-0 p-0">
-            <legend className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+            <legend className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
               Modo IA
             </legend>
-            <label className="flex cursor-pointer items-start gap-2 text-[11px] leading-snug text-slate-600">
+            <label className="flex cursor-pointer items-start gap-2 text-[11px] leading-snug text-orbita-secondary">
               <input
                 type="radio"
                 name="training-goal-ai-mode"
@@ -168,11 +168,11 @@ export function TrainingVisualBodySection({
                 onChange={() => onGoalImageAiModeChange("create")}
               />
               <span>
-                <span className="font-medium text-slate-800">Imagen nueva desde el prompt</span> (DALL·E 3) — escena distinta,
+                <span className="font-medium text-orbita-primary">Imagen nueva desde el prompt</span> (DALL·E 3) — escena distinta,
                 recomendado para objetivos visuales llamativos. No usa tu foto.
               </span>
             </label>
-            <label className="flex cursor-pointer items-start gap-2 text-[11px] leading-snug text-slate-600">
+            <label className="flex cursor-pointer items-start gap-2 text-[11px] leading-snug text-orbita-secondary">
               <input
                 type="radio"
                 name="training-goal-ai-mode"
@@ -181,12 +181,12 @@ export function TrainingVisualBodySection({
                 onChange={() => onGoalImageAiModeChange("edit")}
               />
               <span>
-                <span className="font-medium text-slate-800">Editar referencia</span> (DALL·E 2) — ajuste sobre tu imagen o el
+                <span className="font-medium text-orbita-primary">Editar referencia</span> (DALL·E 2) — ajuste sobre tu imagen o el
                 placeholder; suele cambiar poco.
               </span>
             </label>
           </fieldset>
-          <p className="text-[10px] text-slate-400">
+          <p className="text-[10px] text-orbita-secondary">
             {visualGoalDescription.length}/900 · En modo edición, la base es tu imagen o el placeholder si no hay foto.
           </p>
         </div>
@@ -268,20 +268,20 @@ export function TrainingVisualBodySection({
         </div>
 
         <div className="flex min-h-0 min-w-0 flex-col lg:col-span-7">
-          <Card className="h-full min-h-0 min-w-0 flex-1 border-slate-200/80 bg-white/90 p-5 shadow-sm backdrop-blur-sm sm:p-7">
+          <Card className="h-full min-h-0 min-w-0 flex-1 border-orbita-border/80 bg-orbita-surface/90 p-5 shadow-sm backdrop-blur-sm sm:p-7">
             <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex items-center gap-2">
-                <Activity className="h-4 w-4 text-slate-500" strokeWidth={2.2} />
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                <Activity className="h-4 w-4 text-orbita-secondary" strokeWidth={2.2} />
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-orbita-secondary">
                   Estado actual vs objetivo
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm">
-                <span className="text-slate-500">
-                  Última: <span className="font-medium text-slate-700">Ayer</span>
+                <span className="text-orbita-secondary">
+                  Última: <span className="font-medium text-orbita-primary">Ayer</span>
                 </span>
-                <span className="text-slate-400">·</span>
-                <span className="text-slate-500">
+                <span className="text-orbita-secondary">·</span>
+                <span className="text-orbita-secondary">
                   Próxima:{" "}
                   <span className="font-semibold" style={{ color: MINT }}>
                     {nextCheck}
@@ -290,7 +290,7 @@ export function TrainingVisualBodySection({
               </div>
             </div>
 
-            <div className="mb-2 hidden grid-cols-[minmax(0,1.5fr)_minmax(0,0.85fr)_minmax(0,0.75fr)_minmax(0,0.75fr)_minmax(0,0.75fr)_minmax(0,0.75fr)_minmax(0,1.35fr)] gap-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400 lg:grid">
+            <div className="mb-2 hidden grid-cols-[minmax(0,1.5fr)_minmax(0,0.85fr)_minmax(0,0.75fr)_minmax(0,0.75fr)_minmax(0,0.75fr)_minmax(0,0.75fr)_minmax(0,1.35fr)] gap-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary lg:grid">
               <span>Medida clave</span>
               <span>Hoy</span>
               <span>Previo</span>
@@ -314,14 +314,14 @@ export function TrainingVisualBodySection({
                 return (
                   <div
                     key={row.label}
-                    className="rounded-2xl bg-slate-50/90 p-3.5 sm:p-4"
-                    style={{ border: "0.5px solid rgba(148,163,184,0.2)" }}
+                    className="rounded-2xl bg-orbita-surface-alt/90 p-3.5 sm:p-4"
+                    style={{ border: "0.5px solid color-mix(in srgb, var(--color-border) 45%, transparent)" }}
                   >
                     <div className="space-y-3 lg:hidden">
                       <div className="flex items-start justify-between gap-3">
-                        <span className="min-w-0 text-sm font-semibold leading-snug text-slate-800">{row.label}</span>
+                        <span className="min-w-0 text-sm font-semibold leading-snug text-orbita-primary">{row.label}</span>
                         <div className="flex shrink-0 items-center gap-1.5">
-                          <span className="text-sm tabular-nums text-slate-700">
+                          <span className="text-sm tabular-nums text-orbita-primary">
                             {row.current}
                             {row.label === "% de Grasa" ? "%" : ""}
                           </span>
@@ -330,29 +330,31 @@ export function TrainingVisualBodySection({
                       </div>
                       <dl className="grid grid-cols-2 gap-x-3 gap-y-2.5 text-sm">
                         <div className="min-w-0">
-                          <dt className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Previo</dt>
-                          <dd className="mt-0.5 tabular-nums text-slate-700">{row.previous}</dd>
+                          <dt className="text-[10px] font-semibold uppercase tracking-wide text-orbita-secondary">Previo</dt>
+                          <dd className="mt-0.5 tabular-nums text-orbita-primary">{row.previous}</dd>
                         </div>
                         <div className="min-w-0">
-                          <dt className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Objetivo</dt>
-                          <dd className="mt-0.5 font-medium tabular-nums text-slate-700">{targetUnitLabel(row)}</dd>
+                          <dt className="text-[10px] font-semibold uppercase tracking-wide text-orbita-secondary">Objetivo</dt>
+                          <dd className="mt-0.5 font-medium tabular-nums text-orbita-primary">{targetUnitLabel(row)}</dd>
                         </div>
                         <div className="min-w-0">
-                          <dt className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Proyección</dt>
-                          <dd className="mt-0.5 text-slate-600">{row.projection}</dd>
+                          <dt className="text-[10px] font-semibold uppercase tracking-wide text-orbita-secondary">Proyección</dt>
+                          <dd className="mt-0.5 text-orbita-secondary">{row.projection}</dd>
                         </div>
                         <div className="min-w-0">
-                          <dt className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Progreso</dt>
-                          <dd className="mt-0.5 font-semibold tabular-nums text-slate-600">{row.progressPct}%</dd>
+                          <dt className="text-[10px] font-semibold uppercase tracking-wide text-orbita-secondary">Progreso</dt>
+                          <dd className="mt-0.5 font-semibold tabular-nums text-orbita-secondary">{row.progressPct}%</dd>
                         </div>
                       </dl>
                       <div className="flex items-center gap-3">
-                        <span className="w-10 shrink-0 text-right text-xs font-semibold tabular-nums text-slate-600">
+                        <span className="w-10 shrink-0 text-right text-xs font-semibold tabular-nums text-orbita-secondary">
                           {row.progressPct}%
                         </span>
                         <div
                           className="h-2 min-w-0 flex-1 overflow-hidden rounded-full"
-                          style={{ background: "rgba(148,163,184,0.35)" }}
+                          style={{
+                            background: "color-mix(in srgb, var(--color-border) 55%, transparent)",
+                          }}
                         >
                           <div className="h-full rounded-full transition-all" style={barFillStyle} />
                         </div>
@@ -360,24 +362,26 @@ export function TrainingVisualBodySection({
                     </div>
 
                     <div className="hidden gap-2 lg:grid lg:grid-cols-[minmax(0,1.5fr)_minmax(0,0.85fr)_minmax(0,0.75fr)_minmax(0,0.75fr)_minmax(0,0.75fr)_minmax(0,0.75fr)_minmax(0,1.35fr)] lg:items-center">
-                      <span className="text-sm font-semibold text-slate-800">{row.label}</span>
+                      <span className="text-sm font-semibold text-orbita-primary">{row.label}</span>
                       <div className="flex items-center gap-1.5 lg:justify-start">
-                        <span className="text-sm tabular-nums text-slate-700">
+                        <span className="text-sm tabular-nums text-orbita-primary">
                           {row.current}
                           {row.label === "% de Grasa" ? "%" : ""}
                         </span>
                         <Arrow className="h-4 w-4 shrink-0" strokeWidth={2.5} style={{ color: arrowColor }} aria-hidden />
                       </div>
-                      <span className="text-xs text-slate-500 lg:text-sm">{row.previous}</span>
-                      <span className="text-sm font-medium tabular-nums text-slate-700">{targetUnitLabel(row)}</span>
-                      <span className="text-xs text-slate-500 lg:text-sm">{row.projection}</span>
+                      <span className="text-xs text-orbita-secondary lg:text-sm">{row.previous}</span>
+                      <span className="text-sm font-medium tabular-nums text-orbita-primary">{targetUnitLabel(row)}</span>
+                      <span className="text-xs text-orbita-secondary lg:text-sm">{row.projection}</span>
                       <div className="flex items-center gap-3 lg:col-span-2">
-                        <span className="w-9 shrink-0 text-right text-xs font-semibold tabular-nums text-slate-600">
+                        <span className="w-9 shrink-0 text-right text-xs font-semibold tabular-nums text-orbita-secondary">
                           {row.progressPct}%
                         </span>
                         <div
                           className="h-2 min-w-0 flex-1 overflow-hidden rounded-full"
-                          style={{ background: "rgba(148,163,184,0.35)" }}
+                          style={{
+                            background: "color-mix(in srgb, var(--color-border) 55%, transparent)",
+                          }}
                         >
                           <div className="h-full rounded-full transition-all" style={barFillStyle} />
                         </div>
@@ -391,16 +395,17 @@ export function TrainingVisualBodySection({
             <div
               className="mt-6 rounded-2xl px-4 py-4 sm:px-5 sm:py-5"
               style={{
-                background: "linear-gradient(180deg, #FFF7ED 0%, #FFEDD5 100%)",
-                border: "0.5px solid rgba(251, 146, 60, 0.35)",
-                boxShadow: "0 1px 0 rgba(255,255,255,0.6) inset",
+                background:
+                  "linear-gradient(180deg, color-mix(in srgb, var(--color-accent-warning) 14%, var(--color-surface)) 0%, color-mix(in srgb, var(--color-accent-warning) 9%, var(--color-surface-alt)) 100%)",
+                border: "0.5px solid color-mix(in srgb, var(--color-accent-warning) 38%, var(--color-border))",
+                boxShadow: "0 1px 0 color-mix(in srgb, var(--color-surface) 65%, transparent) inset",
               }}
             >
-              <div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-orange-700">
-                <Sparkles className="h-3.5 w-3.5 text-orange-500" strokeWidth={2.4} />
+              <div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--color-accent-warning)]">
+                <Sparkles className="h-3.5 w-3.5 text-[var(--color-accent-warning)]" strokeWidth={2.4} />
                 Qué debo ajustar esta semana
               </div>
-              <ul className="list-disc space-y-2 pl-4 text-sm leading-snug text-pretty text-red-700/90 marker:text-orange-400">
+              <ul className="list-disc space-y-2 pl-4 text-sm leading-snug text-pretty text-[color-mix(in_srgb,var(--color-accent-danger)_88%,var(--color-text-primary))] marker:text-[var(--color-accent-warning)]">
                 {hints.map((h) => (
                   <li key={h}>{h}</li>
                 ))}

@@ -154,7 +154,7 @@ export function CapitalOperativoPanel({ model, formatCOP }: CapitalOperativoPane
               </div>
               <div className="h-14 w-28">
                 <ClientOnly
-                  fallback={<div className="h-full w-full rounded-xl border border-white/10 bg-white/5" />}
+                  fallback={<div className="h-full w-full rounded-xl border border-orbita-border/40 bg-orbita-surface/35" />}
                 >
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={energySeries}>

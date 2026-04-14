@@ -26,10 +26,10 @@ function TaskCard({
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-medium">{task.title}</p>
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="mt-1 text-xs text-orbita-secondary">
             {task.priority} • {task.estimatedMinutes} min
           </p>
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="mt-1 text-xs text-orbita-secondary">
             Responsable: {task.assigneeName || "Sin asignar"}
           </p>
         </div>
@@ -37,12 +37,12 @@ function TaskCard({
           {task.status === "completed" ? (
             <CheckCircle2 className="h-5 w-5 text-emerald-600" />
           ) : (
-            <Circle className="h-5 w-5 text-slate-400" />
+            <Circle className="h-5 w-5 text-orbita-secondary" />
           )}
         </button>
       </div>
       <div className="mt-3 flex items-center gap-2">
-        <UserPlus className="h-4 w-4 text-slate-500" />
+        <UserPlus className="h-4 w-4 text-orbita-secondary" />
         <select
           className="rounded-md border px-2 py-1 text-xs"
           value={task.assigneeId || ""}
@@ -87,19 +87,19 @@ export default function AgendaSharedOption1() {
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3" style={{ color: theme.text }}>
       <div className="space-y-3">
-        <h3 className="text-xs uppercase tracking-wider text-slate-500">Tareas Recibidas</h3>
+        <h3 className="text-xs uppercase tracking-wider text-orbita-secondary">Tareas Recibidas</h3>
         {myTasks.map((task) => (
           <TaskCard key={task.id} task={task} onStatusToggle={handleToggle} onAssign={handleAssign} />
         ))}
       </div>
       <div className="space-y-3">
-        <h3 className="text-xs uppercase tracking-wider text-slate-500">Asignadas por Mi</h3>
+        <h3 className="text-xs uppercase tracking-wider text-orbita-secondary">Asignadas por Mi</h3>
         {assignedByMe.map((task) => (
           <TaskCard key={task.id} task={task} onStatusToggle={handleToggle} onAssign={handleAssign} />
         ))}
       </div>
       <div className="space-y-3">
-        <h3 className="text-xs uppercase tracking-wider text-slate-500">Personales</h3>
+        <h3 className="text-xs uppercase tracking-wider text-orbita-secondary">Personales</h3>
         {personal.map((task) => (
           <TaskCard key={task.id} task={task} onStatusToggle={handleToggle} onAssign={handleAssign} />
         ))}

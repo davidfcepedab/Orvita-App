@@ -360,32 +360,35 @@ export default function CheckinPage() {
           {mockOn && (
             <p
               role="alert"
-              className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-2 text-sm text-violet-900"
+              className="rounded-xl border border-[color-mix(in_srgb,var(--color-accent-agenda)_42%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-agenda)_12%,var(--color-surface))] px-4 py-2 text-sm text-orbita-primary"
             >
               {UI_CHECKIN_BANNER_MOCK}
             </p>
           )}
           {!mockOn && !supabaseOn && (
-            <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-900">
+            <p
+              role="alert"
+              className="rounded-xl border border-[color-mix(in_srgb,var(--color-accent-danger)_42%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-danger)_10%,var(--color-surface))] px-4 py-2 text-sm text-orbita-primary"
+            >
               {UI_CHECKIN_BANNER_NO_CLOUD}
             </p>
           )}
           {apiNotice && (
-            <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-800">{apiNotice}</p>
+            <p className="rounded-xl border border-orbita-border bg-orbita-surface-alt px-4 py-2 text-sm text-orbita-primary">{apiNotice}</p>
           )}
         </div>
         <div className="flex shrink-0 items-center gap-2 self-start sm:self-auto">
           <Link
             href="/hoy"
-            className="inline-flex min-h-[40px] items-center rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 shadow-sm transition hover:bg-slate-50 sm:min-h-0"
+            className="inline-flex min-h-[40px] items-center rounded-full border border-orbita-border bg-orbita-surface px-3 py-2 text-xs font-medium text-orbita-secondary shadow-sm transition hover:bg-orbita-surface-alt sm:min-h-0"
           >
             ← Hoy
           </Link>
           <span
             className={`inline-flex items-center rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide sm:text-xs ${
               supabaseOn
-                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                : "border-slate-300 bg-slate-100 text-slate-600"
+                ? "border-[color-mix(in_srgb,var(--color-accent-health)_40%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_12%,var(--color-surface))] text-orbita-primary"
+                : "border-orbita-border bg-orbita-surface-alt text-orbita-secondary"
             }`}
             title={`App: ${mockOn ? "mock" : getAppMode()} · Supabase check-in: ${supabaseOn ? "on" : "off"}${apiFlags ? " · sync API" : ""}`}
           >
@@ -395,24 +398,28 @@ export default function CheckinPage() {
       </div>
 
       {preloadStatus && (
-        <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">{preloadStatus}</p>
+        <p className="rounded-xl border border-[color-mix(in_srgb,var(--color-accent-warning)_40%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-warning)_12%,var(--color-surface))] px-4 py-2 text-sm text-orbita-primary">{preloadStatus}</p>
       )}
 
       {/* Cabecera página (referencia Figma) */}
-      <header className="flex flex-col gap-4 rounded-2xl border border-slate-200/90 bg-gradient-to-br from-slate-50 to-white p-4 shadow-[var(--shadow-card)] sm:flex-row sm:items-start sm:justify-between sm:p-5">
+      <header className="flex flex-col gap-4 rounded-2xl border border-orbita-border/90 bg-gradient-to-br from-orbita-surface-alt to-orbita-surface p-4 shadow-card sm:flex-row sm:items-start sm:justify-between sm:p-5">
         <div className="flex min-w-0 items-start gap-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-violet-700 shadow-sm">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[color-mix(in_srgb,var(--color-accent-agenda)_20%,var(--color-surface-alt))] text-[var(--color-accent-agenda)] shadow-sm">
             <Calendar className="h-6 w-6" strokeWidth={2} aria-hidden />
           </div>
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">Check-in diario</h1>
-            <p className="mt-1 text-sm text-slate-500">
+            <h1 className="text-xl font-semibold tracking-tight text-orbita-primary sm:text-2xl">Check-in diario</h1>
+            <p className="mt-1 text-sm text-orbita-secondary">
               Elige un momento o el formulario completo. Los datos se comparten entre vistas.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <button
                 type="button"
-                className={`${chipBase} ${form.hoy ? "border-violet-300 bg-violet-50 text-violet-800" : "border-slate-200 bg-white text-slate-600"}`}
+                className={`${chipBase} ${
+                  form.hoy
+                    ? "border-[color-mix(in_srgb,var(--color-accent-primary)_45%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-primary)_14%,var(--color-surface))] text-orbita-primary"
+                    : "border-orbita-border bg-orbita-surface text-orbita-secondary"
+                }`}
                 onClick={() => {
                   handleChange("fecha", today)
                   handleChange("hoy", true)
@@ -423,7 +430,11 @@ export default function CheckinPage() {
               </button>
               <button
                 type="button"
-                className={`${chipBase} ${form.ayer ? "border-violet-300 bg-violet-50 text-violet-800" : "border-slate-200 bg-white text-slate-600"}`}
+                className={`${chipBase} ${
+                  form.ayer
+                    ? "border-[color-mix(in_srgb,var(--color-accent-primary)_45%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-primary)_14%,var(--color-surface))] text-orbita-primary"
+                    : "border-orbita-border bg-orbita-surface text-orbita-secondary"
+                }`}
                 onClick={() => {
                   handleChange("fecha", yesterday)
                   handleChange("ayer", true)
@@ -436,7 +447,7 @@ export default function CheckinPage() {
           </div>
         </div>
         <label className="flex w-full flex-col gap-1 sm:w-auto sm:min-w-[200px]">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Fecha</span>
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-orbita-secondary">Fecha</span>
           <input
             type="date"
             value={form.fecha}
@@ -445,7 +456,7 @@ export default function CheckinPage() {
               handleChange("hoy", e.target.value === today)
               handleChange("ayer", false)
             }}
-            className="min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-200/60"
+            className="min-h-[44px] w-full rounded-xl border border-orbita-border bg-orbita-surface px-3 py-2 text-sm text-orbita-primary shadow-sm outline-none focus:border-[color-mix(in_srgb,var(--color-accent-primary)_42%,var(--color-border))] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--color-accent-primary)_28%,transparent)]"
             aria-label="Fecha del check-in"
           />
         </label>
@@ -453,9 +464,9 @@ export default function CheckinPage() {
 
       <nav
         aria-label="Parte del formulario a mostrar"
-        className="rounded-xl border border-slate-200/90 bg-white/95 p-1 shadow-[var(--shadow-card)] ring-1 ring-slate-100/80"
+        className="rounded-xl border border-orbita-border/90 bg-orbita-surface/95 p-1 shadow-card ring-1 ring-orbita-border/80"
       >
-        <div className="grid grid-cols-2 gap-0.5 sm:grid-cols-4 sm:gap-px sm:bg-slate-200/60 sm:p-px">
+        <div className="grid grid-cols-2 gap-0.5 sm:grid-cols-4 sm:gap-px sm:bg-orbita-border/50 sm:p-px">
           {VIEWPORT_TABS.map((tab) => {
             const active = viewport === tab.id
             return (
@@ -465,13 +476,13 @@ export default function CheckinPage() {
                 onClick={() => setViewportAndUrl(tab.id)}
                 className={`flex min-h-[48px] flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-2 text-center transition sm:min-h-[52px] sm:rounded-md ${
                   active
-                    ? "bg-violet-600 text-white shadow-sm"
-                    : "bg-slate-50/80 text-slate-600 hover:bg-slate-100 sm:bg-white"
+                    ? "bg-[var(--color-accent-primary)] text-white shadow-sm"
+                    : "bg-orbita-surface-alt/80 text-orbita-secondary hover:bg-orbita-surface-alt sm:bg-orbita-surface"
                 }`}
               >
                 <span className="text-[11px] font-semibold tracking-tight sm:text-xs">{tab.label}</span>
                 <span
-                  className={`hidden text-[9px] leading-tight sm:block ${active ? "text-violet-100" : "text-slate-400"}`}
+                  className={`hidden text-[9px] leading-tight sm:block ${active ? "text-white/85" : "text-orbita-secondary"}`}
                 >
                   {tab.hint}
                 </span>
@@ -480,7 +491,7 @@ export default function CheckinPage() {
           })}
         </div>
         {viewport !== "full" ? (
-          <p className="m-0 border-t border-slate-100 px-3 py-2 text-center text-[11px] leading-snug text-slate-500">
+          <p className="m-0 border-t border-orbita-border px-3 py-2 text-center text-[11px] leading-snug text-orbita-secondary">
             Vista reducida: solo editas este bloque. Al guardar se envía el formulario entero (otros campos conservan lo que ya tenías o valores por defecto).
           </p>
         ) : null}
@@ -496,21 +507,21 @@ export default function CheckinPage() {
           title="Despertar & Energía Matinal"
           subtitle="Sueño, descanso percibido y energía al levantarte"
           icon={Sunrise}
-          headerTintClass="bg-gradient-to-r from-orange-50 to-amber-50/80"
-          iconBoxClass="bg-orange-100 text-orange-600"
+          headerTintClass="bg-gradient-to-r from-[color-mix(in_srgb,var(--color-accent-warning)_14%,var(--color-surface))] to-[color-mix(in_srgb,var(--color-accent-health)_10%,var(--color-background))]"
+          iconBoxClass="bg-[color-mix(in_srgb,var(--color-accent-warning)_22%,var(--color-surface-alt))] text-[var(--color-accent-warning)]"
         >
           <TimeField label="Hora despertar" icon={Clock} value={form.horaDespertar} onChange={(v) => handleChange("horaDespertar", v)} />
           <SliderRow
             label="Calidad del sueño"
             value={form.calidadSueno}
             onChange={(n) => handleChange("calidadSueno", n)}
-            accentClass="accent-orange-500"
+            accentClass="accent-[var(--color-accent-warning)]"
           />
           <SliderRow
             label="Nivel de energía"
             value={form.energia}
             onChange={(n) => handleChange("energia", n)}
-            accentClass="accent-violet-600"
+            accentClass="accent-[var(--color-accent-agenda)]"
           />
         </CheckinSection>
         </div>
@@ -525,8 +536,8 @@ export default function CheckinPage() {
           title="Actividades & Bienestar Diurno"
           subtitle="Hábitos, hidratación y foco profundo"
           icon={Sun}
-          headerTintClass="bg-gradient-to-r from-amber-50 to-yellow-50/70"
-          iconBoxClass="bg-amber-100 text-amber-700"
+          headerTintClass="bg-gradient-to-r from-[color-mix(in_srgb,var(--color-accent-health)_12%,var(--color-surface))] to-[color-mix(in_srgb,var(--color-accent-warning)_10%,var(--color-background))]"
+          iconBoxClass="bg-[color-mix(in_srgb,var(--color-accent-health)_20%,var(--color-surface-alt))] text-[var(--color-accent-health)]"
         >
           <ToggleRow
             label="Dieta cumplida"
@@ -578,7 +589,7 @@ export default function CheckinPage() {
             label="Productividad"
             value={form.productividad}
             onChange={(n) => handleChange("productividad", n)}
-            accentClass="accent-amber-500"
+            accentClass="accent-[var(--color-accent-warning)]"
           />
         </CheckinSection>
 
@@ -586,8 +597,8 @@ export default function CheckinPage() {
           title="Entrenamiento & Fitness"
           subtitle="Sesión del día"
           icon={Dumbbell}
-          headerTintClass="bg-gradient-to-r from-emerald-50 to-teal-50/70"
-          iconBoxClass="bg-emerald-100 text-emerald-700"
+          headerTintClass="bg-gradient-to-r from-[color-mix(in_srgb,var(--color-accent-health)_14%,var(--color-surface))] to-[color-mix(in_srgb,var(--color-accent-primary)_10%,var(--color-background))]"
+          iconBoxClass="bg-[color-mix(in_srgb,var(--color-accent-health)_22%,var(--color-surface-alt))] text-[var(--color-accent-health)]"
         >
           <ToggleRow
             label="Entrenamiento realizado"
@@ -630,8 +641,8 @@ export default function CheckinPage() {
           title="Conexiones & Relaciones"
           subtitle="Pareja, social y calidad de vínculo"
           icon={Heart}
-          headerTintClass="bg-gradient-to-r from-pink-50 to-violet-50/60"
-          iconBoxClass="bg-pink-100 text-pink-600"
+          headerTintClass="bg-gradient-to-r from-[color-mix(in_srgb,var(--color-accent-agenda)_12%,var(--color-surface))] to-[color-mix(in_srgb,var(--color-accent-finance)_8%,var(--color-background))]"
+          iconBoxClass="bg-[color-mix(in_srgb,var(--color-accent-agenda)_22%,var(--color-surface-alt))] text-[var(--color-accent-agenda)]"
         >
           <ToggleRow
             label="Tiempo pareja"
@@ -650,7 +661,7 @@ export default function CheckinPage() {
             icon={Heart}
             value={form.calidadConexion}
             onChange={(n) => handleChange("calidadConexion", n)}
-            accentClass="accent-pink-500"
+            accentClass="accent-[var(--color-accent-agenda)]"
           />
         </CheckinSection>
         </div>
@@ -665,29 +676,29 @@ export default function CheckinPage() {
           title="Balance Nocturno & Descanso"
           subtitle="Cierre del día y regulación emocional"
           icon={Moon}
-          headerTintClass="bg-gradient-to-r from-slate-100 to-indigo-50/80"
-          iconBoxClass="bg-indigo-100 text-indigo-700"
+          headerTintClass="bg-gradient-to-r from-[color-mix(in_srgb,var(--color-surface-alt)_92%,var(--color-background))] to-[color-mix(in_srgb,var(--color-accent-agenda)_10%,var(--color-surface))]"
+          iconBoxClass="bg-[color-mix(in_srgb,var(--color-accent-agenda)_22%,var(--color-surface-alt))] text-[var(--color-accent-agenda)]"
         >
           <TimeField label="Hora dormir" icon={Clock} value={form.horaDormir} onChange={(v) => handleChange("horaDormir", v)} />
           <SliderRow
             label="Descanso percibido (día)"
             value={form.descanso}
             onChange={(n) => handleChange("descanso", n)}
-            accentClass="accent-slate-500"
+            accentClass="accent-[var(--color-text-secondary)]"
           />
           <SliderRow
             label="Estado de ánimo"
             icon={Smile}
             value={form.estadoAnimo}
             onChange={(n) => handleChange("estadoAnimo", n)}
-            accentClass="accent-indigo-500"
+            accentClass="accent-[var(--color-accent-agenda)]"
           />
           <SliderRow
             label="Nivel de ansiedad"
             icon={Cloud}
             value={form.ansiedad}
             onChange={(n) => handleChange("ansiedad", n)}
-            accentClass="accent-sky-500"
+            accentClass="accent-[var(--color-accent-finance)]"
           />
         </CheckinSection>
 
@@ -695,8 +706,8 @@ export default function CheckinPage() {
           title="Medidas & Composición Corporal"
           subtitle="Opcional — precarga desde hoja si está configurada"
           icon={Ruler}
-          headerTintClass="bg-gradient-to-r from-orange-50/90 to-rose-50/50"
-          iconBoxClass="bg-orange-100 text-orange-700"
+          headerTintClass="bg-gradient-to-r from-[color-mix(in_srgb,var(--color-accent-warning)_12%,var(--color-surface))] to-[color-mix(in_srgb,var(--color-accent-danger)_8%,var(--color-background))]"
+          iconBoxClass="bg-[color-mix(in_srgb,var(--color-accent-warning)_22%,var(--color-surface-alt))] text-[var(--color-accent-warning)]"
         >
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <NumberUnitField label="Peso" value={form.peso} onChange={(v) => handleChange("peso", v)} unit="kg" step="0.1" />
@@ -705,12 +716,12 @@ export default function CheckinPage() {
             <NumberUnitField label="Pecho" value={form.pecho} onChange={(v) => handleChange("pecho", v)} unit="cm" step="0.1" />
             <NumberUnitField label="Hombros" value={form.hombros} onChange={(v) => handleChange("hombros", v)} unit="cm" step="0.1" />
           </div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Bíceps</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-orbita-secondary">Bíceps</p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <NumberUnitField label="Derecho" value={form.bicepsDer} onChange={(v) => handleChange("bicepsDer", v)} unit="cm" step="0.1" />
             <NumberUnitField label="Izquierdo" value={form.bicepsIzq} onChange={(v) => handleChange("bicepsIzq", v)} unit="cm" step="0.1" />
           </div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Cuádriceps</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-orbita-secondary">Cuádriceps</p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <NumberUnitField
               label="Derecho"
@@ -738,13 +749,13 @@ export default function CheckinPage() {
           type="button"
           onClick={handleSubmit}
           disabled={loading || saveDisabled}
-          className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-violet-600 px-4 py-3.5 text-sm font-bold uppercase tracking-[0.12em] text-white shadow-lg shadow-violet-600/25 transition hover:bg-violet-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-[56px] sm:text-[13px]"
+          className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-[var(--color-accent-primary)] px-4 py-3.5 text-sm font-bold uppercase tracking-[0.12em] text-white shadow-lg shadow-[color-mix(in_srgb,var(--color-accent-primary)_32%,transparent)] transition hover:brightness-110 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-[56px] sm:text-[13px]"
         >
           <Save className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
           {loading ? "Guardando…" : saveDisabled ? "Guardar desactivado" : "Guardar check-in completo"}
         </button>
         {saveDisabled && (
-          <p className="mt-2 text-center text-xs text-rose-700">{UI_CHECKIN_SAVE_DISABLED_FOOTER}</p>
+          <p className="mt-2 text-center text-xs text-[var(--color-accent-danger)]">{UI_CHECKIN_SAVE_DISABLED_FOOTER}</p>
         )}
       </div>
     </div>

@@ -49,7 +49,7 @@ export function MiniWidgets({ decisions, agendaToday, habits }: MiniWidgetsProps
 
             <div className="mt-4 grid gap-2">
               {decisions.slice(0, 3).map((d) => (
-                <div key={d.id} className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                <div key={d.id} className="rounded-2xl border border-orbita-border/40 bg-orbita-surface/35 p-3">
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-sm font-semibold text-orbita-primary">{d.title}</p>
                     <span
@@ -98,7 +98,7 @@ export function MiniWidgets({ decisions, agendaToday, habits }: MiniWidgetsProps
 
             <div className="mt-4 grid gap-2">
               {agendaToday.slice(0, 4).map((b) => (
-                <div key={b.id} className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                <div key={b.id} className="rounded-2xl border border-orbita-border/40 bg-orbita-surface/35 p-3">
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-sm font-semibold text-orbita-primary">{b.title}</p>
                     <span className="inline-flex items-center gap-2 text-xs text-orbita-secondary">
@@ -153,7 +153,7 @@ export function MiniWidgets({ decisions, agendaToday, habits }: MiniWidgetsProps
                   </div>
                   <div className="mt-3 h-16">
                     <ClientOnly
-                      fallback={<div className="h-full w-full rounded-xl border border-white/10 bg-white/5" />}
+                      fallback={<div className="h-full w-full rounded-xl border border-orbita-border/40 bg-orbita-surface/35" />}
                     >
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={h.week}>

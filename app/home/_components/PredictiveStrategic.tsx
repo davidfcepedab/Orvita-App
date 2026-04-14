@@ -36,7 +36,7 @@ export function PredictiveStrategic({ points, insights, onRequestAiRefresh, isRe
           type="button"
           onClick={() => void onRequestAiRefresh()}
           disabled={isRefreshing}
-          className="h-10 rounded-xl px-4 border border-white/10 bg-orbita-surface hover:bg-white/5 transition text-sm font-semibold text-orbita-primary inline-flex items-center gap-2 w-fit"
+          className="inline-flex h-10 w-fit items-center gap-2 rounded-xl border border-orbita-border/50 bg-orbita-surface px-4 text-sm font-semibold text-orbita-primary transition hover:bg-orbita-surface-alt/70"
         >
           <Bot className="h-4 w-4 text-sky-200" />
           {isRefreshing ? "Actualizando…" : "Actualizar análisis"}
@@ -73,7 +73,7 @@ export function PredictiveStrategic({ points, insights, onRequestAiRefresh, isRe
           </div>
 
           <div className="mt-4 h-[280px] sm:h-[320px]">
-            <ClientOnly fallback={<div className="h-full w-full rounded-2xl border border-white/10 bg-white/5" />}>
+            <ClientOnly fallback={<div className="h-full w-full rounded-2xl border border-orbita-border/40 bg-orbita-surface/35" />}>
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={points}>
                   <XAxis dataKey="day" tick={{ fill: "rgba(255,255,255,0.55)", fontSize: 11 }} interval={4} />
@@ -111,15 +111,15 @@ export function PredictiveStrategic({ points, insights, onRequestAiRefresh, isRe
           </div>
 
           <div className="mt-4 grid gap-2 sm:grid-cols-3">
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+            <div className="rounded-2xl border border-orbita-border/40 bg-orbita-surface/35 p-3">
               <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Lo que pesa</p>
               <p className="mt-1 text-sm font-semibold text-orbita-primary">Dinero apretado + cierres pendientes</p>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+            <div className="rounded-2xl border border-orbita-border/40 bg-orbita-surface/35 p-3">
               <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Lo que quiebra</p>
               <p className="mt-1 text-sm font-semibold text-orbita-primary">Energía baja + agenda partida</p>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+            <div className="rounded-2xl border border-orbita-border/40 bg-orbita-surface/35 p-3">
               <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Mejor paso</p>
               <p className="mt-1 text-sm font-semibold text-orbita-primary">Cierra 1 cosa + compra runway</p>
             </div>

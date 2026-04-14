@@ -14,7 +14,7 @@ export default function Tabs() {
   ]
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-200 px-6 py-4 flex justify-between text-xs font-medium">
+    <div className="fixed bottom-0 left-0 right-0 mx-auto flex max-w-md justify-between border-t border-orbita-border bg-orbita-surface px-6 py-4 text-xs font-medium">
       {tabs.map(tab => (
         <Link
           key={tab.href}
@@ -22,8 +22,8 @@ export default function Tabs() {
           className={`transition ${
             pathname === tab.href ||
             (tab.href === "/finanzas/overview" && pathname.startsWith("/finanzas"))
-              ? "text-[#FF2D8E]"
-              : "text-gray-400"
+              ? "text-[var(--color-accent-primary)]"
+              : "text-orbita-secondary"
           }`}
         >
           {tab.name}

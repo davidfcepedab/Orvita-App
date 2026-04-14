@@ -59,7 +59,7 @@ function ProtocolCard({
           <span
             className={cn(
               "flex h-9 w-9 items-center justify-center rounded-full border-2",
-              vitalVisual ? "border-red-500 bg-white" : "border-[var(--color-border)] bg-[var(--color-surface)]",
+              vitalVisual ? "border-red-500 bg-orbita-surface" : "border-[var(--color-border)] bg-[var(--color-surface)]",
             )}
             aria-hidden
           >

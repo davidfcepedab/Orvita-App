@@ -56,7 +56,7 @@ export default function AgendaSharedOption2() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="font-medium">{task.title}</p>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-orbita-secondary">
                   {task.priority} • {task.estimatedMinutes} min • Responsable: {task.assigneeName || "Sin asignar"}
                 </p>
               </div>
@@ -70,7 +70,7 @@ export default function AgendaSharedOption2() {
                 {task.status === "completed" ? (
                   <CheckCircle2 className="h-5 w-5 text-emerald-600" />
                 ) : (
-                  <Circle className="h-5 w-5 text-slate-400" />
+                  <Circle className="h-5 w-5 text-orbita-secondary" />
                 )}
               </button>
             </div>

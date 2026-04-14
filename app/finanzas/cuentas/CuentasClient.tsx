@@ -56,7 +56,7 @@ const supabaseEnabled = process.env.NEXT_PUBLIC_SUPABASE_ENABLED === "true"
 
 /** Texto en modales de edición manual (ahorro / TC / crédito): borrar, discreto */
 const manualItemDeleteTextBtnClass =
-  "w-fit text-left text-xs font-medium text-orbita-secondary/75 underline decoration-transparent underline-offset-[3px] transition hover:text-rose-600/95 hover:decoration-rose-500/35"
+  "w-fit text-left text-xs font-medium text-orbita-secondary/75 underline decoration-transparent underline-offset-[3px] transition hover:text-[var(--color-accent-danger)]/95 hover:decoration-[color-mix(in_srgb,var(--color-accent-danger)_35%,transparent)]"
 
 function reorderLedgerAccountList<T>(items: T[], fromIndex: number, toIndex: number): T[] {
   const next = [...items]
@@ -168,11 +168,11 @@ function ledgerCardShellClass(accountClass: string): string {
     "flex gap-1.5 rounded-lg px-2 py-2 [overflow-wrap:anywhere] shadow-sm transition-shadow"
   switch (accountClass) {
     case "ahorro":
-      return `${base} border border-teal-300/85 bg-white dark:border-teal-700/70 dark:bg-teal-950/30`
+      return `${base} border border-[color-mix(in_srgb,var(--color-accent-health)_38%,var(--color-border))] bg-orbita-surface`
     case "tarjeta_credito":
-      return `${base} border border-sky-300/85 bg-white dark:border-sky-700/70 dark:bg-sky-950/30`
+      return `${base} border border-[color-mix(in_srgb,var(--color-accent-finance)_38%,var(--color-border))] bg-orbita-surface`
     case "credito":
-      return `${base} border border-violet-300/85 bg-white dark:border-violet-700/70 dark:bg-violet-950/30`
+      return `${base} border border-[color-mix(in_srgb,var(--color-accent-agenda)_38%,var(--color-border))] bg-orbita-surface`
     default:
       return `${base} border border-orbita-border/60 bg-orbita-surface dark:bg-orbita-surface/90`
   }
@@ -361,7 +361,7 @@ function StatKpiCard({
       <p className="mt-3 text-2xl font-semibold tracking-tight text-orbita-primary sm:text-[26px]">{value}</p>
       <div className="mt-2 text-sm text-orbita-secondary">{sub}</div>
       {warning ? (
-        <div className="absolute bottom-4 right-4 rounded-full bg-orange-100 p-1.5 text-orange-600">
+        <div className="absolute bottom-4 right-4 rounded-full bg-[color-mix(in_srgb,var(--color-accent-warning)_18%,var(--color-surface-alt))] p-1.5 text-[var(--color-accent-warning)]">
           <TrendingDown className="h-4 w-4" aria-hidden />
         </div>
       ) : null}
@@ -611,7 +611,7 @@ function LoanStructuralCard({
     <Card className={`p-4 sm:p-5 ${arcticPanel}`}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-50 text-violet-600 sm:h-10 sm:w-10">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[color-mix(in_srgb,var(--color-accent-agenda)_16%,var(--color-surface-alt))] text-[var(--color-accent-agenda)] sm:h-10 sm:w-10">
             <Icon className="h-4 w-4 sm:h-[18px] sm:w-[18px]" aria-hidden />
           </div>
           <div>

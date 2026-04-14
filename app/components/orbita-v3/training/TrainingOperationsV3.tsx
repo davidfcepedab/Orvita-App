@@ -205,7 +205,7 @@ export default function TrainingOperationsV3() {
                     <p className="text-sm font-semibold text-[var(--text-primary)]">{day.day}</p>
                     <p className="text-xs text-[var(--text-secondary)]">{day.cals} kcal</p>
                   </div>
-                  <div className="flex items-center gap-2 rounded-full bg-white/70 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                  <div className="flex items-center gap-2 rounded-full bg-orbita-surface/75 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
                     <Flame className="h-3.5 w-3.5 text-[var(--accent-warning)]" />
                     fuel
                   </div>
