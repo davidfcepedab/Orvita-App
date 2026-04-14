@@ -33,6 +33,7 @@ function FinanzasLayoutContent({
 
   const tabs = [
     { name: "Resumen", path: "/finanzas/overview" },
+    { name: "P&L", path: "/finanzas/pl" },
     { name: "Movimientos", path: "/finanzas/transactions" },
     { name: "Categorías", path: "/finanzas/categories" },
     { name: "Cuentas", path: "/finanzas/cuentas" },

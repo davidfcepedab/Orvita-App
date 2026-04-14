@@ -48,10 +48,53 @@ function layersForGroup(layers: CanonicalPlLayer[], ids: string[]) {
   return layers.filter((L) => set.has(L.id))
 }
 
-function layerVariant(id: string, amount: number): "default" | "danger" | "success" {
-  if (id === "net") return amount >= 0 ? "success" : "danger"
-  if (id === "expense_all") return "danger"
-  return "default"
+function layerVariant(id: string, amount: number): "default" | "muted" | "danger" | "success" {
+  switch (id) {
+    case "income":
+      return "success"
+    case "expense_all":
+      return "danger"
+    case "net":
+      return amount >= 0 ? "success" : "danger"
+    case "modulo_structural":
+      return "muted"
+    case "gap_kpi_struct":
+    case "unexplained":
+      return Math.abs(amount) < 1 ? "muted" : "danger"
+    case "bridges":
+      return "default"
+    default:
+      return "default"
+  }
+}
+
+function plRowShellClass(layerId: string, keyLine: boolean): string {
+  const base = "border-b border-orbita-border/40 transition-colors"
+  if (layerId === "income") {
+    return `${base} border-l-[3px] border-l-emerald-500/70 bg-emerald-500/[0.07] dark:bg-emerald-950/35`
+  }
+  if (layerId === "expense_all") {
+    return `${base} border-l-[3px] border-l-rose-500/65 bg-rose-500/[0.06] dark:bg-rose-950/28`
+  }
+  if (layerId === "net") {
+    return `${base} border-l-[3px] border-l-[color-mix(in_srgb,var(--color-accent-finance)_72%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-finance)_11%,transparent)]`
+  }
+  if (layerId === "gap_kpi_struct" || layerId === "unexplained") {
+    return `${base} border-l-[3px] border-l-amber-500/60 bg-amber-500/[0.06] dark:bg-amber-950/30`
+  }
+  if (layerId === "bridges") {
+    return `${base} border-l-[3px] border-l-sky-500/55 bg-sky-500/[0.05] dark:bg-sky-950/28`
+  }
+  if (keyLine) {
+    return `${base} bg-[color-mix(in_srgb,var(--color-accent-finance)_7%,transparent)]`
+  }
+  return `${base} bg-orbita-surface-alt/[0.2]`
+}
+
+const SECTION_HEAD_CLASS: Record<string, string> = {
+  caja: "border-l-[3px] border-l-emerald-600/55 bg-emerald-500/[0.08] dark:bg-emerald-950/40",
+  operativo: "border-l-[3px] border-l-violet-500/50 bg-violet-500/[0.07] dark:bg-violet-950/35",
+  cierre: "border-l-[3px] border-l-amber-500/55 bg-amber-500/[0.07] dark:bg-amber-950/32",
 }
 
 function KpiCard({
@@ -59,24 +102,44 @@ function KpiCard({
   value,
   sub,
   emphasize,
+  dense,
 }: {
   label: string
   value: ReactNode
   sub?: string
   emphasize?: boolean
+  dense?: boolean
 }) {
   return (
     <div
       className={[
-        "rounded-xl border px-3 py-3 sm:px-4 sm:py-3.5",
+        dense ? "rounded-lg border px-2.5 py-2 sm:px-3 sm:py-2.5" : "rounded-xl border px-3 py-3 sm:px-4 sm:py-3.5",
         emphasize
           ? "border-[color-mix(in_srgb,var(--color-accent-finance)_38%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-finance)_9%,var(--color-surface))] shadow-[0_1px_0_color-mix(in_srgb,#fff_40%,transparent)]"
           : "border-orbita-border/75 bg-orbita-surface-alt/45",
       ].join(" ")}
     >
-      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">{label}</p>
-      <div className="mt-1.5 text-base font-bold tabular-nums text-orbita-primary sm:text-lg">{value}</div>
-      {sub ? <p className="mt-1 text-[10px] leading-snug text-orbita-muted">{sub}</p> : null}
+      <p
+        className={[
+          "font-semibold uppercase tracking-[0.12em] text-orbita-secondary",
+          dense ? "text-[9px] leading-tight sm:text-[10px]" : "text-[10px]",
+        ].join(" ")}
+      >
+        {label}
+      </p>
+      <div
+        className={[
+          "font-bold tabular-nums text-orbita-primary",
+          dense ? "mt-1 text-sm sm:text-base" : "mt-1.5 text-base sm:text-lg",
+        ].join(" ")}
+      >
+        {value}
+      </div>
+      {sub ? (
+        <p className={["mt-1 leading-snug text-orbita-muted", dense ? "text-[9px] sm:text-[10px]" : "text-[10px]"].join(" ")}>
+          {sub}
+        </p>
+      ) : null}
     </div>
   )
 }
@@ -258,50 +321,6 @@ export function FinanzasPlDashboard() {
         </div>
       </div>
 
-      <div>
-        <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">KPI principales</p>
-        <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-6">
-          <KpiCard label="Ingresos" value={<MoneyCell value={c.incomeTotal} />} sub="Suma TX ingreso" />
-          <KpiCard
-            label="Gasto total"
-            value={<MoneyCell value={c.expenseTotalAll} variant="danger" />}
-            sub="Todos los egresos"
-          />
-          <KpiCard
-            label="Flujo neto"
-            value={<MoneyCell value={c.netCashFlow} variant={c.netCashFlow >= 0 ? "success" : "danger"} />}
-            sub="Ingresos − gastos"
-            emphasize
-          />
-          <KpiCard
-            label="Gasto op. KPI"
-            value={<MoneyCell value={c.expenseOperativoKpi} />}
-            sub="Catálogo (operativo)"
-          />
-          <KpiCard
-            label="Mapa operativo"
-            value={<MoneyCell value={c.expenseStructuralOperativoUi} />}
-            sub="Fijo + var. (sin módulo)"
-          />
-          <KpiCard
-            label="Brecha sin explicar"
-            value={<MoneyCell value={c.unexplainedKpiStructural} />}
-            sub="Tras puentes"
-            emphasize={Math.abs(c.unexplainedKpiStructural) >= 1}
-          />
-        </div>
-        <p className="mt-2 text-[10px] leading-snug text-orbita-muted">
-          Fuente del KPI del resumen: <span className="font-medium text-orbita-secondary">{kpiSourceLabel}</span>
-          {financeMeta?.transactionsInSelectedMonth != null ? (
-            <>
-              {" "}
-              · <span className="font-medium text-orbita-secondary">{financeMeta.transactionsInSelectedMonth}</span> movimientos
-              en el mes
-            </>
-          ) : null}
-        </p>
-      </div>
-
       {syncOn ? (
         <Card className="border-orbita-border/80 p-4 sm:p-5">
           <div className="flex flex-wrap items-start gap-3">
@@ -356,23 +375,83 @@ export function FinanzasPlDashboard() {
       <Card className="overflow-hidden border-orbita-border/85 shadow-[var(--shadow-card)]">
         <div className="border-b border-orbita-border/70 bg-[color-mix(in_srgb,var(--color-surface-alt)_55%,var(--color-surface))] px-4 py-3 sm:px-5">
           <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-orbita-secondary">Estado de resultados</p>
-          <p className="mt-0.5 text-xs text-orbita-muted">Leer de arriba a abajo. Montos en COP.</p>
+          <p className="mt-0.5 text-xs text-orbita-muted">
+            Leer de arriba a abajo. Dos columnas al mismo ancho. Verde = ingreso / neto positivo; rojo = egreso; ámbar = brechas;
+            azul = puentes.
+          </p>
         </div>
+
+        <div className="border-b border-orbita-border/60 bg-orbita-surface-alt/25 px-4 py-3 sm:px-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-orbita-secondary">Indicadores del mes (resumen)</p>
+          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+            <KpiCard dense label="Ingresos" value={<MoneyCell value={c.incomeTotal} variant="success" />} sub="Suma TX ingreso" />
+            <KpiCard
+              dense
+              label="Gasto total"
+              value={<MoneyCell value={c.expenseTotalAll} variant="danger" />}
+              sub="Todos los egresos"
+            />
+            <KpiCard
+              dense
+              label="Flujo neto"
+              value={<MoneyCell value={c.netCashFlow} variant={c.netCashFlow >= 0 ? "success" : "danger"} />}
+              sub="Ingresos − gastos"
+              emphasize
+            />
+            <KpiCard dense label="Gasto op. KPI" value={<MoneyCell value={c.expenseOperativoKpi} />} sub="Catálogo (operativo)" />
+            <KpiCard
+              dense
+              label="Mapa operativo"
+              value={<MoneyCell value={c.expenseStructuralOperativoUi} />}
+              sub="Fijo + var. (sin módulo)"
+            />
+            <KpiCard
+              dense
+              label="Brecha sin explicar"
+              value={<MoneyCell value={c.unexplainedKpiStructural} variant={Math.abs(c.unexplainedKpiStructural) < 1 ? "muted" : "danger"} />}
+              sub="Tras puentes"
+              emphasize={Math.abs(c.unexplainedKpiStructural) >= 1}
+            />
+          </div>
+          <p className="mt-2 text-[10px] leading-snug text-orbita-muted">
+            Fuente del KPI del resumen: <span className="font-medium text-orbita-secondary">{kpiSourceLabel}</span>
+            {financeMeta?.transactionsInSelectedMonth != null ? (
+              <>
+                {" "}
+                · <span className="font-medium text-orbita-secondary">{financeMeta.transactionsInSelectedMonth}</span> movimientos
+                en el mes
+              </>
+            ) : null}
+          </p>
+        </div>
+
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[min(100%,520px)] border-collapse text-left text-sm">
+          <table className="table-fixed w-full min-w-[min(100%,520px)] border-collapse text-left text-sm">
+            <caption className="sr-only">
+              Estado de resultados del mes: partidas en la primera columna, importes en COP en la segunda.
+            </caption>
+            <colgroup>
+              <col style={{ width: "50%" }} />
+              <col style={{ width: "50%" }} />
+            </colgroup>
             <thead>
-              <tr className="border-b border-orbita-border/60 text-[11px] uppercase tracking-wide text-orbita-secondary">
-                <th className="px-4 py-2.5 font-semibold sm:px-5">Partida</th>
-                <th className="px-4 py-2.5 text-right font-semibold tabular-nums sm:px-5">COP</th>
+              <tr className="border-b border-orbita-border/60 bg-orbita-surface-alt/40 text-[11px] uppercase tracking-wide text-orbita-secondary">
+                <th scope="col" className="w-1/2 px-4 py-2.5 font-semibold sm:px-5">
+                  Partida
+                </th>
+                <th scope="col" className="w-1/2 px-4 py-2.5 text-right font-semibold tabular-nums sm:px-5">
+                  COP
+                </th>
               </tr>
             </thead>
             <tbody>
               {PL_GROUPS.map((g) => {
                 const rows = layersForGroup(c.plLayers, g.layerIds)
+                const headClass = SECTION_HEAD_CLASS[g.id] ?? "bg-orbita-surface-alt/50"
                 return (
                   <Fragment key={g.id}>
-                    <tr className="bg-orbita-surface-alt/50">
-                      <td colSpan={2} className="px-4 py-2 text-[11px] font-bold uppercase tracking-[0.12em] text-orbita-primary sm:px-5">
+                    <tr className={`border-b border-orbita-border/50 ${headClass}`}>
+                      <td colSpan={2} className="px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.12em] text-orbita-primary sm:px-5">
                         {g.title}
                       </td>
                     </tr>
@@ -380,14 +459,8 @@ export function FinanzasPlDashboard() {
                       const keyLine = layer.id === "net" || layer.id === "unexplained" || layer.id === "gap_kpi_struct"
                       const pad = layer.indent === 0 ? "pl-4 sm:pl-5" : layer.indent === 1 ? "pl-6 sm:pl-8" : "pl-8 sm:pl-12"
                       return (
-                        <tr
-                          key={layer.id}
-                          className={[
-                            "border-b border-orbita-border/40",
-                            keyLine ? "bg-[color-mix(in_srgb,var(--color-accent-finance)_6%,transparent)]" : "",
-                          ].join(" ")}
-                        >
-                          <td className={`py-2.5 pr-2 align-top ${pad}`}>
+                        <tr key={layer.id} className={plRowShellClass(layer.id, keyLine)}>
+                          <td className={`min-w-0 py-2.5 pr-2 align-top ${pad}`}>
                             <span className={keyLine ? "font-semibold text-orbita-primary" : "text-orbita-secondary"}>
                               {layer.label}
                             </span>
@@ -397,7 +470,7 @@ export function FinanzasPlDashboard() {
                               </p>
                             ) : null}
                           </td>
-                          <td className={`py-2.5 px-4 text-right align-top tabular-nums sm:px-5 ${keyLine ? "font-semibold" : ""}`}>
+                          <td className={`min-w-0 py-2.5 px-4 text-right align-top tabular-nums sm:px-5 ${keyLine ? "font-semibold" : ""}`}>
                             <MoneyCell value={layer.amount} variant={layerVariant(layer.id, layer.amount)} />
                           </td>
                         </tr>
