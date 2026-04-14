@@ -4,6 +4,7 @@ import {
   calendarQuarterMonthsThrough,
   eachMonthInclusive,
   fillMonthlyFlowFromSnapshots,
+  rollingQuarterMonths,
   rollingSemesterMonths,
   rollingYearMonths,
   rollingWindowStartYm,
@@ -30,6 +31,12 @@ describe("flowEvolutionBuckets", () => {
     expect(calendarQuarterFullMonths("2026-04")).toEqual(["2026-04", "2026-05", "2026-06"])
     expect(calendarQuarterFullMonths("2026-02")).toEqual(["2026-01", "2026-02", "2026-03"])
     expect(calendarQuarterFullMonths("2026-12")).toEqual(["2026-10", "2026-11", "2026-12"])
+  })
+
+  test("rolling quarter is 3 months ending at selected month", () => {
+    expect(rollingQuarterMonths("2026-05")).toEqual(["2026-03", "2026-04", "2026-05"])
+    expect(rollingQuarterMonths("2026-01")).toEqual(["2025-11", "2025-12", "2026-01"])
+    expect(rollingQuarterMonths("2026-08")).toHaveLength(3)
   })
 
   test("rolling semester is 6 months ending at selected month", () => {

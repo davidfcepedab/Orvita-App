@@ -54,7 +54,7 @@ export function calendarQuarterMonthsThrough(endYm: string): string[] {
   return eachMonthInclusive(start, endYm)
 }
 
-/** Los 3 meses del trimestre civil que contiene el mes activo (Ene–Mar, Abr–Jun, Jul–Sep, Oct–Dic). */
+/** Los 3 meses del trimestre civil que contiene el mes activo (Ene–Mar, Abr–Jun, Jul–Sep, Oct–Dic). Para evolución alineada al mes elegido, usar {@link rollingQuarterMonths}. */
 export function calendarQuarterFullMonths(anchorYm: string): string[] {
   const [y, mo] = anchorYm.split("-").map(Number)
   if (!y || !mo || mo < 1 || mo > 12) return []
@@ -62,6 +62,12 @@ export function calendarQuarterFullMonths(anchorYm: string): string[] {
   const start = `${y}-${String(qStartM).padStart(2, "0")}`
   const end = addMonthsYm(start, 2)
   return eachMonthInclusive(start, end)
+}
+
+/** 3 meses terminando en `endYm` (inclusive), ventana móvil (misma lógica que semestre y año móvil). */
+export function rollingQuarterMonths(endYm: string): string[] {
+  const start = rollingWindowStartYm(endYm, 3)
+  return eachMonthInclusive(start, endYm)
 }
 
 /** 6 meses terminando en `endYm` (inclusive), ventana móvil. */

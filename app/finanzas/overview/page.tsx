@@ -247,8 +247,8 @@ const FLOW_TABS: { id: FlowEvolutionKey; label: string; subtitle: string }[] = [
   },
   {
     id: "quarter",
-    label: "Trimestre",
-    subtitle: "Trimestre civil completo (3 meses; meses futuros sin movimientos en cero) (COP)",
+    label: "3 meses",
+    subtitle: "Ventana móvil de 3 meses terminando en el mes seleccionado (misma lógica que semestre y año móvil; COP)",
   },
   {
     id: "semester",
@@ -625,7 +625,17 @@ export default function FinanzasOverview() {
                 <FlowChartLegend />
                 <details className="group mt-3">
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-lg border border-orbita-border/60 bg-orbita-surface-alt/35 px-3 py-2 text-left text-xs font-semibold text-orbita-primary sm:text-sm [&::-webkit-details-marker]:hidden">
-                    <span>Tabla de datos (periodo, ingresos, gasto op., flujo neto)</span>
+                    <span className="flex min-w-0 flex-1 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2.5">
+                      <span
+                        className="inline-flex w-fit shrink-0 items-center rounded-full border border-[color-mix(in_srgb,var(--color-accent-finance)_38%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-finance)_11%,var(--color-surface))] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-orbita-primary"
+                        aria-hidden
+                      >
+                        Modo repaso
+                      </span>
+                      <span className="min-w-0 font-medium leading-snug text-orbita-secondary">
+                        Despliega la misma curva del gráfico en cifras: cada periodo, ingresos, gasto operativo y flujo neto.
+                      </span>
+                    </span>
                     <ChevronDown
                       className="h-4 w-4 shrink-0 text-orbita-secondary transition-transform duration-200 group-open:rotate-180"
                       aria-hidden
