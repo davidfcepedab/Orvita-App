@@ -2,6 +2,7 @@
 
 import { Card } from "@/src/components/ui/Card"
 import type { FinanceModuleMeta } from "@/lib/finanzas/financeModuleMeta"
+import { cn } from "@/lib/utils"
 import { financeInsetBarClass } from "./_components/financeChrome"
 import { useFinance } from "./FinanceContext"
 
@@ -39,7 +40,7 @@ export function FinanceDataLineBanner({ embedded = false }: FinanceDataLineBanne
   const { month, setMonth, financeMeta, financeMetaLoading, financeMetaNotice } = finance
 
   const datosShell = embedded
-    ? "mt-2 border-t border-orbita-border/55 pt-2.5 text-orbita-primary sm:pt-3"
+    ? "mt-1.5 border-t border-orbita-border/55 pt-1.5 text-orbita-primary sm:mt-2 sm:pt-2.5 md:pt-3"
     : `min-w-0 ${financeInsetBarClass} text-orbita-primary`
 
   if (financeMetaLoading && !financeMeta) {
@@ -47,7 +48,7 @@ export function FinanceDataLineBanner({ embedded = false }: FinanceDataLineBanne
       <div
         className={
           embedded
-            ? "mt-2 border-t border-orbita-border/55 pt-2.5 sm:pt-3"
+            ? "mt-1.5 border-t border-orbita-border/55 pt-1.5 sm:mt-2 sm:pt-2.5 md:pt-3"
             : `min-w-0 ${financeInsetBarClass}`
         }
         role="status"
@@ -87,31 +88,36 @@ export function FinanceDataLineBanner({ embedded = false }: FinanceDataLineBanne
         </p>
       ) : null}
 
-      <div className={datosShell} role="region" aria-label="Actividad e importes del mes elegido">
-        <p className="m-0 flex flex-wrap items-baseline gap-x-1.5 gap-y-1 text-[11px] leading-relaxed sm:text-xs">
-          <span className="font-semibold uppercase tracking-[0.12em] text-orbita-secondary">Datos</span>
-          <span className="text-orbita-secondary">·</span>
+      <div className={cn(datosShell, "min-w-0 max-w-full")} role="region" aria-label="Actividad e importes del mes elegido">
+        <p className="m-0 min-w-0 max-w-full text-[10px] leading-snug text-orbita-primary [overflow-wrap:anywhere] sm:text-[11px] sm:leading-relaxed md:text-xs">
+          <span className="font-semibold uppercase tracking-[0.1em] text-orbita-secondary sm:tracking-[0.12em]">Datos</span>{" "}
+          <span className="text-orbita-secondary">·</span>{" "}
           <span>
-            <span className="text-orbita-secondary">Movimientos:</span> {meta.transactionsInSelectedMonth ?? 0}
-          </span>
-          <span className="text-orbita-secondary">·</span>
+            <span className="text-orbita-secondary">Mov.:</span> {meta.transactionsInSelectedMonth ?? 0}
+          </span>{" "}
+          <span className="text-orbita-secondary">·</span>{" "}
           <span>
             <span className="text-orbita-secondary">Origen:</span> {origenResumenLabel}
           </span>
           {meta.lastTransactionDate ? (
             <>
-              <span className="text-orbita-secondary">·</span>
+              {" "}
+              <span className="text-orbita-secondary">·</span>{" "}
               <span>
                 <span className="text-orbita-secondary">Último:</span> {formatDayEs(meta.lastTransactionDate)}
                 {updatedShort ? (
-                  <span className="text-orbita-secondary"> (actualizado {updatedShort})</span>
+                  <span className="text-orbita-secondary">
+                    {" "}
+                    (<span className="whitespace-nowrap">act. {updatedShort}</span>)
+                  </span>
                 ) : null}
               </span>
             </>
           ) : (
             <>
-              <span className="text-orbita-secondary">·</span>
-              <span className="text-orbita-secondary">Sin movimientos en este mes para tu hogar.</span>
+              {" "}
+              <span className="text-orbita-secondary">·</span>{" "}
+              <span className="text-orbita-secondary">Sin movimientos este mes.</span>
             </>
           )}
         </p>

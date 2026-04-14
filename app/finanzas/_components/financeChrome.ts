@@ -5,7 +5,7 @@ export const financeInsetBarClass =
   "rounded-[var(--radius-card)] border border-[color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_48%,var(--color-surface))] px-3 py-1.5 text-[11px] sm:px-4 sm:py-2 sm:text-xs"
 
 export const financeModuleHeroClass =
-  "min-w-0 border-[color-mix(in_srgb,var(--color-border)_70%,transparent)] p-3 shadow-[var(--shadow-card)] sm:p-4"
+  "min-w-0 border-[color-mix(in_srgb,var(--color-border)_70%,transparent)] p-2.5 shadow-[var(--shadow-card)] sm:p-4"
 
 /** Contenedor principal de cada sub-vista: ritmo compacto tipo app. */
 export const financeViewRootClass = "min-w-0 space-y-3 sm:space-y-4"
@@ -28,7 +28,7 @@ export const financeModuleSubnavStyle: CSSProperties = {
 
 export function financeSubnavTabClass(active: boolean): string {
   return [
-    "min-h-[40px] flex-shrink-0 snap-start rounded-[11px] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] transition-[transform,box-shadow,background-color,color] duration-200 sm:min-h-0 sm:px-3.5 sm:py-2 sm:text-[12px] sm:tracking-[0.13em]",
+    "min-h-[40px] flex-shrink-0 snap-start rounded-[11px] px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] transition-[transform,box-shadow,background-color,color] duration-200 sm:min-h-0 sm:px-3.5 sm:py-2 sm:text-[12px] sm:tracking-[0.13em]",
     active
       ? "scale-[1.01] bg-orbita-surface text-orbita-primary shadow-[var(--shadow-card)] ring-2 ring-[color-mix(in_srgb,var(--color-accent-finance)_42%,transparent)] motion-reduce:scale-100"
       : "text-orbita-secondary hover:bg-orbita-surface/55 hover:text-orbita-primary active:scale-[0.99]",

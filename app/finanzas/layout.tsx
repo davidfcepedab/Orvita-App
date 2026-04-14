@@ -44,20 +44,27 @@ function FinanzasLayoutContent({
   return (
     <div className="min-w-0 max-w-full space-y-2.5 overflow-x-hidden sm:space-y-3">
       <Card className={financeModuleHeroClass}>
-        <div className="flex min-w-0 flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-          <div className="min-w-0 max-w-full">
-            <h1 className="orbita-large-title m-0 break-words text-orbita-primary">Capital operativo</h1>
-            <p className="mt-0.5 max-w-prose text-[11px] leading-snug text-orbita-secondary [overflow-wrap:anywhere] sm:text-xs sm:leading-snug">
+        <div className="flex min-w-0 flex-col gap-2 min-[400px]:flex-row min-[400px]:items-end min-[400px]:justify-between min-[400px]:gap-3 sm:items-center sm:gap-4">
+          <div className="min-w-0 max-w-full flex-1">
+            <h1 className="m-0 text-xl font-bold leading-tight tracking-tight text-orbita-primary sm:orbita-large-title sm:leading-none">
+              Capital operativo
+            </h1>
+            <p className="mt-0.5 hidden max-w-prose text-xs leading-snug text-orbita-secondary sm:block">
               Un mismo mes para todo el módulo: elige el periodo aquí; cada pestaña muestra el detalle de esa fecha.
             </p>
+            <p className="mt-0.5 text-[10px] leading-snug text-orbita-secondary [overflow-wrap:anywhere] sm:hidden">
+              Un mes para todo Capital; el selector aplica a todas las pestañas.
+            </p>
           </div>
-          <label className="grid w-full min-w-0 shrink-0 gap-1 sm:w-auto sm:min-w-[11rem]">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">Mes</span>
+          <label className="grid w-full min-w-0 shrink-0 gap-0.5 min-[400px]:w-auto min-[400px]:max-w-[min(100%,13.5rem)] sm:min-w-[11rem]">
+            <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary sm:text-[10px] sm:tracking-[0.14em]">
+              Mes
+            </span>
             <input
               type="month"
               value={month}
               onChange={(e) => setMonth(e.target.value)}
-              className="min-h-[42px] w-full min-w-0 rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface px-3 py-2 text-sm text-orbita-primary shadow-sm transition focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--color-accent-finance)_35%,transparent)]"
+              className="min-h-[38px] w-full min-w-0 rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface px-2.5 py-1.5 text-sm text-orbita-primary shadow-sm transition focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--color-accent-finance)_35%,transparent)] sm:min-h-[42px] sm:px-3 sm:py-2"
               aria-label="Seleccionar mes del periodo"
             />
           </label>
