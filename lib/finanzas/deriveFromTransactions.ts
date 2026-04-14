@@ -1,7 +1,7 @@
 import type { FinanceTransaction } from "@/lib/finanzas/types"
 import { excludeReconciliationFromOperativoAnalysis } from "@/lib/finanzas/reconciliationTxFilter"
 import { monthBounds } from "@/lib/finanzas/monthRange"
-import { expenseAmount, incomeAmount, netCashFlow } from "@/lib/finanzas/calculations/txMath"
+import { expenseAmount, incomeAmount, netCashFlowWithExpenseRule } from "@/lib/finanzas/calculations/txMath"
 import {
   normalizeFinanceCatalogKey,
   type FinanceSubcategoryCatalogEntry,
@@ -443,12 +443,21 @@ export type InsightPayload = {
 
 const MONTH_SHORT = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
 
-export function buildInsightsFromHistory(monthSlices: { month: string; rows: FinanceTransaction[] }[]): InsightPayload {
+export type BuildInsightsFromHistoryOptions = {
+  /** Por defecto {@link expenseAmount}; usar `createOperativoExpenseFn(catálogo)` para alinear con Resumen. */
+  expenseAmount?: (tx: FinanceTransaction) => number
+}
+
+export function buildInsightsFromHistory(
+  monthSlices: { month: string; rows: FinanceTransaction[] }[],
+  options?: BuildInsightsFromHistoryOptions,
+): InsightPayload {
+  const expFn = options?.expenseAmount ?? expenseAmount
   const slices = monthSlices.map((s) => ({
     month: s.month,
     rows: excludeReconciliationFromOperativoAnalysis(s.rows),
   }))
-  const nets = slices.map((s) => ({ month: s.month, net: netCashFlow(s.rows) }))
+  const nets = slices.map((s) => ({ month: s.month, net: netCashFlowWithExpenseRule(s.rows, expFn) }))
   const avgNet = nets.length ? nets.reduce((a, n) => a + n.net, 0) / nets.length : 0
   const lastNet = nets.length ? nets[nets.length - 1]!.net : 0
   const volatility =
@@ -461,7 +470,7 @@ export function buildInsightsFromHistory(monthSlices: { month: string; rows: Fin
   const savingsLike = slices.length
     ? slices.map((s) => {
         const inc = s.rows.reduce((a, t) => a + incomeAmount(t), 0)
-        const net = netCashFlow(s.rows)
+        const net = netCashFlowWithExpenseRule(s.rows, expFn)
         return inc > 0 ? (net / inc) * 100 : 0
       })
     : [0]
@@ -484,6 +493,8 @@ export function buildInsightsFromHistory(monthSlices: { month: string; rows: Fin
   if (volatility > 800_000) messages.push("Alta variación mes a mes en flujo: conviene buffer de liquidez de 1–2 meses.")
   if (messages.length === 0) messages.push("Patrón de flujo estable. Mantén categorización para afinar proyecciones.")
 
+  const insightIsAlert = lastNet < 0 || avgSav < 15 || volatility > 800_000
+
   const [Y, M] = slices.length
     ? slices[slices.length - 1]!.month.split("-").map(Number)
     : [new Date().getFullYear(), new Date().getMonth() + 1]
@@ -498,7 +509,7 @@ export function buildInsightsFromHistory(monthSlices: { month: string; rows: Fin
 
   return {
     score,
-    insight: { type: "alert", message: messages[0] ?? "", all: messages },
+    insight: { type: insightIsAlert ? "alert" : "positive", message: messages[0] ?? "", all: messages },
     stability: {
       stabilityIndex,
       status,

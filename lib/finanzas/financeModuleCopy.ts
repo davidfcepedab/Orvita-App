@@ -19,6 +19,6 @@ export const FINANCE_PL_README_EXPANDED =
 export const FINANCE_CUENTAS_HEADER_SUBTITLE =
   "Indicadores arriba; más abajo despliega «Tus saldos en el banco» para anotar lo que ves en extracto o app y cuadrarlo con Órvita."
 
-/** Perspectivas: mismo criterio de exclusión que KPI / categorías / P&L operativo. */
+/** Perspectivas: misma base operativa que Resumen / meta del mes (catálogo + sin ajustes de conciliación). */
 export const FINANCE_INSIGHTS_STRAPLINE =
-  "Flujo neto por mes (misma base que Resumen; la gráfica no incluye ajustes de conciliación)."
+  "Índices sobre flujo operativo por mes: sin ajustes de conciliación y con gasto según tu catálogo (misma lógica que Resumen y P&L)."

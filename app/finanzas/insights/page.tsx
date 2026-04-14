@@ -26,6 +26,9 @@ interface InsightsResponse {
 interface InsightsMeta {
   months: number
   throughMonth: string
+  /** Misma base que GET meta / Resumen: gasto operativo del catálogo. */
+  basis?: string
+  catalogEntries?: number
 }
 
 function formatYmLongEs(ym: string) {
@@ -183,9 +186,19 @@ export default function FinanzasInsights() {
       <Card className="border border-orbita-border/80 bg-[color-mix(in_srgb,var(--color-accent-finance)_6%,var(--color-surface))] p-3 sm:p-4">
         <p className="m-0 text-sm leading-relaxed text-orbita-primary">
           Ventana de{" "}
-          <span className="tabular-nums font-semibold">{meta?.months ?? 6}</span> meses hasta{" "}
-          <span className="font-semibold">{formatYmLongEs(meta?.throughMonth ?? month)}</span>. Score y estabilidad
-          recompensan ahorro vs ingresos y baja volatilidad del flujo neto.
+          <span className="tabular-nums font-semibold">{meta?.months ?? 6}</span> meses corridos hasta{" "}
+          <span className="font-semibold">{formatYmLongEs(meta?.throughMonth ?? month)}</span>
+          {meta?.basis === "operativo" ? (
+            <>
+              . Los índices usan{" "}
+              <span className="font-semibold">flujo operativo</span> (ingresos menos gasto catalogado como operativo, sin
+              ajustes de conciliación), la misma base que la franja «Datos» del mes en el encabezado del módulo y el
+              Resumen.
+            </>
+          ) : (
+            <>.</>
+          )}{" "}
+          Score y estabilidad ponderan ahorro vs ingresos y la volatilidad de ese flujo mes a mes.
         </p>
       </Card>
 
@@ -305,7 +318,8 @@ export default function FinanzasInsights() {
                 <div>
                   <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Proyección simple (3 meses)</p>
                   <p className="mt-1 text-[11px] leading-snug text-orbita-secondary">
-                    Suma el flujo neto medio mes a mes; es una referencia, no un saldo bancario.
+                    Suma el flujo operativo medio de la ventana; referencia de tendencia, no saldo bancario ni cierre
+                    contable.
                   </p>
                 </div>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">

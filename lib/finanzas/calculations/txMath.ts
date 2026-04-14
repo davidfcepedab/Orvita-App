@@ -30,6 +30,23 @@ export function netCashFlow(rows: FinanceTransaction[]): number {
   return inc - exp
 }
 
+/**
+ * Flujo con regla de gasto explícita (p. ej. {@link createOperativoExpenseFn} del catálogo).
+ * Ingresos siguen siendo {@link incomeAmount}; alinea Perspectivas con Resumen/P&L operativo.
+ */
+export function netCashFlowWithExpenseRule(
+  rows: FinanceTransaction[],
+  expenseFn: (tx: FinanceTransaction) => number,
+): number {
+  let inc = 0
+  let exp = 0
+  for (const r of rows) {
+    inc += incomeAmount(r)
+    exp += expenseFn(r)
+  }
+  return inc - exp
+}
+
 /** Para UI tipo extracto: egresos negativos. */
 export function signedDisplayAmount(tx: FinanceTransaction): number {
   return expenseAmount(tx) > 0 ? -expenseAmount(tx) : incomeAmount(tx)

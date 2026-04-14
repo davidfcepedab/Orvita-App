@@ -2,20 +2,18 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
 import { isAppMockMode, isSupabaseEnabled, UI_SYNC_OFF_SHORT } from "@/lib/checkins/flags"
 import { buildInsightsFromHistory } from "@/lib/finanzas/deriveFromTransactions"
+import { eachMonthInclusive, rollingWindowStartYm } from "@/lib/finanzas/flowEvolutionBuckets"
 import { mockTransactionsForMonth } from "@/lib/finanzas/mockFinancePayloads"
 import { monthBounds } from "@/lib/finanzas/monthRange"
+import { createOperativoExpenseFn } from "@/lib/finanzas/operativoExpense"
+import { fetchSubcategoryCatalogMerged } from "@/lib/finanzas/subcategoryCatalog"
 import type { FinanceTransaction } from "@/lib/finanzas/types"
+import { getHouseholdId } from "@/lib/households/getHouseholdId"
 import { getTransactionsByRange } from "@/lib/services/finanzasService"
 
 export const runtime = "nodejs"
 
-function shiftMonth(m: string, delta: number) {
-  const [ys, ms] = m.split("-").map(Number)
-  const d = new Date(ys, ms - 1 + delta, 1)
-  const y = d.getFullYear()
-  const mo = d.getMonth() + 1
-  return `${y}-${String(mo).padStart(2, "0")}`
-}
+const INSIGHT_ROLLING_MONTHS = 6
 
 export async function GET(req: NextRequest) {
   try {
@@ -27,22 +25,28 @@ export async function GET(req: NextRequest) {
       )
     }
 
+    const months = eachMonthInclusive(rollingWindowStartYm(month, INSIGHT_ROLLING_MONTHS), month)
     const slices: { month: string; rows: FinanceTransaction[] }[] = []
 
     if (isAppMockMode()) {
-      for (let i = 5; i >= 0; i -= 1) {
-        const mk = shiftMonth(month, -i)
+      const opex = createOperativoExpenseFn([])
+      for (const mk of months) {
         const b = monthBounds(mk)
         if (!b) continue
         const all = mockTransactionsForMonth(mk)
         const rows = all.filter((r) => r.date >= b.startStr && r.date <= b.endStr)
         slices.push({ month: mk, rows })
       }
-      const data = buildInsightsFromHistory(slices)
+      const data = buildInsightsFromHistory(slices, { expenseAmount: opex })
       return NextResponse.json({
         success: true,
         source: "mock",
-        meta: { months: slices.length, throughMonth: month },
+        meta: {
+          months: slices.length,
+          throughMonth: month,
+          basis: "operativo",
+          catalogEntries: 0,
+        },
         data,
       })
     }
@@ -58,18 +62,35 @@ export async function GET(req: NextRequest) {
     const auth = await requireUser(req)
     if (auth instanceof NextResponse) return auth
 
-    for (let i = 5; i >= 0; i -= 1) {
-      const mk = shiftMonth(month, -i)
+    const householdId = await getHouseholdId(auth.supabase, auth.userId)
+    if (!householdId) {
+      return NextResponse.json({ success: false, error: "Usuario sin hogar asignado" }, { status: 403 })
+    }
+
+    let catalogRows: Awaited<ReturnType<typeof fetchSubcategoryCatalogMerged>> = []
+    try {
+      catalogRows = await fetchSubcategoryCatalogMerged(auth.supabase, householdId)
+    } catch (e) {
+      console.warn("FINANCE INSIGHTS: catálogo no disponible", e)
+    }
+    const opex = createOperativoExpenseFn(catalogRows)
+
+    for (const mk of months) {
       const b = monthBounds(mk)
       if (!b) continue
       const rows = await getTransactionsByRange(auth.supabase, b.startStr, b.endStr)
       slices.push({ month: mk, rows })
     }
 
-    const data = buildInsightsFromHistory(slices)
+    const data = buildInsightsFromHistory(slices, { expenseAmount: opex })
     return NextResponse.json({
       success: true,
-      meta: { months: slices.length, throughMonth: month },
+      meta: {
+        months: slices.length,
+        throughMonth: month,
+        basis: "operativo",
+        catalogEntries: catalogRows.length,
+      },
       data,
     })
   } catch (error: unknown) {
