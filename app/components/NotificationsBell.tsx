@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Bell, Loader2, Radio } from "lucide-react"
@@ -45,7 +46,11 @@ export function NotificationsBell() {
     const rect = anchor.getBoundingClientRect()
     const margin = 10
     const maxW = 380
-    const vw = window.innerWidth
+    /** `visualViewport` refleja el ancho real en móvil (cromo/iframe); evita usar solo `innerWidth` del padre. */
+    const vw =
+      window.visualViewport?.width ??
+      document.documentElement?.clientWidth ??
+      window.innerWidth
     const w = Math.min(maxW, vw - margin * 2)
     let left = rect.right - w
     left = Math.max(margin, Math.min(left, vw - w - margin))
@@ -55,7 +60,7 @@ export function NotificationsBell() {
     panel.style.top = `${Math.round(top)}px`
     panel.style.width = `${Math.round(w)}px`
     panel.style.right = "auto"
-    panel.style.zIndex = "70"
+    panel.style.zIndex = "100"
   }, [])
 
   useLayoutEffect(() => {
@@ -64,9 +69,13 @@ export function NotificationsBell() {
     const onReposition = () => positionPanel()
     window.addEventListener("resize", onReposition)
     window.addEventListener("scroll", onReposition, true)
+    window.visualViewport?.addEventListener("resize", onReposition)
+    window.visualViewport?.addEventListener("scroll", onReposition)
     return () => {
       window.removeEventListener("resize", onReposition)
       window.removeEventListener("scroll", onReposition, true)
+      window.visualViewport?.removeEventListener("resize", onReposition)
+      window.visualViewport?.removeEventListener("scroll", onReposition)
     }
   }, [open, positionPanel])
 
@@ -120,7 +129,9 @@ export function NotificationsBell() {
   useEffect(() => {
     if (!open) return
     const close = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false)
+      const t = e.target as Node
+      if (wrapRef.current?.contains(t) || panelRef.current?.contains(t)) return
+      setOpen(false)
     }
     document.addEventListener("mousedown", close)
     return () => document.removeEventListener("mousedown", close)
@@ -240,11 +251,12 @@ export function NotificationsBell() {
         ) : null}
       </button>
 
-      {open ? (
-        <div
-          ref={panelRef}
-          className="flex max-h-[min(520px,calc(100vh-5rem))] flex-col overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-card"
-        >
+      {open && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              ref={panelRef}
+              className="flex max-h-[min(520px,calc(100dvh-5rem))] flex-col overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-card"
+            >
           <div className="flex items-center justify-between gap-2 border-b border-[color-mix(in_srgb,var(--color-border)_80%,transparent)] px-3 py-2">
             <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
               Alertas
@@ -354,8 +366,10 @@ export function NotificationsBell() {
               Configuración
             </Link>
           </div>
-        </div>
-      ) : null}
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   )
 }

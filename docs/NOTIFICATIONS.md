@@ -1,5 +1,9 @@
 # Notificaciones in-app y Web Push (Órvita)
 
+## UI (campana)
+
+El panel se renderiza con **portal a `document.body`**: el `<header>` usa `backdrop-filter`, que crea un *containing block* y desplazaba los `position: fixed` calculados con coordenadas de viewport.
+
 ## Qué hay implementado
 
 1. **Bandeja** (`orbita_notifications`): lista en el panel de la campana, no leídas con punto, “Marcar leídas”, clic navega y marca leída.
@@ -17,19 +21,20 @@ Migración: `supabase/migrations/20260415120000_orbita_notifications_and_push.sq
 ## Variables de entorno
 
 ```bash
-# Público (cliente): clave VAPID (misma pareja que la privada)
-NEXT_PUBLIC_VAPID_PUBLIC_KEY=
+# Público (cliente): clave VAPID (misma pareja que la privada; salida de generate-vapid-keys)
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=<public_key_base64url>
 
 # Servidor: clave privada VAPID y contacto (RFC 8292)
-VAPID_PRIVATE_KEY=
+VAPID_PRIVATE_KEY=<private_key_base64url>
 VAPID_SUBJECT=mailto:tu-correo@dominio.com
 
-# Clave JWT **service_role** (Project Settings → API → service_role), nunca la anon ni la contraseña de Postgres.
-# En Vercel integración Supabase a menudo llega como SUPABASE_SECRET_KEY; el código acepta también SUPABASE_SERVICE_ROLE_KEY.
-SUPABASE_SERVICE_ROLE_KEY=
-# o bien (mismo valor JWT service_role):
-# SUPABASE_SECRET_KEY=
+# JWT service_role (Supabase → Project Settings → API). No subas valores reales al repo.
+# En Vercel a menudo: SUPABASE_SECRET_KEY. El código acepta también SUPABASE_SERVICE_ROLE_KEY.
+SUPABASE_SERVICE_ROLE_KEY=<service_role_jwt>
+# SUPABASE_SECRET_KEY=<mismo_jwt_si_usas_nombre_Vercel>
 ```
+
+**No pegues secretos reales en archivos del repositorio** (GitHub push protection). Rellena solo en Vercel / `.env.local`.
 
 Generar par VAPID:
 
