@@ -25,8 +25,8 @@ import {
   User,
   LogOut,
   Sparkles,
-  Bell,
 } from "lucide-react"
+import { NotificationsBell } from "@/app/components/NotificationsBell"
 
 type AppShellProps = {
   moduleLabel?: string
@@ -288,19 +288,7 @@ export function AppShell({
                 {headerDateLabel}
               </time>
 
-              <span
-                className="inline-flex shrink-0"
-                title="Centro de alertas (en preparación). Para activarlo: Web Push (service worker + permiso del navegador), email desde un cron/API, o bandeja in-app con tabla en Supabase — aún no cableado."
-              >
-                <button
-                  type="button"
-                  disabled
-                  aria-label="Notificaciones — función en preparación, aún no activa"
-                  className="orbita-icon-button orbita-focus-ring relative h-11 w-11 cursor-not-allowed opacity-50 sm:h-9 sm:w-9"
-                >
-                  <Bell size={17} strokeWidth={2} className="shrink-0" aria-hidden />
-                </button>
-              </span>
+              <NotificationsBell />
 
               <button
                 className="orbita-header-action orbita-focus-ring sm:min-h-0 sm:py-1.5"
