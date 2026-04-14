@@ -630,6 +630,7 @@ export default function CuentasClient() {
   const finance = useFinance()
   const month = finance?.month ?? ""
   const capitalEpoch = finance?.capitalDataEpoch ?? 0
+  const touchCapitalData = finance?.touchCapitalData
 
   const {
     accounts: ledgerAccounts,
@@ -795,7 +796,7 @@ export default function CuentasClient() {
         setLedgerReorderBusy(false)
       }
     },
-    [refetchAccountsDashboard, refetchLedger],
+    [refetchAccountsDashboard, refetchLedger, touchCapitalData],
   )
 
   const onDropLedgerReorder = useCallback(
@@ -891,6 +892,7 @@ export default function CuentasClient() {
         }
         await refetchLedger()
         await refetchAccountsDashboard()
+        touchCapitalData?.()
         if (json.data?.inserted) {
           const d = Number(json.data?.delta ?? 0)
           if (json.data?.needsAttention) {
@@ -909,7 +911,7 @@ export default function CuentasClient() {
         setLedgerReconcileBusyId(null)
       }
     },
-    [refetchAccountsDashboard, refetchLedger, setLedgerAccounts],
+    [refetchAccountsDashboard, refetchLedger, setLedgerAccounts, touchCapitalData],
   )
 
   const reloadManualFromApi = useCallback(async () => {

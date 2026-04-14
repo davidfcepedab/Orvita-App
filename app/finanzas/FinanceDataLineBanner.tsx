@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { Card } from "@/src/components/ui/Card"
 import type { FinanceModuleMeta } from "@/lib/finanzas/financeModuleMeta"
 import { financeInsetBarClass } from "./_components/financeChrome"
@@ -101,6 +102,13 @@ export function FinanceDataLineBanner() {
               <span className="text-orbita-secondary">Sin movimientos en base para tu hogar.</span>
             </>
           )}
+          <span className="text-orbita-secondary">·</span>
+          <Link
+            href="/finanzas/pl"
+            className="font-semibold text-orbita-primary underline decoration-orbita-border/80 underline-offset-2 transition hover:text-[color-mix(in_srgb,var(--color-accent-finance)_85%,var(--color-text-primary))]"
+          >
+            Ver P&amp;L del mes
+          </Link>
         </p>
       </div>
 
