@@ -32,8 +32,11 @@ function normalizeHeaderKey(s: string): string {
     .toLowerCase()
 }
 
-/** Parseo CSV mínimo con comillas dobles. */
-export function splitCsvLine(line: string): string[] {
+/**
+ * Parseo CSV/TSV mínimo con comillas dobles.
+ * `delimiter` ',' (export web) o ';' (Excel regional ES/LATAM) o tab.
+ */
+export function splitCsvLine(line: string, delimiter: "," | ";" | "\t" = ","): string[] {
   const out: string[] = []
   let cur = ""
   let i = 0
@@ -60,7 +63,7 @@ export function splitCsvLine(line: string): string[] {
       i += 1
       continue
     }
-    if (c === ",") {
+    if (c === delimiter) {
       out.push(cur)
       cur = ""
       i += 1
@@ -83,6 +86,14 @@ function mapHeaderIndex(headerCells: string[]): Map<string, number> | null {
     positions.set(key, idx)
   }
   return positions
+}
+
+/** Detecta ';' (Excel ES) vs ',' (export Órvita) según la primera línea. */
+export function detectCsvDelimiter(headerLine: string): "," | ";" | "\t" {
+  const tryMap = (d: "," | ";" | "\t") => mapHeaderIndex(splitCsvLine(headerLine, d))
+  if (tryMap(";")) return ";"
+  if (tryMap("\t")) return "\t"
+  return ","
 }
 
 function parseIsoDate(s: string): string | null {
@@ -109,14 +120,23 @@ function parseIsoDate(s: string): string | null {
 function parseMoney(s: string): number | null {
   let t = s.trim().replace(/\s/g, "")
   if (!t) return null
-  if (/^\d+[.,]\d{3}([.,]\d+)?$/.test(t.replace(/[^\d.,]/g, ""))) {
+  let neg = false
+  if (t.startsWith("-")) {
+    neg = true
+    t = t.slice(1)
+  } else if (t.startsWith("(") && t.endsWith(")")) {
+    neg = true
+    t = t.slice(1, -1)
+  }
+  if (/^\d+[.,]\d{3}([.,]\d+)?$/.test(t.replace(/[^\d.,-]/g, ""))) {
     t = t.replace(/\./g, "").replace(",", ".")
   } else {
     t = t.replace(/,/g, ".")
   }
   const n = Number(t)
   if (!Number.isFinite(n) || n <= 0) return null
-  return Math.round(n * 100) / 100
+  const v = Math.round(n * 100) / 100
+  return neg ? -v : v
 }
 
 function parseTipo(raw: string): "income" | "expense" | null {
@@ -143,12 +163,13 @@ export function parseTransactionsImportCsv(text: string): {
     return { rows, errors }
   }
 
-  const headerCells = splitCsvLine(lines[0]!)
+  const delimiter = detectCsvDelimiter(lines[0]!)
+  const headerCells = splitCsvLine(lines[0]!, delimiter)
   const pos = mapHeaderIndex(headerCells)
   if (!pos) {
     errors.push({
       line: 1,
-      message: `Cabecera inválida. Se esperan columnas: ${TRANSACTION_CSV_HEADERS_ES.join(", ")}`,
+      message: `Cabecera inválida. Se esperan columnas: ${TRANSACTION_CSV_HEADERS_ES.join(", ")} (coma o punto y coma como separador).`,
     })
     return { rows, errors }
   }
@@ -161,7 +182,7 @@ export function parseTransactionsImportCsv(text: string): {
 
   for (let li = 1; li < lines.length; li += 1) {
     const lineNum = li + 1
-    const cells = splitCsvLine(lines[li]!)
+    const cells = splitCsvLine(lines[li]!, delimiter)
 
     const fechaRaw = cellAt("fecha", cells)
     const tipoRaw = cellAt("tipo", cells)
@@ -183,11 +204,13 @@ export function parseTransactionsImportCsv(text: string): {
       errors.push({ line: lineNum, message: `Tipo inválido (use Gasto o Ingreso): "${tipoRaw}"` })
       continue
     }
-    const monto = parseMoney(montoRaw)
-    if (monto == null) {
+    const montoSigned = parseMoney(montoRaw)
+    if (montoSigned == null) {
       errors.push({ line: lineNum, message: `Monto inválido: "${montoRaw}"` })
       continue
     }
+    /** Monto siempre positivo; el signo en CSV (p. ej. Excel) se ignora frente a Tipo. */
+    const monto = Math.abs(montoSigned)
 
     rows.push({
       fecha,

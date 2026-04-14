@@ -7,6 +7,15 @@ import { FinanceViewHeader } from "../_components/FinanceViewHeader"
 import { financeViewRootClass } from "../_components/financeChrome"
 import { useLedgerAccounts } from "../useLedgerAccounts"
 import { Card } from "@/src/components/ui/Card"
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/src/components/ui/dialog"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import type { FinanceSubcategoryCatalogRow } from "@/lib/finanzas/subcategoryCatalog"
 import { financeApiDelete, financeApiGet, financeApiJson } from "@/lib/finanzas/financeClientFetch"
@@ -120,6 +129,11 @@ export default function TransactionsPageClient() {
   const [templateDownloading, setTemplateDownloading] = useState(false)
   const [importingCsv, setImportingCsv] = useState(false)
   const [importNotice, setImportNotice] = useState<string | null>(null)
+  const [importSuccessDialog, setImportSuccessDialog] = useState<{
+    open: boolean
+    message: string
+    omittedLines?: { line: number; message: string }[]
+  }>({ open: false, message: "" })
   const csvFileInputRef = useRef<HTMLInputElement>(null)
   const patchTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
   const selectAllRef = useRef<HTMLInputElement>(null)
@@ -452,16 +466,22 @@ export default function TransactionsPageClient() {
           throw new Error(messageForHttpError(res.status, json.error, res.statusText))
         }
         const d = json.data
-        let msg = `Se importaron ${d?.inserted ?? 0} movimiento(s).`
+        const inserted = d?.inserted ?? 0
         const pe = d?.parseErrors ?? []
-        if (pe.length > 0) {
-          msg += ` ${pe.length} línea(s) con avisos (formato o datos inválidos en esas líneas).`
-        }
         const sw = d?.snapshotWarnings
-        if (sw?.length) {
-          msg += ` Actualización de resúmenes mensuales: ${sw.join("; ")}`
+        let msg = `Se importaron ${inserted} movimiento(s).`
+        if (pe.length > 0) {
+          msg += `\n\nSe omitieron ${pe.length} fila(s) (formato, monto o par no válido en el catálogo).`
         }
-        setImportNotice(msg)
+        if (sw?.length) {
+          msg += `\n\nResúmenes mensuales: ${sw.join("; ")}`
+        }
+        setImportNotice(null)
+        setImportSuccessDialog({
+          open: true,
+          message: msg,
+          omittedLines: pe.length > 0 ? pe : undefined,
+        })
         await loadTransactions({ showLoading: false })
       } catch (e) {
         setPatchErr(e instanceof Error ? e.message : "Error al importar")
@@ -595,6 +615,48 @@ export default function TransactionsPageClient() {
           {importNotice}
         </p>
       ) : null}
+
+      <Dialog
+        open={importSuccessDialog.open}
+        onOpenChange={(open) => {
+          if (!open) setImportSuccessDialog({ open: false, message: "" })
+        }}
+      >
+        <DialogContent className="max-w-md" showClose>
+          <DialogHeader>
+            <DialogTitle>Importación completada</DialogTitle>
+            <DialogDescription asChild>
+              <div className="space-y-3 pt-1 text-[var(--color-text-primary)]">
+                <p className="whitespace-pre-wrap text-sm leading-relaxed">{importSuccessDialog.message}</p>
+                {importSuccessDialog.omittedLines && importSuccessDialog.omittedLines.length > 0 ? (
+                  <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+                    <p className="m-0 text-[11px] font-semibold text-amber-900 dark:text-amber-100">
+                      Detalle de filas omitidas (primeras {Math.min(12, importSuccessDialog.omittedLines.length)})
+                    </p>
+                    <ul className="mt-2 max-h-36 list-disc space-y-1 overflow-y-auto pl-4 text-[10px] text-amber-950/90 dark:text-amber-50/90">
+                      {importSuccessDialog.omittedLines.slice(0, 12).map((e, i) => (
+                        <li key={`${e.line}-${i}`}>
+                          Línea {e.line}: {e.message}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <button
+                type="button"
+                className="inline-flex min-h-9 items-center justify-center rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface px-4 py-2 text-sm font-semibold text-orbita-primary transition hover:bg-orbita-surface-alt"
+              >
+                Aceptar
+              </button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {!periodReady ? (
         <div className="p-6 text-center text-orbita-secondary">
@@ -935,8 +997,9 @@ export default function TransactionsPageClient() {
                   importar).
                 </li>
                 <li>
-                  Para importar aquí, exporta la hoja a <strong className="font-semibold text-orbita-primary">CSV UTF-8</strong> con la misma
-                  cabecera que «Exportar vista», o reutiliza un CSV exportado desde esta pantalla.
+                  Para importar aquí, exporta la hoja a <strong className="font-semibold text-orbita-primary">CSV UTF-8</strong> (desde Excel:
+                  «Guardar como» CSV). Se aceptan separador <strong className="font-semibold text-orbita-primary">coma</strong> (como «Exportar
+                  vista») o <strong className="font-semibold text-orbita-primary">punto y coma</strong> según la configuración regional.
                 </li>
               </ul>
               <div className="flex flex-wrap gap-2">

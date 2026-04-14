@@ -11,6 +11,25 @@ describe("parseTransactionsImportCsv", () => {
     expect(splitCsvLine(`a,"b,c",d`)).toEqual(["a", "b,c", "d"])
   })
 
+  test("accepts semicolon delimiter (Excel regional ES)", () => {
+    const csv =
+      "Fecha;Tipo;Categoría;Subcategoría;Cuenta;Concepto;Monto\n" +
+      "2026-04-01;Gasto;Hogar;Sub;A;Test;150000\n"
+    const { rows, errors } = parseTransactionsImportCsv(csv)
+    expect(errors).toHaveLength(0)
+    expect(rows).toHaveLength(1)
+    expect(rows[0]?.monto).toBe(150000)
+  })
+
+  test("accepts negative amounts in CSV (uses absolute value)", () => {
+    const csv =
+      "Fecha,Tipo,Categoría,Subcategoría,Cuenta,Concepto,Monto\n" +
+      "2026-04-01,Gasto,Hogar,Sub,A,Test,-50000\n"
+    const { rows, errors } = parseTransactionsImportCsv(csv)
+    expect(errors).toHaveLength(0)
+    expect(rows[0]?.monto).toBe(50000)
+  })
+
   test("round-trips export csv format", () => {
     const csv = buildTransactionsExportCsv([
       {
