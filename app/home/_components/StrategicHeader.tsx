@@ -25,23 +25,27 @@ export function StrategicHeader({ model, onGenerateAi, isGenerating }: Strategic
 
   const tone = flowToneClasses(model.flow.color)
 
+  /** Legibilidad del saludo sobre el lienzo (sticky sin panel de fondo). */
+  const greetingLiftStyle = {
+    textShadow:
+      "0 1px 0 color-mix(in srgb, var(--color-surface) 88%, var(--color-background)), 0 0 18px color-mix(in srgb, var(--color-background) 22%, transparent)",
+  } as const
+
   return (
-    <div
-      className="sticky top-0 z-20 -mx-4 px-4 pt-4 pb-3 backdrop-blur"
-      style={{
-        background: "color-mix(in srgb, var(--color-surface) 88%, transparent)",
-        borderBottom: "0.5px solid var(--color-border)",
-      }}
-    >
+    <div className="sticky top-0 z-20 -mx-4 bg-transparent px-4 pt-4 pb-3">
       <div className="mx-auto max-w-6xl">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="m-0 text-sm leading-snug text-orbita-secondary sm:text-[15px]">
-              <span className="font-semibold text-orbita-primary">
+            <p
+              className="m-0 text-sm leading-snug text-orbita-secondary sm:text-[15px]"
+              style={greetingLiftStyle}
+            >
+              <span className="font-semibold tracking-tight text-orbita-primary">
                 {greeting}, {model.user.firstName}
               </span>
-              <span className="hidden sm:inline">
-                . Mantén el rumbo. Reduce fricción. Compra claridad.
+              <span className="hidden text-orbita-primary/85 sm:inline">
+                {" "}
+                · Mantén el rumbo, reduce fricción y compra claridad.
               </span>
             </p>
           </div>
@@ -49,12 +53,12 @@ export function StrategicHeader({ model, onGenerateAi, isGenerating }: Strategic
           <div className="flex items-center gap-3">
             <div
               className={[
-                "hidden sm:flex items-center gap-3 rounded-2xl border px-3 py-2",
+                "hidden sm:flex items-center gap-3 rounded-2xl border px-3 py-2 shadow-card ring-1 ring-orbita-border/35",
                 tone.glow,
               ].join(" ")}
               style={{
                 background: "var(--color-surface)",
-                borderColor: "color-mix(in srgb, var(--color-border) 85%, transparent)",
+                borderColor: "color-mix(in srgb, var(--color-border) 72%, var(--color-text-primary))",
               }}
             >
               <div className="h-10 w-10">
@@ -86,7 +90,9 @@ export function StrategicHeader({ model, onGenerateAi, isGenerating }: Strategic
                     {model.flow.label}
                   </span>
                 </div>
-                <p className="mt-1 text-xs text-orbita-secondary max-w-[260px] truncate">{model.flow.microcopy}</p>
+                <p className="mt-1 max-w-[260px] truncate text-[13px] leading-snug text-orbita-primary/90">
+                  {model.flow.microcopy}
+                </p>
               </div>
             </div>
 
@@ -94,7 +100,7 @@ export function StrategicHeader({ model, onGenerateAi, isGenerating }: Strategic
               type="button"
               onClick={() => void onGenerateAi()}
               disabled={isGenerating}
-              className="h-10 rounded-xl px-3 sm:px-4 inline-flex items-center gap-2 text-sm font-semibold whitespace-nowrap shrink-0 min-w-[168px] justify-center"
+              className="inline-flex h-10 min-w-[168px] shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-3 text-sm font-semibold shadow-card ring-1 ring-orbita-border/25 sm:px-4"
               style={{
                 background: "var(--color-accent-health)",
                 color: "white",
@@ -109,18 +115,22 @@ export function StrategicHeader({ model, onGenerateAi, isGenerating }: Strategic
           </div>
         </div>
 
-        <div className="sm:hidden mt-3 flex items-center justify-between gap-3">
+        <div className="mt-3 flex items-center justify-between gap-3 sm:hidden">
           <div
-            className={["flex-1 rounded-2xl border px-3 py-2", tone.glow].join(" ")}
+            className={["flex-1 rounded-2xl border px-3 py-2 shadow-card ring-1 ring-orbita-border/35", tone.glow].join(
+              " ",
+            )}
             style={{
               background: "var(--color-surface)",
-              borderColor: "color-mix(in srgb, var(--color-border) 85%, transparent)",
+              borderColor: "color-mix(in srgb, var(--color-border) 72%, var(--color-text-primary))",
             }}
           >
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">{model.flow.label}</p>
-                <p className="mt-1 text-xs text-orbita-secondary truncate">{model.flow.microcopy}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-orbita-primary">
+                  {model.flow.label}
+                </p>
+                <p className="mt-1 truncate text-[13px] leading-snug text-orbita-primary/90">{model.flow.microcopy}</p>
               </div>
               <div className="h-10 w-10 shrink-0">
                 <CircularProgressbar
