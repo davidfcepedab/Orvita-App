@@ -16,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/src/components/ui/dialog"
+import { ChevronDown } from "lucide-react"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import type { FinanceSubcategoryCatalogRow } from "@/lib/finanzas/subcategoryCatalog"
 import { financeApiDelete, financeApiGet, financeApiJson } from "@/lib/finanzas/financeClientFetch"
@@ -978,14 +979,21 @@ export default function TransactionsPageClient() {
           )}
 
           <Card className="min-w-0 overflow-hidden p-0">
-            <div className="border-b border-orbita-border/70 bg-orbita-surface-alt/35 px-3 py-1.5 sm:px-4">
-              <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.13em] text-orbita-secondary">
-                Importar y exportar
-              </p>
-              <p className="mt-0.5 text-[11px] leading-snug text-orbita-secondary">
-                Plantilla Excel, CSV o descarga de la vista actual ({month || "periodo"}).
-              </p>
-            </div>
+            <details className="group">
+              <summary className="flex cursor-pointer list-none items-start justify-between gap-3 border-b border-orbita-border/70 bg-orbita-surface-alt/35 px-3 py-2 sm:px-4 [&::-webkit-details-marker]:hidden">
+                <div className="min-w-0 flex-1">
+                  <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.13em] text-orbita-secondary">
+                    Importar y exportar
+                  </p>
+                  <p className="mt-0.5 text-[11px] leading-snug text-orbita-secondary">
+                    Plantilla Excel, CSV o descarga de la vista actual ({month || "periodo"}).
+                  </p>
+                </div>
+                <ChevronDown
+                  className="mt-0.5 h-4 w-4 shrink-0 text-orbita-secondary transition-transform duration-200 group-open:rotate-180"
+                  aria-hidden
+                />
+              </summary>
             <div className="grid gap-3 p-3 sm:p-4">
               <ul className="m-0 list-disc space-y-1.5 pl-4 text-[10px] leading-relaxed text-orbita-secondary [text-wrap:pretty] marker:text-orbita-secondary/80">
                 <li>
@@ -1070,6 +1078,7 @@ export default function TransactionsPageClient() {
                 de importación).
               </p>
             </div>
+            </details>
           </Card>
         </>
       )}

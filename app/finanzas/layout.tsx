@@ -10,6 +10,7 @@ import {
   financeSubnavTabClass,
 } from "./_components/financeChrome"
 import { FinanceDataLineBanner } from "./FinanceDataLineBanner"
+import { FinanzasCoherencePanel } from "./_components/FinanzasCoherencePanel"
 import { Card } from "@/src/components/ui/Card"
 
 function FinanzasLayoutContent({
@@ -90,7 +91,10 @@ function FinanzasLayoutContent({
 
       <FinanceDataLineBanner />
 
-      <div className="min-w-0">{children}</div>
+      <div className="min-w-0 space-y-3 sm:space-y-4">
+        <FinanzasCoherencePanel />
+        {children}
+      </div>
     </div>
   )
 }

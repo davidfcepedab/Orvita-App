@@ -138,9 +138,12 @@ function FlowChartLegend() {
 function FlowEvolutionTable({
   rows,
   formatMoney,
+  tableWrapClassName,
 }: {
   rows: MonthlyRow[]
   formatMoney: (value: number) => string
+  /** Por defecto margen superior; en `<details>` usar sin mt-4. */
+  tableWrapClassName?: string
 }) {
   if (rows.length === 0) return null
 
@@ -150,7 +153,12 @@ function FlowEvolutionTable({
   const tdLabel = `${tdBase} max-w-[min(40vw,11rem)] text-orbita-primary [overflow-wrap:anywhere] sm:max-w-none`
 
   return (
-    <div className="mt-4 overflow-x-auto rounded-lg border border-orbita-border/70 [scrollbar-gutter:stable]">
+    <div
+      className={
+        tableWrapClassName ??
+        "mt-4 overflow-x-auto rounded-lg border border-orbita-border/70 [scrollbar-gutter:stable]"
+      }
+    >
       <table className="w-full min-w-[min(100%,380px)] border-collapse text-[11px] sm:min-w-[420px] sm:text-xs">
         <caption className="sr-only">
           Valores numéricos por periodo: ingresos, gasto operativo y flujo neto en pesos colombianos
@@ -615,7 +623,20 @@ export default function FinanzasOverview() {
             {chartData.length > 0 ? (
               <>
                 <FlowChartLegend />
-                <FlowEvolutionTable rows={chartData} formatMoney={formatMoney} />
+                <details className="group mt-3">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-lg border border-orbita-border/60 bg-orbita-surface-alt/35 px-3 py-2 text-left text-xs font-semibold text-orbita-primary sm:text-sm [&::-webkit-details-marker]:hidden">
+                    <span>Tabla de datos (periodo, ingresos, gasto op., flujo neto)</span>
+                    <ChevronDown
+                      className="h-4 w-4 shrink-0 text-orbita-secondary transition-transform duration-200 group-open:rotate-180"
+                      aria-hidden
+                    />
+                  </summary>
+                  <FlowEvolutionTable
+                    rows={chartData}
+                    formatMoney={formatMoney}
+                    tableWrapClassName="mt-2 overflow-x-auto rounded-lg border border-orbita-border/70 [scrollbar-gutter:stable]"
+                  />
+                </details>
               </>
             ) : null}
           </div>

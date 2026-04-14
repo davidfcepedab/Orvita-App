@@ -7,6 +7,7 @@ import { FinanceViewHeader } from "../_components/FinanceViewHeader"
 import { financeViewRootClass } from "../_components/financeChrome"
 import { useRouter } from "next/navigation"
 import { Card } from "@/src/components/ui/Card"
+import { isModuloFinancieroStructuralCategory } from "@/lib/finanzas/structuralOperativoTotals"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { sheetTipoPillClass } from "@/lib/finanzas/catalogTagStyles"
 import { applyClientCategoryBudgets, type CategoryBudgetSource } from "@/lib/finanzas/applyClientCategoryBudgets"
@@ -73,11 +74,6 @@ function parseMoneyInput(s: string): number | null {
   if (!d) return null
   const n = parseInt(d, 10)
   return Number.isFinite(n) && n > 0 ? n : null
-}
-
-/** Bloque agregado en servidor para subs `modulo_finanzas`; no se muestra en el mapa fijo/variable. */
-function isModuloFinancieroCatalogCategory(cat: Pick<Category, "name">): boolean {
-  return cat.name.includes("Módulo financiero")
 }
 
 function budgetBarTone(status: Category["budgetStatus"]) {
@@ -443,7 +439,7 @@ export default function FinanzasCategories() {
   }, [month_value, budgetRevision])
 
   const structuralCategoriesUi = useMemo(
-    () => structuralCategoriesRaw.filter((c) => !isModuloFinancieroCatalogCategory(c)),
+    () => structuralCategoriesRaw.filter((c) => !isModuloFinancieroStructuralCategory(c)),
     [structuralCategoriesRaw],
   )
 
@@ -533,7 +529,7 @@ export default function FinanzasCategories() {
   const unknownSubcategories = data?.unknownSubcategories ?? []
   const householdCatalogRows = data?.subcategoryCatalog ?? []
 
-  const moduloCategory = structuralCategoriesRaw.find((c) => isModuloFinancieroCatalogCategory(c))
+  const moduloCategory = structuralCategoriesRaw.find((c) => isModuloFinancieroStructuralCategory(c))
   const moduloTotalAbs = moduloCategory ? Math.abs(moduloCategory.total) : 0
   const totalVariableUi = Math.max(0, totalVariable - moduloTotalAbs)
   const totalStructuralUi = totalFixed + totalVariableUi
@@ -938,7 +934,7 @@ export default function FinanzasCategories() {
               boxShadow: "0 2px 18px color-mix(in srgb, var(--color-text-primary) 5%, transparent)",
             }}
           >
-            <details className="group" open>
+            <details className="group">
               <summary className="flex cursor-pointer list-none items-start justify-between gap-3 px-4 py-3 sm:px-5 sm:py-3.5 [&::-webkit-details-marker]:hidden">
                 <div className="min-w-0 flex-1">
                   <h2 className="text-sm font-semibold text-orbita-primary">Presupuestos (COP, lineal mensual)</h2>

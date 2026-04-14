@@ -1,0 +1,44 @@
+import type { SupabaseClient } from "@supabase/supabase-js"
+
+/** EMA de |brecha sin explicar| KPI vs mapa; se actualiza al registrar un puente. */
+export const HINT_KEY_KPI_STRUCTURAL_UNEXPLAINED_EMA = "kpi_structural_unexplained_ema"
+
+export async function fetchReconciliationHintEma(
+  supabase: SupabaseClient,
+  householdId: string,
+  hintKey: string,
+): Promise<number | null> {
+  const { data } = await supabase
+    .from("household_finance_reconciliation_hints")
+    .select("value_json")
+    .eq("household_id", householdId)
+    .eq("hint_key", hintKey)
+    .maybeSingle()
+
+  const raw = data?.value_json as { ema?: unknown } | undefined
+  const ema = typeof raw?.ema === "number" && Number.isFinite(raw.ema) ? raw.ema : null
+  return ema
+}
+
+/**
+ * Suaviza la magnitud típica de brecha restante tras conciliar (α=0,3 hacia el último cierre).
+ */
+export async function upsertUnexplainedGapEma(
+  supabase: SupabaseClient,
+  householdId: string,
+  observedAbsUnexplained: number,
+): Promise<void> {
+  const prev = await fetchReconciliationHintEma(supabase, householdId, HINT_KEY_KPI_STRUCTURAL_UNEXPLAINED_EMA)
+  const absObs = Math.abs(observedAbsUnexplained)
+  const ema = prev != null ? 0.7 * prev + 0.3 * absObs : absObs
+
+  await supabase.from("household_finance_reconciliation_hints").upsert(
+    {
+      household_id: householdId,
+      hint_key: HINT_KEY_KPI_STRUCTURAL_UNEXPLAINED_EMA,
+      value_json: { ema },
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "household_id,hint_key" },
+  )
+}

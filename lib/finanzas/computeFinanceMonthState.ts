@@ -3,8 +3,13 @@ import { calculateOverview } from "@/lib/finanzas/calculations/overview"
 import { createOperativoExpenseFn } from "@/lib/finanzas/operativoExpense"
 import { fetchSubcategoryCatalogMerged } from "@/lib/finanzas/subcategoryCatalog"
 import type { FinanceModuleMeta } from "@/lib/finanzas/financeModuleMeta"
+import { buildCompleteMonthFinanceCoherence, type MonthBridgeEntryLite } from "@/lib/finanzas/monthFinanceCoherence"
 import type { FinanceTransaction } from "@/lib/finanzas/types"
 import { monthBounds } from "@/lib/finanzas/monthRange"
+import {
+  fetchReconciliationHintEma,
+  HINT_KEY_KPI_STRUCTURAL_UNEXPLAINED_EMA,
+} from "@/lib/finanzas/reconciliationHints"
 
 export type FinanceMonthOpex = (tx: FinanceTransaction) => number
 
@@ -150,6 +155,46 @@ export async function computeFinanceMonthState(
     }
   }
 
+  let coherence: FinanceModuleMeta["coherence"] = null
+  if (currentRows.length > 0) {
+    let bridgeEntries: MonthBridgeEntryLite[] = []
+    let hintEma: number | null = null
+    try {
+      const [bridgeRes, hintEmaResolved] = await Promise.all([
+        supabase
+          .from("household_finance_month_bridge_entries")
+          .select("id, bridge_kind, amount_cop, label")
+          .eq("household_id", householdId)
+          .eq("year", y)
+          .eq("month", mo)
+          .order("created_at", { ascending: true }),
+        fetchReconciliationHintEma(supabase, householdId, HINT_KEY_KPI_STRUCTURAL_UNEXPLAINED_EMA),
+      ])
+      hintEma = hintEmaResolved
+      for (const r of bridgeRes.data ?? []) {
+        const id = typeof r.id === "string" ? r.id : ""
+        const kind = r.bridge_kind === "other" ? "other" : "kpi_structural"
+        const amount = Number(r.amount_cop)
+        const label = typeof r.label === "string" ? r.label : ""
+        if (id && Number.isFinite(amount)) {
+          bridgeEntries.push({ id, bridge_kind: kind, amount_cop: amount, label })
+        }
+      }
+    } catch (e) {
+      console.warn("FINANCE_MONTH_STATE: puentes/hints no disponibles", e)
+      bridgeEntries = []
+      hintEma = null
+    }
+
+    coherence = buildCompleteMonthFinanceCoherence(
+      currentRows,
+      previousRows,
+      catalogRows,
+      bridgeEntries,
+      hintEma,
+    )
+  }
+
   const meta: FinanceModuleMeta = {
     selectedMonth: month,
     lastTransactionDate,
@@ -158,6 +203,7 @@ export async function computeFinanceMonthState(
     kpiSource,
     kpiHasSignal,
     reference,
+    coherence,
   }
 
   return {

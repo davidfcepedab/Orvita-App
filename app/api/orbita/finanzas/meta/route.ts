@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/api/requireUser"
 import { isAppMockMode, isSupabaseEnabled, UI_FINANCE_DEMO_NOTICE } from "@/lib/checkins/flags"
 import { calculateOverview } from "@/lib/finanzas/calculations/overview"
 import { computeFinanceMonthState } from "@/lib/finanzas/computeFinanceMonthState"
+import { buildCompleteMonthFinanceCoherence } from "@/lib/finanzas/monthFinanceCoherence"
 import { createOperativoExpenseFn } from "@/lib/finanzas/operativoExpense"
 import { eachMonthInclusive, rollingWindowStartYm } from "@/lib/finanzas/flowEvolutionBuckets"
 import { mockTransactionsForMonth } from "@/lib/finanzas/mockFinancePayloads"
@@ -49,6 +50,7 @@ export async function GET(req: NextRequest) {
           transactionsInSelectedMonth: currentRows.length,
           kpiSource: "transactions" as const,
           kpiHasSignal: overview.income > 0.5 || overview.expense > 0.5,
+          coherence: buildCompleteMonthFinanceCoherence(currentRows, previousRows, [], [], null),
         },
       })
     }
