@@ -1694,19 +1694,25 @@ export default function CuentasClient() {
                       title="Total liquidez"
                       value={`$${formatMoney(kpis.totalLiquidez)}`}
                       sub={
-                        <span
-                          className={`inline-flex items-center gap-1 font-medium ${
-                            kpis.liquidezTrendPct >= 0 ? "text-emerald-600" : "text-rose-600"
-                          }`}
-                        >
-                          {kpis.liquidezTrendPct >= 0 ? (
-                            <ArrowUpRight className="h-4 w-4" aria-hidden />
-                          ) : (
-                            <ArrowDownRight className="h-4 w-4" aria-hidden />
-                          )}
-                          {kpis.liquidezTrendPct >= 0 ? "+" : ""}
-                          {kpis.liquidezTrendPct}% vs mes anterior
-                        </span>
+                        <>
+                          <span
+                            className={`inline-flex items-center gap-1 font-medium ${
+                              kpis.liquidezTrendPct >= 0 ? "text-emerald-600" : "text-rose-600"
+                            }`}
+                          >
+                            {kpis.liquidezTrendPct >= 0 ? (
+                              <ArrowUpRight className="h-4 w-4" aria-hidden />
+                            ) : (
+                              <ArrowDownRight className="h-4 w-4" aria-hidden />
+                            )}
+                            {kpis.liquidezTrendPct >= 0 ? "+" : ""}
+                            {kpis.liquidezTrendPct}% vs mes anterior
+                          </span>
+                          <p className="mt-2 text-[10px] leading-snug text-orbita-secondary [text-wrap:pretty]">
+                            Flujo neto del mes (ingresos − gastos), alineado con el total de Movimientos sin filtros.
+                            Las tarjetas por cuenta muestran disponible por cuenta; no tienen por qué sumar este total.
+                          </p>
+                        </>
                       }
                       icon={<Wallet className="h-5 w-5" />}
                     />
