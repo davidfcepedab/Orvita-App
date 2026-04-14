@@ -1,20 +1,28 @@
 {
-  "name": "ÓRVITA",
-  "short_name": "ÓRVITA",
+  "id": "/",
+  "name": "Órvita",
+  "short_name": "Órvita",
+  "description": "Sistema operativo estratégico — salud, capital, agenda y decisión.",
+  "lang": "es",
+  "dir": "ltr",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#F7F8FA",
-  "theme_color": "#FF2D8E",
+  "background_color": "#f2f2f7",
+  "theme_color": "#0d9488",
+  "categories": ["productivity", "lifestyle"],
   "icons": [
     {
       "src": "/icon",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/apple-icon",
       "sizes": "180x180",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }

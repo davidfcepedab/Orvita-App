@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { createBrowserClient } from "@/lib/supabase/browser"
 import { authCardSurfaceClass } from "@/app/auth/_components/authCardClasses"
@@ -14,6 +14,9 @@ type RegisterPayload = {
 }
 
 const isMock = process.env.NEXT_PUBLIC_APP_MODE === "mock"
+
+/** Supabase: proveedor Apple activado en el proyecto + URL de retorno en el dashboard. */
+const appleSignInEnabled = process.env.NEXT_PUBLIC_AUTH_APPLE_SIGN_IN === "1"
 
 /** Vercel inyecta esto en build; en prod suele haber más cold start (Hobby). */
 const isVercelProduction = process.env.NEXT_PUBLIC_VERCEL_ENV === "production"
@@ -90,6 +93,36 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false)
   const [busyHint, setBusyHint] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [oauthLoading, setOauthLoading] = useState(false)
+
+  /** Tras OAuth (p. ej. Apple), sincroniza cookie de sesión y redirige si ya hay sesión. */
+  useEffect(() => {
+    if (isMock) return
+    let cancelled = false
+
+    async function resumeOAuthSession() {
+      try {
+        const supabase = createBrowserClient()
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+        if (cancelled || !session?.access_token) return
+        const res = await fetch("/api/auth/session", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        })
+        if (!res.ok || cancelled) return
+        window.location.replace("/")
+      } catch {
+        /* sin sesión o error de red */
+      }
+    }
+
+    void resumeOAuthSession()
+    return () => {
+      cancelled = true
+    }
+  }, [isMock])
 
   const switchMode = (next: Mode) => {
     setMode(next)
@@ -269,11 +302,11 @@ export default function AuthPage() {
     "text-orbita-secondary hover:bg-orbita-surface/60 hover:text-orbita-primary motion-safe:transition-colors"
 
   /**
-   * Autocompletado alineado con Password AutoFill (Safari / iOS): pareja username + current-password
-   * en inicio de sesión; email + new-password en alta. Ver documentación de Apple sobre seguridad y formularios.
-   * @see https://developer.apple.com/documentation/security/password_autofill
+   * Password AutoFill (Safari / iOS): `username` en correo como identificador en login y alta;
+   * `current-password` / `new-password` en contraseña.
+   * @see https://developer.apple.com/documentation/security/enabling-password-autofill-on-an-html-input-element
    */
-  const emailAutoComplete = mode === "login" ? "username" : "email"
+  const emailAutoComplete = "username"
   const passwordAutoComplete = mode === "login" ? "current-password" : "new-password"
 
   /** Reglas mínimas para sugerencias de contraseña fuerte en Safari (Supabase ≥ 6). */
@@ -285,6 +318,31 @@ export default function AuthPage() {
   const primaryBtnClass =
     "min-h-[44px] w-full touch-manipulation rounded-[var(--radius-button)] px-4 py-3 text-base font-semibold text-[var(--color-background)] bg-[var(--color-text-primary)] shadow-sm transition-[transform,opacity,box-shadow] duration-200 hover:shadow-md active:scale-[0.99] motion-reduce:transform-none disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none disabled:hover:shadow-none"
 
+  const appleBtnClass =
+    "flex min-h-[44px] w-full touch-manipulation items-center justify-center gap-2 rounded-[var(--radius-button)] border border-black/10 bg-black px-4 py-3 text-base font-semibold text-white shadow-sm transition-[opacity,box-shadow] duration-200 hover:bg-neutral-900 hover:shadow-md active:opacity-95 motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-50"
+
+  const handleAppleSignIn = async () => {
+    if (isMock || !appleSignInEnabled) return
+    setOauthLoading(true)
+    setError(null)
+    try {
+      const supabase = createBrowserClient()
+      const origin = typeof window !== "undefined" ? window.location.origin : ""
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "apple",
+        options: {
+          redirectTo: `${origin}/auth`,
+          skipBrowserRedirect: false,
+        },
+      })
+      if (oauthError) throw oauthError
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo iniciar sesión con Apple.")
+    } finally {
+      setOauthLoading(false)
+    }
+  }
+
   return (
     <div className="relative isolate flex min-h-[100dvh] min-h-[-webkit-fill-available] w-full flex-col">
       <AuthScenicBackdrop />
@@ -292,9 +350,15 @@ export default function AuthPage() {
         className="relative z-10 mx-auto flex w-full max-w-[26rem] flex-1 flex-col justify-center gap-8 pl-[max(1.25rem,env(safe-area-inset-left,0px))] pr-[max(1.25rem,env(safe-area-inset-right,0px))] pb-[max(2rem,env(safe-area-inset-bottom,0px))] pt-[max(1.25rem,env(safe-area-inset-top,0px))] sm:pl-6 sm:pr-6 sm:pb-12 sm:pt-8"
         id="auth-main"
       >
+      <a
+        href="#auth-form"
+        className="sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:block focus:h-auto focus:w-auto focus:overflow-visible focus:rounded-[var(--radius-button)] focus:bg-white focus:px-4 focus:py-2.5 focus:text-sm focus:font-semibold focus:text-orbita-primary focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--color-accent-primary)_45%,transparent)]"
+      >
+        Saltar al formulario de acceso
+      </a>
       <div
         className={`flex flex-col gap-7 p-6 sm:p-7 ${authCardSurfaceClass}`}
-        aria-busy={loading}
+        aria-busy={loading || oauthLoading}
       >
         <header className="space-y-2">
           <p className="text-overline font-semibold uppercase tracking-[0.16em] text-[var(--color-accent-primary)]">
@@ -338,8 +402,9 @@ export default function AuthPage() {
               type="button"
               role="tab"
               aria-selected={mode === "login"}
+              aria-controls="auth-form-panel"
               id="tab-login"
-              disabled={loading}
+              disabled={loading || oauthLoading}
               onClick={() => switchMode("login")}
               className={`flex-1 min-h-[44px] rounded-md px-3 py-2.5 text-base font-semibold touch-manipulation disabled:cursor-not-allowed disabled:opacity-50 ${mode === "login" ? tabActive : tabIdle}`}
             >
@@ -349,8 +414,9 @@ export default function AuthPage() {
               type="button"
               role="tab"
               aria-selected={mode === "register"}
+              aria-controls="auth-form-panel"
               id="tab-register"
-              disabled={loading}
+              disabled={loading || oauthLoading}
               onClick={() => switchMode("register")}
               className={`flex-1 min-h-[44px] rounded-md px-3 py-2.5 text-base font-semibold touch-manipulation disabled:cursor-not-allowed disabled:opacity-50 ${mode === "register" ? tabActive : tabIdle}`}
             >
@@ -358,11 +424,34 @@ export default function AuthPage() {
             </button>
           </div>
 
+          {appleSignInEnabled ? (
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={() => void handleAppleSignIn()}
+                disabled={loading || oauthLoading}
+                className={appleBtnClass}
+                aria-label="Continuar con Apple"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden className="shrink-0 fill-current">
+                  <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
+                </svg>
+                {oauthLoading ? "Abriendo Apple…" : "Continuar con Apple"}
+              </button>
+              <p className="text-center text-xs text-orbita-secondary">o con correo y contraseña</p>
+            </div>
+          ) : null}
+
+          <div
+            id="auth-form-panel"
+            role="tabpanel"
+            tabIndex={-1}
+            aria-labelledby={mode === "login" ? "tab-login" : "tab-register"}
+          >
           <form
+            id="auth-form"
             onSubmit={handleSubmit}
             className="space-y-5"
-            role="tabpanel"
-            aria-labelledby={mode === "login" ? "tab-login" : "tab-register"}
             autoComplete="on"
             name={mode === "login" ? "signin" : "signup"}
           >
@@ -379,7 +468,7 @@ export default function AuthPage() {
                 spellCheck={false}
                 enterKeyHint="next"
                 required
-                disabled={loading}
+                disabled={loading || oauthLoading}
                 className={fieldClass}
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
@@ -404,7 +493,7 @@ export default function AuthPage() {
                     } as React.InputHTMLAttributes<HTMLInputElement> & { passwordrules?: string })
                   : {})}
                 enterKeyHint={mode === "register" ? "next" : "go"}
-                disabled={loading}
+                disabled={loading || oauthLoading}
                 className={fieldClass}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
@@ -420,7 +509,7 @@ export default function AuthPage() {
                   type="text"
                   autoComplete="off"
                   enterKeyHint="done"
-                  disabled={loading}
+                  disabled={loading || oauthLoading}
                   className={fieldClass}
                   value={inviteCode}
                   onChange={(event) => setInviteCode(event.target.value)}
@@ -429,7 +518,7 @@ export default function AuthPage() {
               </label>
             )}
 
-            <button type="submit" disabled={loading} className={primaryBtnClass}>
+            <button type="submit" disabled={loading || oauthLoading} className={primaryBtnClass}>
               {loading
                 ? mode === "login"
                   ? "Ingresando..."
@@ -439,10 +528,11 @@ export default function AuthPage() {
                   : "Registrarme"}
             </button>
           </form>
+          </div>
         </>
       )}
 
-      {error && (
+      {error ? (
         <div
           className="rounded-[var(--radius-button)] border p-4 text-sm leading-relaxed"
           style={{
@@ -451,10 +541,11 @@ export default function AuthPage() {
             color: "var(--color-accent-danger)",
           }}
           role="alert"
+          aria-live="assertive"
         >
           {error}
         </div>
-      )}
+      ) : null}
 
       {loading && (
         <div

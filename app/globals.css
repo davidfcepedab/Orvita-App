@@ -158,6 +158,9 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-feature-settings: "kern" 1, "liga" 1;
+  /* Safari iOS: toque sin rectángulo gris agresivo (HIG / web sobre SF) */
+  -webkit-tap-highlight-color: color-mix(in srgb, var(--color-accent-primary) 22%, transparent);
+  touch-action: manipulation;
 }
 
 /* Capa ambiental (HIG: profundidad sin ruido; respeta tokens por tema) */
@@ -285,6 +288,33 @@ body.orbita-app-root {
 :where(button, a, input, select, textarea, [role="button"], [role="tab"]) {
   transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease,
     box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+/* prefers-reduced-motion: menos animación global (accesibilidad; sin capa nativa) */
+@media (prefers-reduced-motion: reduce) {
+  .gradient-animate {
+    animation: none !important;
+  }
+
+  .animate-agenda-check-pop {
+    animation: none !important;
+  }
+
+  :where(html) {
+    transition: none;
+  }
+
+  :where(button, a, input, select, textarea, [role="button"], [role="tab"]) {
+    transition-duration: 0.01ms !important;
+  }
+
+  .card {
+    transition: none !important;
+  }
+
+  .card:hover {
+    transform: none;
+  }
 }
 
 /* ===================================================== */

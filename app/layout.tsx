@@ -32,11 +32,15 @@ export const metadata: Metadata = {
   },
 }
 
-/** Escalado correcto en móvil + `env(safe-area-inset-*)` en iPhone (viewport-fit=cover). */
+/**
+ * Escalado en móvil + safe areas (viewport-fit=cover).
+ * theme-color Arctic; ThemeProvider actualiza el meta al cambiar tema (Safari / “Añadir a pantalla de inicio”).
+ */
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  themeColor: "#0d9488",
 }
 
 export default function RootLayout({

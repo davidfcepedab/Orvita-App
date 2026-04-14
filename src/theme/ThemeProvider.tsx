@@ -29,6 +29,14 @@ function isLayoutMode(value: string): value is LayoutMode {
   return value === "compact" || value === "balanced" || value === "zen"
 }
 
+/** Barra de estado / PWA en Safari: alineada a tokens (sin Swift; solo meta theme-color). */
+const THEME_COLOR_HEX: Record<ThemeName, string> = {
+  arctic: "#0d9488",
+  carbon: "#1a1a1b",
+  sand: "#78716c",
+  midnight: "#111827",
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<ThemeName>("arctic")
   const [layoutMode, setLayoutMode] = useState<LayoutMode>("balanced")
@@ -49,6 +57,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     window.localStorage.setItem(THEME_KEY, theme)
     document.documentElement.dataset.theme = theme
+    const content = THEME_COLOR_HEX[theme]
+    const metas = document.querySelectorAll('meta[name="theme-color"]')
+    if (metas.length === 0) {
+      const el = document.createElement("meta")
+      el.setAttribute("name", "theme-color")
+      el.setAttribute("content", content)
+      document.head.appendChild(el)
+    } else {
+      metas.forEach((m) => m.setAttribute("content", content))
+    }
   }, [theme])
 
   useEffect(() => {

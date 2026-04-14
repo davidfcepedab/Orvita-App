@@ -5,22 +5,20 @@
 export function AuthScenicBackdrop() {
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-      {/* Resplandor central tipo “marca” */}
+      {/* Resplandor central tipo “marca” — blur reducido con prefers-reduced-motion */}
       <div
-        className="absolute -top-[18%] left-1/2 h-[min(72vh,560px)] w-[min(92vw,680px)] -translate-x-1/2 rounded-full opacity-50 motion-reduce:opacity-40"
+        className="absolute -top-[18%] left-1/2 h-[min(72vh,560px)] w-[min(92vw,680px)] -translate-x-1/2 rounded-full opacity-50 blur-[44px] motion-reduce:blur-md motion-reduce:opacity-28"
         style={{
           background:
             "radial-gradient(closest-side, color-mix(in srgb, var(--color-accent-primary) 26%, transparent), transparent 72%)",
-          filter: "blur(44px)",
         }}
       />
       {/* Segundo halo (esquina) — eco del punto del logo */}
       <div
-        className="absolute -bottom-[8%] -right-[6%] h-[min(42vh,360px)] w-[min(42vh,360px)] rounded-full opacity-40 motion-reduce:opacity-30"
+        className="absolute -bottom-[8%] -right-[6%] h-[min(42vh,360px)] w-[min(42vh,360px)] rounded-full opacity-40 blur-[48px] motion-reduce:blur-md motion-reduce:opacity-22"
         style={{
           background:
             "radial-gradient(closest-side, color-mix(in srgb, var(--color-accent-primary) 20%, transparent), transparent 68%)",
-          filter: "blur(48px)",
         }}
       />
       <div
@@ -39,7 +37,7 @@ export function AuthScenicBackdrop() {
       />
       {/* Malla de puntos muy suave */}
       <div
-        className="absolute inset-0 opacity-[0.22]"
+        className="absolute inset-0 opacity-[0.22] motion-reduce:opacity-[0.12]"
         style={{
           backgroundImage: `radial-gradient(circle at center, color-mix(in srgb, var(--color-accent-primary) 28%, transparent) 0.85px, transparent 1.1px)`,
           backgroundSize: "26px 26px",

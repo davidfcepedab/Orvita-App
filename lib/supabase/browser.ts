@@ -47,6 +47,12 @@ export function createBrowserClient() {
             error: null,
           }
         },
+        async signInWithOAuth() {
+          return {
+            data: { provider: "apple" as const, url: null },
+            error: new Error("OAuth no disponible en modo demo"),
+          }
+        },
       },
     }
   }
