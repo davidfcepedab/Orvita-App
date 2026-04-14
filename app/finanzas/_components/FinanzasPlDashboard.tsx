@@ -194,7 +194,7 @@ function netMonthOverMonth(c: MonthFinanceCoherence): { delta: number; pct: numb
   return { delta, pct: (delta / Math.abs(prior)) * 100 }
 }
 
-export function FinanzasPlDashboard() {
+export function FinanzasPlDashboard({ omitStrategicHero = false }: { omitStrategicHero?: boolean } = {}) {
   const { financeMeta, financeMetaLoading, month, touchCapitalData } = useFinanceOrThrow()
   const c = financeMeta?.coherence
   const syncOn = isSupabaseEnabled()
@@ -390,6 +390,7 @@ export function FinanzasPlDashboard() {
 
   return (
     <div className="space-y-4 sm:space-y-5">
+      {!omitStrategicHero ? (
       <section
         className="overflow-hidden rounded-2xl border border-orbita-border/85 bg-orbita-surface shadow-[var(--shadow-card)]"
         aria-label="P&L del periodo y ayudas"
@@ -618,6 +619,7 @@ export function FinanzasPlDashboard() {
           ) : null}
         </div>
       </section>
+      ) : null}
 
       <Card
         id="pl-partidas-table"
