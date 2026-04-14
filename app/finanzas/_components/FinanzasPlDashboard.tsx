@@ -173,6 +173,10 @@ const SECTION_HEAD_CLASS: Record<string, string> = {
   cierre: "border-l-[3px] border-l-amber-500/55 bg-amber-500/[0.07] dark:bg-amber-950/32",
 }
 
+/** Desplegables auxiliares bajo el encabezado del P&amp;L (misma piel). */
+const PL_AUX_DISCLOSURE_SUMMARY =
+  "flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-[11px] font-semibold text-orbita-primary sm:px-5 [&::-webkit-details-marker]:hidden"
+
 export function FinanzasPlDashboard() {
   const { financeMeta, financeMetaLoading, month, touchCapitalData } = useFinanceOrThrow()
   const c = financeMeta?.coherence
@@ -311,7 +315,10 @@ export function FinanzasPlDashboard() {
 
   return (
     <div className="space-y-4 sm:space-y-5">
-      <section className="overflow-hidden rounded-2xl border border-orbita-border/85 bg-orbita-surface shadow-[var(--shadow-card)]">
+      <section
+        className="overflow-hidden rounded-2xl border border-orbita-border/85 bg-orbita-surface shadow-[var(--shadow-card)]"
+        aria-label="P&L del periodo y ayudas"
+      >
         <div className="border-b border-orbita-border/50 bg-[color-mix(in_srgb,var(--color-accent-finance)_7%,var(--color-surface))] px-4 py-4 sm:px-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
@@ -360,83 +367,125 @@ export function FinanzasPlDashboard() {
           </div>
         </div>
 
-        <details className="group border-t border-orbita-border/55 bg-orbita-surface-alt/25">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-2.5 text-[11px] font-semibold text-orbita-primary sm:px-5 [&::-webkit-details-marker]:hidden">
-            <span>Cómo leer este P&amp;L</span>
-            <ChevronDown className="h-4 w-4 shrink-0 text-orbita-secondary transition group-open:rotate-180" aria-hidden />
-          </summary>
-          <div className="space-y-2 border-t border-orbita-border/40 px-4 pb-3 pt-2 text-[11px] leading-relaxed text-orbita-secondary sm:px-5">
-            <p className="m-0">{FINANCE_PL_README_EXPANDED}</p>
-          </div>
-        </details>
+        <div className="bg-orbita-surface-alt/25">
+          <details className="group border-b border-orbita-border/45 last:border-b-0">
+            <summary className={PL_AUX_DISCLOSURE_SUMMARY}>
+              <span>Cómo leer este P&amp;L</span>
+              <ChevronDown className="h-4 w-4 shrink-0 text-orbita-secondary transition group-open:rotate-180" aria-hidden />
+            </summary>
+            <div className="space-y-2 border-t border-orbita-border/40 bg-orbita-surface/80 px-4 pb-3 pt-2 text-[11px] leading-relaxed text-orbita-secondary sm:px-5">
+              <p className="m-0">{FINANCE_PL_README_EXPANDED}</p>
+            </div>
+          </details>
+          {syncOn ? (
+            <details className="group border-b border-orbita-border/45 last:border-b-0">
+              <summary className={PL_AUX_DISCLOSURE_SUMMARY}>
+                <span className="flex min-w-0 items-center gap-3">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[color-mix(in_srgb,var(--color-accent-finance)_12%,var(--color-surface))] text-orbita-primary sm:h-9 sm:w-9">
+                    <Landmark className="h-4 w-4" aria-hidden />
+                  </span>
+                  <span className="min-w-0 text-left">
+                    <span className="block text-sm font-semibold text-orbita-primary">Cuentas (ledger)</span>
+                    <span className="block text-[10px] font-normal text-orbita-muted">Confirmadas vs automáticas · opcional</span>
+                  </span>
+                </span>
+                <ChevronDown className="h-4 w-4 shrink-0 text-orbita-secondary transition group-open:rotate-180" aria-hidden />
+              </summary>
+              <div className="border-t border-orbita-border/40 bg-orbita-surface/80 px-4 pb-3 pt-2 sm:px-5">
+                <p className="text-xs leading-relaxed text-orbita-secondary">
+                  Confirmado = cierre manual con fecha en la cuenta. Automático = solo movimientos y reglas, sin ese ancla.
+                </p>
+                {ledgerLoading ? (
+                  <p className="mt-3 text-xs text-orbita-muted">Cargando cuentas…</p>
+                ) : ledgerSummary ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <span className="inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-900 dark:text-emerald-100">
+                      Confirmadas: {ledgerSummary.confirmadas}
+                    </span>
+                    <span className="inline-flex rounded-full border border-orbita-border/80 bg-orbita-surface-alt px-2.5 py-1 text-[11px] font-medium text-orbita-secondary">
+                      Automáticas: {ledgerSummary.automaticas}
+                    </span>
+                    <span className="inline-flex rounded-full border border-orbita-border/60 px-2.5 py-1 text-[11px] text-orbita-muted">
+                      Total: {ledgerSummary.total}
+                    </span>
+                  </div>
+                ) : (
+                  <p className="mt-3 text-xs text-orbita-muted">Sin cuentas ledger listadas.</p>
+                )}
+              </div>
+            </details>
+          ) : null}
+        </div>
       </section>
 
-      {syncOn ? (
-        <details className="group rounded-xl border border-orbita-border/80 bg-orbita-surface shadow-sm">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3.5 sm:px-5 [&::-webkit-details-marker]:hidden">
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[color-mix(in_srgb,var(--color-accent-finance)_12%,var(--color-surface))] text-orbita-primary">
-                <Landmark className="h-4 w-4" aria-hidden />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-orbita-primary">Cuentas (ledger)</p>
-                <p className="text-[10px] text-orbita-muted">Confirmadas vs automáticas · opcional</p>
-              </div>
+      <Card
+        className="overflow-hidden border-orbita-border/85 shadow-[var(--shadow-card)]"
+        aria-labelledby="pl-partidas-heading"
+      >
+        <div className="border-b border-orbita-border/65 bg-[color-mix(in_srgb,var(--color-surface-alt)_45%,var(--color-surface))]">
+          <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-3 sm:px-5">
+            <div className="min-w-0">
+              <p id="pl-partidas-heading" className="text-[10px] font-bold uppercase tracking-[0.14em] text-orbita-secondary">
+                Partidas del mes
+              </p>
+              <p className="mt-0.5 text-[11px] text-orbita-muted">
+                Importes en COP. Partidas con puntos suspensivos: ayuda al pasar el cursor.
+              </p>
+              <p className="mt-1.5 text-[10px] text-orbita-muted">
+                Fuente: <span className="font-medium text-orbita-secondary">{kpiSourceLabel}</span>
+                {financeMeta?.transactionsInSelectedMonth != null ? (
+                  <>
+                    {" "}
+                    · <span className="font-medium text-orbita-secondary">{financeMeta.transactionsInSelectedMonth}</span>{" "}
+                    movimientos en el mes
+                  </>
+                ) : null}
+              </p>
             </div>
-            <ChevronDown className="h-4 w-4 shrink-0 text-orbita-secondary transition group-open:rotate-180" aria-hidden />
-          </summary>
-          <div className="border-t border-orbita-border/60 px-4 pb-4 pt-1 sm:px-5">
-            <p className="text-xs leading-relaxed text-orbita-secondary">
-              Confirmado = cierre manual con fecha en la cuenta. Automático = solo movimientos y reglas, sin ese ancla.
-            </p>
-            {ledgerLoading ? (
-              <p className="mt-3 text-xs text-orbita-muted">Cargando cuentas…</p>
-            ) : ledgerSummary ? (
-              <div className="mt-3 flex flex-wrap gap-2">
-                <span className="inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-900 dark:text-emerald-100">
-                  Confirmadas: {ledgerSummary.confirmadas}
-                </span>
-                <span className="inline-flex rounded-full border border-orbita-border/80 bg-orbita-surface-alt px-2.5 py-1 text-[11px] font-medium text-orbita-secondary">
-                  Automáticas: {ledgerSummary.automaticas}
-                </span>
-                <span className="inline-flex rounded-full border border-orbita-border/60 px-2.5 py-1 text-[11px] text-orbita-muted">
-                  Total: {ledgerSummary.total}
-                </span>
-              </div>
-            ) : (
-              <p className="mt-3 text-xs text-orbita-muted">Sin cuentas ledger listadas.</p>
-            )}
+            <details className="text-[10px] text-orbita-secondary">
+              <summary className="cursor-pointer font-medium text-orbita-primary">Leyenda de color</summary>
+              <ul className="mt-2 max-w-xs list-inside list-disc space-y-0.5 text-orbita-muted">
+                <li>Índigo: continuidad (mes previo)</li>
+                <li>Verde / rojo: ingreso y egreso</li>
+                <li>Violeta: operación · cielo: módulo financiero</li>
+                <li>Ámbar: brechas · azul: puentes</li>
+              </ul>
+            </details>
           </div>
-        </details>
-      ) : null}
-
-      <Card className="overflow-hidden border-orbita-border/85 shadow-[var(--shadow-card)]">
-        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-orbita-border/65 bg-[color-mix(in_srgb,var(--color-surface-alt)_45%,var(--color-surface))] px-4 py-3 sm:px-5">
-          <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-orbita-secondary">Partidas del mes</p>
-            <p className="mt-0.5 text-[11px] text-orbita-muted">
-              Importes en COP. Partidas con puntos suspensivos: ayuda al pasar el cursor.
-            </p>
-            <p className="mt-1.5 text-[10px] text-orbita-muted">
-              Fuente: <span className="font-medium text-orbita-secondary">{kpiSourceLabel}</span>
-              {financeMeta?.transactionsInSelectedMonth != null ? (
-                <>
-                  {" "}
-                  · <span className="font-medium text-orbita-secondary">{financeMeta.transactionsInSelectedMonth}</span> movimientos
-                  en el mes
-                </>
-              ) : null}
+          <div
+            className="border-t border-orbita-border/50 bg-[color-mix(in_srgb,var(--color-surface-alt)_32%,var(--color-surface))] px-4 py-2.5 sm:px-5"
+            role="region"
+            aria-label="Resumen del periodo en el P&L"
+          >
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-[11px]">
+              <span className="text-orbita-secondary">
+                Mes en análisis:{" "}
+                <span className="font-semibold capitalize text-orbita-primary">{monthLabel}</span>
+              </span>
+              <span className="tabular-nums text-orbita-secondary">
+                Flujo neto (mes):{" "}
+                <span
+                  className={
+                    c.netCashFlow >= 0
+                      ? "font-semibold text-[color-mix(in_srgb,var(--color-accent-finance)_88%,var(--color-text-primary))]"
+                      : "font-semibold text-orbita-accent-danger"
+                  }
+                >
+                  ${formatMoney(c.netCashFlow)}
+                </span>
+              </span>
+            </div>
+            <p className="mt-1.5 text-[10px] leading-snug text-orbita-muted">
+              YTD / tendencia: en{" "}
+              <Link
+                href="/finanzas/overview"
+                className="font-medium text-orbita-primary underline-offset-2 hover:underline"
+              >
+                Resumen → Evolución
+              </Link>{" "}
+              elige «Año móvil» o «Semestre» (misma moneda, distinta agregación temporal).
             </p>
           </div>
-          <details className="text-[10px] text-orbita-secondary">
-            <summary className="cursor-pointer font-medium text-orbita-primary">Leyenda de color</summary>
-            <ul className="mt-2 max-w-xs list-inside list-disc space-y-0.5 text-orbita-muted">
-              <li>Índigo: continuidad (mes previo)</li>
-              <li>Verde / rojo: ingreso y egreso</li>
-              <li>Violeta: operación · cielo: módulo financiero</li>
-              <li>Ámbar: brechas · azul: puentes</li>
-            </ul>
-          </details>
         </div>
 
         <div className="overflow-x-auto">

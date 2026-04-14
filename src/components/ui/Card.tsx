@@ -10,7 +10,7 @@ type CardProps = {
   shadow?: string
   hoverShadow?: string
   style?: React.CSSProperties
-}
+} & Pick<React.ComponentProps<"div">, "aria-labelledby" | "id" | "role">
 
 export function Card({
   children,
@@ -19,6 +19,7 @@ export function Card({
   shadow = designTokens.elevation["arctic-soft"] ?? designTokens.elevation.card,
   hoverShadow = designTokens.elevation.hover,
   style,
+  ...divRest
 }: CardProps) {
   const [isHovering, setIsHovering] = useState(false)
 
@@ -32,6 +33,7 @@ export function Card({
       className={className}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
+      {...divRest}
       style={{
         background: "var(--color-surface)",
         border: "0.5px solid var(--color-border)",

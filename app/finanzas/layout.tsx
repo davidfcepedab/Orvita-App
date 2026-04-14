@@ -63,6 +63,7 @@ function FinanzasLayoutContent({
             />
           </label>
         </div>
+        <FinanceDataLineBanner embedded />
       </Card>
 
       <div
@@ -89,8 +90,6 @@ function FinanzasLayoutContent({
           )
         })}
       </div>
-
-      <FinanceDataLineBanner />
 
       <div className="min-w-0 space-y-3 sm:space-y-4">{children}</div>
     </div>

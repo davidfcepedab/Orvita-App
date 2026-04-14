@@ -27,15 +27,32 @@ function formatMoney(value: number) {
 
 const supabaseEnabled = process.env.NEXT_PUBLIC_SUPABASE_ENABLED === "true"
 
-export function FinanceDataLineBanner() {
+type FinanceDataLineBannerProps = {
+  /** Dentro del hero del layout: mismo card, sin segunda caja con borde propio. */
+  embedded?: boolean
+}
+
+export function FinanceDataLineBanner({ embedded = false }: FinanceDataLineBannerProps) {
   const finance = useFinance()
   if (!finance || !supabaseEnabled) return null
 
   const { month, setMonth, financeMeta, financeMetaLoading, financeMetaNotice } = finance
 
+  const datosShell = embedded
+    ? "mt-2 border-t border-orbita-border/55 pt-2.5 text-orbita-primary sm:pt-3"
+    : `min-w-0 ${financeInsetBarClass} text-orbita-primary`
+
   if (financeMetaLoading && !financeMeta) {
     return (
-      <div className={`min-w-0 ${financeInsetBarClass}`} role="status" aria-live="polite">
+      <div
+        className={
+          embedded
+            ? "mt-2 border-t border-orbita-border/55 pt-2.5 sm:pt-3"
+            : `min-w-0 ${financeInsetBarClass}`
+        }
+        role="status"
+        aria-live="polite"
+      >
         <p className="m-0 text-[11px] text-orbita-secondary">Sincronizando trazabilidad del periodo…</p>
       </div>
     )
@@ -70,11 +87,7 @@ export function FinanceDataLineBanner() {
         </p>
       ) : null}
 
-      <div
-        className={`min-w-0 ${financeInsetBarClass} text-orbita-primary`}
-        role="region"
-        aria-label="Trazabilidad del periodo seleccionado"
-      >
+      <div className={datosShell} role="region" aria-label="Trazabilidad del periodo seleccionado">
         <p className="m-0 flex flex-wrap items-baseline gap-x-1.5 gap-y-1 text-[11px] leading-relaxed sm:text-xs">
           <span className="font-semibold uppercase tracking-[0.12em] text-orbita-secondary">Datos</span>
           <span className="text-orbita-secondary">·</span>
@@ -105,7 +118,9 @@ export function FinanceDataLineBanner() {
       </div>
 
       {!kpiHasSignal && meta.reference ? (
-        <Card className="min-w-0 border border-dashed border-[color-mix(in_srgb,var(--color-accent-finance)_40%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-finance)_6%,var(--color-surface))] p-3 sm:p-4">
+        <Card
+          className={`min-w-0 border border-dashed border-[color-mix(in_srgb,var(--color-accent-finance)_40%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-finance)_6%,var(--color-surface))] p-3 sm:p-4 ${embedded ? "mt-1" : ""}`}
+        >
           <p className="m-0 text-sm font-semibold text-orbita-primary">Sin cifras para {formatYmLongEs(month)}</p>
           <p className="mt-1 text-[11px] leading-relaxed text-orbita-secondary">
             Último mes con resumen guardado:
