@@ -123,29 +123,71 @@ function ledgerRunsFromAccounts(accounts: LedgerAccountRow[]): LedgerAccountRun[
 
 function ledgerSectionShellClass(accountClass: string): string {
   const shell =
-    "mt-3 first:mt-0 rounded-xl border px-3 py-2.5 shadow-[inset_0_1px_0_color-mix(in_srgb,#fff_12%,transparent)] sm:px-3.5 sm:py-3 dark:shadow-[inset_0_1px_0_color-mix(in_srgb,#fff_5%,transparent)]"
+    "mt-3 first:mt-0 rounded-xl border border-l-[5px] px-3 py-3 shadow-sm sm:px-4 sm:py-3.5"
   switch (accountClass) {
     case "ahorro":
-      return `${shell} border-teal-200/55 bg-teal-50/45 dark:border-teal-900/40 dark:bg-teal-950/30`
+      return `${shell} border-teal-400/55 border-l-teal-600 bg-teal-100/95 text-teal-950 shadow-teal-900/10 dark:border-teal-800/80 dark:border-l-teal-400 dark:bg-teal-950/55 dark:text-teal-50 dark:shadow-black/25`
     case "tarjeta_credito":
-      return `${shell} border-sky-200/55 bg-sky-50/40 dark:border-sky-900/40 dark:bg-sky-950/28`
+      return `${shell} border-sky-400/55 border-l-sky-600 bg-sky-100/95 text-sky-950 shadow-sky-900/10 dark:border-sky-800/80 dark:border-l-sky-400 dark:bg-sky-950/50 dark:text-sky-50 dark:shadow-black/25`
     case "credito":
-      return `${shell} border-violet-200/55 bg-violet-50/40 dark:border-violet-900/40 dark:bg-violet-950/28`
+      return `${shell} border-violet-400/55 border-l-violet-600 bg-violet-100/95 text-violet-950 shadow-violet-900/10 dark:border-violet-800/80 dark:border-l-violet-400 dark:bg-violet-950/50 dark:text-violet-50 dark:shadow-black/25`
     default:
-      return `${shell} border-orbita-border/55 bg-orbita-surface-alt/35`
+      return `${shell} border-orbita-border/60 border-l-orbita-primary/40 bg-orbita-surface-alt/55 text-orbita-primary dark:border-orbita-border/70 dark:bg-orbita-surface-alt/40`
   }
 }
 
 function ledgerSectionHeadingClass(accountClass: string): string {
   switch (accountClass) {
     case "ahorro":
-      return "text-teal-900 dark:text-teal-100/95"
+      return "text-teal-950 dark:text-teal-50"
     case "tarjeta_credito":
-      return "text-sky-900 dark:text-sky-100/95"
+      return "text-sky-950 dark:text-sky-50"
     case "credito":
-      return "text-violet-900 dark:text-violet-100/95"
+      return "text-violet-950 dark:text-violet-50"
     default:
       return "text-orbita-secondary"
+  }
+}
+
+function ledgerSectionHeadDividerClass(accountClass: string): string {
+  switch (accountClass) {
+    case "ahorro":
+      return "border-b border-teal-700/25 dark:border-teal-300/25"
+    case "tarjeta_credito":
+      return "border-b border-sky-700/25 dark:border-sky-300/25"
+    case "credito":
+      return "border-b border-violet-700/25 dark:border-violet-300/25"
+    default:
+      return "border-b border-orbita-border/45"
+  }
+}
+
+/** Tarjeta interior: blanco sobre el panel teñido para máximo contraste. */
+function ledgerCardShellClass(accountClass: string): string {
+  const base =
+    "flex gap-1.5 rounded-lg px-2 py-2 [overflow-wrap:anywhere] shadow-sm transition-shadow"
+  switch (accountClass) {
+    case "ahorro":
+      return `${base} border border-teal-300/85 bg-white dark:border-teal-700/70 dark:bg-teal-950/30`
+    case "tarjeta_credito":
+      return `${base} border border-sky-300/85 bg-white dark:border-sky-700/70 dark:bg-sky-950/30`
+    case "credito":
+      return `${base} border border-violet-300/85 bg-white dark:border-violet-700/70 dark:bg-violet-950/30`
+    default:
+      return `${base} border border-orbita-border/60 bg-orbita-surface dark:bg-orbita-surface/90`
+  }
+}
+
+function ledgerCardDraggingRingClass(accountClass: string): string {
+  switch (accountClass) {
+    case "ahorro":
+      return "opacity-60 shadow-md ring-2 ring-teal-400/80 dark:ring-teal-500/60"
+    case "tarjeta_credito":
+      return "opacity-60 shadow-md ring-2 ring-sky-400/80 dark:ring-sky-500/60"
+    case "credito":
+      return "opacity-60 shadow-md ring-2 ring-violet-400/80 dark:ring-violet-500/60"
+    default:
+      return "opacity-60 shadow-md ring-1 ring-orbita-border"
   }
 }
 
@@ -1734,7 +1776,7 @@ export default function CuentasClient() {
                     className={ledgerSectionShellClass(run.accountClass)}
                   >
                     <h3
-                      className={`mb-2 border-b border-orbita-border/35 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] ${ledgerSectionHeadingClass(run.accountClass)}`}
+                      className={`mb-2.5 pb-2 text-[11px] font-semibold uppercase tracking-[0.14em] ${ledgerSectionHeadDividerClass(run.accountClass)} ${ledgerSectionHeadingClass(run.accountClass)}`}
                     >
                       {ledgerHeadingForAccountClass(run.accountClass)}
                     </h3>
@@ -1755,8 +1797,8 @@ export default function CuentasClient() {
                             if (!Number.isFinite(from)) return
                             onDropLedgerReorder(from, idx)
                           }}
-                          className={`flex gap-1.5 rounded-lg border border-orbita-border/55 bg-orbita-surface/90 px-2 py-2 [overflow-wrap:anywhere] shadow-sm transition-shadow dark:bg-orbita-surface/80 ${
-                            draggingLedgerIndex === idx ? "opacity-60 shadow-md ring-1 ring-orbita-border" : ""
+                          className={`${ledgerCardShellClass(run.accountClass)} ${
+                            draggingLedgerIndex === idx ? ledgerCardDraggingRingClass(run.accountClass) : ""
                           }`}
                         >
                           <div
