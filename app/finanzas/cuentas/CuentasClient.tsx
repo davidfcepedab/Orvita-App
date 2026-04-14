@@ -266,9 +266,18 @@ function StatKpiCard({
 
 function SavingsPlasticCard({ item, onEdit }: { item: CuentasSavingsCard; onEdit?: () => void }) {
   const displayAmount = Math.round(Number(item.disponibleOperativoLine ?? item.amount))
-  const hasAmount = Number.isFinite(displayAmount) && displayAmount !== 0
   const fromManual = Boolean(item.manualRowId)
   const fromLedgerCatalog = cardUsesLedgerCatalogRow(item)
+  const anchored = Boolean(item.fechaUltimaReconciliacion?.trim())
+  const fromEngine =
+    fromLedgerCatalog ||
+    anchored ||
+    item.fuenteDatos === "ledger" ||
+    item.fuenteDatos === "ajuste-auto" ||
+    item.fuenteDatos === "seed"
+  /** $0 es válido si viene de ledger/conciliación; solo ocultamos cifra si es manual sin anclaje y monto 0 (no guardado). */
+  const hasAmount =
+    Number.isFinite(displayAmount) && (displayAmount !== 0 || fromEngine || Boolean(item.manualFinancialOverride))
   const tipManual =
     "Monto de esta tarjeta: datos manuales (guardados en el dispositivo o en Supabase según tu configuración). Edita para actualizar."
   const th = creditThemes[normalizeCreditCardTheme(item.theme ?? "emerald")]
