@@ -35,7 +35,11 @@ export async function POST(req: NextRequest) {
     svc = createServiceClient()
   } catch {
     return NextResponse.json(
-      { success: false, error: "Servidor sin SUPABASE_SERVICE_ROLE_KEY; no se puede registrar push." },
+      {
+        success: false,
+        error:
+          "Servidor sin clave service_role (SUPABASE_SERVICE_ROLE_KEY o SUPABASE_SECRET_KEY en Vercel); no se puede registrar push.",
+      },
       { status: 503 },
     )
   }

@@ -24,8 +24,11 @@ NEXT_PUBLIC_VAPID_PUBLIC_KEY=
 VAPID_PRIVATE_KEY=
 VAPID_SUBJECT=mailto:tu-correo@dominio.com
 
-# Ya usada en otras rutas; obligatoria para registrar push (upsert por endpoint)
+# Clave JWT **service_role** (Project Settings → API → service_role), nunca la anon ni la contraseña de Postgres.
+# En Vercel integración Supabase a menudo llega como SUPABASE_SECRET_KEY; el código acepta también SUPABASE_SERVICE_ROLE_KEY.
 SUPABASE_SERVICE_ROLE_KEY=
+# o bien (mismo valor JWT service_role):
+# SUPABASE_SECRET_KEY=
 ```
 
 Generar par VAPID:

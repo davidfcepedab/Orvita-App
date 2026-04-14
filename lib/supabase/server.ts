@@ -40,12 +40,25 @@ export function createClient(options?: CreateClientOptions) {
   })
 }
 
+/** Clave `service_role` (no anon). Vercel/Supabase suele exponerla como SUPABASE_SECRET_KEY. */
+export function getServiceRoleKey(): string | null {
+  return (
+    process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ||
+    process.env.SUPABASE_SECRET_KEY?.trim() ||
+    null
+  )
+}
+
 export function createServiceClient() {
   const url = getSupabaseUrl()
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
+  const serviceKey = getServiceRoleKey()
 
   if (!url) throw new Error("NEXT_PUBLIC_SUPABASE_URL is not configured")
-  if (!serviceKey) throw new Error("SUPABASE_SERVICE_ROLE_KEY is not configured")
+  if (!serviceKey) {
+    throw new Error(
+      "Service role key not configured: set SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SECRET_KEY (service_role JWT)",
+    )
+  }
 
   return createSupabaseClient(url, serviceKey, {
     auth: {

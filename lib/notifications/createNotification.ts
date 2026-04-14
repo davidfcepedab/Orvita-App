@@ -5,7 +5,7 @@ export type NotificationCategory = "system" | "finance" | "habits" | "agenda" | 
 
 /**
  * Inserta notificación y dispara Web Push (si hay suscripciones y VAPID).
- * Requiere `SUPABASE_SERVICE_ROLE_KEY` en el servidor (cron, jobs, otras APIs sin JWT de usuario).
+ * Requiere clave service_role en el servidor (`SUPABASE_SERVICE_ROLE_KEY` o `SUPABASE_SECRET_KEY` en Vercel).
  */
 export async function createNotificationForUser(params: {
   userId: string
