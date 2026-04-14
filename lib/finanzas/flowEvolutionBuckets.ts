@@ -42,13 +42,26 @@ export function rollingWindowStartYm(endYm: string, n: number): string {
   return addMonthsYm(endYm, -(n - 1))
 }
 
-/** Meses del trimestre civil que contiene `endYm`, desde inicio de trimestre hasta `endYm`. */
+/**
+ * Meses del trimestre civil que contiene `endYm`, desde inicio de trimestre hasta `endYm` (parcial a inicio de trimestre).
+ * @deprecated Para gráficos de «trimestre» suele preferirse {@link calendarQuarterFullMonths}.
+ */
 export function calendarQuarterMonthsThrough(endYm: string): string[] {
   const [y, mo] = endYm.split("-").map(Number)
   if (!y || !mo || mo < 1 || mo > 12) return []
   const qStartM = Math.floor((mo - 1) / 3) * 3 + 1
   const start = `${y}-${String(qStartM).padStart(2, "0")}`
   return eachMonthInclusive(start, endYm)
+}
+
+/** Los 3 meses del trimestre civil que contiene el mes activo (Ene–Mar, Abr–Jun, Jul–Sep, Oct–Dic). */
+export function calendarQuarterFullMonths(anchorYm: string): string[] {
+  const [y, mo] = anchorYm.split("-").map(Number)
+  if (!y || !mo || mo < 1 || mo > 12) return []
+  const qStartM = Math.floor((mo - 1) / 3) * 3 + 1
+  const start = `${y}-${String(qStartM).padStart(2, "0")}`
+  const end = addMonthsYm(start, 2)
+  return eachMonthInclusive(start, end)
 }
 
 /** 6 meses terminando en `endYm` (inclusive), ventana móvil. */

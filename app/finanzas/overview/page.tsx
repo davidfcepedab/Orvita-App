@@ -248,7 +248,7 @@ const FLOW_TABS: { id: FlowEvolutionKey; label: string; subtitle: string }[] = [
   {
     id: "quarter",
     label: "Trimestre",
-    subtitle: "Meses del trimestre civil hasta el mes actual (COP)",
+    subtitle: "Trimestre civil completo (3 meses; meses futuros sin movimientos en cero) (COP)",
   },
   {
     id: "semester",

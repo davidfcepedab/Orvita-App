@@ -1,5 +1,6 @@
 import {
   addMonthsYm,
+  calendarQuarterFullMonths,
   calendarQuarterMonthsThrough,
   eachMonthInclusive,
   fillMonthlyFlowFromSnapshots,
@@ -23,6 +24,12 @@ describe("flowEvolutionBuckets", () => {
   test("calendar quarter through March is Q1 partial", () => {
     expect(calendarQuarterMonthsThrough("2026-03")).toEqual(["2026-01", "2026-02", "2026-03"])
     expect(calendarQuarterMonthsThrough("2026-02")).toEqual(["2026-01", "2026-02"])
+  })
+
+  test("calendar quarter full is always 3 civil months", () => {
+    expect(calendarQuarterFullMonths("2026-04")).toEqual(["2026-04", "2026-05", "2026-06"])
+    expect(calendarQuarterFullMonths("2026-02")).toEqual(["2026-01", "2026-02", "2026-03"])
+    expect(calendarQuarterFullMonths("2026-12")).toEqual(["2026-10", "2026-11", "2026-12"])
   })
 
   test("rolling semester is 6 months ending at selected month", () => {

@@ -6,7 +6,7 @@ import { computeFinanceMonthState } from "@/lib/finanzas/computeFinanceMonthStat
 import { createOperativoExpenseFn } from "@/lib/finanzas/operativoExpense"
 import {
   buildMonthlyFlowBuckets,
-  calendarQuarterMonthsThrough,
+  calendarQuarterFullMonths,
   eachMonthInclusive,
   fillMonthlyFlowFromSnapshots,
   rollingSemesterMonths,
@@ -103,7 +103,7 @@ export async function GET(req: NextRequest) {
       const weeklySeries = buildWeeklyBuckets(month, currentRows, opex, { allRowsForWeekWindow: all })
       const flowEvolution = {
         weeks: weeklySeries,
-        quarter: buildMonthlyFlowBuckets(calendarQuarterMonthsThrough(month), all, opex),
+        quarter: buildMonthlyFlowBuckets(calendarQuarterFullMonths(month), all, opex),
         semester: buildMonthlyFlowBuckets(rollingSemesterMonths(month), all, opex),
         rollingYear: buildMonthlyFlowBuckets(rollingYearMonths(month), all, opex),
       }
@@ -183,7 +183,7 @@ export async function GET(req: NextRequest) {
 
     const weeklySeries = buildWeeklyBuckets(month, currentRows, opex, { allRowsForWeekWindow: rows })
 
-    const quarterMonths = calendarQuarterMonthsThrough(month)
+    const quarterMonths = calendarQuarterFullMonths(month)
     const semesterMonths = rollingSemesterMonths(month)
     const rollingMonths = rollingYearMonths(month)
     const flowMonthsUnion = [...new Set([...quarterMonths, ...semesterMonths, ...rollingMonths])]
