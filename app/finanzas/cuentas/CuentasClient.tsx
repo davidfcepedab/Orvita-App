@@ -1578,7 +1578,10 @@ export default function CuentasClient() {
           <div className="border-t border-orbita-border/80 px-3 pb-3 pt-1.5 sm:px-4 sm:pb-4">
             <p className="text-[10px] leading-snug text-orbita-secondary">
               Creadas o actualizadas al importar la hoja Movimientos (columna Cuenta). Orden: arrastra ⋮⋮ y suelta para
-              guardar en Supabase.
+              guardar en Supabase. En <strong className="text-orbita-primary">tarjetas</strong>, el disponible y el % de uso
+              siguen los movimientos enlazados (cargos como egreso, abonos como ingreso a la misma cuenta) y la fecha de
+              conciliación; <strong className="text-orbita-primary">Conciliar</strong> es para alinear con el cupo
+              disponible real del banco cuando haya diferencia.
             </p>
             {ledgerReorderMessage ? (
               <p

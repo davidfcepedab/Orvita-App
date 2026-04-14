@@ -16,6 +16,7 @@ import type {
   CreditCardTheme,
 } from "@/lib/finanzas/cuentasDashboard"
 import { computeDisponibleCuenta } from "@/lib/finanzas/accountBalanceTypes"
+import { computeAccountCalculatedBalanceFromSnapshot } from "@/lib/finanzas/reconciliation"
 import {
   ahorroSaldoOperativoFromCatalog,
   creditoSaldoPendienteFromCatalog,
@@ -138,21 +139,39 @@ function ledgerRowToCreditCard(
     row.id,
     row.label,
   )
-  const txNetDebt = Math.max(0, Math.round(expense - income))
-  let balance = dbUsed > 0 ? dbUsed : txNetDebt
 
   /**
-   * Con cupo + disponible del banco: deuda ≈ cupo − disponible (evita "balance_used" mal cargado como disponible).
-   * Si usado+disponible ≈ cupo, confiamos en `balance_used`; si no, preferimos la derivación por disponible.
+   * Deuda reconocida: mismo motor que la conciliación (cargos − abonos; los abonos van como ingreso enlazado a la TC).
+   * Si hay `manual_balance_on`, el saldo ancla y el resto son movimientos posteriores a esa fecha.
+   * Importante: no preferir `balance_used` del extracto cuando ya hay movimientos — si no, un abono registrado no baja el uso %.
    */
-  if (limit > 0 && Number.isFinite(dbAvail)) {
-    const fromAvail = Math.max(0, Math.min(limit, Math.round(limit - dbAvail)))
-    if (dbUsed <= 0) {
-      balance = fromAvail > 0 ? fromAvail : balance
-    } else {
-      const drift = Math.abs(dbUsed + dbAvail - limit) / limit
-      balance = drift < 0.06 ? dbUsed : fromAvail
+  const calculatedDebtRaw = computeAccountCalculatedBalanceFromSnapshot(rollupRows, monthEndInclusive, {
+    id: row.id,
+    label: row.label,
+    account_class: row.account_class,
+    manual_balance: row.manual_balance,
+    manual_balance_on: row.manual_balance_on,
+  })
+  const calculatedDebt = Math.max(0, calculatedDebtRaw)
+
+  const snapD = String(row.manual_balance_on ?? "").trim()
+  const hasReconcileSnapshot = /^\d{4}-\d{2}-\d{2}$/.test(snapD) && Number.isFinite(Number(row.manual_balance))
+  const hasMovementActivity = expense + income > 0.5
+
+  let balance = calculatedDebt
+
+  if (!hasMovementActivity && !hasReconcileSnapshot && calculatedDebt < 1) {
+    let b = dbUsed > 0 ? dbUsed : balance
+    if (limit > 0 && Number.isFinite(dbAvail)) {
+      const fromAvail = Math.max(0, Math.min(limit, Math.round(limit - dbAvail)))
+      if (dbUsed <= 0) {
+        b = fromAvail > 0 ? fromAvail : b
+      } else {
+        const drift = Math.abs(dbUsed + dbAvail - limit) / limit
+        b = drift < 0.06 ? dbUsed : fromAvail
+      }
     }
+    balance = Math.max(0, b)
   }
 
   if (limit < 1 && balance > 0) limit = Math.max(balance * 2, 1)

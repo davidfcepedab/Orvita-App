@@ -259,6 +259,48 @@ describe("mergeLiveDashboardWithLedger", () => {
     expect(out.loans[0]!.pctPagado).toBe(25)
   })
 
+  test("TC: abonos (ingreso) reducen deuda aunque balance_used del catálogo siga alto", () => {
+    const ledger: LedgerAccountSortable[] = [
+      {
+        id: "c1",
+        label: "TC | Visa Villas | Juan | 5419",
+        account_class: "tarjeta_credito",
+        nature: "pasivo_rotativo",
+        credit_limit: 8_000_000,
+        balance_used: 4_000_000,
+        sort_order: 0,
+      },
+    ]
+    const rows: FinanceTransaction[] = [
+      {
+        id: "t1",
+        date: "2026-03-10",
+        description: "Compras",
+        amount: 4_000_000,
+        type: "expense",
+        category: "Otros",
+        created_at: "2026-03-10T00:00:00Z",
+        updated_at: "2026-03-10T00:00:00Z",
+        finance_account_id: "c1",
+      },
+      {
+        id: "t2",
+        date: "2026-03-12",
+        description: "Abono tarjeta",
+        amount: 2_000_000,
+        type: "income",
+        category: "Otros",
+        created_at: "2026-03-12T00:00:00Z",
+        updated_at: "2026-03-12T00:00:00Z",
+        finance_account_id: "c1",
+      },
+    ]
+    const out = mergeLiveDashboardWithLedger(live, "2026-03", ledger, rows)
+    expect(out.creditCards[0]!.balance).toBe(2_000_000)
+    expect(out.creditCards[0]!.limit).toBe(8_000_000)
+    expect(out.creditCards[0]!.usagePct).toBe(25)
+  })
+
   test("derives TC balance from movements when balance_used is zero", () => {
     const ledger: LedgerAccountSortable[] = [
       {
