@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$comment": "Especificación declarativa PL Estratégico Órbita — referencia de implementación UI",
+  "$comment": "v1 legado — preferir pl-strategic-center.json (PLStrategicCenter v2)",
   "viewName": "PLStrategicDashboard",
   "version": "1.0.0",
   "title": "P&L Estratégico",
