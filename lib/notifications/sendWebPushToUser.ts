@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type webpush from "web-push"
-import { ORVITA_PUSH_BADGE, ORVITA_PUSH_ICON } from "@/lib/notifications/pushBranding"
+import { ORVITA_PUSH_ICON } from "@/lib/notifications/pushBranding"
 import { getVapidPrivateKey, getVapidPublicKey, getVapidSubject, isVapidConfigured } from "@/lib/notifications/vapid"
 
 export type WebPushPayload = {
@@ -58,7 +58,7 @@ export async function sendWebPushToUser(
     url: payload.url ?? "/",
     notificationId: payload.notificationId,
     icon: payload.icon?.trim() || ORVITA_PUSH_ICON,
-    badge: payload.badge?.trim() || ORVITA_PUSH_BADGE,
+    ...(payload.badge?.trim() ? { badge: payload.badge.trim() } : {}),
     ...(payload.image?.trim() ? { image: payload.image.trim() } : {}),
   })
 

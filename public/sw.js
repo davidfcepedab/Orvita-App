@@ -1,8 +1,7 @@
 /* eslint-disable no-restricted-globals */
 /* Service Worker mínimo: Web Push + clic abre la app (Safari iOS requiere PWA en pantalla de inicio). */
-/** Alineado con `lib/notifications/pushBranding.ts` (payload del servidor suele traer estos valores). */
-const DEFAULT_PUSH_ICON = "/brand/orvita-logo-on-dark-bg.png"
-const DEFAULT_PUSH_BADGE = "/brand/orvita-logo-on-dark-bg.png"
+/** Alineado con `lib/notifications/pushBranding.ts` */
+const DEFAULT_PUSH_ICON = "/brand/orvita-push-icon-192.png"
 
 function pickAssetUrl(value, fallback) {
   if (typeof value !== "string") return fallback
@@ -11,6 +10,15 @@ function pickAssetUrl(value, fallback) {
   if (v.startsWith("/")) return v
   if (v.startsWith("https://")) return v
   return fallback
+}
+
+/** WebKit suele resolver mal rutas relativas en `showNotification`; forzar mismo origen. */
+function toAbsoluteNotificationAsset(urlPath) {
+  if (typeof urlPath !== "string" || !urlPath.trim()) return undefined
+  const v = urlPath.trim()
+  if (v.startsWith("https://") || v.startsWith("http://")) return v
+  if (v.startsWith("/")) return `${self.location.origin}${v}`
+  return `${self.location.origin}/${v.replace(/^\//, "")}`
 }
 
 self.addEventListener("push", (event) => {
@@ -28,14 +36,11 @@ self.addEventListener("push", (event) => {
   }
 
   const url = typeof payload.url === "string" && payload.url.startsWith("/") ? payload.url : "/"
-  const icon = pickAssetUrl(payload.icon, DEFAULT_PUSH_ICON)
-  const badge = pickAssetUrl(payload.badge, DEFAULT_PUSH_BADGE)
-  const imageUrl = pickAssetUrl(payload.image, null)
+  const iconRel = pickAssetUrl(payload.icon, DEFAULT_PUSH_ICON)
+  const iconAbs = toAbsoluteNotificationAsset(iconRel)
 
   const options = {
     body: payload.body || "",
-    icon,
-    badge,
     tag: payload.notificationId ? `orvita-${payload.notificationId}` : "orvita-generic",
     data: { url, notificationId: payload.notificationId },
     lang: "es",
@@ -43,7 +48,16 @@ self.addEventListener("push", (event) => {
     timestamp: Date.now(),
   }
 
-  if (imageUrl) options.image = imageUrl
+  if (iconAbs) options.icon = iconAbs
+
+  const badgeRel = typeof payload.badge === "string" && payload.badge.trim() ? pickAssetUrl(payload.badge, null) : null
+  const badgeAbs = badgeRel ? toAbsoluteNotificationAsset(badgeRel) : null
+  if (badgeAbs) options.badge = badgeAbs
+
+  const imageRel =
+    typeof payload.image === "string" && payload.image.trim() ? pickAssetUrl(payload.image, null) : null
+  const imageAbs = imageRel ? toAbsoluteNotificationAsset(imageRel) : null
+  if (imageAbs) options.image = imageAbs
 
   event.waitUntil(self.registration.showNotification(payload.title || "Órvita", options))
 })
