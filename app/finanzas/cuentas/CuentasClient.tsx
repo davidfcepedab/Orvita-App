@@ -87,6 +87,20 @@ const CUENTAS_SECTION_LABELS: Record<CuentasPageSectionId, string> = {
   loans: "Créditos estructurales",
 }
 
+/** Misma nomenclatura que las secciones de tarjetas más abajo en esta página. */
+function ledgerHeadingForAccountClass(accountClass: string): string {
+  switch (accountClass) {
+    case "ahorro":
+      return CUENTAS_SECTION_LABELS.savings
+    case "tarjeta_credito":
+      return CUENTAS_SECTION_LABELS.credit
+    case "credito":
+      return CUENTAS_SECTION_LABELS.loans
+    default:
+      return "Otras cuentas"
+  }
+}
+
 function normalizeCuentasSectionOrder(parsed: unknown): CuentasPageSectionId[] {
   const allowed = new Set<string>(DEFAULT_CUENTAS_PAGE_SECTIONS)
   const fromArr = Array.isArray(parsed) ? parsed : []
@@ -1663,59 +1677,75 @@ export default function CuentasClient() {
             ) : null}
             {ledgerAccounts.length > 0 ? (
               <ul className="mt-2 grid gap-1.5 text-xs sm:grid-cols-2 sm:text-sm">
-                {ledgerAccounts.map((a, idx) => (
-                  <li
-                    key={a.id}
-                    onDragOver={(e) => {
-                      if (ledgerReorderBusy) return
-                      e.preventDefault()
-                      e.dataTransfer.dropEffect = "move"
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault()
-                      if (ledgerReorderBusy) return
-                      const raw = e.dataTransfer.getData("text/plain")
-                      const from = Number.parseInt(raw, 10)
-                      if (!Number.isFinite(from)) return
-                      onDropLedgerReorder(from, idx)
-                    }}
-                    className={`flex gap-1.5 rounded-lg border border-orbita-border/80 bg-orbita-surface px-1.5 py-2 [overflow-wrap:anywhere] transition-shadow ${
-                      draggingLedgerIndex === idx ? "opacity-60 shadow-lg ring-1 ring-orbita-border" : ""
-                    }`}
-                  >
-                    <div
-                      draggable={!ledgerReorderBusy}
-                      onDragStart={(e) => {
-                        e.dataTransfer.effectAllowed = "move"
-                        e.dataTransfer.setData("text/plain", String(idx))
-                        setDraggingLedgerIndex(idx)
+                {ledgerAccounts.flatMap((a, idx) => {
+                  const prev = idx > 0 ? ledgerAccounts[idx - 1] : null
+                  const showSectionHead = !prev || prev.account_class !== a.account_class
+                  const accountRow = (
+                    <li
+                      key={a.id}
+                      onDragOver={(e) => {
+                        if (ledgerReorderBusy) return
+                        e.preventDefault()
+                        e.dataTransfer.dropEffect = "move"
                       }}
-                      onDragEnd={() => setDraggingLedgerIndex(null)}
-                      className="flex shrink-0 cursor-grab touch-none select-none items-center rounded px-0.5 text-orbita-secondary hover:bg-orbita-surface-alt active:cursor-grabbing"
-                      aria-label={`Arrastrar para reordenar ${a.label}`}
+                      onDrop={(e) => {
+                        e.preventDefault()
+                        if (ledgerReorderBusy) return
+                        const raw = e.dataTransfer.getData("text/plain")
+                        const from = Number.parseInt(raw, 10)
+                        if (!Number.isFinite(from)) return
+                        onDropLedgerReorder(from, idx)
+                      }}
+                      className={`flex gap-1.5 rounded-lg border border-orbita-border/80 bg-orbita-surface px-1.5 py-2 [overflow-wrap:anywhere] transition-shadow ${
+                        draggingLedgerIndex === idx ? "opacity-60 shadow-lg ring-1 ring-orbita-border" : ""
+                      }`}
                     >
-                      <GripVertical className="h-4 w-4 shrink-0 sm:h-[18px] sm:w-[18px]" aria-hidden />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium leading-snug text-orbita-primary">{a.label}</p>
-                      <p className="mt-0.5 text-[10px] uppercase tracking-wide text-orbita-secondary sm:text-[11px]">
-                        {a.account_class.replace(/_/g, " ")} · {a.nature.replace(/_/g, " ")}
-                      </p>
-                      <LedgerRowReconcileMeta a={a} />
-                      <div className="mt-1.5">
-                        <button
-                          type="button"
-                          onClick={() => void reconcileLedgerAccount(a)}
-                          disabled={ledgerReconcileBusyId === a.id}
-                          title="Escribe el disponible (TC) o el saldo (ahorro) que ves en tu app o extracto. Sin sincronización bancaria."
-                          className="inline-flex min-h-[32px] items-center rounded-lg border border-[color-mix(in_srgb,var(--color-accent-finance)_35%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-finance)_9%,var(--color-surface))] px-2.5 py-1 text-xs font-medium text-orbita-primary shadow-sm transition hover:bg-[color-mix(in_srgb,var(--color-accent-finance)_14%,var(--color-surface))] disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          {ledgerReconcileBusyId === a.id ? "Aplicando…" : "Registrar cifra"}
-                        </button>
+                      <div
+                        draggable={!ledgerReorderBusy}
+                        onDragStart={(e) => {
+                          e.dataTransfer.effectAllowed = "move"
+                          e.dataTransfer.setData("text/plain", String(idx))
+                          setDraggingLedgerIndex(idx)
+                        }}
+                        onDragEnd={() => setDraggingLedgerIndex(null)}
+                        className="flex shrink-0 cursor-grab touch-none select-none items-center rounded px-0.5 text-orbita-secondary hover:bg-orbita-surface-alt active:cursor-grabbing"
+                        aria-label={`Arrastrar para reordenar ${a.label}`}
+                      >
+                        <GripVertical className="h-4 w-4 shrink-0 sm:h-[18px] sm:w-[18px]" aria-hidden />
                       </div>
-                    </div>
-                  </li>
-                ))}
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium leading-snug text-orbita-primary">{a.label}</p>
+                        <p className="mt-0.5 text-[10px] uppercase tracking-wide text-orbita-secondary sm:text-[11px]">
+                          {a.account_class.replace(/_/g, " ")} · {a.nature.replace(/_/g, " ")}
+                        </p>
+                        <LedgerRowReconcileMeta a={a} />
+                        <div className="mt-1.5">
+                          <button
+                            type="button"
+                            onClick={() => void reconcileLedgerAccount(a)}
+                            disabled={ledgerReconcileBusyId === a.id}
+                            title="Escribe el disponible (TC) o el saldo (ahorro) que ves en tu app o extracto. Sin sincronización bancaria."
+                            className="inline-flex min-h-[32px] items-center rounded-lg border border-[color-mix(in_srgb,var(--color-accent-finance)_35%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-finance)_9%,var(--color-surface))] px-2.5 py-1 text-xs font-medium text-orbita-primary shadow-sm transition hover:bg-[color-mix(in_srgb,var(--color-accent-finance)_14%,var(--color-surface))] disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {ledgerReconcileBusyId === a.id ? "Aplicando…" : "Registrar cifra"}
+                          </button>
+                        </div>
+                      </div>
+                    </li>
+                  )
+                  if (!showSectionHead) return [accountRow]
+                  const sectionHead = (
+                    <li
+                      key={`ledger-section-${a.account_class}-${a.id}`}
+                      className="col-span-full list-none border-t border-orbita-border/55 pt-3 first:border-t-0 first:pt-0"
+                    >
+                      <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
+                        {ledgerHeadingForAccountClass(a.account_class)}
+                      </h3>
+                    </li>
+                  )
+                  return [sectionHead, accountRow]
+                })}
               </ul>
             ) : null}
           </div>
