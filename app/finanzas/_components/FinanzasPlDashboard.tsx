@@ -3,6 +3,7 @@
 import { FormEvent, Fragment, useMemo, useState } from "react"
 import {
   ArrowDownRight,
+  ArrowUpRight,
   CheckCircle2,
   ChevronDown,
   CircleAlert,
@@ -17,6 +18,7 @@ import { formatMoney } from "@/app/finanzas/cuentas/cuentasFormat"
 import { Card } from "@/src/components/ui/Card"
 import { isSupabaseEnabled } from "@/lib/checkins/flags"
 import type { CanonicalPlLayer } from "@/lib/finanzas/canonicalMonthPl"
+import type { MonthFinanceCoherence } from "@/lib/finanzas/monthFinanceCoherence"
 import { financeApiDelete, financeApiJson } from "@/lib/finanzas/financeClientFetch"
 import { printMonthPlReport } from "@/lib/finanzas/printMonthPlReport"
 import { FINANCE_PL_README_EXPANDED } from "@/lib/finanzas/financeModuleCopy"
@@ -177,6 +179,21 @@ const SECTION_HEAD_CLASS: Record<string, string> = {
 const PL_AUX_DISCLOSURE_SUMMARY =
   "flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-[11px] font-semibold text-orbita-primary sm:px-5 [&::-webkit-details-marker]:hidden"
 
+function plLayerAmount(layers: CanonicalPlLayer[], id: string): number {
+  return layers.find((L) => L.id === id)?.amount ?? 0
+}
+
+/** Variación del flujo neto respecto al flujo neto del mes calendario anterior (mismo criterio que la fila de continuidad). */
+function netMonthOverMonth(c: MonthFinanceCoherence): { delta: number; pct: number | null } {
+  const current = c.netCashFlow
+  const prior = c.previousMonthNetCashFlow
+  const delta = current - prior
+  if (!Number.isFinite(prior) || Math.abs(prior) < 1) {
+    return { delta, pct: null }
+  }
+  return { delta, pct: (delta / Math.abs(prior)) * 100 }
+}
+
 export function FinanzasPlDashboard() {
   const { financeMeta, financeMetaLoading, month, touchCapitalData } = useFinanceOrThrow()
   const c = financeMeta?.coherence
@@ -211,6 +228,64 @@ export function FinanzasPlDashboard() {
     const automatic = Math.max(0, ledgerAccounts.length - withManualDate)
     return { total: ledgerAccounts.length, confirmadas: withManualDate, automaticas: automatic }
   }, [ledgerAccounts, syncOn])
+
+  const netMom = useMemo(() => (c ? netMonthOverMonth(c) : { delta: 0, pct: null as number | null }), [c])
+
+  const strategic = useMemo(() => {
+    if (!c) {
+      return {
+        income: 0,
+        expense: 0,
+        opexKpi: 0,
+        gap: 0,
+        unexplained: 0,
+        modulo: 0,
+      }
+    }
+    const layers = c.plLayers
+    return {
+      income: plLayerAmount(layers, "income"),
+      expense: Math.abs(plLayerAmount(layers, "expense_all")),
+      opexKpi: plLayerAmount(layers, "opex_kpi"),
+      gap: plLayerAmount(layers, "gap_kpi_struct"),
+      unexplained: plLayerAmount(layers, "unexplained"),
+      modulo: plLayerAmount(layers, "modulo_structural"),
+    }
+  }, [c])
+
+  const recommendedActions = useMemo(() => {
+    if (!c) return []
+    const items: { id: string; title: string; href?: string; hash?: string }[] = []
+    if (Math.abs(c.unexplainedKpiStructural) >= 1) {
+      items.push({
+        id: "reconcile",
+        title: `Brecha sin explicar ${formatMoney(Math.abs(c.unexplainedKpiStructural))} COP — revisa conciliación o puentes`,
+        hash: "#pl-puentes-card",
+      })
+    }
+    if (!residualOk) {
+      items.push({
+        id: "identity",
+        title: "Cuadre de movimientos: revisa importes en Movimientos (identidad contable)",
+        href: "/finanzas/transactions",
+      })
+    }
+    if (Math.abs(c.gapKpiVsStructuralUi) >= 50_000) {
+      items.push({
+        id: "gap",
+        title: "Brecha KPI vs mapa operativo elevada — contrasta con Categorías",
+        href: "/finanzas/categories",
+      })
+    }
+    if (items.length === 0) {
+      items.push({
+        id: "ok",
+        title: "Sin alertas críticas este mes. Puedes profundizar en partidas abajo o en Perspectivas.",
+        href: "/finanzas/insights",
+      })
+    }
+    return items.slice(0, 4)
+  }, [c, residualOk])
 
   async function onSubmitBridge(e: FormEvent) {
     e.preventDefault()
@@ -319,52 +394,178 @@ export function FinanzasPlDashboard() {
         className="overflow-hidden rounded-2xl border border-orbita-border/85 bg-orbita-surface shadow-[var(--shadow-card)]"
         aria-label="P&L del periodo y ayudas"
       >
-        <div className="border-b border-orbita-border/50 bg-[color-mix(in_srgb,var(--color-accent-finance)_7%,var(--color-surface))] px-4 py-4 sm:px-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0">
+        <div className="border-b border-orbita-border/50 bg-[color-mix(in_srgb,var(--color-accent-finance)_7%,var(--color-surface))] px-4 py-5 sm:px-6">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0 flex-1">
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-orbita-secondary">Mes analizado</p>
-              <h2 className="mt-0.5 text-lg font-bold capitalize tracking-tight text-orbita-primary sm:text-xl">{monthLabel}</h2>
-              <p className="mt-2 max-w-2xl text-[11px] leading-snug text-orbita-secondary">
-                P&amp;L del hogar en una columna: caja → operación → capa financiera del mapa.{" "}
+              <h2 className="mt-1 text-xl font-bold capitalize tracking-tight text-orbita-primary sm:text-2xl">{monthLabel}</h2>
+              <p className="mt-1 text-[11px] leading-snug text-orbita-secondary">
+                Resultado y presiones usan los mismos datos que la tabla de partidas y{" "}
                 <Link
                   href="/finanzas/cuentas"
                   className="font-semibold text-[color-mix(in_srgb,var(--color-accent-finance)_78%,var(--color-text-primary))] underline-offset-2 hover:underline"
                 >
                   Cuentas
                 </Link>{" "}
-                para saldos bancarios.
+                (saldos bancarios aparte).
               </p>
+              <div className="mt-4 rounded-2xl border border-orbita-border/50 bg-orbita-surface/90 px-4 py-4 shadow-sm sm:px-5">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">Flujo neto del mes</p>
+                <p
+                  className={`mt-1 text-3xl font-bold tabular-nums tracking-tight sm:text-4xl ${
+                    c.netCashFlow >= 0 ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300"
+                  }`}
+                >
+                  ${formatMoney(c.netCashFlow)}
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-orbita-secondary">
+                  <span className="inline-flex items-center gap-1 tabular-nums">
+                    {netMom.delta >= 0 ? (
+                      <ArrowUpRight className="h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-hidden />
+                    ) : (
+                      <ArrowDownRight className="h-4 w-4 text-rose-600 dark:text-rose-400" aria-hidden />
+                    )}
+                    <span className="font-medium text-orbita-primary">
+                      {netMom.delta >= 0 ? "+" : "−"}
+                      ${formatMoney(Math.abs(netMom.delta))}
+                    </span>
+                    <span>vs mes anterior (flujo neto)</span>
+                  </span>
+                  {netMom.pct != null && Number.isFinite(netMom.pct) ? (
+                    <span className="tabular-nums text-orbita-muted">
+                      ({netMom.delta >= 0 ? "+" : ""}
+                      {netMom.pct.toFixed(1)}%)
+                    </span>
+                  ) : null}
+                </div>
+                <p className="mt-2 text-[10px] text-orbita-muted">
+                  Mes anterior (continuidad): ${formatMoney(c.previousMonthNetCashFlow)} · Fuente KPI: {kpiSourceLabel}
+                  {financeMeta?.transactionsInSelectedMonth != null ? (
+                    <> · {financeMeta.transactionsInSelectedMonth} movimientos en el mes</>
+                  ) : null}
+                </p>
+              </div>
             </div>
-            <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
-              <span
-                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                  residualOk
-                    ? "bg-emerald-500/15 text-emerald-800 dark:text-emerald-200"
-                    : "bg-amber-500/15 text-amber-900 dark:text-amber-100"
-                }`}
-              >
-                {residualOk ? <CheckCircle2 className="h-3.5 w-3.5" /> : <CircleAlert className="h-3.5 w-3.5" />}
-                Identidad {residualOk ? "OK" : "revisar"}
-              </span>
-              <span
-                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                  bridgeOk
-                    ? "bg-emerald-500/15 text-emerald-800 dark:text-emerald-200"
-                    : "bg-sky-500/15 text-sky-950 dark:text-sky-100"
-                }`}
-              >
-                Brecha {bridgeOk ? "cerrada" : "abierta"}
-              </span>
+            <div className="flex w-full flex-shrink-0 flex-col gap-3 sm:flex-row sm:flex-wrap lg:w-auto lg:max-w-md lg:flex-col">
+              <div className="flex flex-wrap gap-2">
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                    residualOk
+                      ? "bg-emerald-500/15 text-emerald-800 dark:text-emerald-200"
+                      : "bg-amber-500/15 text-amber-900 dark:text-amber-100"
+                  }`}
+                >
+                  {residualOk ? <CheckCircle2 className="h-3.5 w-3.5" /> : <CircleAlert className="h-3.5 w-3.5" />}
+                  Identidad {residualOk ? "OK" : "revisar"}
+                </span>
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                    bridgeOk
+                      ? "bg-emerald-500/15 text-emerald-800 dark:text-emerald-200"
+                      : "bg-sky-500/15 text-sky-950 dark:text-sky-100"
+                  }`}
+                >
+                  Brecha {bridgeOk ? "cerrada" : "abierta"}
+                </span>
+              </div>
               <button
                 type="button"
                 onClick={() => printMonthPlReport(monthLabel || month, c.plLayers)}
-                className="inline-flex items-center gap-1.5 rounded-full border border-orbita-border/90 bg-orbita-surface px-3 py-1.5 text-[11px] font-semibold text-orbita-primary shadow-sm transition hover:bg-orbita-surface-alt"
+                className="inline-flex w-full min-h-[40px] items-center justify-center gap-1.5 rounded-full border border-orbita-border/90 bg-orbita-surface px-3 py-2 text-[11px] font-semibold text-orbita-primary shadow-sm transition hover:bg-orbita-surface-alt sm:w-auto"
               >
                 <Printer className="h-4 w-4" aria-hidden />
                 Imprimir / PDF
               </button>
             </div>
           </div>
+
+          <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+            {(
+              [
+                { label: "Ingresos", value: strategic.income, tone: "text-emerald-700 dark:text-emerald-300" },
+                { label: "Gastos (total)", value: -strategic.expense, tone: "text-rose-700 dark:text-rose-300" },
+                { label: "Gasto operativo KPI", value: strategic.opexKpi, tone: "text-orbita-primary" },
+                {
+                  label: "Brecha sin explicar",
+                  value: strategic.unexplained,
+                  tone:
+                    Math.abs(strategic.unexplained) < 1
+                      ? "text-orbita-muted"
+                      : "text-amber-800 dark:text-amber-200",
+                },
+              ] as const
+            ).map((cell) => (
+              <div
+                key={cell.label}
+                className="rounded-xl border border-orbita-border/45 bg-orbita-surface/80 px-3 py-2.5 shadow-sm"
+              >
+                <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">{cell.label}</p>
+                <p className={`mt-1 text-sm font-semibold tabular-nums sm:text-base ${cell.tone}`}>${formatMoney(cell.value)}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-xl border border-rose-200/70 bg-rose-50/50 px-3 py-3 dark:border-rose-900/50 dark:bg-rose-950/25">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-rose-900 dark:text-rose-100">Presión: gasto operativo</p>
+              <p className="mt-1 text-lg font-bold tabular-nums text-orbita-primary">${formatMoney(strategic.opexKpi)}</p>
+              <p className="mt-1 text-[10px] leading-snug text-orbita-secondary">Catálogo KPI · mismo criterio que partidas</p>
+              <Link
+                href="/finanzas/categories"
+                className="mt-2 inline-block text-[10px] font-semibold text-[color-mix(in_srgb,var(--color-accent-finance)_85%,var(--color-text-primary))] underline-offset-2 hover:underline"
+              >
+                Ver categorías
+              </Link>
+            </div>
+            <div className="rounded-xl border border-amber-200/80 bg-amber-50/55 px-3 py-3 dark:border-amber-900/45 dark:bg-amber-950/25">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-950 dark:text-amber-100">Presión: brecha KPI ↔ mapa</p>
+              <p className="mt-1 text-lg font-bold tabular-nums text-orbita-primary">${formatMoney(strategic.gap)}</p>
+              <p className="mt-1 text-[10px] leading-snug text-orbita-secondary">gap_kpi_struct en partidas</p>
+              <a
+                href="#pl-partidas-table"
+                className="mt-2 inline-block text-[10px] font-semibold text-[color-mix(in_srgb,var(--color-accent-finance)_85%,var(--color-text-primary))] underline-offset-2 hover:underline"
+              >
+                Ir a partidas
+              </a>
+            </div>
+            <div className="rounded-xl border border-violet-200/75 bg-violet-50/50 px-3 py-3 dark:border-violet-900/45 dark:bg-violet-950/25">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-violet-900 dark:text-violet-100">Capa financiera (mapa)</p>
+              <p className="mt-1 text-lg font-bold tabular-nums text-orbita-primary">${formatMoney(strategic.modulo)}</p>
+              <p className="mt-1 text-[10px] leading-snug text-orbita-secondary">Módulo estructural del mapa</p>
+              <Link
+                href="/finanzas/categories"
+                className="mt-2 inline-block text-[10px] font-semibold text-[color-mix(in_srgb,var(--color-accent-finance)_85%,var(--color-text-primary))] underline-offset-2 hover:underline"
+              >
+                Ver mapa en categorías
+              </Link>
+            </div>
+          </div>
+
+          {recommendedActions.length > 0 ? (
+            <div className="mt-5 rounded-xl border border-orbita-border/50 bg-[color-mix(in_srgb,var(--color-surface-alt)_40%,transparent)] px-3 py-3 sm:px-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">Siguientes pasos (datos del mes)</p>
+              <ul className="mt-2 space-y-2 text-[11px] leading-snug text-orbita-secondary">
+                {recommendedActions.map((a) => (
+                  <li key={a.id} className="flex gap-2">
+                    <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-[color-mix(in_srgb,var(--color-accent-finance)_55%,var(--color-border))]" aria-hidden />
+                    <span>
+                      {a.href ? (
+                        <Link href={a.href} className="font-medium text-orbita-primary underline-offset-2 hover:underline">
+                          {a.title}
+                        </Link>
+                      ) : a.hash ? (
+                        <a href={a.hash} className="font-medium text-orbita-primary underline-offset-2 hover:underline">
+                          {a.title}
+                        </a>
+                      ) : (
+                        a.title
+                      )}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </div>
 
         <div className="bg-orbita-surface-alt/25">
@@ -419,6 +620,7 @@ export function FinanzasPlDashboard() {
       </section>
 
       <Card
+        id="pl-partidas-table"
         className="overflow-hidden border-orbita-border/85 shadow-[var(--shadow-card)]"
         aria-labelledby="pl-partidas-heading"
       >
@@ -572,7 +774,7 @@ export function FinanzasPlDashboard() {
         ) : null}
       </Card>
 
-      <Card className="border-orbita-border/80 p-4 sm:p-6">
+      <Card id="pl-puentes-card" className="border-orbita-border/80 p-4 sm:p-6">
         <h3 className="text-sm font-bold text-orbita-primary">Puentes de conciliación</h3>
         <p className="mt-1 text-xs leading-relaxed text-orbita-secondary">
           Ajustes explícitos de la brecha KPI vs mapa. Opcional: el modelo usa el historial (EMA) como referencia.
