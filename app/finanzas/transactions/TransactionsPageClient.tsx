@@ -921,6 +921,24 @@ export default function TransactionsPageClient() {
               </p>
             </div>
             <div className="grid gap-3 p-3 sm:p-4">
+              <ul className="m-0 list-disc space-y-1.5 pl-4 text-[10px] leading-relaxed text-orbita-secondary [text-wrap:pretty] marker:text-orbita-secondary/80">
+                <li>
+                  La plantilla Excel incluye listas del <strong className="font-semibold text-orbita-primary">catálogo del hogar</strong>:{" "}
+                  <strong className="font-semibold text-orbita-primary">subcategoría depende de categoría</strong> (columnas C y D). El{" "}
+                  <strong className="font-semibold text-orbita-primary">tipo de gasto</strong> (fijo/variable/…) y el{" "}
+                  <strong className="font-semibold text-orbita-primary">impacto financiero</strong> los aplica el sistema desde esa tabla al
+                  ser un par válido; no van columnas aparte.
+                </li>
+                <li>
+                  Columna <strong className="font-semibold text-orbita-primary">Cuenta</strong>: en la hoja Listas verás las{" "}
+                  <strong className="font-semibold text-orbita-primary">cuentas del hogar</strong>; puedes usar una etiqueta nueva (se crea al
+                  importar).
+                </li>
+                <li>
+                  Para importar aquí, exporta la hoja a <strong className="font-semibold text-orbita-primary">CSV UTF-8</strong> con la misma
+                  cabecera que «Exportar vista», o reutiliza un CSV exportado desde esta pantalla.
+                </li>
+              </ul>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -981,9 +999,8 @@ export default function TransactionsPageClient() {
                 </button>
               </div>
               <p className="m-0 text-[10px] leading-relaxed text-orbita-secondary [text-wrap:pretty]">
-                La plantilla Excel trae desplegables. Para importar aquí, exporta esa hoja como CSV (UTF-8) con la misma
-                cabecera que «Exportar vista», o reutiliza un CSV ya exportado. Máximo 300 filas por carga; si la cuenta
-                no existía, se crea al importar.
+                Máximo 300 filas por carga. Las filas cuyo par categoría/subcategoría no exista en el catálogo se rechazan (se listan en el aviso
+                de importación).
               </p>
             </div>
           </Card>

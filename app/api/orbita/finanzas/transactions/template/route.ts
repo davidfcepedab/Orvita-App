@@ -10,7 +10,7 @@ export const runtime = "nodejs"
 export async function GET(_req: NextRequest) {
   try {
     if (!isSupabaseEnabled()) {
-      const buf = await buildTransactionsTemplateXlsxBuffer([])
+      const buf = await buildTransactionsTemplateXlsxBuffer([], [])
       return new NextResponse(buf, {
         headers: {
           "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -29,7 +29,22 @@ export async function GET(_req: NextRequest) {
     }
 
     const rows = await fetchSubcategoryCatalogMerged(auth.supabase, householdId)
-    const buf = await buildTransactionsTemplateXlsxBuffer(rows)
+    const { data: accountRows, error: accErr } = await auth.supabase
+      .from("orbita_finance_accounts")
+      .select("label")
+      .eq("household_id", householdId)
+      .is("deleted_at", null)
+      .order("label", { ascending: true })
+
+    if (accErr) {
+      console.error("TRANSACTIONS_TEMPLATE_ACCOUNTS:", accErr.message)
+    }
+
+    const accountLabels = (accountRows ?? [])
+      .map((r) => String((r as { label?: string }).label ?? "").trim())
+      .filter(Boolean)
+
+    const buf = await buildTransactionsTemplateXlsxBuffer(rows, accountLabels)
 
     return new NextResponse(buf, {
       headers: {

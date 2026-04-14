@@ -3,7 +3,12 @@ import { requireUser } from "@/lib/api/requireUser"
 import { isAppMockMode, isSupabaseEnabled, UI_SYNC_OFF_SHORT } from "@/lib/checkins/flags"
 import { ensureFinanceAccountsForLabels } from "@/lib/finanzas/ensureFinanceAccountsForLabels"
 import { formatPostgrestError } from "@/lib/finanzas/subcategoryCatalog"
-import { parseTransactionsImportCsv } from "@/lib/finanzas/parseTransactionsImportCsv"
+import {
+  buildCatalogPairKeySet,
+  catalogMismatchMessage,
+  parseTransactionsImportCsv,
+} from "@/lib/finanzas/parseTransactionsImportCsv"
+import { fetchSubcategoryCatalogMerged } from "@/lib/finanzas/subcategoryCatalog"
 import { getHouseholdId } from "@/lib/households/getHouseholdId"
 
 export const runtime = "nodejs"
@@ -41,7 +46,20 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const { rows: parsed, errors: parseErrors } = parseTransactionsImportCsv(csv)
+    const { rows: parsedRaw, errors: parseErrors } = parseTransactionsImportCsv(csv)
+
+    const catalog = await fetchSubcategoryCatalogMerged(auth.supabase, householdId)
+    const pairKeys = buildCatalogPairKeySet(catalog)
+    const parsed: typeof parsedRaw = []
+    for (const row of parsedRaw) {
+      const mismatch = catalogMismatchMessage(pairKeys, row)
+      if (mismatch) {
+        parseErrors.push({ line: row.sourceLine, message: mismatch })
+        continue
+      }
+      parsed.push(row)
+    }
+
     if (parsed.length === 0) {
       const hint = parseErrors[0]
         ? ` (Línea ${parseErrors[0].line}: ${parseErrors[0].message})`

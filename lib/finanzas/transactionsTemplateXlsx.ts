@@ -50,10 +50,12 @@ function buildCategorySubMap(rows: FinanceSubcategoryCatalogRow[]): Map<string, 
 
 /**
  * Plantilla .xlsx: desplegable Tipo; categorías desde columna A de Listas;
- * subcategorías dependientes vía OFFSET/MATCH sobre la fila 1 de Listas (categorías en B1…).
+ * subcategorías dependientes vía OFFSET/MATCH sobre la fila 1 de Listas (categorías en B1…);
+ * cuentas del hogar en una columna de Listas y validación sugerida en E.
  */
 export async function buildTransactionsTemplateXlsxBuffer(
   catalogRows: FinanceSubcategoryCatalogRow[],
+  accountLabels: string[],
 ): Promise<ArrayBuffer> {
   const map = buildCategorySubMap(catalogRows)
   const categories = [...map.keys()].sort((a, b) => a.localeCompare(b, "es"))
@@ -97,6 +99,21 @@ export async function buildTransactionsTemplateXlsxBuffer(
 
   const endColLetter = nCat > 0 ? excelColumnLetter(firstCatCol + nCat - 1) : "B"
 
+  /** Columna en Listas para etiquetas de cuenta (no solapa con bloques de subcategorías). */
+  const accountsColIndex = nCat === 0 ? 2 : firstCatCol + nCat
+  const accLetter = excelColumnLetter(accountsColIndex)
+  const sortedAccounts = [...new Set(accountLabels.map((a) => a.trim()).filter(Boolean))].sort((a, b) =>
+    a.localeCompare(b, "es"),
+  )
+  const maxAccRows = Math.min(sortedAccounts.length, 500)
+  listas.getCell(`${accLetter}1`).value = "Cuentas — usar en columna E (Movimientos)"
+  listas.getCell(`${accLetter}1`).font = { bold: true }
+  listas.getColumn(accountsColIndex).width = 26
+  for (let i = 0; i < maxAccRows; i += 1) {
+    listas.getCell(`${accLetter}${i + 2}`).value = sortedAccounts[i] ?? ""
+  }
+  const lastAccRow = Math.max(2, 1 + maxAccRows)
+
   mov.columns = [
     { width: 12 },
     { width: 10 },
@@ -118,7 +135,7 @@ export async function buildTransactionsTemplateXlsxBuffer(
   mov.getCell("B2").value = "Gasto"
   mov.getCell("C2").value = firstCat ?? ""
   mov.getCell("D2").value = firstSub
-  mov.getCell("E2").value = ""
+  mov.getCell("E2").value = sortedAccounts[0] ?? ""
   mov.getCell("F2").value = "Ejemplo: compra / transferencia"
   mov.getCell("G2").value = 150000
 
@@ -166,9 +183,32 @@ export async function buildTransactionsTemplateXlsxBuffer(
     })
   }
 
+  if (sortedAccounts.length > 0) {
+    addDataValidation(mov, `E2:E${lastMovRow}`, {
+      type: "list",
+      allowBlank: true,
+      formulae: [`=Listas!$${accLetter}$2:$${accLetter}$${lastAccRow}`],
+      showInputMessage: true,
+      promptTitle: "Cuenta",
+      prompt:
+        "Elija una cuenta del hogar (hoja Listas). Si escribe una etiqueta nueva, se creará la cuenta al importar el CSV.",
+      showErrorMessage: true,
+      errorStyle: "warning",
+      errorTitle: "Cuenta",
+      error: "Valor no está en la lista. Puede continuar si es una cuenta nueva; se creará al importar.",
+    })
+  }
+
   mov.getCell("H1").value =
-    "Rellene filas desde la 2. Las listas usan el catálogo activo. Revise la hoja Listas si necesita ver las fuentes."
+    [
+      "Rellene desde la fila 2. C y D: par del catálogo (en D la subcategoría depende de C).",
+      "Tipo de gasto (fijo/variable/…) e impacto financiero (operativo/inversión/…) los toma el sistema del catálogo al usar un par válido.",
+      "E: cuentas en Listas; etiqueta nueva → se crea la cuenta al importar.",
+      "Exporte «Movimientos» a CSV (UTF-8) para importar aquí.",
+    ].join(" ")
   mov.getCell("H1").font = { italic: true, size: 9 }
+  mov.getRow(1).height = 48
+  mov.getCell("H1").alignment = { wrapText: true, vertical: "top" }
 
   const buf = await wb.xlsx.writeBuffer()
   return buf as ArrayBuffer

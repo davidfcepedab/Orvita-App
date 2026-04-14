@@ -2,6 +2,10 @@
  * Esquema de URL personalizado de Órvita (alineado con el shell iOS `orvita://`).
  * En web se resuelve vía `/open?p=…` o enlaces `https://` equivalentes.
  *
+ * **Safari y el navegador:** solo las URLs **https://** (p. ej. `buildHttpsOpenUrl`) abren el sitio
+ * directamente en Safari. Los enlaces `orvita://…` **no** cargan una página web: iOS los entrega
+ * a la app que tenga registrado ese esquema (o no hace nada si no hay app).
+ *
  * Ejemplos:
  * - `orvita://home` → `/`
  * - `orvita://checkin/dia` → `/checkin#checkin-dia`
@@ -71,4 +75,16 @@ export function orvitaPathToWebLocation(pathWithoutScheme: string): string | nul
 /** Acepta `orvita://…`, `web+orvita://…` o solo `checkin/dia`. */
 export function resolveOrvitaDeepLink(input: string): string | null {
   return orvitaPathToWebLocation(normalizeOrvitaInput(input))
+}
+
+/**
+ * Enlace público **https** listo para compartir (Mail, WhatsApp, SMS, QR): se abre en Safari
+ * o en el navegador por defecto. `siteOrigin` sin barra final, p. ej. `https://orvita.app`.
+ * `p` puede ser `home`, `checkin/dia`, o `orvita://checkin/dia`.
+ */
+export function buildHttpsOpenUrl(siteOrigin: string, p: string): string {
+  const base = siteOrigin.replace(/\/$/, "")
+  const normalized = normalizeOrvitaInput(p)
+  const q = encodeURIComponent(normalized || "home")
+  return `${base}/open?p=${q}`
 }

@@ -1,4 +1,6 @@
 import { TRANSACTION_CSV_HEADERS_ES } from "@/lib/finanzas/transactionsCsv"
+import type { FinanceSubcategoryCatalogRow } from "@/lib/finanzas/subcategoryCatalog"
+import { normalizeFinanceCatalogKey } from "@/lib/finanzas/subcategoryCatalog"
 
 export type TransactionsImportParsedRow = {
   fecha: string
@@ -8,6 +10,8 @@ export type TransactionsImportParsedRow = {
   cuenta: string
   concepto: string
   monto: number
+  /** Línea en el archivo CSV (incl. cabecera); para validación e informes. */
+  sourceLine: number
 }
 
 export type TransactionsImportLineError = {
@@ -189,8 +193,41 @@ export function parseTransactionsImportCsv(text: string): {
       cuenta: cuenta || "",
       concepto: concepto || "(sin descripción)",
       monto,
+      sourceLine: lineNum,
     })
   }
 
   return { rows, errors }
+}
+
+/**
+ * Construye pares (categoría, subcategoría) del catálogo para validar importaciones.
+ * Tipo de gasto e impacto financiero en reportes salen de esta tabla al coincidir el par.
+ */
+export function buildCatalogPairKeySet(rows: FinanceSubcategoryCatalogRow[]): Set<string> {
+  const set = new Set<string>()
+  for (const r of rows) {
+    if (r.active === false) continue
+    const c = String(r.category ?? "").trim()
+    const s = String(r.subcategory ?? "").trim()
+    if (!c || !s) continue
+    set.add(`${normalizeFinanceCatalogKey(c)}|||${normalizeFinanceCatalogKey(s)}`)
+  }
+  return set
+}
+
+/** Si hay subcategoría, debe existir el par exacto en el catálogo (coherente con KPIs y vistas). */
+export function catalogMismatchMessage(
+  pairKeys: Set<string>,
+  p: Pick<TransactionsImportParsedRow, "categoria" | "subcategoria" | "sourceLine">,
+): string | null {
+  const s = p.subcategoria.trim()
+  if (!s) return null
+  const c = p.categoria.trim()
+  if (!c) {
+    return `Línea ${p.sourceLine}: indique categoría junto con la subcategoría «${s}».`
+  }
+  const key = `${normalizeFinanceCatalogKey(c)}|||${normalizeFinanceCatalogKey(s)}`
+  if (pairKeys.has(key)) return null
+  return `Línea ${p.sourceLine}: el par categoría «${c}» + subcategoría «${s}» no está en el catálogo del hogar (revise tildes y el mismo par que en la plantilla .xlsx).`
 }

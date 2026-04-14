@@ -27,5 +27,6 @@ describe("parseTransactionsImportCsv", () => {
     expect(rows[0]?.fecha).toBe("2026-04-01")
     expect(rows[0]?.tipo).toBe("expense")
     expect(rows[0]?.monto).toBe(10000)
+    expect(rows[0]?.sourceLine).toBe(2)
   })
 })
