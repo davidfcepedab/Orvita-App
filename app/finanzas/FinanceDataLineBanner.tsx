@@ -105,9 +105,9 @@ export function FinanceDataLineBanner() {
           <span className="text-orbita-secondary">·</span>
           <Link
             href="/finanzas/pl"
-            className="font-semibold text-orbita-primary underline decoration-orbita-border/80 underline-offset-2 transition hover:text-[color-mix(in_srgb,var(--color-accent-finance)_85%,var(--color-text-primary))]"
+            className="inline-flex min-h-[28px] items-center rounded-full border border-[color-mix(in_srgb,var(--color-accent-finance)_35%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-finance)_10%,var(--color-surface))] px-2.5 py-1 text-[11px] font-semibold text-orbita-primary shadow-sm transition hover:bg-[color-mix(in_srgb,var(--color-accent-finance)_16%,var(--color-surface))] sm:text-xs"
           >
-            Ver P&amp;L del mes
+            P&amp;L del mes
           </Link>
         </p>
       </div>
