@@ -20,7 +20,7 @@ import { Card } from "@/src/components/ui/Card"
 import { useFinance } from "../FinanceContext"
 import { FinanceViewHeader } from "../_components/FinanceViewHeader"
 import { financeViewRootClass } from "../_components/financeChrome"
-import { useLedgerAccounts } from "../useLedgerAccounts"
+import { useLedgerAccounts, type LedgerAccountRow } from "../useLedgerAccounts"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { financeApiDelete, financeApiGet, financeApiJson } from "@/lib/finanzas/financeClientFetch"
 import {
@@ -454,8 +454,8 @@ function CreditPlasticCard({
             className="mt-2 max-w-[95%] rounded-lg border border-amber-300/35 bg-black/25 px-2 py-1.5 text-[10px] font-medium leading-snug text-amber-50/95"
             title="Concilia en la lista de cuentas para alinear el saldo con tu banco."
           >
-            Hay una diferencia notable con el ledger. Usa <strong className="font-semibold">Conciliar</strong> en la fila de
-            esta cuenta (lista inferior).
+            Hay una diferencia notable con el ledger. Usa{" "}
+            <strong className="font-semibold">Conciliar con banco</strong> en la lista de cuentas ledger.
           </p>
         ) : null}
       </div>
@@ -625,6 +625,78 @@ function ReadonlyField({ value }: { value: ReactNode }) {
   return (
     <div className="mt-1 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt px-3 py-2 text-sm font-medium text-orbita-primary">
       {value}
+    </div>
+  )
+}
+
+/** Dónde acercar el modelo a la realidad bancaria (único flujo manual de cifra “real”). */
+function CuentasReconcileCallout() {
+  return (
+    <div className="rounded-xl border border-[color-mix(in_srgb,var(--color-accent-finance)_34%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-finance)_9%,var(--color-surface))] p-3 shadow-sm sm:p-4">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">Disponible / saldo real</p>
+      <p className="mt-1.5 text-xs leading-relaxed text-orbita-primary">
+        Aquí no se editan montos a mano en cada tarjeta grande: la cifra que ves en el banco la cargas con{" "}
+        <span className="font-semibold text-[color-mix(in_srgb,var(--color-accent-finance)_75%,var(--color-text-primary))]">
+          Conciliar
+        </span>{" "}
+        en el listado de <span className="font-medium">cuentas ledger</span> (sección siguiente).{" "}
+        <strong>Tarjeta:</strong> disponible para compras hoy. <strong>Ahorro:</strong> saldo de la cuenta.{" "}
+        <strong>Crédito estructural:</strong> saldo pendiente. Cada conciliación deja un ancla en la fecha; los
+        movimientos posteriores se suman encima hasta que la desviación sea 0.
+      </p>
+    </div>
+  )
+}
+
+function LedgerRowReconcileMeta({ a }: { a: LedgerAccountRow }) {
+  const dateRaw = typeof a.manual_balance_on === "string" ? a.manual_balance_on.trim().slice(0, 10) : ""
+  const dateOk = /^\d{4}-\d{2}-\d{2}$/.test(dateRaw)
+  const mb = a.manual_balance != null ? Number(a.manual_balance) : NaN
+  const hasAnch = dateOk && Number.isFinite(mb)
+
+  return (
+    <div className="mt-1 space-y-1 text-[10px] leading-snug">
+      {a.account_class === "ahorro" && a.balance_available != null && Number(a.balance_available) > 0 ? (
+        <p className="tabular-nums text-orbita-muted">
+          Catálogo / extracto · Disp. ${formatMoney(Math.round(Number(a.balance_available)))}
+        </p>
+      ) : null}
+      {a.account_class !== "ahorro" && a.balance_used != null && Number(a.balance_used) > 0 ? (
+        <p className="tabular-nums text-orbita-muted">
+          Catálogo / extracto · Usado ${formatMoney(Math.round(Number(a.balance_used)))}
+        </p>
+      ) : null}
+      {hasAnch ? (
+        a.account_class === "tarjeta_credito" ? (
+          <p className="text-orbita-secondary">
+            <span className="font-semibold text-orbita-primary">Conciliación {dateRaw}</span>
+            {Number(a.credit_limit) > 0 ? (
+              <>
+                : ingresaste disponible → deuda anclada ${formatMoney(Math.round(mb))} (~disponible restante{" "}
+                {formatMoney(Math.round(Math.max(0, Number(a.credit_limit) - mb)))} de cupo{" "}
+                {formatMoney(Math.round(Number(a.credit_limit)))})
+              </>
+            ) : (
+              <> · anclaje ${formatMoney(Math.round(mb))}</>
+            )}
+          </p>
+        ) : a.account_class === "ahorro" ? (
+          <p className="text-orbita-secondary">
+            <span className="font-semibold text-orbita-primary">Conciliación {dateRaw}</span>: saldo anclado $
+            {formatMoney(Math.round(mb))}
+          </p>
+        ) : (
+          <p className="text-orbita-secondary">
+            <span className="font-semibold text-orbita-primary">Conciliación {dateRaw}</span>: saldo anclado $
+            {formatMoney(Math.round(mb))}
+          </p>
+        )
+      ) : (
+        <p className="text-orbita-muted">
+          <span className="font-medium text-orbita-primary">Conciliar</span> para cargar la cifra del banco y generar el
+          ajuste hasta cuadrar (Δ → 0).
+        </p>
+      )}
     </div>
   )
 }
@@ -1507,7 +1579,7 @@ export default function CuentasClient() {
             <FinanceViewHeader
               kicker="Balance"
               title="Cuentas y exposición"
-              subtitle="Liquidez y disponibilidad por cuenta."
+              subtitle="Modelo desde movimientos y catálogo; la cifra del banco se alinea con Conciliar (listado ledger)."
               action={
                 <button
                   type="button"
@@ -1549,25 +1621,26 @@ export default function CuentasClient() {
         {notice ? <p className="mt-2 text-xs text-orbita-secondary">{notice}</p> : null}
       </div>
 
+      {supabaseEnabled ? (
+        <div className="mt-3 sm:mt-4">
+          <CuentasReconcileCallout />
+        </div>
+      ) : null}
+
       {supabaseEnabled && (ledgerLoading || ledgerAccounts.length > 0 || ledgerError) ? (
         <details
-          className={`group rounded-[var(--radius-card)] border-[0.5px] border-orbita-border/90 shadow-card ${arcticPanel}`}
-          style={{
-            background: "var(--color-surface)",
-            border: "0.5px solid var(--color-border)",
-            borderRadius: "var(--radius-card)",
-            boxShadow: "rgba(0, 0, 0, 0.05) 0px 1px 3px, rgba(0, 0, 0, 0.02) 0px 1px 2px",
-          }}
+          open
+          className={`group mt-4 rounded-[var(--radius-card)] border border-orbita-border/90 bg-orbita-surface shadow-[var(--shadow-card)] ${arcticPanel}`}
         >
           <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 sm:px-4 sm:py-2 [&::-webkit-details-marker]:hidden">
             <div className="min-w-0 text-left">
               <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">
-                Cuentas desde movimientos (Supabase)
+                Cuentas ledger — disponible / saldo real
               </h2>
               <p className="mt-0.5 text-[10px] leading-tight text-orbita-secondary">
                 {ledgerAccounts.length > 0
-                  ? `${ledgerAccounts.length} cuenta${ledgerAccounts.length === 1 ? "" : "s"} · Movimientos`
-                  : "Ledger del hogar"}
+                  ? `${ledgerAccounts.length} cuenta${ledgerAccounts.length === 1 ? "" : "s"} · Conciliar = cifra banco`
+                  : "Supabase · orden y conciliación"}
               </p>
             </div>
             <ChevronDown
@@ -1577,11 +1650,10 @@ export default function CuentasClient() {
           </summary>
           <div className="border-t border-orbita-border/80 px-3 pb-3 pt-1.5 sm:px-4 sm:pb-4">
             <p className="text-[10px] leading-snug text-orbita-secondary">
-              Creadas o actualizadas al importar la hoja Movimientos (columna Cuenta). Orden: arrastra ⋮⋮ y suelta para
-              guardar en Supabase. En <strong className="text-orbita-primary">tarjetas</strong>, el disponible y el % de uso
-              siguen los movimientos enlazados (cargos como egreso, abonos como ingreso a la misma cuenta) y la fecha de
-              conciliación; <strong className="text-orbita-primary">Conciliar</strong> es para alinear con el cupo
-              disponible real del banco cuando haya diferencia.
+              Filas de <code className="rounded bg-orbita-surface-alt px-1 text-[9px]">orbita_finance_accounts</code> al
+              importar Movimientos (columna Cuenta). Arrastra ⋮⋮ para orden. Las tarjetas de arriba son vista resumen; aquí
+              defines la <strong className="text-orbita-primary">cifra real</strong> con Conciliar (TC = disponible hoy,
+              ahorro = saldo).
             </p>
             {ledgerReorderMessage ? (
               <p
@@ -1643,30 +1715,15 @@ export default function CuentasClient() {
                       <p className="mt-0.5 text-[10px] uppercase tracking-wide text-orbita-secondary sm:text-[11px]">
                         {a.account_class.replace(/_/g, " ")} · {a.nature.replace(/_/g, " ")}
                       </p>
-                      {(() => {
-                        const bits: string[] = []
-                        if (a.manual_balance != null && Number(a.manual_balance) !== 0) {
-                          bits.push(`Manual $${formatMoney(Number(a.manual_balance))}`)
-                        }
-                        if (a.account_class === "ahorro" && a.balance_available != null) {
-                          bits.push(`Disp. $${formatMoney(Number(a.balance_available))}`)
-                        }
-                        if (a.account_class !== "ahorro" && a.balance_used != null) {
-                          bits.push(`Usado $${formatMoney(Number(a.balance_used))}`)
-                        }
-                        if (bits.length === 0) return null
-                        return (
-                          <p className="mt-1 text-[11px] tabular-nums text-orbita-secondary">{bits.join(" · ")}</p>
-                        )
-                      })()}
+                      <LedgerRowReconcileMeta a={a} />
                       <div className="mt-2">
                         <button
                           type="button"
                           onClick={() => void reconcileLedgerAccount(a)}
                           disabled={ledgerReconcileBusyId === a.id}
-                          className="rounded-full border border-orbita-border/80 bg-orbita-surface-alt px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-orbita-secondary hover:text-orbita-primary disabled:cursor-not-allowed disabled:opacity-60"
+                          className="min-h-[40px] rounded-full border border-[color-mix(in_srgb,var(--color-accent-finance)_38%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-finance)_11%,var(--color-surface))] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-orbita-primary shadow-sm transition hover:bg-[color-mix(in_srgb,var(--color-accent-finance)_16%,var(--color-surface))] disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          {ledgerReconcileBusyId === a.id ? "Conciliando..." : "Conciliar"}
+                          {ledgerReconcileBusyId === a.id ? "Conciliando..." : "Conciliar con banco"}
                         </button>
                       </div>
                     </div>
@@ -1733,7 +1790,14 @@ export default function CuentasClient() {
                     <StatKpiCard
                       title="Crédito disponible"
                       value={`$${formatMoney(kpis.creditoDisponible)}`}
-                      sub={<span>{kpis.creditoUsoPromedioPct}% uso promedio</span>}
+                      sub={
+                        <span className="block space-y-1">
+                          <span>{kpis.creditoUsoPromedioPct}% uso promedio (tarjetas)</span>
+                          <span className="block text-[10px] font-normal leading-snug text-orbita-muted">
+                            Por tarjeta: movimientos + conciliación en la sección ledger arriba.
+                          </span>
+                        </span>
+                      }
                       icon={<CreditCard className="h-5 w-5" />}
                     />
                     <StatKpiCard
