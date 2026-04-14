@@ -1611,10 +1611,7 @@ export default function CuentasClient() {
       </div>
 
       {supabaseEnabled && (ledgerLoading || ledgerAccounts.length > 0 || ledgerError) ? (
-        <details
-          open
-          className={`group mt-3 rounded-[var(--radius-card)] border border-orbita-border/90 bg-orbita-surface shadow-[var(--shadow-card)] sm:mt-4 ${arcticPanel}`}
-        >
+        <details className={`group mt-3 sm:mt-4 ${arcticPanel}`}>
           <summary className="flex min-h-[44px] cursor-pointer list-none items-center gap-3 rounded-t-[var(--radius-card)] px-3 py-2.5 transition-colors hover:bg-[color-mix(in_srgb,var(--color-text-primary)_4%,transparent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--color-accent-finance)_45%,var(--color-border))] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)] sm:px-4 [&::-webkit-details-marker]:hidden">
             <ChevronDown
               className="h-4 w-4 shrink-0 text-orbita-secondary transition-transform duration-200 group-open:rotate-180"
@@ -1622,26 +1619,29 @@ export default function CuentasClient() {
             />
             <div className="min-w-0 flex-1 text-left">
               <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">
-                Conciliación manual (ledger)
+                Ledger manual
               </h2>
               <p className="mt-0.5 text-[10px] leading-snug text-orbita-secondary">
                 {ledgerAccounts.length > 0
-                  ? `${ledgerAccounts.length} cuenta${ledgerAccounts.length === 1 ? "" : "s"} · registra el saldo de tu extracto o app (sin conexión bancaria)`
-                  : "Lista desde importación · orden y conciliación cuando carguen cuentas"}
+                  ? `${ledgerAccounts.length} cuenta${ledgerAccounts.length === 1 ? "" : "s"} · saldo desde extracto o app (sin API)`
+                  : "Tras importar, abre y alinea saldos aquí"}
               </p>
             </div>
           </summary>
-          <div className="border-t border-orbita-border/80 px-3 pb-3 pt-1.5 sm:px-4 sm:pb-4">
-            <p className="text-[10px] leading-relaxed text-orbita-secondary">
-              <span className="block">
-                Filas desde importación (columna Cuenta). Por cuenta:{" "}
-                <strong className="text-orbita-primary">Registrar cifra (manual)</strong> — TC = disponible hoy; ahorro =
-                saldo. Los <strong className="text-orbita-primary">ajustes</strong> cuadran modelo vs extracto: si el monto
-                es alto, suele ser la diferencia acumulada respecto a movimientos importados;{" "}
-                <strong className="text-orbita-primary">no entran en KPI operativo ni en el mapa de categorías</strong> (evitan
-                doble conteo).
-              </span>
-            </p>
+          <div className="border-t border-orbita-border/80 px-3 pb-3 pt-2 sm:px-4 sm:pb-4">
+            <ol className="list-inside list-decimal space-y-1 text-[10px] leading-relaxed text-orbita-secondary marker:text-orbita-secondary">
+              <li>
+                Cuentas desde importación (columna <span className="font-medium text-orbita-primary">Cuenta</span>).
+              </li>
+              <li>
+                <span className="font-medium text-orbita-primary">TC</span>: disponible hoy ·{" "}
+                <span className="font-medium text-orbita-primary">Ahorro</span>: saldo en cuenta.
+              </li>
+              <li>
+                <span className="font-medium text-orbita-primary">Ajustes</span> cuadran modelo vs extracto; no entran en KPI
+                ni mapa de categorías.
+              </li>
+            </ol>
             {ledgerReorderMessage ? (
               <p
                 className="mt-2 rounded-lg border border-emerald-200/80 bg-emerald-50/90 px-3 py-2 text-xs font-medium text-emerald-900"
@@ -1658,8 +1658,7 @@ export default function CuentasClient() {
             ) : null}
             {!ledgerLoading && ledgerAccounts.length === 0 && !ledgerError ? (
               <p className="mt-3 text-sm text-orbita-secondary">
-                No hay filas en orbita_finance_accounts para este hogar (importa movimientos con columna Cuenta o crea
-                cuentas en BD).
+                Aún no hay cuentas ledger para este hogar. Importa movimientos con columna Cuenta o da de alta cuentas.
               </p>
             ) : null}
             {ledgerAccounts.length > 0 ? (
@@ -1703,15 +1702,15 @@ export default function CuentasClient() {
                         {a.account_class.replace(/_/g, " ")} · {a.nature.replace(/_/g, " ")}
                       </p>
                       <LedgerRowReconcileMeta a={a} />
-                      <div className="mt-2">
+                      <div className="mt-1.5">
                         <button
                           type="button"
                           onClick={() => void reconcileLedgerAccount(a)}
                           disabled={ledgerReconcileBusyId === a.id}
-                          title="Abre un cuadro para escribir el disponible (TC) o saldo (ahorro) que ves en tu app o extracto. No hay sincronización con el banco."
-                          className="min-h-[40px] rounded-full border border-[color-mix(in_srgb,var(--color-accent-finance)_38%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-finance)_11%,var(--color-surface))] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-orbita-primary shadow-sm transition hover:bg-[color-mix(in_srgb,var(--color-accent-finance)_16%,var(--color-surface))] disabled:cursor-not-allowed disabled:opacity-60"
+                          title="Escribe el disponible (TC) o el saldo (ahorro) que ves en tu app o extracto. Sin sincronización bancaria."
+                          className="inline-flex min-h-[32px] items-center rounded-lg border border-[color-mix(in_srgb,var(--color-accent-finance)_35%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-finance)_9%,var(--color-surface))] px-2.5 py-1 text-xs font-medium text-orbita-primary shadow-sm transition hover:bg-[color-mix(in_srgb,var(--color-accent-finance)_14%,var(--color-surface))] disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          {ledgerReconcileBusyId === a.id ? "Aplicando…" : "Registrar cifra (manual)"}
+                          {ledgerReconcileBusyId === a.id ? "Aplicando…" : "Registrar cifra"}
                         </button>
                       </div>
                     </div>

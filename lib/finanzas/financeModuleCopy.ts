@@ -17,7 +17,7 @@ export const FINANCE_PL_README_EXPANDED =
 
 /** Cabecera de la página Cuentas (no repetir el párrafo largo del callout). */
 export const FINANCE_CUENTAS_HEADER_SUBTITLE =
-  "Resumen arriba; en el desplegable inferior alineas extracto con el modelo (manual)."
+  "Resumen arriba; despliega «Ledger manual» para alinear saldos con tu extracto (sin API)."
 
 /** Perspectivas: mismo criterio de exclusión que KPI / categorías / P&L operativo. */
 export const FINANCE_INSIGHTS_STRAPLINE =
