@@ -468,6 +468,93 @@ export interface PlRuntimeFlowMonthPoint {
   readonly pctVariable?: number
 }
 
+/** KPIs del header hero (neto, MoM, YTD). */
+export interface PlRuntimeHeroData {
+  /** Flujo neto del mes (COP). */
+  readonly netCop: number
+  /** Delta vs mes calendario anterior (COP). */
+  readonly momDeltaCop: number
+  /** % sobre |neto mes anterior| cuando aplica; null si base ~0. */
+  readonly momDeltaPct: number | null
+  /** Acumulado año calendario hasta el mes seleccionado. */
+  readonly ytdNetCop: number
+}
+
+/** Brecha KPI ↔ mapa para el banner opcional. */
+export interface PlRuntimeInsightData {
+  readonly primaryCop: number
+  readonly secondaryCop: number
+  readonly visible: boolean
+}
+
+/** Segmento para donut / barras por capa semántica. */
+export interface PlRuntimeBreakdownSlice {
+  readonly impact: FinancialImpact
+  readonly label: string
+  readonly valueCop: number
+}
+
+/** Reparto fijo vs variable (gasto operativo). */
+export interface PlRuntimeFixedVariable {
+  readonly fijoCop: number
+  readonly variableCop: number
+}
+
+/** Proyección simplificada (opcional). */
+export interface PlRuntimeProjectionSlice {
+  readonly series: readonly { readonly label: string; readonly value: number }[]
+  readonly confidence: PlConfidenceLevel
+}
+
+/** Acción ya resuelta por servidor/reglas (mostrar en UI). */
+export interface PlRuntimeActionResolved {
+  readonly id: string
+  readonly title: string
+  readonly href: string
+}
+
+/**
+ * Payload que alimenta {@link PLStrategicCenter} junto a {@link PlStrategicCenterSpec}.
+ * Construir en cliente tras `GET /api/.../pl-strategic-center` o en loader.
+ */
+export interface PlStrategicCenterRuntimeData {
+  readonly meta: {
+    /** Mes activo `YYYY-MM`. */
+    readonly monthYm: string
+    /** Etiqueta legible (ej. «abril de 2026»). */
+    readonly monthLabel: string
+  }
+  readonly hero: PlRuntimeHeroData
+  /** Tarjetas de presión (máx. coherente con spec.pressuresSection.maxCards). */
+  readonly pressures: readonly PlRuntimePressureCardData[]
+  readonly insightBanner?: PlRuntimeInsightData
+  /** Serie ingresos / gasto / flujo (p. ej. últimos 6–12 meses). */
+  readonly incomeExpenseSeries: readonly PlRuntimeFlowMonthPoint[]
+  /** Gasto por financial_impact para donut. */
+  readonly breakdownByImpact: readonly PlRuntimeBreakdownSlice[]
+  readonly fixedVsVariable: PlRuntimeFixedVariable
+  /** Tendencia de flujo (línea minimal). */
+  readonly trendFlujo?: readonly { readonly label: string; readonly flujo: number }[]
+  readonly projection?: PlRuntimeProjectionSlice
+  /** Flujo de caja mes (si solo hay neto, basta un número). */
+  readonly cashMonthNetCop?: number
+  /** Acciones priorizadas (≤ spec.actions.maxItems). */
+  readonly actions: readonly PlRuntimeActionResolved[]
+}
+
+/** Callbacks opcionales para drill-down y telemetría. */
+export interface PlStrategicCenterCallbacks {
+  readonly onPressureCardClick?: (payload: { impact: FinancialImpact; card: PlRuntimePressureCardData }) => void
+  /** Clic en punto de la serie ingresos/gasto/flujo. */
+  readonly onIncomeExpenseChartClick?: (payload: { monthYm: string; point: PlRuntimeFlowMonthPoint }) => void
+  /** Alias genérico para instrumentación (opcional). */
+  readonly onChartClick?: (payload: { chartId: string; monthYm?: string }) => void
+  readonly onBreakdownSegmentClick?: (payload: { impact: FinancialImpact; slice: PlRuntimeBreakdownSlice }) => void
+  readonly onFixedVariableClick?: (payload: { expenseType: ExpenseType }) => void
+  readonly onActionClick?: (payload: { action: PlRuntimeActionResolved }) => void
+  readonly onTrendChartClick?: (payload: { label: string; flujo: number }) => void
+}
+
 // ─── Alias de nombres cortos (exports solicitados) ───────────────────────────
 
 export type HeaderSpec = PlHeaderSpec
