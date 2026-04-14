@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Bell, Loader2, Radio } from "lucide-react"
@@ -36,6 +36,39 @@ export function NotificationsBell() {
   const [pushBusy, setPushBusy] = useState(false)
   const [pushHint, setPushHint] = useState<string | null>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+
+  const positionPanel = useCallback(() => {
+    const anchor = wrapRef.current
+    const panel = panelRef.current
+    if (!anchor || !panel) return
+    const rect = anchor.getBoundingClientRect()
+    const margin = 10
+    const maxW = 380
+    const vw = window.innerWidth
+    const w = Math.min(maxW, vw - margin * 2)
+    let left = rect.right - w
+    left = Math.max(margin, Math.min(left, vw - w - margin))
+    const top = rect.bottom + 6
+    panel.style.position = "fixed"
+    panel.style.left = `${Math.round(left)}px`
+    panel.style.top = `${Math.round(top)}px`
+    panel.style.width = `${Math.round(w)}px`
+    panel.style.right = "auto"
+    panel.style.zIndex = "70"
+  }, [])
+
+  useLayoutEffect(() => {
+    if (!open) return
+    positionPanel()
+    const onReposition = () => positionPanel()
+    window.addEventListener("resize", onReposition)
+    window.addEventListener("scroll", onReposition, true)
+    return () => {
+      window.removeEventListener("resize", onReposition)
+      window.removeEventListener("scroll", onReposition, true)
+    }
+  }, [open, positionPanel])
 
   const vapidPublic = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim() ?? ""
 
@@ -209,7 +242,8 @@ export function NotificationsBell() {
 
       {open ? (
         <div
-          className="absolute right-0 top-[48px] z-[60] flex w-[min(100vw-2rem,380px)] flex-col overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-card sm:top-[44px]"
+          ref={panelRef}
+          className="flex max-h-[min(520px,calc(100vh-5rem))] flex-col overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-card"
         >
           <div className="flex items-center justify-between gap-2 border-b border-[color-mix(in_srgb,var(--color-border)_80%,transparent)] px-3 py-2">
             <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
@@ -226,7 +260,7 @@ export function NotificationsBell() {
             ) : null}
           </div>
 
-          <div className="max-h-[min(420px,70vh)] overflow-y-auto px-1 py-1">
+          <div className="min-h-0 flex-1 overflow-y-auto px-1 py-1">
             {loading && items.length === 0 ? (
               <div className="flex items-center justify-center gap-2 py-8 text-sm text-[var(--color-text-secondary)]">
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
