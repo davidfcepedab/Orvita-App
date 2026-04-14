@@ -19,6 +19,7 @@ import {
 import { Card } from "@/src/components/ui/Card"
 import { useFinance } from "../FinanceContext"
 import { FinanceViewHeader } from "../_components/FinanceViewHeader"
+import { FINANCE_CUENTAS_HEADER_SUBTITLE } from "@/lib/finanzas/financeModuleCopy"
 import { financeViewRootClass } from "../_components/financeChrome"
 import { useLedgerAccounts, type LedgerAccountRow } from "../useLedgerAccounts"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
@@ -634,26 +635,6 @@ function ReadonlyField({ value }: { value: ReactNode }) {
   return (
     <div className="mt-1 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt px-3 py-2 text-sm font-medium text-orbita-primary">
       {value}
-    </div>
-  )
-}
-
-/** Dónde acercar el modelo a la realidad bancaria (único flujo manual de cifra “real”). */
-function CuentasReconcileCallout() {
-  return (
-    <div className="rounded-xl border border-[color-mix(in_srgb,var(--color-accent-finance)_34%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-finance)_9%,var(--color-surface))] p-3 shadow-sm sm:p-4">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">Disponible / saldo real</p>
-      <p className="mt-1.5 text-xs leading-relaxed text-orbita-primary">
-        Aquí no se editan montos a mano en cada tarjeta grande: introduces tú la cifra (extracto o app del banco) con{" "}
-        <span className="font-semibold text-[color-mix(in_srgb,var(--color-accent-finance)_75%,var(--color-text-primary))]">
-          Registrar cifra (manual)
-        </span>{" "}
-        en el listado de <span className="font-medium">cuentas ledger</span> (sección siguiente). No hay conexión automática
-        con entidades financieras.{" "}
-        <strong>Tarjeta:</strong> disponible para compras hoy. <strong>Ahorro:</strong> saldo de la cuenta.{" "}
-        <strong>Crédito estructural:</strong> saldo pendiente. Cada conciliación deja un ancla en la fecha; los movimientos posteriores se suman encima hasta que la desviación
-        sea 0. Es un flujo continuo: el saldo/cupo que cierra un día es la referencia del siguiente (mismo criterio mes a mes). Los ajustes alinean el modelo con la cifra que registraste; no se usan en KPI, categorías ni P&L operativo por movimientos (evitan doble conteo con el modelo).
-      </p>
     </div>
   )
 }
@@ -1587,7 +1568,7 @@ export default function CuentasClient() {
             <FinanceViewHeader
               kicker="Balance"
               title="Cuentas y exposición"
-              subtitle="Modelo desde movimientos y catálogo; la cifra real la introduces tú a mano en el listado ledger (sin API bancaria)."
+              subtitle={FINANCE_CUENTAS_HEADER_SUBTITLE}
               action={
                 <button
                   type="button"
@@ -1629,26 +1610,19 @@ export default function CuentasClient() {
         {notice ? <p className="mt-2 text-xs text-orbita-secondary">{notice}</p> : null}
       </div>
 
-      {supabaseEnabled ? (
-        <div className="mt-3 sm:mt-4">
-          <CuentasReconcileCallout />
-        </div>
-      ) : null}
-
       {supabaseEnabled && (ledgerLoading || ledgerAccounts.length > 0 || ledgerError) ? (
         <details
-          open
-          className={`group mt-4 rounded-[var(--radius-card)] border border-orbita-border/90 bg-orbita-surface shadow-[var(--shadow-card)] ${arcticPanel}`}
+          className={`group mt-3 rounded-[var(--radius-card)] border border-orbita-border/90 bg-orbita-surface shadow-[var(--shadow-card)] sm:mt-4 ${arcticPanel}`}
         >
           <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 sm:px-4 sm:py-2 [&::-webkit-details-marker]:hidden">
             <div className="min-w-0 text-left">
               <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">
-                Cuentas ledger — disponible / saldo real (entrada manual)
+                Ledger — alinear disponible / saldo (manual)
               </h2>
               <p className="mt-0.5 text-[10px] leading-tight text-orbita-secondary">
                 {ledgerAccounts.length > 0
-                  ? `${ledgerAccounts.length} cuenta${ledgerAccounts.length === 1 ? "" : "s"} · sin conexión al banco: tú escribes la cifra`
-                  : "Supabase · orden y conciliación"}
+                  ? `${ledgerAccounts.length} cuenta${ledgerAccounts.length === 1 ? "" : "s"} · abre para registrar cifra (sin API bancaria)`
+                  : "Cuentas orbita_finance_accounts · orden y conciliación"}
               </p>
             </div>
             <ChevronDown
@@ -1657,11 +1631,15 @@ export default function CuentasClient() {
             />
           </summary>
           <div className="border-t border-orbita-border/80 px-3 pb-3 pt-1.5 sm:px-4 sm:pb-4">
-            <p className="text-[10px] leading-snug text-orbita-secondary">
-              Filas de <code className="rounded bg-orbita-surface-alt px-1 text-[9px]">orbita_finance_accounts</code> al
-              importar Movimientos (columna Cuenta). Arrastra ⋮⋮ para orden. Las tarjetas de arriba son vista resumen; aquí
-              defines la <strong className="text-orbita-primary">cifra real</strong> con el botón de abajo (TC = disponible
-              hoy, ahorro = saldo), todo a mano.
+            <p className="text-[10px] leading-relaxed text-orbita-secondary">
+              <span className="block">
+                Filas desde importación (columna Cuenta). Por cuenta:{" "}
+                <strong className="text-orbita-primary">Registrar cifra (manual)</strong> — TC = disponible hoy; ahorro =
+                saldo. Los <strong className="text-orbita-primary">ajustes</strong> cuadran modelo vs extracto: si el monto
+                es alto, suele ser la diferencia acumulada respecto a movimientos importados;{" "}
+                <strong className="text-orbita-primary">no entran en KPI operativo ni en el mapa de categorías</strong> (evitan
+                doble conteo).
+              </span>
             </p>
             {ledgerReorderMessage ? (
               <p

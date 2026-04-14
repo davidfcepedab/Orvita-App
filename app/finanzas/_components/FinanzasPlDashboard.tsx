@@ -302,12 +302,12 @@ export function FinanzasPlDashboard() {
             <span className="text-orbita-muted">cierre mes previo = arranque en flujo del mes abierto</span>
           </p>
           <p className="mt-1 max-w-xl text-xs leading-relaxed text-orbita-secondary sm:text-sm">
-            El P&amp;L es <strong className="text-orbita-primary">un solo hilo en el tiempo</strong>: cómo quedó el mes
-            pasado es el estado de partida del mes que ves; encima se apilan ingresos y gastos del periodo (caja → operativo
-            → cierre). El detalle de{" "}
-            <strong className="text-orbita-primary">Cuentas</strong>{" "}
-            <Link href="/finanzas/cuentas" className="font-semibold text-[color-mix(in_srgb,var(--color-accent-finance)_80%,var(--color-text-primary))] underline-offset-2 hover:underline">
-              está en su pestaña
+            Arrastre del mes previo + ingresos y gastos del mes (sin ajustes de conciliación en capas operativas).{" "}
+            <Link
+              href="/finanzas/cuentas"
+              className="font-semibold text-[color-mix(in_srgb,var(--color-accent-finance)_80%,var(--color-text-primary))] underline-offset-2 hover:underline"
+            >
+              Saldos ledger
             </Link>
             .
           </p>

@@ -5,6 +5,7 @@ import { useFinance } from "../FinanceContext"
 import { FinanceViewHeader } from "../_components/FinanceViewHeader"
 import { financeViewRootClass } from "../_components/financeChrome"
 import { Card } from "@/src/components/ui/Card"
+import { FINANCE_INSIGHTS_STRAPLINE } from "@/lib/finanzas/financeModuleCopy"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { financeApiGet } from "@/lib/finanzas/financeClientFetch"
 
@@ -162,7 +163,7 @@ export default function FinanzasInsights() {
       <FinanceViewHeader
         kicker="Perspectivas"
         title="Lectura de tu flujo"
-        subtitle="Índices calculados con los movimientos reales del hogar (ventana de varios meses hasta el mes activo)."
+        subtitle={FINANCE_INSIGHTS_STRAPLINE}
         action={
           <div className="flex flex-wrap items-center justify-end gap-2">
             {source === "mock" ? (
@@ -181,11 +182,10 @@ export default function FinanzasInsights() {
 
       <Card className="border border-orbita-border/80 bg-[color-mix(in_srgb,var(--color-accent-finance)_6%,var(--color-surface))] p-3 sm:p-4">
         <p className="m-0 text-sm leading-relaxed text-orbita-primary">
-          <span className="font-semibold">Datos reales.</span> El motor toma el flujo neto mes a mes (ingresos − gastos
-          operativos) en los últimos{" "}
-          <span className="tabular-nums font-semibold">{meta?.months ?? 6}</span> meses y lo ancla al cierre{" "}
-          <span className="font-semibold">{formatYmLongEs(meta?.throughMonth ?? month)}</span>. El score y la
-          estabilidad suben si ahorras más respecto a ingresos y si el flujo no salta demasiado mes a mes.
+          Ventana de{" "}
+          <span className="tabular-nums font-semibold">{meta?.months ?? 6}</span> meses hasta{" "}
+          <span className="font-semibold">{formatYmLongEs(meta?.throughMonth ?? month)}</span>. Score y estabilidad
+          recompensan ahorro vs ingresos y baja volatilidad del flujo neto.
         </p>
       </Card>
 

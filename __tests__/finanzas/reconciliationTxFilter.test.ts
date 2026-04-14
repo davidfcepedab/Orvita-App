@@ -24,18 +24,28 @@ describe("reconciliationTxFilter", () => {
       isReconciliationAdjustmentTransaction({
         description: "[reconciliation_adjustment|manual_sync|origin:user] x",
         subcategory: "x",
+        category: "Ajustes",
       }),
     ).toBe(true)
     expect(
       isReconciliationAdjustmentTransaction({
         description: "Normal",
         subcategory: "manual_sync",
+        category: "Ajustes",
       }),
     ).toBe(true)
     expect(
       isReconciliationAdjustmentTransaction({
+        description: "Normal",
+        subcategory: "manual_sync",
+        category: "Comida",
+      }),
+    ).toBe(false)
+    expect(
+      isReconciliationAdjustmentTransaction({
         description: "Compra",
         subcategory: "General",
+        category: "Vida",
       }),
     ).toBe(false)
   })
@@ -45,7 +55,7 @@ describe("reconciliationTxFilter", () => {
       date: "2026-03-10",
       amount: 500_000,
       type: "expense",
-      description: "[reconciliation_adjustment|manual_sync|origin:user] TC · Δ -500000",
+      description: "[reconciliation_adjustment|manual_sync|origin:manualFinancialOverride|accountId:x] TC · Δ",
       subcategory: "manual_sync",
       category: "Ajustes",
     })
