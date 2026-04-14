@@ -44,6 +44,11 @@ export default function proxy(req: NextRequest) {
     return NextResponse.next()
   }
 
+  /** Resolución de enlaces `orvita://` vía web (`/open?p=…`). Sin sesión: igual entra; la ruta destino aplica auth. */
+  if (pathname.startsWith("/open")) {
+    return NextResponse.next()
+  }
+
   if (pathname === "/") {
     // Inicio (/) es el centro de control. Si no hay sesión, manda a Auth.
     if (!authed) {

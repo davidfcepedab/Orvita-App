@@ -11,6 +11,12 @@
   "background_color": "#f2f2f7",
   "theme_color": "#0d9488",
   "categories": ["productivity", "lifestyle"],
+  "protocol_handlers": [
+    {
+      "protocol": "web+orvita",
+      "url": "/open?p=%s"
+    }
+  ],
   "icons": [
     {
       "src": "/icon",
