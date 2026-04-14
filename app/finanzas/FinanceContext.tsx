@@ -11,8 +11,8 @@ export interface FinanceContextType {
   month: string
   setMonth: (month: string) => void
   /**
-   * Contador opcional para que vistas de Capital invaliden datos tras reconciliar u otras acciones.
-   * Ej.: `touchCapitalData()` tras guardar en `orbita_finance_accounts`.
+   * Contador para invalidar KPIs, Cuentas (GET accounts), ledger-accounts y meta al cambiar datos de capital.
+   * Llamar tras importar movimientos, conciliación, u otras escrituras que afecten saldos o el mes.
    */
   capitalDataEpoch: number
   touchCapitalData: () => void

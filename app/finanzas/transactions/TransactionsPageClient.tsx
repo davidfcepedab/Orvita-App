@@ -115,6 +115,7 @@ export default function TransactionsPageClient() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const finance = useFinance()
+  const touchCapitalData = finance?.touchCapitalData
 
   const [data, setData] = useState<TransactionsData | null>(null)
   const [txRows, setTxRows] = useState<Transaction[]>([])
@@ -334,6 +335,7 @@ export default function TransactionsPageClient() {
         if (!res.ok || !json.success) {
           throw new Error(messageForHttpError(res.status, json.error, res.statusText))
         }
+        touchCapitalData?.()
         fetchTransactionsSilent()
       } catch (e) {
         setPatchErr(e instanceof Error ? e.message : "No se pudo eliminar")
@@ -342,7 +344,7 @@ export default function TransactionsPageClient() {
         setDeletingId(null)
       }
     },
-    [fetchTransactionsSilent, supabaseEnabled],
+    [fetchTransactionsSilent, supabaseEnabled, touchCapitalData],
   )
 
   const bulkDeleteReconciliation = useCallback(async () => {
@@ -379,6 +381,7 @@ export default function TransactionsPageClient() {
         )
       }
       setSelectedIds(new Set())
+      touchCapitalData?.()
       fetchTransactionsSilent()
     } catch (e) {
       setPatchErr(e instanceof Error ? e.message : "No se pudo eliminar la selección")
@@ -386,7 +389,7 @@ export default function TransactionsPageClient() {
     } finally {
       setBulkDeleting(false)
     }
-  }, [fetchTransactionsSilent, selectedIds, supabaseEnabled])
+  }, [fetchTransactionsSilent, selectedIds, supabaseEnabled, touchCapitalData])
 
   const setFinanceAccountId = (id: string) => {
     const p = new URLSearchParams(searchParams.toString())
@@ -482,6 +485,7 @@ export default function TransactionsPageClient() {
           message: msg,
           omittedLines: pe.length > 0 ? pe : undefined,
         })
+        touchCapitalData?.()
         await loadTransactions({ showLoading: false })
       } catch (e) {
         setPatchErr(e instanceof Error ? e.message : "Error al importar")
@@ -489,7 +493,7 @@ export default function TransactionsPageClient() {
         setImportingCsv(false)
       }
     },
-    [loadTransactions, supabaseEnabled],
+    [loadTransactions, supabaseEnabled, touchCapitalData],
   )
 
   const transactions = data != null ? txRows : []
