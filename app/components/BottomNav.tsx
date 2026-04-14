@@ -8,6 +8,10 @@ export default function BottomNav() {
   const pathname = usePathname()
   const router = useRouter()
 
+  if (pathname.startsWith("/auth")) {
+    return null
+  }
+
   const tabs = [
     { name: "Inicio", route: "/", icon: Home, accent: "var(--color-text-primary)" },
     { name: "Salud", route: "/health", icon: HeartPulse, accent: "var(--accent-health-strong)" },

@@ -125,6 +125,9 @@ export function AppShell({
     }
   }, [pathname])
 
+  /** Pantalla de acceso: solo el formulario; sin barra superior ni tabs horizontales. */
+  const isAuthRoute = pathname.startsWith("/auth")
+
   const cycleTheme = () => {
     const order = ["arctic", "carbon", "sand", "midnight"] as const
     const currentIndex = order.indexOf(theme)
@@ -177,7 +180,13 @@ export function AppShell({
   )
 
   return (
-    <div style={{ background: "var(--color-background)", minHeight: "100vh" }}>
+    <div
+      style={{
+        minHeight: "100vh",
+        background: isAuthRoute ? "transparent" : "var(--color-background)",
+      }}
+    >
+      {!isAuthRoute ? (
       <header
         className="orbita-chrome-surface border-b border-[color-mix(in_srgb,var(--color-border)_85%,transparent)]"
         style={{
@@ -315,7 +324,9 @@ export function AppShell({
           </div>
         </div>
       </header>
+      ) : null}
 
+      {!isAuthRoute ? (
       <nav
         className="orbita-chrome-surface border-b border-[color-mix(in_srgb,var(--color-border)_85%,transparent)]"
         style={{ overflowX: "auto" }}
@@ -350,9 +361,15 @@ export function AppShell({
           </div>
         </div>
       </nav>
+      ) : null}
 
       <div
-        className="orbita-shell-inline mx-auto grid min-w-0 max-w-[1400px] gap-[var(--layout-gap)] pb-10 pt-5 sm:pt-7"
+        className={clsx(
+          "mx-auto grid min-w-0 gap-[var(--layout-gap)]",
+          isAuthRoute
+            ? "max-w-none w-full px-0 pb-0 pt-0"
+            : "orbita-shell-inline max-w-[1400px] pb-10 pt-5 sm:pt-7",
+        )}
         style={{
           gridTemplateColumns: showSidebar ? "280px minmax(0, 1fr)" : "minmax(0, 1fr)",
         }}
@@ -407,7 +424,10 @@ export function AppShell({
             )}
           </aside>
         )}
-        <main className="min-w-0" style={{ display: "grid", gap: "var(--layout-gap)" }}>
+        <main
+          className={clsx("min-w-0", isAuthRoute && "w-full")}
+          style={{ display: "grid", gap: isAuthRoute ? 0 : "var(--layout-gap)" }}
+        >
           {children}
         </main>
       </div>

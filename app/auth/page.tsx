@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { createBrowserClient } from "@/lib/supabase/browser"
+import { AuthScenicBackdrop } from "@/app/auth/_components/AuthScenicBackdrop"
 
 type Mode = "login" | "register"
 
@@ -284,10 +285,12 @@ export default function AuthPage() {
     "min-h-[44px] w-full touch-manipulation rounded-[var(--radius-button)] px-4 py-3 text-base font-semibold text-[var(--color-background)] bg-[var(--color-text-primary)] shadow-sm transition-[transform,opacity,box-shadow] duration-200 hover:shadow-md active:scale-[0.99] motion-reduce:transform-none disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none disabled:hover:shadow-none"
 
   return (
-    <main
-      className="mx-auto flex min-h-[100dvh] min-h-[-webkit-fill-available] w-full max-w-[26rem] flex-col justify-center gap-8 pl-[max(1.25rem,env(safe-area-inset-left,0px))] pr-[max(1.25rem,env(safe-area-inset-right,0px))] pb-[max(2rem,env(safe-area-inset-bottom,0px))] pt-[max(1.25rem,env(safe-area-inset-top,0px))] sm:pl-6 sm:pr-6 sm:pb-12 sm:pt-8"
-      id="auth-main"
-    >
+    <div className="relative isolate flex min-h-[100dvh] min-h-[-webkit-fill-available] w-full flex-col">
+      <AuthScenicBackdrop />
+      <main
+        className="relative z-10 mx-auto flex w-full max-w-[26rem] flex-1 flex-col justify-center gap-8 pl-[max(1.25rem,env(safe-area-inset-left,0px))] pr-[max(1.25rem,env(safe-area-inset-right,0px))] pb-[max(2rem,env(safe-area-inset-bottom,0px))] pt-[max(1.25rem,env(safe-area-inset-top,0px))] sm:pl-6 sm:pr-6 sm:pb-12 sm:pt-8"
+        id="auth-main"
+      >
       <div
         className="flex flex-col gap-7 rounded-[var(--radius-card)] border border-orbita-border/80 bg-orbita-surface/95 p-6 shadow-card ring-1 ring-orbita-border/25 backdrop-blur-[2px] sm:p-7"
         aria-busy={loading}
@@ -466,6 +469,7 @@ export default function AuthPage() {
         </div>
       )}
       </div>
-    </main>
+      </main>
+    </div>
   )
 }
