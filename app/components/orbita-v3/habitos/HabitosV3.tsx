@@ -1,13 +1,12 @@
 "use client"
 
-import { useApp, themes } from "@/app/contexts/AppContext"
+import { useOrbitaSkin } from "@/app/contexts/AppContext"
 import { Activity, CheckCircle2, Circle, Flame, Plus, Target, TrendingDown } from "lucide-react"
 import { useOperationalContext } from "@/app/hooks/useOperationalContext"
 import type { OperationalHabit } from "@/lib/operational/types"
 
 export default function HabitosV3() {
-  const { colorTheme } = useApp()
-  const theme = themes[colorTheme]
+  const theme = useOrbitaSkin()
   const { data } = useOperationalContext()
 
   return (

@@ -2,12 +2,11 @@
 
 import { useMemo, useState } from "react"
 import { useAgendaTasks } from "@/app/hooks/useAgendaTasks"
-import { useApp, themes } from "@/app/contexts/AppContext"
+import { useOrbitaSkin } from "@/app/contexts/AppContext"
 import { CheckCircle2, Circle } from "lucide-react"
 
 export default function AgendaSharedOption2() {
-  const { colorTheme } = useApp()
-  const theme = themes[colorTheme]
+  const theme = useOrbitaSkin()
   const { tasks, loading, error, updateTask } = useAgendaTasks()
   const [activeTab, setActiveTab] = useState<"all" | "received" | "assigned" | "personal">("all")
   const [query, setQuery] = useState("")

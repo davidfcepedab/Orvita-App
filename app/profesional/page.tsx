@@ -5,12 +5,12 @@ import { AppShell } from "@/src/components/layout/AppShell"
 import { Card } from "@/src/components/ui/Card"
 import { SectionHeader } from "@/src/components/ui/SectionHeader"
 import { useOperationalContext } from "@/app/hooks/useOperationalContext"
-import { useLayoutMode } from "@/src/theme/ThemeProvider"
+import { useApp } from "@/app/contexts/AppContext"
 import { designTokens } from "@/src/theme/design-tokens"
 
 export default function Profesional() {
   const { data, loading, error } = useOperationalContext()
-  const { layoutMode } = useLayoutMode()
+  const { layoutMode } = useApp()
 
   if (loading) {
     return <div style={{ padding: "var(--spacing-lg)", textAlign: "center", color: "var(--color-text-secondary)" }}>Cargando coach...</div>

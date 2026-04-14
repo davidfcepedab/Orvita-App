@@ -2,13 +2,12 @@
 
 import { useState } from "react"
 import { useAgendaTasks } from "@/app/hooks/useAgendaTasks"
-import { useApp, themes } from "@/app/contexts/AppContext"
+import { useOrbitaSkin } from "@/app/contexts/AppContext"
 import AgendaSharedOption1 from "./AgendaSharedOption1"
 import AgendaSharedOption2 from "./AgendaSharedOption2"
 
 export default function AgendaSharedComparison() {
-  const { colorTheme } = useApp()
-  const theme = themes[colorTheme]
+  const theme = useOrbitaSkin()
   const { createTask } = useAgendaTasks()
   const [selectedOption, setSelectedOption] = useState<1 | 2>(1)
   const [newTask, setNewTask] = useState("")

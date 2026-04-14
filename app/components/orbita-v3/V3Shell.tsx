@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useApp, themes } from "@/app/contexts/AppContext"
+import { useApp, useOrbitaSkin } from "@/app/contexts/AppContext"
 import {
   Activity,
   Calendar,
@@ -19,16 +19,13 @@ import {
 export default function V3Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const { colorTheme, setColorTheme } = useApp()
-  const theme = themes[colorTheme]
+  const theme = useOrbitaSkin()
 
   const cycleTheme = () => {
-    const nextTheme =
-      colorTheme === "arctic"
-        ? "carbon"
-        : colorTheme === "carbon"
-        ? "sand"
-        : "arctic"
-    setColorTheme(nextTheme)
+    const order = ["arctic", "carbon", "sand", "midnight"] as const
+    const base = colorTheme === "custom" ? "arctic" : colorTheme
+    const idx = order.indexOf(base as (typeof order)[number])
+    setColorTheme(order[(idx < 0 ? 0 : idx + 1) % order.length])
   }
 
   const navItems = [

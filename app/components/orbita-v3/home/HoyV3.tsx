@@ -1,15 +1,14 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { useApp, themes } from "@/app/contexts/AppContext"
+import { useOrbitaSkin } from "@/app/contexts/AppContext"
 import { Calendar, CheckCircle2, Circle, Clock, Flame } from "lucide-react"
 import { getAgendaDisplayTimeZone } from "@/lib/agenda/agendaTimeZone"
 import { useOperationalContext } from "@/app/hooks/useOperationalContext"
 import type { OperationalTask } from "@/lib/operational/types"
 
 export default function HoyV3() {
-  const { colorTheme } = useApp()
-  const theme = themes[colorTheme]
+  const theme = useOrbitaSkin()
   const [completed, setCompleted] = useState<string[]>([])
   const { data } = useOperationalContext()
 

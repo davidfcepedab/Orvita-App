@@ -132,6 +132,30 @@
   --agenda-reminder: #fbbf24;
 }
 
+/* Tema personalizado: base Arctic hasta que el cliente aplique variables inline */
+[data-theme="custom"] {
+  --agenda-shell-bg: color-mix(in srgb, var(--color-surface-alt) 68%, var(--color-background));
+  --agenda-inset-bg: color-mix(in srgb, var(--color-surface-alt) 52%, var(--color-background));
+  --agenda-elevated-bg: color-mix(in srgb, var(--color-surface) 58%, var(--color-surface-alt));
+  --color-background: #f2f2f7;
+  --color-surface: #ffffff;
+  --color-surface-alt: #e9eef5;
+  --color-border: #d1d5db;
+  --color-text-primary: #1c1c1e;
+  --color-text-secondary: #636366;
+  --color-accent-primary: #0d9488;
+  --color-accent-health: #0f9f7a;
+  --color-accent-finance: #0ea5e9;
+  --color-accent-agenda: #6366f1;
+  --color-accent-warning: #f97316;
+  --color-accent-danger: #ef4444;
+  --agenda-personal: #0ea5e9;
+  --agenda-received: #ea580c;
+  --agenda-assigned: #059669;
+  --agenda-calendar: #7c3aed;
+  --agenda-reminder: #d97706;
+}
+
 [data-layout="compact"] {
   --layout-padding: var(--spacing-sm);
   --layout-gap: var(--spacing-sm);

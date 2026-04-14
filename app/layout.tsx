@@ -2,7 +2,6 @@ import "./globals.css"
 import type { Metadata, Viewport } from "next"
 import Script from "next/script"
 import Providers from "@/app/providers"
-import { ThemeProvider } from "@/src/theme/ThemeProvider"
 import { AppShell } from "@/src/components/layout/AppShell"
 import BottomNav from "@/app/components/BottomNav"
 import { ScrollAreaWithBottomInset } from "@/app/components/ScrollAreaWithBottomInset"
@@ -34,7 +33,7 @@ export const metadata: Metadata = {
 
 /**
  * Escalado en móvil + safe areas (viewport-fit=cover).
- * theme-color Arctic; ThemeProvider actualiza el meta al cambiar tema (Safari / “Añadir a pantalla de inicio”).
+ * theme-color por defecto Arctic; `AppProvider` actualiza meta theme-color al cambiar tema (Safari / PWA).
  */
 export const viewport: Viewport = {
   width: "device-width",
@@ -59,15 +58,13 @@ export default function RootLayout({
             strategy="afterInteractive"
           />
         ) : null}
-        <ThemeProvider>
-          <Providers>
-            <AppShell showSidebar={false}>
-              {/* ← V3 RECONSTRUIDO: fiel a captura + navegación preservada */}
-              <ScrollAreaWithBottomInset>{children}</ScrollAreaWithBottomInset>
-            </AppShell>
-            <BottomNav />
-          </Providers>
-        </ThemeProvider>
+        <Providers>
+          <AppShell showSidebar={false}>
+            {/* ← V3 RECONSTRUIDO: fiel a captura + navegación preservada */}
+            <ScrollAreaWithBottomInset>{children}</ScrollAreaWithBottomInset>
+          </AppShell>
+          <BottomNav />
+        </Providers>
       </body>
     </html>
   )

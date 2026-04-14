@@ -2,7 +2,7 @@
 
 import { useMemo } from "react"
 import { useAgendaTasks, type AgendaTask } from "@/app/hooks/useAgendaTasks"
-import { useApp, themes } from "@/app/contexts/AppContext"
+import { useOrbitaSkin } from "@/app/contexts/AppContext"
 import { CheckCircle2, Circle, UserPlus } from "lucide-react"
 
 const assigneeOptions = [
@@ -61,8 +61,7 @@ function TaskCard({
 }
 
 export default function AgendaSharedOption1() {
-  const { colorTheme } = useApp()
-  const theme = themes[colorTheme]
+  const theme = useOrbitaSkin()
   const { tasks, loading, error, updateTask } = useAgendaTasks()
 
   const myTasks = useMemo(() => tasks.filter((task) => task.type === "received"), [tasks])

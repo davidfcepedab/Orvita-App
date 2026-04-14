@@ -1,14 +1,13 @@
 "use client"
 
 import { useState } from "react"
-import { useApp, themes } from "@/app/contexts/AppContext"
+import { useOrbitaSkin } from "@/app/contexts/AppContext"
 import { Calendar, ChevronRight, KanbanSquare, LayoutList, Plus } from "lucide-react"
 import { useOperationalContext } from "@/app/hooks/useOperationalContext"
 import type { OperationalTask } from "@/lib/operational/types"
 
 export default function AgendaV3() {
-  const { colorTheme } = useApp()
-  const theme = themes[colorTheme]
+  const theme = useOrbitaSkin()
   const [tab, setTab] = useState("Hoy")
   const [view, setView] = useState<"list" | "kanban">("list")
   const { data } = useOperationalContext()

@@ -1,14 +1,13 @@
 "use client"
 
 import { useState } from "react"
-import { useApp, themes } from "@/app/contexts/AppContext"
+import { useOrbitaSkin } from "@/app/contexts/AppContext"
 import { Activity, AlertCircle, CheckCircle2, Wind } from "lucide-react"
 import { useOperationalContext } from "@/app/hooks/useOperationalContext"
 import type { OperationalHabit } from "@/lib/operational/types"
 
 export default function HomeV3() {
-  const { colorTheme } = useApp()
-  const theme = themes[colorTheme]
+  const theme = useOrbitaSkin()
   const [note, setNote] = useState("")
   const [period, setPeriod] = useState<"Dia" | "Semana" | "Mes">("Dia")
   const { data } = useOperationalContext()

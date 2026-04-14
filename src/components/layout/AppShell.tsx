@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import clsx from "clsx"
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { useTheme } from "@/src/theme/ThemeProvider"
+import { useApp } from "@/app/contexts/AppContext"
 import { designTokens } from "@/src/theme/design-tokens"
 import { Button } from "@/src/components/ui/Button"
 import { getAgendaDisplayTimeZone } from "@/lib/agenda/agendaTimeZone"
@@ -47,7 +47,7 @@ export function AppShell({
   sidebar,
 }: AppShellProps) {
   const pathname = usePathname()
-  const { theme, setTheme } = useTheme()
+  const { colorTheme, setColorTheme } = useApp()
   const [open, setOpen] = useState(false)
   const [userName, setUserName] = useState<string | null>(null)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
@@ -182,9 +182,10 @@ export function AppShell({
 
   const cycleTheme = () => {
     const order = ["arctic", "carbon", "sand", "midnight"] as const
-    const currentIndex = order.indexOf(theme)
-    const next = order[(currentIndex + 1) % order.length]
-    setTheme(next)
+    const base = colorTheme === "custom" ? "arctic" : colorTheme
+    const currentIndex = order.indexOf(base as (typeof order)[number])
+    const next = order[(currentIndex < 0 ? 0 : currentIndex + 1) % order.length]
+    setColorTheme(next)
   }
 
   const handleLogout = async () => {

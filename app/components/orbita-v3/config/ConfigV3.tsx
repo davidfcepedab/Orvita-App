@@ -1,8 +1,14 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { type ColorTheme, type LayoutMode, useApp, themes } from "@/app/contexts/AppContext"
+import {
+  type ColorTheme,
+  type LayoutMode,
+  useApp,
+  useOrbitaSkin,
+  themes,
+} from "@/app/contexts/AppContext"
 import { OrbitaImageCropDialog } from "@/app/components/OrbitaImageCropDialog"
 import { ConfigHouseholdSection } from "@/app/components/orbita-v3/config/ConfigHouseholdSection"
 import { ConfigIntegrationsPanel } from "@/app/components/orbita-v3/config/ConfigIntegrationsPanel"
@@ -11,13 +17,14 @@ import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { createBrowserClient } from "@/lib/supabase/browser"
 import Link from "next/link"
 import { ChevronRight, Monitor, Palette, Sliders, Sparkles } from "lucide-react"
+import { defaultCustomPalette, normalizeHex, type CustomPalette } from "@/lib/theme/customPalette"
 import type { HouseholdMemberDTO } from "@/lib/household/memberTypes"
 
 const HEVY_LAST_SYNC_STORAGE_KEY = "orvita:config:hevyLastSyncIso"
 
 export default function ConfigV3() {
-  const { colorTheme, setColorTheme, layoutMode, setLayoutMode } = useApp()
-  const theme = themes[colorTheme]
+  const { colorTheme, setColorTheme, layoutMode, setLayoutMode, customPalette, setCustomPalette } = useApp()
+  const theme = useOrbitaSkin()
   const [intensity, setIntensity] = useState(50)
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -41,6 +48,11 @@ export default function ConfigV3() {
   const [familyPhotoError, setFamilyPhotoError] = useState<string | null>(null)
   const [familyCropOpen, setFamilyCropOpen] = useState(false)
   const [familyCropFile, setFamilyCropFile] = useState<File | null>(null)
+  const [paletteDraft, setPaletteDraft] = useState<CustomPalette>(() => defaultCustomPalette())
+
+  useEffect(() => {
+    setPaletteDraft(customPalette)
+  }, [customPalette])
   const [hevyConnected, setHevyConnected] = useState(false)
   const [hevyChecking, setHevyChecking] = useState(true)
   const [hevySyncing, setHevySyncing] = useState(false)
@@ -411,45 +423,72 @@ export default function ConfigV3() {
     }
   }
 
-  const themeOptions: { id: ColorTheme; label: string; colors: string[] }[] = [
-    {
-      id: "arctic",
-      label: "Arctic (Claro)",
-      colors: [
-        designTokens.colors.arctic.background,
-        designTokens.colors.arctic["accent-health"],
-        designTokens.colors.arctic["accent-finance"],
-      ],
-    },
-    {
-      id: "carbon",
-      label: "Carbon (Oscuro)",
-      colors: [
-        designTokens.colors.carbon.background,
-        designTokens.colors.carbon["accent-health"],
-        designTokens.colors.carbon["accent-finance"],
-      ],
-    },
-    {
-      id: "sand",
-      label: "Sand (Cálido)",
-      colors: [
-        designTokens.colors.sand.background,
-        designTokens.colors.sand["accent-health"],
-        designTokens.colors.sand["accent-finance"],
-      ],
-    },
-    {
-      id: "midnight",
-      label: "Midnight (Profundo)",
-      colors: [themes.midnight.bg, themes.midnight.accent.health, themes.midnight.accent.finance],
-    },
-  ]
+  const themeOptions = useMemo(
+    (): { id: ColorTheme; label: string; colors: string[] }[] => [
+      {
+        id: "arctic",
+        label: "Arctic (Claro)",
+        colors: [
+          designTokens.colors.arctic.background,
+          designTokens.colors.arctic["accent-health"],
+          designTokens.colors.arctic["accent-finance"],
+        ],
+      },
+      {
+        id: "carbon",
+        label: "Carbon (Oscuro)",
+        colors: [
+          designTokens.colors.carbon.background,
+          designTokens.colors.carbon["accent-health"],
+          designTokens.colors.carbon["accent-finance"],
+        ],
+      },
+      {
+        id: "sand",
+        label: "Sand (Cálido)",
+        colors: [
+          designTokens.colors.sand.background,
+          designTokens.colors.sand["accent-health"],
+          designTokens.colors.sand["accent-finance"],
+        ],
+      },
+      {
+        id: "midnight",
+        label: "Midnight (Profundo)",
+        colors: [themes.midnight.bg, themes.midnight.accent.health, themes.midnight.accent.finance],
+      },
+      {
+        id: "custom",
+        label: "Personalizado (hex)",
+        colors: [paletteDraft.background, paletteDraft.surface, paletteDraft.accentHealth],
+      },
+    ],
+    [paletteDraft],
+  )
 
   const layoutOptions: { id: LayoutMode; label: string }[] = [
     { id: "balanced", label: "Balanceado (Estándar)" },
     { id: "compact", label: "Alta densidad (Pro)" },
     { id: "zen", label: "Modo foco (Zen)" },
+  ]
+
+  const applyPaletteDraft = () => {
+    const next: CustomPalette = {
+      background: normalizeHex(paletteDraft.background) ?? customPalette.background,
+      surface: normalizeHex(paletteDraft.surface) ?? customPalette.surface,
+      text: normalizeHex(paletteDraft.text) ?? customPalette.text,
+      textMuted: normalizeHex(paletteDraft.textMuted) ?? customPalette.textMuted,
+      accentHealth: normalizeHex(paletteDraft.accentHealth) ?? customPalette.accentHealth,
+    }
+    setCustomPalette(next)
+  }
+
+  const paletteFields: { key: keyof CustomPalette; label: string }[] = [
+    { key: "background", label: "Fondo" },
+    { key: "surface", label: "Superficie (tarjetas)" },
+    { key: "text", label: "Texto principal" },
+    { key: "textMuted", label: "Texto secundario" },
+    { key: "accentHealth", label: "Acento (salud / primario)" },
   ]
 
   return (
@@ -527,6 +566,10 @@ export default function ConfigV3() {
               <Palette className="h-4 w-4 shrink-0" aria-hidden />
               Entorno de color
             </h3>
+            <p className="max-w-2xl text-xs leading-relaxed" style={{ color: theme.textMuted }}>
+              Los presets aplican variables CSS en toda la app. «Personalizado» te deja elegir hex; superficie
+              alterna, borde y acentos secundarios se derivan automáticamente para mantener contraste legible.
+            </p>
             <div className="grid gap-3">
               {themeOptions.map((option) => (
                 <button
@@ -549,6 +592,81 @@ export default function ConfigV3() {
                 </button>
               ))}
             </div>
+
+            {colorTheme === "custom" ? (
+              <div
+                className="mt-4 space-y-4 rounded-2xl border p-4 sm:p-5"
+                style={{
+                  backgroundColor: theme.surfaceAlt,
+                  borderColor: theme.border,
+                }}
+              >
+                <p className="text-xs font-medium" style={{ color: theme.text }}>
+                  Colores hex
+                </p>
+                <p className="text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
+                  Formato #RRGGBB. Tras editar, pulsa «Aplicar colores» para guardar y refrescar variables en vivo.
+                </p>
+                <div className="space-y-3">
+                  {paletteFields.map(({ key, label }) => (
+                    <div key={key} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+                      <label className="w-full min-w-[8rem] text-xs font-medium sm:w-44" style={{ color: theme.text }}>
+                        {label}
+                      </label>
+                      <div className="flex flex-1 flex-wrap items-center gap-2">
+                        <input
+                          type="color"
+                          className="h-10 w-14 cursor-pointer rounded border p-0"
+                          style={{ borderColor: theme.border }}
+                          value={normalizeHex(paletteDraft[key]) ?? "#888888"}
+                          onChange={(e) =>
+                            setPaletteDraft((prev) => ({
+                              ...prev,
+                              [key]: normalizeHex(e.target.value) ?? e.target.value,
+                            }))
+                          }
+                          aria-label={label}
+                        />
+                        <input
+                          type="text"
+                          spellCheck={false}
+                          className="min-w-[7rem] flex-1 rounded-lg border px-2 py-2 font-mono text-xs"
+                          style={{
+                            borderColor: theme.border,
+                            backgroundColor: theme.surface,
+                            color: theme.text,
+                          }}
+                          value={paletteDraft[key]}
+                          onChange={(e) => setPaletteDraft((prev) => ({ ...prev, [key]: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <button
+                    type="button"
+                    className="rounded-lg border px-3 py-2 text-xs font-medium transition-opacity hover:opacity-90"
+                    style={{ borderColor: theme.border, color: theme.text }}
+                    onClick={() => setPaletteDraft(defaultCustomPalette())}
+                  >
+                    Valores base
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-lg border px-3 py-2 text-xs font-semibold transition-opacity hover:opacity-90"
+                    style={{
+                      borderColor: theme.accent.health,
+                      backgroundColor: theme.accent.health,
+                      color: "#fff",
+                    }}
+                    onClick={() => applyPaletteDraft()}
+                  >
+                    Aplicar colores
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           {/* 3. Densidad de datos */}
@@ -560,6 +678,11 @@ export default function ConfigV3() {
               <Monitor className="h-4 w-4 shrink-0" aria-hidden />
               Densidad de datos
             </h3>
+            <p className="max-w-2xl text-xs leading-relaxed" style={{ color: theme.textMuted }}>
+              Cambia <strong className="font-medium text-[inherit]">--layout-gap</strong> y{" "}
+              <strong className="font-medium text-[inherit]">--layout-padding</strong> en toda la app (Inicio, Salud,
+              Agenda, etc.). No es solo decorativo.
+            </p>
             <div className="grid gap-3">
               {layoutOptions.map((option) => (
                 <button
@@ -592,6 +715,10 @@ export default function ConfigV3() {
               <Sliders className="h-4 w-4 shrink-0" aria-hidden />
               Intensidad háptica / animaciones
             </h3>
+            <p className="max-w-2xl text-xs leading-relaxed" style={{ color: theme.textMuted }}>
+              Ajusta <strong className="font-medium text-[inherit]">--motion-factor</strong> (p. ej. sombras y
+              transiciones en tarjetas). El alcance es acotado; si quieres animación global, habría que extender tokens.
+            </p>
             <div
               className="rounded-2xl border p-6 sm:p-8"
               style={{
@@ -643,17 +770,33 @@ export default function ConfigV3() {
           <h3 className="text-xs font-medium uppercase tracking-[0.14em]" style={{ color: theme.textMuted }}>
             Vista previa
           </h3>
+          <p className="text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
+            Maqueta de color reactiva al tema (incl. personalizado). El espaciado usa ahora{" "}
+            <span className="font-mono text-[10px]">var(--layout-gap)</span> para acercarse a la densidad elegida.
+          </p>
           <div
-            className="flex min-h-[420px] flex-col gap-6 rounded-3xl border-2 p-6 lg:min-h-[500px]"
-            style={{ backgroundColor: theme.bg, borderColor: theme.border }}
+            className="flex min-h-[420px] flex-col rounded-3xl border-2 lg:min-h-[500px]"
+            style={{
+              backgroundColor: theme.bg,
+              borderColor: theme.border,
+              gap: "var(--layout-gap)",
+              padding: "var(--layout-padding)",
+            }}
           >
             <div className="flex items-center justify-between">
               <div className="h-6 w-24 rounded-md" style={{ backgroundColor: theme.surfaceAlt }} />
               <div className="h-8 w-8 rounded-full" style={{ backgroundColor: theme.surfaceAlt }} />
             </div>
-            <div className="flex-1 rounded-2xl border p-5" style={{ backgroundColor: theme.surface, borderColor: theme.border }}>
+            <div
+              className="flex-1 rounded-2xl border p-5"
+              style={{
+                backgroundColor: theme.surface,
+                borderColor: theme.border,
+                gap: "var(--layout-gap)",
+              }}
+            >
               <div className="mb-6 h-4 w-1/3 rounded" style={{ backgroundColor: theme.textMuted, opacity: 0.2 }} />
-              <div className="space-y-3">
+              <div className="flex flex-col" style={{ gap: "var(--layout-gap)" }}>
                 {[1, 2, 3].map((item) => (
                   <div key={item} className="flex items-center gap-4">
                     <div

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useState } from "react"
 import Link from "next/link"
 import { Sparkles, Camera, Save, ChevronLeft } from "lucide-react"
-import { useApp, themes } from "@/app/contexts/AppContext"
+import { useOrbitaSkin } from "@/app/contexts/AppContext"
 import { OrbitaImageCropDialog } from "@/app/components/OrbitaImageCropDialog"
 import { createBrowserClient } from "@/lib/supabase/browser"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
@@ -18,8 +18,7 @@ type ProfileMePayload = {
 }
 
 export default function PerfilPage() {
-  const { colorTheme } = useApp()
-  const theme = themes[colorTheme]
+  const theme = useOrbitaSkin()
   const fileInputId = useId()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
