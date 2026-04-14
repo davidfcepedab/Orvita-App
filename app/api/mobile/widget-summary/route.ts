@@ -27,6 +27,10 @@ type MobileWidgetSummary = {
     home: string
     checkin: { manana: string; dia: string; noche: string }
   }
+  /**
+   * Solo en respuesta demo (sin Bearer válido + env mock). Omitir en datos reales para no romper clientes viejos.
+   */
+  demo?: boolean
 }
 
 const DEEP_LINKS = {
@@ -48,6 +52,7 @@ function mockWidgetPayload(webBaseUrl: string): MobileWidgetSummary {
     habitsTotal: 3,
     nextActionTitle: "Completar propuesta para cliente",
     deepLinks: { ...DEEP_LINKS },
+    demo: true,
   }
 }
 
@@ -107,6 +112,9 @@ export async function GET(req: NextRequest) {
 
     if (auth instanceof NextResponse) {
       if (isAppMockMode()) {
+        console.warn(
+          "[widget-summary] Sin Bearer válido: respuesta demo (revisar token en App Group / bridge iOS).",
+        )
         return NextResponse.json({ success: true, data: mockWidgetPayload(webBaseUrl) })
       }
       return auth
