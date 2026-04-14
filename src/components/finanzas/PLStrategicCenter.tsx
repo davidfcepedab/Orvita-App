@@ -179,10 +179,17 @@ export function PLStrategicCenter({ spec, data, callbacks, className }: PLStrate
                   </p>
                 </div>
               </div>
-              <div className="text-right text-sm tabular-nums">
-                <p className="text-[11px] uppercase tracking-wide text-orbita-secondary">YTD</p>
-                <p className="font-semibold text-orbita-primary">${formatCop(hero.ytdNetCop)}</p>
-              </div>
+              {hero.ytdNetCop != null ? (
+                <div className="text-right text-sm tabular-nums">
+                  <p className="text-[11px] uppercase tracking-wide text-orbita-secondary">YTD</p>
+                  <p className="font-semibold text-orbita-primary">${formatCop(hero.ytdNetCop)}</p>
+                </div>
+              ) : (
+                <div className="text-right text-xs text-orbita-muted">
+                  <p className="text-[11px] uppercase tracking-wide">YTD</p>
+                  <p>—</p>
+                </div>
+              )}
             </div>
           </div>
           <p className="sr-only">{spec.header.accessibility.summaryLabel}</p>

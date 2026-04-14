@@ -476,8 +476,8 @@ export interface PlRuntimeHeroData {
   readonly momDeltaCop: number
   /** % sobre |neto mes anterior| cuando aplica; null si base ~0. */
   readonly momDeltaPct: number | null
-  /** Acumulado año calendario hasta el mes seleccionado. */
-  readonly ytdNetCop: number
+  /** Acumulado año calendario hasta el mes seleccionado (omitir si aún no hay API que lo calcule). */
+  readonly ytdNetCop?: number
 }
 
 /** Brecha KPI ↔ mapa para el banner opcional. */
