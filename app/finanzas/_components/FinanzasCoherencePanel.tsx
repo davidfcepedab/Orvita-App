@@ -30,7 +30,7 @@ function Money({
 }
 
 export function FinanzasCoherencePanel() {
-  const { financeMeta, month, touchCapitalData } = useFinanceOrThrow()
+  const { financeMeta, financeMetaLoading, month, touchCapitalData } = useFinanceOrThrow()
   const c = financeMeta?.coherence
   const [plOpen, setPlOpen] = useState(true)
   const [bridgesOpen, setBridgesOpen] = useState(true)
@@ -56,6 +56,40 @@ export function FinanzasCoherencePanel() {
     if (!c?.hintEmaAbsGap) return false
     return c.hintEmaAbsGap > 1
   }, [c?.hintEmaAbsGap])
+
+  if (financeMetaLoading) {
+    return (
+      <div
+        className="animate-pulse rounded-[var(--radius-card)] border border-orbita-border/70 bg-orbita-surface-alt/40 p-3 sm:p-4"
+        aria-busy="true"
+        aria-label="Cargando conciliación del mes"
+      >
+        <p className="text-xs font-semibold uppercase tracking-wide text-orbita-muted sm:text-[13px]">
+          P&amp;L del mes · conciliación
+        </p>
+        <p className="mt-2 text-[11px] text-orbita-secondary">Cargando…</p>
+      </div>
+    )
+  }
+
+  if (!c && financeMeta) {
+    return (
+      <div
+        className="rounded-[var(--radius-card)] border border-orbita-border/70 bg-orbita-surface-alt/40 p-3 sm:p-4"
+        role="region"
+        aria-label="Estado de resultados y conciliación del mes"
+      >
+        <p className="text-xs font-semibold uppercase tracking-wide text-orbita-muted sm:text-[13px]">
+          P&amp;L del mes · conciliación
+        </p>
+        <p className="mt-1 text-[11px] leading-snug text-orbita-secondary sm:text-xs">
+          {financeMeta.transactionsInSelectedMonth === 0
+            ? "No hay movimientos en el mes seleccionado. Registra o importa transacciones para ver el desglose y la conciliación."
+            : "No hay datos de P&amp;L para este periodo."}
+        </p>
+      </div>
+    )
+  }
 
   if (!c) return null
 
