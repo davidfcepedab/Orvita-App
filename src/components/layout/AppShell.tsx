@@ -25,6 +25,7 @@ import {
   User,
   LogOut,
   Sparkles,
+  Bell,
 } from "lucide-react"
 
 type AppShellProps = {
@@ -287,6 +288,20 @@ export function AppShell({
                 {headerDateLabel}
               </time>
 
+              <span
+                className="inline-flex shrink-0"
+                title="Centro de alertas (en preparación). Para activarlo: Web Push (service worker + permiso del navegador), email desde un cron/API, o bandeja in-app con tabla en Supabase — aún no cableado."
+              >
+                <button
+                  type="button"
+                  disabled
+                  aria-label="Notificaciones — función en preparación, aún no activa"
+                  className="orbita-icon-button orbita-focus-ring relative h-11 w-11 cursor-not-allowed opacity-50 sm:h-9 sm:w-9"
+                >
+                  <Bell size={17} strokeWidth={2} className="shrink-0" aria-hidden />
+                </button>
+              </span>
+
               <button
                 className="orbita-header-action orbita-focus-ring sm:min-h-0 sm:py-1.5"
                 onClick={cycleTheme}
@@ -296,15 +311,6 @@ export function AppShell({
                 Tema
               </button>
 
-              <button
-                type="button"
-                disabled
-                title="Próximamente"
-                aria-disabled="true"
-                className="orbita-header-action orbita-focus-ring hidden cursor-not-allowed opacity-60 md:inline-flex sm:min-h-0 sm:py-1.5"
-              >
-                Exportar
-              </button>
               <button
                 type="button"
                 onClick={handleLogout}
