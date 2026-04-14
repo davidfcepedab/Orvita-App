@@ -1797,8 +1797,8 @@ export default function CuentasClient() {
                             {kpis.liquidezTrendPct}% vs mes anterior
                           </span>
                           <p className="mt-2 text-[10px] leading-snug text-orbita-secondary [text-wrap:pretty]">
-                            Flujo neto del mes (ingresos − gastos), alineado con el total de Movimientos sin filtros.
-                            Las tarjetas por cuenta muestran disponible por cuenta; no tienen por qué sumar este total.
+                            Ingresos − gastos del mes (misma base que Movimientos). Abajo, saldos por cuenta; no suman
+                            este total.
                           </p>
                         </>
                       }
@@ -1811,7 +1811,7 @@ export default function CuentasClient() {
                         <span className="block space-y-1">
                           <span>{kpis.creditoUsoPromedioPct}% uso promedio (tarjetas)</span>
                           <span className="block text-[10px] font-normal leading-snug text-orbita-muted">
-                            Por tarjeta: movimientos + registro manual de disponible en la sección ledger arriba.
+                            Por TC: movimientos del mes + disponible manual en «Ledger manual».
                           </span>
                         </span>
                       }
