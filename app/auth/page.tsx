@@ -261,8 +261,10 @@ export default function AuthPage() {
     }
   }
 
-  const tabActive = "bg-[var(--color-text-primary)] text-[var(--color-background)]"
-  const tabIdle = "text-orbita-secondary hover:text-orbita-primary motion-safe:transition-colors"
+  const tabActive =
+    "bg-orbita-surface text-orbita-primary shadow-sm ring-1 ring-orbita-border/60 motion-safe:transition-all"
+  const tabIdle =
+    "text-orbita-secondary hover:bg-orbita-surface/60 hover:text-orbita-primary motion-safe:transition-colors"
 
   /**
    * Autocompletado alineado con Password AutoFill (Safari / iOS): pareja username + current-password
@@ -276,34 +278,40 @@ export default function AuthPage() {
   const newPasswordRules = "minlength: 6; allowed: ascii-printable;"
 
   const fieldClass =
-    "mt-2 w-full min-h-[44px] rounded-lg border border-orbita-border bg-orbita-surface-alt px-3 py-2.5 text-base text-orbita-primary outline-none placeholder:text-orbita-secondary/70 focus-visible:ring-2 focus-visible:ring-[var(--color-accent-primary)] touch-manipulation"
+    "mt-2 w-full min-h-[44px] rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface-alt px-3 py-2.5 text-base text-orbita-primary outline-none placeholder:text-orbita-secondary/65 transition-[box-shadow,background-color,border-color] duration-200 placeholder:transition-opacity focus-visible:border-[color-mix(in_srgb,var(--color-accent-primary)_42%,var(--color-border))] focus-visible:bg-orbita-surface focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--color-accent-primary)_35%,transparent)] touch-manipulation disabled:cursor-not-allowed disabled:opacity-60"
+
+  const primaryBtnClass =
+    "min-h-[44px] w-full touch-manipulation rounded-[var(--radius-button)] px-4 py-3 text-base font-semibold text-[var(--color-background)] bg-[var(--color-text-primary)] shadow-sm transition-[transform,opacity,box-shadow] duration-200 hover:shadow-md active:scale-[0.99] motion-reduce:transform-none disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none disabled:hover:shadow-none"
 
   return (
     <main
-      className="mx-auto flex min-h-[100dvh] min-h-[-webkit-fill-available] w-full max-w-lg flex-col justify-center gap-6 pl-[max(1.25rem,env(safe-area-inset-left,0px))] pr-[max(1.25rem,env(safe-area-inset-right,0px))] pb-[max(2rem,env(safe-area-inset-bottom,0px))] pt-[max(1.25rem,env(safe-area-inset-top,0px))] sm:pl-6 sm:pr-6 sm:pb-12 sm:pt-8"
+      className="mx-auto flex min-h-[100dvh] min-h-[-webkit-fill-available] w-full max-w-[26rem] flex-col justify-center gap-8 pl-[max(1.25rem,env(safe-area-inset-left,0px))] pr-[max(1.25rem,env(safe-area-inset-right,0px))] pb-[max(2rem,env(safe-area-inset-bottom,0px))] pt-[max(1.25rem,env(safe-area-inset-top,0px))] sm:pl-6 sm:pr-6 sm:pb-12 sm:pt-8"
       id="auth-main"
     >
       <div
-        className="flex flex-col gap-6 rounded-2xl border border-orbita-border bg-orbita-surface p-5 shadow-card sm:p-6"
+        className="flex flex-col gap-7 rounded-[var(--radius-card)] border border-orbita-border/80 bg-orbita-surface/95 p-6 shadow-card ring-1 ring-orbita-border/25 backdrop-blur-[2px] sm:p-7"
         aria-busy={loading}
       >
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-orbita-primary">
+        <header className="space-y-2">
+          <p className="text-overline font-semibold uppercase tracking-[0.16em] text-[var(--color-accent-primary)]">
+            Órvita
+          </p>
+          <h1 className="font-display text-[1.65rem] font-semibold leading-tight tracking-tight text-orbita-primary sm:text-3xl">
             {isMock ? "Modo demo" : mode === "login" ? "Iniciar sesión" : "Crear cuenta"}
           </h1>
-          <p className="mt-2 text-sm text-orbita-secondary">
+          <p className="text-[0.9375rem] leading-relaxed text-orbita-secondary">
             {isMock
               ? "Estás en modo visual. Puedes entrar sin autenticación real."
               : mode === "login"
                 ? "Accede con tu cuenta de Órvita."
-                : "Regístrate con email y password. Si tienes invite code, úsalo para unirte a tu hogar."}
+                : "Regístrate con correo y contraseña. Si tienes código de invitación, podrás unirte a un hogar existente."}
           </p>
-        </div>
+        </header>
 
       {isMock ? (
         <div className="space-y-4">
           <div
-            className="rounded-xl border p-4 text-sm text-orbita-primary"
+            className="rounded-[var(--radius-button)] border p-4 text-sm leading-relaxed text-orbita-primary"
             style={{
               borderColor: "color-mix(in srgb, var(--color-accent-warning) 40%, var(--color-border))",
               background: "color-mix(in srgb, var(--color-accent-warning) 14%, var(--color-surface-alt))",
@@ -311,20 +319,14 @@ export default function AuthPage() {
           >
             Auth real desactivada en local. Entrarás con datos de referencia.
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              window.location.href = "/"
-            }}
-            className="min-h-[44px] w-full touch-manipulation rounded-lg px-4 py-3 text-base font-semibold text-[var(--color-background)] bg-[var(--color-text-primary)]"
-          >
+          <button type="button" onClick={() => (window.location.href = "/")} className={primaryBtnClass}>
             Entrar en demo
           </button>
         </div>
       ) : (
         <>
           <div
-            className="flex gap-2 rounded-xl border border-orbita-border bg-orbita-surface-alt p-2"
+            className="flex gap-1.5 rounded-[var(--radius-button)] border border-orbita-border/70 bg-[color-mix(in_srgb,var(--color-surface-alt)_88%,var(--color-border))] p-1.5 shadow-inner"
             role="tablist"
             aria-label="Tipo de acceso"
           >
@@ -333,8 +335,9 @@ export default function AuthPage() {
               role="tab"
               aria-selected={mode === "login"}
               id="tab-login"
+              disabled={loading}
               onClick={() => switchMode("login")}
-              className={`flex-1 min-h-[44px] rounded-lg px-3 py-2.5 text-base font-medium touch-manipulation ${mode === "login" ? tabActive : tabIdle}`}
+              className={`flex-1 min-h-[44px] rounded-md px-3 py-2.5 text-base font-semibold touch-manipulation disabled:cursor-not-allowed disabled:opacity-50 ${mode === "login" ? tabActive : tabIdle}`}
             >
               Entrar
             </button>
@@ -343,8 +346,9 @@ export default function AuthPage() {
               role="tab"
               aria-selected={mode === "register"}
               id="tab-register"
+              disabled={loading}
               onClick={() => switchMode("register")}
-              className={`flex-1 min-h-[44px] rounded-lg px-3 py-2.5 text-base font-medium touch-manipulation ${mode === "register" ? tabActive : tabIdle}`}
+              className={`flex-1 min-h-[44px] rounded-md px-3 py-2.5 text-base font-semibold touch-manipulation disabled:cursor-not-allowed disabled:opacity-50 ${mode === "register" ? tabActive : tabIdle}`}
             >
               Crear cuenta
             </button>
@@ -352,13 +356,13 @@ export default function AuthPage() {
 
           <form
             onSubmit={handleSubmit}
-            className="space-y-4"
+            className="space-y-5"
             role="tabpanel"
             aria-labelledby={mode === "login" ? "tab-login" : "tab-register"}
             autoComplete="on"
             name={mode === "login" ? "signin" : "signup"}
           >
-            <label className="block text-sm font-medium text-orbita-primary" htmlFor="auth-email">
+            <label className="block text-sm font-semibold text-orbita-primary" htmlFor="auth-email">
               Correo electrónico
               <input
                 id="auth-email"
@@ -371,14 +375,18 @@ export default function AuthPage() {
                 spellCheck={false}
                 enterKeyHint="next"
                 required
+                disabled={loading}
                 className={fieldClass}
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
               />
             </label>
 
-            <label className="block text-sm font-medium text-orbita-primary" htmlFor="auth-password">
+            <label className="block text-sm font-semibold text-orbita-primary" htmlFor="auth-password">
               Contraseña
+              {mode === "register" ? (
+                <span className="mt-1 block text-xs font-normal text-orbita-secondary">Mínimo 6 caracteres</span>
+              ) : null}
               <input
                 id="auth-password"
                 name="password"
@@ -392,6 +400,7 @@ export default function AuthPage() {
                     } as React.InputHTMLAttributes<HTMLInputElement> & { passwordrules?: string })
                   : {})}
                 enterKeyHint={mode === "register" ? "next" : "go"}
+                disabled={loading}
                 className={fieldClass}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
@@ -399,7 +408,7 @@ export default function AuthPage() {
             </label>
 
             {mode === "register" && (
-              <label className="block text-sm font-medium text-orbita-primary" htmlFor="auth-invite">
+              <label className="block text-sm font-semibold text-orbita-primary" htmlFor="auth-invite">
                 Código de invitación (opcional)
                 <input
                   id="auth-invite"
@@ -407,6 +416,7 @@ export default function AuthPage() {
                   type="text"
                   autoComplete="off"
                   enterKeyHint="done"
+                  disabled={loading}
                   className={fieldClass}
                   value={inviteCode}
                   onChange={(event) => setInviteCode(event.target.value)}
@@ -415,11 +425,7 @@ export default function AuthPage() {
               </label>
             )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="min-h-[44px] w-full touch-manipulation rounded-lg px-4 py-3 text-base font-semibold text-[var(--color-background)] bg-[var(--color-text-primary)] disabled:opacity-60"
-            >
+            <button type="submit" disabled={loading} className={primaryBtnClass}>
               {loading
                 ? mode === "login"
                   ? "Ingresando..."
@@ -434,25 +440,30 @@ export default function AuthPage() {
 
       {error && (
         <div
-          className="rounded-lg border p-3 text-sm"
+          className="rounded-[var(--radius-button)] border p-4 text-sm leading-relaxed"
           style={{
             borderColor: "color-mix(in srgb, var(--color-accent-danger) 45%, var(--color-border))",
-            background: "color-mix(in srgb, var(--color-accent-danger) 12%, var(--color-surface-alt))",
+            background: "color-mix(in srgb, var(--color-accent-danger) 10%, var(--color-surface-alt))",
             color: "var(--color-accent-danger)",
           }}
+          role="alert"
         >
           {error}
         </div>
       )}
 
       {loading && (
-        <p
-          className="text-center text-xs text-orbita-secondary motion-safe:animate-pulse"
+        <div
+          className="flex items-center justify-center gap-2.5 text-center text-xs text-orbita-secondary"
           role="status"
           aria-live="polite"
         >
-          {busyHint ?? "Procesando…"}
-        </p>
+          <span
+            className="inline-block h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-orbita-border border-t-[var(--color-accent-primary)] motion-reduce:animate-none"
+            aria-hidden
+          />
+          <span className="motion-safe:animate-pulse">{busyHint ?? "Procesando…"}</span>
+        </div>
       )}
       </div>
     </main>
