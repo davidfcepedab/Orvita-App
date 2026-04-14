@@ -1,6 +1,7 @@
 import ExcelJS from "exceljs"
 import type { DataValidation } from "exceljs"
 import type { FinanceSubcategoryCatalogRow } from "@/lib/finanzas/subcategoryCatalog"
+import { buildTemplatePairRows } from "@/lib/finanzas/subcategoryTemplateLabel"
 
 /** exceljs runtime incluye dataValidations; los tipos .d.ts no lo exponen. */
 function addDataValidation(
@@ -28,37 +29,18 @@ export function excelColumnLetter(columnIndex1Based: number): string {
 
 const MOV_HEADERS = ["Fecha", "Tipo", "Categoría", "Subcategoría", "Cuenta", "Concepto", "Monto"] as const
 const MAX_DATA_ROWS = 4000
-/** Filas por columna de subcategorías en hoja Listas (OFFSET). */
-const SUB_COLUMN_ROWS = 120
-
-function buildCategorySubMap(rows: FinanceSubcategoryCatalogRow[]): Map<string, string[]> {
-  const byCat = new Map<string, Set<string>>()
-  for (const r of rows) {
-    if (r.active === false) continue
-    const c = String(r.category ?? "").trim()
-    const s = String(r.subcategory ?? "").trim()
-    if (!c || !s) continue
-    if (!byCat.has(c)) byCat.set(c, new Set())
-    byCat.get(c)!.add(s)
-  }
-  const out = new Map<string, string[]>()
-  for (const [c, set] of byCat) {
-    out.set(c, [...set].sort((a, b) => a.localeCompare(b, "es")))
-  }
-  return out
-}
 
 /**
- * Plantilla .xlsx: desplegable Tipo; categorías desde columna A de Listas;
- * subcategorías dependientes vía OFFSET/MATCH sobre la fila 1 de Listas (categorías en B1…);
- * cuentas del hogar en una columna de Listas y validación sugerida en E.
+ * Plantilla .xlsx: desplegable Tipo; en D elija **subcategoría** (lista única);
+ * la **categoría** en C se rellena sola con fórmula (INDEX/MATCH sobre Listas).
+ * Cuentas del hogar en Listas y validación sugerida en E.
  */
 export async function buildTransactionsTemplateXlsxBuffer(
   catalogRows: FinanceSubcategoryCatalogRow[],
   accountLabels: string[],
 ): Promise<ArrayBuffer> {
-  const map = buildCategorySubMap(catalogRows)
-  const categories = [...map.keys()].sort((a, b) => a.localeCompare(b, "es"))
+  const pairRows = buildTemplatePairRows(catalogRows)
+  const lastPairRow = Math.max(1, pairRows.length + 1)
 
   const wb = new ExcelJS.Workbook()
   wb.creator = "ÓRVITA"
@@ -71,44 +53,31 @@ export async function buildTransactionsTemplateXlsxBuffer(
     views: [{ state: "frozen", xSplit: 0, ySplit: 1 }],
   })
 
-  listas.getColumn(1).width = 28
+  listas.getColumn(1).width = 26
+  listas.getColumn(2).width = 22
+  listas.getColumn(3).width = 36
   listas.getRow(1).font = { bold: true }
-  listas.getCell("A1").value = "Categorías (para columna C)"
+  listas.getCell("A1").value = "Categoría"
+  listas.getCell("B1").value = "Subcategoría"
+  listas.getCell("C1").value = "Desplegable (columna D en Movimientos)"
 
-  let catStartRow = 2
-  for (const c of categories) {
-    listas.getCell(`A${catStartRow}`).value = c
-    catStartRow += 1
-  }
-  const lastCatRow = Math.max(1, catStartRow - 1)
-
-  // Fila 1: B1… = cabeceras de categoría; debajo, subcategorías por columna
-  const firstCatCol = 2 // B
-  const nCat = categories.length
-  for (let i = 0; i < nCat; i += 1) {
-    const col = firstCatCol + i
-    const letter = excelColumnLetter(col)
-    const cat = categories[i]!
-    listas.getCell(`${letter}1`).value = cat
-    listas.getColumn(col).width = 22
-    const subs = map.get(cat) ?? []
-    for (let r = 0; r < Math.min(subs.length, SUB_COLUMN_ROWS); r += 1) {
-      listas.getCell(`${letter}${r + 2}`).value = subs[r]
-    }
+  for (let i = 0; i < pairRows.length; i += 1) {
+    const pr = pairRows[i]!
+    const row = i + 2
+    listas.getCell(row, 1).value = pr.category
+    listas.getCell(row, 2).value = pr.sub
+    listas.getCell(row, 3).value = pr.label
   }
 
-  const endColLetter = nCat > 0 ? excelColumnLetter(firstCatCol + nCat - 1) : "B"
-
-  /** Columna en Listas para etiquetas de cuenta (no solapa con bloques de subcategorías). */
-  const accountsColIndex = nCat === 0 ? 2 : firstCatCol + nCat
-  const accLetter = excelColumnLetter(accountsColIndex)
+  /** Columna D en Listas = cuentas (no solapa con A:C de pares). */
+  const accLetter = "D"
   const sortedAccounts = [...new Set(accountLabels.map((a) => a.trim()).filter(Boolean))].sort((a, b) =>
     a.localeCompare(b, "es"),
   )
   const maxAccRows = Math.min(sortedAccounts.length, 500)
   listas.getCell(`${accLetter}1`).value = "Cuentas — usar en columna E (Movimientos)"
   listas.getCell(`${accLetter}1`).font = { bold: true }
-  listas.getColumn(accountsColIndex).width = 26
+  listas.getColumn(4).width = 26
   for (let i = 0; i < maxAccRows; i += 1) {
     listas.getCell(`${accLetter}${i + 2}`).value = sortedAccounts[i] ?? ""
   }
@@ -118,7 +87,7 @@ export async function buildTransactionsTemplateXlsxBuffer(
     { width: 12 },
     { width: 10 },
     { width: 22 },
-    { width: 22 },
+    { width: 28 },
     { width: 20 },
     { width: 36 },
     { width: 12 },
@@ -129,17 +98,26 @@ export async function buildTransactionsTemplateXlsxBuffer(
   })
   mov.getRow(1).font = { bold: true }
 
-  const firstCat = categories[0]
-  const firstSub = firstCat ? (map.get(firstCat)?.[0] ?? "") : ""
+  const firstPair = pairRows[0]
   mov.getCell("A2").value = "2026-04-01"
   mov.getCell("B2").value = "Gasto"
-  mov.getCell("C2").value = firstCat ?? ""
-  mov.getCell("D2").value = firstSub
   mov.getCell("E2").value = sortedAccounts[0] ?? ""
   mov.getCell("F2").value = "Ejemplo: compra / transferencia"
   mov.getCell("G2").value = 150000
 
   const lastMovRow = 1 + MAX_DATA_ROWS
+
+  if (pairRows.length > 0) {
+    mov.getCell("D2").value = firstPair!.label
+    for (let r = 2; r <= lastMovRow; r += 1) {
+      mov.getCell(r, 3).value = {
+        formula: `IF($D${r}="","",IFERROR(INDEX(Listas!$A:$A,MATCH($D${r},Listas!$C:$C,0)),""))`,
+      }
+    }
+  } else {
+    mov.getCell("C2").value = ""
+    mov.getCell("D2").value = ""
+  }
 
   addDataValidation(mov, `B2:B${lastMovRow}`, {
     type: "list",
@@ -154,32 +132,18 @@ export async function buildTransactionsTemplateXlsxBuffer(
     error: "Elija Gasto o Ingreso.",
   })
 
-  if (categories.length > 0) {
-    addDataValidation(mov, `C2:C${lastMovRow}`, {
-      type: "list",
-      allowBlank: false,
-      formulae: [`=Listas!$A$2:$A$${lastCatRow}`],
-      showInputMessage: true,
-      promptTitle: "Categoría",
-      prompt: "Debe existir en el catálogo del hogar.",
-      showErrorMessage: true,
-      errorStyle: "warning",
-      errorTitle: "Categoría",
-      error: "Elija una categoría de la lista (hoja Listas, columna A).",
-    })
-
-    const subFormula = `=OFFSET(Listas!$B$2,0,MATCH($C2,Listas!$B$1:$${endColLetter}$1,0)-1,${SUB_COLUMN_ROWS},1)`
+  if (pairRows.length > 0) {
     addDataValidation(mov, `D2:D${lastMovRow}`, {
       type: "list",
-      allowBlank: true,
-      formulae: [subFormula],
+      allowBlank: false,
+      formulae: [`=Listas!$C$2:$C$${lastPairRow}`],
       showInputMessage: true,
       promptTitle: "Subcategoría",
-      prompt: "Primero elija categoría en C; la lista depende de esa celda.",
+      prompt: "Elija la subcategoría; la categoría (columna C) se rellena sola.",
       showErrorMessage: true,
       errorStyle: "warning",
       errorTitle: "Subcategoría",
-      error: "Elija una subcategoría válida para la categoría indicada en C.",
+      error: "Elija un valor de la lista (hoja Listas, columna de desplegable).",
     })
   }
 
@@ -201,13 +165,14 @@ export async function buildTransactionsTemplateXlsxBuffer(
 
   mov.getCell("H1").value =
     [
-      "Rellene desde la fila 2. C y D: par del catálogo (en D la subcategoría depende de C).",
-      "Tipo de gasto (fijo/variable/…) e impacto financiero (operativo/inversión/…) los toma el sistema del catálogo al usar un par válido.",
+      "Rellene desde la fila 2. Elija la subcategoría en D (lista); la categoría en C es automática.",
+      "Si un mismo nombre de subcategoría existe en varias categorías, la lista muestra «Sub (Categoría)».",
+      "Tipo de gasto e impacto financiero los toma el sistema del catálogo al usar un par válido.",
       "E: cuentas en Listas; etiqueta nueva → se crea la cuenta al importar.",
       "Exporte «Movimientos» a CSV (UTF-8) para importar aquí.",
     ].join(" ")
   mov.getCell("H1").font = { italic: true, size: 9 }
-  mov.getRow(1).height = 48
+  mov.getRow(1).height = 52
   mov.getCell("H1").alignment = { wrapText: true, vertical: "top" }
 
   const buf = await wb.xlsx.writeBuffer()

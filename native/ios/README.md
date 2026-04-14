@@ -70,13 +70,15 @@ Si en el simulador ves el **icono gris en blanco** (placeholder), es porque `Ass
 
 Si más adelante quieres el logo oficial de marca, sustituye ese PNG por tu asset final (idealmente 1024×1024, sin transparencia para evitar sorpresas en App Store).
 
-## API para WidgetKit (siguiente paso)
+## API para WidgetKit
 
-`GET /api/mobile/widget-summary` con header **`Authorization: Bearer <access_token>`** (mismo JWT de sesión que la web). Sin Bearer, si el servidor está en **modo demo** (`NEXT_PUBLIC_APP_MODE=mock`), la API devuelve números de ejemplo; con Bearer válido siempre se usan **datos reales** de Supabase.
+`GET /api/mobile/widget-summary` con header **`Authorization: Bearer <access_token>`** (mismo JWT de sesión que la web). Sin Bearer, si el servidor está en **modo demo** (`NEXT_PUBLIC_APP_MODE=mock`), la API devuelve **números fijos de ejemplo** (2 tareas abiertas, 1/3 hábitos, etc.); con Bearer válido se usan **datos reales** de Supabase.
+
+Para que el widget deje de mostrar ese demo: **Signing & Capabilities** del target de la app → **App Groups** → `group.app.orvita.mobile` (el mismo que la extensión), añade **`OrvitaWidgetSessionStore.swift`** al target, y abre la app tras iniciar sesión en la web para que `OrvitaWebView` escriba `widget_session.json`.
 
 Respuesta incluye contadores compactos y `deepLinks` relativos; concatena con `webBaseUrl` en el widget.
 
 ## Notas
 
 - La sesión Supabase vive en el `WKWebView` (cookies / almacenamiento del dominio). El usuario inicia sesión una vez en la web dentro del shell.
-- Un **widget nativo** real requiere extensión **WidgetKit** en el mismo proyecto; este repo solo entrega el shell y el endpoint de datos.
+- Un **widget nativo** requiere extensión **WidgetKit** en el mismo proyecto; este repo entrega el shell, el puente a App Group (`OrvitaWebView` + `OrvitaWidgetSessionStore`) y el endpoint Next.js.

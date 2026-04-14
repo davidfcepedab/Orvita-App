@@ -13,4 +13,7 @@ enum OrvitaConfig {
 
     /// Esquema registrado en Xcode → URL Types → URL Schemes: `orvita`
     static let urlScheme = "orvita"
+
+    /// App Group compartido con WidgetKit (mismo ID en la extensión). Ver `WIDGET_EXTENSION.md`.
+    static let widgetAppGroupIdentifier = "group.app.orvita.mobile"
 }

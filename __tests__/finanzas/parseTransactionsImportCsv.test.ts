@@ -1,7 +1,9 @@
 import {
   parseTransactionsImportCsv,
+  resolveImportCategorySubcategory,
   splitCsvLine,
 } from "@/lib/finanzas/parseTransactionsImportCsv"
+import type { FinanceSubcategoryCatalogRow } from "@/lib/finanzas/subcategoryCatalog"
 import { buildTransactionsExportCsv } from "@/lib/finanzas/transactionsCsv"
 
 describe("parseTransactionsImportCsv", () => {
@@ -28,5 +30,28 @@ describe("parseTransactionsImportCsv", () => {
     expect(rows[0]?.tipo).toBe("expense")
     expect(rows[0]?.monto).toBe(10000)
     expect(rows[0]?.sourceLine).toBe(2)
+  })
+})
+
+describe("resolveImportCategorySubcategory", () => {
+  const catalog: FinanceSubcategoryCatalogRow[] = [
+    { category: "A", subcategory: "Duplicada", active: true } as FinanceSubcategoryCatalogRow,
+    { category: "B", subcategory: "Duplicada", active: true } as FinanceSubcategoryCatalogRow,
+    { category: "C", subcategory: "Unica", active: true } as FinanceSubcategoryCatalogRow,
+  ]
+
+  test("resolves etiqueta plantilla con sub duplicada", () => {
+    const r = resolveImportCategorySubcategory(catalog, "B", "Duplicada (B)")
+    expect(r).toEqual({ categoria: "B", subcategoria: "Duplicada" })
+  })
+
+  test("resolves par plano cuando coincide", () => {
+    const r = resolveImportCategorySubcategory(catalog, "C", "Unica")
+    expect(r).toEqual({ categoria: "C", subcategoria: "Unica" })
+  })
+
+  test("resolves sub única sin categoría en CSV", () => {
+    const r = resolveImportCategorySubcategory(catalog, "", "Unica")
+    expect(r).toEqual({ categoria: "C", subcategoria: "Unica" })
   })
 })

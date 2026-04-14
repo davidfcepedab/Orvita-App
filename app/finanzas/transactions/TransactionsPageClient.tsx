@@ -924,7 +924,7 @@ export default function TransactionsPageClient() {
               <ul className="m-0 list-disc space-y-1.5 pl-4 text-[10px] leading-relaxed text-orbita-secondary [text-wrap:pretty] marker:text-orbita-secondary/80">
                 <li>
                   La plantilla Excel incluye listas del <strong className="font-semibold text-orbita-primary">catálogo del hogar</strong>:{" "}
-                  <strong className="font-semibold text-orbita-primary">subcategoría depende de categoría</strong> (columnas C y D). El{" "}
+                  <strong className="font-semibold text-orbita-primary">elige la subcategoría en D</strong> y la categoría en C se rellena sola. El{" "}
                   <strong className="font-semibold text-orbita-primary">tipo de gasto</strong> (fijo/variable/…) y el{" "}
                   <strong className="font-semibold text-orbita-primary">impacto financiero</strong> los aplica el sistema desde esa tabla al
                   ser un par válido; no van columnas aparte.

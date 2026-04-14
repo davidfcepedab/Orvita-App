@@ -7,6 +7,7 @@ import {
   buildCatalogPairKeySet,
   catalogMismatchMessage,
   parseTransactionsImportCsv,
+  resolveImportCategorySubcategory,
 } from "@/lib/finanzas/parseTransactionsImportCsv"
 import { fetchSubcategoryCatalogMerged } from "@/lib/finanzas/subcategoryCatalog"
 import { getHouseholdId } from "@/lib/households/getHouseholdId"
@@ -52,12 +53,14 @@ export async function POST(req: NextRequest) {
     const pairKeys = buildCatalogPairKeySet(catalog)
     const parsed: typeof parsedRaw = []
     for (const row of parsedRaw) {
-      const mismatch = catalogMismatchMessage(pairKeys, row)
+      const resolved = resolveImportCategorySubcategory(catalog, row.categoria, row.subcategoria)
+      const rowResolved = { ...row, categoria: resolved.categoria, subcategoria: resolved.subcategoria }
+      const mismatch = catalogMismatchMessage(pairKeys, rowResolved)
       if (mismatch) {
-        parseErrors.push({ line: row.sourceLine, message: mismatch })
+        parseErrors.push({ line: rowResolved.sourceLine, message: mismatch })
         continue
       }
-      parsed.push(row)
+      parsed.push(rowResolved)
     }
 
     if (parsed.length === 0) {

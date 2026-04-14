@@ -4,8 +4,8 @@ Este documento alinea el **proyecto iOS** (p. ej. `Orvita-Apple/OrvitaMobile` en
 
 ## Flujo de datos reales
 
-1. **App (WKWebView)** inyecta JS que lee el token de Supabase en `localStorage` (`sb-*-auth-token`) y lo envía al nativo vía `WKScriptMessageHandler` (`orvitaAuth`).
-2. **`OrvitaWidgetSharedStorage.syncFromWebAuth`** escribe en el App Group **`group.app.orvita.mobile`** un JSON (`Library/Application Support/Orvita/widget_session.json`) con:
+1. **App (WKWebView)** — en este repo, `AppleShell/OrvitaWebView.swift` inyecta JS que lee el token de Supabase en `localStorage` (`sb-*-auth-token`) y lo envía al nativo vía `WKScriptMessageHandler` (`orvitaAuth`). Tras cada carga de página se vuelve a sincronizar (`didFinish`) para SPAs (Next.js).
+2. **`OrvitaWidgetSessionStore`** escribe en el App Group **`group.app.orvita.mobile`** un JSON (`Library/Application Support/Orvita/widget_session.json`) con:
    - `accessToken`
    - `apiBaseURL` (origen de la web, p. ej. `https://orvita.app` o preview Vercel)
 3. La **extensión de widget** lee ese archivo con **`OrvitaAppGroupSessionStore`** y llama:
@@ -47,11 +47,12 @@ El cliente decodifica `WidgetSummaryResponse` → `WidgetSummaryData`. Campos qu
 
 ## Checklist si “solo veo mock” o falla
 
-1. **App Group** activo y **mismo ID** en la app y en la extensión (`group.app.orvita.mobile`).
-2. Tras login en la web dentro de la app, comprobar que existe `widget_session.json` con `accessToken` no vacío (Finder / consola de depuración).
-3. **`apiBaseURL`** apunta al mismo origen donde desplegaste este repo (preview vs producción).
-4. **Desplegar** la última `main` que incluye el fix de Bearer en modo mock.
+1. **App Group** activo en el **target de la app principal** y en la **extensión** (`group.app.orvita.mobile`). Sin App Group, `OrvitaWidgetSessionStore` no puede escribir (en DEBUG verás un log en consola).
+2. Incluye en el target Xcode **`OrvitaWidgetSessionStore.swift`** junto al resto de `AppleShell/`.
+3. Tras login en la web dentro de la app, comprobar que existe `widget_session.json` con `accessToken` no vacío (Finder / consola de depuración).
+4. **`apiBaseURL`** apunta al mismo origen donde desplegaste este repo (preview vs producción).
+5. **Desplegar** la última `main` que incluye el fix de Bearer en modo mock.
 
 ## Dónde vive el código Swift
 
-El proyecto completo (app + `orvitamobilewidget`) está fuera de este monorepo; aquí solo documentamos el contrato. La carpeta **`OrvitaMobile/AppleShell/`** en este repo es el shell web; las extensiones WidgetKit se mantienen en Xcode.
+El target **WidgetKit** (`orvitamobilewidget`) suele vivir en tu proyecto Xcode local. En este repo, **`OrvitaMobile/AppleShell/`** incluye el shell web **y** el puente `orvitaAuth` → App Group; cópialo al proyecto y añade los `.swift` al target de la app.

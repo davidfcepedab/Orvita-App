@@ -1,6 +1,10 @@
 import { TRANSACTION_CSV_HEADERS_ES } from "@/lib/finanzas/transactionsCsv"
 import type { FinanceSubcategoryCatalogRow } from "@/lib/finanzas/subcategoryCatalog"
 import { normalizeFinanceCatalogKey } from "@/lib/finanzas/subcategoryCatalog"
+import {
+  buildSubcategoryDuplicateNormalizedSet,
+  subcategoryTemplateDropdownLabel,
+} from "@/lib/finanzas/subcategoryTemplateLabel"
 
 export type TransactionsImportParsedRow = {
   fecha: string
@@ -214,6 +218,74 @@ export function buildCatalogPairKeySet(rows: FinanceSubcategoryCatalogRow[]): Se
     set.add(`${normalizeFinanceCatalogKey(c)}|||${normalizeFinanceCatalogKey(s)}`)
   }
   return set
+}
+
+/**
+ * Convierte lo exportado desde la plantilla Excel (sub en D puede ser etiqueta «Sub (Categoría)»)
+ * al par canónico del catálogo para validar e insertar.
+ */
+export function resolveImportCategorySubcategory(
+  catalogRows: FinanceSubcategoryCatalogRow[],
+  categoriaRaw: string,
+  subcategoriaRaw: string,
+): { categoria: string; subcategoria: string } {
+  const c0 = categoriaRaw.trim()
+  const s0 = subcategoriaRaw.trim()
+  if (!s0) {
+    return { categoria: c0 || "Sin categoría", subcategoria: s0 }
+  }
+
+  const pairKeys = buildCatalogPairKeySet(catalogRows)
+  const keyOf = (c: string, s: string) =>
+    `${normalizeFinanceCatalogKey(c)}|||${normalizeFinanceCatalogKey(s)}`
+
+  if (c0 && pairKeys.has(keyOf(c0, s0))) {
+    return { categoria: c0, subcategoria: s0 }
+  }
+
+  const dups = buildSubcategoryDuplicateNormalizedSet(catalogRows)
+
+  for (const r of catalogRows) {
+    if (r.active === false) continue
+    const c = String(r.category ?? "").trim()
+    const s = String(r.subcategory ?? "").trim()
+    if (!c || !s) continue
+    const label = subcategoryTemplateDropdownLabel(s, c, dups)
+    if (label === s0) {
+      if (!c0 || normalizeFinanceCatalogKey(c0) === normalizeFinanceCatalogKey(c)) {
+        return { categoria: c, subcategoria: s }
+      }
+    }
+  }
+
+  const m = /^(?<sub>.+?)\s+\((?<cat>.+)\)\s*$/.exec(s0)
+  if (m?.groups) {
+    const catHint = m.groups.cat.trim()
+    const subHint = m.groups.sub.trim()
+    if (pairKeys.has(keyOf(catHint, subHint))) {
+      return { categoria: catHint, subcategoria: subHint }
+    }
+  }
+
+  const candidates: { c: string; s: string }[] = []
+  for (const r of catalogRows) {
+    if (r.active === false) continue
+    const c = String(r.category ?? "").trim()
+    const s = String(r.subcategory ?? "").trim()
+    if (!c || !s) continue
+    if (normalizeFinanceCatalogKey(s) === normalizeFinanceCatalogKey(s0)) {
+      candidates.push({ c, s })
+    }
+  }
+  const catKeys = new Set(candidates.map((x) => normalizeFinanceCatalogKey(x.c)))
+  if (candidates.length > 0 && catKeys.size === 1) {
+    const one = candidates[0]!
+    if (!c0 || normalizeFinanceCatalogKey(c0) === normalizeFinanceCatalogKey(one.c)) {
+      return { categoria: one.c, subcategoria: one.s }
+    }
+  }
+
+  return { categoria: c0 || "Sin categoría", subcategoria: s0 }
 }
 
 /** Si hay subcategoría, debe existir el par exacto en el catálogo (coherente con KPIs y vistas). */
