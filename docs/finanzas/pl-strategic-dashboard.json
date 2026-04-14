@@ -1,0 +1,174 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "Especificación declarativa PL Estratégico Órbita — referencia de implementación UI",
+  "viewName": "PLStrategicDashboard",
+  "version": "1.0.0",
+  "title": "P&L Estratégico",
+  "subtitle": "Tu mes en una sola lectura: presión, palancas y siguiente paso.",
+  "layout": "scroll",
+  "density": "comfortable",
+  "spacing": "apple-generous",
+  "colorScheme": "semantic-apple",
+  "dataSources": [
+    {
+      "id": "catalog",
+      "table": "orbita_finance_subcategory_catalog",
+      "keys": ["subcategory", "category", "expense_type", "financial_impact", "budgetable", "comment"],
+      "role": "taxonomy_and_semantics"
+    },
+    {
+      "id": "tx",
+      "table": "finance_transactions",
+      "keys": ["date", "amount", "category_id", "subcategory_id", "type", "household_id"],
+      "role": "actuals_for_period"
+    },
+    {
+      "id": "snapshots",
+      "table": "finance_monthly_snapshots",
+      "keys": ["year", "month", "total_income", "total_expense"],
+      "role": "fallback_or_cross_check_when_sparse_tx"
+    }
+  ],
+  "header": {
+    "id": "hero-result",
+    "type": "hero-metric",
+    "sticky": true,
+    "primaryMetric": {
+      "label": "Flujo neto del mes",
+      "binding": {
+        "compute": "sum(income_operativo_month) - sum(expense_operativo_month_mapped)",
+        "fallbackSnapshot": "snapshots cuando catálogo incompleto"
+      },
+      "format": "currency-COP-compact",
+      "semanticTone": "positive-if-gte-zero"
+    },
+    "secondaryRow": [
+      {
+        "id": "mom-net",
+        "label": "vs mes anterior",
+        "binding": { "compute": "net_current - net_previous_calendar_month" },
+        "format": "delta-currency-and-pct"
+      },
+      {
+        "id": "ytd-net",
+        "label": "YTD (año calendario)",
+        "binding": { "compute": "sum_net_jan_through_selected_month" },
+        "format": "currency-COP-compact"
+      }
+    ],
+    "periodControl": { "type": "segmented-month", "binding": "selected_month_yyyy_mm" }
+  },
+  "filters": {
+    "period": { "type": "month-picker", "presets": ["this_month", "last_month"] },
+    "scenario": {
+      "type": "segmented",
+      "options": [
+        { "id": "actual", "label": "Real" },
+        { "id": "budget_compare", "label": "vs presupuesto", "enabledIf": "budget_lines_exist" }
+      ]
+    },
+    "groupByOptions": [
+      { "id": "financial_impact", "label": "Capa", "default": true },
+      { "id": "expense_type", "label": "Fijo / variable" },
+      { "id": "category", "label": "Categoría" }
+    ]
+  },
+  "sections": [
+    {
+      "id": "pressures",
+      "title": "Presiones actuales",
+      "type": "cards-large",
+      "groupBy": "financial_impact",
+      "maxItems": 4,
+      "cardTemplate": {
+        "semanticState": {
+          "rules": [
+            { "if": "budget_gap < -5pct", "state": "attention", "swatch": "amber" },
+            { "if": "budget_gap < -15pct or expense_mom_gt_10pct", "state": "pressure", "swatch": "rose" },
+            { "if": "stable", "state": "calm", "swatch": "emerald" }
+          ]
+        },
+        "cta": { "label": "Ver palancas", "action": "drilldown-impact" }
+      }
+    },
+    {
+      "id": "kpi-vs-map",
+      "title": "Brecha KPI ↔ mapa",
+      "type": "insight-banner",
+      "binding": { "source": "MonthFinanceCoherence / capas canónicas existentes" }
+    },
+    {
+      "id": "income-vs-expense",
+      "title": "Ingresos vs gasto operativo",
+      "type": "chart-panel",
+      "chartRef": "chart-income-expense-trend"
+    },
+    {
+      "id": "breakdown",
+      "title": "Desglose",
+      "type": "chart-panel",
+      "chartRef": "chart-breakdown-donut-or-bar",
+      "defaultGroupBy": "financial_impact"
+    },
+    {
+      "id": "fixed-vs-variable",
+      "title": "Fijo vs variable",
+      "type": "split-gauge",
+      "groupBy": "expense_type",
+      "binding": { "split": "sum_expense_by_expense_type within operativo" }
+    },
+    {
+      "id": "cash-bridge-90d",
+      "title": "Caja y ventana 90 días",
+      "type": "two-column",
+      "right": { "chartRef": "chart-projection-90d-area" }
+    },
+    {
+      "id": "recommended-actions",
+      "title": "Siguiente movimiento",
+      "type": "prioritized-list",
+      "maxItems": 4
+    }
+  ],
+  "charts": [
+    {
+      "id": "chart-income-expense-trend",
+      "kind": "area-or-line-smooth",
+      "series": ["ingresos", "gasto_operativo", "flujo"],
+      "interaction": { "scrub": true, "tooltip": "month-plus-three-series" }
+    },
+    {
+      "id": "chart-breakdown-donut-or-bar",
+      "kind": "donut",
+      "segmentBy": "financial_impact",
+      "interaction": { "tapSegment": "sheet-drilldown-by-impact" }
+    },
+    {
+      "id": "chart-projection-90d-area",
+      "kind": "area",
+      "x": "day-or-week-buckets"
+    }
+  ],
+  "actions": [
+    {
+      "id": "reduce-top-variable",
+      "when": "top_variable_operativo_mom_increase_gt_10pct",
+      "href": "/finanzas/categories?focus={{subcategory_id}}"
+    },
+    {
+      "id": "close-kpi-gap",
+      "when": "abs(unexplained_kpi_structural) >= threshold",
+      "href": "/finanzas/pl#conciliation"
+    }
+  ],
+  "emptyStates": {
+    "noCatalog": {
+      "title": "Falta el mapa de categorías",
+      "cta": "/finanzas/categories"
+    },
+    "sparseMonth": {
+      "title": "Pocos movimientos este mes",
+      "cta": "/finanzas/transactions"
+    }
+  }
+}

@@ -11,6 +11,7 @@ Orvita is a Next.js App Router application with a modular, domain-driven layout.
 - UI: `app/` pages and `app/components/orbita-v3` components.
 - API: `app/api/*` Next.js route handlers with strict typing and structured responses.
 - Domain Logic: `lib/operational`, `lib/finanzas`.
+- Finanzas (P&L estratégico, especificación declarativa): **[finanzas/PL_STRATEGIC_DASHBOARD.md](./finanzas/PL_STRATEGIC_DASHBOARD.md)**.
 - Data Access: Supabase via `lib/supabase/server`.
 
 ## Data & Security
