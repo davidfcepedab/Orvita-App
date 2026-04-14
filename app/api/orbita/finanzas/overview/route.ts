@@ -7,7 +7,6 @@ import { createOperativoExpenseFn } from "@/lib/finanzas/operativoExpense"
 import {
   buildMonthlyFlowBuckets,
   eachMonthInclusive,
-  fillMonthlyFlowFromSnapshots,
   rollingQuarterMonths,
   rollingSemesterMonths,
   rollingYearMonths,
@@ -29,6 +28,10 @@ import type { FlowCommitment } from "@/lib/finanzas/flowCommitmentsTypes"
 import { normalizeUserSubscription } from "@/lib/finanzas/userSubscriptionsNormalize"
 import type { SubscriptionStatus, UserSubscription } from "@/lib/finanzas/userSubscriptionsTypes"
 import { excludeReconciliationFromOperativoAnalysis } from "@/lib/finanzas/reconciliationTxFilter"
+import {
+  buildFlowSeriesWithSnapshots,
+  fetchSnapshotMapForMonths,
+} from "@/lib/finanzas/rollingYearFlowSeries"
 
 export const runtime = "nodejs"
 
@@ -177,60 +180,18 @@ export async function GET(req: NextRequest) {
     )
     const { overview, opex, snapshotKpiNotice, meta, hasOperativoCatalog } = monthState
 
-    const [yStr, mStr] = month.split("-")
-    const y = Number(yStr)
-    const mo = Number(mStr)
-
     const weeklySeries = buildWeeklyBuckets(month, currentRows, opex, { allRowsForWeekWindow: rows })
 
     const quarterMonths = rollingQuarterMonths(month)
     const semesterMonths = rollingSemesterMonths(month)
     const rollingMonths = rollingYearMonths(month)
     const flowMonthsUnion = [...new Set([...quarterMonths, ...semesterMonths, ...rollingMonths])]
-    const yearsInFlow = flowMonthsUnion.map((ym) => Number(ym.split("-")[0])).filter(Number.isFinite)
-    const minFlowYear = yearsInFlow.length ? Math.min(...yearsInFlow) : y
-    const maxFlowYear = yearsInFlow.length ? Math.max(...yearsInFlow) : y
-
-    const { data: flowSnapRows } = await auth.supabase
-      .from("finance_monthly_snapshots")
-      .select("year, month, total_income, total_expense")
-      .eq("household_id", householdId)
-      .gte("year", minFlowYear)
-      .lte("year", maxFlowYear)
-
-    const snapByYm = new Map<string, { income: number; expense: number }>()
-    for (const r of flowSnapRows ?? []) {
-      const yy = Number((r as { year?: number }).year)
-      const mm = Number((r as { month?: number }).month)
-      if (!yy || !mm || mm < 1 || mm > 12) continue
-      const key = `${yy}-${String(mm).padStart(2, "0")}`
-      snapByYm.set(key, {
-        income: Number((r as { total_income?: unknown }).total_income ?? 0),
-        expense: Number((r as { total_expense?: unknown }).total_expense ?? 0),
-      })
-    }
-
-    const snapFillOpts = { fillExpenseFromSnapshots: !hasOperativoCatalog } as const
+    const snapByYm = await fetchSnapshotMapForMonths(auth.supabase, householdId, flowMonthsUnion)
     const flowEvolution = {
       weeks: weeklySeries,
-      quarter: fillMonthlyFlowFromSnapshots(
-        quarterMonths,
-        buildMonthlyFlowBuckets(quarterMonths, rows, opex),
-        snapByYm,
-        snapFillOpts,
-      ),
-      semester: fillMonthlyFlowFromSnapshots(
-        semesterMonths,
-        buildMonthlyFlowBuckets(semesterMonths, rows, opex),
-        snapByYm,
-        snapFillOpts,
-      ),
-      rollingYear: fillMonthlyFlowFromSnapshots(
-        rollingMonths,
-        buildMonthlyFlowBuckets(rollingMonths, rows, opex),
-        snapByYm,
-        snapFillOpts,
-      ),
+      quarter: buildFlowSeriesWithSnapshots(quarterMonths, rows, opex, hasOperativoCatalog, snapByYm),
+      semester: buildFlowSeriesWithSnapshots(semesterMonths, rows, opex, hasOperativoCatalog, snapByYm),
+      rollingYear: buildFlowSeriesWithSnapshots(rollingMonths, rows, opex, hasOperativoCatalog, snapByYm),
     }
     const subs = pickSubscriptionExpenses(currentRows, opex)
     const obls = pickObligationExpenses(currentRows, opex)

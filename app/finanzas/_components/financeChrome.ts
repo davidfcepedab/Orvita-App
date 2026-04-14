@@ -10,6 +10,13 @@ export const financeModuleHeroClass =
 /** Contenedor principal de cada sub-vista: ritmo compacto tipo app. */
 export const financeViewRootClass = "min-w-0 space-y-3 sm:space-y-4"
 
+/**
+ * Vista P&L: el shell ya limita a `max-w-[1400px]` en desktop.
+ * En móvil (p. ej. iPhone 16 Pro Max ≈ 430×CSS px) usar breakpoints `min-[400px]:` / `sm:` para
+ * no depender solo de `sm` (640px): así el layout “grande” del teléfono aprovecha mejor el ancho.
+ */
+export const financePlStackClass = "w-full min-w-0 max-w-full"
+
 /** Barra de tabs del layout: aspecto “segmented control” iOS / app. */
 export const financeModuleSubnavClass =
   "flex w-full min-w-0 max-w-full touch-pan-x snap-x snap-mandatory gap-0.5 overflow-x-auto overflow-y-hidden overscroll-x-contain rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_68%,transparent)] p-0.5 [-webkit-overflow-scrolling:touch] backdrop-blur-[6px] sm:flex-wrap sm:overflow-x-visible sm:snap-none"

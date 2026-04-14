@@ -22,6 +22,8 @@ import type { MonthFinanceCoherence } from "@/lib/finanzas/monthFinanceCoherence
 import { financeApiDelete, financeApiJson } from "@/lib/finanzas/financeClientFetch"
 import { printMonthPlReport } from "@/lib/finanzas/printMonthPlReport"
 import { FINANCE_PL_README_EXPANDED } from "@/lib/finanzas/financeModuleCopy"
+import { financePlStackClass } from "@/app/finanzas/_components/financeChrome"
+import { cn } from "@/lib/utils"
 
 function MoneyCell({
   value,
@@ -96,7 +98,7 @@ function PlLayerRows({ layers }: { layers: CanonicalPlLayer[] }) {
         const pad = layer.indent === 0 ? "pl-4 sm:pl-5" : layer.indent === 1 ? "pl-6 sm:pl-8" : "pl-8 sm:pl-12"
         return (
           <tr key={layer.id} className={plRowShellClass(layer.id, keyLine)}>
-            <td className={`min-w-0 py-2.5 pr-2 align-top ${pad}`}>
+            <td className={`min-w-0 py-2 pr-2 align-top ${pad}`}>
               <span
                 className={[
                   keyLine ? "font-semibold text-orbita-primary" : "text-orbita-secondary",
@@ -111,7 +113,7 @@ function PlLayerRows({ layers }: { layers: CanonicalPlLayer[] }) {
                 {layer.label}
               </span>
             </td>
-            <td className={`min-w-0 py-2.5 px-4 text-right align-top tabular-nums sm:px-5 ${keyLine ? "font-semibold" : ""}`}>
+            <td className={`min-w-0 py-2 px-4 text-right align-top tabular-nums sm:px-5 ${keyLine ? "font-semibold" : ""}`}>
               <MoneyCell value={layer.amount} variant={layerVariant(layer.id, layer.amount)} />
             </td>
           </tr>
@@ -389,7 +391,7 @@ export function FinanzasPlDashboard({ omitStrategicHero = false }: { omitStrateg
   const plConciliationGroup = PL_GROUPS.find((g) => g.collapsed)
 
   return (
-    <div className="space-y-4 sm:space-y-5">
+    <div className={cn("space-y-3 sm:space-y-4", financePlStackClass)}>
       {!omitStrategicHero ? (
       <section
         className="overflow-hidden rounded-2xl border border-orbita-border/85 bg-orbita-surface shadow-[var(--shadow-card)]"
@@ -623,19 +625,17 @@ export function FinanzasPlDashboard({ omitStrategicHero = false }: { omitStrateg
 
       <Card
         id="pl-partidas-table"
-        className="overflow-hidden border-orbita-border/85 shadow-[var(--shadow-card)]"
+        className="overflow-hidden border-orbita-border/85 bg-[radial-gradient(120%_90%_at_100%_0%,rgba(16,185,129,0.09),transparent_55%),radial-gradient(110%_80%_at_0%_0%,rgba(99,102,241,0.09),transparent_55%),var(--color-surface)] shadow-[var(--shadow-card)]"
         aria-labelledby="pl-partidas-heading"
       >
         <div className="border-b border-orbita-border/65 bg-[color-mix(in_srgb,var(--color-surface-alt)_45%,var(--color-surface))]">
-          <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-3 sm:px-5">
+          <div className="flex flex-wrap items-start justify-between gap-2 px-4 py-2.5 sm:px-5">
             <div className="min-w-0">
               <p id="pl-partidas-heading" className="text-[10px] font-bold uppercase tracking-[0.14em] text-orbita-secondary">
                 Partidas del mes
               </p>
-              <p className="mt-0.5 text-[11px] text-orbita-muted">
-                Importes en COP. Partidas con puntos suspensivos: ayuda al pasar el cursor.
-              </p>
-              <p className="mt-1.5 text-[10px] text-orbita-muted">
+              <p className="mt-0.5 text-[10px] text-orbita-muted">Importes en COP. Tooltip en textos truncados.</p>
+              <p className="mt-1 text-[10px] text-orbita-muted">
                 Fuente: <span className="font-medium text-orbita-secondary">{kpiSourceLabel}</span>
                 {financeMeta?.transactionsInSelectedMonth != null ? (
                   <>
@@ -647,17 +647,14 @@ export function FinanzasPlDashboard({ omitStrategicHero = false }: { omitStrateg
               </p>
             </div>
             <details className="text-[10px] text-orbita-secondary">
-              <summary className="cursor-pointer font-medium text-orbita-primary">Leyenda de color</summary>
-              <ul className="mt-2 max-w-xs list-inside list-disc space-y-0.5 text-orbita-muted">
-                <li>Índigo: continuidad (mes previo)</li>
-                <li>Verde / rojo: ingreso y egreso</li>
-                <li>Violeta: operación · cielo: módulo financiero</li>
-                <li>Ámbar: brechas · azul: puentes</li>
-              </ul>
+              <summary className="cursor-pointer font-medium text-orbita-primary">Leyenda</summary>
+              <p className="mt-1 max-w-xs text-orbita-muted">
+                Índigo continuidad · verde/rojo ingreso-egreso · violeta/cielo operación-financiero · ámbar/azul brechas-puentes.
+              </p>
             </details>
           </div>
           <div
-            className="border-t border-orbita-border/50 bg-[color-mix(in_srgb,var(--color-surface-alt)_32%,var(--color-surface))] px-4 py-2.5 sm:px-5"
+            className="border-t border-orbita-border/50 bg-[color-mix(in_srgb,var(--color-surface-alt)_32%,var(--color-surface))] px-4 py-2 sm:px-5"
             role="region"
             aria-label="Resumen del periodo en el P&L"
           >
@@ -679,20 +676,20 @@ export function FinanzasPlDashboard({ omitStrategicHero = false }: { omitStrateg
                 </span>
               </span>
             </div>
-            <p className="mt-1.5 text-[10px] leading-snug text-orbita-muted">
-              YTD / tendencia: en{" "}
+            <p className="mt-1 text-[10px] leading-snug text-orbita-muted">
+              Tendencia: ver{" "}
               <Link
                 href="/finanzas/overview"
                 className="font-medium text-orbita-primary underline-offset-2 hover:underline"
               >
                 Resumen → Evolución
               </Link>{" "}
-              elige «Año móvil» o «Semestre» (misma moneda, distinta agregación temporal).
+              con «Año móvil» o «Semestre».
             </p>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="touch-pan-x overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
           <table className="table-fixed w-full min-w-[min(100%,520px)] border-collapse text-left text-sm">
             <caption className="sr-only">
               Estado de resultados del mes: partidas en la primera columna, importes en COP en la segunda.
@@ -703,10 +700,10 @@ export function FinanzasPlDashboard({ omitStrategicHero = false }: { omitStrateg
             </colgroup>
             <thead>
               <tr className="border-b border-orbita-border/60 bg-orbita-surface-alt/40 text-[11px] uppercase tracking-wide text-orbita-secondary">
-                <th scope="col" className="w-1/2 px-4 py-2.5 font-semibold sm:px-5">
+                <th scope="col" className="w-1/2 px-4 py-2 font-semibold sm:px-5">
                   Partida
                 </th>
-                <th scope="col" className="w-1/2 px-4 py-2.5 text-right font-semibold tabular-nums sm:px-5">
+                <th scope="col" className="w-1/2 px-4 py-2 text-right font-semibold tabular-nums sm:px-5">
                   COP
                 </th>
               </tr>
@@ -718,7 +715,7 @@ export function FinanzasPlDashboard({ omitStrategicHero = false }: { omitStrateg
                 return (
                   <Fragment key={g.id}>
                     <tr className={`border-b border-orbita-border/50 ${headClass}`}>
-                      <td colSpan={2} className="px-4 py-2 sm:px-5">
+                      <td colSpan={2} className="px-4 py-1.5 sm:px-5">
                         <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-orbita-primary">{g.title}</p>
                         {g.subtitle ? (
                           <p className="mt-0.5 max-w-prose text-[10px] leading-snug text-orbita-muted">{g.subtitle}</p>
@@ -760,7 +757,7 @@ export function FinanzasPlDashboard({ omitStrategicHero = false }: { omitStrateg
                   </p>
                 </div>
               ) : null}
-              <div className="overflow-x-auto">
+              <div className="touch-pan-x overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
                 <table className="table-fixed w-full min-w-[min(100%,520px)] border-collapse text-left text-sm">
                   <colgroup>
                     <col style={{ width: "50%" }} />
@@ -776,7 +773,7 @@ export function FinanzasPlDashboard({ omitStrategicHero = false }: { omitStrateg
         ) : null}
       </Card>
 
-      <Card id="pl-puentes-card" className="border-orbita-border/80 p-4 sm:p-6">
+      <Card id="pl-puentes-card" className="border-orbita-border/80 bg-[linear-gradient(165deg,color-mix(in_srgb,var(--color-accent-finance)_10%,transparent),transparent)] p-4 sm:p-6">
         <h3 className="text-sm font-bold text-orbita-primary">Puentes de conciliación</h3>
         <p className="mt-1 text-xs leading-relaxed text-orbita-secondary">
           Ajustes explícitos de la brecha KPI vs mapa. Opcional: el modelo usa el historial (EMA) como referencia.

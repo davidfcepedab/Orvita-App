@@ -11,6 +11,7 @@ import {
   HINT_KEY_KPI_STRUCTURAL_UNEXPLAINED_EMA,
 } from "@/lib/finanzas/reconciliationHints"
 import { excludeReconciliationFromOperativoAnalysis } from "@/lib/finanzas/reconciliationTxFilter"
+import type { FinanceSubcategoryCatalogRow } from "@/lib/finanzas/subcategoryCatalog"
 
 export type FinanceMonthOpex = (tx: FinanceTransaction) => number
 
@@ -22,6 +23,8 @@ export type ComputedFinanceMonthState = {
   txMagBeforeMerge: number
   snapMag: number
   hasOperativoCatalog: boolean
+  /** Mismo catálogo usado para opex y coherencia (activo, merge global+hogar). */
+  catalogRows: FinanceSubcategoryCatalogRow[]
   transactionsInSelectedMonth: number
   meta: FinanceModuleMeta
 }
@@ -218,6 +221,7 @@ export async function computeFinanceMonthState(
     txMagBeforeMerge,
     snapMag,
     hasOperativoCatalog,
+    catalogRows,
     transactionsInSelectedMonth: operativoCurrent.length,
     meta,
   }
