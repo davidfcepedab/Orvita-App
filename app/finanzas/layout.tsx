@@ -10,6 +10,7 @@ import {
   financeSubnavTabClass,
 } from "./_components/financeChrome"
 import { FinanceDataLineBanner } from "./FinanceDataLineBanner"
+import { FinanceHeroMonthControl } from "./_components/FinanceHeroMonthControl"
 import { Card } from "@/src/components/ui/Card"
 import { cn } from "@/lib/utils"
 
@@ -47,7 +48,7 @@ function FinanzasLayoutContent({
       <Card
         className={cn(
           financeModuleHeroClass,
-          "max-sm:pl-[max(0px,env(safe-area-inset-left,0px))] max-sm:pr-[max(0.75rem,env(safe-area-inset-right,0px))]",
+          "max-sm:pr-[max(0.75rem,env(safe-area-inset-right,0px))]",
         )}
       >
         <div className="flex min-w-0 flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
@@ -57,16 +58,7 @@ function FinanzasLayoutContent({
               Un mismo mes para todo el módulo: elige el periodo aquí; cada pestaña muestra el detalle de esa fecha.
             </p>
           </div>
-          <label className="grid w-full min-w-0 shrink-0 gap-1 max-sm:max-w-[min(100%,430px,calc(100dvw-1.5rem-env(safe-area-inset-left,0px)-env(safe-area-inset-right,0px)))] sm:w-auto sm:min-w-[11rem] sm:max-w-none">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">Mes</span>
-            <input
-              type="month"
-              value={month}
-              onChange={(e) => setMonth(e.target.value)}
-              className="min-h-[42px] w-full min-w-0 max-w-full rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface px-3 py-2 text-sm text-orbita-primary shadow-sm transition focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--color-accent-finance)_35%,transparent)]"
-              aria-label="Seleccionar mes del periodo"
-            />
-          </label>
+          <FinanceHeroMonthControl month={month} onChange={setMonth} />
         </div>
         <FinanceDataLineBanner embedded />
       </Card>
