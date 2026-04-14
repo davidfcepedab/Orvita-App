@@ -25,9 +25,9 @@ export const metadata: Metadata = {
     telephone: false,
   },
   icons: {
-    icon: [{ url: "/icon", type: "image/png" }],
-    apple: [{ url: "/apple-icon", type: "image/png" }],
-    shortcut: ["/icon"],
+    icon: [{ url: "/brand/orvita-logo-on-dark-bg.png", type: "image/png", sizes: "1024x1024" }],
+    apple: [{ url: "/brand/orvita-logo-on-light-bg.png", type: "image/png", sizes: "1024x1024" }],
+    shortcut: ["/brand/orvita-logo-on-dark-bg.png"],
   },
 }
 

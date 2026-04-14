@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     if (isAppMockMode()) {
       return NextResponse.json({
         success: true,
-        data: { familyPhotoUrl: `${req.nextUrl.origin}/icon` },
+        data: { familyPhotoUrl: `${req.nextUrl.origin}/brand/orvita-logo-on-dark-bg.png` },
       })
     }
 

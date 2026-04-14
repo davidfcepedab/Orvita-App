@@ -75,3 +75,30 @@ export async function PATCH(req: NextRequest) {
 
   return NextResponse.json({ success: false, error: "Provide markAllRead or ids" }, { status: 400 })
 }
+
+export async function DELETE(req: NextRequest) {
+  const auth = await requireUser(req)
+  if (auth instanceof NextResponse) return auth
+
+  const body = (await req.json().catch(() => null)) as { ids?: string[] } | null
+  if (!body || !Array.isArray(body.ids) || body.ids.length === 0) {
+    return NextResponse.json({ success: false, error: "Provide ids (non-empty array)" }, { status: 400 })
+  }
+
+  const ids = body.ids
+    .filter((id): id is string => typeof id === "string" && id.length > 0)
+    .slice(0, 80)
+
+  if (ids.length === 0) {
+    return NextResponse.json({ success: false, error: "Invalid ids" }, { status: 400 })
+  }
+
+  const { error } = await auth.supabase
+    .from("orbita_notifications")
+    .delete()
+    .in("id", ids)
+    .eq("user_id", auth.userId)
+
+  if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+  return NextResponse.json({ success: true })
+}

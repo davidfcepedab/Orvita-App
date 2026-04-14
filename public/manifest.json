@@ -19,16 +19,22 @@
   ],
   "icons": [
     {
-      "src": "/icon",
-      "sizes": "512x512",
+      "src": "/brand/orvita-logo-on-dark-bg.png",
+      "sizes": "1024x1024",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/apple-icon",
-      "sizes": "180x180",
+      "src": "/brand/orvita-logo-on-light-bg.png",
+      "sizes": "1024x1024",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "maskable"
+    },
+    {
+      "src": "/brand/orvita-logo-on-radiant-bg.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }

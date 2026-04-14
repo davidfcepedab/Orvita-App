@@ -1,7 +1,20 @@
 /* eslint-disable no-restricted-globals */
 /* Service Worker mínimo: Web Push + clic abre la app (Safari iOS requiere PWA en pantalla de inicio). */
+/** Alineado con `lib/notifications/pushBranding.ts` (payload del servidor suele traer estos valores). */
+const DEFAULT_PUSH_ICON = "/brand/orvita-logo-on-dark-bg.png"
+const DEFAULT_PUSH_BADGE = "/brand/orvita-logo-on-dark-bg.png"
+
+function pickAssetUrl(value, fallback) {
+  if (typeof value !== "string") return fallback
+  const v = value.trim()
+  if (!v) return fallback
+  if (v.startsWith("/")) return v
+  if (v.startsWith("https://")) return v
+  return fallback
+}
+
 self.addEventListener("push", (event) => {
-  let payload = { title: "Órvita", body: "", url: "/", notificationId: null }
+  let payload = { title: "Órvita", body: "", url: "/", notificationId: null, icon: null, badge: null, image: null }
   try {
     if (event.data) {
       payload = { ...payload, ...event.data.json() }
@@ -15,16 +28,24 @@ self.addEventListener("push", (event) => {
   }
 
   const url = typeof payload.url === "string" && payload.url.startsWith("/") ? payload.url : "/"
+  const icon = pickAssetUrl(payload.icon, DEFAULT_PUSH_ICON)
+  const badge = pickAssetUrl(payload.badge, DEFAULT_PUSH_BADGE)
+  const imageUrl = pickAssetUrl(payload.image, null)
 
-  event.waitUntil(
-    self.registration.showNotification(payload.title || "Órvita", {
-      body: payload.body || "",
-      icon: "/favicon.ico",
-      badge: "/favicon.ico",
-      tag: payload.notificationId ? `orvita-${payload.notificationId}` : "orvita-generic",
-      data: { url, notificationId: payload.notificationId },
-    }),
-  )
+  const options = {
+    body: payload.body || "",
+    icon,
+    badge,
+    tag: payload.notificationId ? `orvita-${payload.notificationId}` : "orvita-generic",
+    data: { url, notificationId: payload.notificationId },
+    lang: "es",
+    dir: "ltr",
+    timestamp: Date.now(),
+  }
+
+  if (imageUrl) options.image = imageUrl
+
+  event.waitUntil(self.registration.showNotification(payload.title || "Órvita", options))
 })
 
 self.addEventListener("notificationclick", (event) => {

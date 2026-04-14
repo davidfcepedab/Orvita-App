@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type webpush from "web-push"
+import { ORVITA_PUSH_BADGE, ORVITA_PUSH_ICON } from "@/lib/notifications/pushBranding"
 import { getVapidPrivateKey, getVapidPublicKey, getVapidSubject, isVapidConfigured } from "@/lib/notifications/vapid"
 
 export type WebPushPayload = {
@@ -8,6 +9,12 @@ export type WebPushPayload = {
   /** Ruta interna, ej. /finanzas/overview */
   url?: string | null
   notificationId?: string
+  /** Ruta `/…` o URL `https://…` para el icono principal del sistema. */
+  icon?: string | null
+  /** Icono de badge (idealmente simple / monocromo); muchas plataformas lo ignoran. */
+  badge?: string | null
+  /** Imagen grande opcional (ruta o https), p. ej. hero de la alerta. */
+  image?: string | null
 }
 
 let webPushModule: typeof webpush | null = null
@@ -50,6 +57,9 @@ export async function sendWebPushToUser(
     body: payload.body,
     url: payload.url ?? "/",
     notificationId: payload.notificationId,
+    icon: payload.icon?.trim() || ORVITA_PUSH_ICON,
+    badge: payload.badge?.trim() || ORVITA_PUSH_BADGE,
+    ...(payload.image?.trim() ? { image: payload.image.trim() } : {}),
   })
 
   let sent = 0

@@ -4,7 +4,8 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { createPortal } from "react-dom"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Bell, Loader2, Radio } from "lucide-react"
+import clsx from "clsx"
+import { Bell, Check, Loader2, Radio, Trash2 } from "lucide-react"
 import { createBrowserClient } from "@/lib/supabase/browser"
 import { isAppMockMode } from "@/lib/checkins/flags"
 import { isPushSupported, subscribeOrvitaPush } from "@/lib/notifications/pushClient"
@@ -36,6 +37,9 @@ export function NotificationsBell() {
   const [loading, setLoading] = useState(false)
   const [pushBusy, setPushBusy] = useState(false)
   const [pushHint, setPushHint] = useState<string | null>(null)
+  /** `true` si este navegador ya tiene `PushSubscription` (activaste push aquí). */
+  const [pushSubscribed, setPushSubscribed] = useState<boolean | undefined>(undefined)
+  const [deletingId, setDeletingId] = useState<string | "all" | null>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
 
@@ -78,6 +82,27 @@ export function NotificationsBell() {
       window.visualViewport?.removeEventListener("scroll", onReposition)
     }
   }, [open, positionPanel])
+
+  useEffect(() => {
+    if (!open || mock) return
+    let cancelled = false
+    ;(async () => {
+      if (!isPushSupported()) {
+        if (!cancelled) setPushSubscribed(false)
+        return
+      }
+      try {
+        const reg = await navigator.serviceWorker.ready
+        const sub = await reg.pushManager.getSubscription()
+        if (!cancelled) setPushSubscribed(Boolean(sub))
+      } catch {
+        if (!cancelled) setPushSubscribed(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [open, mock])
 
   const vapidPublic = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim() ?? ""
 
@@ -167,6 +192,45 @@ export function NotificationsBell() {
     void load()
   }
 
+  const deleteNotifications = async (ids: string[]) => {
+    if (mock || ids.length === 0) return false
+    const token = await getAccessToken()
+    if (!token) return false
+    const res = await fetch("/api/notifications", {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ ids }),
+    })
+    const json = (await res.json().catch(() => ({}))) as { success?: boolean }
+    return Boolean(res.ok && json.success)
+  }
+
+  const deleteOne = async (id: string) => {
+    if (mock) return
+    setDeletingId(id)
+    try {
+      await deleteNotifications([id])
+    } finally {
+      setDeletingId(null)
+      void load()
+    }
+  }
+
+  const deleteAll = async () => {
+    if (mock || items.length === 0) return
+    if (!window.confirm("¿Borrar todas las alertas de la bandeja? No se puede deshacer.")) return
+    setDeletingId("all")
+    try {
+      await deleteNotifications(items.map((n) => n.id))
+    } finally {
+      setDeletingId(null)
+      void load()
+    }
+  }
+
   const onOpenItem = async (n: NotificationRow) => {
     if (!n.read_at) await markRead([n.id])
     setOpen(false)
@@ -189,7 +253,10 @@ export function NotificationsBell() {
     try {
       const result = await subscribeOrvitaPush(vapidPublic, token)
       if (!result.ok) setPushHint(result.error ?? "No se pudo activar")
-      else setPushHint("Listo: notificaciones push activas en este dispositivo.")
+      else {
+        setPushHint("Listo: notificaciones push activas en este dispositivo.")
+        setPushSubscribed(true)
+      }
     } finally {
       setPushBusy(false)
     }
@@ -200,8 +267,9 @@ export function NotificationsBell() {
     const token = await getAccessToken()
     if (!token) return
     setPushBusy(true)
+    setPushHint(null)
     try {
-      await fetch("/api/notifications/self-test", {
+      const res = await fetch("/api/notifications/self-test", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -209,7 +277,26 @@ export function NotificationsBell() {
         },
         body: JSON.stringify({}),
       })
+      const json = (await res.json()) as {
+        success?: boolean
+        error?: string
+        push?: { sent?: number; errors?: number }
+      }
       void load()
+      if (!res.ok || !json.success) {
+        setPushHint(json.error ?? "No se pudo crear la prueba.")
+        return
+      }
+      const sent = json.push?.sent ?? 0
+      if (sent > 0) {
+        setPushHint(
+          "Push enviado al servicio. Si no ves la burbuja: deja la pestaña en segundo plano o abre el centro de notificaciones del sistema (Chrome a menudo no muestra banner con la pestaña enfocada).",
+        )
+      } else {
+        setPushHint(
+          "Entrada en bandeja creada. Push: 0 envíos — revisa permiso del sitio, que /sw.js esté activo y que «Activar push» se haya hecho en este mismo navegador.",
+        )
+      }
     } finally {
       setPushBusy(false)
     }
@@ -261,15 +348,28 @@ export function NotificationsBell() {
             <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
               Alertas
             </span>
-            {unread > 0 ? (
-              <button
-                type="button"
-                onClick={() => void markAllRead()}
-                className="orbita-focus-ring rounded-md px-2 py-1 text-[11px] font-medium text-[var(--color-accent-primary)] hover:bg-[var(--color-surface-alt)]"
-              >
-                Marcar leídas
-              </button>
-            ) : null}
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+              {unread > 0 ? (
+                <button
+                  type="button"
+                  disabled={deletingId !== null}
+                  onClick={() => void markAllRead()}
+                  className="orbita-focus-ring rounded-md px-2 py-1 text-[11px] font-medium text-[var(--color-accent-primary)] hover:bg-[var(--color-surface-alt)] disabled:opacity-50"
+                >
+                  Marcar leídas
+                </button>
+              ) : null}
+              {items.length > 0 ? (
+                <button
+                  type="button"
+                  disabled={deletingId !== null}
+                  onClick={() => void deleteAll()}
+                  className="orbita-focus-ring rounded-md px-2 py-1 text-[11px] font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-alt)] hover:text-[var(--color-accent-danger)] disabled:opacity-50"
+                >
+                  {deletingId === "all" ? "Borrando…" : "Borrar todas"}
+                </button>
+              ) : null}
+            </div>
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto px-1 py-1">
@@ -286,11 +386,11 @@ export function NotificationsBell() {
             ) : (
               <ul className="m-0 list-none space-y-0.5 p-0">
                 {items.map((n) => (
-                  <li key={n.id}>
+                  <li key={n.id} className="flex items-stretch gap-0.5 rounded-lg hover:bg-[var(--color-surface-alt)]">
                     <button
                       type="button"
                       onClick={() => void onOpenItem(n)}
-                      className="orbita-focus-ring w-full rounded-lg px-3 py-2.5 text-left transition hover:bg-[var(--color-surface-alt)]"
+                      className="orbita-focus-ring min-w-0 flex-1 rounded-l-lg px-3 py-2.5 text-left transition"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <span className="text-[13px] font-semibold leading-snug text-[var(--color-text-primary)]">
@@ -310,6 +410,23 @@ export function NotificationsBell() {
                         })}
                         {n.category ? ` · ${n.category}` : ""}
                       </p>
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Borrar: ${n.title}`}
+                      disabled={deletingId !== null}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        void deleteOne(n.id)
+                      }}
+                      className="orbita-focus-ring flex w-9 shrink-0 items-center justify-center rounded-r-lg text-[var(--color-text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--color-accent-danger)_12%,transparent)] hover:text-[var(--color-accent-danger)] disabled:opacity-50"
+                    >
+                      {deletingId === n.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                      ) : (
+                        <Trash2 className="h-4 w-4" strokeWidth={2} aria-hidden />
+                      )}
                     </button>
                   </li>
                 ))}
@@ -335,12 +452,28 @@ export function NotificationsBell() {
               {isPushSupported() && vapidPublic ? (
                 <button
                   type="button"
-                  disabled={pushBusy}
+                  disabled={pushBusy || pushSubscribed === true}
                   onClick={() => void onEnablePush()}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--color-text-primary)] disabled:opacity-60"
+                  title={
+                    pushSubscribed === true
+                      ? "Este navegador ya tiene suscripción push activa"
+                      : "Solicitar permiso y registrar este dispositivo"
+                  }
+                  className={clsx(
+                    "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold disabled:opacity-60",
+                    pushSubscribed === true
+                      ? "cursor-default border border-[color-mix(in_srgb,var(--color-accent-health)_28%,transparent)] bg-[var(--color-accent-health)] text-white shadow-sm"
+                      : "border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-primary)]",
+                  )}
                 >
-                  {pushBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Radio className="h-3.5 w-3.5" />}
-                  Activar push en este dispositivo
+                  {pushBusy ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                  ) : pushSubscribed === true ? (
+                    <Check className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
+                  ) : (
+                    <Radio className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  )}
+                  {pushSubscribed === true ? "Push activo en este dispositivo" : "Activar push en este dispositivo"}
                 </button>
               ) : null}
               <button
