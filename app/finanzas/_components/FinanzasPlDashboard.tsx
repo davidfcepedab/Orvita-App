@@ -299,11 +299,12 @@ export function FinanzasPlDashboard() {
               value={c.previousMonthNetCashFlow}
               variant={c.previousMonthNetCashFlow >= 0 ? "success" : "danger"}
             />
-            <span className="text-orbita-muted">mes previo (ingresos − gastos; no es saldo banco)</span>
+            <span className="text-orbita-muted">cierre mes previo = arranque en flujo del mes abierto</span>
           </p>
           <p className="mt-1 max-w-xl text-xs leading-relaxed text-orbita-secondary sm:text-sm">
-            El P&amp;L es <strong className="text-orbita-primary">continuo</strong>: primero el cierre en flujo del mes
-            anterior, luego lo que ocurre en el mes seleccionado (caja → operativo → cierre). El detalle de{" "}
+            El P&amp;L es <strong className="text-orbita-primary">un solo hilo en el tiempo</strong>: cómo quedó el mes
+            pasado es el estado de partida del mes que ves; encima se apilan ingresos y gastos del periodo (caja → operativo
+            → cierre). El detalle de{" "}
             <strong className="text-orbita-primary">Cuentas</strong>{" "}
             <Link href="/finanzas/cuentas" className="font-semibold text-[color-mix(in_srgb,var(--color-accent-finance)_80%,var(--color-text-primary))] underline-offset-2 hover:underline">
               está en su pestaña
@@ -393,8 +394,8 @@ export function FinanzasPlDashboard() {
         <div className="border-b border-orbita-border/70 bg-[color-mix(in_srgb,var(--color-surface-alt)_55%,var(--color-surface))] px-4 py-3 sm:px-5">
           <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-orbita-secondary">Estado de resultados</p>
           <p className="mt-0.5 text-xs text-orbita-muted">
-            Leer de arriba a abajo. Dos columnas al mismo ancho. Índigo = arrastre mes anterior; verde = ingreso; rojo =
-            egreso; ámbar = brechas; azul = puentes.
+            Leer de arriba a abajo. Dos columnas al mismo ancho. Índigo = cierre mes anterior (inicio lógico del actual);
+            verde = ingreso; rojo = egreso; ámbar = brechas; azul = puentes.
           </p>
         </div>
 

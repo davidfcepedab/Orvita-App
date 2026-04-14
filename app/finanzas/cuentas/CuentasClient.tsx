@@ -641,8 +641,8 @@ function CuentasReconcileCallout() {
         </span>{" "}
         en el listado de <span className="font-medium">cuentas ledger</span> (sección siguiente).{" "}
         <strong>Tarjeta:</strong> disponible para compras hoy. <strong>Ahorro:</strong> saldo de la cuenta.{" "}
-        <strong>Crédito estructural:</strong> saldo pendiente. Cada conciliación deja un ancla en la fecha; los
-        movimientos posteriores se suman encima hasta que la desviación sea 0.
+        <strong>Crédito estructural:</strong> saldo pendiente.         Cada conciliación deja un ancla en la fecha; los movimientos posteriores se suman encima hasta que la desviación
+        sea 0. Es un flujo continuo: el saldo/cupo que cierra un día es la referencia del siguiente (mismo criterio mes a mes).
       </p>
     </div>
   )

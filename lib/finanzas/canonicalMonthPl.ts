@@ -26,10 +26,10 @@ export function buildCanonicalPlLayers(
   const layers: CanonicalPlLayer[] = [
     {
       id: "continuity_prev",
-      label: "Mes anterior (flujo neto dejado)",
+      label: "Cierre del mes anterior → inicio del actual (flujo neto)",
       amount: opts.previousMonthNetCashFlow,
       indent: 0,
-      hint: "Punto de partida continuo: cuánto «cerró» el mes previo como ingresos − gastos. No es saldo en banco; el mes actual se lee encima de esta trayectoria.",
+      hint: "En un flujo constante, el resultado neto del mes pasado es el contexto con el que arranca el mes seleccionado (ingresos − gastos de ese mes previo; no es saldo bancario).",
     },
     {
       id: "income",
