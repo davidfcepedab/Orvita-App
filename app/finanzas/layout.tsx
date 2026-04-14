@@ -48,8 +48,7 @@ function FinanzasLayoutContent({
           <div className="min-w-0 max-w-full">
             <h1 className="orbita-large-title m-0 break-words text-orbita-primary">Capital operativo</h1>
             <p className="mt-0.5 max-w-prose text-[11px] leading-snug text-orbita-secondary [overflow-wrap:anywhere] sm:text-xs sm:leading-snug">
-              Flujo continuo: cómo cierra un mes es el punto de partida del siguiente (mismo mes que elijas aquí). El detalle
-              sigue abajo.
+              Un mismo mes para todo el módulo: elige el periodo aquí; cada pestaña muestra el detalle de esa fecha.
             </p>
           </div>
           <label className="grid w-full min-w-0 shrink-0 gap-1 sm:w-auto sm:min-w-[11rem]">

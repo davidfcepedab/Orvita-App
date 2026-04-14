@@ -53,7 +53,7 @@ export function FinanceDataLineBanner({ embedded = false }: FinanceDataLineBanne
         role="status"
         aria-live="polite"
       >
-        <p className="m-0 text-[11px] text-orbita-secondary">Sincronizando trazabilidad del periodo…</p>
+        <p className="m-0 text-[11px] text-orbita-secondary">Cargando resumen del mes…</p>
       </div>
     )
   }
@@ -61,11 +61,11 @@ export function FinanceDataLineBanner({ embedded = false }: FinanceDataLineBanne
   const meta = financeMeta as FinanceModuleMeta | null
   if (!meta) return null
 
-  const kpiSourceLabel =
+  const origenResumenLabel =
     meta.kpiSource === "transactions"
       ? "Movimientos del mes"
       : meta.kpiSource === "snapshot"
-        ? "Snapshot"
+        ? "Resumen guardado"
         : "Sin fuente"
 
   const kpiHasSignal = meta.kpiHasSignal
@@ -87,7 +87,7 @@ export function FinanceDataLineBanner({ embedded = false }: FinanceDataLineBanne
         </p>
       ) : null}
 
-      <div className={datosShell} role="region" aria-label="Trazabilidad del periodo seleccionado">
+      <div className={datosShell} role="region" aria-label="Actividad e importes del mes elegido">
         <p className="m-0 flex flex-wrap items-baseline gap-x-1.5 gap-y-1 text-[11px] leading-relaxed sm:text-xs">
           <span className="font-semibold uppercase tracking-[0.12em] text-orbita-secondary">Datos</span>
           <span className="text-orbita-secondary">·</span>
@@ -96,7 +96,7 @@ export function FinanceDataLineBanner({ embedded = false }: FinanceDataLineBanne
           </span>
           <span className="text-orbita-secondary">·</span>
           <span>
-            <span className="text-orbita-secondary">KPI:</span> {kpiSourceLabel}
+            <span className="text-orbita-secondary">Origen:</span> {origenResumenLabel}
           </span>
           {meta.lastTransactionDate ? (
             <>
@@ -104,14 +104,14 @@ export function FinanceDataLineBanner({ embedded = false }: FinanceDataLineBanne
               <span>
                 <span className="text-orbita-secondary">Último:</span> {formatDayEs(meta.lastTransactionDate)}
                 {updatedShort ? (
-                  <span className="text-orbita-secondary"> (sync {updatedShort})</span>
+                  <span className="text-orbita-secondary"> (actualizado {updatedShort})</span>
                 ) : null}
               </span>
             </>
           ) : (
             <>
               <span className="text-orbita-secondary">·</span>
-              <span className="text-orbita-secondary">Sin movimientos en base para tu hogar.</span>
+              <span className="text-orbita-secondary">Sin movimientos en este mes para tu hogar.</span>
             </>
           )}
         </p>

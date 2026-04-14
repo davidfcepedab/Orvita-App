@@ -385,8 +385,8 @@ export function FinanzasPlDashboard() {
                     <Landmark className="h-4 w-4" aria-hidden />
                   </span>
                   <span className="min-w-0 text-left">
-                    <span className="block text-sm font-semibold text-orbita-primary">Cuentas (ledger)</span>
-                    <span className="block text-[10px] font-normal text-orbita-muted">Confirmadas vs automáticas · opcional</span>
+                    <span className="block text-sm font-semibold text-orbita-primary">Tus cuentas importadas</span>
+                    <span className="block text-[10px] font-normal text-orbita-muted">Cierre manual con fecha frente a solo movimientos</span>
                   </span>
                 </span>
                 <ChevronDown className="h-4 w-4 shrink-0 text-orbita-secondary transition group-open:rotate-180" aria-hidden />

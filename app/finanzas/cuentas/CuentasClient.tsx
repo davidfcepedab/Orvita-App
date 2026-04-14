@@ -476,10 +476,10 @@ function CreditPlasticCard({
         {card.conciliacionPendiente ? (
           <p
             className="mt-2 max-w-[95%] rounded-lg border border-amber-300/35 bg-black/25 px-2 py-1.5 text-[10px] font-medium leading-snug text-amber-50/95"
-            title="En la lista ledger puedes introducir a mano el disponible o saldo real (sin conexión al banco)."
+            title="En «Tus saldos en el banco» puedes anotar a mano el disponible o saldo real (sin conexión con el banco)."
           >
-            Hay una diferencia notable con el ledger. Usa{" "}
-            <strong className="font-semibold">Registrar cifra (manual)</strong> en la lista de cuentas ledger.
+            Hay una diferencia notable con los movimientos. Usa{" "}
+            <strong className="font-semibold">Registrar cifra</strong> en «Tus saldos en el banco», más arriba.
           </p>
         ) : null}
       </div>
@@ -626,8 +626,8 @@ function AutoFieldHint({ ledgerLinked }: { ledgerLinked?: boolean }) {
   return (
     <p className="mt-1 text-[10px] leading-snug text-orbita-secondary">
       {ledgerLinked
-        ? "Viene del catálogo (hoja Cuentas) y movimientos. Para ajustar el saldo usa Registrar cifra (manual) en la lista inferior."
-        : "Automático desde movimientos del mes, ledger y panel de cuentas."}
+        ? "Viene del catálogo y movimientos. Para ajustar el saldo usa Registrar cifra en «Tus saldos en el banco»."
+        : "Automático a partir de movimientos del mes y del listado de cuentas."}
     </p>
   )
 }
@@ -920,7 +920,7 @@ export default function CuentasClient() {
         const realDebt = clampedLimit - realBalance
         const usagePct = clampedLimit > 0 ? Math.round((realDebt / clampedLimit) * 1000) / 10 : 0
         const ok = window.confirm(
-          `Confirmar registro manual (sin API bancaria)\nCupo: ${formatMoney(clampedLimit)}\nDisponible: ${formatMoney(realBalance)}\nDeuda calculada: ${formatMoney(realDebt)}\nUso: ${usagePct}%`,
+          `Confirmar registro manual (sin conexión con el banco)\nCupo: ${formatMoney(clampedLimit)}\nDisponible: ${formatMoney(realBalance)}\nDeuda calculada: ${formatMoney(realDebt)}\nUso: ${usagePct}%`,
         )
         if (!ok) return
       }
@@ -1633,12 +1633,12 @@ export default function CuentasClient() {
             />
             <div className="min-w-0 flex-1 text-left">
               <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">
-                Ledger manual
+                Tus saldos en el banco
               </h2>
               <p className="mt-0.5 text-[10px] leading-snug text-orbita-secondary">
                 {ledgerAccounts.length > 0
-                  ? `${ledgerAccounts.length} cuenta${ledgerAccounts.length === 1 ? "" : "s"} · saldo desde extracto o app (sin API)`
-                  : "Tras importar, abre y alinea saldos aquí"}
+                  ? `${ledgerAccounts.length} cuenta${ledgerAccounts.length === 1 ? "" : "s"} · anota lo que ves en extracto o app (sin conexión con el banco)`
+                  : "Cuando importes movimientos, podrás anotar aquí los saldos para cuadrarlos con Órvita"}
               </p>
             </div>
           </summary>
@@ -1648,12 +1648,12 @@ export default function CuentasClient() {
                 Cuentas desde importación (columna <span className="font-medium text-orbita-primary">Cuenta</span>).
               </li>
               <li>
-                <span className="font-medium text-orbita-primary">TC</span>: disponible hoy ·{" "}
+                <span className="font-medium text-orbita-primary">Tarjeta</span>: disponible hoy ·{" "}
                 <span className="font-medium text-orbita-primary">Ahorro</span>: saldo en cuenta.
               </li>
               <li>
-                <span className="font-medium text-orbita-primary">Ajustes</span> cuadran modelo vs extracto; no entran en KPI
-                ni mapa de categorías.
+                <span className="font-medium text-orbita-primary">Ajustes</span> cuadran con tu extracto; no cambian el
+                resumen de ingresos y gastos ni las categorías del mapa.
               </li>
             </ol>
             {ledgerReorderMessage ? (
@@ -1668,11 +1668,11 @@ export default function CuentasClient() {
               <p className="mt-2 text-xs text-amber-800 dark:text-amber-300">{ledgerError}</p>
             ) : null}
             {ledgerLoading && ledgerAccounts.length === 0 ? (
-              <p className="mt-3 text-sm text-orbita-secondary">Cargando cuentas ledger…</p>
+              <p className="mt-3 text-sm text-orbita-secondary">Cargando lista de cuentas…</p>
             ) : null}
             {!ledgerLoading && ledgerAccounts.length === 0 && !ledgerError ? (
               <p className="mt-3 text-sm text-orbita-secondary">
-                Aún no hay cuentas ledger para este hogar. Importa movimientos con columna Cuenta o da de alta cuentas.
+                Aún no hay cuentas. Aparecerán aquí cuando importes movimientos con columna Cuenta.
               </p>
             ) : null}
             {ledgerAccounts.length > 0 ? (
@@ -1811,7 +1811,7 @@ export default function CuentasClient() {
                         <span className="block space-y-1">
                           <span>{kpis.creditoUsoPromedioPct}% uso promedio (tarjetas)</span>
                           <span className="block text-[10px] font-normal leading-snug text-orbita-muted">
-                            Por TC: movimientos del mes + disponible manual en «Ledger manual».
+                            Por tarjeta: movimientos del mes + disponible anotado en «Tus saldos en el banco».
                           </span>
                         </span>
                       }
