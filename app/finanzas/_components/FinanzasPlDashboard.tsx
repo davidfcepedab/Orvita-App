@@ -34,7 +34,11 @@ function MoneyCell({
 }
 
 const PL_GROUPS: { id: string; title: string; layerIds: string[] }[] = [
-  { id: "caja", title: "1 · Flujo de caja (movimientos del mes)", layerIds: ["income", "expense_all", "net"] },
+  {
+    id: "caja",
+    title: "1 · Continuidad y flujo de caja",
+    layerIds: ["continuity_prev", "income", "expense_all", "net"],
+  },
   {
     id: "operativo",
     title: "2 · Operativo y mapa de categorías",
@@ -54,6 +58,7 @@ function layerVariant(id: string, amount: number): "default" | "muted" | "danger
       return "success"
     case "expense_all":
       return "danger"
+    case "continuity_prev":
     case "net":
       return amount >= 0 ? "success" : "danger"
     case "modulo_structural":
@@ -70,6 +75,9 @@ function layerVariant(id: string, amount: number): "default" | "muted" | "danger
 
 function plRowShellClass(layerId: string, keyLine: boolean): string {
   const base = "border-b border-orbita-border/40 transition-colors"
+  if (layerId === "continuity_prev") {
+    return `${base} border-l-[3px] border-l-indigo-500/65 bg-indigo-500/[0.07] dark:bg-indigo-950/32`
+  }
   if (layerId === "income") {
     return `${base} border-l-[3px] border-l-emerald-500/70 bg-emerald-500/[0.07] dark:bg-emerald-950/35`
   }
@@ -285,11 +293,20 @@ export function FinanzasPlDashboard() {
           <h2 className="mt-0.5 text-xl font-bold capitalize tracking-tight text-orbita-primary sm:text-2xl">
             {monthLabel}
           </h2>
+          <p className="mt-1.5 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 text-[11px] text-orbita-secondary sm:text-xs">
+            <span className="font-semibold uppercase tracking-[0.08em] text-orbita-muted">Arrastre</span>
+            <MoneyCell
+              value={c.previousMonthNetCashFlow}
+              variant={c.previousMonthNetCashFlow >= 0 ? "success" : "danger"}
+            />
+            <span className="text-orbita-muted">mes previo (ingresos − gastos; no es saldo banco)</span>
+          </p>
           <p className="mt-1 max-w-xl text-xs leading-relaxed text-orbita-secondary sm:text-sm">
-            Lectura vertical como un estado de resultados: de arriba abajo, caja → operativo → cierre. Los importes de{" "}
+            El P&amp;L es <strong className="text-orbita-primary">continuo</strong>: primero el cierre en flujo del mes
+            anterior, luego lo que ocurre en el mes seleccionado (caja → operativo → cierre). El detalle de{" "}
             <strong className="text-orbita-primary">Cuentas</strong>{" "}
             <Link href="/finanzas/cuentas" className="font-semibold text-[color-mix(in_srgb,var(--color-accent-finance)_80%,var(--color-text-primary))] underline-offset-2 hover:underline">
-              viven en su pestaña
+              está en su pestaña
             </Link>
             .
           </p>
@@ -376,8 +393,8 @@ export function FinanzasPlDashboard() {
         <div className="border-b border-orbita-border/70 bg-[color-mix(in_srgb,var(--color-surface-alt)_55%,var(--color-surface))] px-4 py-3 sm:px-5">
           <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-orbita-secondary">Estado de resultados</p>
           <p className="mt-0.5 text-xs text-orbita-muted">
-            Leer de arriba a abajo. Dos columnas al mismo ancho. Verde = ingreso / neto positivo; rojo = egreso; ámbar = brechas;
-            azul = puentes.
+            Leer de arriba a abajo. Dos columnas al mismo ancho. Índigo = arrastre mes anterior; verde = ingreso; rojo =
+            egreso; ámbar = brechas; azul = puentes.
           </p>
         </div>
 
@@ -456,7 +473,11 @@ export function FinanzasPlDashboard() {
                       </td>
                     </tr>
                     {rows.map((layer) => {
-                      const keyLine = layer.id === "net" || layer.id === "unexplained" || layer.id === "gap_kpi_struct"
+                      const keyLine =
+                        layer.id === "continuity_prev" ||
+                        layer.id === "net" ||
+                        layer.id === "unexplained" ||
+                        layer.id === "gap_kpi_struct"
                       const pad = layer.indent === 0 ? "pl-4 sm:pl-5" : layer.indent === 1 ? "pl-6 sm:pl-8" : "pl-8 sm:pl-12"
                       return (
                         <tr key={layer.id} className={plRowShellClass(layer.id, keyLine)}>

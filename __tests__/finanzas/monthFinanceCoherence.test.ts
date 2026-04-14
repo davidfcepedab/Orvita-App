@@ -52,6 +52,20 @@ describe("computeMonthFinanceCoherence", () => {
     expect(full.expenseStructuralOperativoUi).toBe(400_000)
     expect(Math.abs(full.gapKpiVsStructuralUi)).toBeLessThan(1)
     expect(full.plLayers.length).toBeGreaterThan(5)
+    expect(full.previousMonthNetCashFlow).toBe(0)
+    expect(full.plLayers[0]?.id).toBe("continuity_prev")
+  })
+
+  test("P&L: primera fila refleja flujo neto del mes anterior (continuidad)", () => {
+    const previous = [
+      tx({ id: "p1", date: "2026-03-10", amount: 2_000_000, type: "income" }),
+      tx({ id: "p2", date: "2026-03-20", amount: 500_000, type: "expense", category: "X", subcategory: "Y" }),
+    ]
+    const current = [tx({ id: "c1", date: "2026-04-05", amount: 100_000, type: "income" })]
+    const full = buildCompleteMonthFinanceCoherence(current, previous, [], [], null)
+    expect(full.previousMonthNetCashFlow).toBe(1_500_000)
+    const continuity = full.plLayers.find((L) => L.id === "continuity_prev")
+    expect(continuity?.amount).toBe(1_500_000)
   })
 
   test("gasto módulo finanzas: fuera de operativo KPI pero en gasto total; residual ~0", () => {

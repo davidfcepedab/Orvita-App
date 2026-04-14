@@ -13,6 +13,8 @@ export type CanonicalPlLayer = {
 export function buildCanonicalPlLayers(
   c: MonthFinanceCoherenceCore,
   opts: {
+    /** Cierre en términos de flujo del mes calendario previo al seleccionado (ingresos − gastos de ese mes). */
+    previousMonthNetCashFlow: number
     expenseStructuralOperativoUi: number
     moduloFinancieroStructural: number
     gapKpiVsStructuralUi: number
@@ -23,11 +25,18 @@ export function buildCanonicalPlLayers(
 ): CanonicalPlLayer[] {
   const layers: CanonicalPlLayer[] = [
     {
+      id: "continuity_prev",
+      label: "Mes anterior (flujo neto dejado)",
+      amount: opts.previousMonthNetCashFlow,
+      indent: 0,
+      hint: "Punto de partida continuo: cuánto «cerró» el mes previo como ingresos − gastos. No es saldo en banco; el mes actual se lee encima de esta trayectoria.",
+    },
+    {
       id: "income",
-      label: "Ingresos del mes",
+      label: "Ingresos del mes en curso",
       amount: c.incomeTotal,
       indent: 0,
-      hint: "Fuente: movimientos del periodo (misma base que Movimientos).",
+      hint: "Entradas de efectivo del periodo seleccionado (misma base que Movimientos).",
     },
     {
       id: "expense_all",
@@ -37,10 +46,10 @@ export function buildCanonicalPlLayers(
     },
     {
       id: "net",
-      label: "= Flujo neto del mes",
+      label: "= Flujo neto del mes en curso",
       amount: c.netCashFlow,
       indent: 0,
-      hint: "Ingresos − todos los egresos; alinea con «Total movimientos» / balance del periodo.",
+      hint: "Ingresos − egresos solo del periodo seleccionado. La fila superior resume el mes anterior; juntas describen continuidad, no un mes aislado.",
     },
     {
       id: "opex_kpi",

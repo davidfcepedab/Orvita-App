@@ -28,6 +28,8 @@ export type MonthBridgeEntryLite = {
  * Coherencia ampliada: núcleo + mapa operativo (misma regla que Categorías) + puentes + capas P&L.
  */
 export type MonthFinanceCoherence = MonthFinanceCoherenceCore & {
+  /** Flujo neto (ingresos − gastos) del mes calendario anterior; lectura de continuidad (no es saldo bancario). */
+  previousMonthNetCashFlow: number
   expenseStructuralOperativoUi: number
   moduloFinancieroStructural: number
   gapKpiVsStructuralUi: number
@@ -74,6 +76,7 @@ export function buildCompleteMonthFinanceCoherence(
   hintEmaAbsGap: number | null,
 ): MonthFinanceCoherence {
   const core = computeMonthFinanceCoherence(monthRows, catalog)
+  const previousMonthNetCashFlow = netCashFlow(previousRows)
   const { totals } = computeStructuralOperativoFromRows(monthRows, previousRows, catalog)
 
   const expenseStructuralOperativoUi = totals.totalStructuralUi
@@ -87,6 +90,7 @@ export function buildCompleteMonthFinanceCoherence(
   const unexplainedKpiStructural = gapKpiVsStructuralUi - bridgeSumKpiStructural
 
   const plLayers = buildCanonicalPlLayers(core, {
+    previousMonthNetCashFlow,
     expenseStructuralOperativoUi,
     moduloFinancieroStructural,
     gapKpiVsStructuralUi,
@@ -97,6 +101,7 @@ export function buildCompleteMonthFinanceCoherence(
 
   return {
     ...core,
+    previousMonthNetCashFlow,
     expenseStructuralOperativoUi,
     moduloFinancieroStructural,
     gapKpiVsStructuralUi,
