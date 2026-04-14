@@ -23,6 +23,7 @@ import {
   SunMoon,
   User,
   LogOut,
+  Sparkles,
 } from "lucide-react"
 
 type AppShellProps = {
@@ -287,11 +288,13 @@ export function AppShell({
                     }}
                   >
                     <Link
-                      href="/health"
+                      href="/perfil"
                       onClick={() => setOpen(false)}
-                      className="orbita-focus-ring block rounded-[var(--radius-button)] px-2 py-2 text-[13px] text-[var(--color-text-secondary)] no-underline transition-colors hover:bg-[var(--color-surface-alt)] hover:text-[var(--color-text-primary)]"
+                      className="orbita-focus-ring flex items-center gap-2 rounded-[var(--radius-button)] px-2 py-2 text-[13px] text-[var(--color-text-secondary)] no-underline transition-colors hover:bg-[var(--color-surface-alt)] hover:text-[var(--color-text-primary)]"
+                      aria-label="Personalizar perfil, foto y nombre"
                     >
-                      Perfil
+                      <Sparkles size={14} className="shrink-0 text-[var(--color-accent-health)]" aria-hidden />
+                      Tu espacio
                     </Link>
                     <Link
                       href="/configuracion"

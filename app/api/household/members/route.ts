@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
 
     const { data: rows, error: usersError } = await db
       .from("users")
-      .select("id, email")
+      .select("id, email, avatar_url")
       .eq("household_id", householdId)
 
     if (usersError) {
@@ -55,10 +55,14 @@ export async function GET(req: NextRequest) {
       if (typeof fn === "string" && fn.trim()) displayName = fn.trim()
       else if (typeof nm === "string" && nm.trim()) displayName = nm.trim()
 
+      const avatarRaw = (row as { avatar_url?: string | null }).avatar_url
+      const avatarUrl = typeof avatarRaw === "string" && avatarRaw.trim() ? avatarRaw.trim() : null
+
       members.push({
         id: uid,
         email,
         displayName,
+        avatarUrl,
         isOwner: ownerId != null && uid === ownerId,
       })
     }

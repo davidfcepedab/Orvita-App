@@ -2,7 +2,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 
 let browserClient: SupabaseClient | null = null
 
-export function createBrowserClient() {
+export function createBrowserClient(): SupabaseClient {
   const isMock = process.env.NEXT_PUBLIC_APP_MODE === "mock"
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim()
@@ -34,6 +34,26 @@ export function createBrowserClient() {
             error: null,
           }
         },
+        async updateUser(attrs: { data?: Record<string, unknown> }) {
+          const nextName =
+            typeof attrs.data?.full_name === "string"
+              ? attrs.data.full_name
+              : typeof attrs.data?.name === "string"
+                ? attrs.data.name
+                : "Demo User"
+          return {
+            data: {
+              user: {
+                user_metadata: {
+                  full_name: nextName,
+                  name: nextName,
+                },
+                email: "demo@local.test",
+              },
+            },
+            error: null,
+          }
+        },
         async signOut() {
           return { error: null }
         },
@@ -54,7 +74,7 @@ export function createBrowserClient() {
           }
         },
       },
-    }
+    } as unknown as SupabaseClient
   }
 
   if (!url) throw new Error("NEXT_PUBLIC_SUPABASE_URL is not configured")

@@ -1,6 +1,7 @@
 "use client"
 
-import { Users } from "lucide-react"
+import { useId } from "react"
+import { ImagePlus, Users } from "lucide-react"
 import type { HouseholdMemberDTO } from "@/lib/household/memberTypes"
 import type { OrbitaConfigTheme } from "@/app/components/orbita-v3/config/configThemeTypes"
 
@@ -27,6 +28,10 @@ export function ConfigHouseholdSection({
   householdInviteError,
   inviteCopied,
   onCopyInvite,
+  familyPhotoUrl,
+  familyPhotoBusy,
+  familyPhotoError,
+  onPickFamilyPhoto,
   members,
   membersLoading,
   membersError,
@@ -37,10 +42,16 @@ export function ConfigHouseholdSection({
   householdInviteError: string | null
   inviteCopied: boolean
   onCopyInvite: () => void
+  familyPhotoUrl: string | null
+  familyPhotoBusy: boolean
+  familyPhotoError: string | null
+  onPickFamilyPhoto: (file: File) => void
   members: HouseholdMemberDTO[]
   membersLoading: boolean
   membersError: string | null
 }) {
+  const familyPhotoInputId = useId()
+
   return (
     <section className="space-y-4" aria-labelledby="config-household-heading">
       <h3
@@ -110,7 +121,66 @@ export function ConfigHouseholdSection({
         )}
 
         <div className="mt-10 border-t pt-8" style={{ borderColor: theme.border }}>
-          <p className="text-sm font-semibold tracking-tight" style={{ color: theme.text }}>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold tracking-tight" style={{ color: theme.text }}>
+                Imagen del hogar
+              </p>
+              <p className="mt-2 max-w-xl text-xs leading-relaxed" style={{ color: theme.textMuted }}>
+                Una foto familiar o símbolo compartido: refuerza la identidad del hogar en Órvita (visible para quienes
+                comparten este espacio).
+              </p>
+            </div>
+            <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
+              <input
+                id={familyPhotoInputId}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="sr-only"
+                disabled={familyPhotoBusy}
+                onChange={(ev) => {
+                  const file = ev.target.files?.[0] ?? null
+                  ev.target.value = ""
+                  if (file) onPickFamilyPhoto(file)
+                }}
+              />
+              <label
+                htmlFor={familyPhotoInputId}
+                className={`${subtleButton} inline-flex cursor-pointer items-center justify-center gap-2`}
+                style={{
+                  borderColor: theme.border,
+                  color: theme.text,
+                  opacity: familyPhotoBusy ? 0.55 : 1,
+                  pointerEvents: familyPhotoBusy ? "none" : "auto",
+                }}
+              >
+                <ImagePlus className="h-3.5 w-3.5" aria-hidden />
+                {familyPhotoBusy ? "Subiendo…" : familyPhotoUrl ? "Cambiar imagen" : "Añadir imagen"}
+              </label>
+            </div>
+          </div>
+
+          {familyPhotoError ? (
+            <p className="mt-3 text-xs" style={{ color: theme.accent.finance }}>
+              {familyPhotoError}
+            </p>
+          ) : null}
+
+          {familyPhotoUrl ? (
+            <div
+              className="mt-4 overflow-hidden rounded-xl border"
+              style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={familyPhotoUrl} alt="Imagen del hogar" className="max-h-52 w-full object-cover" />
+            </div>
+          ) : (
+            <p className="mt-4 text-xs" style={{ color: theme.textMuted }}>
+              Aún no hay imagen del hogar.
+            </p>
+          )}
+
+          <p className="mt-10 text-sm font-semibold tracking-tight" style={{ color: theme.text }}>
             Miembros del hogar actual
           </p>
 
@@ -144,14 +214,19 @@ export function ConfigHouseholdSection({
                     }}
                   >
                     <div
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+                      className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full text-[11px] font-semibold"
                       style={{
                         backgroundColor: theme.border,
                         color: theme.text,
                       }}
                       aria-hidden
                     >
-                      {memberInitials(m.displayName, m.email)}
+                      {m.avatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={m.avatarUrl} alt="" className="h-full w-full object-cover" width={40} height={40} />
+                      ) : (
+                        memberInitials(m.displayName, m.email)
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium" style={{ color: theme.text }}>

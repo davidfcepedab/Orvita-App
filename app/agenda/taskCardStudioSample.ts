@@ -8,12 +8,14 @@ export const TASK_CARD_STUDIO_HOUSEHOLD_MEMBERS: HouseholdMemberDTO[] = [
     id: "00000000-0000-0000-0000-0000000000aa",
     email: "maria@ejemplo.local",
     displayName: "María López",
+    avatarUrl: null,
     isOwner: false,
   },
   {
     id: "00000000-0000-0000-0000-0000000000cc",
     email: "carlos@ejemplo.local",
     displayName: "Carlos Ruiz",
+    avatarUrl: null,
     isOwner: false,
   },
 ]

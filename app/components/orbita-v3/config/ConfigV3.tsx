@@ -8,7 +8,8 @@ import { ConfigIntegrationsPanel } from "@/app/components/orbita-v3/config/Confi
 import { designTokens } from "@/src/theme/design-tokens"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { createBrowserClient } from "@/lib/supabase/browser"
-import { Monitor, Palette, Sliders } from "lucide-react"
+import Link from "next/link"
+import { ChevronRight, Monitor, Palette, Sliders, Sparkles } from "lucide-react"
 import type { HouseholdMemberDTO } from "@/lib/household/memberTypes"
 
 const HEVY_LAST_SYNC_STORAGE_KEY = "orvita:config:hevyLastSyncIso"
@@ -34,6 +35,9 @@ export default function ConfigV3() {
   const [members, setMembers] = useState<HouseholdMemberDTO[]>([])
   const [membersLoading, setMembersLoading] = useState(true)
   const [membersError, setMembersError] = useState<string | null>(null)
+  const [familyPhotoUrl, setFamilyPhotoUrl] = useState<string | null>(null)
+  const [familyPhotoBusy, setFamilyPhotoBusy] = useState(false)
+  const [familyPhotoError, setFamilyPhotoError] = useState<string | null>(null)
   const [hevyConnected, setHevyConnected] = useState(false)
   const [hevyChecking, setHevyChecking] = useState(true)
   const [hevySyncing, setHevySyncing] = useState(false)
@@ -112,7 +116,7 @@ export default function ConfigV3() {
         })
         const payload = (await res.json()) as {
           success?: boolean
-          data?: { inviteCode: string }
+          data?: { inviteCode: string; familyPhotoUrl?: string | null }
           error?: string
         }
         if (cancelled) return
@@ -120,6 +124,11 @@ export default function ConfigV3() {
           throw new Error(messageForHttpError(res.status, payload.error, res.statusText))
         }
         setHouseholdInviteCode(payload.data.inviteCode)
+        setFamilyPhotoUrl(
+          typeof payload.data.familyPhotoUrl === "string" && payload.data.familyPhotoUrl.trim()
+            ? payload.data.familyPhotoUrl.trim()
+            : null,
+        )
       } catch (e) {
         if (!cancelled) {
           setHouseholdInviteCode(null)
@@ -371,6 +380,34 @@ export default function ConfigV3() {
     }
   }
 
+  const handleUploadFamilyPhoto = async (file: File) => {
+    try {
+      setFamilyPhotoError(null)
+      setFamilyPhotoBusy(true)
+      const token = await getAccessToken()
+      const body = new FormData()
+      body.append("file", file)
+      const res = await fetch("/api/household/family-photo", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body,
+      })
+      const payload = (await res.json()) as {
+        success?: boolean
+        data?: { familyPhotoUrl?: string }
+        error?: string
+      }
+      if (!res.ok || !payload.success || !payload.data?.familyPhotoUrl) {
+        throw new Error(messageForHttpError(res.status, payload.error, res.statusText))
+      }
+      setFamilyPhotoUrl(payload.data.familyPhotoUrl)
+    } catch (e) {
+      setFamilyPhotoError(e instanceof Error ? e.message : "No se pudo subir la foto del hogar")
+    } finally {
+      setFamilyPhotoBusy(false)
+    }
+  }
+
   const themeOptions: { id: ColorTheme; label: string; colors: string[] }[] = [
     {
       id: "arctic",
@@ -423,6 +460,34 @@ export default function ConfigV3() {
         </p>
       </header>
 
+      <Link
+        href="/perfil"
+        className="orbita-focus-ring flex items-center justify-between gap-4 rounded-2xl border p-5 no-underline transition-opacity hover:opacity-95"
+        style={{
+          backgroundColor: theme.surfaceAlt,
+          borderColor: theme.border,
+          boxShadow: "0 1px 0 rgba(15, 23, 42, 0.04)",
+        }}
+      >
+        <div className="flex min-w-0 items-start gap-3">
+          <span
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+            style={{ backgroundColor: theme.surface, color: theme.accent.health }}
+          >
+            <Sparkles className="h-5 w-5" aria-hidden />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold tracking-tight" style={{ color: theme.text }}>
+              Tu espacio
+            </p>
+            <p className="mt-1 text-xs leading-relaxed" style={{ color: theme.textMuted }}>
+              Foto y nombre: personaliza cómo te muestra Órvita y gana un poco de gamificación ligera.
+            </p>
+          </div>
+        </div>
+        <ChevronRight className="h-5 w-5 shrink-0" style={{ color: theme.textMuted }} aria-hidden />
+      </Link>
+
       <ConfigHouseholdSection
         theme={theme}
         householdInviteLoading={householdInviteLoading}
@@ -436,6 +501,10 @@ export default function ConfigV3() {
             window.setTimeout(() => setInviteCopied(false), 2500)
           })
         }}
+        familyPhotoUrl={familyPhotoUrl}
+        familyPhotoBusy={familyPhotoBusy}
+        familyPhotoError={familyPhotoError}
+        onPickFamilyPhoto={(file) => void handleUploadFamilyPhoto(file)}
         members={members}
         membersLoading={membersLoading}
         membersError={membersError}

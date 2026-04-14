@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
 
     const { data, error } = await supabase
       .from("households")
-      .select("invite_code")
+      .select("invite_code, family_photo_url")
       .eq("id", householdId)
       .single()
 
@@ -27,10 +27,16 @@ export async function GET(req: NextRequest) {
       throw error
     }
 
+    const row = data as { invite_code?: string; family_photo_url?: string | null }
+
     return NextResponse.json({
       success: true,
       data: {
-        inviteCode: data.invite_code,
+        inviteCode: row.invite_code,
+        familyPhotoUrl:
+          typeof row.family_photo_url === "string" && row.family_photo_url.trim()
+            ? row.family_photo_url.trim()
+            : null,
       },
     })
   } catch (error: unknown) {
