@@ -44,7 +44,7 @@ function FinanzasLayoutContent({
   return (
     <div className="min-w-0 max-w-full space-y-2.5 overflow-x-hidden sm:space-y-3">
       <Card className={financeModuleHeroClass}>
-        <div className="flex min-w-0 flex-col gap-2 min-[400px]:flex-row min-[400px]:items-end min-[400px]:justify-between min-[400px]:gap-3 sm:items-center sm:gap-4">
+        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <div className="min-w-0 max-w-full flex-1">
             <h1 className="m-0 text-xl font-bold leading-tight tracking-tight text-orbita-primary sm:orbita-large-title sm:leading-none">
               Capital operativo
@@ -56,7 +56,7 @@ function FinanzasLayoutContent({
               Un mes para todo Capital; el selector aplica a todas las pestañas.
             </p>
           </div>
-          <label className="grid w-full min-w-0 shrink-0 gap-0.5 min-[400px]:w-auto min-[400px]:max-w-[min(100%,13.5rem)] sm:min-w-[11rem]">
+          <label className="grid w-full min-w-0 max-w-full grid-cols-1 gap-0.5 sm:w-auto sm:max-w-[min(100%,22rem)] sm:shrink-0 sm:min-w-[11.5rem]">
             <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary sm:text-[10px] sm:tracking-[0.14em]">
               Mes
             </span>
@@ -64,7 +64,7 @@ function FinanzasLayoutContent({
               type="month"
               value={month}
               onChange={(e) => setMonth(e.target.value)}
-              className="min-h-[38px] w-full min-w-0 rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface px-2.5 py-1.5 text-sm text-orbita-primary shadow-sm transition focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--color-accent-finance)_35%,transparent)] sm:min-h-[42px] sm:px-3 sm:py-2"
+              className="box-border min-h-[40px] w-full min-w-0 max-w-full rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface px-2.5 py-1.5 text-sm text-orbita-primary shadow-sm transition focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--color-accent-finance)_35%,transparent)] sm:min-h-[42px] sm:px-3 sm:py-2"
               aria-label="Seleccionar mes del periodo"
             />
           </label>
