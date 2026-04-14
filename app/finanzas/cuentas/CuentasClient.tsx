@@ -1612,23 +1612,24 @@ export default function CuentasClient() {
 
       {supabaseEnabled && (ledgerLoading || ledgerAccounts.length > 0 || ledgerError) ? (
         <details
+          open
           className={`group mt-3 rounded-[var(--radius-card)] border border-orbita-border/90 bg-orbita-surface shadow-[var(--shadow-card)] sm:mt-4 ${arcticPanel}`}
         >
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 sm:px-4 sm:py-2 [&::-webkit-details-marker]:hidden">
-            <div className="min-w-0 text-left">
-              <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">
-                Ledger — alinear disponible / saldo (manual)
-              </h2>
-              <p className="mt-0.5 text-[10px] leading-tight text-orbita-secondary">
-                {ledgerAccounts.length > 0
-                  ? `${ledgerAccounts.length} cuenta${ledgerAccounts.length === 1 ? "" : "s"} · abre para registrar cifra (sin API bancaria)`
-                  : "Cuentas orbita_finance_accounts · orden y conciliación"}
-              </p>
-            </div>
+          <summary className="flex min-h-[44px] cursor-pointer list-none items-center gap-3 rounded-t-[var(--radius-card)] px-3 py-2.5 transition-colors hover:bg-[color-mix(in_srgb,var(--color-text-primary)_4%,transparent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--color-accent-finance)_45%,var(--color-border))] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)] sm:px-4 [&::-webkit-details-marker]:hidden">
             <ChevronDown
-              className="h-4 w-4 shrink-0 text-orbita-secondary transition-transform group-open:rotate-180"
+              className="h-4 w-4 shrink-0 text-orbita-secondary transition-transform duration-200 group-open:rotate-180"
               aria-hidden
             />
+            <div className="min-w-0 flex-1 text-left">
+              <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">
+                Conciliación manual (ledger)
+              </h2>
+              <p className="mt-0.5 text-[10px] leading-snug text-orbita-secondary">
+                {ledgerAccounts.length > 0
+                  ? `${ledgerAccounts.length} cuenta${ledgerAccounts.length === 1 ? "" : "s"} · registra el saldo de tu extracto o app (sin conexión bancaria)`
+                  : "Lista desde importación · orden y conciliación cuando carguen cuentas"}
+              </p>
+            </div>
           </summary>
           <div className="border-t border-orbita-border/80 px-3 pb-3 pt-1.5 sm:px-4 sm:pb-4">
             <p className="text-[10px] leading-relaxed text-orbita-secondary">
