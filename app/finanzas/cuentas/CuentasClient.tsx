@@ -452,9 +452,10 @@ function CreditPlasticCard({
         {card.conciliacionPendiente ? (
           <p
             className="mt-2 max-w-[95%] rounded-lg border border-amber-300/35 bg-black/25 px-2 py-1.5 text-[10px] font-medium leading-snug text-amber-50/95"
-            title="El saldo mostrado sigue al ledger; si el tuyo es otro, abre Editar y marca que tu cifra prevalece."
+            title="Concilia en la lista de cuentas para alinear el saldo con tu banco."
           >
-            Hay una diferencia notable con el ledger. Pulsa Editar para revisar o indicar que tus números son los correctos.
+            Hay una diferencia notable con el ledger. Usa <strong className="font-semibold">Conciliar</strong> en la fila de
+            esta cuenta (lista inferior).
           </p>
         ) : null}
       </div>
@@ -597,10 +598,12 @@ function isManualOnlyLoan(l: CuentasLoanCard) {
   return Boolean(l.manualRowId || String(l.id).startsWith("manual-loan"))
 }
 
-function AutoFieldHint() {
+function AutoFieldHint({ ledgerLinked }: { ledgerLinked?: boolean }) {
   return (
     <p className="mt-1 text-[10px] leading-snug text-orbita-secondary">
-      Automático desde movimientos del mes, ledger y panel de cuentas.
+      {ledgerLinked
+        ? "Viene del catálogo (hoja Cuentas) y movimientos. Para ajustar el saldo usa Conciliar en la lista inferior."
+        : "Automático desde movimientos del mes, ledger y panel de cuentas."}
     </p>
   )
 }
@@ -1108,6 +1111,7 @@ export default function CuentasClient() {
   }
 
   const openEditSavings = (item: CuentasSavingsCard) => {
+    const fromLedgerCatalog = cardUsesLedgerCatalogRow(item)
     setSavingForm({
       id: item.id,
       institution: item.institution,
@@ -1117,7 +1121,8 @@ export default function CuentasClient() {
       trendUp: item.trendUp,
       theme: item.theme ?? "emerald",
       replacesSyntheticId: item.replacesSyntheticId ?? (item.id.startsWith("manual-saving") ? undefined : item.id),
-      derivedMetrics: !isManualOnlySaving(item),
+      /** Manual-only rows sin vínculo ledger pueden editar montos; si viene de hoja Cuentas, siempre automático. */
+      derivedMetrics: fromLedgerCatalog ? true : !isManualOnlySaving(item),
     })
     setManualModal("savings")
   }
@@ -1202,8 +1207,7 @@ export default function CuentasClient() {
   }
 
   const openEditCredit = (c: CuentasCreditCard) => {
-    const tiedToLedgerCatalog =
-      c.id.startsWith("ledger-") || Boolean(c.replacesSyntheticId?.startsWith("ledger-"))
+    const tiedToLedgerCatalog = cardUsesLedgerCatalogRow(c)
     setCreditForm({
       id: c.id,
       bankLabel: c.bankLabel,
@@ -1217,12 +1221,17 @@ export default function CuentasClient() {
       replacesSyntheticId: c.replacesSyntheticId ?? (c.id.startsWith("manual-cc") ? undefined : c.id),
       /** Saldo/score automáticos si viene del catálogo ledger o una manual que lo sustituye. */
       derivedFinancials: tiedToLedgerCatalog ? true : !isManualOnlyCredit(c),
-      manualFinancialOverride: c.manualFinancialOverride === true,
+      /** Nunca override manual si la tarjeta representa fila de hoja Cuentas: solo conciliación. */
+      manualFinancialOverride: tiedToLedgerCatalog ? false : c.manualFinancialOverride === true,
     })
     setManualModal("credit")
   }
 
   const submitCredit = async () => {
+    const tiedLedgerCatalog = cardUsesLedgerCatalogRow({
+      id: creditForm.id ?? "",
+      replacesSyntheticId: creditForm.replacesSyntheticId,
+    })
     const lim = Math.max(1, creditForm.limit)
     const bal = Math.min(creditForm.balance, lim)
     const usagePct = Math.round((bal / lim) * 100)
@@ -1251,7 +1260,7 @@ export default function CuentasClient() {
       theme: normalizeCreditCardTheme(creditForm.theme),
       replacesSyntheticId: rep,
       manualRowId: existing?.manualRowId,
-      manualFinancialOverride: creditForm.manualFinancialOverride,
+      manualFinancialOverride: tiedLedgerCatalog ? false : creditForm.manualFinancialOverride,
       cupo: existing?.cupo,
       uso: existing?.uso,
       creditosExtras: existing?.creditosExtras,
@@ -2140,7 +2149,12 @@ export default function CuentasClient() {
                 <div className="mt-1 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt px-3 py-2 text-sm font-semibold tabular-nums text-orbita-primary">
                   ${formatMoney(savingForm.amount)}
                 </div>
-                <AutoFieldHint />
+                <AutoFieldHint
+                  ledgerLinked={cardUsesLedgerCatalogRow({
+                    id: savingForm.id ?? "",
+                    replacesSyntheticId: savingForm.replacesSyntheticId,
+                  })}
+                />
               </>
             ) : (
               <input
@@ -2158,7 +2172,12 @@ export default function CuentasClient() {
                 <div className="mt-1 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt px-3 py-2 text-sm font-semibold tabular-nums text-orbita-primary">
                   {savingForm.healthPct}%
                 </div>
-                <AutoFieldHint />
+                <AutoFieldHint
+                  ledgerLinked={cardUsesLedgerCatalogRow({
+                    id: savingForm.id ?? "",
+                    replacesSyntheticId: savingForm.replacesSyntheticId,
+                  })}
+                />
               </>
             ) : (
               <input
@@ -2176,7 +2195,12 @@ export default function CuentasClient() {
                 <div className="mt-1 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt px-3 py-2 text-sm text-orbita-primary">
                   {savingForm.trendUp ? "Positiva" : "A la baja"}
                 </div>
-                <AutoFieldHint />
+                <AutoFieldHint
+                  ledgerLinked={cardUsesLedgerCatalogRow({
+                    id: savingForm.id ?? "",
+                    replacesSyntheticId: savingForm.replacesSyntheticId,
+                  })}
+                />
               </>
             ) : (
               <label className="mt-1 flex items-center gap-2">
@@ -2238,19 +2262,11 @@ export default function CuentasClient() {
             <ReadonlyField value={<span className="tabular-nums">{creditForm.last4}</span>} />
           </label>
           {lockCatalogCreditIdentity ? (
-            <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-orbita-border/70 bg-orbita-surface-alt/40 px-3 py-2.5 text-sm text-orbita-primary sm:col-span-2">
-              <input
-                type="checkbox"
-                className="mt-0.5"
-                checked={creditForm.manualFinancialOverride}
-                onChange={(e) =>
-                  setCreditForm((s) => ({ ...s, manualFinancialOverride: e.target.checked }))
-                }
-              />
-              <span className="leading-snug">
-                Usar valores manuales para esta tarjeta (saldo/cupo/score) en lugar del ledger.
-              </span>
-            </label>
+            <p className="rounded-xl border border-orbita-border/70 bg-orbita-surface-alt/35 px-3 py-2.5 text-xs leading-relaxed text-orbita-secondary sm:col-span-2">
+              Deuda, cupo y salud % salen del <strong className="text-orbita-primary">catálogo</strong> y movimientos. Para
+              alinear el saldo con tu banco usa <strong className="text-orbita-primary">Conciliar</strong> en la fila de esta
+              cuenta en la lista inferior (no se sobrescriben aquí).
+            </p>
           ) : null}
           <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary sm:col-span-2">
             Configuración visual
@@ -2306,13 +2322,16 @@ export default function CuentasClient() {
           </label>
           <label className="block text-sm text-orbita-primary">
             Cupo {catalogLockedMetrics ? <FieldMetaTag kind="automatico" /> : <FieldMetaTag kind="manual" />}
-            <input
-              type="number"
-              disabled={catalogLockedMetrics}
-              className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
-              value={creditForm.limit}
-              onChange={(e) => setCreditForm((s) => ({ ...s, limit: Number(e.target.value) }))}
-            />
+            {catalogLockedMetrics ? (
+              <ReadonlyField value={`$${formatMoney(creditForm.limit)}`} />
+            ) : (
+              <input
+                type="number"
+                className="mt-1 w-full rounded-xl border border-orbita-border px-3 py-2"
+                value={creditForm.limit}
+                onChange={(e) => setCreditForm((s) => ({ ...s, limit: Number(e.target.value) }))}
+              />
+            )}
           </label>
           <label className="block text-sm text-orbita-primary">
             Día de pago
