@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { createBrowserClient } from "@/lib/supabase/browser"
+import { authCardSurfaceClass } from "@/app/auth/_components/authCardClasses"
 import { AuthScenicBackdrop } from "@/app/auth/_components/AuthScenicBackdrop"
 
 type Mode = "login" | "register"
@@ -292,7 +293,7 @@ export default function AuthPage() {
         id="auth-main"
       >
       <div
-        className="flex flex-col gap-7 rounded-[var(--radius-card)] border border-orbita-border/80 bg-orbita-surface/95 p-6 shadow-card ring-1 ring-orbita-border/25 backdrop-blur-[2px] sm:p-7"
+        className={`flex flex-col gap-7 p-6 sm:p-7 ${authCardSurfaceClass}`}
         aria-busy={loading}
       >
         <header className="space-y-2">

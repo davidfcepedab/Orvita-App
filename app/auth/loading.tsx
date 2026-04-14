@@ -1,3 +1,4 @@
+import { authCardSurfaceClass } from "@/app/auth/_components/authCardClasses"
 import { AuthScenicBackdrop } from "@/app/auth/_components/AuthScenicBackdrop"
 
 export default function AuthLoading() {
@@ -9,18 +10,20 @@ export default function AuthLoading() {
         aria-busy="true"
         aria-label="Cargando acceso"
       >
-      <div className="space-y-6 rounded-[var(--radius-card)] border border-orbita-border/80 bg-orbita-surface/95 p-6 shadow-card ring-1 ring-orbita-border/25 backdrop-blur-[2px] motion-safe:animate-pulse sm:p-7">
+      <div
+        className={`space-y-6 p-6 motion-safe:animate-pulse sm:p-7 ${authCardSurfaceClass}`}
+      >
         <div className="space-y-2">
-          <div className="h-3 w-16 rounded bg-orbita-surface-alt" />
-          <div className="h-8 w-4/5 max-w-[14rem] rounded-md bg-orbita-surface-alt" />
-          <div className="h-4 w-full rounded bg-orbita-surface-alt" />
-          <div className="h-4 w-5/6 rounded bg-orbita-surface-alt" />
+          <div className="h-3 w-16 rounded bg-[color-mix(in_srgb,var(--color-accent-primary)_12%,#f1f5f9)]" />
+          <div className="h-8 w-4/5 max-w-[14rem] rounded-md bg-[color-mix(in_srgb,var(--color-accent-primary)_10%,#f1f5f9)]" />
+          <div className="h-4 w-full rounded bg-[color-mix(in_srgb,var(--color-accent-primary)_8%,#f1f5f9)]" />
+          <div className="h-4 w-5/6 rounded bg-[color-mix(in_srgb,var(--color-accent-primary)_8%,#f1f5f9)]" />
         </div>
-        <div className="h-12 w-full rounded-[var(--radius-button)] bg-orbita-surface-alt shadow-inner" />
+        <div className="h-12 w-full rounded-[var(--radius-button)] bg-[color-mix(in_srgb,var(--color-accent-primary)_9%,#eef2f6)] shadow-inner" />
         <div className="space-y-3">
-          <div className="h-11 w-full rounded-[var(--radius-button)] bg-orbita-surface-alt" />
-          <div className="h-11 w-full rounded-[var(--radius-button)] bg-orbita-surface-alt" />
-          <div className="h-11 w-full rounded-[var(--radius-button)] bg-[color-mix(in_srgb,var(--color-text-primary)_18%,var(--color-surface-alt))]" />
+          <div className="h-11 w-full rounded-[var(--radius-button)] bg-[color-mix(in_srgb,var(--color-accent-primary)_8%,#f1f5f9)]" />
+          <div className="h-11 w-full rounded-[var(--radius-button)] bg-[color-mix(in_srgb,var(--color-accent-primary)_8%,#f1f5f9)]" />
+          <div className="h-11 w-full rounded-[var(--radius-button)] bg-[color-mix(in_srgb,var(--color-text-primary)_14%,#f1f5f9)]" />
         </div>
       </div>
       <p className="mt-5 text-center text-xs text-orbita-secondary">Cargando pantalla de acceso…</p>
