@@ -128,7 +128,11 @@ export function ConfigHouseholdSection({
               </p>
               <p className="mt-2 max-w-xl text-xs leading-relaxed" style={{ color: theme.textMuted }}>
                 Una foto familiar o símbolo compartido: refuerza la identidad del hogar en Órvita (visible para quienes
-                comparten este espacio).
+                comparten este espacio). Al elegir archivo podrás{" "}
+                <strong className="font-medium" style={{ color: theme.text }}>
+                  recortar y encuadrar
+                </strong>{" "}
+                antes de subirla.
               </p>
             </div>
             <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
@@ -168,11 +172,11 @@ export function ConfigHouseholdSection({
 
           {familyPhotoUrl ? (
             <div
-              className="mt-4 overflow-hidden rounded-xl border"
+              className="mt-4 h-72 overflow-hidden rounded-xl border sm:h-80 md:h-[22rem]"
               style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={familyPhotoUrl} alt="Imagen del hogar" className="max-h-52 w-full object-cover" />
+              <img src={familyPhotoUrl} alt="Imagen del hogar" className="h-full w-full object-cover" />
             </div>
           ) : (
             <p className="mt-4 text-xs" style={{ color: theme.textMuted }}>

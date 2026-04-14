@@ -4,8 +4,10 @@ import { useCallback, useEffect, useId, useState } from "react"
 import Link from "next/link"
 import { Sparkles, Camera, Save, ChevronLeft } from "lucide-react"
 import { useApp, themes } from "@/app/contexts/AppContext"
+import { OrbitaImageCropDialog } from "@/app/components/OrbitaImageCropDialog"
 import { createBrowserClient } from "@/lib/supabase/browser"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
+import { dispatchAvatarUpdated } from "@/lib/profile/avatarUpdatedEvent"
 
 type ProfileMePayload = {
   email: string
@@ -30,6 +32,8 @@ export default function PerfilPage() {
   const [nameMessage, setNameMessage] = useState<string | null>(null)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [avatarMessage, setAvatarMessage] = useState<string | null>(null)
+  const [avatarCropOpen, setAvatarCropOpen] = useState(false)
+  const [avatarCropFile, setAvatarCropFile] = useState<File | null>(null)
 
   const getAccessToken = useCallback(async () => {
     const supabase = createBrowserClient()
@@ -132,6 +136,7 @@ export default function PerfilPage() {
       if (resMe.ok && mePayload.success && mePayload.data) {
         setCompleteness(mePayload.data.completeness)
       }
+      dispatchAvatarUpdated()
     } catch (e) {
       setAvatarMessage(e instanceof Error ? e.message : "No se pudo subir la foto")
     } finally {
@@ -232,6 +237,10 @@ export default function PerfilPage() {
             <h2 className="text-sm font-semibold" style={{ color: theme.text }}>
               Foto y nombre
             </h2>
+            <p className="mt-2 text-xs leading-relaxed" style={{ color: theme.textMuted }}>
+              Al elegir imagen se abre un recorte cuadrado antes de subirla (también verás tu foto en el botón del menú
+              superior).
+            </p>
             <div className="mt-6 flex flex-col items-start gap-6 sm:flex-row sm:items-center">
               <div className="relative shrink-0">
                 <div
@@ -257,7 +266,10 @@ export default function PerfilPage() {
                   onChange={(ev) => {
                     const f = ev.target.files?.[0] ?? null
                     ev.target.value = ""
-                    void handleAvatarFile(f)
+                    if (f) {
+                      setAvatarCropFile(f)
+                      setAvatarCropOpen(true)
+                    }
                   }}
                 />
                 <label
@@ -348,12 +360,15 @@ export default function PerfilPage() {
                 </Link>
                 .
               </p>
-              <div className="mt-4 overflow-hidden rounded-xl border" style={{ borderColor: theme.border }}>
+              <div
+                className="mt-4 h-72 overflow-hidden rounded-xl border sm:h-80 md:h-[22rem]"
+                style={{ borderColor: theme.border }}
+              >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={householdFamilyPhotoUrl}
                   alt="Imagen del hogar"
-                  className="max-h-48 w-full object-cover"
+                  className="h-full w-full object-cover"
                 />
               </div>
             </section>
@@ -368,6 +383,21 @@ export default function PerfilPage() {
           )}
         </div>
       ) : null}
+
+      <OrbitaImageCropDialog
+        open={avatarCropOpen}
+        onOpenChange={(v) => {
+          setAvatarCropOpen(v)
+          if (!v) setAvatarCropFile(null)
+        }}
+        file={avatarCropFile}
+        aspect={1}
+        title="Recortar foto de perfil"
+        outputMaxWidth={640}
+        onCropped={(cropped) => {
+          void handleAvatarFile(cropped)
+        }}
+      />
     </div>
   )
 }

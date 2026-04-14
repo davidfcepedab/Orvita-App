@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { type ColorTheme, type LayoutMode, useApp, themes } from "@/app/contexts/AppContext"
+import { OrbitaImageCropDialog } from "@/app/components/OrbitaImageCropDialog"
 import { ConfigHouseholdSection } from "@/app/components/orbita-v3/config/ConfigHouseholdSection"
 import { ConfigIntegrationsPanel } from "@/app/components/orbita-v3/config/ConfigIntegrationsPanel"
 import { designTokens } from "@/src/theme/design-tokens"
@@ -38,6 +39,8 @@ export default function ConfigV3() {
   const [familyPhotoUrl, setFamilyPhotoUrl] = useState<string | null>(null)
   const [familyPhotoBusy, setFamilyPhotoBusy] = useState(false)
   const [familyPhotoError, setFamilyPhotoError] = useState<string | null>(null)
+  const [familyCropOpen, setFamilyCropOpen] = useState(false)
+  const [familyCropFile, setFamilyCropFile] = useState<File | null>(null)
   const [hevyConnected, setHevyConnected] = useState(false)
   const [hevyChecking, setHevyChecking] = useState(true)
   const [hevySyncing, setHevySyncing] = useState(false)
@@ -504,7 +507,10 @@ export default function ConfigV3() {
         familyPhotoUrl={familyPhotoUrl}
         familyPhotoBusy={familyPhotoBusy}
         familyPhotoError={familyPhotoError}
-        onPickFamilyPhoto={(file) => void handleUploadFamilyPhoto(file)}
+        onPickFamilyPhoto={(file) => {
+          setFamilyCropFile(file)
+          setFamilyCropOpen(true)
+        }}
         members={members}
         membersLoading={membersLoading}
         membersError={membersError}
@@ -680,6 +686,21 @@ export default function ConfigV3() {
           </div>
         </aside>
       </div>
+
+      <OrbitaImageCropDialog
+        open={familyCropOpen}
+        onOpenChange={(v) => {
+          setFamilyCropOpen(v)
+          if (!v) setFamilyCropFile(null)
+        }}
+        file={familyCropFile}
+        aspect={2.35}
+        title="Recortar imagen del hogar"
+        outputMaxWidth={1920}
+        onCropped={(cropped) => {
+          void handleUploadFamilyPhoto(cropped)
+        }}
+      />
     </div>
   )
 }

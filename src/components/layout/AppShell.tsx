@@ -3,13 +3,14 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import clsx from "clsx"
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { useTheme } from "@/src/theme/ThemeProvider"
 import { designTokens } from "@/src/theme/design-tokens"
 import { Button } from "@/src/components/ui/Button"
 import { getAgendaDisplayTimeZone } from "@/lib/agenda/agendaTimeZone"
 import { agendaTodayYmd } from "@/lib/agenda/localDateKey"
 import { isAppMockMode } from "@/lib/checkins/flags"
+import { ORVITA_AVATAR_UPDATED_EVENT } from "@/lib/profile/avatarUpdatedEvent"
 import {
   Activity,
   Calendar,
@@ -49,6 +50,7 @@ export function AppShell({
   const { theme, setTheme } = useTheme()
   const [open, setOpen] = useState(false)
   const [userName, setUserName] = useState<string | null>(null)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [loggingOut, setLoggingOut] = useState(false)
 
   useEffect(() => {
@@ -125,6 +127,55 @@ export function AppShell({
       cancelled = true
     }
   }, [pathname])
+
+  const fetchAvatarUrl = useCallback(async () => {
+    if (isAppMockMode()) {
+      setAvatarUrl(null)
+      return
+    }
+    if (pathname.startsWith("/auth")) {
+      setAvatarUrl(null)
+      return
+    }
+    try {
+      const { createBrowserClient } = await import("@/lib/supabase/browser")
+      const supabase = createBrowserClient()
+      const { data } = await supabase.auth.getSession()
+      const token = data.session?.access_token
+      if (!token) {
+        setAvatarUrl(null)
+        return
+      }
+      const res = await fetch("/api/profile/me", {
+        cache: "no-store",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const payload = (await res.json()) as {
+        success?: boolean
+        data?: { avatarUrl?: string | null }
+      }
+      const url = payload.success && payload.data?.avatarUrl?.trim() ? payload.data.avatarUrl.trim() : null
+      setAvatarUrl(url)
+    } catch {
+      setAvatarUrl(null)
+    }
+  }, [pathname])
+
+  useEffect(() => {
+    if (isAppMockMode() || pathname.startsWith("/auth")) {
+      setAvatarUrl(null)
+      return
+    }
+    void fetchAvatarUrl()
+  }, [pathname, fetchAvatarUrl])
+
+  useEffect(() => {
+    const onAvatarUpdated = () => {
+      void fetchAvatarUrl()
+    }
+    window.addEventListener(ORVITA_AVATAR_UPDATED_EVENT, onAvatarUpdated)
+    return () => window.removeEventListener(ORVITA_AVATAR_UPDATED_EVENT, onAvatarUpdated)
+  }, [fetchAvatarUrl])
 
   /** Pantalla de acceso: solo el formulario; sin barra superior ni tabs horizontales. */
   const isAuthRoute = pathname.startsWith("/auth")
@@ -267,11 +318,16 @@ export function AppShell({
                 <button
                   type="button"
                   onClick={() => setOpen((prev) => !prev)}
-                  className="orbita-icon-button orbita-focus-ring h-11 w-11 sm:h-9 sm:w-9"
+                  className="orbita-icon-button orbita-focus-ring h-11 w-11 overflow-hidden p-0 sm:h-9 sm:w-9"
                   aria-label="Menú de usuario"
                   aria-expanded={open}
                 >
-                  <User size={16} aria-hidden />
+                  {avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={avatarUrl} alt="" className="h-full w-full object-cover" width={36} height={36} />
+                  ) : (
+                    <User size={16} aria-hidden />
+                  )}
                 </button>
                 {open && (
                   <div
