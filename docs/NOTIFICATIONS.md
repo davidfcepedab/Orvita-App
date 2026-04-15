@@ -53,14 +53,24 @@ npx web-push generate-vapid-keys
 | 5 | RFC 8292 (VAPID) | https://datatracker.ietf.org/doc/html/rfc8292 |
 | 6 | WebKit — Push en iOS/iPadOS (PWA en pantalla de inicio) | https://webkit.org/blog/13878/web-push-for-web-apps-on-ios-and-ipados/ |
 
-## Dónde enganchar alertas (prioridad sugerida)
+## Por qué «push activo» pero no llegan alertas solas
+
+Esto es **esperado con el código actual**:
+
+1. **Suscripción y canal** — Si «Activar push» y «Probar alerta» funcionan, VAPID, `sw.js` y `orbita_push_subscriptions` están bien.
+2. **No hay disparadores automáticos conectados** — La función `createNotificationForUser` en `lib/notifications/createNotification.ts` **inserta en bandeja y llama a `sendWebPushToUser`**, pero **ninguna ruta API ni cron del repositorio la importa todavía**. Solo el flujo manual **`POST /api/notifications/self-test`** crea fila + push.
+3. **La tabla de abajo es hoja de ruta (producto)**, no implementación: hay que añadir llamadas desde APIs o jobs cuando defináis reglas (umbral, hábito, recordatorio, etc.).
+
+**Cron en Vercel** — `vercel.json` programa `GET /api/cron/checkins/sync` cada hora. En este repo **no existe** la carpeta `app/api/cron/`; ese path respondería 404 hasta que exista la ruta (y envíe notificaciones solo si la implementáis ahí con `createNotificationForUser` o lógica equivalente).
+
+## Dónde enganchar alertas (prioridad sugerida — pendiente de código)
 
 | Área | Idea de evento | Dónde llamar `createNotificationForUser` |
 |------|----------------|------------------------------------------|
 | Capital / finanzas | Umbral de flujo, tarjeta próxima a cierre, burn de suscripciones | Tras cálculo en APIs de overview/pl o en job programado |
 | Hábitos | Racha en riesgo, bloque sin completar | `POST` completar hábito / cron diario |
 | Agenda | Tarea en ventana corta, asignación pendiente | `app/api/agenda` o sync Google |
-| Check-in | Recordatorio nocturno si falta registro | Cron existente en `vercel.json` + condición por usuario |
+| Check-in | Recordatorio nocturno si falta registro | **Crear** `app/api/cron/...` protegido con `CRON_SECRET` + `authorizeAutomationRequest` (`lib/auth/automationGuard.ts`) |
 | Decisión / KPI | Brecha vs objetivo, compromiso vencido | Motor de home (`orbita/home`) o tabla de compromisos |
 | Entrenamiento | Sesión planificada sin registro | Preferencias + recordatorio |
 
