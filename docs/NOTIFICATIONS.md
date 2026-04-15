@@ -76,6 +76,49 @@ Esto es **esperado con el código actual**:
 
 Cada llamada debe ejecutarse en **servidor** con `SUPABASE_SERVICE_ROLE_KEY` disponible (misma forma que otras tareas administrativas).
 
+## Listado de push a activar (propuesta de producto)
+
+**Estado:** ninguno de los siguientes está cableado a `createNotificationForUser` todavía; sirve como backlog para implementar por fases.
+
+**Disciplina sugerida** (alineada con `ORVITA_IOS_COPILOT.md`): tratar el push como **capital escaso** — pocas interrupciones al día; el resto puede ir a **resumen en bandeja** sin push, o a digest horario. Evitar duplicar lo que ya cubre el email o el calendario del sistema.
+
+### Fase A — Alto valor / encaja con datos ya en Órvita
+
+| ID | Push | Disparador (evento o hora) | Enlace típico | Notas |
+|----|------|---------------------------|---------------|-------|
+| A1 | **Check-in: te falta cerrar el día** | Cron nocturno (ej. 21:30 local o UTC+regla) si no hay check-in del día | `/checkin` o `/hoy` | Requiere cron real + consulta check-ins por usuario |
+| A2 | **Hábito en riesgo hoy** | Cron 1×/día: hábito programado para hoy y aún sin “hecho” (ventana configurable) | `/habitos` | Encajar con `habits` + metadata de frecuencia |
+| A3 | **Recordatorio de decisión** | Fecha límite de decisión/compromiso en −48h / −24h / día D | `/decision` o ruta del ítem | Tabla/API de compromisos o decisiones |
+| A4 | **Finanzas: umbral suave** | Tras import o cálculo: flujo neto del mes bajo X%, o gasto operativo vs ingresos | `/finanzas/overview` | Solo si el usuario activa umbrales en preferencias (evitar spam) |
+
+### Fase B — Agenda, hogar y operación
+
+| ID | Push | Disparador | Enlace típico | Notas |
+|----|------|------------|---------------|-------|
+| B1 | **Próximo bloque importante** | Evento Google/Órvita en ventana 30–60 min (opcional) | `/agenda` | Cuidado con duplicar Google Calendar |
+| B2 | **Tarea asignada / pendiente hogar** | Invitación o tarea con due date hoy | `/agenda` o tarea | Depende de modelo de tareas hogar |
+| B3 | **Entrenamiento: sesión planificada** | Día con sesión en preferencias y sin registro | `/training` | Opcional; muchos usuarios prefieren solo app |
+
+### Fase C — Resúmenes y pareja (baja frecuencia)
+
+| ID | Push | Disparador | Enlace típico | Notas |
+|----|------|------------|---------------|-------|
+| C1 | **Pulso / digest matutino** | 1×/día hora fija (ej. 8:00): una línea de Pulso + siguiente paso | `/inicio` o `/hoy` | Sustituye varios pings sueltos |
+| C2 | **Cierre semanal** | Domingo hora fija: resumen breve semanal | `/inicio` | Alineado con widget “cierre” en copiloto |
+| C3 | **Sincronía pareja** | Cambio en entidad compartida + reglas (ej. lista hogar) | ruta compartida | Requiere producto “pareja” estable |
+
+### Fase D — Solo in-app (sin push) o digest
+
+| ID | Canal | Motivo |
+|----|--------|--------|
+| D1 | Bandeja sin push | Micro-avisos frecuentes (cada gasto, cada hábito) |
+| D2 | Email / informe | Reportes largos o listas |
+
+### Preferencias de usuario (recomendado antes de escalar push)
+
+- Granularidad por **categoría** (`system`, `finance`, `habits`, `agenda`, `checkin`, etc.) y tabla `metadata` o `user_notification_settings` futura.
+- Horario **quiet** (no push entre X–Y salvo categoría `critical`).
+
 ## Producción
 
 - HTTPS obligatorio para push (excepto `localhost`).
