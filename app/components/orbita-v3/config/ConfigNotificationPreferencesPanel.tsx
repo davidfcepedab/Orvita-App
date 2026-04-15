@@ -1,7 +1,7 @@
 "use client"
 
-import { useCallback, useEffect, useState, type ReactNode } from "react"
-import { Bell, Loader2 } from "lucide-react"
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
+import { Bell, ChevronDown, Loader2, Sparkles } from "lucide-react"
 import type { OrbitaConfigTheme } from "@/app/components/orbita-v3/config/configThemeTypes"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
@@ -22,6 +22,39 @@ const DOW_OPTS: { v: number; label: string }[] = [
 const subtleBtn =
   "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-opacity hover:opacity-90 disabled:opacity-50"
 
+/** Naranja medio: filas «próximamente» (borde + fondo suave). */
+const UPCOMING_BORDER = "#ea580c"
+const UPCOMING_BG = "rgba(234, 88, 12, 0.1)"
+const UPCOMING_DESC = "#c2410c"
+const UPCOMING_TRACK_ON = "#f97316"
+
+const LS_NOTIF_GAMIF_SAVED = "orvita:gamif:notif_prefs_saved"
+
+function computeNotificationSetupPoints(
+  p: OrbitaNotificationPreferences,
+  opts: { hasSavedBonus: boolean },
+): { current: number; max: number } {
+  const max = 36
+  let n = 0
+  if (p.push_enabled_global) n += 5
+  const core = [
+    p.push_checkin_reminder,
+    p.push_habit_reminder,
+    p.push_commitment_reminder,
+    p.push_finance_threshold,
+    p.push_digest_morning,
+    p.push_weekly_summary,
+  ]
+  n += core.filter(Boolean).length * 3
+  if (p.push_agenda_upcoming || p.push_training_reminder || p.push_partner_activity) n += 1
+  if (p.email_digest_enabled || p.email_weekly_enabled) n += 2
+  if (p.timezone?.trim().includes("/")) n += 2
+  if (p.quiet_hours_start != null && p.quiet_hours_end != null) n += 2
+  if (p.finance_savings_threshold_pct != null && p.push_finance_threshold) n += 2
+  if (opts.hasSavedBonus) n += 5
+  return { current: Math.min(n, max), max }
+}
+
 function ToggleRow({
   theme,
   label,
@@ -29,6 +62,7 @@ function ToggleRow({
   checked,
   disabled,
   onChange,
+  upcoming,
 }: {
   theme: OrbitaConfigTheme
   label: string
@@ -36,18 +70,26 @@ function ToggleRow({
   checked: boolean
   disabled?: boolean
   onChange: (v: boolean) => void
+  /** Aviso aún no disponible: estilo naranja distintivo */
+  upcoming?: boolean
 }) {
   return (
     <div
       className="flex flex-col gap-1 rounded-lg border p-2.5 sm:flex-row sm:items-center sm:justify-between"
-      style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt }}
+      style={{
+        borderColor: upcoming ? UPCOMING_BORDER : theme.border,
+        backgroundColor: upcoming ? UPCOMING_BG : theme.surfaceAlt,
+      }}
     >
       <div className="min-w-0 pr-1">
         <p className="text-[13px] font-medium leading-snug" style={{ color: theme.text }}>
           {label}
         </p>
         {description ? (
-          <p className="mt-0.5 text-[10px] leading-snug sm:text-[11px]" style={{ color: theme.textMuted }}>
+          <p
+            className="mt-0.5 text-[10px] leading-snug sm:text-[11px]"
+            style={{ color: upcoming ? UPCOMING_DESC : theme.textMuted }}
+          >
             {description}
           </p>
         ) : null}
@@ -60,7 +102,11 @@ function ToggleRow({
         onClick={() => onChange(!checked)}
         className="relative h-7 w-[3.25rem] shrink-0 rounded-full transition-colors"
         style={{
-          backgroundColor: checked ? theme.accent.health : theme.border,
+          backgroundColor: checked
+            ? upcoming
+              ? UPCOMING_TRACK_ON
+              : theme.accent.health
+            : theme.border,
           opacity: disabled ? 0.5 : 1,
         }}
       >
@@ -87,6 +133,29 @@ export function ConfigNotificationPreferencesPanel({ theme }: { theme: OrbitaCon
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [draft, setDraft] = useState<OrbitaNotificationPreferences | null>(null)
+  /** Panel plegado por defecto */
+  const [panelOpen, setPanelOpen] = useState(false)
+  /** Bonus +5 pts por haber guardado al menos una vez (persistente) */
+  const [hasSavedBonus, setHasSavedBonus] = useState(false)
+
+  useEffect(() => {
+    try {
+      if (typeof window !== "undefined" && window.localStorage.getItem(LS_NOTIF_GAMIF_SAVED) === "1") {
+        setHasSavedBonus(true)
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [])
+
+  useEffect(() => {
+    if (error && draft) setPanelOpen(true)
+  }, [error, draft])
+
+  const gamification = useMemo(() => {
+    if (!draft) return { current: 0, max: 36 }
+    return computeNotificationSetupPoints(draft, { hasSavedBonus })
+  }, [draft, hasSavedBonus])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -161,9 +230,17 @@ export function ConfigNotificationPreferencesPanel({ theme }: { theme: OrbitaCon
       if (!res.ok || !payload.success || !payload.data) {
         throw new Error(messageForHttpError(res.status, payload.error, res.statusText))
       }
+      let firstTimePersist = false
+      try {
+        firstTimePersist = window.localStorage.getItem(LS_NOTIF_GAMIF_SAVED) !== "1"
+        window.localStorage.setItem(LS_NOTIF_GAMIF_SAVED, "1")
+      } catch {
+        /* ignore */
+      }
       setDraft(payload.data)
-      setSuccess("Listo, guardado.")
-      window.setTimeout(() => setSuccess(null), 4000)
+      setHasSavedBonus(true)
+      setSuccess(firstTimePersist ? "Listo, guardado. +5 pts por cuidar tus avisos." : "Listo, guardado.")
+      window.setTimeout(() => setSuccess(null), 5000)
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo guardar")
     } finally {
@@ -175,15 +252,6 @@ export function ConfigNotificationPreferencesPanel({ theme }: { theme: OrbitaCon
 
   return (
     <section className="space-y-2" aria-labelledby="config-notifications-heading">
-      <h3
-        id="config-notifications-heading"
-        className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-[0.14em]"
-        style={{ color: theme.textMuted }}
-      >
-        <Bell className="h-3.5 w-3.5 shrink-0" aria-hidden />
-        Notificaciones
-      </h3>
-
       {isAppMockMode() ? (
         <p className="text-[10px] leading-snug sm:text-[11px]" style={{ color: theme.accent.agenda }}>
           Vista de prueba: ves valores de ejemplo; al salir del modo demo podrás guardar de verdad.
@@ -191,7 +259,7 @@ export function ConfigNotificationPreferencesPanel({ theme }: { theme: OrbitaCon
       ) : null}
 
       <div
-        className="rounded-2xl border p-4 sm:p-5"
+        className="rounded-2xl border"
         style={{
           backgroundColor: theme.surface,
           borderColor: theme.border,
@@ -199,12 +267,12 @@ export function ConfigNotificationPreferencesPanel({ theme }: { theme: OrbitaCon
         }}
       >
         {loading ? (
-          <div className="flex items-center gap-2 text-sm" style={{ color: theme.textMuted }}>
+          <div className="flex items-center gap-2 px-4 py-3 text-sm" style={{ color: theme.textMuted }}>
             <Loader2 className="h-4 w-4 animate-spin shrink-0" aria-hidden />
-            Cargando…
+            Cargando avisos…
           </div>
         ) : error && !draft ? (
-          <div className="space-y-3">
+          <div className="space-y-3 px-4 py-3">
             <p className="text-sm" style={{ color: theme.text }}>
               {error}
             </p>
@@ -213,7 +281,59 @@ export function ConfigNotificationPreferencesPanel({ theme }: { theme: OrbitaCon
             </button>
           </div>
         ) : draft ? (
-          <div className="space-y-4">
+          <div>
+            <button
+              type="button"
+              id="config-notifications-heading"
+              className="orbita-focus-ring flex w-full items-start gap-3 px-4 py-3 text-left sm:items-center"
+              aria-expanded={panelOpen}
+              onClick={() => setPanelOpen((v) => !v)}
+            >
+              <span
+                className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl sm:mt-0"
+                style={{ backgroundColor: theme.surfaceAlt, color: theme.accent.health }}
+                aria-hidden
+              >
+                <Bell className="h-4 w-4" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-semibold tracking-tight" style={{ color: theme.text }}>
+                    Notificaciones
+                  </span>
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold tabular-nums"
+                    style={{
+                      backgroundColor: theme.surfaceAlt,
+                      border: `1px solid ${theme.border}`,
+                      color: theme.text,
+                    }}
+                  >
+                    <Sparkles className="h-3 w-3 shrink-0" style={{ color: theme.accent.finance }} aria-hidden />
+                    {gamification.current}/{gamification.max} pts
+                  </span>
+                </span>
+                <span className="mt-0.5 block text-[11px] leading-snug" style={{ color: theme.textMuted }}>
+                  {panelOpen
+                    ? "Ocultar opciones"
+                    : "Avisos en el teléfono o navegador, horarios y correo — pulsa para configurar"}
+                </span>
+              </span>
+              <ChevronDown
+                className={`mt-1 h-5 w-5 shrink-0 transition-transform duration-200 sm:mt-0 ${panelOpen ? "rotate-180" : ""}`}
+                style={{ color: theme.textMuted }}
+                aria-hidden
+              />
+            </button>
+
+            {panelOpen ? (
+              <div
+                className="space-y-4 border-t px-4 pb-4 pt-3"
+                style={{ borderColor: theme.border }}
+                role="region"
+                aria-labelledby="config-notifications-heading"
+              >
+                <div className="space-y-4">
             {error ? (
               <p className="text-sm" style={{ color: "#b91c1c" }}>
                 {error}
@@ -275,6 +395,7 @@ export function ConfigNotificationPreferencesPanel({ theme }: { theme: OrbitaCon
                   theme={theme}
                   label="Próximos en tu agenda"
                   description="Próximamente, cuando conectemos mejor con tu calendario."
+                  upcoming
                   checked={draft.push_agenda_upcoming}
                   disabled={disabled || !draft.push_enabled_global}
                   onChange={(v) => update({ push_agenda_upcoming: v })}
@@ -283,6 +404,7 @@ export function ConfigNotificationPreferencesPanel({ theme }: { theme: OrbitaCon
                   theme={theme}
                   label="Entrenamiento"
                   description="Próximamente."
+                  upcoming
                   checked={draft.push_training_reminder}
                   disabled={disabled || !draft.push_enabled_global}
                   onChange={(v) => update({ push_training_reminder: v })}
@@ -307,6 +429,7 @@ export function ConfigNotificationPreferencesPanel({ theme }: { theme: OrbitaCon
                   theme={theme}
                   label="Novedades con tu pareja"
                   description="Próximamente, cuando activemos el hogar compartido."
+                  upcoming
                   checked={draft.push_partner_activity}
                   disabled={disabled || !draft.push_enabled_global}
                   onChange={(v) => update({ push_partner_activity: v })}
@@ -489,7 +612,7 @@ export function ConfigNotificationPreferencesPanel({ theme }: { theme: OrbitaCon
               />
             </div>
 
-            <div className="flex flex-wrap gap-2 pt-0.5">
+            <div className="flex flex-wrap items-center gap-2 pt-0.5">
               <button
                 type="button"
                 className={subtleBtn}
@@ -503,7 +626,13 @@ export function ConfigNotificationPreferencesPanel({ theme }: { theme: OrbitaCon
               >
                 {saving ? "Guardando…" : "Guardar cambios"}
               </button>
+              <p className="text-[10px] leading-snug" style={{ color: theme.textMuted }}>
+                Más opciones activas y guardar = más puntos (hasta {gamification.max}).
+              </p>
             </div>
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </div>
