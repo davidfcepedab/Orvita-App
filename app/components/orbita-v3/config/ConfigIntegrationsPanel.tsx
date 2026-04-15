@@ -18,7 +18,7 @@ function IntegrationCard({
 }) {
   return (
     <div
-      className="rounded-2xl border p-6 sm:p-8"
+      className="rounded-2xl border p-5 sm:p-6"
       style={{
         backgroundColor: theme.surface,
         borderColor: theme.border,
@@ -72,7 +72,7 @@ export function ConfigIntegrationsPanel({
   hevyLastSyncAt: string | null
 }) {
   return (
-    <section className="space-y-5" aria-labelledby="config-integrations-heading">
+    <section className="space-y-3" aria-labelledby="config-integrations-heading">
       <h3
         id="config-integrations-heading"
         className="text-xs font-medium uppercase tracking-[0.14em]"
@@ -81,11 +81,11 @@ export function ConfigIntegrationsPanel({
         Integraciones
       </h3>
 
-      <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-5">
         <IntegrationCard theme={theme}>
-          <div className="flex flex-wrap items-start gap-5">
+          <div className="flex flex-wrap items-start gap-4">
             <div
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border"
               style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt }}
               aria-hidden
             >
@@ -116,7 +116,7 @@ export function ConfigIntegrationsPanel({
                 </div>
               </div>
 
-              <div className="mt-6 flex flex-wrap gap-2">
+              <div className="mt-4 flex flex-wrap gap-2">
                 {!googleConnected ? (
                   <button
                     type="button"
@@ -175,7 +175,7 @@ export function ConfigIntegrationsPanel({
               )}
 
               <p
-                className="mt-6 border-t pt-4 text-[11px] leading-relaxed"
+                className="mt-4 border-t pt-3 text-[11px] leading-relaxed"
                 style={{ color: theme.textMuted, borderColor: theme.border }}
               >
                 {formatRelativeSyncAgo(googleLastSyncAt)}
@@ -185,9 +185,9 @@ export function ConfigIntegrationsPanel({
         </IntegrationCard>
 
         <IntegrationCard theme={theme}>
-          <div className="flex flex-wrap items-start gap-5">
+          <div className="flex flex-wrap items-start gap-4">
             <div
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border"
               style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt }}
               aria-hidden
             >
@@ -222,7 +222,7 @@ export function ConfigIntegrationsPanel({
                 </div>
               </div>
 
-              <div className="mt-6 flex flex-wrap gap-2">
+              <div className="mt-4 flex flex-wrap gap-2">
                 <Link
                   href="/training"
                   className={`inline-flex items-center justify-center ${subtleButton}`}
@@ -248,7 +248,7 @@ export function ConfigIntegrationsPanel({
               )}
 
               <p
-                className="mt-6 border-t pt-4 text-[11px] leading-relaxed"
+                className="mt-4 border-t pt-3 text-[11px] leading-relaxed"
                 style={{ color: theme.textMuted, borderColor: theme.border }}
               >
                 {formatRelativeSyncAgo(hevyLastSyncAt)}

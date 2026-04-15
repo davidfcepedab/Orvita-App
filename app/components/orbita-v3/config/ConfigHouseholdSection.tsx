@@ -53,7 +53,7 @@ export function ConfigHouseholdSection({
   const familyPhotoInputId = useId()
 
   return (
-    <section className="space-y-4" aria-labelledby="config-household-heading">
+    <section className="space-y-3" aria-labelledby="config-household-heading">
       <h3
         id="config-household-heading"
         className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.14em]"
@@ -64,7 +64,7 @@ export function ConfigHouseholdSection({
       </h3>
 
       <div
-        className="rounded-2xl border p-6 sm:p-8"
+        className="rounded-2xl border p-5 sm:p-6"
         style={{
           backgroundColor: theme.surface,
           borderColor: theme.border,
@@ -88,7 +88,7 @@ export function ConfigHouseholdSection({
           </p>
         )}
         {!householdInviteLoading && householdInviteCode && (
-          <div className="mt-5 flex flex-wrap items-center gap-3">
+          <div className="mt-4 flex flex-wrap items-center gap-3">
             <code
               className="rounded-xl border px-4 py-2.5 text-base font-semibold tracking-[0.2em] sm:text-lg"
               style={{
@@ -120,8 +120,8 @@ export function ConfigHouseholdSection({
           </p>
         )}
 
-        <div className="mt-10 border-t pt-8" style={{ borderColor: theme.border }}>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="mt-7 border-t pt-5" style={{ borderColor: theme.border }}>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p className="text-sm font-semibold tracking-tight" style={{ color: theme.text }}>
                 Imagen del hogar
@@ -172,7 +172,7 @@ export function ConfigHouseholdSection({
 
           {familyPhotoUrl ? (
             <div
-              className="mt-4 h-72 overflow-hidden rounded-xl border sm:h-80 md:h-[22rem]"
+              className="mt-3 h-52 overflow-hidden rounded-xl border sm:h-60 md:h-64"
               style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -184,7 +184,7 @@ export function ConfigHouseholdSection({
             </p>
           )}
 
-          <p className="mt-10 text-sm font-semibold tracking-tight" style={{ color: theme.text }}>
+          <p className="mt-6 text-sm font-semibold tracking-tight" style={{ color: theme.text }}>
             Miembros del hogar actual
           </p>
 
@@ -204,14 +204,14 @@ export function ConfigHouseholdSection({
             </p>
           )}
           {!membersLoading && members.length > 0 && (
-            <ul className="mt-5 space-y-3" aria-label="Lista de miembros del hogar">
+            <ul className="mt-4 space-y-2" aria-label="Lista de miembros del hogar">
               {members.map((m) => {
                 const label = m.displayName || m.email || "Miembro"
                 const secondary = m.displayName ? m.email : null
                 return (
                   <li
                     key={m.id}
-                    className="flex items-center gap-4 rounded-xl border px-4 py-3"
+                    className="flex items-center gap-3 rounded-xl border px-3 py-2.5"
                     style={{
                       borderColor: theme.border,
                       backgroundColor: theme.surfaceAlt,

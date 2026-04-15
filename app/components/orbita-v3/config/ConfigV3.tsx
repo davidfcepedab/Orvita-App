@@ -12,6 +12,7 @@ import {
 import { OrbitaImageCropDialog } from "@/app/components/OrbitaImageCropDialog"
 import { ConfigHouseholdSection } from "@/app/components/orbita-v3/config/ConfigHouseholdSection"
 import { ConfigIntegrationsPanel } from "@/app/components/orbita-v3/config/ConfigIntegrationsPanel"
+import { ConfigNotificationPreferencesPanel } from "@/app/components/orbita-v3/config/ConfigNotificationPreferencesPanel"
 import { designTokens } from "@/src/theme/design-tokens"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { createBrowserClient } from "@/lib/supabase/browser"
@@ -492,31 +493,31 @@ export default function ConfigV3() {
   ]
 
   return (
-    <div className="mx-auto min-w-0 max-w-5xl space-y-12 overflow-x-hidden">
+    <div className="mx-auto min-w-0 max-w-5xl space-y-7 overflow-x-hidden">
       <header>
-        <h2 className="text-3xl font-medium tracking-tight" style={{ color: theme.text }}>
+        <h2 className="text-2xl font-medium tracking-tight" style={{ color: theme.text }}>
           Configuración del sistema
         </h2>
-        <p className="mt-2 text-sm leading-relaxed" style={{ color: theme.textMuted }}>
+        <p className="mt-1 text-sm leading-snug" style={{ color: theme.textMuted }}>
           Control paramétrico de la interfaz Órvita
         </p>
       </header>
 
       <Link
         href="/perfil"
-        className="orbita-focus-ring flex items-center justify-between gap-4 rounded-2xl border p-5 no-underline transition-opacity hover:opacity-95"
+        className="orbita-focus-ring flex items-center justify-between gap-3 rounded-2xl border p-4 no-underline transition-opacity hover:opacity-95"
         style={{
           backgroundColor: theme.surfaceAlt,
           borderColor: theme.border,
           boxShadow: "0 1px 0 rgba(15, 23, 42, 0.04)",
         }}
       >
-        <div className="flex min-w-0 items-start gap-3">
+        <div className="flex min-w-0 items-start gap-2.5">
           <span
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
             style={{ backgroundColor: theme.surface, color: theme.accent.health }}
           >
-            <Sparkles className="h-5 w-5" aria-hidden />
+            <Sparkles className="h-4 w-4" aria-hidden />
           </span>
           <div className="min-w-0">
             <p className="text-sm font-semibold tracking-tight" style={{ color: theme.text }}>
@@ -555,10 +556,12 @@ export default function ConfigV3() {
         membersError={membersError}
       />
 
-      <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(260px,340px)] lg:items-start">
-        <div className="space-y-14">
+      <ConfigNotificationPreferencesPanel theme={theme} />
+
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(260px,340px)] lg:items-start">
+        <div className="space-y-9">
           {/* 2. Entorno de color */}
-          <div className="space-y-4">
+          <div className="space-y-3">
             <h3
               className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.14em]"
               style={{ color: theme.textMuted }}
@@ -570,13 +573,13 @@ export default function ConfigV3() {
               Los presets aplican variables CSS en toda la app. «Personalizado» te deja elegir hex; superficie
               alterna, borde y acentos secundarios se derivan automáticamente para mantener contraste legible.
             </p>
-            <div className="grid gap-3">
+            <div className="grid gap-2">
               {themeOptions.map((option) => (
                 <button
                   key={option.id}
                   type="button"
                   onClick={() => setColorTheme(option.id)}
-                  className="flex items-center justify-between rounded-2xl border p-4 text-left transition-colors"
+                  className="flex items-center justify-between rounded-2xl border p-3 text-left transition-colors"
                   style={{
                     backgroundColor: colorTheme === option.id ? theme.surfaceAlt : theme.surface,
                     borderColor: colorTheme === option.id ? theme.text : theme.border,
@@ -595,7 +598,7 @@ export default function ConfigV3() {
 
             {colorTheme === "custom" ? (
               <div
-                className="mt-4 space-y-4 rounded-2xl border p-4 sm:p-5"
+                className="mt-3 space-y-3 rounded-2xl border p-3 sm:p-4"
                 style={{
                   backgroundColor: theme.surfaceAlt,
                   borderColor: theme.border,
@@ -670,7 +673,7 @@ export default function ConfigV3() {
           </div>
 
           {/* 3. Densidad de datos */}
-          <div className="space-y-4">
+          <div className="space-y-3">
             <h3
               className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.14em]"
               style={{ color: theme.textMuted }}
@@ -683,13 +686,13 @@ export default function ConfigV3() {
               <strong className="font-medium text-[inherit]">--layout-padding</strong> en toda la app (Inicio, Salud,
               Agenda, etc.). No es solo decorativo.
             </p>
-            <div className="grid gap-3">
+            <div className="grid gap-2">
               {layoutOptions.map((option) => (
                 <button
                   key={option.id}
                   type="button"
                   onClick={() => setLayoutMode(option.id)}
-                  className="flex items-center justify-between rounded-2xl border p-4 text-left transition-colors"
+                  className="flex items-center justify-between rounded-2xl border p-3 text-left transition-colors"
                   style={{
                     backgroundColor: layoutMode === option.id ? theme.surfaceAlt : theme.surface,
                     borderColor: layoutMode === option.id ? theme.text : theme.border,
@@ -707,7 +710,7 @@ export default function ConfigV3() {
           </div>
 
           {/* 4. Intensidad háptica / animaciones */}
-          <div className="space-y-4">
+          <div className="space-y-3">
             <h3
               className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.14em]"
               style={{ color: theme.textMuted }}
@@ -720,14 +723,14 @@ export default function ConfigV3() {
               transiciones en tarjetas). El alcance es acotado; si quieres animación global, habría que extender tokens.
             </p>
             <div
-              className="rounded-2xl border p-6 sm:p-8"
+              className="rounded-2xl border p-5 sm:p-6"
               style={{
                 backgroundColor: theme.surface,
                 borderColor: theme.border,
                 boxShadow: "0 1px 0 rgba(15, 23, 42, 0.04)",
               }}
             >
-              <div className="mb-4 flex justify-between text-xs" style={{ color: theme.textMuted }}>
+              <div className="mb-3 flex justify-between text-xs" style={{ color: theme.textMuted }}>
                 <span>Sutil</span>
                 <span>Inmersivo</span>
               </div>
@@ -766,7 +769,7 @@ export default function ConfigV3() {
           />
         </div>
 
-        <aside className="space-y-4 lg:sticky lg:top-24">
+        <aside className="space-y-3 lg:sticky lg:top-24">
           <h3 className="text-xs font-medium uppercase tracking-[0.14em]" style={{ color: theme.textMuted }}>
             Vista previa
           </h3>
@@ -775,7 +778,7 @@ export default function ConfigV3() {
             <span className="font-mono text-[10px]">var(--layout-gap)</span> para acercarse a la densidad elegida.
           </p>
           <div
-            className="flex min-h-[420px] flex-col rounded-3xl border-2 lg:min-h-[500px]"
+            className="flex min-h-[360px] flex-col rounded-3xl border-2 lg:min-h-[440px]"
             style={{
               backgroundColor: theme.bg,
               borderColor: theme.border,
@@ -795,7 +798,7 @@ export default function ConfigV3() {
                 gap: "var(--layout-gap)",
               }}
             >
-              <div className="mb-6 h-4 w-1/3 rounded" style={{ backgroundColor: theme.textMuted, opacity: 0.2 }} />
+              <div className="mb-4 h-4 w-1/3 rounded" style={{ backgroundColor: theme.textMuted, opacity: 0.2 }} />
               <div className="flex flex-col" style={{ gap: "var(--layout-gap)" }}>
                 {[1, 2, 3].map((item) => (
                   <div key={item} className="flex items-center gap-4">
@@ -815,7 +818,7 @@ export default function ConfigV3() {
               </div>
             </div>
             <div
-              className="flex h-14 items-center justify-around rounded-2xl border px-3"
+              className="flex h-12 items-center justify-around rounded-2xl border px-3"
               style={{ backgroundColor: theme.surfaceAlt, borderColor: theme.border }}
             >
               {[1, 2, 3, 4].map((item) => (

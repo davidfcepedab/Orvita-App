@@ -10,13 +10,19 @@ El panel se renderiza con **portal a `document.body`**: el `<header>` usa `backd
 2. **API** (Bearer JWT Supabase):
    - `GET /api/notifications` — lista + `unreadCount`
    - `PATCH /api/notifications` — `{ markAllRead: true }` o `{ ids: string[] }`
+   - `GET /api/notifications/preferences` — preferencias fusionadas con defaults (sin fila en BD = defaults)
+   - `PATCH /api/notifications/preferences` — actualización parcial de toggles, horas locales, `timezone`, `finance_savings_threshold_pct`, flags de email digest
+   - UI: pantalla **Configuración** (`/configuracion`) — sección «Notificaciones y alertas» (`ConfigNotificationPreferencesPanel`) carga y guarda vía esas rutas.
    - `POST /api/notifications/push/subscribe` — cuerpo `PushSubscription.toJSON()` (requiere VAPID + `SUPABASE_SERVICE_ROLE_KEY` en el servidor)
    - `DELETE /api/notifications/push/unsubscribe` — `{ endpoint }`
    - `POST /api/notifications/self-test` — crea una alerta de prueba y envía push si hay suscripción
 3. **Service worker** `public/sw.js` — recibe push y muestra notificación nativa; al hacer clic abre la ruta en `data.url`.
 4. **Servidor** `lib/notifications/createNotification.ts` — `createNotificationForUser({ userId, title, body, category, link })` inserta y dispara Web Push (service role).
 
-Migración: `supabase/migrations/20260415120000_orbita_notifications_and_push.sql` (aplicar con `supabase db push` o SQL en el dashboard).
+Migraciones (aplicar con `supabase db push` o SQL en el dashboard):
+
+- `20260415120000_orbita_notifications_and_push.sql` — bandeja + push subscriptions
+- `20260416000000_orbita_notification_preferences.sql` — `orbita_notification_preferences`, dedupe `orbita_cron_notification_sent`
 
 ## Variables de entorno
 
@@ -36,6 +42,22 @@ SUPABASE_SERVICE_ROLE_KEY=<service_role_jwt>
 
 **No pegues secretos reales en archivos del repositorio** (GitHub push protection). Rellena solo en Vercel / `.env.local`.
 
+Cron y jobs (servidor):
+
+```bash
+# Protección de rutas /api/cron/* (una de las dos):
+CRON_SECRET=<token_largo>
+INTERNAL_API_TOKEN=<token_largo>
+# Authorization: Bearer $CRON_SECRET  o  x-reset-token: $INTERNAL_API_TOKEN
+```
+
+Email opcional (digest por Resend):
+
+```bash
+RESEND_API_KEY=
+EMAIL_FROM="Órvita <onboarding@resend.dev>"
+```
+
 Generar par VAPID:
 
 ```bash
@@ -53,32 +75,47 @@ npx web-push generate-vapid-keys
 | 5 | RFC 8292 (VAPID) | https://datatracker.ietf.org/doc/html/rfc8292 |
 | 6 | WebKit — Push en iOS/iPadOS (PWA en pantalla de inicio) | https://webkit.org/blog/13878/web-push-for-web-apps-on-ios-and-ipados/ |
 
-## Por qué «push activo» pero no llegan alertas solas
+## Cron y jobs automáticos
 
-Esto es **esperado con el código actual**:
+**Vercel** — `vercel.json` programa `GET /api/cron/notifications/dispatch` cada hora (sin query = `jobs=all`). La ruta usa `authorizeAutomationRequest` (`lib/auth/automationGuard.ts`): `Authorization: Bearer <CRON_SECRET>` o cabecera `x-reset-token: <INTERNAL_API_TOKEN>`. Vercel debe tener esos secretos y `SUPABASE_SERVICE_ROLE_KEY` (o `SUPABASE_SECRET_KEY`).
 
-1. **Suscripción y canal** — Si «Activar push» y «Probar alerta» funcionan, VAPID, `sw.js` y `orbita_push_subscriptions` están bien.
-2. **No hay disparadores automáticos conectados** — La función `createNotificationForUser` en `lib/notifications/createNotification.ts` **inserta en bandeja y llama a `sendWebPushToUser`**, pero **ninguna ruta API ni cron del repositorio la importa todavía**. Solo el flujo manual **`POST /api/notifications/self-test`** crea fila + push.
-3. **La tabla de abajo es hoja de ruta (producto)**, no implementación: hay que añadir llamadas desde APIs o jobs cuando defináis reglas (umbral, hábito, recordatorio, etc.).
+**Parámetro `jobs`** — Lista separada por comas o `all`:
 
-**Cron en Vercel** — `vercel.json` programa `GET /api/cron/checkins/sync` cada hora. En este repo **no existe** la carpeta `app/api/cron/`; ese path respondería 404 hasta que exista la ruta (y envíe notificaciones solo si la implementáis ahí con `createNotificationForUser` o lógica equivalente).
+`checkin`, `habits`, `commitments`, `finance`, `morning`, `weekly`, `agenda`, `training`, `partner`.
 
-## Dónde enganchar alertas (prioridad sugerida — pendiente de código)
+Ejemplo manual: `GET /api/cron/notifications/dispatch?jobs=checkin,habits`
 
-| Área | Idea de evento | Dónde llamar `createNotificationForUser` |
-|------|----------------|------------------------------------------|
-| Capital / finanzas | Umbral de flujo, tarjeta próxima a cierre, burn de suscripciones | Tras cálculo en APIs de overview/pl o en job programado |
-| Hábitos | Racha en riesgo, bloque sin completar | `POST` completar hábito / cron diario |
-| Agenda | Tarea en ventana corta, asignación pendiente | `app/api/agenda` o sync Google |
-| Check-in | Recordatorio nocturno si falta registro | **Crear** `app/api/cron/...` protegido con `CRON_SECRET` + `authorizeAutomationRequest` (`lib/auth/automationGuard.ts`) |
-| Decisión / KPI | Brecha vs objetivo, compromiso vencido | Motor de home (`orbita/home`) o tabla de compromisos |
-| Entrenamiento | Sesión planificada sin registro | Preferencias + recordatorio |
+**Compatibilidad** — `GET /api/cron/checkins/sync` reenvía internamente a `jobs=checkin` (misma autenticación).
 
-Cada llamada debe ejecutarse en **servidor** con `SUPABASE_SERVICE_ROLE_KEY` disponible (misma forma que otras tareas administrativas).
+**Implementación** — `lib/notifications/cron/runAllJobs.ts` recorre usuarios en `public.users`, carga preferencias y ejecuta cada job. Las notificaciones reales pasan por `createNotificationForUser` (`lib/notifications/createNotification.ts`). Dedupe en `orbita_cron_notification_sent` (service role).
 
-## Listado de push a activar (propuesta de producto)
+### Email (Resend)
 
-**Estado:** ninguno de los siguientes está cableado a `createNotificationForUser` todavía; sirve como backlog para implementar por fases.
+Si `email_digest_enabled` / `email_weekly_enabled` están activos y existe `RESEND_API_KEY`, los digest pueden enviar copia por correo (`lib/email/sendOrvitaEmail.ts`). El remitente por defecto se configura con `EMAIL_FROM`.
+
+### Estado por tipo de job
+
+| Job | Comportamiento |
+|-----|----------------|
+| `checkin` | Recordatorio en `reminder_hour_local` si no hay check-in del día (zona `timezone`). |
+| `habits` | Mañana (`digest_hour_local`): hábitos programados hoy sin completar. |
+| `commitments` | Compromisos del hogar próximos a vencer. |
+| `finance` | Si `finance_savings_threshold_pct` no es null y el ahorro del mes está por debajo, aviso ~hora local 14 (dedupe mensual). |
+| `morning` | Digest matutino (push + email opcional). |
+| `weekly` | Resumen semanal (`weekly_digest_dow` + `digest_hour_local`; email opcional). |
+| `agenda`, `training`, `partner` | **Stub** — devuelven sin enviar hasta integrar Google/agenda, preferencias de training y lógica de pareja. |
+
+## Extensiones futuras (APIs y producto)
+
+| Área | Idea | Notas |
+|------|------|--------|
+| Agenda / Google | Recordatorios por ventana | Conectar con sync existente; hoy el job `agenda` es stub. |
+| Entrenamiento | Sesión sin registro | Job `training` pendiente de modelo de datos. |
+| Pareja | Actividad compartida | Job `partner` pendiente de producto. |
+
+Las llamadas server-side siguen requiriendo `SUPABASE_SERVICE_ROLE_KEY` en procesos con service client.
+
+## Listado de push (producto — alineación con copiloto)
 
 **Disciplina sugerida** (alineada con `ORVITA_IOS_COPILOT.md`): tratar el push como **capital escaso** — pocas interrupciones al día; el resto puede ir a **resumen en bandeja** sin push, o a digest horario. Evitar duplicar lo que ya cubre el email o el calendario del sistema.
 
@@ -114,10 +151,10 @@ Cada llamada debe ejecutarse en **servidor** con `SUPABASE_SERVICE_ROLE_KEY` dis
 | D1 | Bandeja sin push | Micro-avisos frecuentes (cada gasto, cada hábito) |
 | D2 | Email / informe | Reportes largos o listas |
 
-### Preferencias de usuario (recomendado antes de escalar push)
+### Preferencias de usuario
 
-- Granularidad por **categoría** (`system`, `finance`, `habits`, `agenda`, `checkin`, etc.) y tabla `metadata` o `user_notification_settings` futura.
-- Horario **quiet** (no push entre X–Y salvo categoría `critical`).
+- Tabla **`orbita_notification_preferences`** (ver migración): toggles por tipo de push, `timezone`, `reminder_hour_local`, `digest_hour_local`, `weekly_digest_dow`, `quiet_hours_start` / `quiet_hours_end`, umbral `finance_savings_threshold_pct`, `email_digest_enabled` / `email_weekly_enabled`. La API `GET`/`PATCH` `/api/notifications/preferences` fusiona con defaults definidos en `lib/notifications/notificationPrefs.ts` si no hay fila.
+- Posible evolución: categorías más finas (`metadata`) si el producto lo exige.
 
 ## Producción
 
