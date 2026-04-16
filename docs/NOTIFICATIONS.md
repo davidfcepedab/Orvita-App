@@ -98,7 +98,7 @@ Si `email_digest_enabled` / `email_weekly_enabled` están activos y existe `RESE
 | Job | Comportamiento |
 |-----|----------------|
 | `checkin` | Recordatorio en `reminder_hour_local` si no hay check-in del día (zona `timezone`). |
-| `habits` | Mañana (`digest_hour_local`): hábitos programados hoy sin completar. |
+| `habits` | Mañana (`digest_hour_local`): hábitos programados hoy sin completar; si aplica, destaca la racha más alta en riesgo. |
 | `commitments` | Compromisos del hogar próximos a vencer. |
 | `finance` | Si `finance_savings_threshold_pct` no es null y el ahorro del mes está por debajo, aviso ~hora local 14 (dedupe mensual). |
 | `morning` | Informe de pulso matutino (push + email opcional). |

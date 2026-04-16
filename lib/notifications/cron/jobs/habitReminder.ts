@@ -5,6 +5,8 @@ import { mergePrefs } from "@/lib/notifications/notificationPrefs"
 import { tryAcquireCronSend } from "@/lib/notifications/cron/dedupe"
 import { isInQuietHours, localHourInTimezone, localYmdInTimezone } from "@/lib/notifications/cron/timeHelpers"
 import {
+  addDaysIso,
+  computeCurrentStreak,
   isScheduledOnUtcDay,
   utcTodayIso,
   type HabitMetadataInput,
@@ -33,6 +35,7 @@ export async function runHabitReminders(
 
   const ymd = localYmdInTimezone(tz)
   const todayIso = utcTodayIso()
+  const streakLookbackStart = addDaysIso(todayIso, -730)
 
   const { data: habits, error } = await supabase
     .from("operational_habits")
@@ -49,16 +52,34 @@ export async function runHabitReminders(
     .select("habit_id,completed_on")
     .eq("user_id", userId)
     .in("habit_id", habitIds)
-    .eq("completed_on", todayIso)
+    .gte("completed_on", streakLookbackStart)
 
-  const doneToday = new Set((comps ?? []).map((c) => c.habit_id as string))
+  const byHabit = new Map<string, string[]>()
+  const doneToday = new Set<string>()
+  for (const c of comps ?? []) {
+    const habitId = String(c.habit_id)
+    const day = String(c.completed_on).slice(0, 10)
+    if (!day) continue
+    const arr = byHabit.get(habitId) ?? []
+    arr.push(day)
+    byHabit.set(habitId, arr)
+    if (day === todayIso) doneToday.add(habitId)
+  }
 
   const pending: string[] = []
+  let topPendingStreakHabit: { name: string; days: number } | null = null
   for (const h of habits) {
     const meta = h.metadata as HabitMetadataInput | null
     if (!isScheduledOnUtcDay(meta, todayIso)) continue
     if (doneToday.has(h.id as string)) continue
     pending.push(String(h.name))
+
+    const dates = Array.from(new Set(byHabit.get(String(h.id)) ?? [])).sort()
+    const streakDays = computeCurrentStreak(dates, todayIso)
+    if (streakDays <= 0) continue
+    if (!topPendingStreakHabit || streakDays > topPendingStreakHabit.days) {
+      topPendingStreakHabit = { name: String(h.name), days: streakDays }
+    }
   }
 
   if (pending.length === 0) {
@@ -70,14 +91,24 @@ export async function runHabitReminders(
 
   const preview = pending.slice(0, 4).join(", ")
   const more = pending.length > 4 ? ` (+${pending.length - 4} más)` : ""
+  const streakLead =
+    topPendingStreakHabit && topPendingStreakHabit.days >= 2
+      ? `Tu racha de ${topPendingStreakHabit.days} días en ${topPendingStreakHabit.name} está en riesgo. `
+      : ""
 
   await createNotificationForUser({
     userId,
-    title: "Hábitos pendientes hoy",
-    body: `Te falta registrar: ${preview}${more}.`,
+    title: topPendingStreakHabit ? "Racha de hábitos en riesgo" : "Hábitos pendientes hoy",
+    body: `${streakLead}Te falta registrar: ${preview}${more}.`,
     category: "habits",
     link: "/habitos",
-    metadata: { cron: "habit_reminder", date: ymd, count: pending.length },
+    metadata: {
+      cron: "habit_reminder",
+      date: ymd,
+      count: pending.length,
+      top_streak_days: topPendingStreakHabit?.days ?? 0,
+      top_streak_habit: topPendingStreakHabit?.name ?? null,
+    },
   })
 
   return { sent: true }
