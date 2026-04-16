@@ -11,7 +11,17 @@ export type HabitsAggregateSummary = {
   current_streak_max: number
 }
 
+/** Clave para estilos gamificados en UI (colores, badge de “rango”). */
+export type HabitConsistencyTier =
+  | "empty"
+  | "very_low"
+  | "low"
+  | "mid"
+  | "high"
+  | "elite"
+
 export type HabitConsistencyInsight = {
+  tier: HabitConsistencyTier
   headline: string
   lines: string[]
 }
@@ -60,6 +70,7 @@ export function buildHabitConsistencyInsight(
 ): HabitConsistencyInsight {
   if (habits.length === 0) {
     return {
+      tier: "empty",
       headline: "Aún sin lectura",
       lines: [
         "Cuando añadas hábitos al stack, aquí verás una lectura de tu consistencia: no solo el porcentaje, sino qué está tirando del promedio y dónde se concentra el riesgo de romper la cadena.",
@@ -137,5 +148,5 @@ export function buildHabitConsistencyInsight(
     return "Adherencia muy alta"
   })()
 
-  return { headline, lines }
+  return { tier: band, headline, lines }
 }

@@ -18,6 +18,7 @@ import {
   Sunset,
   Target,
   TrendingDown,
+  Trophy,
   Zap,
 } from "lucide-react"
 import { UI_HABITS_MUTATIONS_OFF, UI_HABITS_SAVE_OFF } from "@/lib/checkins/flags"
@@ -32,7 +33,10 @@ import type {
   OperationalDomain,
 } from "@/lib/operational/types"
 import { emptyHabitModalForm, habitToModalValues, HabitFormModal } from "@/app/habitos/HabitFormModal"
-import { buildHabitConsistencyInsight } from "@/lib/habits/habitConsistencyInterpretation"
+import {
+  buildHabitConsistencyInsight,
+  type HabitConsistencyTier,
+} from "@/lib/habits/habitConsistencyInterpretation"
 
 const days = ["L", "M", "X", "J", "V", "S", "D"]
 
@@ -127,6 +131,74 @@ function rewardMessage(days: number) {
   return null
 }
 
+/** Estilo gamificado por banda de adherencia (barra, halo, badge). */
+const HABIT_CONSISTENCY_TIER_PRESENTATION: Record<
+  HabitConsistencyTier,
+  {
+    badge: string
+    barFrom: string
+    barTo: string
+    glow: string
+    orb: string
+    badgeWrapClass: string
+  }
+> = {
+  empty: {
+    badge: "Sin clasificar",
+    barFrom: "#94a3b8",
+    barTo: "#cbd5e1",
+    glow: "rgba(148, 163, 184, 0.45)",
+    orb: "color-mix(in srgb, var(--color-accent-health) 14%, transparent)",
+    badgeWrapClass:
+      "border-[color-mix(in_srgb,var(--color-border)_85%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_95%,transparent)] text-[var(--color-text-secondary)]",
+  },
+  very_low: {
+    badge: "Rango I · Semilla",
+    barFrom: "#ea580c",
+    barTo: "#fb923c",
+    glow: "rgba(251, 146, 60, 0.55)",
+    orb: "rgba(234, 88, 12, 0.14)",
+    badgeWrapClass:
+      "border-[color-mix(in_srgb,#ea580c_38%,transparent)] bg-[color-mix(in_srgb,#ea580c_12%,transparent)] text-[#9a3412] dark:text-[#fdba74]",
+  },
+  low: {
+    badge: "Rango II · Brote",
+    barFrom: "#0d9488",
+    barTo: "#2dd4bf",
+    glow: "rgba(45, 212, 191, 0.45)",
+    orb: "rgba(13, 148, 136, 0.12)",
+    badgeWrapClass:
+      "border-[color-mix(in_srgb,#0d9488_35%,transparent)] bg-[color-mix(in_srgb,#0d9488_11%,transparent)] text-[#115e59] dark:text-[#5eead4]",
+  },
+  mid: {
+    badge: "Rango III · Sistema",
+    barFrom: "#16a34a",
+    barTo: "#4ade80",
+    glow: "rgba(74, 222, 128, 0.4)",
+    orb: "rgba(22, 163, 74, 0.11)",
+    badgeWrapClass:
+      "border-[color-mix(in_srgb,#16a34a_32%,transparent)] bg-[color-mix(in_srgb,#16a34a_10%,transparent)] text-[#166534] dark:text-[#86efac]",
+  },
+  high: {
+    badge: "Rango IV · Ritmo",
+    barFrom: "#7c3aed",
+    barTo: "#a78bfa",
+    glow: "rgba(167, 139, 250, 0.45)",
+    orb: "rgba(124, 58, 237, 0.12)",
+    badgeWrapClass:
+      "border-[color-mix(in_srgb,#7c3aed_32%,transparent)] bg-[color-mix(in_srgb,#7c3aed_10%,transparent)] text-[#5b21b6] dark:text-[#c4b5fd]",
+  },
+  elite: {
+    badge: "Rango V · Leyenda",
+    barFrom: "#ca8a04",
+    barTo: "#fde047",
+    glow: "rgba(253, 224, 71, 0.55)",
+    orb: "rgba(202, 138, 4, 0.14)",
+    badgeWrapClass:
+      "border-[color-mix(in_srgb,#ca8a04_40%,transparent)] bg-[color-mix(in_srgb,#ca8a04_12%,transparent)] text-[#854d0e] dark:text-[#fde047]",
+  },
+}
+
 export default function HabitosPage() {
   const {
     habits,
@@ -173,6 +245,9 @@ export default function HabitosPage() {
     () => buildHabitConsistencyInsight(habits, summary),
     [habits, summary],
   )
+  const consistencyTierUi = HABIT_CONSISTENCY_TIER_PRESENTATION[consistencyInsight.tier]
+  const consistencyMomentumPct =
+    habits.length === 0 ? 0 : Math.min(100, Math.max(0, summary.consistency_30d))
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
@@ -350,31 +425,118 @@ export default function HabitosPage() {
         </Card>
       </div>
 
-      <Card hover className="min-w-0 border-l-[3px] border-l-[color-mix(in_srgb,var(--color-accent-health)_65%,transparent)]">
-        <div style={{ padding: "var(--spacing-md)", display: "grid", gap: "10px" }}>
-          <p
-            className="text-[10px] sm:text-[11px]"
+      <Card
+        hover
+        className="relative min-w-0 overflow-hidden p-0 shadow-[0_12px_40px_-12px_color-mix(in_srgb,var(--color-accent-health)_22%,transparent)]"
+        style={{
+          background:
+            "linear-gradient(165deg, color-mix(in srgb, var(--color-accent-health) 7%, var(--color-surface)) 0%, var(--color-surface) 42%, var(--color-surface) 100%)",
+        }}
+      >
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-24 -top-28 h-64 w-64 rounded-full blur-3xl sm:h-72 sm:w-72"
+          style={{
+            background: `radial-gradient(circle at 30% 30%, ${consistencyTierUi.orb} 0%, transparent 68%)`,
+          }}
+        />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[color-mix(in_srgb,var(--color-accent-health)_45%,transparent)] to-transparent" />
+        <div className="relative px-4 pb-5 pt-4 sm:px-6 sm:pb-6 sm:pt-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+            <div className="flex min-w-0 gap-3">
+              <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[color-mix(in_srgb,var(--color-accent-health)_16%,transparent)] shadow-[inset_0_1px_0_color-mix(in_srgb,white_22%,transparent),0_8px_24px_-8px_color-mix(in_srgb,var(--color-accent-health)_35%,transparent)] ring-2 ring-[color-mix(in_srgb,var(--color-accent-health)_38%,transparent)]">
+                <Sparkles className="h-6 w-6 text-[var(--color-accent-health)]" aria-hidden />
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-surface)] text-[9px] shadow-sm ring-1 ring-[color-mix(in_srgb,var(--color-border)_70%,transparent)]">
+                  <Zap className="h-2.5 w-2.5 text-amber-500" aria-hidden />
+                </span>
+              </div>
+              <div className="min-w-0 space-y-0.5 pt-0.5">
+                <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--color-text-secondary)]">
+                  Briefing de consistencia
+                </p>
+                <p className="m-0 max-w-[26rem] text-[12px] leading-snug text-[var(--color-text-secondary)]">
+                  Informe gamificado según tu adherencia media (30d), rachas y alertas de hoy.
+                </p>
+              </div>
+            </div>
+            <span
+              className={`inline-flex w-fit shrink-0 items-center gap-2 self-start rounded-full border px-3.5 py-1.5 text-[11px] font-semibold leading-none tracking-tight shadow-sm ${consistencyTierUi.badgeWrapClass}`}
+            >
+              <Trophy className="h-3.5 w-3.5 shrink-0 opacity-90" aria-hidden />
+              {consistencyTierUi.badge}
+            </span>
+          </div>
+
+          <div className="mt-6">
+            <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
+                Momentum 30d
+              </span>
+              <span className="text-2xl font-bold tabular-nums leading-none tracking-tight text-[var(--color-text-primary)] sm:text-[26px]">
+                {habits.length === 0 ? "—" : `${summary.consistency_30d}%`}
+              </span>
+            </div>
+            <div
+              className="relative h-3.5 w-full overflow-hidden rounded-full p-[3px] ring-1 ring-[color-mix(in_srgb,var(--color-border)_75%,transparent)]"
+              style={{
+                background:
+                  "color-mix(in srgb, var(--color-text-secondary) 9%, var(--color-surface-alt))",
+              }}
+            >
+              <div
+                className="h-full min-w-0 rounded-full transition-[width] duration-700 ease-out"
+                style={{
+                  width: `${consistencyMomentumPct}%`,
+                  background: `linear-gradient(90deg, ${consistencyTierUi.barFrom}, ${consistencyTierUi.barTo})`,
+                  boxShadow: `0 0 22px ${consistencyTierUi.glow}, inset 0 1px 0 rgba(255,255,255,0.35)`,
+                }}
+              />
+            </div>
+            <p className="m-0 mt-1.5 text-[10px] text-[var(--color-text-secondary)]">
+              Promedio del stack en días programados · sube cerrando días pendientes sin castigarte.
+            </p>
+          </div>
+
+          <div className="mt-5 flex flex-wrap gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-xl border border-[color-mix(in_srgb,var(--color-border)_80%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_88%,transparent)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--color-text-primary)] shadow-sm">
+              <Flame className="h-3.5 w-3.5 text-orange-500" aria-hidden />
+              <span className="tabular-nums">{summary.current_streak_max}</span>
+              <span className="text-[var(--color-text-secondary)]">racha máx. hoy</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-xl border border-[color-mix(in_srgb,var(--color-border)_80%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_88%,transparent)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--color-text-primary)] shadow-sm">
+              <Trophy className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" aria-hidden />
+              <span className="tabular-nums">{summary.best_streak}</span>
+              <span className="text-[var(--color-text-secondary)]">mejor histórico</span>
+            </span>
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-[11px] font-medium shadow-sm ${
+                summary.at_risk > 0
+                  ? "border-[color-mix(in_srgb,var(--color-accent-warning)_45%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-warning)_10%,transparent)] text-[var(--color-text-primary)]"
+                  : "border-[color-mix(in_srgb,var(--color-border)_80%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_8%,transparent)] text-[var(--color-text-primary)]"
+              }`}
+            >
+              <Target
+                className={`h-3.5 w-3.5 ${summary.at_risk > 0 ? "text-[var(--color-accent-warning)]" : "text-[var(--color-accent-health)]"}`}
+                aria-hidden
+              />
+              <span className="tabular-nums">{summary.at_risk}</span>
+              <span className="text-[var(--color-text-secondary)]">en alerta hoy</span>
+            </span>
+          </div>
+
+          <h2 className="m-0 mt-6 text-lg font-semibold tracking-tight text-[var(--color-text-primary)] sm:text-xl">
+            {consistencyInsight.headline}
+          </h2>
+          <div
+            className="mt-3 space-y-2.5 rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_72%,transparent)] p-3.5 shadow-[inset_0_1px_0_color-mix(in_srgb,white_8%,transparent)] sm:p-4"
             style={{
-              margin: 0,
-              textTransform: "uppercase",
-              letterSpacing: "0.14em",
-              color: "var(--color-text-secondary)",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
+              background: "color-mix(in srgb, var(--color-surface-alt) 55%, var(--color-surface))",
             }}
           >
-            <Sparkles size={14} className="shrink-0 text-[var(--color-accent-health)]" aria-hidden />
-            <span className="min-w-0 leading-snug">Lectura de consistencia</span>
-          </p>
-          <p className="m-0 text-[15px] font-medium leading-snug text-[var(--color-text-primary)]">
-            {consistencyInsight.headline}
-          </p>
-          <div className="space-y-2.5">
             {consistencyInsight.lines.map((line, idx) => (
               <p
                 key={`consistency-insight-${idx}`}
-                className="m-0 max-w-prose text-[13px] leading-relaxed text-[var(--color-text-secondary)]"
+                className="m-0 max-w-prose text-[13px] leading-relaxed text-[var(--color-text-secondary)] first:mt-0"
               >
                 {line}
               </p>
