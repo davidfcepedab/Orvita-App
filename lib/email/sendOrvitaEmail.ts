@@ -3,6 +3,8 @@
  * Si falta RESEND_API_KEY, solo registra en consola (desarrollo).
  */
 
+import { escapeHtml } from "@/lib/email/htmlEscape"
+
 export type SendEmailArgs = {
   to: string
   subject: string
@@ -33,7 +35,7 @@ export async function sendOrvitaEmail(args: SendEmailArgs): Promise<{ ok: boolea
         to: [args.to],
         subject: args.subject,
         text: args.text,
-        html: args.html ?? `<pre>${escapeHtml(args.text)}</pre>`,
+        html: args.html ?? plainTextToResendHtml(args.text),
       }),
     })
 
@@ -51,6 +53,9 @@ export async function sendOrvitaEmail(args: SendEmailArgs): Promise<{ ok: boolea
   }
 }
 
-function escapeHtml(s: string) {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+/**
+ * HTML mínimo si no hay plantilla rica: un único `<pre>` con el texto escapado.
+ */
+export function plainTextToResendHtml(text: string): string {
+  return `<pre>${escapeHtml(text)}</pre>`
 }

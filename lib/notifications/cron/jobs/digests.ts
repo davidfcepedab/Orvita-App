@@ -9,6 +9,8 @@ import {
   localWeekdayInTimezone,
   localYmdInTimezone,
 } from "@/lib/notifications/cron/timeHelpers"
+import { getDigestGreetingFirstName } from "@/lib/email/digestGreeting"
+import { morningDigestHtml, weeklyDigestHtml } from "@/lib/email/digestTemplatesHtml"
 import { sendOrvitaEmail } from "@/lib/email/sendOrvitaEmail"
 import { morningDigestEmail, weeklyDigestEmail } from "@/lib/email/templates"
 
@@ -39,18 +41,20 @@ export async function runMorningDigest(
 
   await createNotificationForUser({
     userId,
-    title: "Pulso del día",
-    body: "Abre Órvita para ver agenda, hábitos y capital en un vistazo.",
+    title: "Informe de pulso",
+    body: "Tu resumen del día: abre Órvita para ver agenda, hábitos, capital y salud.",
     category: "system",
     link: "/inicio",
     metadata: { cron: "morning_digest", date: ymd },
   })
 
   if (p.email_digest_enabled && email) {
+    const greetingFirstName = await getDigestGreetingFirstName(supabase, userId)
     void sendOrvitaEmail({
       to: email,
-      subject: "Órvita — Pulso del día",
-      text: morningDigestEmail({ dateLabel: ymd }),
+      subject: "Órvita — Informe de pulso",
+      text: morningDigestEmail({ dateLabel: ymd, greetingFirstName }),
+      html: morningDigestHtml({ dateYmd: ymd, greetingFirstName }),
     })
   }
 
@@ -90,17 +94,19 @@ export async function runWeeklySummary(
   await createNotificationForUser({
     userId,
     title: "Cierre de semana",
-    body: "Repasa lo que fluyó esta semana en Órvita y ajusta la que viene.",
+    body: "Tu informe de cierre: repasa la semana en Órvita y ajusta la próxima.",
     category: "system",
     link: "/inicio",
     metadata: { cron: "weekly_summary", date: ymd },
   })
 
   if (p.email_weekly_enabled && email) {
+    const greetingFirstName = await getDigestGreetingFirstName(supabase, userId)
     void sendOrvitaEmail({
       to: email,
-      subject: "Órvita — Resumen semanal",
-      text: weeklyDigestEmail({ dateLabel: ymd }),
+      subject: "Órvita — Cierre de semana",
+      text: weeklyDigestEmail({ dateLabel: ymd, greetingFirstName }),
+      html: weeklyDigestHtml({ dateYmd: ymd, greetingFirstName }),
     })
   }
 

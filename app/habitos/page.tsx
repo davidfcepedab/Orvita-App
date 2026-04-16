@@ -13,6 +13,7 @@ import {
   Loader2,
   Moon,
   Plus,
+  Sparkles,
   Sun,
   Sunset,
   Target,
@@ -31,6 +32,7 @@ import type {
   OperationalDomain,
 } from "@/lib/operational/types"
 import { emptyHabitModalForm, habitToModalValues, HabitFormModal } from "@/app/habitos/HabitFormModal"
+import { buildHabitConsistencyInsight } from "@/lib/habits/habitConsistencyInterpretation"
 
 const days = ["L", "M", "X", "J", "V", "S", "D"]
 
@@ -166,6 +168,11 @@ export default function HabitosPage() {
     }
     return out
   }, [habitsByDaypart])
+
+  const consistencyInsight = useMemo(
+    () => buildHabitConsistencyInsight(habits, summary),
+    [habits, summary],
+  )
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
@@ -342,6 +349,39 @@ export default function HabitosPage() {
           </div>
         </Card>
       </div>
+
+      <Card hover className="min-w-0 border-l-[3px] border-l-[color-mix(in_srgb,var(--color-accent-health)_65%,transparent)]">
+        <div style={{ padding: "var(--spacing-md)", display: "grid", gap: "10px" }}>
+          <p
+            className="text-[10px] sm:text-[11px]"
+            style={{
+              margin: 0,
+              textTransform: "uppercase",
+              letterSpacing: "0.14em",
+              color: "var(--color-text-secondary)",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
+            <Sparkles size={14} className="shrink-0 text-[var(--color-accent-health)]" aria-hidden />
+            <span className="min-w-0 leading-snug">Lectura de consistencia</span>
+          </p>
+          <p className="m-0 text-[15px] font-medium leading-snug text-[var(--color-text-primary)]">
+            {consistencyInsight.headline}
+          </p>
+          <div className="space-y-2.5">
+            {consistencyInsight.lines.map((line, idx) => (
+              <p
+                key={`consistency-insight-${idx}`}
+                className="m-0 max-w-prose text-[13px] leading-relaxed text-[var(--color-text-secondary)]"
+              >
+                {line}
+              </p>
+            ))}
+          </div>
+        </div>
+      </Card>
 
       <div style={{ display: "grid", gap: "var(--spacing-md)" }}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">

@@ -101,8 +101,8 @@ Si `email_digest_enabled` / `email_weekly_enabled` están activos y existe `RESE
 | `habits` | Mañana (`digest_hour_local`): hábitos programados hoy sin completar. |
 | `commitments` | Compromisos del hogar próximos a vencer. |
 | `finance` | Si `finance_savings_threshold_pct` no es null y el ahorro del mes está por debajo, aviso ~hora local 14 (dedupe mensual). |
-| `morning` | Digest matutino (push + email opcional). |
-| `weekly` | Resumen semanal (`weekly_digest_dow` + `digest_hour_local`; email opcional). |
+| `morning` | Informe de pulso matutino (push + email opcional). |
+| `weekly` | Cierre de semana (`weekly_digest_dow` + hora local 19; email opcional). |
 | `agenda`, `training`, `partner` | **Stub** — devuelven sin enviar hasta integrar Google/agenda, preferencias de training y lógica de pareja. |
 
 ## Extensiones futuras (APIs y producto)
