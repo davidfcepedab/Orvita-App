@@ -72,20 +72,24 @@ export async function POST(req: NextRequest) {
     const resolvedSource =
       data.source ?? (data.sheet_row_id ? "sheets" : "manual")
 
+    const row = {
+      user_id: userId,
+      reported_date: data.fecha,
+      score_global: scores.score_global,
+      score_fisico: scores.score_fisico,
+      score_salud: scores.score_salud,
+      score_profesional: scores.score_profesional,
+      body_metrics: bodyMetrics,
+      sheet_row_id: data.sheet_row_id ?? null,
+      source: resolvedSource,
+      notes: null,
+      updated_at: new Date().toISOString(),
+    }
+
     const { data: inserted, error } = await supabase
       .from("checkins")
-      .insert({
-        user_id: userId,
-        score_global: scores.score_global,
-        score_fisico: scores.score_fisico,
-        score_salud: scores.score_salud,
-        score_profesional: scores.score_profesional,
-        body_metrics: bodyMetrics,
-        sheet_row_id: data.sheet_row_id ?? null,
-        source: resolvedSource,
-        notes: null,
-      })
-      .select("id,created_at,body_metrics,sheet_row_id,source")
+      .upsert(row, { onConflict: "user_id,reported_date" })
+      .select("id,created_at,updated_at,body_metrics,sheet_row_id,source,reported_date")
       .single()
 
     if (error) {

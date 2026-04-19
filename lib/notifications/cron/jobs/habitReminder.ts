@@ -75,7 +75,7 @@ export async function runHabitReminders(
     pending.push(String(h.name))
 
     const dates = Array.from(new Set(byHabit.get(String(h.id)) ?? [])).sort()
-    const streakDays = computeCurrentStreak(dates, todayIso)
+    const streakDays = computeCurrentStreak(dates, todayIso, meta)
     if (streakDays <= 0) continue
     if (!topPendingStreakHabit || streakDays > topPendingStreakHabit.days) {
       topPendingStreakHabit = { name: String(h.name), days: streakDays }

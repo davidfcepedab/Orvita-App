@@ -1,6 +1,16 @@
 import { TRAINING_MEAL_PLAN } from "@/app/data/training/visualSeeds"
 import type { BodyMetricDisplayRow, MealDayDisplay } from "@/lib/training/trainingPrefsTypes"
 
+/** Preferencias vacías en modo estándar (sin números de ejemplo). */
+export function emptyBodyMetricRows(): BodyMetricDisplayRow[] {
+  return []
+}
+
+export function emptyMealPlan(): MealDayDisplay[] {
+  return []
+}
+
+/** Solo modo demostración (`NEXT_PUBLIC_APP_MODE=mock`). */
 export function defaultBodyMetricRows(): BodyMetricDisplayRow[] {
   return [
     { label: "Peso Corporal", current: "78.5", previous: "79.3", target: "75", projection: "77.4", progressPct: 80, trend: "down" },

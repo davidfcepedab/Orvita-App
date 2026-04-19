@@ -20,8 +20,10 @@ function isTrendPositive(label: string, trend: "up" | "down") {
 }
 
 function formatDeadlineBadge(ym: string): string {
-  const [y, m] = ym.split("-").map(Number)
-  if (!y || !m || m < 1 || m > 12) return ym.toUpperCase()
+  const t = ym.trim()
+  if (!t) return "—"
+  const [y, m] = t.split("-").map(Number)
+  if (!y || !m || m < 1 || m > 12) return t.toUpperCase()
   const mon = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"][m - 1]
   return `${mon} ${y}`
 }
@@ -30,13 +32,6 @@ function targetUnitLabel(row: BodyMetricDisplayRow): string {
   if (row.label === "Peso Corporal") return `${row.target} KG`
   if (row.label === "% de Grasa") return `${row.target} %`
   return `${row.target} CM`
-}
-
-function nextSundayShortLabel(): string {
-  const short = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"]
-  const d = new Date().getDay()
-  if (d === 0) return "Hoy"
-  return short[0]!
 }
 
 export type TrainingVisualBodySectionProps = {
@@ -89,7 +84,6 @@ export function TrainingVisualBodySection({
   onGenerateGoalWithAI,
 }: TrainingVisualBodySectionProps) {
   const deadlineBadge = useMemo(() => formatDeadlineBadge(visualGoalDeadlineYm), [visualGoalDeadlineYm])
-  const nextCheck = useMemo(() => nextSundayShortLabel(), [])
   const imageSrc = goalImageUrl || placeholderImageSrc
   const useUserImage = Boolean(goalImageUrl)
   const heroImageKey =
@@ -233,7 +227,11 @@ export function TrainingVisualBodySection({
                     boxShadow: "0 8px 32px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.06)",
                   }}
                 >
-                  {visualGoalDescription}
+                  {visualGoalDescription.trim() ? (
+                    visualGoalDescription
+                  ) : (
+                    <span className="text-white/45">Sin descripción del objetivo (rellena el prompt arriba).</span>
+                  )}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
@@ -278,14 +276,9 @@ export function TrainingVisualBodySection({
               </div>
               <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm">
                 <span className="text-orbita-secondary">
-                  Última: <span className="font-medium text-orbita-primary">Ayer</span>
-                </span>
-                <span className="text-orbita-secondary">·</span>
-                <span className="text-orbita-secondary">
-                  Próxima:{" "}
-                  <span className="font-semibold" style={{ color: MINT }}>
-                    {nextCheck}
-                  </span>
+                  {bodyRows.length > 0
+                    ? "Compara «Hoy» con «Previo» según los valores guardados en preferencias."
+                    : "Sin filas de medidas: no inferimos fechas de última toma."}
                 </span>
               </div>
             </div>
@@ -300,6 +293,13 @@ export function TrainingVisualBodySection({
             </div>
 
             <div className="flex flex-col gap-2.5">
+              {bodyRows.length === 0 ? (
+                <p className="rounded-2xl border border-dashed border-orbita-border/80 bg-orbita-surface-alt/60 px-4 py-6 text-center text-sm leading-relaxed text-orbita-secondary">
+                  No hay medidas corporales en tus preferencias. Con la sincronización activa se cargan desde tu cuenta;
+                  si no, puedes guardarlas en local desde el flujo de preferencias de entreno cuando esté disponible en
+                  la app.
+                </p>
+              ) : null}
               {bodyRows.map((row) => {
                 const positive = isTrendPositive(row.label, row.trend)
                 const arrowColor = positive ? GOOD : BAD

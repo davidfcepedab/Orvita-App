@@ -1,7 +1,7 @@
 "use client"
 
-import { Fragment, useMemo, useState } from "react"
-import { Bell, Calendar, ChevronLeft, ChevronRight } from "lucide-react"
+import { Fragment, useEffect, useMemo, useState } from "react"
+import { Bell, Calendar, ChevronLeft, ChevronRight, Minus, Plus } from "lucide-react"
 import { Card } from "@/src/components/ui/Card"
 import type { UiAgendaTask } from "@/app/agenda/mapAgendaTaskToUi"
 import type { GoogleCalendarFeedState } from "@/app/hooks/useGoogleCalendar"
@@ -40,6 +40,13 @@ import type { AgendaTaskPriority } from "@/app/hooks/useAgendaTasks"
 import { googleAgendaCardShell } from "@/app/agenda/agendaCardChrome"
 import type { AgendaEditModalTarget } from "@/app/agenda/AgendaTaskEditModal"
 import { addDaysToYmd, isYmdTodayLocal } from "@/lib/agenda/agendaDueShift"
+import {
+  type UnifiedListHorizonId,
+  unifiedListHorizonRange,
+  unifiedRowInHorizon,
+  unifiedTimelineSectionTitle,
+  UNIFIED_LIST_EXTENDED_DAYS_AFTER_MONTH,
+} from "@/lib/agenda/unifiedListHorizon"
 
 function taskDueSortMs(due: string): number {
   if (!due || due.length < 10) return Number.MAX_SAFE_INTEGER - 10_000
@@ -578,7 +585,13 @@ export function AgendaSharedList({
   onGoogleReminderPatch?: GoogleReminderPatchHandler
 } & AgendaCardBridge) {
   const [busyDel, setBusyDel] = useState<string | null>(null)
+  const [listHorizon, setListHorizon] = useState<UnifiedListHorizonId>("this_week")
+  const [extendMonthHorizon, setExtendMonthHorizon] = useState(false)
   const members = householdMembers ?? []
+
+  useEffect(() => {
+    if (listHorizon !== "this_month") setExtendMonthHorizon(false)
+  }, [listHorizon])
 
   const googleReminders = useMemo(
     () => (googleTasksFeed?.connected ? googleTasksForTimelineMerge(googleTasksFeed.tasks) : []),
@@ -604,6 +617,24 @@ export function AgendaSharedList({
     ]
   )
 
+  const todayYmd = agendaTodayYmd()
+  const mergedFiltered = useMemo(() => {
+    return merged.filter((row) =>
+      unifiedRowInHorizon(mergedRowDayKey(row), listHorizon, extendMonthHorizon),
+    )
+  }, [merged, listHorizon, extendMonthHorizon])
+
+  const horizonHint = useMemo(() => {
+    const { start, end } = unifiedListHorizonRange(listHorizon, {
+      extendedAfterMonth: listHorizon === "this_month" && extendMonthHorizon,
+    })
+    if (listHorizon === "this_month" && extendMonthHorizon) {
+      return `Incluye hasta ~${UNIFIED_LIST_EXTENDED_DAYS_AFTER_MONTH} días después del cierre del mes (${end}).`
+    }
+    if (start === end) return `Solo ${start}.`
+    return `Del ${start} al ${end}.`
+  }, [listHorizon, extendMonthHorizon])
+
   const googleErrored = Boolean(calendarFeed?.error || googleTasksFeed?.error)
   const waitingGoogle =
     filtered.length === 0 &&
@@ -616,11 +647,45 @@ export function AgendaSharedList({
     !googleErrored &&
     (Boolean(agendaLoading && filtered.length === 0) || waitingGoogle)
 
+  const horizonTabs = [
+    { id: "today" as const, label: "Hoy", title: "Solo ítems con fecha de hoy" },
+    { id: "tomorrow" as const, label: "Mañana", title: "Solo el día siguiente" },
+    { id: "this_week" as const, label: "Semana", title: "Desde hoy hasta el domingo de esta semana (lunes–domingo)" },
+    { id: "next_week" as const, label: "Próx. semana", title: "Lunes a domingo de la semana siguiente" },
+    { id: "this_month" as const, label: "Mes", title: "Desde hoy hasta el último día del mes en curso" },
+  ] satisfies { id: UnifiedListHorizonId; label: string; title: string }[]
+
   return (
     <div
-      className={`${agendaViewStackClass} min-h-[min(280px,42dvh)]`}
+      className={`${agendaViewStackClass} flex min-h-[min(280px,42dvh)] flex-col gap-2 sm:gap-2.5`}
       aria-label="Cronología unificada: Órvita y Google (Tasks con fecha en orden de vencimiento; sin fecha al final)"
     >
+      <div
+        role="toolbar"
+        aria-label="Ventana temporal de la cronología"
+        className="flex flex-wrap items-center gap-1.5 sm:gap-2"
+      >
+        {horizonTabs.map((tab) => {
+          const active = listHorizon === tab.id
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              title={tab.title}
+              onClick={() => setListHorizon(tab.id)}
+              className={`min-h-8 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] transition sm:px-3 sm:text-[11px] ${
+                active
+                  ? "border-[color-mix(in_srgb,var(--color-accent-primary)_48%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-primary)_14%,var(--color-surface))] text-[var(--color-text-primary)] shadow-sm"
+                  : "border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface)]"
+              }`}
+            >
+              {tab.label}
+            </button>
+          )
+        })}
+      </div>
+      <p className="m-0 text-[10px] leading-snug text-[var(--color-text-secondary)]">{horizonHint}</p>
+
       {merged.length === 0 && pendingInvites.length === 0 ? (
         <div
           role={feedsLoading ? "status" : undefined}
@@ -643,49 +708,64 @@ export function AgendaSharedList({
                     : "Nada que mostrar con estos filtros (Órvita + Google Tasks y Calendar sincronizados)."}
           </p>
         </div>
-      ) : null}
-      {pendingInvites.length > 0 ? (
-        <div className="flex flex-col gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] p-3 sm:p-4">
-          <p className={`m-0 ${agendaSectionTitleClass}`}>Pendientes de aceptar</p>
-          <p className="m-0 text-[11px] leading-snug text-[var(--color-text-secondary)] sm:text-[12px]">
-            Te asignaron estas tareas desde tu hogar. Al aceptarlas pasan a tu tablero y cronología.
-          </p>
-          <div className="flex flex-col gap-2">
-            {pendingInvites.map((task) => (
-              <AgendaOrvitaTaskCard
-                key={`p-${task.id}`}
-                task={task}
-                variant="list"
-                viewerUserId={viewerUserId}
-                onAcceptAssignment={onAcceptAssignment}
-              />
-            ))}
-          </div>
-        </div>
-      ) : null}
-      {merged.map((row, idx) => {
-        const dayBucket = mergedRowDayBucket(row)
-        const prevBucket = idx > 0 ? mergedRowDayBucket(merged[idx - 1]!) : null
-        const showDayDivider = idx > 0 && dayBucket !== prevBucket
-        const rowKey = listDayDividerKey(row)
-
-        return (
-          <Fragment key={rowKey}>
-            {showDayDivider ? (
-              <div
-                className="pointer-events-none min-h-0 w-full select-none rounded-full pt-2 sm:pt-2.5"
-                aria-hidden
-              >
-                <div
-                  className="h-px w-full opacity-[0.55]"
-                  style={{
-                    background:
-                      "linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--color-border) 55%, transparent) 12%, color-mix(in srgb, var(--color-border) 72%, var(--color-text-primary)) 50%, color-mix(in srgb, var(--color-border) 55%, transparent) 88%, transparent 100%)",
-                    boxShadow: "0 1px 0 color-mix(in srgb, var(--color-surface) 65%, transparent)",
-                  }}
-                />
+      ) : (
+        <>
+          {pendingInvites.length > 0 ? (
+            <div className="flex flex-col gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] p-3 sm:p-4">
+              <p className={`m-0 ${agendaSectionTitleClass}`}>Pendientes de aceptar</p>
+              <p className="m-0 text-[11px] leading-snug text-[var(--color-text-secondary)] sm:text-[12px]">
+                Te asignaron estas tareas desde tu hogar. Al aceptarlas pasan a tu tablero y cronología.
+              </p>
+              <div className="flex flex-col gap-2">
+                {pendingInvites.map((task) => (
+                  <AgendaOrvitaTaskCard
+                    key={`p-${task.id}`}
+                    task={task}
+                    variant="list"
+                    viewerUserId={viewerUserId}
+                    onAcceptAssignment={onAcceptAssignment}
+                  />
+                ))}
               </div>
+            </div>
+          ) : null}
+          <div className="flex max-h-[min(68dvh,820px)] min-h-0 min-w-0 flex-col gap-3 overflow-y-auto overscroll-y-contain pr-0.5 sm:gap-4 sm:pr-1">
+            {merged.length > 0 && mergedFiltered.length === 0 ? (
+              <p
+                role="status"
+                className="m-0 rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 py-4 text-center text-[12px] leading-snug text-[var(--color-text-secondary)]"
+              >
+                Nada cae en esta ventana temporal. Prueba otra pestaña arriba
+                {listHorizon === "this_month" && !extendMonthHorizon
+                  ? ", o pulsa «+» para ampliar más allá del mes."
+                  : "."}
+              </p>
             ) : null}
+            {mergedFiltered.map((row, idx) => {
+              const dayKey = mergedRowDayKey(row)
+              const prevKey = idx > 0 ? mergedRowDayKey(mergedFiltered[idx - 1]!) : null
+              const sectionTitle = unifiedTimelineSectionTitle(dayKey, todayYmd)
+              const prevTitle = prevKey == null ? null : unifiedTimelineSectionTitle(prevKey, todayYmd)
+              const showMacroHeader = idx === 0 || sectionTitle !== prevTitle
+              const rowKey = listDayDividerKey(row)
+
+              return (
+                <Fragment key={rowKey}>
+                  {showMacroHeader ? (
+                    <div className="min-w-0 scroll-mt-2 pt-2 first:pt-0">
+                      <p className="m-0 text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--color-text-secondary)]">
+                        {sectionTitle}
+                      </p>
+                      <div
+                        className="mt-1.5 h-px w-full opacity-[0.65]"
+                        style={{
+                          background:
+                            "linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--color-border) 55%, transparent) 10%, color-mix(in srgb, var(--color-accent-primary) 35%, var(--color-border)) 50%, color-mix(in srgb, var(--color-border) 55%, transparent) 90%, transparent 100%)",
+                        }}
+                        aria-hidden
+                      />
+                    </div>
+                  ) : null}
             {row.kind === "task" ? (
               <AgendaOrvitaTaskCard
                 task={row.task}
@@ -849,6 +929,36 @@ export function AgendaSharedList({
           </Fragment>
         )
       })}
+          </div>
+          {listHorizon === "this_month" ? (
+            <div className="flex flex-col items-center gap-1 border-t border-[color-mix(in_srgb,var(--color-border)_70%,transparent)] pt-2">
+              <button
+                type="button"
+                onClick={() => setExtendMonthHorizon((v) => !v)}
+                aria-pressed={extendMonthHorizon}
+                title={
+                  extendMonthHorizon
+                    ? "Volver al mes natural"
+                    : `Ver ~${UNIFIED_LIST_EXTENDED_DAYS_AFTER_MONTH} días más allá del cierre del mes`
+                }
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--color-border)_85%,transparent)] bg-[var(--color-surface-alt)] text-[var(--color-text-secondary)] transition hover:border-[color-mix(in_srgb,var(--color-accent-primary)_40%,var(--color-border))] hover:bg-[var(--color-surface)] hover:text-[var(--color-text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent-primary)]"
+              >
+                {extendMonthHorizon ? (
+                  <Minus className="h-4 w-4" strokeWidth={2.25} aria-hidden />
+                ) : (
+                  <Plus className="h-4 w-4" strokeWidth={2.25} aria-hidden />
+                )}
+                <span className="sr-only">
+                  {extendMonthHorizon ? "Reducir ventana temporal" : "Ampliar ventana más allá del mes"}
+                </span>
+              </button>
+              <span className="text-[9px] font-medium uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
+                {extendMonthHorizon ? "Mes extendido" : "Más allá del mes"}
+              </span>
+            </div>
+          ) : null}
+        </>
+      )}
     </div>
   )
 }

@@ -74,8 +74,9 @@ async function widgetPayloadForUser(auth: AuthedRequest, webBaseUrl: string): Pr
       .limit(80),
     supabase
       .from("checkins")
-      .select("id,score_global,score_fisico,score_salud,score_profesional,created_at")
+      .select("id,score_global,score_fisico,score_salud,score_profesional,created_at,updated_at")
       .eq("user_id", userId)
+      .order("updated_at", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),

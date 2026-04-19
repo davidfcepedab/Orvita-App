@@ -171,31 +171,64 @@ function uniqueSortedAsc(dates: string[]): string[] {
 }
 
 /**
- * Rachas consecutivas hacia atrás desde hoy; si hoy no hay, permite continuar desde ayer.
+ * Días programados estrictamente entre `prevIso` y `curIso` (excluye extremos).
+ * Si alguno debía cumplirse y no está en `done`, la cadena de racha se rompe.
  */
-export function computeCurrentStreak(sortedUniqueAsc: string[], todayIso: string): number {
-  const set = new Set(sortedUniqueAsc)
-  let cursor = todayIso
-  if (!set.has(todayIso)) {
-    cursor = addDaysIso(todayIso, -1)
-    if (!set.has(cursor)) return 0
+function noMissedScheduledBetween(
+  prevIso: string,
+  curIso: string,
+  done: Set<string>,
+  meta: HabitMetadataInput | null | undefined
+): boolean {
+  let d = addDaysIso(prevIso, 1)
+  while (d < curIso) {
+    if (isScheduledOnUtcDay(meta, d) && !done.has(d)) return false
+    d = addDaysIso(d, 1)
   }
-  let n = 0
-  while (set.has(cursor)) {
-    n++
-    cursor = addDaysIso(cursor, -1)
-  }
-  return n
+  return true
 }
 
-export function computeBestStreak(sortedUniqueAsc: string[]): number {
-  if (sortedUniqueAsc.length === 0) return 0
+/**
+ * Racha actual: ocurrencias programadas consecutivas hacia atrás desde hoy,
+ * sin contar días en que el hábito no aplica. Se corta en el primer día
+ * programado ≤ hoy que falte por completar.
+ */
+export function computeCurrentStreak(
+  sortedUniqueAsc: string[],
+  todayIso: string,
+  meta: HabitMetadataInput | null | undefined
+): number {
+  const done = new Set(sortedUniqueAsc)
+  let streak = 0
+  let d = todayIso
+  for (let i = 0; i < 800; i++) {
+    if (isScheduledOnUtcDay(meta, d)) {
+      if (!done.has(d)) break
+      streak++
+    }
+    d = addDaysIso(d, -1)
+  }
+  return streak
+}
+
+/**
+ * Mejor racha histórica solo sobre días programados: cadena de completados
+ * donde entre dos fechas consecutivas en la lista no hubo ningún día
+ * programado sin completar.
+ */
+export function computeBestStreak(
+  sortedUniqueAsc: string[],
+  meta: HabitMetadataInput | null | undefined
+): number {
+  const done = new Set(sortedUniqueAsc)
+  const scheduledDone = sortedUniqueAsc.filter((day) => done.has(day) && isScheduledOnUtcDay(meta, day))
+  if (scheduledDone.length === 0) return 0
   let best = 1
   let run = 1
-  for (let i = 1; i < sortedUniqueAsc.length; i++) {
-    const prev = sortedUniqueAsc[i - 1]
-    const cur = sortedUniqueAsc[i]
-    if (addDaysIso(prev, 1) === cur) {
+  for (let i = 1; i < scheduledDone.length; i++) {
+    const prev = scheduledDone[i - 1]
+    const cur = scheduledDone[i]
+    if (noMissedScheduledBetween(prev, cur, done, meta)) {
       run++
       best = Math.max(best, run)
     } else {
@@ -269,8 +302,8 @@ export function computeHabitCompletionMetrics(
   const at_risk = scheduled_today && !completed_today
 
   return {
-    current_streak: computeCurrentStreak(sorted, todayIso),
-    best_streak: computeBestStreak(sorted),
+    current_streak: computeCurrentStreak(sorted, todayIso, meta),
+    best_streak: computeBestStreak(sorted, meta),
     completion_rate_30d: computeCompletionRate30d(todayIso, sorted, meta),
     completed_today,
     at_risk,

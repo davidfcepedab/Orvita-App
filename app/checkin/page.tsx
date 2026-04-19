@@ -1,11 +1,12 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import {
   BookOpen,
   Building2,
   Calendar,
+  Check,
   Clock,
   Cloud,
   Droplets,
@@ -132,6 +133,45 @@ const VIEWPORT_TABS: { id: CheckinViewport; label: string; hint: string }[] = [
   { id: "full", label: "Completo", hint: "Todo el formulario" },
 ]
 
+const SLIDER_MIN = 1
+const SLIDER_MAX = 10
+
+function inSliderRange(n: number): boolean {
+  return Number.isFinite(n) && n >= SLIDER_MIN && n <= SLIDER_MAX
+}
+
+/** Validación por vista: puedes guardar por bloques sin rellenar el resto primero (el estado del formulario completo se envía igual). */
+function checkinSaveValidationError(viewport: CheckinViewport, form: FormState): string | null {
+  if (!form.fecha || !/^\d{4}-\d{2}-\d{2}$/.test(form.fecha.trim())) {
+    return "Indica una fecha válida (YYYY-MM-DD)."
+  }
+  if (viewport === "manana") {
+    if (!inSliderRange(form.calidadSueno)) return "Ajusta la calidad del sueño (1–10)."
+    if (!inSliderRange(form.energia)) return "Ajusta el nivel de energía (1–10)."
+    return null
+  }
+  if (viewport === "noche") {
+    if (!inSliderRange(form.estadoAnimo)) return "Ajusta el estado de ánimo (1–10)."
+    if (!inSliderRange(form.descanso)) return "Ajusta el descanso percibido (1–10)."
+    if (!inSliderRange(form.ansiedad)) return "Ajusta el nivel de ansiedad (1–10)."
+    return null
+  }
+  if (viewport === "dia") {
+    return null
+  }
+  if (!inSliderRange(form.calidadSueno)) return "Revisa Mañana: calidad del sueño (1–10)."
+  if (!inSliderRange(form.energia)) return "Revisa Mañana: nivel de energía (1–10)."
+  if (!inSliderRange(form.estadoAnimo)) return "Revisa Noche: estado de ánimo (1–10)."
+  return null
+}
+
+function saveCtaLabel(viewport: CheckinViewport): string {
+  if (viewport === "full") return "Guardar check-in completo"
+  if (viewport === "manana") return "Guardar · mañana"
+  if (viewport === "dia") return "Guardar · día"
+  return "Guardar · noche"
+}
+
 export default function CheckinPage() {
   /** Día civil en la zona de agenda (no UTC), para no adelantar “mañana” por la noche. */
   const today = agendaTodayYmd()
@@ -182,7 +222,9 @@ export default function CheckinPage() {
     source: "",
   })
 
-  const [loading, setLoading] = useState(false)
+  const [savePhase, setSavePhase] = useState<"idle" | "loading" | "success">("idle")
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const saveSuccessTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [preloadStatus, setPreloadStatus] = useState<string | null>(null)
   const [apiNotice, setApiNotice] = useState<string | null>(null)
   const [apiFlags, setApiFlags] = useState<CheckinApiFlags | null>(null)
@@ -274,6 +316,7 @@ export default function CheckinPage() {
   }, [today])
 
   const setViewportAndUrl = useCallback((vp: CheckinViewport) => {
+    setSubmitError(null)
     setViewport(vp)
     if (typeof window === "undefined") return
     const hash = viewportToHash(vp)
@@ -297,26 +340,35 @@ export default function CheckinPage() {
     return () => window.removeEventListener("hashchange", syncFromHash)
   }, [])
 
+  useEffect(() => {
+    return () => {
+      if (saveSuccessTimerRef.current) clearTimeout(saveSuccessTimerRef.current)
+    }
+  }, [])
+
   const handleChange = (field: keyof FormState, value: FormState[keyof FormState]) => {
     setForm((prev) => ({ ...prev, [field]: value }))
   }
 
   const handleSubmit = async () => {
+    setSubmitError(null)
     if (saveDisabled) {
-      alert(CHECKIN_SUPABASE_DISABLED_MESSAGE)
+      setSubmitError(CHECKIN_SUPABASE_DISABLED_MESSAGE)
       return
     }
-    if (!form.calidadSueno || !form.energia || !form.estadoAnimo) {
-      alert("Completa los campos principales")
+    const validationError = checkinSaveValidationError(viewport, form)
+    if (validationError) {
+      setSubmitError(validationError)
       return
     }
 
-    setLoading(true)
+    setSavePhase("loading")
     try {
       const headers = await buildJsonHeaders()
       const payload = {
         ...form,
         source: form.source || (form.sheet_row_id ? "sheets" : "manual"),
+        save_viewport: viewport,
       }
       const res = await fetch("/api/checkin", {
         method: "POST",
@@ -333,20 +385,21 @@ export default function CheckinPage() {
       }
       if (!res.ok || !json.success) {
         if (json.flags) setApiFlags(json.flags)
-        const extra = json.hint ? `\n\n${json.hint}` : ""
-        alert(messageForHttpError(res.status, json.error, res.statusText) + extra)
+        const base = messageForHttpError(res.status, json.error, res.statusText)
+        setSubmitError(json.hint ? `${base} · ${json.hint}` : base)
+        setSavePhase("idle")
         return
       }
       if (json.flags) setApiFlags(json.flags)
-      if (json.mock) {
-        alert("Check-in simulado (modo mock).")
-      } else {
-        alert("Check-in guardado")
-      }
+      setSavePhase("success")
+      if (saveSuccessTimerRef.current) clearTimeout(saveSuccessTimerRef.current)
+      saveSuccessTimerRef.current = setTimeout(() => {
+        setSavePhase("idle")
+        saveSuccessTimerRef.current = null
+      }, 2800)
     } catch {
-      alert("Error de red al guardar")
-    } finally {
-      setLoading(false)
+      setSubmitError("Error de red al guardar. Revisa la conexión e inténtalo de nuevo.")
+      setSavePhase("idle")
     }
   }
 
@@ -492,10 +545,18 @@ export default function CheckinPage() {
         </div>
         {viewport !== "full" ? (
           <p className="m-0 border-t border-orbita-border px-3 py-2 text-center text-[11px] leading-snug text-orbita-secondary">
-            Vista reducida: solo editas este bloque. Al guardar se envía el formulario entero (otros campos conservan lo que ya tenías o valores por defecto).
+            Vista reducida: enfocas un bloque a la vez. Cada guardado envía el formulario completo en memoria (mañana/día/noche siguen con los valores que ya tenías o por defecto), así puedes repartir el check-in en varios guardados el mismo día.
           </p>
         ) : null}
       </nav>
+
+      <aside
+        aria-label="Cómo se guardan los check-ins en el historial"
+        className="rounded-xl border border-orbita-border/80 bg-[color-mix(in_srgb,var(--color-surface-alt)_88%,var(--color-surface))] px-3 py-2.5 text-[11px] leading-snug text-orbita-secondary sm:px-4 sm:text-[12px]"
+      >
+        <span className="font-semibold text-orbita-primary">Historial: </span>
+        varios guardados el mismo día se fusionan en un solo registro en la nube (misma fecha del formulario): el último guardado sustituye el anterior. En contexto y salud se usa ese registro del día. Entradas antiguas sin fecha o creadas por otros flujos pueden seguir apareciendo aparte.
+      </aside>
 
       <div className="space-y-4 sm:space-y-5">
         {(viewport === "full" || viewport === "manana") && (
@@ -745,15 +806,55 @@ export default function CheckinPage() {
       </div>
 
       <div className="sticky bottom-2 z-10 pt-2 sm:bottom-4">
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={loading || saveDisabled}
-          className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-[var(--color-accent-primary)] px-4 py-3.5 text-sm font-bold uppercase tracking-[0.12em] text-white shadow-lg shadow-[color-mix(in_srgb,var(--color-accent-primary)_32%,transparent)] transition hover:brightness-110 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-[56px] sm:text-[13px]"
+        <div
+          className={`rounded-2xl transition-[box-shadow,transform] duration-300 motion-safe:duration-300 ${
+            savePhase === "success"
+              ? "motion-safe:animate-in motion-safe:zoom-in-95 motion-safe:fade-in motion-safe:duration-300 ring-2 ring-[color-mix(in_srgb,var(--color-accent-health)_55%,transparent)] ring-offset-2 ring-offset-[var(--color-background)]"
+              : ""
+          }`}
         >
-          <Save className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
-          {loading ? "Guardando…" : saveDisabled ? "Guardar desactivado" : "Guardar check-in completo"}
-        </button>
+          <button
+            type="button"
+            onClick={() => void handleSubmit()}
+            disabled={savePhase === "loading" || savePhase === "success" || saveDisabled}
+            className={`flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl px-4 py-3.5 text-sm font-bold uppercase tracking-[0.12em] text-white shadow-lg transition hover:brightness-110 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-[56px] sm:text-[13px] ${
+              savePhase === "success"
+                ? "bg-[var(--color-accent-health)] shadow-[color-mix(in_srgb,var(--color-accent-health)_38%,transparent)] motion-safe:animate-in motion-safe:zoom-in-95 motion-safe:duration-200"
+                : "bg-[var(--color-accent-primary)] shadow-[color-mix(in_srgb,var(--color-accent-primary)_32%,transparent)]"
+            }`}
+          >
+            {savePhase === "loading" ? (
+              <>
+                <span
+                  className="inline-block h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-white/35 border-t-white"
+                  aria-hidden
+                />
+                Guardando…
+              </>
+            ) : savePhase === "success" ? (
+              <>
+                <Check className="h-6 w-6 shrink-0 motion-safe:animate-in motion-safe:zoom-in-50 motion-safe:duration-300" strokeWidth={2.75} aria-hidden />
+                <span className="motion-safe:animate-in motion-safe:fade-in motion-safe:duration-300">Guardado</span>
+              </>
+            ) : saveDisabled ? (
+              <>
+                <Save className="h-5 w-5 shrink-0 opacity-60" strokeWidth={2} aria-hidden />
+                Guardar desactivado
+              </>
+            ) : (
+              <>
+                <Save className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
+                {saveCtaLabel(viewport)}
+              </>
+            )}
+          </button>
+        </div>
+        <p className="sr-only" aria-live="polite">
+          {savePhase === "success" ? "Check-in guardado correctamente." : ""}
+        </p>
+        {submitError ? (
+          <p className="mt-2 text-center text-xs leading-snug text-[var(--color-accent-danger)]">{submitError}</p>
+        ) : null}
         {saveDisabled && (
           <p className="mt-2 text-center text-xs text-[var(--color-accent-danger)]">{UI_CHECKIN_SAVE_DISABLED_FOOTER}</p>
         )}

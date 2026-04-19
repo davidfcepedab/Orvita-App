@@ -4,20 +4,30 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { createBrowserClient } from "@/lib/supabase/browser"
 import { isAppMockMode, isSupabaseEnabled } from "@/lib/checkins/flags"
-import { defaultBodyMetricRows, defaultMealPlan } from "@/lib/training/defaultTrainingDisplay"
+import { defaultBodyMetricRows, defaultMealPlan, emptyBodyMetricRows, emptyMealPlan } from "@/lib/training/defaultTrainingDisplay"
 import type { BodyMetricDisplayRow, MealDayDisplay, TrainingPreferencesPayload } from "@/lib/training/trainingPrefsTypes"
 
 const PREFS_KEY = "orbita:training:prefs:v1"
 const LEGACY_GOAL_KEY = "orbita:training:goal-image"
 
 function buildDefaults(): TrainingPreferencesPayload {
+  if (isAppMockMode()) {
+    return {
+      bodyMetrics: defaultBodyMetricRows(),
+      mealPlan: defaultMealPlan(),
+      mealNotes: "",
+      visualGoalDescription:
+        "Cuerpo atlético con 12% grasa, hombros y brazos marcados, postura fuerte y energía sostenida todo el día.",
+      visualGoalDeadlineYm: "2026-10",
+      visualGoalPriority: "alta",
+    }
+  }
   return {
-    bodyMetrics: defaultBodyMetricRows(),
-    mealPlan: defaultMealPlan(),
+    bodyMetrics: emptyBodyMetricRows(),
+    mealPlan: emptyMealPlan(),
     mealNotes: "",
-    visualGoalDescription:
-      "Cuerpo atlético con 12% grasa, hombros y brazos marcados, postura fuerte y energía sostenida todo el día.",
-    visualGoalDeadlineYm: "2026-10",
+    visualGoalDescription: "",
+    visualGoalDeadlineYm: "",
     visualGoalPriority: "alta",
   }
 }
@@ -238,8 +248,19 @@ export function useTrainingPreferences() {
     [updatePrefs],
   )
 
-  const bodyRows = useMemo(() => prefs.bodyMetrics ?? defaultBodyMetricRows(), [prefs.bodyMetrics])
-  const mealDays = useMemo(() => prefs.mealPlan ?? defaultMealPlan(), [prefs.mealPlan])
+  const bodyRows = useMemo(() => {
+    if (mock) {
+      return prefs.bodyMetrics && prefs.bodyMetrics.length > 0 ? prefs.bodyMetrics : defaultBodyMetricRows()
+    }
+    return prefs.bodyMetrics ?? emptyBodyMetricRows()
+  }, [mock, prefs.bodyMetrics])
+
+  const mealDays = useMemo(() => {
+    if (mock) {
+      return prefs.mealPlan && prefs.mealPlan.length > 0 ? prefs.mealPlan : defaultMealPlan()
+    }
+    return prefs.mealPlan ?? emptyMealPlan()
+  }, [mock, prefs.mealPlan])
 
   return {
     prefs,

@@ -10,6 +10,15 @@ async function hasCheckinForLocalDay(
   userId: string,
   localYmd: string,
 ): Promise<boolean> {
+  const { data: byReported, error: reportedErr } = await supabase
+    .from("checkins")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("reported_date", localYmd)
+    .limit(1)
+
+  if (!reportedErr && (byReported?.length ?? 0) > 0) return true
+
   const { data, error } = await supabase
     .from("checkins")
     .select("id,body_metrics,created_at")

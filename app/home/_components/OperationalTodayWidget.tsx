@@ -8,6 +8,8 @@ import { Check, Loader2, Moon, Sun, Sunrise } from "lucide-react"
 import { useGoogleCalendar } from "@/app/hooks/useGoogleCalendar"
 import { useGoogleTasks } from "@/app/hooks/useGoogleTasks"
 import { useHabits } from "@/app/hooks/useHabits"
+import { useStreakCelebrationQueue } from "@/app/hooks/useStreakCelebrationQueue"
+import { StreakCelebrationOverlay } from "@/app/habitos/StreakCelebrationOverlay"
 import { useOperationalContext } from "@/app/hooks/useOperationalContext"
 import { Card } from "@/src/components/ui/Card"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
@@ -60,6 +62,7 @@ export function OperationalTodayWidget() {
     patchTask,
   } = useGoogleTasks()
   const { habits, togglingId, toggleCompleteToday } = useHabits()
+  const { activeStreak, streakOpen, enqueueStreakCelebrations, dismissFront } = useStreakCelebrationQueue()
   const { data: operationalContext, refetch: refetchOperationalContext } = useOperationalContext()
 
   const [taskPendingId, setTaskPendingId] = useState<string | null>(null)
@@ -371,7 +374,11 @@ export function OperationalTodayWidget() {
                   </p>
                   <button
                     type="button"
-                    onClick={() => void toggleCompleteToday(habit.id)}
+                    onClick={async () => {
+                      const r = await toggleCompleteToday(habit.id)
+                      if (!r.ok) return
+                      if (r.streakCelebration) enqueueStreakCelebrations([r.streakCelebration])
+                    }}
                     disabled={togglingId === habit.id}
                     className={clsx(
                       "inline-flex min-h-[32px] items-center gap-1 rounded-[var(--radius-button)] border px-2 text-[11px] font-semibold disabled:opacity-50",
@@ -398,6 +405,8 @@ export function OperationalTodayWidget() {
 
         {inlineError ? <p className="m-0 mt-3 text-xs text-[var(--color-accent-danger)]">{inlineError}</p> : null}
       </Card>
+
+      <StreakCelebrationOverlay open={streakOpen} payload={activeStreak} onDismiss={dismissFront} />
     </section>
   )
 }

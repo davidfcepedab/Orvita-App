@@ -19,7 +19,10 @@ import {
   Zap,
 } from "lucide-react"
 import { Card } from "@/src/components/ui/Card"
+import { useHabits } from "@/app/hooks/useHabits"
 import { useOperationalContext } from "@/app/hooks/useOperationalContext"
+import { useStreakCelebrationQueue } from "@/app/hooks/useStreakCelebrationQueue"
+import { StreakCelebrationOverlay } from "@/app/habitos/StreakCelebrationOverlay"
 import { useFinanceMonthSummary } from "@/app/hooks/useFinanceMonthSummary"
 import { useGoogleCalendar } from "@/app/hooks/useGoogleCalendar"
 import { useGoogleTasks } from "@/app/hooks/useGoogleTasks"
@@ -42,7 +45,7 @@ import {
   totalMeetingMinutes,
   type PressureBand,
 } from "@/lib/hoy/commandDerivation"
-import type { OperationalDomain, OperationalHabit, OperationalTask } from "@/lib/operational/types"
+import type { OperationalDomain, OperationalTask } from "@/lib/operational/types"
 
 const TIMELINE_FALLBACK_EXAMPLE = [
   { time: "08:00", label: "Bloque de trabajo profundo" },
@@ -174,6 +177,9 @@ export default function HoyCommandCenter() {
     refresh: refreshTasks,
     error: tasksError,
   } = useGoogleTasks()
+
+  const { habits: habitHookList, togglingId, toggleCompleteToday, persistenceEnabled, mock } = useHabits()
+  const { activeStreak, streakOpen, enqueueStreakCelebrations, dismissFront } = useStreakCelebrationQueue()
 
   useEffect(() => {
     if (isAppMockMode() || !isSupabaseEnabled()) return
@@ -330,9 +336,9 @@ export default function HoyCommandCenter() {
 
   const queueTasks = useMemo(() => sortTasksByDomainPriority(ctx?.today_tasks ?? []).slice(0, 6), [ctx?.today_tasks])
 
-  const habits: OperationalHabit[] = ctx?.habits ?? []
-  const habitsDone = habits.filter((h) => h.completed).length
-  const habitsLabel = habits.length ? `${habitsDone}/${habits.length}` : "—"
+  const habitsShown = useMemo(() => habitHookList.slice(0, 5), [habitHookList])
+  const habitsDone = habitHookList.filter((h) => h.completed).length
+  const habitsLabel = habitHookList.length ? `${habitsDone}/${habitHookList.length}` : "—"
 
   const openTasks = (ctx?.today_tasks ?? []).filter((t) => !t.completed).length
   const [completing, setCompleting] = useState(false)
@@ -785,47 +791,66 @@ export default function HoyCommandCenter() {
               <SectionLabel>Hábitos clave</SectionLabel>
             </div>
             <ul className="m-0 grid list-none gap-2 p-0">
-              {habits.slice(0, 5).map((habit) => (
+              {habitsShown.map((habit) => (
                 <li key={habit.id}>
-                  <Link
-                    href="/habitos"
-                    className="flex items-center gap-3 rounded-lg border border-transparent px-1 py-1.5 motion-safe:hover:border-[color-mix(in_srgb,var(--color-border)_80%,transparent)] motion-safe:hover:bg-[color-mix(in_srgb,var(--color-text-secondary)_4%,transparent)]"
-                    style={{ textDecoration: "none" }}
+                  <div
+                    className={`flex min-w-0 items-center justify-between gap-2 rounded-lg border px-2 py-2 ${
+                      habit.completed
+                        ? "border-[color-mix(in_srgb,var(--color-accent-health)_42%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_10%,var(--color-surface-alt))]"
+                        : "border-[color-mix(in_srgb,var(--color-border)_85%,transparent)] bg-[var(--color-surface-alt)]"
+                    }`}
                   >
-                    <span
-                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border"
-                      style={
-                        habit.completed
-                          ? {
-                              background: "var(--color-accent-health)",
-                              borderColor: "transparent",
-                            }
-                          : { borderColor: "var(--color-border)" }
-                      }
-                      aria-hidden
-                    >
-                      {habit.completed ? (
-                        <Check className="h-3.5 w-3.5 text-white" strokeWidth={2.75} />
-                      ) : null}
-                    </span>
-                    <span className="min-w-0 flex-1 text-sm font-medium text-[var(--color-text-primary)]">
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--color-text-primary)]">
                       {habit.name}
                     </span>
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--color-text-secondary)]">
-                      {habit.completed ? "Hecho" : "Registrar"}
-                    </span>
-                  </Link>
+                    <button
+                      type="button"
+                      disabled={
+                        (!persistenceEnabled && !mock) || togglingId === habit.id
+                      }
+                      onClick={async () => {
+                        const r = await toggleCompleteToday(habit.id)
+                        if (!r.ok) return
+                        if (r.streakCelebration) enqueueStreakCelebrations([r.streakCelebration])
+                        void refetchCtx()
+                      }}
+                      className="inline-flex shrink-0 items-center gap-1 rounded-md border px-2 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] disabled:opacity-45"
+                      style={{
+                        borderColor: habit.completed
+                          ? "color-mix(in srgb, var(--color-accent-health) 45%, transparent)"
+                          : "var(--color-border)",
+                        background: habit.completed
+                          ? "color-mix(in srgb, var(--color-accent-health) 12%, transparent)"
+                          : "var(--color-surface)",
+                        color: habit.completed ? "var(--color-accent-health)" : "var(--color-text-secondary)",
+                      }}
+                    >
+                      {togglingId === habit.id ? (
+                        <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+                      ) : (
+                        <Check className="h-3 w-3" strokeWidth={2.5} aria-hidden />
+                      )}
+                      {habit.completed ? "Quitar" : "Hecho"}
+                    </button>
+                  </div>
                 </li>
               ))}
-              {habits.length === 0 ? (
+              {habitHookList.length === 0 ? (
                 <li className="text-xs text-[var(--color-text-secondary)]">
-                  Sin hábitos en contexto.{" "}
+                  Sin hábitos cargados.{" "}
                   <Link href="/habitos" className="font-medium text-[var(--color-accent-primary)] underline">
                     Configurar
                   </Link>
                 </li>
               ) : null}
             </ul>
+            {habitHookList.length > 0 ? (
+              <p className="m-0 mt-2 text-center text-[10px] text-[var(--color-text-secondary)]">
+                <Link href="/habitos" className="font-medium text-[var(--color-accent-primary)] underline">
+                  Ver todos en Hábitos
+                </Link>
+              </p>
+            ) : null}
           </Card>
 
           <Card className="p-4">
@@ -928,6 +953,8 @@ export default function HoyCommandCenter() {
           </Card>
         </aside>
       </div>
+
+      <StreakCelebrationOverlay open={streakOpen} payload={activeStreak} onDismiss={dismissFront} />
     </div>
   )
 }

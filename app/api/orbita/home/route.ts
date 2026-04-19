@@ -245,8 +245,9 @@ export async function GET(req: NextRequest) {
         supabase.auth.getUser(),
         supabase
           .from("checkins")
-          .select("score_global,created_at")
+          .select("score_global,created_at,updated_at")
           .eq("user_id", userId)
+          .order("updated_at", { ascending: false })
           .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle(),

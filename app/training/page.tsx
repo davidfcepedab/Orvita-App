@@ -73,7 +73,7 @@ export default function TrainingPage() {
   const weekPoints = useMemo(() => buildWeeklyVolumeIntensity(days, todayIso), [days, todayIso])
   const weekSum = useMemo(() => weeklyVolumeSum(weekPoints), [weekPoints])
   const todayVol = today?.volumeScore ?? 0
-  const { strain, recoveryPct } = useMemo(
+  const { strain, recoveryPct, hasSignal: strainHasSignal } = useMemo(
     () => deriveStrainRecovery(todayVol, weekSum),
     [todayVol, weekSum],
   )
@@ -86,8 +86,17 @@ export default function TrainingPage() {
   const milestones = useMemo(() => buildMilestoneViews(days, TRAINING_MILESTONES), [days])
   const hints = useMemo(() => buildAdjustmentHints(bodyRows), [bodyRows])
 
-  const maxKcal = useMemo(() => Math.max(1, ...mealDays.map((d) => d.kcal)), [mealDays])
-  const avgKcal = useMemo(() => Math.round(mealDays.reduce((s, d) => s + d.kcal, 0) / Math.max(1, mealDays.length)), [mealDays])
+  const maxKcal = useMemo(
+    () => (mealDays.length > 0 ? Math.max(1, ...mealDays.map((d) => d.kcal)) : 0),
+    [mealDays],
+  )
+  const avgKcal = useMemo(
+    () =>
+      mealDays.length > 0
+        ? Math.round(mealDays.reduce((s, d) => s + d.kcal, 0) / mealDays.length)
+        : 0,
+    [mealDays],
+  )
 
   const showManual = !today || today.source !== "hevy"
   const goalUrl = prefs.goalImageUrl ?? ""
@@ -235,7 +244,17 @@ export default function TrainingPage() {
               {formatStatus(today?.status ?? manualStatus ?? "rest")}
             </h2>
             <p className="max-w-prose text-pretty" style={{ margin: 0, fontSize: "12px", color: "var(--color-text-secondary)" }}>
-              Recuperación estimada ~{recoveryPct}% · Carga (strain) {strain} según volumen Hevy últimos 7 días y hoy.
+              {strainHasSignal && recoveryPct != null && strain != null ? (
+                <>
+                  Recuperación estimada ~{recoveryPct}% · Carga (strain) {strain} (heurística a partir del volumen Hevy
+                  últimos 7 días y hoy; no es dato clínico).
+                </>
+              ) : (
+                <>
+                  Sin volumen Hevy en los últimos 7 días ni hoy: no mostramos strain ni % de recuperación para no
+                  inventar números. Tras registrar entrenos en Hevy verás la estimación aquí.
+                </>
+              )}
             </p>
             {showManual && (
               <div className="flex flex-wrap gap-2 pt-1 sm:gap-2.5" style={{ marginTop: "var(--spacing-sm)" }}>
@@ -292,7 +311,7 @@ export default function TrainingPage() {
               }}
             />
             <div style={{ textAlign: "center" }}>
-              <p style={{ margin: 0, fontSize: "22px", fontWeight: 600 }}>{strain}</p>
+              <p style={{ margin: 0, fontSize: "22px", fontWeight: 600 }}>{strainHasSignal && strain != null ? strain : "—"}</p>
               <p
                 style={{
                   margin: 0,
@@ -431,10 +450,12 @@ export default function TrainingPage() {
         onGoalImageAiModeChange={setGoalImageAiMode}
         placeholderImageSrc="/training/visual-goal-placeholder.png"
         visualGoalDescription={
-          prefs.visualGoalDescription ??
-          "Cuerpo atlético con 12% grasa, hombros y brazos marcados, postura fuerte y energía sostenida todo el día."
+          isAppMockMode()
+            ? (prefs.visualGoalDescription ??
+                "Cuerpo atlético con 12% grasa, hombros y brazos marcados, postura fuerte y energía sostenida todo el día.")
+            : (prefs.visualGoalDescription ?? "")
         }
-        visualGoalDeadlineYm={prefs.visualGoalDeadlineYm ?? "2026-10"}
+        visualGoalDeadlineYm={isAppMockMode() ? (prefs.visualGoalDeadlineYm ?? "2026-10") : (prefs.visualGoalDeadlineYm ?? "")}
         visualGoalPriority={prefs.visualGoalPriority ?? "alta"}
         bodyRows={bodyRows}
         hints={hints}
@@ -489,48 +510,64 @@ export default function TrainingPage() {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 gap-[var(--spacing-sm)] min-[380px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-7">
-            {mealDays.map((day) => (
-              <div
-                key={day.day}
-                className="min-w-0"
-                style={{
-                  padding: "12px",
-                  borderRadius: "14px",
-                  background: "var(--color-surface-alt)",
-                  display: "grid",
-                  gap: "8px",
-                  border: "0.5px solid var(--color-border)",
-                }}
-              >
-                <div className="flex min-w-0 flex-wrap items-center justify-between gap-1">
-                  <span className="text-xs font-semibold sm:text-[12px]">{day.day}</span>
-                  <span className="shrink-0 text-[10px] text-[var(--color-text-secondary)]">{day.kcal} kcal</span>
+          {mealDays.length === 0 ? (
+            <div
+              style={{
+                borderRadius: "14px",
+                border: "0.5px solid var(--color-border)",
+                background: "var(--color-surface-alt)",
+                padding: "16px",
+                fontSize: "12px",
+                color: "var(--color-text-secondary)",
+              }}
+            >
+              No hay plan semanal guardado. Añade objetivos de kcal y macros en tus preferencias de entreno (o en modo
+              demostración verás un ejemplo).
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-[var(--spacing-sm)] min-[380px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-7">
+              {mealDays.map((day) => (
+                <div
+                  key={day.day}
+                  className="min-w-0"
+                  style={{
+                    padding: "12px",
+                    borderRadius: "14px",
+                    background: "var(--color-surface-alt)",
+                    display: "grid",
+                    gap: "8px",
+                    border: "0.5px solid var(--color-border)",
+                  }}
+                >
+                  <div className="flex min-w-0 flex-wrap items-center justify-between gap-1">
+                    <span className="text-xs font-semibold sm:text-[12px]">{day.day}</span>
+                    <span className="shrink-0 text-[10px] text-[var(--color-text-secondary)]">{day.kcal} kcal</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1 text-[10px] sm:flex sm:flex-col sm:gap-1 sm:text-[11px]">
+                    <span className="truncate text-center sm:text-left" style={{ color: "var(--color-accent-health)" }}>
+                      P {day.pro}g
+                    </span>
+                    <span className="truncate text-center sm:text-left" style={{ color: "var(--color-accent-warning)" }}>
+                      C {day.carb}g
+                    </span>
+                    <span className="truncate text-center sm:text-left" style={{ color: "var(--color-accent-primary)" }}>
+                      G {day.fat}g
+                    </span>
+                  </div>
+                  <div style={{ height: "6px", borderRadius: "999px", background: "var(--color-border)" }}>
+                    <div
+                      style={{
+                        height: "6px",
+                        borderRadius: "999px",
+                        width: `${Math.round((day.kcal / maxKcal) * 100)}%`,
+                        background: "var(--color-accent-health)",
+                      }}
+                    />
+                  </div>
                 </div>
-                <div className="grid grid-cols-3 gap-1 text-[10px] sm:flex sm:flex-col sm:gap-1 sm:text-[11px]">
-                  <span className="truncate text-center sm:text-left" style={{ color: "var(--color-accent-health)" }}>
-                    P {day.pro}g
-                  </span>
-                  <span className="truncate text-center sm:text-left" style={{ color: "var(--color-accent-warning)" }}>
-                    C {day.carb}g
-                  </span>
-                  <span className="truncate text-center sm:text-left" style={{ color: "var(--color-accent-primary)" }}>
-                    G {day.fat}g
-                  </span>
-                </div>
-                <div style={{ height: "6px", borderRadius: "999px", background: "var(--color-border)" }}>
-                  <div
-                    style={{
-                      height: "6px",
-                      borderRadius: "999px",
-                      width: `${Math.round((day.kcal / maxKcal) * 100)}%`,
-                      background: "var(--color-accent-health)",
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
           <div
             className="grid grid-cols-1 gap-4 sm:gap-[var(--spacing-sm)] md:grid-cols-3"
@@ -546,7 +583,9 @@ export default function TrainingPage() {
                 Resumen semanal
               </p>
               <p className="text-pretty" style={{ margin: "6px 0 0", fontSize: "12px" }}>
-                {avgKcal} kcal promedio · objetivo coherente con plan guardado
+                {mealDays.length > 0
+                  ? `${avgKcal} kcal promedio · según el plan guardado en preferencias`
+                  : "Sin días de plan guardados todavía."}
               </p>
             </div>
             <div className="min-w-0">

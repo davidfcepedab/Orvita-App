@@ -1,6 +1,12 @@
 import type { BodyMetricDisplayRow } from "@/lib/training/trainingPrefsTypes"
 
 export function buildAdjustmentHints(rows: BodyMetricDisplayRow[]): string[] {
+  if (rows.length === 0) {
+    return [
+      "No hay medidas corporales guardadas en tus preferencias de entreno. Cuando las añadas aquí (o sincronices con tu cuenta), podremos sugerir ajustes basados en tus números reales.",
+    ]
+  }
+
   const hints: string[] = []
   const waist = rows.find((r) => /cintura/i.test(r.label))
   const arms = rows.find((r) => /brazo/i.test(r.label))

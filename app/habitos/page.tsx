@@ -33,6 +33,7 @@ import {
 import { UI_HABITS_MUTATIONS_OFF, UI_HABITS_SAVE_OFF } from "@/lib/checkins/flags"
 import { groupHabitsByDaypart, orderedDaypartBlocks, type HabitTimeBlockId } from "@/lib/habits/habitStackGroups"
 import { useHabits } from "@/app/hooks/useHabits"
+import { useStreakCelebrationQueue } from "@/app/hooks/useStreakCelebrationQueue"
 import type { HabitWeekDayMark } from "@/lib/habits/habitMetrics"
 import type {
   HabitMetadata,
@@ -42,6 +43,8 @@ import type {
 } from "@/lib/operational/types"
 import { emptyHabitModalForm, habitToModalValues, HabitFormModal } from "@/app/habitos/HabitFormModal"
 import { HabitSparkline14 } from "@/app/habitos/HabitSparkline14"
+import { StreakCelebrationOverlay } from "@/app/habitos/StreakCelebrationOverlay"
+import { superhabitStreakRewardMessage } from "@/lib/habits/streakMilestones"
 import {
   buildHabitConsistencyInsight,
   type HabitConsistencyTier,
@@ -143,17 +146,6 @@ function weekMarksForHabit(habit: HabitWithMetrics): HabitWeekDayMark[] {
   return days.map(() => "off" as HabitWeekDayMark)
 }
 
-function rewardMessage(days: number) {
-  if (days >= 120) return "Hito 120 días: consistencia de élite"
-  if (days >= 90) return "Hito 90 días: sistema consolidado"
-  if (days >= 60) return "Hito 60 días: constancia estratégica"
-  if (days >= 45) return "Hito 45 días: momentum estable"
-  if (days >= 30) return "Hito 30 días: disciplina consolidada"
-  if (days >= 15) return "Hito 15 días: progreso consistente"
-  if (days >= 7) return "Hito 7 días: primer bloque completado"
-  return null
-}
-
 /** Estilo gamificado por banda de adherencia (barra, halo, badge). */
 const HABIT_CONSISTENCY_TIER_PRESENTATION: Record<
   HabitConsistencyTier,
@@ -252,6 +244,7 @@ export default function HabitosPage() {
   const [backfillDate, setBackfillDate] = useState(() => addDaysIso(utcTodayIso(), -1))
   const [editing, setEditing] = useState<HabitWithMetrics | null>(null)
   const [form, setForm] = useState(() => emptyHabitModalForm())
+  const { activeStreak, streakOpen, enqueueStreakCelebrations, dismissFront } = useStreakCelebrationQueue()
 
   useEffect(() => {
     try {
@@ -755,6 +748,7 @@ export default function HabitosPage() {
               onClick={async () => {
                 const r = await completeAllScheduledToday(pendingScheduledTodayIds)
                 if (!r.ok) alert(r.error || "No se pudo completar")
+                else enqueueStreakCelebrations(r.streakCelebrations ?? [])
               }}
               className="inline-flex min-h-9 w-full shrink-0 items-center justify-center gap-1.5 rounded-lg bg-[var(--color-accent-health)] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-white transition-opacity sm:w-auto disabled:opacity-50"
             >
@@ -853,7 +847,10 @@ export default function HabitosPage() {
                         </div>
 
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-[color-mix(in_srgb,var(--color-border)_48%,transparent)] pt-2.5 text-[11px] text-[var(--color-text-secondary)] sm:text-[12px]">
-                          <span className="inline-flex items-center gap-1.5">
+                          <span
+                            className="inline-flex items-center gap-1.5"
+                            title="Racha = días programados para este hábito seguidos cumplidos; no cuenta días en que el hábito no aplica."
+                          >
                             <Flame className="h-3.5 w-3.5 shrink-0 text-orange-500" aria-hidden />
                             <span className="tabular-nums font-semibold text-[var(--color-text-primary)]">{streak}</span>
                             {streak === 1 ? "día de racha" : "días de racha"}
@@ -999,7 +996,7 @@ export default function HabitosPage() {
                     const freq = habit.metadata?.frequency ?? "diario"
                     const streakDays = habit.metrics.current_streak
                     const doneToday = habit.metrics.completed_today
-                    const reward = isSuperhabit ? rewardMessage(streakDays) : null
+                    const reward = isSuperhabit ? superhabitStreakRewardMessage(streakDays) : null
                     const weekMarks = weekMarksForHabit(habit)
                     const intention = habit.metadata?.intention?.trim()
                     const triggerOrTime = habit.metadata?.trigger_or_time?.trim()
@@ -1090,10 +1087,15 @@ export default function HabitosPage() {
                                 </span>
                               )}
                             </div>
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", fontSize: "10px", color: "var(--color-text-secondary)" }}>
+                            <div
+                              style={{ display: "flex", flexWrap: "wrap", gap: "6px", fontSize: "10px", color: "var(--color-text-secondary)" }}
+                              title="La racha cuenta solo días en que este hábito aplica (según frecuencia y días elegidos)."
+                            >
                               <span>{DOMAIN_LABELS[habit.domain] ?? habit.domain}</span>
                               <span>• {freq}</span>
-                              <span>• {streakDays} días continuos</span>
+                              <span>
+                                • {streakDays} {streakDays === 1 ? "día de racha" : "días de racha"}
+                              </span>
                               {freq === "semanal" && (
                                 <span style={{ padding: "2px 6px", borderRadius: "999px", background: "var(--color-surface-alt)" }}>
                                   Frecuencia específica
@@ -1244,6 +1246,8 @@ export default function HabitosPage() {
                                 onClick={async () => {
                                   const r = await toggleCompleteToday(habit.id)
                                   if (!r.ok) alert(r.error || "No se pudo actualizar")
+                                  else if (r.streakCelebration)
+                                    enqueueStreakCelebrations([r.streakCelebration])
                                 }}
                                 className="h-10 w-10 shrink-0 transition-[transform,opacity,box-shadow] duration-200 active:scale-[0.97] motion-safe:hover:scale-[1.02]"
                                 style={{
@@ -1286,6 +1290,8 @@ export default function HabitosPage() {
           })}
       </div>
       ) : null}
+
+      <StreakCelebrationOverlay open={streakOpen} payload={activeStreak} onDismiss={dismissFront} />
 
       <HabitFormModal
         open={formOpen}

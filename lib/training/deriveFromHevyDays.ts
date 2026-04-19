@@ -47,10 +47,22 @@ export function weeklyVolumeSum(points: WeekVolumePoint[]): number {
   return points.reduce((s, p) => s + p.volume, 0)
 }
 
-export function deriveStrainRecovery(todayVolume: number, last7Sum: number): { strain: number; recoveryPct: number } {
+export type StrainRecoveryEstimate = {
+  /** Heurística 0–95 a partir del volumen Hevy; null si no hay señal. */
+  strain: number | null
+  /** Derivada del strain cuando hay señal; null si no hay volumen reciente. */
+  recoveryPct: number | null
+  hasSignal: boolean
+}
+
+export function deriveStrainRecovery(todayVolume: number, last7Sum: number): StrainRecoveryEstimate {
+  const hasSignal = todayVolume > 0 || last7Sum > 0
+  if (!hasSignal) {
+    return { strain: null, recoveryPct: null, hasSignal: false }
+  }
   const strain = Math.min(95, Math.round(todayVolume / 5 + last7Sum / 1200))
   const recoveryPct = Math.max(38, Math.min(97, 100 - Math.round(strain * 0.65)))
-  return { strain, recoveryPct }
+  return { strain, recoveryPct, hasSignal: true }
 }
 
 export type MilestoneView = {
@@ -68,38 +80,45 @@ export function buildMilestoneViews(days: TrainingDay[], seeds: TrainingMileston
   return seeds.map((seed) => {
     if (seed.unit === "kg") {
       const n = countWorkoutNameMatches(recent, /dead|peso muerto|rumo|rdl|sumo/i)
-      const bump = Math.min(seed.target - seed.current, n * 2.5)
-      const current = Math.min(seed.target, Math.round((seed.current + bump) * 10) / 10)
-      const pct = Math.min(100, Math.round((current / seed.target) * 100))
+      const pct = n > 0 ? Math.min(100, Math.round((n / 6) * 100)) : 0
       return {
         id: seed.id,
         title: seed.title.replace(/Deadlift/i, "Peso muerto"),
-        progressLabel: `Actual: ${current} / ${seed.target} ${seed.unit.toUpperCase()}`,
+        progressLabel:
+          n > 0
+            ? `Hevy (14 días): ${n} sesión(es) con patrón de fuerza · referencia ${seed.target} ${seed.unit}`
+            : `Referencia ${seed.target} ${seed.unit} — sin sesiones Hevy con patrón de peso muerto (14 días)`,
         barPct: pct,
-        subtitle: n > 0 ? `Basado en ${n} sesión(es) recientes en Hevy con foco fuerza.` : "Sin sesiones detectadas con patrón de peso muerto en Hevy (últimas 2 semanas).",
+        subtitle:
+          n > 0
+            ? "La barra refleja consistencia de sesiones con nombre/ejercicios tipo peso muerto; no sustituye el registro de cargas en Hevy."
+            : "Registra entrenos en Hevy cuyo nombre o bloque sugiera peso muerto/RDL para seguir este hito.",
       }
     }
     if (seed.unit === "min" && seed.reverse) {
       const n = countWorkoutNameMatches(recent, /run|carrera|5k|5 k|rodaje|interval|tempo/i)
-      const improved = Math.min(3, n * 0.35)
-      const current = Math.max(seed.target, Math.round((seed.current - improved) * 10) / 10)
-      const span = 12
-      const done = Math.min(100, Math.round(((span - (current - seed.target)) / span) * 100))
+      const pct = n > 0 ? Math.min(100, Math.round((n / 4) * 100)) : 0
       return {
         id: seed.id,
         title: seed.title.replace(/5 km Run/i, "Carrera 5 km"),
-        progressLabel: `Actual: ${current} / ${seed.target} min (objetivo más rápido)`,
-        barPct: Math.max(8, Math.min(100, done)),
-        subtitle: n > 0 ? `${n} carrera(s) o rodajes registrados en Hevy recientemente.` : "Añade entrenos con nombre tipo carrera/5K en Hevy para afinar este hito.",
+        progressLabel:
+          n > 0
+            ? `Hevy (14 días): ${n} sesión(es) tipo carrera/rodaje · objetivo tiempo ~${seed.target} min`
+            : `Objetivo ~${seed.target} min (5K) — sin carreras/rodajes detectados en Hevy (14 días)`,
+        barPct: pct,
+        subtitle:
+          n > 0
+            ? "La barra refleja frecuencia de sesiones con patrón carrera/intervalo; el tiempo de carrera no se infiere aún desde la API."
+            : "Añade entrenos con nombre tipo carrera, 5K o rodaje en Hevy para seguir este hito.",
       }
     }
     const pct = Math.min(100, Math.round((seed.current / seed.target) * 100))
     return {
       id: seed.id,
       title: seed.title,
-      progressLabel: `Actual: ${seed.current} / ${seed.target} ${seed.unit}`,
+      progressLabel: `Configuración: ${seed.current} / ${seed.target} ${seed.unit}`,
       barPct: pct,
-      subtitle: "Progreso base (semilla); conecta más datos en Hevy para refinar.",
+      subtitle: "Define objetivos en preferencias o enriquece Hevy para sustituir esta referencia.",
     }
   })
 }
