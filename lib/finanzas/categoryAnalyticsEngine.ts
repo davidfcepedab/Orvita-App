@@ -152,6 +152,87 @@ function expenseByCategory(monthTxs: FinanceTransaction[]): Map<string, number> 
   return m
 }
 
+const WEEKDAY_ES = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"] as const
+
+/** 0 = domingo … 6 = sábado (local `Date`, YYYY-MM-DD). */
+function ymdToWeekdayIndex(dateStr: string): number | null {
+  if (!dateStr || dateStr.length < 10) return null
+  const [y, m, d] = dateStr.slice(0, 10).split("-").map(Number)
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null
+  return new Date(y, m - 1, d).getDay()
+}
+
+function copShort(n: number): string {
+  return new Intl.NumberFormat("es-CO", { maximumFractionDigits: 0 }).format(Math.round(n))
+}
+
+/** "los lunes", "los sábados" — hábito de gasto en el mes. */
+function losWeekdaysPhrase(wd: number): string {
+  const name = WEEKDAY_ES[wd] ?? "día"
+  if (name === "sábado") return "los sábados"
+  if (name === "domingo") return "los domingos"
+  return `los ${name}`
+}
+
+function monthTitleEs(ym: string): string {
+  const [y, m] = ym.split("-").map(Number)
+  if (!Number.isFinite(y) || !Number.isFinite(m)) return ym
+  const d = new Date(y, m - 1, 1)
+  return new Intl.DateTimeFormat("es-CO", { month: "long", year: "numeric" }).format(d)
+}
+
+function monthChartLabel(ym: string): string {
+  const [y, m] = ym.split("-").map(Number)
+  if (!Number.isFinite(y) || !Number.isFinite(m)) return ym
+  const d = new Date(y, m - 1, 15)
+  return new Intl.DateTimeFormat("es-CO", { month: "short", year: "2-digit" }).format(d)
+}
+
+function expenseByCategoryWeekday(
+  monthTxs: FinanceTransaction[],
+  category: string,
+): { byWd: number[]; total: number } {
+  const byWd = [0, 0, 0, 0, 0, 0, 0]
+  let total = 0
+  for (const tx of monthTxs) {
+    const e = expenseAmount(tx)
+    if (e <= 0) continue
+    const c = tx.category?.trim() || "Sin categoría"
+    if (c !== category) continue
+    const wd = ymdToWeekdayIndex(tx.date)
+    if (wd == null) continue
+    byWd[wd] += e
+    total += e
+  }
+  return { byWd, total }
+}
+
+function dominantSubcategoryOnWeekday(
+  monthTxs: FinanceTransaction[],
+  category: string,
+  wd: number,
+): { sub: string; amount: number } | null {
+  const m = new Map<string, number>()
+  for (const tx of monthTxs) {
+    const e = expenseAmount(tx)
+    if (e <= 0) continue
+    const c = tx.category?.trim() || "Sin categoría"
+    if (c !== category) continue
+    if (ymdToWeekdayIndex(tx.date) !== wd) continue
+    const sub = tx.subcategory?.trim() || "General"
+    m.set(sub, (m.get(sub) ?? 0) + e)
+  }
+  let best = ""
+  let bestA = 0
+  for (const [k, v] of m) {
+    if (v > bestA) {
+      best = k
+      bestA = v
+    }
+  }
+  return bestA > 0 ? { sub: best, amount: bestA } : null
+}
+
 function incomeByCategory(monthTxs: FinanceTransaction[]): Map<string, number> {
   const m = new Map<string, number>()
   for (const tx of monthTxs) {
@@ -441,6 +522,64 @@ export function buildCategoryAnalyticsPayload(input: BuildCategoryAnalyticsInput
     return rank[a.impact] - rank[b.impact]
   })
 
+  const TREND_MONTHS = 10
+  const TOP_CATS_FOR_TREND = 5
+  const sortedCatsBySpend = [...curCat.entries()]
+    .filter(([, v]) => v > 1e-6)
+    .sort((a, b) => b[1] - a[1])
+  const topCategoryNamesForTrend = sortedCatsBySpend.slice(0, TOP_CATS_FOR_TREND).map(([name]) => name)
+  const trendMonthSlice = months.slice(-Math.min(TREND_MONTHS, months.length))
+
+  const topOperativeCategoryTrendKeys = topCategoryNamesForTrend.map((name, i) => ({
+    key: `c${i}` as const,
+    label: name,
+  }))
+
+  const topOperativeCategoryTrendPoints = trendMonthSlice.map((ym) => {
+    const em = expenseByCategory(byMonth.get(ym) ?? [])
+    const row: Record<string, string | number> = {
+      monthKey: ym,
+      monthLabel: monthChartLabel(ym),
+    }
+    for (let i = 0; i < topCategoryNamesForTrend.length; i += 1) {
+      row[`c${i}`] = em.get(topCategoryNamesForTrend[i]!) ?? 0
+    }
+    return row as {
+      monthKey: string
+      monthLabel: string
+    } & Record<`c${number}`, number>
+  })
+
+  const MIN_CAT_FOR_WEEKDAY = 80_000
+  const MIN_WEEKDAY_SHARE = 0.22
+  const monthTitle = monthTitleEs(anchor)
+  const monthTitleSentence =
+    monthTitle.length > 0 ? monthTitle.charAt(0).toUpperCase() + monthTitle.slice(1) : monthTitle
+
+  const weekdayOperativeInsights: { text: string; category: string; weekday: number }[] = []
+  for (const category of topCategoryNamesForTrend) {
+    const { byWd, total } = expenseByCategoryWeekday(anchorTxs, category)
+    if (total < MIN_CAT_FOR_WEEKDAY) continue
+    let peakWd = 0
+    let peakAmt = 0
+    for (let w = 0; w < 7; w += 1) {
+      if (byWd[w]! > peakAmt) {
+        peakAmt = byWd[w]!
+        peakWd = w
+      }
+    }
+    const share = total > 1e-6 ? peakAmt / total : 0
+    if (share < MIN_WEEKDAY_SHARE) continue
+    const sub = dominantSubcategoryOnWeekday(anchorTxs, category, peakWd)
+    const subShareOfPeak = sub && peakAmt > 1e-6 ? sub.amount / peakAmt : 0
+    const subClause =
+      sub && subShareOfPeak >= 0.42
+        ? ` En ese día, buena parte cae en «${sub.sub}» ($${copShort(sub.amount)}).`
+        : ""
+    const text = `${monthTitleSentence}: ${losWeekdaysPhrase(peakWd)} concentran ~${(share * 100).toFixed(0)}% del gasto operativo de «${category}» ($${copShort(peakAmt)} de $${copShort(total)}).${subClause}`
+    weekdayOperativeInsights.push({ text, category, weekday: peakWd })
+  }
+
   return {
     anchorMonth: anchor,
     monthsIncluded: months,
@@ -473,6 +612,11 @@ export function buildCategoryAnalyticsPayload(input: BuildCategoryAnalyticsInput
       ifTrimAntByHalf,
     },
     insights,
+    topOperativeCategoryTrend: {
+      keys: topOperativeCategoryTrendKeys,
+      points: topOperativeCategoryTrendPoints,
+    },
+    weekdayOperativeInsights,
   }
 }
 

@@ -381,6 +381,79 @@ export function CategoryAnalysisPanels({
         </Card>
       </div>
 
+      {data.topOperativeCategoryTrend.keys.length > 0 && data.topOperativeCategoryTrend.points.length > 0 ? (
+        <Card className="overflow-hidden p-0">
+          <div className="border-b border-orbita-border/60 px-3 py-2.5 sm:px-4">
+            <h3 className="text-sm font-semibold text-orbita-primary">Tendencia · categorías con más peso</h3>
+            <p className="mt-0.5 text-[11px] leading-snug text-orbita-secondary">
+              Gasto operativo mensual de las cinco categorías que más pesan en el mes ancla (misma regla que el resto de
+              esta vista: sin módulo finanzas). Útil para ver si el peso se mueve o se concentra en el tiempo.
+            </p>
+          </div>
+          <div className="h-64 w-full px-1 pb-2 pt-2 sm:h-72 sm:px-2 sm:pb-3">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={data.topOperativeCategoryTrend.points} margin={{ top: 8, right: 12, left: 4, bottom: 4 }}>
+                <CartesianGrid stroke="var(--color-border)" strokeDasharray="3 3" opacity={0.45} />
+                <XAxis dataKey="monthLabel" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
+                <YAxis
+                  tick={{ fontSize: 10 }}
+                  width={40}
+                  tickFormatter={(v) => {
+                    const n = Number(v)
+                    if (!Number.isFinite(n) || n === 0) return "0"
+                    if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
+                    if (Math.abs(n) >= 1000) return `${Math.round(n / 1000)}k`
+                    return String(Math.round(n))
+                  }}
+                />
+                <Tooltip
+                  contentStyle={rechartsTooltipContentStyle}
+                  formatter={(value, name) => {
+                    const v = typeof value === "number" ? value : Number(value)
+                    const label = typeof name === "string" ? name : String(name)
+                    return [`$${formatCop(Number.isFinite(v) ? v : 0)}`, label]
+                  }}
+                />
+                <Legend wrapperStyle={{ fontSize: 10, paddingTop: 4 }} />
+                {data.topOperativeCategoryTrend.keys.map((k, i) => (
+                  <Line
+                    key={k.key}
+                    type="monotone"
+                    dataKey={k.key}
+                    name={k.label}
+                    stroke={PIE_COLORS[i % PIE_COLORS.length]}
+                    strokeWidth={2}
+                    dot={{ r: 2 }}
+                    activeDot={{ r: 4 }}
+                    isAnimationActive={false}
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+      ) : null}
+
+      {data.weekdayOperativeInsights.length > 0 ? (
+        <Card className="p-3 sm:p-4">
+          <h3 className="text-sm font-semibold text-orbita-primary">Patrón por día de la semana (mes ancla)</h3>
+          <p className="mt-0.5 text-[11px] leading-snug text-orbita-secondary">
+            Solo categorías con gasto relevante y un día que concentra al menos ~22% del total de esa categoría. Si un
+            subrubro domina ese día, se nombra (p. ej. domicilios).
+          </p>
+          <ul className="mt-3 list-none space-y-2.5 p-0">
+            {data.weekdayOperativeInsights.map((row, idx) => (
+              <li
+                key={`${row.category}-${row.weekday}-${idx}`}
+                className="rounded-lg border border-orbita-border/55 bg-orbita-surface-alt/30 px-3 py-2 text-[12px] leading-relaxed text-orbita-primary"
+              >
+                {row.text}
+              </li>
+            ))}
+          </ul>
+        </Card>
+      ) : null}
+
       {mode === "estrategica" ? (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_minmax(17rem,22rem)] lg:items-start">
           <div className="space-y-4">
