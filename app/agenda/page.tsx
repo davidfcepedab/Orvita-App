@@ -57,6 +57,7 @@ const tabs = [
   { key: "todas", label: "Todas" },
   { key: "recibida", label: "Recibidas" },
   { key: "asignada", label: "Asignadas" },
+  { key: "compartida", label: "Compartidas hogar" },
   { key: "personal", label: "Personales" },
 ]
 
@@ -232,6 +233,8 @@ export default function AgendaPage() {
     title: "",
     /** vacío = tarea personal (para mí) */
     assigneeMemberId: "",
+    /** Una sola fila visible para todo el hogar (no sustituye asignar a una persona). */
+    householdShared: false,
     due: todayDateInputValue(),
     duration: 30,
     priority: "media" as "alta" | "media" | "baja",
@@ -327,12 +330,16 @@ export default function AgendaPage() {
     if (key === "recibida") {
       return tasks.filter((task) => task.type === "recibida").length + pendingUi.length
     }
+    if (key === "compartida") {
+      return tasks.filter((task) => task.type === "compartida").length
+    }
     return tasks.filter((task) => task.type === key).length
   }
 
   const grouped = useMemo(() => ({
     recibida: filtered.filter((task) => task.type === "recibida"),
     asignada: filtered.filter((task) => task.type === "asignada"),
+    compartida: filtered.filter((task) => task.type === "compartida"),
     personal: filtered.filter((task) => task.type === "personal"),
   }), [filtered])
 
@@ -375,7 +382,8 @@ export default function AgendaPage() {
     event.preventDefault()
     if (!form.title.trim()) return
     setFormSubmitError(null)
-    const mid = form.assigneeMemberId.trim()
+    const shared = form.householdShared
+    const mid = shared ? "" : form.assigneeMemberId.trim()
     let assigneeId: string | null = null
     let assigneeName: string | null = null
     if (mid) {
@@ -395,11 +403,13 @@ export default function AgendaPage() {
         dueDate: form.due ? form.due : null,
         assigneeName,
         assigneeId,
+        householdShared: shared,
       })
       setFormOpen(false)
       setForm({
         title: "",
         assigneeMemberId: "",
+        householdShared: false,
         due: todayDateInputValue(),
         duration: 30,
         priority: "media",
@@ -866,7 +876,14 @@ export default function AgendaPage() {
                   <span>Asignar a</span>
                   <select
                     value={form.assigneeMemberId}
-                    onChange={(event) => setForm((prev) => ({ ...prev, assigneeMemberId: event.target.value }))}
+                    disabled={form.householdShared}
+                    onChange={(event) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        assigneeMemberId: event.target.value,
+                        householdShared: event.target.value ? false : prev.householdShared,
+                      }))
+                    }
                     style={{ padding: "10px 12px", borderRadius: "10px", border: "0.5px solid var(--color-border)", background: "var(--color-surface)" }}
                   >
                     <option value="">Para mí (personal)</option>
@@ -887,6 +904,27 @@ export default function AgendaPage() {
                   />
                 </label>
               </div>
+              <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-[color-mix(in_srgb,var(--agenda-shared)_35%,var(--color-border))] bg-[color-mix(in_srgb,var(--agenda-shared)_10%,var(--color-surface))] px-3 py-2.5 text-[12px] text-[var(--color-text-primary)]">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--agenda-shared)]"
+                  checked={form.householdShared}
+                  onChange={(event) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      householdShared: event.target.checked,
+                      assigneeMemberId: event.target.checked ? "" : prev.assigneeMemberId,
+                    }))
+                  }
+                />
+                <span className="min-w-0 leading-snug">
+                  <span className="font-semibold">Compartir con el hogar</span>
+                  <span className="mt-0.5 block text-[11px] font-normal text-[var(--color-text-secondary)]">
+                    Todos los miembros la ven y pueden marcar estado; solo quien la crea puede eliminarla. No se envía a
+                    Google Tasks del creador. (Distinto de asignar a una persona concreta.)
+                  </span>
+                </span>
+              </label>
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-2.5">
                 <label className="grid gap-1 text-[12px] text-[var(--color-text-secondary)]">
                   <span>Prioridad</span>

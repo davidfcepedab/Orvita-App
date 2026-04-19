@@ -28,6 +28,12 @@ export function orvitaAgendaCardShell(
       borderLeft: "4px solid color-mix(in srgb, #4ade80 50%, transparent)",
     }
   }
+  if (task.type === "compartida") {
+    return {
+      background: mix("#c4b5fd", 20),
+      borderLeft: "4px solid color-mix(in srgb, #7c3aed 40%, transparent)",
+    }
+  }
   const v = opts?.viewerUserId
   const assignedToMe =
     Boolean(v && task.assigneeUserId && task.assigneeUserId === v) || task.type === "recibida"

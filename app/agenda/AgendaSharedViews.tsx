@@ -155,7 +155,7 @@ function buildMergedTimeline(
 }
 
 function monthDayTypeMarkers(dayTasks: UiAgendaTask[]) {
-  const order: UiAgendaTask["type"][] = ["recibida", "asignada", "personal"]
+  const order: UiAgendaTask["type"][] = ["recibida", "asignada", "compartida", "personal"]
   const seen = new Set<UiAgendaTask["type"]>()
   dayTasks.forEach((t) => seen.add(t.type))
   return order.filter((k) => seen.has(k))
@@ -164,6 +164,7 @@ function monthDayTypeMarkers(dayTasks: UiAgendaTask[]) {
 export type GroupedTasks = {
   recibida: UiAgendaTask[]
   asignada: UiAgendaTask[]
+  compartida: UiAgendaTask[]
   personal: UiAgendaTask[]
 }
 
@@ -260,8 +261,8 @@ export function AgendaSharedKanban({
   )
 
   const allGroupedForDedupe = useMemo(
-    () => [...grouped.personal, ...grouped.recibida, ...grouped.asignada],
-    [grouped.personal, grouped.recibida, grouped.asignada],
+    () => [...grouped.personal, ...grouped.recibida, ...grouped.asignada, ...grouped.compartida],
+    [grouped.personal, grouped.recibida, grouped.asignada, grouped.compartida],
   )
 
   const googleMerged = useMemo(
@@ -339,11 +340,38 @@ export function AgendaSharedKanban({
       ))}
       <div className={agendaKanbanColumnClass}>
         <div className="border-l-[3px] border-solid pl-2.5" style={{ borderLeftColor: "var(--agenda-personal)" }}>
-          <p className={`m-0 ${agendaColumnHeadingClass}`}>Personales y Google</p>
+          <p className={`m-0 ${agendaColumnHeadingClass}`}>Compartidas, personales y Google</p>
           <p className="m-0 mt-1 text-[10px] font-medium normal-case tracking-normal text-[var(--color-text-secondary)] sm:text-[11px]">
-            Tareas personales Órvita · eventos y recordatorios (solo lectura)
+            Tareas del hogar y personales Órvita · eventos y recordatorios (solo lectura)
           </p>
         </div>
+        {grouped.compartida.map((task) => (
+          <AgendaOrvitaTaskCard
+            key={task.id}
+            task={task}
+            variant="kanban"
+            viewerUserId={viewerUserId}
+            onOpenEdit={onOpenAgendaEdit ? (t) => onOpenAgendaEdit({ kind: "orvita", task: t }) : undefined}
+            householdMembers={householdMembers}
+            onPatchOrvita={onPatchOrvitaTask}
+            onSaveComplete={onSaveComplete}
+            onAcceptAssignment={onAcceptAssignment}
+            onDelete={
+              onDeleteOrvitaTask
+                ? async (t) => {
+                    if (!confirm(`¿Eliminar “${t.title}” del tablero Órvita?`)) return
+                    setBusyDel(`o-${t.id}`)
+                    try {
+                      await onDeleteOrvitaTask(t)
+                    } finally {
+                      setBusyDel(null)
+                    }
+                  }
+                : undefined
+            }
+            deleteBusy={busyDel === `o-${task.id}`}
+          />
+        ))}
         {grouped.personal.map((task) => (
           <AgendaOrvitaTaskCard
             key={task.id}
@@ -376,9 +404,9 @@ export function AgendaSharedKanban({
             Conecta Google en Cuenta para mezclar Calendar y Tasks en esta columna.
           </p>
         ) : googleMerged.length === 0 ? (
-          grouped.personal.length > 0 ? null : (
+          grouped.personal.length > 0 || grouped.compartida.length > 0 ? null : (
             <p className="m-0 text-[11px] text-[var(--color-text-secondary)] sm:text-[12px]">
-              Sin personales ni ítems Google en el periodo.
+              Sin tareas Órvita ni ítems Google en el periodo.
             </p>
           )
         ) : (
@@ -524,7 +552,7 @@ export function AgendaSharedKanban({
             ) : null
           )
         )}
-        {googleConnected && googleMerged.length === 0 && grouped.personal.length > 0 ? (
+        {googleConnected && googleMerged.length === 0 && (grouped.personal.length > 0 || grouped.compartida.length > 0) ? (
           <p style={{ margin: 0, fontSize: "11px", color: "var(--color-text-secondary)" }}>
             Sin eventos ni recordatorios Google en este periodo.
           </p>

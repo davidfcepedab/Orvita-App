@@ -4,6 +4,7 @@ const ACCENT: Record<UiAgendaTask["type"], string> = {
   personal: "var(--agenda-personal)",
   recibida: "var(--agenda-received)",
   asignada: "var(--agenda-assigned)",
+  compartida: "var(--agenda-shared)",
 }
 
 export function taskTypeAccentVar(type: UiAgendaTask["type"]) {

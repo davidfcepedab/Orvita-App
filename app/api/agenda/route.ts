@@ -28,6 +28,8 @@ type AgendaRow = {
   created_at: string
   domain: OperationalDomain
   assignment_accepted_at: string | null
+  /** Toda la familia/hogar ve y puede actualizar estado (no sustituye asignación 1:1). */
+  household_shared?: boolean | null
   /** Enlazada a Google Tasks (misma tarea: no duplicar en timeline unificado). */
   google_task_id?: string | null
 }
@@ -37,10 +39,13 @@ type AgendaRow = {
  * Las asignaciones pendientes se aceptan vía rama dedicada (sin este filtro).
  */
 function agendaMutationOrFilter(userId: string) {
-  return `user_id.eq.${userId},and(assignee_id.eq.${userId},assignment_accepted_at.not.is.null)`
+  return `user_id.eq.${userId},and(assignee_id.eq.${userId},assignment_accepted_at.not.is.null),household_shared.eq.true`
 }
 
 function mapType(row: AgendaRow, currentUserId: string) {
+  if (row.household_shared) {
+    return "shared"
+  }
   const assignee = row.assignee_id?.trim() || null
   const creator = (row.created_by ?? row.user_id)?.trim() || null
 
@@ -92,6 +97,22 @@ function seedMockAgendaRows(): AgendaRow[] {
       domain: "agenda",
       assignment_accepted_at: now,
     },
+    {
+      id: "mock-agenda-shared-1",
+      user_id: MOCK_AGENDA_USER_ID,
+      title: "Revisión semanal del hogar (compartida)",
+      status: "pending",
+      priority: "Media",
+      estimated_minutes: 20,
+      due_date: today,
+      assignee_id: null,
+      assignee_name: null,
+      created_by: MOCK_AGENDA_USER_ID,
+      created_at: now,
+      domain: "agenda",
+      assignment_accepted_at: now,
+      household_shared: true,
+    },
   ]
 }
 
@@ -112,6 +133,7 @@ function mapTask(row: AgendaRow, currentUserId: string) {
     assignmentAcceptedAt: row.assignment_accepted_at ?? null,
     type: mapType(row, currentUserId),
     googleTaskId: row.google_task_id ?? null,
+    householdShared: Boolean(row.household_shared),
   }
 }
 
@@ -143,16 +165,17 @@ export async function GET(req: NextRequest) {
         .eq("household_id", householdId)
         .is("deleted_at", null)
 
-    const [ownedRes, acceptedRes, pendingRes] = await Promise.all([
+    const [ownedRes, acceptedRes, pendingRes, sharedRes] = await Promise.all([
       base().eq("user_id", userId).order("created_at", { ascending: false }),
       base()
         .eq("assignee_id", userId)
         .not("assignment_accepted_at", "is", null)
         .order("created_at", { ascending: false }),
       base().eq("assignee_id", userId).is("assignment_accepted_at", null).order("created_at", { ascending: false }),
+      base().eq("household_shared", true).order("created_at", { ascending: false }),
     ])
 
-    const firstErr = ownedRes.error ?? acceptedRes.error ?? pendingRes.error
+    const firstErr = ownedRes.error ?? acceptedRes.error ?? pendingRes.error ?? sharedRes.error
     if (firstErr) {
       throw firstErr
     }
@@ -166,7 +189,8 @@ export async function GET(req: NextRequest) {
       return c == null || c !== userId
     })
 
-    const merged = mergeAgendaRowsById(owned, acceptedRecv)
+    const sharedRows = (sharedRes.data ?? []) as AgendaRow[]
+    const merged = mergeAgendaRowsById(mergeAgendaRowsById(owned, acceptedRecv), sharedRows)
 
     return NextResponse.json({
       success: true,
@@ -192,8 +216,13 @@ export async function POST(req: NextRequest) {
         : "Media"
       const estimatedMinutes = Number(body?.estimatedMinutes || 30)
       const dueDate = body?.dueDate ? String(body.dueDate) : null
-      const assigneeId = body?.assigneeId ? String(body.assigneeId) : null
-      const assigneeName = body?.assigneeName ? String(body.assigneeName) : null
+      const householdShared = body?.householdShared === true
+      let assigneeId = body?.assigneeId ? String(body.assigneeId) : null
+      let assigneeName = body?.assigneeName ? String(body.assigneeName) : null
+      if (householdShared) {
+        assigneeId = null
+        assigneeName = null
+      }
 
       if (!title) {
         return NextResponse.json({ success: false, error: "title es obligatorio" }, { status: 400 })
@@ -201,6 +230,7 @@ export async function POST(req: NextRequest) {
 
       const now = new Date().toISOString()
       const assignedToOther =
+        !householdShared &&
         Boolean(assigneeId && String(assigneeId).trim()) &&
         String(assigneeId).trim() !== MOCK_AGENDA_USER_ID
       mockAgendaRows.unshift({
@@ -217,6 +247,7 @@ export async function POST(req: NextRequest) {
         created_at: now,
         domain: "agenda",
         assignment_accepted_at: assignedToOther ? null : now,
+        household_shared: householdShared,
       })
 
       return NextResponse.json({ success: true, googleTask: null, googleSyncError: undefined })
@@ -233,15 +264,20 @@ export async function POST(req: NextRequest) {
       )
     }
     const body = await req.json()
-    const syncToGoogle = body?.syncToGoogle === true
+    const householdShared = body?.householdShared === true
+    const syncToGoogle = body?.syncToGoogle === true && !householdShared
     const title = String(body?.title || "").trim()
     const priority = body?.priority === "Alta" || body?.priority === "Media" || body?.priority === "Baja"
       ? body.priority
       : "Media"
     const estimatedMinutes = Number(body?.estimatedMinutes || 30)
     const dueDate = body?.dueDate ? String(body.dueDate) : null
-    const assigneeId = body?.assigneeId ? String(body.assigneeId) : null
-    const assigneeName = body?.assigneeName ? String(body.assigneeName) : null
+    let assigneeId = body?.assigneeId ? String(body.assigneeId) : null
+    let assigneeName = body?.assigneeName ? String(body.assigneeName) : null
+    if (householdShared) {
+      assigneeId = null
+      assigneeName = null
+    }
 
     if (!title) {
       return NextResponse.json(
@@ -251,7 +287,9 @@ export async function POST(req: NextRequest) {
     }
 
     const assignedToOther =
-      Boolean(assigneeId && String(assigneeId).trim()) && String(assigneeId).trim() !== userId
+      !householdShared &&
+      Boolean(assigneeId && String(assigneeId).trim()) &&
+      String(assigneeId).trim() !== userId
 
     const insert = await supabase
       .from("operational_tasks")
@@ -268,6 +306,7 @@ export async function POST(req: NextRequest) {
         created_by: userId,
         domain: "agenda",
         completed: false,
+        household_shared: householdShared,
         assignment_accepted_at: assignedToOther ? null : new Date().toISOString(),
       })
       .select("id")

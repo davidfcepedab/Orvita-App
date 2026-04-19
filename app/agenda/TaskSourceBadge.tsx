@@ -9,7 +9,9 @@ export function TaskSourceBadge({ type }: { type: UiAgendaTask["type"] }) {
       ? { label: "G.Tasks", bg: "color-mix(in srgb, var(--agenda-assigned) 20%, transparent)", color: "var(--agenda-assigned)" }
       : type === "asignada"
         ? { label: "Me →", bg: "color-mix(in srgb, var(--agenda-assigned) 16%, transparent)", color: "var(--agenda-assigned)" }
-        : { label: "← Me", bg: "color-mix(in srgb, var(--agenda-received) 20%, transparent)", color: "var(--agenda-received)" }
+        : type === "compartida"
+          ? { label: "Hogar", bg: "color-mix(in srgb, var(--agenda-shared) 22%, transparent)", color: "var(--agenda-shared)" }
+          : { label: "← Me", bg: "color-mix(in srgb, var(--agenda-received) 20%, transparent)", color: "var(--agenda-received)" }
 
   return (
     <span

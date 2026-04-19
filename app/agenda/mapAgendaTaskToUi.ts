@@ -13,9 +13,10 @@ function initialsFromName(name: string): string {
   return t.slice(0, 2).toUpperCase()
 }
 
-function orvitaFuenteForType(type: "recibida" | "asignada" | "personal"): string {
+function orvitaFuenteForType(type: "recibida" | "asignada" | "personal" | "compartida"): string {
   if (type === "recibida") return "Me la asignaron"
   if (type === "asignada") return "Yo la asigné"
+  if (type === "compartida") return "Compartida hogar"
   return "Nueva"
 }
 
@@ -24,7 +25,7 @@ export type UiAgendaTask = {
   title: string
   duration: number
   due: string
-  type: "recibida" | "asignada" | "personal"
+  type: "recibida" | "asignada" | "personal" | "compartida"
   priority: "alta" | "media" | "baja"
   status: string
   owner: string
@@ -54,6 +55,7 @@ export type UiAgendaTask = {
 }
 
 export function assignmentShortLine(task: UiAgendaTask): string | null {
+  if (task.type === "compartida") return "Hogar"
   const ini = task.relatedPersonInitials.trim()
   if (!ini) return null
   if (task.type === "recibida") return `De: ${ini}`
@@ -66,6 +68,7 @@ export function mapAgendaTaskToUi(t: AgendaTask): UiAgendaTask {
     received: "recibida",
     assigned: "asignada",
     personal: "personal",
+    shared: "compartida",
   }
   const priMap: Record<AgendaTask["priority"], UiAgendaTask["priority"]> = {
     Alta: "alta",
@@ -77,13 +80,17 @@ export function mapAgendaTaskToUi(t: AgendaTask): UiAgendaTask {
   if (t.status === "completed") displayStatus = "completada"
 
   const name = t.assigneeName?.trim() || ""
-  const relatedPersonInitials = t.type === "personal" ? "" : initialsFromName(name)
+  const relatedPersonInitials =
+    t.type === "personal" || t.type === "shared" ? "" : initialsFromName(name)
   const owner =
-    t.type === "personal" ? "YO" : relatedPersonInitials || "EQ"
+    t.type === "personal" ? "YO" : t.type === "shared" ? "HOG" : relatedPersonInitials || "EQ"
 
   let assigneeLine = ""
   let assignmentCaption = ""
-  if (t.type === "personal") {
+  if (t.type === "shared") {
+    assigneeLine = "Visible para todo el hogar · cualquiera puede marcar estado (solo el creador la elimina)"
+    assignmentCaption = "Tarea compartida del hogar"
+  } else if (t.type === "personal") {
     assigneeLine = "Para ti · las tareas sin asignatario pueden sincronizarse con Google Tasks"
   } else if (t.type === "assigned") {
     assigneeLine = name ? `Asignado a: ${name}` : "Asignado a: sin nombre (añade asignatario al crear la tarea)"
@@ -120,7 +127,11 @@ export function mapAgendaTaskToUi(t: AgendaTask): UiAgendaTask {
     assigneeUserId: t.assigneeId ?? null,
     createdByUserId: t.createdBy,
     assigneeContact:
-      t.type === "personal" && !String(t.assigneeId ?? "").trim() ? null : name || null,
+      t.type === "shared"
+        ? null
+        : t.type === "personal" && !String(t.assigneeId ?? "").trim()
+          ? null
+          : name || null,
   }
 }
 

@@ -88,6 +88,7 @@ export function customPaletteToCssVars(p: CustomPalette): Record<string, string>
     "--agenda-assigned": x.accentHealth,
     "--agenda-calendar": "#7C3AED",
     "--agenda-reminder": "#D97706",
+    "--agenda-shared": x.accentAgenda,
     "--agenda-shell-bg": `color-mix(in srgb, ${x.surfaceAlt} 68%, ${x.background})`,
     "--agenda-inset-bg": `color-mix(in srgb, ${x.surfaceAlt} 52%, ${x.background})`,
     "--agenda-elevated-bg": `color-mix(in srgb, ${x.surface} 58%, ${x.surfaceAlt})`,

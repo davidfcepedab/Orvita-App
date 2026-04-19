@@ -24,6 +24,7 @@
   --agenda-assigned: #059669;
   --agenda-calendar: #7c3aed;
   --agenda-reminder: #d97706;
+  --agenda-shared: #7c3aed;
   --radius-card: 14px;
   --radius-button: 12px;
   --spacing-xs: 4px;
@@ -84,6 +85,7 @@
   --agenda-assigned: #34d399;
   --agenda-calendar: #c084fc;
   --agenda-reminder: #fbbf24;
+  --agenda-shared: #a78bfa;
 }
 
 [data-theme="sand"] {
@@ -107,6 +109,7 @@
   --agenda-assigned: #15803d;
   --agenda-calendar: #7e22ce;
   --agenda-reminder: #b45309;
+  --agenda-shared: #6d28d9;
 }
 
 [data-theme="midnight"] {
@@ -130,6 +133,7 @@
   --agenda-assigned: #4ade80;
   --agenda-calendar: #a78bfa;
   --agenda-reminder: #fbbf24;
+  --agenda-shared: #a78bfa;
 }
 
 /* Tema personalizado: base Arctic hasta que el cliente aplique variables inline */
@@ -154,6 +158,7 @@
   --agenda-assigned: #059669;
   --agenda-calendar: #7c3aed;
   --agenda-reminder: #d97706;
+  --agenda-shared: #7c3aed;
 }
 
 [data-layout="compact"] {

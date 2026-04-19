@@ -4,6 +4,7 @@ export const agendaLegendItems: { label: string; color: string }[] = [
   { label: "Personal", color: "var(--agenda-personal)" },
   { label: "Recibida (me asignaron)", color: "var(--agenda-received)" },
   { label: "Asignada (yo asigné)", color: "var(--agenda-assigned)" },
+  { label: "Compartida hogar", color: "var(--agenda-shared)" },
   { label: "Calendar", color: "var(--agenda-calendar)" },
   { label: "Recordatorio", color: "var(--agenda-reminder)" },
 ]

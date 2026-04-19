@@ -6,7 +6,7 @@ import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 
 export type AgendaTaskStatus = "pending" | "in-progress" | "completed"
 export type AgendaTaskPriority = "Alta" | "Media" | "Baja"
-export type AgendaTaskType = "personal" | "assigned" | "received"
+export type AgendaTaskType = "personal" | "assigned" | "received" | "shared"
 
 export interface AgendaTask {
   id: string
@@ -19,6 +19,8 @@ export interface AgendaTask {
   assigneeName: string | null
   createdBy: string
   type: AgendaTaskType
+  /** Agenda: tarea compartida del hogar (todos los miembros la ven y pueden actualizar estado). */
+  householdShared?: boolean
   createdAt: string
   /** ISO timestamp cuando el asignatario aceptó (null si aún no o no aplica). */
   assignmentAcceptedAt?: string | null
@@ -99,9 +101,13 @@ export function useAgendaTasks() {
       dueDate?: string | null
       assigneeId?: string | null
       assigneeName?: string | null
+      /** Toda la familia/hogar: una fila, sin asignatario único (no sync a Google del creador). */
+      householdShared?: boolean
     }) => {
       const headers = await browserBearerHeaders(true)
+      const shared = input.householdShared === true
       const personal =
+        !shared &&
         (input.assigneeId == null || String(input.assigneeId).trim() === "") &&
         (input.assigneeName == null || String(input.assigneeName).trim() === "")
       const response = await fetch("/api/agenda", {
@@ -109,7 +115,7 @@ export function useAgendaTasks() {
         headers,
         body: JSON.stringify({
           ...input,
-          // Órvita → Google Tasks solo para tareas “para mí” (sin asignatario).
+          // Órvita → Google Tasks solo para tareas “para mí” (sin asignatario ni compartida hogar).
           syncToGoogle: personal,
         }),
       })
