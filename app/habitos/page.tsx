@@ -819,12 +819,12 @@ export default function HabitosPage() {
                           </div>
                         </div>
 
-                        <div className="flex flex-wrap items-end gap-3 sm:gap-4">
-                          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                        <div className="flex flex-wrap items-stretch gap-4 sm:gap-5">
+                          <div className="flex min-w-0 flex-1 flex-col gap-2">
                             <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
                               Últimos 14 días
                             </span>
-                            <div className="min-w-0 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                            <div className="flex min-w-0 items-center rounded-xl border border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_55%,var(--color-surface-alt))] px-3 py-2.5 sm:px-3.5 sm:py-3">
                               <HabitSparkline14 values={h.metrics.sparkline14 ?? []} />
                             </div>
                           </div>
