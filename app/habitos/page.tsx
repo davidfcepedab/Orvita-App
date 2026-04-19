@@ -1,7 +1,15 @@
 "use client"
 
-import { useMemo, useState, type CSSProperties, type FormEvent } from "react"
-import { addDaysIso, HABIT_BACKFILL_MAX_DAYS_PAST, utcTodayIso } from "@/lib/habits/habitMetrics"
+import clsx from "clsx"
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from "react"
+import {
+  addDaysIso,
+  aggregateHabitsSummary,
+  HABIT_BACKFILL_MAX_DAYS_PAST,
+  isScheduledOnUtcDay,
+  lettersToWeekdays,
+  utcTodayIso,
+} from "@/lib/habits/habitMetrics"
 import { Card } from "@/src/components/ui/Card"
 import {
   Activity,
@@ -25,7 +33,6 @@ import {
 } from "lucide-react"
 import { UI_HABITS_MUTATIONS_OFF, UI_HABITS_SAVE_OFF } from "@/lib/checkins/flags"
 import { groupHabitsByDaypart, orderedDaypartBlocks, type HabitTimeBlockId } from "@/lib/habits/habitStackGroups"
-import { lettersToWeekdays } from "@/lib/habits/habitMetrics"
 import { useHabits } from "@/app/hooks/useHabits"
 import type { HabitWeekDayMark } from "@/lib/habits/habitMetrics"
 import type {
@@ -35,6 +42,7 @@ import type {
   OperationalDomain,
 } from "@/lib/operational/types"
 import { emptyHabitModalForm, habitToModalValues, HabitFormModal } from "@/app/habitos/HabitFormModal"
+import { HabitSparkline14 } from "@/app/habitos/HabitSparkline14"
 import {
   buildHabitConsistencyInsight,
   type HabitConsistencyTier,
@@ -57,6 +65,19 @@ const METRIC_LABELS: Record<HabitSuccessMetricType, string> = {
 }
 
 type HabitsShellView = "resumen" | "stack"
+
+const HABITOS_SHELL_KEY = "orbita-habitos-shell-view"
+const HABITOS_DOMAIN_KEY = "orbita-habitos-domain-filter"
+const HABITOS_LAST_STACK_MS_KEY = "orbita-habitos-last-stack-at-ms"
+/** Días sin abrir la pestaña Stack antes de mostrar recordatorio (con hábitos en riesgo). */
+const STACK_REMINDER_AFTER_DAYS = 3
+
+function daysSinceMs(ms: number | null): number {
+  if (ms == null || !Number.isFinite(ms)) return Number.POSITIVE_INFINITY
+  return (Date.now() - ms) / 86_400_000
+}
+
+const DOMAIN_KEYS: Array<OperationalDomain | "all"> = ["all", "salud", "fisico", "profesional", "agenda"]
 
 const STACK_BLOCK_META: Record<
   HabitTimeBlockId,
@@ -216,24 +237,96 @@ export default function HabitosPage() {
     mock,
     toggleCompleteToday,
     completeAllOnDay,
+    completeAllScheduledToday,
     createHabit,
     updateHabit,
     deleteHabit,
   } = useHabits()
 
   const [shellView, setShellView] = useState<HabitsShellView>("stack")
+  const [domainFilter, setDomainFilter] = useState<OperationalDomain | "all">("all")
+  const [lastStackVisitMs, setLastStackVisitMs] = useState<number | null>(null)
+  const [prefsHydrated, setPrefsHydrated] = useState(false)
+  const resumenPanelRef = useRef<HTMLDivElement>(null)
+  const stackPanelRef = useRef<HTMLDivElement>(null)
+
   const [formOpen, setFormOpen] = useState(false)
   const [backfillOpen, setBackfillOpen] = useState(false)
   const [backfillDate, setBackfillDate] = useState(() => addDaysIso(utcTodayIso(), -1))
   const [editing, setEditing] = useState<HabitWithMetrics | null>(null)
   const [form, setForm] = useState(() => emptyHabitModalForm())
 
+  useEffect(() => {
+    try {
+      const v = sessionStorage.getItem(HABITOS_SHELL_KEY)
+      if (v === "resumen" || v === "stack") setShellView(v)
+      const d = sessionStorage.getItem(HABITOS_DOMAIN_KEY)
+      if (d === "salud" || d === "fisico" || d === "profesional" || d === "agenda" || d === "all") {
+        setDomainFilter(d)
+      }
+      const raw = sessionStorage.getItem(HABITOS_LAST_STACK_MS_KEY)
+      if (raw != null) {
+        const n = Number.parseInt(raw, 10)
+        if (Number.isFinite(n)) setLastStackVisitMs(n)
+      }
+    } catch {
+      /* private mode / SSR */
+    }
+    setPrefsHydrated(true)
+  }, [])
+
+  useEffect(() => {
+    if (!prefsHydrated) return
+    try {
+      sessionStorage.setItem(HABITOS_SHELL_KEY, shellView)
+    } catch {
+      /* */
+    }
+  }, [shellView, prefsHydrated])
+
+  useEffect(() => {
+    if (!prefsHydrated) return
+    try {
+      sessionStorage.setItem(HABITOS_DOMAIN_KEY, domainFilter)
+    } catch {
+      /* */
+    }
+  }, [domainFilter, prefsHydrated])
+
+  useEffect(() => {
+    if (shellView !== "stack") return
+    const n = Date.now()
+    try {
+      sessionStorage.setItem(HABITOS_LAST_STACK_MS_KEY, String(n))
+    } catch {
+      /* */
+    }
+    setLastStackVisitMs(n)
+  }, [shellView])
+
+  useEffect(() => {
+    const el = shellView === "resumen" ? resumenPanelRef.current : stackPanelRef.current
+    window.requestAnimationFrame(() => {
+      el?.focus()
+    })
+  }, [shellView])
+
+  const habitsFiltered = useMemo(() => {
+    if (domainFilter === "all") return habits
+    return habits.filter((h) => h.domain === domainFilter)
+  }, [habits, domainFilter])
+
+  const summaryDisplayed = useMemo(() => {
+    if (domainFilter === "all") return summary
+    return aggregateHabitsSummary(habitsFiltered.map((h) => h.metrics))
+  }, [domainFilter, summary, habitsFiltered])
+
   const superhabitCount = useMemo(
     () => habits.filter((h) => h.metadata?.is_superhabit).length,
     [habits]
   )
 
-  const habitsByDaypart = useMemo(() => groupHabitsByDaypart(habits), [habits])
+  const habitsByDaypart = useMemo(() => groupHabitsByDaypart(habitsFiltered), [habitsFiltered])
 
   const stackBlocksWithOffsets = useMemo(() => {
     const out: { blockId: HabitTimeBlockId; habits: HabitWithMetrics[]; animStart: number }[] = []
@@ -247,19 +340,38 @@ export default function HabitosPage() {
   }, [habitsByDaypart])
 
   const consistencyInsight = useMemo(
-    () => buildHabitConsistencyInsight(habits, summary),
-    [habits, summary],
+    () => buildHabitConsistencyInsight(habitsFiltered, summaryDisplayed),
+    [habitsFiltered, summaryDisplayed],
   )
 
   /** Roster para resumen: primero los que más necesitan atención (menor % 30d). */
   const rosterByAdherence = useMemo(() => {
-    return [...habits].sort(
-      (a, b) => a.metrics.completion_rate_30d - b.metrics.completion_rate_30d || a.name.localeCompare(b.name, "es"),
+    return [...habitsFiltered].sort(
+      (a, b) =>
+        a.metrics.completion_rate_30d - b.metrics.completion_rate_30d || a.name.localeCompare(b.name, "es"),
     )
-  }, [habits])
+  }, [habitsFiltered])
   const consistencyTierUi = HABIT_CONSISTENCY_TIER_PRESENTATION[consistencyInsight.tier]
   const consistencyMomentumPct =
-    habits.length === 0 ? 0 : Math.min(100, Math.max(0, summary.consistency_30d))
+    habitsFiltered.length === 0 ? 0 : Math.min(100, Math.max(0, summaryDisplayed.consistency_30d))
+
+  const todayYmd = useMemo(() => utcTodayIso(), [])
+  const pendingScheduledTodayIds = useMemo(() => {
+    return habitsFiltered
+      .filter((h) => !h.metrics.completed_today && isScheduledOnUtcDay(h.metadata ?? null, todayYmd))
+      .map((h) => h.id)
+  }, [habitsFiltered, todayYmd])
+
+  const showStackReminder = useMemo(() => {
+    if (summary.at_risk <= 0 || shellView !== "resumen") return false
+    return daysSinceMs(lastStackVisitMs) >= STACK_REMINDER_AFTER_DAYS
+  }, [summary.at_risk, shellView, lastStackVisitMs])
+
+  const stackReminderDaysLabel = useMemo(() => {
+    if (lastStackVisitMs == null || !Number.isFinite(lastStackVisitMs)) return null
+    const d = Math.floor((Date.now() - lastStackVisitMs) / 86_400_000)
+    return d < 1 ? "menos de 1 día" : `${d} día${d === 1 ? "" : "s"}`
+  }, [lastStackVisitMs])
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
@@ -322,7 +434,6 @@ export default function HabitosPage() {
     return "Buenas noches"
   })()
 
-  const todayYmd = useMemo(() => utcTodayIso(), [])
   const minBackfillYmd = useMemo(() => addDaysIso(todayYmd, -HABIT_BACKFILL_MAX_DAYS_PAST), [todayYmd])
 
   const openGlobalBackfill = () => {
@@ -383,7 +494,7 @@ export default function HabitosPage() {
             stack (viaje u olvido).
           </p>
           <p className="m-0 max-w-prose text-[12px] leading-snug text-[var(--color-text-secondary)]">
-            {greeting}. Tu mayor racha actual en el stack es de {summary.current_streak_max} días.
+            {greeting}. Tu mayor racha actual en el stack es de {summaryDisplayed.current_streak_max} días.
           </p>
         </div>
         <button
@@ -402,6 +513,67 @@ export default function HabitosPage() {
       </header>
 
       <div
+        id="habitos-dominio-filtro"
+        className="flex min-w-0 flex-col gap-2 rounded-xl border border-[color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_35%,var(--color-surface))] px-2 py-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2 sm:px-3 sm:py-2.5"
+        role="group"
+        aria-label="Filtrar hábitos por dominio"
+      >
+        <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
+          Dominio
+        </span>
+        <div className="flex min-w-0 flex-wrap gap-1.5">
+          {DOMAIN_KEYS.map((key) => {
+            const label = key === "all" ? "Todos" : DOMAIN_LABELS[key]
+            const active = domainFilter === key
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setDomainFilter(key)}
+                className={clsx(
+                  "orbita-focus-ring inline-flex min-h-8 items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] transition-colors sm:px-3 sm:text-[11px]",
+                  active
+                    ? "border-[color-mix(in_srgb,var(--color-accent-health)_50%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_12%,var(--color-surface))] text-[var(--color-text-primary)]"
+                    : "border-[color-mix(in_srgb,var(--color-border)_80%,transparent)] bg-transparent text-[var(--color-text-secondary)] hover:bg-[color-mix(in_srgb,var(--color-surface)_55%,transparent)]",
+                )}
+              >
+                {label}
+              </button>
+            )
+          })}
+        </div>
+        {domainFilter !== "all" ? (
+          <p className="m-0 w-full text-[10px] leading-snug text-[var(--color-text-secondary)] sm:ml-auto sm:w-auto sm:max-w-[20rem] sm:text-right">
+            Métricas y stack muestran solo <strong className="font-medium text-[var(--color-text-primary)]">{DOMAIN_LABELS[domainFilter]}</strong>.
+            Los totales globales de alertas siguen usando todo el roster.
+          </p>
+        ) : null}
+      </div>
+
+      {showStackReminder ? (
+        <div
+          role="status"
+          className="rounded-xl border border-[color-mix(in_srgb,var(--color-accent-warning)_42%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-warning)_10%,var(--color-surface))] px-3 py-2.5 sm:px-4 sm:py-3"
+        >
+          <p className="m-0 text-[12px] font-semibold leading-snug text-[var(--color-text-primary)] sm:text-[13px]">
+            {stackReminderDaysLabel
+              ? `Hace ${stackReminderDaysLabel} que no abres la vista Stack y tienes hábitos en riesgo hoy.`
+              : `No hay registro reciente de Stack en este navegador; con hábitos en riesgo hoy conviene abrirla para marcar el día.`}
+          </p>
+          <p className="m-0 mt-1 text-[11px] leading-snug text-[var(--color-text-secondary)] sm:text-[12px]">
+            Abre Stack para marcar «hecho hoy» o revisar el orden por momento del día.
+          </p>
+          <button
+            type="button"
+            onClick={() => setShellView("stack")}
+            className="orbita-focus-ring mt-2 inline-flex min-h-9 items-center justify-center rounded-lg bg-[var(--color-accent-health)] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-white focus-visible:outline-none"
+          >
+            Ir a Stack
+          </button>
+        </div>
+      ) : null}
+
+      <div
         className="flex min-w-0 flex-col gap-2 rounded-xl border border-[color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_40%,var(--color-surface))] p-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:p-1.5"
         role="tablist"
         aria-label="Vista de hábitos: resumen o stack"
@@ -412,7 +584,7 @@ export default function HabitosPage() {
             role="tab"
             aria-selected={shellView === "resumen"}
             onClick={() => setShellView("resumen")}
-            className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-2 text-[11px] font-semibold uppercase tracking-[0.1em] transition-colors sm:min-h-9 sm:flex-1 sm:px-3 sm:text-xs ${
+            className={`orbita-focus-ring inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-2 text-[11px] font-semibold uppercase tracking-[0.1em] transition-colors sm:min-h-9 sm:flex-1 sm:px-3 sm:text-xs ${
               shellView === "resumen"
                 ? "bg-[var(--color-surface)] text-[var(--color-text-primary)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--color-border)_70%,transparent),0_1px_3px_rgba(15,23,42,0.06)]"
                 : "bg-transparent text-[var(--color-text-secondary)] hover:bg-[color-mix(in_srgb,var(--color-surface)_65%,transparent)]"
@@ -426,7 +598,7 @@ export default function HabitosPage() {
             role="tab"
             aria-selected={shellView === "stack"}
             onClick={() => setShellView("stack")}
-            className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-2 text-[11px] font-semibold uppercase tracking-[0.1em] transition-colors sm:min-h-9 sm:flex-1 sm:px-3 sm:text-xs ${
+            className={`orbita-focus-ring inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-2 text-[11px] font-semibold uppercase tracking-[0.1em] transition-colors sm:min-h-9 sm:flex-1 sm:px-3 sm:text-xs ${
               shellView === "stack"
                 ? "bg-[var(--color-surface)] text-[var(--color-text-primary)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--color-border)_70%,transparent),0_1px_3px_rgba(15,23,42,0.06)]"
                 : "bg-transparent text-[var(--color-text-secondary)] hover:bg-[color-mix(in_srgb,var(--color-surface)_65%,transparent)]"
@@ -444,7 +616,11 @@ export default function HabitosPage() {
       </div>
 
       {shellView === "resumen" ? (
-        <>
+        <div
+          ref={resumenPanelRef}
+          tabIndex={-1}
+          className="grid min-w-0 gap-[var(--layout-gap)] outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--color-accent-health)_45%,transparent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-background)]"
+        >
       <div className="grid min-w-0 grid-cols-1 gap-[var(--layout-gap)] sm:grid-cols-2 md:grid-cols-3">
         <Card hover className="min-w-0">
           <div style={{ padding: "var(--spacing-md)", display: "grid", gap: "6px" }}>
@@ -453,7 +629,7 @@ export default function HabitosPage() {
               <span className="min-w-0 leading-snug">Consistencia 30D</span>
             </p>
             <p className="text-2xl font-semibold tabular-nums sm:text-[28px]" style={{ margin: 0 }}>
-              {summary.consistency_30d}%
+              {summaryDisplayed.consistency_30d}%
             </p>
           </div>
         </Card>
@@ -464,7 +640,7 @@ export default function HabitosPage() {
               <span className="min-w-0 leading-snug">Mejor Streak</span>
             </p>
             <p className="text-2xl font-semibold tabular-nums sm:text-[28px]" style={{ margin: 0 }}>
-              {summary.best_streak}
+              {summaryDisplayed.best_streak}
             </p>
           </div>
         </Card>
@@ -475,7 +651,7 @@ export default function HabitosPage() {
               <span className="min-w-0 leading-snug">En riesgo hoy</span>
             </p>
             <p className="text-2xl font-semibold tabular-nums sm:text-[28px]" style={{ margin: 0 }}>
-              {summary.at_risk}
+              {summaryDisplayed.at_risk}
             </p>
           </div>
         </Card>
@@ -529,7 +705,7 @@ export default function HabitosPage() {
                 Momentum 30d
               </span>
               <span className="text-2xl font-bold tabular-nums leading-none tracking-tight text-[var(--color-text-primary)] sm:text-[26px]">
-                {habits.length === 0 ? "—" : `${summary.consistency_30d}%`}
+                {habitsFiltered.length === 0 ? "—" : `${summaryDisplayed.consistency_30d}%`}
               </span>
             </div>
             <div
@@ -556,26 +732,26 @@ export default function HabitosPage() {
           <div className="mt-5 flex flex-wrap gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-xl border border-[color-mix(in_srgb,var(--color-border)_80%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_88%,transparent)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--color-text-primary)] shadow-sm">
               <Flame className="h-3.5 w-3.5 text-orange-500" aria-hidden />
-              <span className="tabular-nums">{summary.current_streak_max}</span>
+              <span className="tabular-nums">{summaryDisplayed.current_streak_max}</span>
               <span className="text-[var(--color-text-secondary)]">racha máx. hoy</span>
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-xl border border-[color-mix(in_srgb,var(--color-border)_80%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_88%,transparent)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--color-text-primary)] shadow-sm">
               <Trophy className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" aria-hidden />
-              <span className="tabular-nums">{summary.best_streak}</span>
+              <span className="tabular-nums">{summaryDisplayed.best_streak}</span>
               <span className="text-[var(--color-text-secondary)]">mejor histórico</span>
             </span>
             <span
               className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-[11px] font-medium shadow-sm ${
-                summary.at_risk > 0
+                summaryDisplayed.at_risk > 0
                   ? "border-[color-mix(in_srgb,var(--color-accent-warning)_45%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-warning)_10%,transparent)] text-[var(--color-text-primary)]"
                   : "border-[color-mix(in_srgb,var(--color-border)_80%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_8%,transparent)] text-[var(--color-text-primary)]"
               }`}
             >
               <Target
-                className={`h-3.5 w-3.5 ${summary.at_risk > 0 ? "text-[var(--color-accent-warning)]" : "text-[var(--color-accent-health)]"}`}
+                className={`h-3.5 w-3.5 ${summaryDisplayed.at_risk > 0 ? "text-[var(--color-accent-warning)]" : "text-[var(--color-accent-health)]"}`}
                 aria-hidden
               />
-              <span className="tabular-nums">{summary.at_risk}</span>
+              <span className="tabular-nums">{summaryDisplayed.at_risk}</span>
               <span className="text-[var(--color-text-secondary)]">en alerta hoy</span>
             </span>
           </div>
@@ -602,13 +778,33 @@ export default function HabitosPage() {
       </Card>
 
       <Card hover className="min-w-0 overflow-hidden">
-        <div className="border-b border-[color-mix(in_srgb,var(--color-border)_65%,transparent)] px-4 py-3 sm:px-5 sm:py-3.5">
-          <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
-            Roster · adherencia 30d
-          </p>
-          <p className="m-0 mt-1 max-w-prose text-[12px] leading-snug text-[var(--color-text-secondary)] sm:text-[13px]">
-            Ordenados del menor al mayor % de cumplimiento en la ventana de 30 días. Usa Stack para marcar «hecho hoy».
-          </p>
+        <div className="flex flex-col gap-3 border-b border-[color-mix(in_srgb,var(--color-border)_65%,transparent)] px-4 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4 sm:px-5 sm:py-3.5">
+          <div className="min-w-0">
+            <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
+              Roster · adherencia 30d
+            </p>
+            <p className="m-0 mt-1 max-w-prose text-[12px] leading-snug text-[var(--color-text-secondary)] sm:text-[13px]">
+              Ordenados del menor al mayor % de cumplimiento en la ventana de 30 días. Usa Stack para marcar «hecho hoy».
+            </p>
+          </div>
+          {pendingScheduledTodayIds.length > 0 && (persistenceEnabled || mock) ? (
+            <button
+              type="button"
+              disabled={loading || backfillingAll}
+              onClick={async () => {
+                const r = await completeAllScheduledToday(pendingScheduledTodayIds)
+                if (!r.ok) alert(r.error || "No se pudo completar")
+              }}
+              className="inline-flex min-h-9 w-full shrink-0 items-center justify-center gap-1.5 rounded-lg bg-[var(--color-accent-health)] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-white transition-opacity sm:w-auto disabled:opacity-50"
+            >
+              {backfillingAll ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              ) : (
+                <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden />
+              )}
+              Marcar todos OK hoy ({pendingScheduledTodayIds.length})
+            </button>
+          ) : null}
         </div>
         <div className="overflow-x-auto px-2 pb-4 pt-2 sm:px-3 sm:pb-5">
           {rosterByAdherence.length === 0 ? (
@@ -620,6 +816,7 @@ export default function HabitosPage() {
               <thead>
                 <tr className="border-b border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] text-[10px] uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
                   <th className="py-2 pl-2 pr-2 font-semibold sm:pl-3">Hábito</th>
+                  <th className="hidden px-1 py-2 text-center font-semibold sm:table-cell">14d</th>
                   <th className="px-2 py-2 text-right font-semibold tabular-nums">30d</th>
                   <th className="px-2 py-2 text-right font-semibold tabular-nums">Racha</th>
                   <th className="px-2 py-2 text-center font-semibold">Hoy</th>
@@ -637,6 +834,9 @@ export default function HabitosPage() {
                       <span className="mt-0.5 block text-[10px] font-normal text-[var(--color-text-secondary)]">
                         {DOMAIN_LABELS[h.domain] ?? h.domain}
                       </span>
+                    </td>
+                    <td className="hidden py-2.5 align-middle sm:table-cell">
+                      <HabitSparkline14 values={h.metrics.sparkline14 ?? []} />
                     </td>
                     <td className="px-2 py-2.5 text-right align-middle tabular-nums text-[var(--color-text-primary)]">
                       {h.metrics.completion_rate_30d}%
@@ -667,18 +867,23 @@ export default function HabitosPage() {
           )}
         </div>
       </Card>
-        </>
+        </div>
       ) : null}
 
       {shellView === "stack" ? (
-      <div style={{ display: "grid", gap: "var(--spacing-md)" }}>
+      <div
+        ref={stackPanelRef}
+        tabIndex={-1}
+        style={{ display: "grid", gap: "var(--spacing-md)" }}
+        className="outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--color-accent-health)_45%,transparent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-background)]"
+      >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <p className="m-0 shrink-0 text-[12px] uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
             Stack actual
           </p>
           <button
             type="button"
-            disabled={(!persistenceEnabled && !mock) || loading || habits.length === 0}
+            disabled={(!persistenceEnabled && !mock) || loading || habitsFiltered.length === 0}
             onClick={openGlobalBackfill}
             title="Registrar el mismo día para todos los hábitos (viaje, olvido)"
             aria-expanded={backfillOpen}
@@ -715,10 +920,10 @@ export default function HabitosPage() {
               <button
                 type="button"
                 disabled={
-                  (!persistenceEnabled && !mock) || backfillingAll || habits.length === 0
+                  (!persistenceEnabled && !mock) || backfillingAll || habitsFiltered.length === 0
                 }
                 onClick={async () => {
-                  const ids = habits.map((h) => h.id)
+                  const ids = habitsFiltered.map((h) => h.id)
                   const r = await completeAllOnDay(ids, backfillDate)
                   if (!r.ok) {
                     alert(r.error || "No se pudo guardar")

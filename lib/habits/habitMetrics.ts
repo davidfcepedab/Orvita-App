@@ -24,6 +24,11 @@ export type HabitCompletionMetrics = {
   completed_today: boolean
   at_risk: boolean
   week_marks: HabitWeekDayMark[]
+  /**
+   * 14 días civiles hasta hoy (más antiguo → más reciente).
+   * `null` = día no programado para ese hábito; `1` = hecho; `0` = programado y pendiente.
+   */
+  sparkline14: Array<0 | 1 | null>
 }
 
 /** Día civil “hoy” según `NEXT_PUBLIC_AGENDA_DISPLAY_TZ` (default America/Bogota). */
@@ -234,6 +239,25 @@ export function computeCompletionRate30d(
   return Math.min(100, Math.round((done / expected) * 100))
 }
 
+/** Serie compacta para mini sparkline (14 días hasta `todayIso`). */
+export function computeSparkline14(
+  sortedUniqueAsc: string[],
+  todayIso: string,
+  meta: HabitMetadataInput | null | undefined,
+): Array<0 | 1 | null> {
+  const set = new Set(sortedUniqueAsc)
+  const out: Array<0 | 1 | null> = []
+  for (let i = 13; i >= 0; i--) {
+    const d = addDaysIso(todayIso, -i)
+    if (!isScheduledOnUtcDay(meta, d)) {
+      out.push(null)
+      continue
+    }
+    out.push(set.has(d) ? 1 : 0)
+  }
+  return out
+}
+
 export function computeHabitCompletionMetrics(
   completionDates: string[],
   todayIso: string,
@@ -251,6 +275,7 @@ export function computeHabitCompletionMetrics(
     completed_today,
     at_risk,
     week_marks: computeWeekDayMarks(sorted, todayIso, meta),
+    sparkline14: computeSparkline14(sorted, todayIso, meta),
   }
 }
 
