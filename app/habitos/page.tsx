@@ -13,6 +13,7 @@ import {
 import { Card } from "@/src/components/ui/Card"
 import {
   Activity,
+  BarChart2,
   CalendarPlus,
   CheckCircle2,
   Circle,
@@ -49,6 +50,8 @@ import {
 } from "@/lib/habits/habitConsistencyInterpretation"
 
 const days = ["L", "M", "X", "J", "V", "S", "D"]
+
+const CONSISTENCY_INSIGHT_STEP_ICONS = [Activity, Clock, BarChart2] as const
 
 const DOMAIN_LABELS: Record<OperationalDomain, string> = {
   salud: "Salud",
@@ -445,7 +448,7 @@ export default function HabitosPage() {
   }
 
   return (
-    <div className="orbita-page-stack">
+    <div className="orbita-page-stack mx-auto w-full max-w-[min(72rem,calc(100vw-1.5rem))]">
       {!persistenceEnabled && !mock && (
         <p
           role="alert"
@@ -686,7 +689,7 @@ export default function HabitosPage() {
                 <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--color-text-secondary)]">
                   Briefing de consistencia
                 </p>
-                <p className="m-0 max-w-[26rem] text-[12px] leading-snug text-[var(--color-text-secondary)]">
+                <p className="m-0 max-w-[26rem] text-[12px] leading-snug text-[var(--color-text-secondary)] sm:max-w-[34rem] lg:max-w-[40rem]">
                   Informe gamificado según tu adherencia media (30d), rachas y alertas de hoy.
                 </p>
               </div>
@@ -699,80 +702,105 @@ export default function HabitosPage() {
             </span>
           </div>
 
-          <div className="mt-6">
-            <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
-                Momentum 30d
-              </span>
-              <span className="text-2xl font-bold tabular-nums leading-none tracking-tight text-[var(--color-text-primary)] sm:text-[26px]">
-                {habitsFiltered.length === 0 ? "—" : `${summaryDisplayed.consistency_30d}%`}
-              </span>
-            </div>
-            <div
-              className="relative h-3.5 w-full overflow-hidden rounded-full p-[3px] ring-1 ring-[color-mix(in_srgb,var(--color-border)_75%,transparent)]"
-              style={{
-                background:
-                  "color-mix(in srgb, var(--color-text-secondary) 9%, var(--color-surface-alt))",
-              }}
-            >
-              <div
-                className="h-full min-w-0 rounded-full transition-[width] duration-700 ease-out"
-                style={{
-                  width: `${consistencyMomentumPct}%`,
-                  background: `linear-gradient(90deg, ${consistencyTierUi.barFrom}, ${consistencyTierUi.barTo})`,
-                  boxShadow: `0 0 22px ${consistencyTierUi.glow}, inset 0 1px 0 rgba(255,255,255,0.35)`,
-                }}
-              />
-            </div>
-            <p className="m-0 mt-1.5 text-[10px] text-[var(--color-text-secondary)]">
-              Promedio del stack en días programados · sube cerrando días pendientes sin castigarte.
-            </p>
-          </div>
+          <div className="mt-6 flex flex-col gap-7 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(15.5rem,17.5rem)] lg:items-start lg:gap-x-10 lg:gap-y-0">
+            <div className="flex min-w-0 flex-col gap-5 lg:order-2 lg:sticky lg:top-4 lg:self-start">
+              <div>
+                <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
+                    Momentum 30d
+                  </span>
+                  <span className="text-2xl font-bold tabular-nums leading-none tracking-tight text-[var(--color-text-primary)] sm:text-[26px]">
+                    {habitsFiltered.length === 0 ? "—" : `${summaryDisplayed.consistency_30d}%`}
+                  </span>
+                </div>
+                <div
+                  className="relative h-3.5 w-full overflow-hidden rounded-full p-[3px] ring-1 ring-[color-mix(in_srgb,var(--color-border)_75%,transparent)]"
+                  style={{
+                    background:
+                      "color-mix(in srgb, var(--color-text-secondary) 9%, var(--color-surface-alt))",
+                  }}
+                >
+                  <div
+                    className="h-full min-w-0 rounded-full transition-[width] duration-700 ease-out motion-reduce:transition-none"
+                    style={{
+                      width: `${consistencyMomentumPct}%`,
+                      background: `linear-gradient(90deg, ${consistencyTierUi.barFrom}, ${consistencyTierUi.barTo})`,
+                      boxShadow: `0 0 22px ${consistencyTierUi.glow}, inset 0 1px 0 rgba(255,255,255,0.35)`,
+                    }}
+                  />
+                </div>
+                <p className="m-0 mt-1.5 text-[10px] leading-snug text-[var(--color-text-secondary)]">
+                  Promedio del stack en días programados · sube cerrando días pendientes sin castigarte.
+                </p>
+              </div>
 
-          <div className="mt-5 flex flex-wrap gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-xl border border-[color-mix(in_srgb,var(--color-border)_80%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_88%,transparent)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--color-text-primary)] shadow-sm">
-              <Flame className="h-3.5 w-3.5 text-orange-500" aria-hidden />
-              <span className="tabular-nums">{summaryDisplayed.current_streak_max}</span>
-              <span className="text-[var(--color-text-secondary)]">racha máx. hoy</span>
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-xl border border-[color-mix(in_srgb,var(--color-border)_80%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_88%,transparent)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--color-text-primary)] shadow-sm">
-              <Trophy className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" aria-hidden />
-              <span className="tabular-nums">{summaryDisplayed.best_streak}</span>
-              <span className="text-[var(--color-text-secondary)]">mejor histórico</span>
-            </span>
-            <span
-              className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-[11px] font-medium shadow-sm ${
-                summaryDisplayed.at_risk > 0
-                  ? "border-[color-mix(in_srgb,var(--color-accent-warning)_45%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-warning)_10%,transparent)] text-[var(--color-text-primary)]"
-                  : "border-[color-mix(in_srgb,var(--color-border)_80%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_8%,transparent)] text-[var(--color-text-primary)]"
-              }`}
-            >
-              <Target
-                className={`h-3.5 w-3.5 ${summaryDisplayed.at_risk > 0 ? "text-[var(--color-accent-warning)]" : "text-[var(--color-accent-health)]"}`}
-                aria-hidden
-              />
-              <span className="tabular-nums">{summaryDisplayed.at_risk}</span>
-              <span className="text-[var(--color-text-secondary)]">en alerta hoy</span>
-            </span>
-          </div>
+              <div className="flex flex-wrap gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-xl border border-[color-mix(in_srgb,var(--color-border)_80%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_88%,transparent)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--color-text-primary)] shadow-sm">
+                  <Flame className="h-3.5 w-3.5 text-orange-500" aria-hidden />
+                  <span className="tabular-nums">{summaryDisplayed.current_streak_max}</span>
+                  <span className="text-[var(--color-text-secondary)]">racha máx. hoy</span>
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-xl border border-[color-mix(in_srgb,var(--color-border)_80%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_88%,transparent)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--color-text-primary)] shadow-sm">
+                  <Trophy className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" aria-hidden />
+                  <span className="tabular-nums">{summaryDisplayed.best_streak}</span>
+                  <span className="text-[var(--color-text-secondary)]">mejor histórico</span>
+                </span>
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-[11px] font-medium shadow-sm ${
+                    summaryDisplayed.at_risk > 0
+                      ? "border-[color-mix(in_srgb,var(--color-accent-warning)_45%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-warning)_10%,transparent)] text-[var(--color-text-primary)]"
+                      : "border-[color-mix(in_srgb,var(--color-border)_80%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_8%,transparent)] text-[var(--color-text-primary)]"
+                  }`}
+                >
+                  <Target
+                    className={`h-3.5 w-3.5 ${summaryDisplayed.at_risk > 0 ? "text-[var(--color-accent-warning)]" : "text-[var(--color-accent-health)]"}`}
+                    aria-hidden
+                  />
+                  <span className="tabular-nums">{summaryDisplayed.at_risk}</span>
+                  <span className="text-[var(--color-text-secondary)]">en alerta hoy</span>
+                </span>
+              </div>
+            </div>
 
-          <h2 className="m-0 mt-6 text-lg font-semibold tracking-tight text-[var(--color-text-primary)] sm:text-xl">
-            {consistencyInsight.headline}
-          </h2>
-          <div
-            className="mt-3 space-y-2.5 rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_72%,transparent)] p-3.5 shadow-[inset_0_1px_0_color-mix(in_srgb,white_8%,transparent)] sm:p-4"
-            style={{
-              background: "color-mix(in srgb, var(--color-surface-alt) 55%, var(--color-surface))",
-            }}
-          >
-            {consistencyInsight.lines.map((line, idx) => (
-              <p
-                key={`consistency-insight-${idx}`}
-                className="m-0 max-w-prose text-[13px] leading-relaxed text-[var(--color-text-secondary)] first:mt-0"
+            <div className="min-w-0 lg:order-1 lg:max-w-[min(40rem,100%)] lg:pr-1">
+              <h2
+                id="habitos-consistency-insight-headline"
+                className="m-0 text-lg font-semibold tracking-tight text-[var(--color-text-primary)] text-balance sm:text-xl"
               >
-                {line}
-              </p>
-            ))}
+                {consistencyInsight.headline}
+              </h2>
+              <ol
+                aria-labelledby="habitos-consistency-insight-headline"
+                className="m-0 mt-4 list-none space-y-2.5 p-0 sm:mt-5 sm:space-y-3"
+              >
+                {consistencyInsight.lines.map((line, idx) => {
+                  const StepIcon = CONSISTENCY_INSIGHT_STEP_ICONS[idx] ?? Sparkles
+                  return (
+                    <li
+                      key={`consistency-insight-${idx}`}
+                      className="flex gap-3 rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_65%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_58%,var(--color-surface))] p-3 shadow-[inset_0_1px_0_color-mix(in_srgb,white_10%,transparent)] transition-[border-color,box-shadow] duration-200 sm:gap-3.5 sm:p-3.5 motion-reduce:transition-none lg:hover:border-[color-mix(in_srgb,var(--color-accent-health)_28%,transparent)] lg:hover:shadow-[0_10px_28px_-18px_color-mix(in_srgb,var(--color-accent-health)_35%,transparent)]"
+                    >
+                      <div className="flex shrink-0 items-center gap-2 pt-0.5">
+                        <span
+                          className="flex h-8 w-8 items-center justify-center rounded-xl bg-[color-mix(in_srgb,var(--color-accent-health)_14%,transparent)] text-[11px] font-bold tabular-nums text-[var(--color-accent-health)] ring-1 ring-[color-mix(in_srgb,var(--color-accent-health)_22%,transparent)] sm:h-9 sm:w-9 sm:text-xs"
+                          aria-hidden
+                        >
+                          {idx + 1}
+                        </span>
+                        <StepIcon
+                          className="hidden h-4 w-4 shrink-0 text-[var(--color-text-secondary)] opacity-85 sm:block"
+                          strokeWidth={2}
+                          aria-hidden
+                        />
+                      </div>
+                      <p className="m-0 min-w-0 flex-1 text-pretty text-[13px] leading-[1.55] tracking-[-0.01em] text-[var(--color-text-secondary)] sm:text-[14px] sm:leading-[1.52]">
+                        {line}
+                      </p>
+                    </li>
+                  )
+                })}
+              </ol>
+            </div>
           </div>
         </div>
       </Card>
@@ -812,15 +840,15 @@ export default function HabitosPage() {
               Aún no hay hábitos. Crea el primero con «Nuevo hábito» y vuelve a este resumen.
             </p>
           ) : (
-            <table className="w-full min-w-[280px] border-collapse text-left text-[12px] text-[var(--color-text-primary)] sm:text-[13px]">
+            <table className="w-full min-w-[280px] border-collapse text-left text-[12px] text-[var(--color-text-primary)] sm:text-[13px] lg:table-fixed">
               <thead>
                 <tr className="border-b border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] text-[10px] uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
-                  <th className="py-2 pl-2 pr-2 font-semibold sm:pl-3">Hábito</th>
-                  <th className="hidden px-1 py-2 text-center font-semibold sm:table-cell">14d</th>
-                  <th className="px-2 py-2 text-right font-semibold tabular-nums">30d</th>
-                  <th className="px-2 py-2 text-right font-semibold tabular-nums">Racha</th>
-                  <th className="px-2 py-2 text-center font-semibold">Hoy</th>
-                  <th className="py-2 pl-2 pr-3 text-right font-semibold sm:pr-4">Estado</th>
+                  <th className="py-2 pl-2 pr-2 font-semibold sm:pl-3 lg:w-[40%]">Hábito</th>
+                  <th className="hidden px-1 py-2 text-center font-semibold sm:table-cell lg:w-[14%]">14d</th>
+                  <th className="px-2 py-2 text-right font-semibold tabular-nums lg:w-[11%]">30d</th>
+                  <th className="px-2 py-2 text-right font-semibold tabular-nums lg:w-[11%]">Racha</th>
+                  <th className="px-2 py-2 text-center font-semibold lg:w-[10%]">Hoy</th>
+                  <th className="py-2 pl-2 pr-3 text-right font-semibold sm:pr-4 lg:w-[14%]">Estado</th>
                 </tr>
               </thead>
               <tbody>
@@ -829,7 +857,7 @@ export default function HabitosPage() {
                     key={h.id}
                     className="border-b border-[color-mix(in_srgb,var(--color-border)_35%,transparent)] last:border-b-0"
                   >
-                    <td className="max-w-[10rem] py-2.5 pl-2 pr-2 align-middle sm:max-w-none sm:pl-3">
+                    <td className="max-w-[10rem] py-2.5 pl-2 pr-2 align-middle sm:max-w-none sm:pl-3 lg:max-w-none lg:min-w-0">
                       <span className="line-clamp-2 font-medium leading-snug">{h.name}</span>
                       <span className="mt-0.5 block text-[10px] font-normal text-[var(--color-text-secondary)]">
                         {DOMAIN_LABELS[h.domain] ?? h.domain}
