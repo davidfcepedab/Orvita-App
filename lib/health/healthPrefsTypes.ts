@@ -27,4 +27,14 @@ export type SupplementComplianceMap = Record<string, Record<string, boolean>>
 export type HealthPreferencesPayload = {
   supplements?: HealthSupplement[]
   supplementCompliance?: SupplementComplianceMap
+  /** Litros de agua registrados hoy (manual). */
+  hydrationLitersToday?: number
+  /** Meta litros/día (manual). */
+  hydrationTargetLiters?: number
+  /** Gramos ingeridos hoy (manual). */
+  macrosGramsToday?: {
+    protein: number
+    carbs: number
+    fats: number
+  }
 }

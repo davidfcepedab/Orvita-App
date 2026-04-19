@@ -1,13 +1,17 @@
 export type RecoveryStatus = "optimal" | "stable" | "fragile"
 
 export type HealthSummaryFactsInput = {
+  /** Índice de energía mostrado (solo a partir de scores de check-in, no wearable). */
   bodyBattery: number
   sleepScore: number
   recoveryStatus: RecoveryStatus
-  hrv: number
-  restingHR: number
+  /** Pulso salud y físico del último check-in (0–100) para lectura de ritmo sin HRV simulado. */
+  pulseSalud: number
+  pulseFisico: number
   hydrationCurrent: number
   hydrationTarget: number
+  /** Si el usuario no ha registrado litros hoy, el copy evita inventar consumo. */
+  hydrationTracked: boolean
   trainedToday: boolean
   activeSupplements: number
   supplementsLoading: boolean
@@ -47,20 +51,24 @@ function restLine(recoveryStatus: RecoveryStatus, sleepScore: number): string {
   return "Recuperación y sueño están en un terreno normal, sin picos ni alarmas en lo que refleja aquí."
 }
 
-function bodyRhythmLine(hrv: number, restingHR: number): string {
-  if (hrv >= 62 && restingHR <= 58) {
-    return "Cuando estás quieto, el pulso se ve tranquilo y el cuerpo transmite calma."
+function bodyRhythmLine(pulseSalud: number, pulseFisico: number): string {
+  const avg = (pulseSalud + pulseFisico) / 2
+  if (avg >= 74) {
+    return "Tu último check-in pinta salud y cuerpo alineados: buen margen para afrontar carga sin ir al límite."
   }
-  if (restingHR >= 64) {
-    return "El pulso en reposo está un poco más vivo que otras veces; a veces pasa con el cansancio o un día intenso."
+  if (pulseSalud >= 68 && pulseFisico < 58) {
+    return "El pulso de salud va bien, pero el bloque físico va más justo; conviene no sumar exigencia extra hoy."
   }
-  if (hrv < 52) {
-    return "Hay señales de que el cuerpo lleva algo de carga; un día más pausado puede ayudar."
+  if (pulseSalud < 58 || pulseFisico < 52) {
+    return "Los scores del check-in muestran cuerpo o salud algo bajos; prioriza sueño, hidratación y pasos pequeños antes que exigirte más."
   }
-  return "Los signos de ritmo en reposo caen dentro de lo habitual para lo que sueles ver en tu resumen."
+  return "Los scores de tu check-in (salud y cuerpo) están en un rango normal; nada que sugiera un pico raro."
 }
 
-function hydrationLine(current: number, target: number): string {
+function hydrationLine(current: number, target: number, tracked: boolean): string {
+  if (!tracked) {
+    return "Aún no registras litros de agua hoy; cuando lo guardes en preferencias de salud, esta lectura se actualizará con datos reales."
+  }
   const t = Math.max(0.1, target)
   const pct = Math.round((current / t) * 100)
   if (pct >= 90) {
@@ -109,8 +117,8 @@ export function buildHealthSummaryFacts(input: HealthSummaryFactsInput): HealthS
   return {
     energyLine: energyLine(input.bodyBattery),
     restLine: restLine(input.recoveryStatus, input.sleepScore),
-    bodyRhythmLine: bodyRhythmLine(input.hrv, input.restingHR),
-    hydrationLine: hydrationLine(input.hydrationCurrent, input.hydrationTarget),
+    bodyRhythmLine: bodyRhythmLine(input.pulseSalud, input.pulseFisico),
+    hydrationLine: hydrationLine(input.hydrationCurrent, input.hydrationTarget, input.hydrationTracked),
     movementLine: movementLine(input.trainedToday),
     supplementsLine: supplementsLine(input.activeSupplements, input.supplementsLoading),
     weekLine: weekLine(input.tendencia),

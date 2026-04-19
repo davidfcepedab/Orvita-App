@@ -66,11 +66,11 @@ export default function HealthOperationsV3() {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         {[
-          { label: "HRV", value: health.hrv, meta: "ms", icon: Activity },
-          { label: "Resting HR", value: health.restingHR, meta: "bpm", icon: HeartPulse },
-          { label: "Sleep", value: health.sleepScore, meta: "score", icon: MoonStar },
-          { label: "Recovery", value: health.scoreRecuperacion, meta: "%", icon: Sparkles },
-          { label: "Body Battery", value: health.bodyBattery, meta: "%", icon: BatteryCharging },
+          { label: "Salud (check-in)", value: health.hrv, meta: "/100", icon: Activity },
+          { label: "Cuerpo (check-in)", value: health.restingHR, meta: "/100", icon: HeartPulse },
+          { label: "Sueño (proxy)", value: health.sleepScore, meta: "/100", icon: MoonStar },
+          { label: "Recuperación", value: health.scoreRecuperacion, meta: "/100", icon: Sparkles },
+          { label: "Índice energía", value: health.bodyBattery, meta: "/100", icon: BatteryCharging },
         ].map((metric) => {
           const Icon = metric.icon
 

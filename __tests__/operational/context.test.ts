@@ -1,4 +1,5 @@
 import { buildOperationalContext } from "@/lib/operational/context"
+import type { Checkin } from "@/lib/operational/types"
 
 describe("buildOperationalContext", () => {
   test("builds defaults when no checkin is present", () => {
@@ -50,6 +51,38 @@ describe("buildOperationalContext", () => {
     })
 
     expect(context.score_global).toBe(60)
+  })
+
+  test("fills tendencia_7d from recentCheckinsDesc (chronological salud scores)", () => {
+    const recentDesc: Checkin[] = [
+      {
+        id: "c-new",
+        score_global: null,
+        score_fisico: 55,
+        score_salud: 60,
+        score_profesional: 55,
+        created_at: "2026-01-02T08:00:00.000Z",
+      },
+      {
+        id: "c-old",
+        score_global: null,
+        score_fisico: 50,
+        score_salud: 40,
+        score_profesional: 50,
+        created_at: "2026-01-01T08:00:00.000Z",
+      },
+    ]
+    const context = buildOperationalContext({
+      tasks: [],
+      habits: [],
+      latestCheckin: recentDesc[0]!,
+      recentCheckinsDesc: recentDesc,
+    })
+
+    expect(context.tendencia_7d).toHaveLength(2)
+    expect(context.tendencia_7d[0]?.value).toBe(40)
+    expect(context.tendencia_7d[1]?.value).toBe(60)
+    expect(context.delta_recuperacion).toBe(20)
   })
 
   test("derives command focus from first open task by domain priority", () => {

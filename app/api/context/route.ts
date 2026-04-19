@@ -77,22 +77,23 @@ export async function GET(req: NextRequest) {
 
     if (habitError) throw habitError
 
-    const { data: latestCheckin, error: checkinError } = await supabase
+    const { data: recentCheckinRows, error: checkinError } = await supabase
       .from("checkins")
       .select("id,score_global,score_fisico,score_salud,score_profesional,created_at")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle()
+      .limit(7)
 
     if (checkinError) throw checkinError
+
+    const recentCheckinsDesc = (recentCheckinRows ?? []).map((row) => mapCheckin(row as CheckinRow))
+    const latestCheckin = recentCheckinsDesc[0] ?? null
 
     const context = buildOperationalContext({
       tasks: (tasks ?? []).map((row) => mapOperationalTask(row as OperationalTaskRow)),
       habits: (habits ?? []).map((row) => mapOperationalHabit(row as OperationalHabitRow)),
-      latestCheckin: latestCheckin
-        ? mapCheckin(latestCheckin as CheckinRow)
-        : null,
+      latestCheckin,
+      recentCheckinsDesc,
     })
 
     return NextResponse.json({ success: true, data: context })

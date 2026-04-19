@@ -14,15 +14,17 @@ type UseArgs = {
   bodyBattery: number
   sleepScore: number
   recoveryStatus: "optimal" | "stable" | "fragile"
-  hrv: number
-  restingHR: number
+  pulseSalud: number
+  pulseFisico: number
   hydrationCurrent: number
   hydrationTarget: number
+  hydrationTracked: boolean
   trainedToday: boolean
   activeSupplements: number
   supplementsLoading: boolean
   tendencia: { value: number }[]
   macros: { label: string; current: number; target: number }[]
+  macrosFromLog: boolean
 }
 
 export function useHealthSummaryNarrative(args: UseArgs) {
@@ -30,15 +32,16 @@ export function useHealthSummaryNarrative(args: UseArgs) {
   const macroKey = args.macros.map((m) => `${m.label}:${m.current}:${m.target}`).join("|")
 
   const facts: HealthSummaryFacts = useMemo(() => {
-    const nutritionHint = macroNutritionHint(args.macros)
+    const nutritionHint = args.macrosFromLog ? macroNutritionHint(args.macros) : null
     return buildHealthSummaryFacts({
       bodyBattery: args.bodyBattery,
       sleepScore: args.sleepScore,
       recoveryStatus: args.recoveryStatus,
-      hrv: args.hrv,
-      restingHR: args.restingHR,
+      pulseSalud: args.pulseSalud,
+      pulseFisico: args.pulseFisico,
       hydrationCurrent: args.hydrationCurrent,
       hydrationTarget: args.hydrationTarget,
+      hydrationTracked: args.hydrationTracked,
       trainedToday: args.trainedToday,
       activeSupplements: args.activeSupplements,
       supplementsLoading: args.supplementsLoading,
@@ -50,10 +53,12 @@ export function useHealthSummaryNarrative(args: UseArgs) {
     args.bodyBattery,
     args.hydrationCurrent,
     args.hydrationTarget,
-    args.hrv,
+    args.hydrationTracked,
     macroKey,
+    args.macrosFromLog,
+    args.pulseFisico,
+    args.pulseSalud,
     args.recoveryStatus,
-    args.restingHR,
     args.sleepScore,
     args.supplementsLoading,
     tendenciaKey,

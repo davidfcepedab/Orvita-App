@@ -27,7 +27,7 @@ import { rechartsTooltipContentStyle } from "@/lib/charts/rechartsShared"
 import { isAppMockMode, isSupabaseEnabled, UI_HEALTH_SUPPLEMENTS_LOCAL } from "@/lib/checkins/flags"
 import { useHealthSummaryNarrative } from "@/app/health/useHealthSummaryNarrative"
 
-/** Alineado con mock “biometric correlation” (área lavanda + línea verde). */
+/** Área “fatiga” (proxy de sueño a partir de check-ins, no polisomnografía). */
 const BIOMETRIC_AREA_TOP = "#E8EAF6"
 const BIOMETRIC_AREA_BOTTOM = "#E8EAF6"
 const BIOMETRIC_ENERGY_STROKE = "#22B455"
@@ -51,7 +51,7 @@ function BiometricCorrelationLegend() {
           className="inline-block shrink-0 rounded-[3px]"
           style={{ width: 12, height: 12, background: BIOMETRIC_AREA_TOP }}
         />
-        Sleep debt / fatigue
+        Deuda de sueño / fatiga
       </span>
       <span className="inline-flex items-center gap-2">
         <span
@@ -59,7 +59,7 @@ function BiometricCorrelationLegend() {
           className="inline-block shrink-0 rounded-full"
           style={{ width: 16, height: 3, background: BIOMETRIC_ENERGY_STROKE }}
         />
-        Energy level
+        Nivel de energía (proxy)
       </span>
     </div>
   )
@@ -99,42 +99,92 @@ export default function HealthPage() {
 
   const topMetrics = useMemo(
     () => [
-      { label: "HRV", value: String(salud.hrv), unit: "ms", accent: "var(--color-accent-warning)" },
-      { label: "FC en reposo", value: String(salud.restingHR), unit: "bpm", accent: "var(--color-accent-danger)" },
-      { label: "Score de sueño", value: String(salud.sleepScore), unit: "", accent: "var(--color-accent-health)" },
-      { label: "Recuperación", value: String(recovery.score), unit: "%", accent: "var(--color-accent-warning)" },
-      { label: "Batería corporal", value: String(salud.bodyBattery), unit: "%", accent: "var(--color-accent-warning)" },
+      {
+        label: "Pulso global",
+        value: salud.scoreGlobal > 0 ? String(Math.round(salud.scoreGlobal)) : "—",
+        unit: "/100",
+        hint: "Media del último check-in",
+        accent: "var(--color-accent-primary)",
+      },
+      {
+        label: "Salud",
+        value: String(Math.round(salud.scoreSalud)),
+        unit: "/100",
+        hint: "Dimensión salud del check-in",
+        accent: "var(--color-accent-health)",
+      },
+      {
+        label: "Cuerpo",
+        value: String(Math.round(salud.scoreFisico)),
+        unit: "/100",
+        hint: "Dimensión física del check-in",
+        accent: "var(--color-accent-danger)",
+      },
+      {
+        label: "Profesional",
+        value: String(Math.round(salud.scoreProfesional)),
+        unit: "/100",
+        hint: "Dimensión trabajo del check-in",
+        accent: "var(--color-accent-warning)",
+      },
+      {
+        label: salud.tendencia.length > 0 ? "Media salud 7d" : "Tendencia 7d",
+        value: salud.tendencia.length > 0 ? String(Math.round(salud.trendAverage)) : "—",
+        unit: salud.tendencia.length > 0 ? "/100" : "",
+        hint: "Promedio score salud en check-ins recientes",
+        accent: "var(--color-accent-health)",
+      },
+      {
+        label: "Recuperación (app)",
+        value: String(recovery.score),
+        unit: "%",
+        hint: "Modelo interno + entreno hoy",
+        accent: "var(--color-accent-warning)",
+      },
     ],
-    [salud.hrv, salud.restingHR, salud.sleepScore, salud.bodyBattery, recovery.score],
+    [
+      salud.scoreGlobal,
+      salud.scoreSalud,
+      salud.scoreFisico,
+      salud.scoreProfesional,
+      salud.tendencia.length,
+      salud.trendAverage,
+      recovery.score,
+    ],
   )
 
   const hydrationTarget = salud.hydrationTarget
-  const hydrationPct = Math.min(100, Math.round((salud.hydrationCurrent / Math.max(0.1, hydrationTarget)) * 100))
+  const hydrationPct = salud.hydrationTracked
+    ? Math.min(100, Math.round((salud.hydrationCurrent / Math.max(0.1, hydrationTarget)) * 100))
+    : 0
 
   const healthSummary = useHealthSummaryNarrative({
     loading: salud.loading,
     bodyBattery: salud.bodyBattery,
     sleepScore: salud.sleepScore,
     recoveryStatus: recovery.status,
-    hrv: salud.hrv,
-    restingHR: salud.restingHR,
+    pulseSalud: salud.scoreSalud,
+    pulseFisico: salud.scoreFisico,
     hydrationCurrent: salud.hydrationCurrent,
     hydrationTarget: salud.hydrationTarget,
+    hydrationTracked: salud.hydrationTracked,
     trainedToday,
     activeSupplements: activeCount,
     supplementsLoading: suppLoading,
     tendencia: salud.tendencia,
     macros: salud.macros.map((m) => ({ label: m.label, current: m.current, target: m.target })),
+    macrosFromLog: salud.macrosFromLog,
   })
 
   return (
-    <div className="orbita-page-stack">
-      <div className="min-w-0">
+    <div className="orbita-page-stack mx-auto w-full max-w-[min(72rem,calc(100vw-1.5rem))]">
+      <div className="min-w-0 rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_65%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_6%,var(--color-surface))] px-4 py-4 shadow-[0_12px_40px_-16px_color-mix(in_srgb,var(--color-accent-health)_18%,transparent)] sm:px-6 sm:py-5">
         <h1 className="m-0 text-2xl font-medium tracking-tight text-[var(--color-text-primary)] phone:text-[1.75rem]">
           Operaciones de Salud
         </h1>
-        <p style={{ margin: "6px 0 0", fontSize: "13px", color: "var(--color-text-secondary)" }}>
-          Biotelemetría, gestión de energía y optimización operativa
+        <p className="m-0 mt-1.5 max-w-[40rem] text-[13px] leading-relaxed text-[var(--color-text-secondary)]">
+          Check-ins reales (Supabase), tendencia de 7 días y preferencias opcionales de hidratación/macros. Lo que no
+          registres aquí no se inventa: sin wearable integrado no mostramos HRV ni FC medidas.
         </p>
         {salud.error && (
           <p style={{ margin: "8px 0 0", fontSize: "11px", color: "var(--color-accent-danger)" }}>{salud.error}</p>
@@ -145,36 +195,26 @@ export default function HealthPage() {
           </p>
         )}
         {isAppMockMode() && (
-          <p style={{ margin: "8px 0 0", fontSize: "11px", color: "var(--color-text-secondary)" }}>
-            Modo mock: contexto de salud simulado; suplementos solo en localStorage.
+          <p className="m-0 mt-2 text-[11px] text-[var(--color-text-secondary)]">
+            Modo mock: check-ins de ejemplo; suplementos siguen en localStorage si no hay Supabase.
           </p>
         )}
       </div>
 
       <Card>
-        <div style={{ padding: "var(--spacing-lg)", display: "grid", gap: "10px" }}>
-          <p
-            style={{
-              margin: 0,
-              fontSize: "11px",
-              textTransform: "uppercase",
-              letterSpacing: "0.14em",
-              color: "var(--color-text-secondary)",
-            }}
-          >
+        <div className="grid gap-3 p-4 sm:gap-3.5 sm:p-6">
+          <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
             Cómo te lee el día
           </p>
           {salud.loading ? (
-            <p style={{ margin: 0, fontSize: "14px", lineHeight: 1.55, color: "var(--color-text-secondary)" }}>
-              Preparando tu lectura…
-            </p>
+            <p className="m-0 text-[14px] leading-relaxed text-[var(--color-text-secondary)]">Preparando tu lectura…</p>
           ) : (
-            <p style={{ margin: 0, fontSize: "14px", lineHeight: 1.6, color: "var(--color-text-primary)" }}>
+            <p className="m-0 max-w-prose text-pretty text-[14px] leading-relaxed tracking-[-0.01em] text-[var(--color-text-primary)] sm:text-[15px] sm:leading-[1.55]">
               {healthSummary.paragraph}
             </p>
           )}
           {!salud.loading && (
-            <p style={{ margin: 0, fontSize: "10px", lineHeight: 1.45, color: "var(--color-text-secondary)" }}>
+            <p className="m-0 text-[10px] leading-snug text-[var(--color-text-secondary)]">
               {healthSummary.usedAi
                 ? "Texto redactado con inteligencia artificial a partir de lo mismo que ves en esta pantalla, en lenguaje cotidiano. No sustituye consejo médico."
                 : "Resumen automático en palabras sencillas, a partir de lo que ya ves en tus tarjetas. No sustituye consejo médico."}
@@ -183,33 +223,26 @@ export default function HealthPage() {
         </div>
       </Card>
 
-      <div className="grid grid-cols-1 gap-[var(--layout-gap)] sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-[var(--layout-gap)] sm:grid-cols-2 lg:grid-cols-3">
         {salud.loading
-          ? Array.from({ length: 5 }).map((_, i) => (
+          ? Array.from({ length: 6 }).map((_, i) => (
               <Card key={i}>
-                <div style={{ padding: "var(--spacing-md)", minHeight: "72px" }}>
-                  <p style={{ margin: 0, fontSize: "11px", color: "var(--color-text-secondary)" }}>…</p>
+                <div className="min-h-[88px] p-4">
+                  <p className="m-0 text-[11px] text-[var(--color-text-secondary)]">…</p>
                 </div>
               </Card>
             ))
           : topMetrics.map((metric) => (
               <Card key={metric.label} hover>
-                <div style={{ padding: "var(--spacing-md)", display: "grid", gap: "6px" }}>
-                  <p
-                    style={{
-                      margin: 0,
-                      fontSize: "11px",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.14em",
-                      color: "var(--color-text-secondary)",
-                    }}
-                  >
+                <div className="grid gap-1.5 p-4 sm:p-5">
+                  <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
                     {metric.label}
                   </p>
-                  <p style={{ margin: 0, fontSize: "22px", fontWeight: 600, color: metric.accent }}>
+                  <p className="m-0 text-[22px] font-semibold tabular-nums leading-tight tracking-tight" style={{ color: metric.accent }}>
                     {metric.value}
-                    <span style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}> {metric.unit}</span>
+                    <span className="text-[12px] font-medium text-[var(--color-text-secondary)]"> {metric.unit}</span>
                   </p>
+                  <p className="m-0 text-[10px] leading-snug text-[var(--color-text-secondary)]">{metric.hint}</p>
                 </div>
               </Card>
             ))}
@@ -230,22 +263,13 @@ export default function HealthPage() {
       />
 
       <Card>
-        <div style={{ padding: "var(--spacing-lg)", display: "grid", gap: "var(--spacing-sm)" }}>
-          <p
-            style={{
-              margin: 0,
-              fontSize: "10px",
-              fontWeight: 600,
-              textTransform: "uppercase",
-              letterSpacing: "0.12em",
-              color: "var(--color-text-secondary)",
-            }}
-          >
-            Biometric correlation: sleep vs daily energy
+        <div className="grid gap-2 p-4 sm:gap-3 sm:p-6">
+          <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
+            Correlación proxy: sueño vs energía
           </p>
-          <p style={{ margin: 0, fontSize: "11px", lineHeight: 1.45, color: "var(--color-text-secondary)" }}>
-            Siete muestras seguidas (últimos días de tu tendencia de energía y un proxy de sueño a partir de recuperación).
-            Las etiquetas del eje inferior son solo referencia visual tipo jornada, no la hora real de cada registro.
+          <p className="m-0 max-w-prose text-[11px] leading-relaxed text-[var(--color-text-secondary)] sm:text-[12px]">
+            Siete puntos alineados con tus últimos check-ins (score salud como energía y un proxy de “carga de sueño”
+            derivado del mismo dato). El eje inferior es solo referencia visual tipo jornada, no hora real de medición.
           </p>
           <div className="w-full min-w-0 overflow-x-auto overscroll-x-contain">
             <div className="h-[260px] min-h-[220px] w-full min-w-[280px] sm:h-[280px]">
@@ -322,68 +346,66 @@ export default function HealthPage() {
 
       <div className="grid grid-cols-1 gap-[var(--layout-gap)] sm:grid-cols-2">
         <Card>
-          <div style={{ padding: "var(--spacing-md)", display: "grid", gap: "6px" }}>
-            <p
-              style={{
-                margin: 0,
-                fontSize: "11px",
-                textTransform: "uppercase",
-                letterSpacing: "0.14em",
-                color: "var(--color-text-secondary)",
-              }}
-            >
+          <div className="grid gap-2 p-4 sm:p-5">
+            <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
               Hidratación
             </p>
-            <p style={{ margin: 0, fontSize: "22px", fontWeight: 600, color: "#3B82F6" }}>
-              {salud.hydrationCurrent} / {hydrationTarget}L
-            </p>
-            <div style={{ height: "6px", borderRadius: "999px", background: "var(--color-border)" }}>
-              <div style={{ height: "6px", borderRadius: "999px", width: `${hydrationPct}%`, background: "#3B82F6" }} />
-            </div>
+            {!salud.hydrationTracked ? (
+              <p className="m-0 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
+                Sin registro de agua hoy: no mostramos litros inventados. Cuando guardes tu consumo en preferencias de
+                salud (mismo endpoint que suplementos), aparecerá aquí con la barra de progreso.
+              </p>
+            ) : (
+              <>
+                <p className="m-0 text-[22px] font-semibold tabular-nums text-[#3B82F6]">
+                  {salud.hydrationCurrent} / {hydrationTarget}L
+                </p>
+                <div className="h-2 overflow-hidden rounded-full bg-[var(--color-border)]">
+                  <div className="h-full rounded-full bg-[#3B82F6]" style={{ width: `${hydrationPct}%` }} />
+                </div>
+              </>
+            )}
           </div>
         </Card>
         <Card>
-          <div style={{ padding: "var(--spacing-md)", display: "grid", gap: "10px" }}>
-            <p
-              style={{
-                margin: 0,
-                fontSize: "11px",
-                textTransform: "uppercase",
-                letterSpacing: "0.14em",
-                color: "var(--color-text-secondary)",
-              }}
-            >
+          <div className="grid gap-3 p-4 sm:p-5">
+            <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
               Macronutrientes
             </p>
-            {salud.macros.map((macro) => {
-              const pct = Math.min(100, Math.round((macro.current / Math.max(1, macro.target)) * 100))
-              return (
-                <div key={macro.label} style={{ display: "grid", gap: "6px" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: "12px" }}>{macro.label}</span>
-                    <span style={{ fontSize: "11px", color: "var(--color-text-secondary)" }}>
-                      {macro.current} / {macro.target}
-                      {macro.unit}
-                    </span>
-                  </div>
-                  <div style={{ height: "6px", borderRadius: "999px", background: "var(--color-border)" }}>
-                    <div
-                      style={{
-                        height: "6px",
-                        borderRadius: "999px",
-                        width: `${pct}%`,
-                        background:
-                          macro.label.toLowerCase().includes("prote")
+            {!salud.macrosFromLog ? (
+              <p className="m-0 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
+                Sin gramos de macros registrados hoy. Los objetivos son referencia; los consumos reales vendrán de lo
+                que guardes en preferencias de salud (no se estiman a partir del check-in).
+              </p>
+            ) : (
+              salud.macros.map((macro) => {
+                const pct = Math.min(100, Math.round((macro.current / Math.max(1, macro.target)) * 100))
+                return (
+                  <div key={macro.label} className="grid gap-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[12px] text-[var(--color-text-primary)]">{macro.label}</span>
+                      <span className="text-[11px] tabular-nums text-[var(--color-text-secondary)]">
+                        {macro.current} / {macro.target}
+                        {macro.unit}
+                      </span>
+                    </div>
+                    <div className="h-1.5 overflow-hidden rounded-full bg-[var(--color-border)]">
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${pct}%`,
+                          background: macro.label.toLowerCase().includes("prote")
                             ? "var(--color-accent-warning)"
                             : macro.label.toLowerCase().includes("carb")
                               ? "var(--color-accent-primary)"
                               : "var(--color-accent-health)",
-                      }}
-                    />
+                        }}
+                      />
+                    </div>
                   </div>
-                </div>
-              )
-            })}
+                )
+              })
+            )}
           </div>
         </Card>
       </div>

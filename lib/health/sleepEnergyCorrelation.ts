@@ -36,7 +36,8 @@ export function buildSleepVsEnergySeries(
   let vals = tendencia7d.map((t) => clamp(t.value, 15, 100))
 
   if (vals.length === 0) {
-    vals = Array.from({ length: 7 }, (_, i) => clamp(base + Math.sin(i * 0.9) * 12 + (i % 3) * 4, 28, 92))
+    const flat = clamp(base, 18, 96)
+    vals = Array.from({ length: 7 }, () => flat)
   } else {
     const seed = vals[0] ?? base
     while (vals.length < 7) {
