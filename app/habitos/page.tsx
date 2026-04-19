@@ -1,10 +1,8 @@
 "use client"
 
-import clsx from "clsx"
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from "react"
 import {
   addDaysIso,
-  aggregateHabitsSummary,
   HABIT_BACKFILL_MAX_DAYS_PAST,
   isScheduledOnUtcDay,
   lettersToWeekdays,
@@ -70,7 +68,6 @@ const METRIC_LABELS: Record<HabitSuccessMetricType, string> = {
 type HabitsShellView = "resumen" | "stack"
 
 const HABITOS_SHELL_KEY = "orbita-habitos-shell-view"
-const HABITOS_DOMAIN_KEY = "orbita-habitos-domain-filter"
 const HABITOS_LAST_STACK_MS_KEY = "orbita-habitos-last-stack-at-ms"
 /** Días sin abrir la pestaña Stack antes de mostrar recordatorio (con hábitos en riesgo). */
 const STACK_REMINDER_AFTER_DAYS = 3
@@ -79,8 +76,6 @@ function daysSinceMs(ms: number | null): number {
   if (ms == null || !Number.isFinite(ms)) return Number.POSITIVE_INFINITY
   return (Date.now() - ms) / 86_400_000
 }
-
-const DOMAIN_KEYS: Array<OperationalDomain | "all"> = ["all", "salud", "fisico", "profesional", "agenda"]
 
 const STACK_BLOCK_META: Record<
   HabitTimeBlockId,
@@ -247,7 +242,6 @@ export default function HabitosPage() {
   } = useHabits()
 
   const [shellView, setShellView] = useState<HabitsShellView>("stack")
-  const [domainFilter, setDomainFilter] = useState<OperationalDomain | "all">("all")
   const [lastStackVisitMs, setLastStackVisitMs] = useState<number | null>(null)
   const [prefsHydrated, setPrefsHydrated] = useState(false)
   const resumenPanelRef = useRef<HTMLDivElement>(null)
@@ -263,10 +257,6 @@ export default function HabitosPage() {
     try {
       const v = sessionStorage.getItem(HABITOS_SHELL_KEY)
       if (v === "resumen" || v === "stack") setShellView(v)
-      const d = sessionStorage.getItem(HABITOS_DOMAIN_KEY)
-      if (d === "salud" || d === "fisico" || d === "profesional" || d === "agenda" || d === "all") {
-        setDomainFilter(d)
-      }
       const raw = sessionStorage.getItem(HABITOS_LAST_STACK_MS_KEY)
       if (raw != null) {
         const n = Number.parseInt(raw, 10)
@@ -288,15 +278,6 @@ export default function HabitosPage() {
   }, [shellView, prefsHydrated])
 
   useEffect(() => {
-    if (!prefsHydrated) return
-    try {
-      sessionStorage.setItem(HABITOS_DOMAIN_KEY, domainFilter)
-    } catch {
-      /* */
-    }
-  }, [domainFilter, prefsHydrated])
-
-  useEffect(() => {
     if (shellView !== "stack") return
     const n = Date.now()
     try {
@@ -314,22 +295,12 @@ export default function HabitosPage() {
     })
   }, [shellView])
 
-  const habitsFiltered = useMemo(() => {
-    if (domainFilter === "all") return habits
-    return habits.filter((h) => h.domain === domainFilter)
-  }, [habits, domainFilter])
-
-  const summaryDisplayed = useMemo(() => {
-    if (domainFilter === "all") return summary
-    return aggregateHabitsSummary(habitsFiltered.map((h) => h.metrics))
-  }, [domainFilter, summary, habitsFiltered])
-
   const superhabitCount = useMemo(
     () => habits.filter((h) => h.metadata?.is_superhabit).length,
     [habits]
   )
 
-  const habitsByDaypart = useMemo(() => groupHabitsByDaypart(habitsFiltered), [habitsFiltered])
+  const habitsByDaypart = useMemo(() => groupHabitsByDaypart(habits), [habits])
 
   const stackBlocksWithOffsets = useMemo(() => {
     const out: { blockId: HabitTimeBlockId; habits: HabitWithMetrics[]; animStart: number }[] = []
@@ -343,27 +314,27 @@ export default function HabitosPage() {
   }, [habitsByDaypart])
 
   const consistencyInsight = useMemo(
-    () => buildHabitConsistencyInsight(habitsFiltered, summaryDisplayed),
-    [habitsFiltered, summaryDisplayed],
+    () => buildHabitConsistencyInsight(habits, summary),
+    [habits, summary],
   )
 
   /** Roster para resumen: primero los que más necesitan atención (menor % 30d). */
   const rosterByAdherence = useMemo(() => {
-    return [...habitsFiltered].sort(
+    return [...habits].sort(
       (a, b) =>
         a.metrics.completion_rate_30d - b.metrics.completion_rate_30d || a.name.localeCompare(b.name, "es"),
     )
-  }, [habitsFiltered])
+  }, [habits])
   const consistencyTierUi = HABIT_CONSISTENCY_TIER_PRESENTATION[consistencyInsight.tier]
   const consistencyMomentumPct =
-    habitsFiltered.length === 0 ? 0 : Math.min(100, Math.max(0, summaryDisplayed.consistency_30d))
+    habits.length === 0 ? 0 : Math.min(100, Math.max(0, summary.consistency_30d))
 
   const todayYmd = useMemo(() => utcTodayIso(), [])
   const pendingScheduledTodayIds = useMemo(() => {
-    return habitsFiltered
+    return habits
       .filter((h) => !h.metrics.completed_today && isScheduledOnUtcDay(h.metadata ?? null, todayYmd))
       .map((h) => h.id)
-  }, [habitsFiltered, todayYmd])
+  }, [habits, todayYmd])
 
   const showStackReminder = useMemo(() => {
     if (summary.at_risk <= 0 || shellView !== "resumen") return false
@@ -497,7 +468,7 @@ export default function HabitosPage() {
             stack (viaje u olvido).
           </p>
           <p className="m-0 max-w-prose text-[12px] leading-snug text-[var(--color-text-secondary)]">
-            {greeting}. Tu mayor racha actual en el stack es de {summaryDisplayed.current_streak_max} días.
+            {greeting}. Tu mayor racha actual en el stack es de {summary.current_streak_max} días.
           </p>
         </div>
         <button
@@ -514,44 +485,6 @@ export default function HabitosPage() {
           Nuevo hábito
         </button>
       </header>
-
-      <div
-        id="habitos-dominio-filtro"
-        className="flex min-w-0 flex-col gap-2 rounded-xl border border-[color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_35%,var(--color-surface))] px-2 py-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2 sm:px-3 sm:py-2.5"
-        role="group"
-        aria-label="Filtrar hábitos por dominio"
-      >
-        <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
-          Dominio
-        </span>
-        <div className="flex min-w-0 flex-wrap gap-1.5">
-          {DOMAIN_KEYS.map((key) => {
-            const label = key === "all" ? "Todos" : DOMAIN_LABELS[key]
-            const active = domainFilter === key
-            return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setDomainFilter(key)}
-                className={clsx(
-                  "orbita-focus-ring inline-flex min-h-8 items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] transition-colors sm:px-3 sm:text-[11px]",
-                  active
-                    ? "border-[color-mix(in_srgb,var(--color-accent-health)_50%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_12%,var(--color-surface))] text-[var(--color-text-primary)]"
-                    : "border-[color-mix(in_srgb,var(--color-border)_80%,transparent)] bg-transparent text-[var(--color-text-secondary)] hover:bg-[color-mix(in_srgb,var(--color-surface)_55%,transparent)]",
-                )}
-              >
-                {label}
-              </button>
-            )
-          })}
-        </div>
-        {domainFilter !== "all" ? (
-          <p className="m-0 w-full text-[10px] leading-snug text-[var(--color-text-secondary)] sm:ml-auto sm:w-auto sm:max-w-[20rem] sm:text-right">
-            Métricas y stack muestran solo <strong className="font-medium text-[var(--color-text-primary)]">{DOMAIN_LABELS[domainFilter]}</strong>.
-            Los totales globales de alertas siguen usando todo el roster.
-          </p>
-        ) : null}
-      </div>
 
       {showStackReminder ? (
         <div
@@ -632,7 +565,7 @@ export default function HabitosPage() {
               <span className="min-w-0 leading-snug">Consistencia 30D</span>
             </p>
             <p className="text-2xl font-semibold tabular-nums sm:text-[28px]" style={{ margin: 0 }}>
-              {summaryDisplayed.consistency_30d}%
+              {summary.consistency_30d}%
             </p>
           </div>
         </Card>
@@ -643,7 +576,7 @@ export default function HabitosPage() {
               <span className="min-w-0 leading-snug">Mejor Streak</span>
             </p>
             <p className="text-2xl font-semibold tabular-nums sm:text-[28px]" style={{ margin: 0 }}>
-              {summaryDisplayed.best_streak}
+              {summary.best_streak}
             </p>
           </div>
         </Card>
@@ -654,7 +587,7 @@ export default function HabitosPage() {
               <span className="min-w-0 leading-snug">En riesgo hoy</span>
             </p>
             <p className="text-2xl font-semibold tabular-nums sm:text-[28px]" style={{ margin: 0 }}>
-              {summaryDisplayed.at_risk}
+              {summary.at_risk}
             </p>
           </div>
         </Card>
@@ -710,7 +643,7 @@ export default function HabitosPage() {
                     Momentum 30d
                   </span>
                   <span className="text-2xl font-bold tabular-nums leading-none tracking-tight text-[var(--color-text-primary)] sm:text-[26px]">
-                    {habitsFiltered.length === 0 ? "—" : `${summaryDisplayed.consistency_30d}%`}
+                    {habits.length === 0 ? "—" : `${summary.consistency_30d}%`}
                   </span>
                 </div>
                 <div
@@ -737,26 +670,26 @@ export default function HabitosPage() {
               <div className="flex flex-wrap gap-2">
                 <span className="inline-flex items-center gap-1.5 rounded-xl border border-[color-mix(in_srgb,var(--color-border)_80%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_88%,transparent)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--color-text-primary)] shadow-sm">
                   <Flame className="h-3.5 w-3.5 text-orange-500" aria-hidden />
-                  <span className="tabular-nums">{summaryDisplayed.current_streak_max}</span>
+                  <span className="tabular-nums">{summary.current_streak_max}</span>
                   <span className="text-[var(--color-text-secondary)]">racha máx. hoy</span>
                 </span>
                 <span className="inline-flex items-center gap-1.5 rounded-xl border border-[color-mix(in_srgb,var(--color-border)_80%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_88%,transparent)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--color-text-primary)] shadow-sm">
                   <Trophy className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" aria-hidden />
-                  <span className="tabular-nums">{summaryDisplayed.best_streak}</span>
+                  <span className="tabular-nums">{summary.best_streak}</span>
                   <span className="text-[var(--color-text-secondary)]">mejor histórico</span>
                 </span>
                 <span
                   className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-[11px] font-medium shadow-sm ${
-                    summaryDisplayed.at_risk > 0
+                    summary.at_risk > 0
                       ? "border-[color-mix(in_srgb,var(--color-accent-warning)_45%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-warning)_10%,transparent)] text-[var(--color-text-primary)]"
                       : "border-[color-mix(in_srgb,var(--color-border)_80%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_8%,transparent)] text-[var(--color-text-primary)]"
                   }`}
                 >
                   <Target
-                    className={`h-3.5 w-3.5 ${summaryDisplayed.at_risk > 0 ? "text-[var(--color-accent-warning)]" : "text-[var(--color-accent-health)]"}`}
+                    className={`h-3.5 w-3.5 ${summary.at_risk > 0 ? "text-[var(--color-accent-warning)]" : "text-[var(--color-accent-health)]"}`}
                     aria-hidden
                   />
-                  <span className="tabular-nums">{summaryDisplayed.at_risk}</span>
+                  <span className="tabular-nums">{summary.at_risk}</span>
                   <span className="text-[var(--color-text-secondary)]">en alerta hoy</span>
                 </span>
               </div>
@@ -812,7 +745,7 @@ export default function HabitosPage() {
               Roster · adherencia 30d
             </p>
             <p className="m-0 mt-1 max-w-prose text-[12px] leading-snug text-[var(--color-text-secondary)] sm:text-[13px]">
-              Ordenados del menor al mayor % de cumplimiento en la ventana de 30 días. Usa Stack para marcar «hecho hoy».
+              Del más débil al más fuerte en la ventana de 30 días. Cada fila resume ritmo reciente, racha y el cierre de hoy; marca en Stack.
             </p>
           </div>
           {pendingScheduledTodayIds.length > 0 && (persistenceEnabled || mock) ? (
@@ -834,64 +767,103 @@ export default function HabitosPage() {
             </button>
           ) : null}
         </div>
-        <div className="overflow-x-auto px-2 pb-4 pt-2 sm:px-3 sm:pb-5">
+        <div className="px-3 pb-5 pt-2 sm:px-5 sm:pb-6 sm:pt-3">
           {rosterByAdherence.length === 0 ? (
-            <p className="m-0 px-2 py-6 text-center text-[12px] text-[var(--color-text-secondary)] sm:px-4">
+            <p className="m-0 py-6 text-center text-[12px] text-[var(--color-text-secondary)] sm:px-2">
               Aún no hay hábitos. Crea el primero con «Nuevo hábito» y vuelve a este resumen.
             </p>
           ) : (
-            <table className="w-full min-w-[280px] border-collapse text-left text-[12px] text-[var(--color-text-primary)] sm:text-[13px] lg:table-fixed">
-              <thead>
-                <tr className="border-b border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] text-[10px] uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
-                  <th className="py-2 pl-2 pr-2 font-semibold sm:pl-3 lg:w-[40%]">Hábito</th>
-                  <th className="hidden px-1 py-2 text-center font-semibold sm:table-cell lg:w-[14%]">14d</th>
-                  <th className="px-2 py-2 text-right font-semibold tabular-nums lg:w-[11%]">30d</th>
-                  <th className="px-2 py-2 text-right font-semibold tabular-nums lg:w-[11%]">Racha</th>
-                  <th className="px-2 py-2 text-center font-semibold lg:w-[10%]">Hoy</th>
-                  <th className="py-2 pl-2 pr-3 text-right font-semibold sm:pr-4 lg:w-[14%]">Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rosterByAdherence.map((h) => (
-                  <tr
+            <ul
+              className="m-0 flex list-none flex-col gap-2.5 p-0 sm:gap-3"
+              aria-label="Hábitos del roster, ordenados por adherencia a 30 días"
+            >
+              {rosterByAdherence.map((h) => {
+                const pct = h.metrics.completion_rate_30d
+                const streak = h.metrics.current_streak
+                return (
+                  <li
                     key={h.id}
-                    className="border-b border-[color-mix(in_srgb,var(--color-border)_35%,transparent)] last:border-b-0"
+                    className="rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_62%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_42%,var(--color-surface))] p-3.5 shadow-[inset_0_1px_0_color-mix(in_srgb,white_7%,transparent)] sm:p-4"
                   >
-                    <td className="max-w-[10rem] py-2.5 pl-2 pr-2 align-middle sm:max-w-none sm:pl-3 lg:max-w-none lg:min-w-0">
-                      <span className="line-clamp-2 font-medium leading-snug">{h.name}</span>
-                      <span className="mt-0.5 block text-[10px] font-normal text-[var(--color-text-secondary)]">
-                        {DOMAIN_LABELS[h.domain] ?? h.domain}
-                      </span>
-                    </td>
-                    <td className="hidden py-2.5 align-middle sm:table-cell">
-                      <HabitSparkline14 values={h.metrics.sparkline14 ?? []} />
-                    </td>
-                    <td className="px-2 py-2.5 text-right align-middle tabular-nums text-[var(--color-text-primary)]">
-                      {h.metrics.completion_rate_30d}%
-                    </td>
-                    <td className="px-2 py-2.5 text-right align-middle tabular-nums text-[var(--color-text-secondary)]">
-                      {h.metrics.current_streak}
-                    </td>
-                    <td className="px-2 py-2.5 text-center align-middle">
-                      {h.metrics.completed_today ? (
-                        <CheckCircle2 className="mx-auto h-4 w-4 text-[var(--color-accent-health)]" aria-label="Hecho hoy" />
-                      ) : (
-                        <Circle className="mx-auto h-4 w-4 text-[var(--color-text-secondary)]" aria-label="Pendiente hoy" />
-                      )}
-                    </td>
-                    <td className="py-2.5 pl-2 pr-2 text-right align-middle sm:pr-4">
-                      {h.metrics.at_risk ? (
-                        <span className="inline-flex rounded-full border border-[color-mix(in_srgb,var(--color-accent-danger)_40%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-danger)_10%,transparent)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-accent-danger)]">
-                          Riesgo
-                        </span>
-                      ) : (
-                        <span className="text-[11px] text-[var(--color-text-secondary)]">OK</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    <div className="min-w-0 space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="m-0 text-[15px] font-semibold leading-snug tracking-[-0.02em] text-[var(--color-text-primary)] sm:text-base">
+                              {h.name}
+                            </p>
+                            <span className="mt-1.5 inline-flex max-w-full items-center rounded-full border border-[color-mix(in_srgb,var(--color-border)_70%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_65%,transparent)] px-2 py-0.5 text-[10px] font-medium text-[var(--color-text-secondary)]">
+                              {DOMAIN_LABELS[h.domain] ?? h.domain}
+                            </span>
+                          </div>
+                          <div className="flex shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:gap-2">
+                            {h.metrics.at_risk ? (
+                              <span className="inline-flex rounded-full border border-[color-mix(in_srgb,var(--color-accent-danger)_42%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-danger)_10%,transparent)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-accent-danger)]">
+                                Riesgo
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
+                                En ritmo
+                              </span>
+                            )}
+                            {h.metrics.completed_today ? (
+                              <CheckCircle2
+                                className="h-5 w-5 shrink-0 text-[var(--color-accent-health)]"
+                                aria-label="Hecho hoy"
+                              />
+                            ) : (
+                              <Circle
+                                className="h-5 w-5 shrink-0 text-[var(--color-text-secondary)]"
+                                aria-label="Pendiente hoy"
+                              />
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-end gap-3 sm:gap-4">
+                          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                            <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
+                              Últimos 14 días
+                            </span>
+                            <div className="min-w-0 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                              <HabitSparkline14 values={h.metrics.sparkline14 ?? []} />
+                            </div>
+                          </div>
+                          <div className="w-full min-w-[9rem] shrink-0 sm:w-36">
+                            <div className="mb-1 flex items-baseline justify-between gap-2">
+                              <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
+                                30 días
+                              </span>
+                              <span className="text-lg font-bold tabular-nums leading-none tracking-tight text-[var(--color-text-primary)]">
+                                {pct}%
+                              </span>
+                            </div>
+                            <div
+                              className="h-2 overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--color-text-secondary)_11%,var(--color-surface-alt))] ring-1 ring-[color-mix(in_srgb,var(--color-border)_58%,transparent)]"
+                              aria-hidden
+                            >
+                              <div
+                                className="h-full rounded-full bg-[var(--color-accent-health)] transition-[width] duration-500 ease-out motion-reduce:transition-none"
+                                style={{
+                                  width: `${Math.min(100, Math.max(0, pct))}%`,
+                                  boxShadow: "inset 0 1px 0 color-mix(in srgb, white 38%, transparent)",
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-[color-mix(in_srgb,var(--color-border)_48%,transparent)] pt-2.5 text-[11px] text-[var(--color-text-secondary)] sm:text-[12px]">
+                          <span className="inline-flex items-center gap-1.5">
+                            <Flame className="h-3.5 w-3.5 shrink-0 text-orange-500" aria-hidden />
+                            <span className="tabular-nums font-semibold text-[var(--color-text-primary)]">{streak}</span>
+                            {streak === 1 ? "día de racha" : "días de racha"}
+                          </span>
+                        </div>
+                      </div>
+                  </li>
+                )
+              })}
+            </ul>
           )}
         </div>
       </Card>
@@ -911,7 +883,7 @@ export default function HabitosPage() {
           </p>
           <button
             type="button"
-            disabled={(!persistenceEnabled && !mock) || loading || habitsFiltered.length === 0}
+            disabled={(!persistenceEnabled && !mock) || loading || habits.length === 0}
             onClick={openGlobalBackfill}
             title="Registrar el mismo día para todos los hábitos (viaje, olvido)"
             aria-expanded={backfillOpen}
@@ -948,10 +920,10 @@ export default function HabitosPage() {
               <button
                 type="button"
                 disabled={
-                  (!persistenceEnabled && !mock) || backfillingAll || habitsFiltered.length === 0
+                  (!persistenceEnabled && !mock) || backfillingAll || habits.length === 0
                 }
                 onClick={async () => {
-                  const ids = habitsFiltered.map((h) => h.id)
+                  const ids = habits.map((h) => h.id)
                   const r = await completeAllOnDay(ids, backfillDate)
                   if (!r.ok) {
                     alert(r.error || "No se pudo guardar")
