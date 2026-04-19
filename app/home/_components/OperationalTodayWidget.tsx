@@ -168,10 +168,10 @@ export function OperationalTodayWidget() {
   return (
     <section
       id="inicio-operacion"
-      className="mx-auto max-w-6xl px-4"
+      className="mx-auto min-w-0 max-w-6xl px-4"
       aria-label="Timeline de hoy, tareas operativas y hábitos"
     >
-      <Card className="border-[color-mix(in_srgb,var(--color-border)_75%,transparent)] p-4 shadow-[var(--shadow-card)] sm:p-5">
+      <Card className="min-w-0 border-[color-mix(in_srgb,var(--color-border)_75%,transparent)] p-4 shadow-[var(--shadow-card)] sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="m-0 text-[11px] uppercase tracking-[0.14em] text-orbita-secondary">Operación rápida</p>
@@ -199,8 +199,8 @@ export function OperationalTodayWidget() {
           </div>
         </div>
 
-        <div className="mt-4 grid gap-4 lg:grid-cols-3">
-          <div className="rounded-2xl border border-orbita-border/40 bg-orbita-surface/35 p-3">
+        <div className="mt-4 grid min-w-0 gap-4 lg:grid-cols-3">
+          <div className="min-w-0 rounded-2xl border border-orbita-border/40 bg-orbita-surface/35 p-3">
             <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
               Timeline operativo
             </p>
@@ -208,9 +208,9 @@ export function OperationalTodayWidget() {
               {timeline.map((item) => (
                 <li
                   key={item.id}
-                  className={clsx("rounded-xl border px-2.5 py-2", rowSurfaceClass(item.done))}
+                  className={clsx("min-w-0 rounded-xl border px-2.5 py-2", rowSurfaceClass(item.done))}
                 >
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex min-w-0 items-center justify-between gap-2">
                     <p
                       className={clsx(
                         "m-0 truncate text-sm font-medium",
@@ -256,7 +256,7 @@ export function OperationalTodayWidget() {
             ) : null}
           </div>
 
-          <div className="rounded-2xl border border-orbita-border/40 bg-orbita-surface/35 p-3">
+          <div className="min-w-0 rounded-2xl border border-orbita-border/40 bg-orbita-surface/35 p-3">
             <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
               Tasks para cerrar
             </p>
@@ -264,7 +264,7 @@ export function OperationalTodayWidget() {
               {operationalSplit.pending.map((task) => (
                 <li
                   key={task.id}
-                  className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/10 px-2.5 py-2"
+                  className="flex min-w-0 items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/10 px-2.5 py-2"
                 >
                   <p className="m-0 min-w-0 flex-1 truncate text-sm text-orbita-primary">{task.title}</p>
                   <button
@@ -282,7 +282,7 @@ export function OperationalTodayWidget() {
                 <li
                   key={task.id}
                   className={clsx(
-                    "flex items-center justify-between gap-2 rounded-xl border px-2.5 py-2",
+                    "flex min-w-0 items-center justify-between gap-2 rounded-xl border px-2.5 py-2",
                     rowSurfaceClass(true),
                   )}
                 >
@@ -307,7 +307,7 @@ export function OperationalTodayWidget() {
               {googleTasksTodaySplit.pending.map((task) => (
                 <li
                   key={task.id}
-                  className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/10 px-2.5 py-2"
+                  className="flex min-w-0 items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/10 px-2.5 py-2"
                 >
                   <p className="m-0 min-w-0 flex-1 truncate text-sm text-orbita-primary">{task.title}</p>
                   <button
@@ -329,7 +329,7 @@ export function OperationalTodayWidget() {
                 <li
                   key={task.id}
                   className={clsx(
-                    "flex items-center justify-between gap-2 rounded-xl border px-2.5 py-2",
+                    "flex min-w-0 items-center justify-between gap-2 rounded-xl border px-2.5 py-2",
                     rowSurfaceClass(true),
                   )}
                 >
@@ -348,7 +348,7 @@ export function OperationalTodayWidget() {
             </ul>
           </div>
 
-          <div className="rounded-2xl border border-orbita-border/40 bg-orbita-surface/35 p-3">
+          <div className="min-w-0 rounded-2xl border border-orbita-border/40 bg-orbita-surface/35 p-3">
             <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
               Hábitos de hoy
             </p>
@@ -357,7 +357,7 @@ export function OperationalTodayWidget() {
                 <li
                   key={habit.id}
                   className={clsx(
-                    "flex items-center justify-between gap-2 rounded-xl border px-2.5 py-2",
+                    "flex min-w-0 items-center justify-between gap-2 rounded-xl border px-2.5 py-2",
                     rowSurfaceClass(Boolean(habit.completed)),
                   )}
                 >

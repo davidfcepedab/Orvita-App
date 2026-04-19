@@ -20,8 +20,8 @@ export function CriticalAlerts({ alerts, onOneClickAction, onResolveWithAi, pend
 
   return (
     <section className="mx-auto max-w-6xl px-4">
-      <div className="flex items-end justify-between gap-3">
-        <div>
+      <div className="flex min-w-0 items-end justify-between gap-3">
+        <div className="min-w-0">
           <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Primero lo primero</p>
           <h2 className="mt-1 text-lg font-semibold text-orbita-primary">Alertas críticas</h2>
           <p className="mt-1 text-sm text-orbita-secondary">

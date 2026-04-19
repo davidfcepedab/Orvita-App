@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { Fragment, useMemo, useState } from "react"
 import { Bell, Calendar, ChevronLeft, ChevronRight } from "lucide-react"
 import { Card } from "@/src/components/ui/Card"
 import type { UiAgendaTask } from "@/app/agenda/mapAgendaTaskToUi"
@@ -83,6 +83,17 @@ function mergedRowLabel(row: MergedRow): string {
   if (row.kind === "task") return row.task.title
   if (row.kind === "reminder") return row.reminder.title
   return row.event.summary || ""
+}
+
+/** Clave civil estable para agrupar la lista (ítems sin día comparten bucket). */
+function mergedRowDayBucket(row: MergedRow): string {
+  return mergedRowDayKey(row) ?? "__sin_fecha__"
+}
+
+function listDayDividerKey(row: MergedRow): string {
+  if (row.kind === "task") return `t-${row.task.id}`
+  if (row.kind === "reminder") return `r-${row.reminder.id}`
+  return `e-${row.event.id}`
 }
 
 function linkedGoogleTaskIdsFromOrvita(tasks: UiAgendaTask[]): Set<string> {
@@ -652,171 +663,192 @@ export function AgendaSharedList({
           </div>
         </div>
       ) : null}
-      {merged.map((row) =>
-        row.kind === "task" ? (
-          <AgendaOrvitaTaskCard
-            key={`t-${row.task.id}`}
-            task={row.task}
-            variant="list"
-            viewerUserId={viewerUserId}
-            onOpenEdit={onOpenAgendaEdit ? (t) => onOpenAgendaEdit({ kind: "orvita", task: t }) : undefined}
-            householdMembers={householdMembers}
-            onPatchOrvita={onPatchOrvitaTask}
-            onSaveComplete={onSaveComplete}
-            onAcceptAssignment={onAcceptAssignment}
-            onDelete={
-              onDeleteOrvitaTask
-                ? async (t) => {
-                    if (!confirm(`¿Eliminar “${t.title}” del tablero Órvita?`)) return
-                    setBusyDel(`o-${t.id}`)
-                    try {
-                      await onDeleteOrvitaTask(t)
-                    } finally {
-                      setBusyDel(null)
-                    }
-                  }
-                : undefined
-            }
-            deleteBusy={busyDel === `o-${row.task.id}`}
-          />
-        ) : row.kind === "reminder" ? (
-          <AgendaReadonlyUnifiedCard
-            key={`r-${row.reminder.id}`}
-            variant="list"
-            shell={googleAgendaCardShell({
-              kind: "reminder",
-              completed: isGoogleTaskDone(row.reminder.status),
-              assignedToViewer: Boolean(
-                viewerUserId && row.reminder.localAssigneeUserId === viewerUserId,
-              ),
-            })}
-            MetaIcon={Bell}
-            metaText={dueMetaCompact(localDateKeyFromIso(row.reminder.due) ?? "")}
-            title={row.reminder.title || "(Sin título)"}
-            googleKind="reminder"
-            kindPillLabel="Recordatorio"
-            statusLabel={isGoogleTaskDone(row.reminder.status) ? "Completada" : "Pendiente"}
-            statusKey={isGoogleTaskDone(row.reminder.status) ? "completada" : "pendiente"}
-            priorityUi={googleLocalPriorityUi(row.reminder.localPriority)}
-            assigneeSubtle={googleReminderAssigneeLabel(row.reminder, members)}
-            onEdit={
-              onOpenAgendaEdit && onGoogleReminderPatch
-                ? () => onOpenAgendaEdit({ kind: "google-reminder", task: row.reminder })
-                : undefined
-            }
-            onToggleGoogleComplete={
-              onGoogleReminderToggleComplete
-                ? () =>
-                    void (async () => {
-                      const r = row.reminder
-                      const done = isGoogleTaskDone(r.status)
-                      setBusyDel(`tc-r-${r.id}`)
-                      try {
-                        await onGoogleReminderToggleComplete(r.id, !done)
-                      } finally {
-                        setBusyDel(null)
+      {merged.map((row, idx) => {
+        const dayBucket = mergedRowDayBucket(row)
+        const prevBucket = idx > 0 ? mergedRowDayBucket(merged[idx - 1]!) : null
+        const showDayDivider = idx > 0 && dayBucket !== prevBucket
+        const rowKey = listDayDividerKey(row)
+
+        return (
+          <Fragment key={rowKey}>
+            {showDayDivider ? (
+              <div
+                className="pointer-events-none min-h-0 w-full select-none rounded-full pt-2 sm:pt-2.5"
+                aria-hidden
+              >
+                <div
+                  className="h-px w-full opacity-[0.55]"
+                  style={{
+                    background:
+                      "linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--color-border) 55%, transparent) 12%, color-mix(in srgb, var(--color-border) 72%, var(--color-text-primary)) 50%, color-mix(in srgb, var(--color-border) 55%, transparent) 88%, transparent 100%)",
+                    boxShadow: "0 1px 0 color-mix(in srgb, var(--color-surface) 65%, transparent)",
+                  }}
+                />
+              </div>
+            ) : null}
+            {row.kind === "task" ? (
+              <AgendaOrvitaTaskCard
+                task={row.task}
+                variant="list"
+                viewerUserId={viewerUserId}
+                onOpenEdit={onOpenAgendaEdit ? (t) => onOpenAgendaEdit({ kind: "orvita", task: t }) : undefined}
+                householdMembers={householdMembers}
+                onPatchOrvita={onPatchOrvitaTask}
+                onSaveComplete={onSaveComplete}
+                onAcceptAssignment={onAcceptAssignment}
+                onDelete={
+                  onDeleteOrvitaTask
+                    ? async (t) => {
+                        if (!confirm(`¿Eliminar “${t.title}” del tablero Órvita?`)) return
+                        setBusyDel(`o-${t.id}`)
+                        try {
+                          await onDeleteOrvitaTask(t)
+                        } finally {
+                          setBusyDel(null)
+                        }
                       }
-                    })()
-                : undefined
-            }
-            googleCompleteBusy={busyDel === `tc-r-${row.reminder.id}`}
-            showMoveDue={Boolean(
-              onGoogleReminderPatch &&
-                (() => {
-                  const y = localDateKeyFromIso(row.reminder.due) ?? ""
-                  return y && isYmdTodayLocal(y) && !isGoogleTaskDone(row.reminder.status)
-                })(),
+                    : undefined
+                }
+                deleteBusy={busyDel === `o-${row.task.id}`}
+              />
+            ) : row.kind === "reminder" ? (
+              <AgendaReadonlyUnifiedCard
+                variant="list"
+                shell={googleAgendaCardShell({
+                  kind: "reminder",
+                  completed: isGoogleTaskDone(row.reminder.status),
+                  assignedToViewer: Boolean(
+                    viewerUserId && row.reminder.localAssigneeUserId === viewerUserId,
+                  ),
+                })}
+                MetaIcon={Bell}
+                metaText={dueMetaCompact(localDateKeyFromIso(row.reminder.due) ?? "")}
+                title={row.reminder.title || "(Sin título)"}
+                googleKind="reminder"
+                kindPillLabel="Recordatorio"
+                statusLabel={isGoogleTaskDone(row.reminder.status) ? "Completada" : "Pendiente"}
+                statusKey={isGoogleTaskDone(row.reminder.status) ? "completada" : "pendiente"}
+                priorityUi={googleLocalPriorityUi(row.reminder.localPriority)}
+                assigneeSubtle={googleReminderAssigneeLabel(row.reminder, members)}
+                onEdit={
+                  onOpenAgendaEdit && onGoogleReminderPatch
+                    ? () => onOpenAgendaEdit({ kind: "google-reminder", task: row.reminder })
+                    : undefined
+                }
+                onToggleGoogleComplete={
+                  onGoogleReminderToggleComplete
+                    ? () =>
+                        void (async () => {
+                          const r = row.reminder
+                          const done = isGoogleTaskDone(r.status)
+                          setBusyDel(`tc-r-${r.id}`)
+                          try {
+                            await onGoogleReminderToggleComplete(r.id, !done)
+                          } finally {
+                            setBusyDel(null)
+                          }
+                        })()
+                    : undefined
+                }
+                googleCompleteBusy={busyDel === `tc-r-${row.reminder.id}`}
+                showMoveDue={Boolean(
+                  onGoogleReminderPatch &&
+                    (() => {
+                      const y = localDateKeyFromIso(row.reminder.due) ?? ""
+                      return y && isYmdTodayLocal(y) && !isGoogleTaskDone(row.reminder.status)
+                    })(),
+                )}
+                onMoveTomorrow={
+                  onGoogleReminderPatch
+                    ? () =>
+                        void (async () => {
+                          const r = row.reminder
+                          const y = localDateKeyFromIso(r.due) ?? ""
+                          if (!y) return
+                          setBusyDel(`mv-r-${r.id}`)
+                          try {
+                            await onGoogleReminderPatch(r.id, {
+                              due: `${addDaysToYmd(y, 1)}T12:00:00.000Z`,
+                            })
+                          } finally {
+                            setBusyDel(null)
+                          }
+                        })()
+                    : undefined
+                }
+                onMoveAfterTomorrow={
+                  onGoogleReminderPatch
+                    ? () =>
+                        void (async () => {
+                          const r = row.reminder
+                          const y = localDateKeyFromIso(r.due) ?? ""
+                          if (!y) return
+                          setBusyDel(`mv-r-${r.id}`)
+                          try {
+                            await onGoogleReminderPatch(r.id, {
+                              due: `${addDaysToYmd(y, 2)}T12:00:00.000Z`,
+                            })
+                          } finally {
+                            setBusyDel(null)
+                          }
+                        })()
+                    : undefined
+                }
+                moveDueBusy={busyDel === `mv-r-${row.reminder.id}`}
+                onDelete={
+                  onDeleteGoogleTask
+                    ? async () => {
+                        if (!confirm("¿Eliminar esta tarea/recordatorio en Google Tasks?")) return
+                        setBusyDel(`r-${row.reminder.id}`)
+                        try {
+                          await onDeleteGoogleTask(row.reminder.id)
+                        } finally {
+                          setBusyDel(null)
+                        }
+                      }
+                    : undefined
+                }
+                deleteBusy={busyDel === `r-${row.reminder.id}`}
+              />
+            ) : (
+              <AgendaReadonlyUnifiedCard
+                variant="list"
+                shell={googleAgendaCardShell({
+                  kind: "calendar",
+                  completed: Boolean(isCalendarUiDone?.(row.event.id)),
+                })}
+                MetaIcon={Calendar}
+                metaText={calendarEventMetaCompact(row.event)}
+                title={row.event.summary || "(Sin título)"}
+                googleKind="calendar"
+                kindPillLabel={calendarEventFuenteLabel(row.event)}
+                statusLabel={isCalendarUiDone?.(row.event.id) ? "Listo" : "Pendiente"}
+                statusKey={isCalendarUiDone?.(row.event.id) ? "completada" : "pendiente"}
+                priorityUi={null}
+                onEdit={onOpenAgendaEdit ? () => onOpenAgendaEdit({ kind: "google-calendar", event: row.event }) : undefined}
+                calendarUiDone={Boolean(isCalendarUiDone?.(row.event.id))}
+                onToggleCalendarUiDone={
+                  toggleCalendarUiDone ? () => toggleCalendarUiDone(row.event.id) : undefined
+                }
+                onDelete={
+                  onDeleteCalendarEvent
+                    ? async () => {
+                        if (!confirm("¿Eliminar este evento en Google Calendar?")) return
+                        setBusyDel(`e-${row.event.id}`)
+                        try {
+                          await onDeleteCalendarEvent(row.event.id)
+                        } finally {
+                          setBusyDel(null)
+                        }
+                      }
+                    : undefined
+                }
+                deleteBusy={busyDel === `e-${row.event.id}`}
+              />
             )}
-            onMoveTomorrow={
-              onGoogleReminderPatch
-                ? () =>
-                    void (async () => {
-                      const r = row.reminder
-                      const y = localDateKeyFromIso(r.due) ?? ""
-                      if (!y) return
-                      setBusyDel(`mv-r-${r.id}`)
-                      try {
-                        await onGoogleReminderPatch(r.id, {
-                          due: `${addDaysToYmd(y, 1)}T12:00:00.000Z`,
-                        })
-                      } finally {
-                        setBusyDel(null)
-                      }
-                    })()
-                : undefined
-            }
-            onMoveAfterTomorrow={
-              onGoogleReminderPatch
-                ? () =>
-                    void (async () => {
-                      const r = row.reminder
-                      const y = localDateKeyFromIso(r.due) ?? ""
-                      if (!y) return
-                      setBusyDel(`mv-r-${r.id}`)
-                      try {
-                        await onGoogleReminderPatch(r.id, {
-                          due: `${addDaysToYmd(y, 2)}T12:00:00.000Z`,
-                        })
-                      } finally {
-                        setBusyDel(null)
-                      }
-                    })()
-                : undefined
-            }
-            moveDueBusy={busyDel === `mv-r-${row.reminder.id}`}
-            onDelete={
-              onDeleteGoogleTask
-                ? async () => {
-                    if (!confirm("¿Eliminar esta tarea/recordatorio en Google Tasks?")) return
-                    setBusyDel(`r-${row.reminder.id}`)
-                    try {
-                      await onDeleteGoogleTask(row.reminder.id)
-                    } finally {
-                      setBusyDel(null)
-                    }
-                  }
-                : undefined
-            }
-            deleteBusy={busyDel === `r-${row.reminder.id}`}
-          />
-        ) : (
-          <AgendaReadonlyUnifiedCard
-            key={`e-${row.event.id}`}
-            variant="list"
-            shell={googleAgendaCardShell({
-              kind: "calendar",
-              completed: Boolean(isCalendarUiDone?.(row.event.id)),
-            })}
-            MetaIcon={Calendar}
-            metaText={calendarEventMetaCompact(row.event)}
-            title={row.event.summary || "(Sin título)"}
-            googleKind="calendar"
-            kindPillLabel={calendarEventFuenteLabel(row.event)}
-            statusLabel={isCalendarUiDone?.(row.event.id) ? "Listo" : "Pendiente"}
-            statusKey={isCalendarUiDone?.(row.event.id) ? "completada" : "pendiente"}
-            priorityUi={null}
-            onEdit={onOpenAgendaEdit ? () => onOpenAgendaEdit({ kind: "google-calendar", event: row.event }) : undefined}
-            calendarUiDone={Boolean(isCalendarUiDone?.(row.event.id))}
-            onToggleCalendarUiDone={
-              toggleCalendarUiDone ? () => toggleCalendarUiDone(row.event.id) : undefined
-            }
-            onDelete={
-              onDeleteCalendarEvent
-                ? async () => {
-                    if (!confirm("¿Eliminar este evento en Google Calendar?")) return
-                    setBusyDel(`e-${row.event.id}`)
-                    try {
-                      await onDeleteCalendarEvent(row.event.id)
-                    } finally {
-                      setBusyDel(null)
-                    }
-                  }
-                : undefined
-            }
-            deleteBusy={busyDel === `e-${row.event.id}`}
-          />
+          </Fragment>
         )
-      )}
+      })}
     </div>
   )
 }

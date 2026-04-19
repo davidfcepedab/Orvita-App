@@ -3,13 +3,23 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
 import { isAppMockMode } from "@/lib/checkins/flags"
 import type {
+  CriticalDecision,
+  DayAgendaBlock,
   FlowColor,
+  HabitTrend,
   OrbitaAlert,
   OrbitaHomeModel,
   PredictivePoint,
   SmartAction,
 } from "@/app/home/_lib/orbita-home-types"
 import { getOrbitaHomeMock } from "@/app/home/_lib/orbita-home-mock"
+import { agendaTodayYmd, formatLocalDateKey } from "@/lib/agenda/localDateKey"
+import { getAgendaDisplayTimeZone } from "@/lib/agenda/agendaTimeZone"
+import { computeFinanceMonthState } from "@/lib/finanzas/computeFinanceMonthState"
+import { monthBounds } from "@/lib/finanzas/monthRange"
+import { getHouseholdId } from "@/lib/households/getHouseholdId"
+import { getTransactionsByRange } from "@/lib/services/finanzasService"
+import type { SupabaseClient } from "@supabase/supabase-js"
 
 export const runtime = "nodejs"
 
@@ -105,6 +115,97 @@ type SmartActionStateRow = {
   status: "active" | "done" | "scheduled" | "ignored"
 }
 
+type TaskRowLite = {
+  id: string
+  title?: string | null
+  completed?: boolean | null
+  created_at?: string | null
+}
+
+type HabitRowLite = {
+  id: string
+  name?: string | null
+  completed?: boolean | null
+}
+
+function spanishWeekdayToLetter(normalizedShort: string): string {
+  const s = normalizedShort.slice(0, 3)
+  if (s.startsWith("lun")) return "L"
+  if (s.startsWith("mar")) return "M"
+  if (s.startsWith("mie")) return "X"
+  if (s.startsWith("jue")) return "J"
+  if (s.startsWith("vie")) return "V"
+  if (s.startsWith("sab")) return "S"
+  if (s.startsWith("dom")) return "D"
+  return "·"
+}
+
+/** Siete días civiles consecutivos (zona de agenda), de más antiguo a hoy. */
+function last7DaysCivil(anchorYmd: string): { ymd: string; letter: string }[] {
+  const tz = getAgendaDisplayTimeZone()
+  const y = Number(anchorYmd.slice(0, 4))
+  const mo = Number(anchorYmd.slice(5, 7)) - 1
+  const da = Number(anchorYmd.slice(8, 10))
+  const out: { ymd: string; letter: string }[] = []
+  for (let delta = -6; delta <= 0; delta++) {
+    const utcNoon = new Date(Date.UTC(y, mo, da + delta, 12, 0, 0))
+    const ymd = formatLocalDateKey(utcNoon)
+    const letterRaw = new Intl.DateTimeFormat("es-CO", { timeZone: tz, weekday: "short" }).format(utcNoon)
+    const norm = letterRaw
+      .normalize("NFD")
+      .replace(/\p{Diacritic}/gu, "")
+      .toLowerCase()
+    out.push({ ymd, letter: spanishWeekdayToLetter(norm) })
+  }
+  return out
+}
+
+function widgetsFromOperationalTasks(taskRows: TaskRowLite[]): {
+  decisions: CriticalDecision[]
+  agendaToday: DayAgendaBlock[]
+} {
+  const sorted = [...taskRows].sort((a, b) => {
+    const ta = Date.parse(String(a.created_at ?? "")) || 0
+    const tb = Date.parse(String(b.created_at ?? "")) || 0
+    return tb - ta
+  })
+  const open = sorted.filter((t) => !Boolean(t.completed))
+  const decisions: CriticalDecision[] = open.slice(0, 3).map((t, i) => ({
+    id: `task-dec-${t.id}`,
+    title: (t.title ?? "Tarea sin título").trim() || "Tarea sin título",
+    deadline: "Cola operativa",
+    pressure: i === 0 ? ("alta" as const) : ("media" as const),
+  }))
+  const agendaToday: DayAgendaBlock[] = open.slice(0, 4).map((t) => ({
+    id: `task-agenda-${t.id}`,
+    time: "Sin hora · prioriza hoy",
+    title: (t.title ?? "Bloque operativo").trim() || "Bloque operativo",
+    energyWindow: "media" as const,
+  }))
+  return { decisions, agendaToday }
+}
+
+async function loadNetMonthlyCOP(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<number | null> {
+  try {
+    const householdId = await getHouseholdId(supabase, userId)
+    if (!householdId) return null
+    const month = agendaTodayYmd().slice(0, 7)
+    const b = monthBounds(month)
+    if (!b) return null
+    const rows = await getTransactionsByRange(supabase, b.prevStartStr, b.endStr)
+    const currentRows = rows.filter((r) => r.date >= b.startStr && r.date <= b.endStr)
+    const previousRows = rows.filter((r) => r.date >= b.prevStartStr && r.date <= b.prevEndStr)
+    const state = await computeFinanceMonthState(supabase, householdId, month, currentRows, previousRows)
+    return state.overview.net
+  } catch (e) {
+    console.warn("ORB_HOME finance snapshot", e)
+    return null
+  }
+}
+
 export async function GET(req: NextRequest) {
   try {
     const now = new Date()
@@ -139,36 +240,38 @@ export async function GET(req: NextRequest) {
     }
     const { supabase, userId } = auth
 
-    const [{ data: userRes }, checkinRes, tasksRes, habitsRes, alertStatesRes, smartStatesRes] = await Promise.all([
-      supabase.auth.getUser(),
-      supabase
-        .from("checkins")
-        .select("score_global,created_at")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-      supabase
-        .from("operational_tasks")
-        .select("id,completed,domain,created_at")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(120),
-      supabase
-        .from("operational_habits")
-        .select("id,completed,domain,created_at")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(80),
-      supabase
-        .from("orbita_home_alert_states")
-        .select("alert_id,status")
-        .eq("user_id", userId),
-      supabase
-        .from("orbita_home_smart_action_states")
-        .select("smart_action_id,status")
-        .eq("user_id", userId),
-    ])
+    const [{ data: userRes }, checkinRes, tasksRes, habitsRes, alertStatesRes, smartStatesRes, netMonthlyCOP] =
+      await Promise.all([
+        supabase.auth.getUser(),
+        supabase
+          .from("checkins")
+          .select("score_global,created_at")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from("operational_tasks")
+          .select("id,title,completed,domain,created_at")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(120),
+        supabase
+          .from("operational_habits")
+          .select("id,name,completed,domain,created_at")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(80),
+        supabase
+          .from("orbita_home_alert_states")
+          .select("alert_id,status")
+          .eq("user_id", userId),
+        supabase
+          .from("orbita_home_smart_action_states")
+          .select("smart_action_id,status")
+          .eq("user_id", userId),
+        loadNetMonthlyCOP(supabase, userId),
+      ])
 
     const rawName =
       userRes?.user?.user_metadata?.full_name ??
@@ -178,10 +281,45 @@ export async function GET(req: NextRequest) {
     const firstName = firstNameFromMetadata(rawName) ?? "Usuario"
 
     const latestCheckinScore = Number((checkinRes.data as { score_global?: unknown } | null)?.score_global ?? 0)
-    const completedTasks = (tasksRes.data ?? []).filter((t) => Boolean((t as { completed?: boolean }).completed)).length
-    const openTasks = (tasksRes.data ?? []).length - completedTasks
-    const completedHabits = (habitsRes.data ?? []).filter((h) => Boolean((h as { completed?: boolean }).completed))
-      .length
+    const taskRows = (tasksRes.data ?? []) as TaskRowLite[]
+    const habitRows = (habitsRes.data ?? []) as HabitRowLite[]
+    const completedTasks = taskRows.filter((t) => Boolean(t.completed)).length
+    const openTasks = taskRows.length - completedTasks
+    const completedHabits = habitRows.filter((h) => Boolean(h.completed)).length
+
+    const anchorYmd = agendaTodayYmd()
+    const weekDays = last7DaysCivil(anchorYmd)
+    const fromYmd = weekDays[0]?.ymd ?? anchorYmd
+    const toYmd = weekDays[weekDays.length - 1]?.ymd ?? anchorYmd
+    const habitsForWidget = habitRows.slice(0, 8).filter((h) => (h.name ?? "").trim().length > 0).slice(0, 3)
+    const habitIdsForCompletions = habitsForWidget.map((h) => h.id)
+
+    let completionPairs = new Set<string>()
+    if (habitIdsForCompletions.length > 0) {
+      const { data: hcRows, error: hcErr } = await supabase
+        .from("habit_completions")
+        .select("habit_id,completed_on")
+        .eq("user_id", userId)
+        .in("habit_id", habitIdsForCompletions)
+        .gte("completed_on", fromYmd)
+        .lte("completed_on", toYmd)
+      if (!hcErr && hcRows) {
+        completionPairs = new Set(
+          (hcRows as { habit_id: string; completed_on: string }[]).map((r) => `${r.habit_id}|${r.completed_on}`),
+        )
+      }
+    }
+
+    const habitsWidget: HabitTrend[] = habitsForWidget.map((h) => ({
+      id: h.id,
+      name: (h.name ?? "Hábito").trim() || "Hábito",
+      week: weekDays.map((d) => ({
+        day: d.letter,
+        score: completionPairs.has(`${h.id}|${d.ymd}`) ? 100 : 0,
+      })),
+    }))
+
+    const { decisions: decisionsWidget, agendaToday: agendaWidget } = widgetsFromOperationalTasks(taskRows)
 
     const points30d = genPredictive30d(now)
     const baseScore = points30d[0]?.flowScore ?? 62
@@ -292,7 +430,8 @@ export async function GET(req: NextRequest) {
           burnoutRiskPct: Math.max(5, Math.min(95, 55 + Math.min(18, openTasks) * 1.1 - Math.max(0, score - 70) * 0.4)),
         },
         money: {
-          netMonthlyCOP: -1450000,
+          netMonthlyCOP:
+            netMonthlyCOP != null && Number.isFinite(netMonthlyCOP) ? Math.round(netMonthlyCOP) : 0,
           runwayDays: Math.max(7, Math.min(90, 30 - Math.min(18, openTasks))),
           financialPressurePct: Math.max(10, Math.min(95, 55 + Math.min(18, openTasks) * 1.2)),
         },
@@ -327,44 +466,9 @@ export async function GET(req: NextRequest) {
       },
       smartActions: smartActions.filter((a) => !hiddenSmartActions.has(a.id)),
       widgets: {
-        decisions: [
-          { id: "d-1", title: "Elegir 1 cierre visible hoy", deadline: "Hoy 17:00", pressure: "alta" },
-          { id: "d-2", title: "Definir límite de reuniones (1 regla)", deadline: "Mañana 12:00", pressure: "media" },
-          { id: "d-3", title: "Elegir 1 métrica de progreso (90D)", deadline: "Sáb 09:00", pressure: "media" },
-        ],
-        agendaToday: [
-          { id: "b-1", time: "08:30–10:00", title: "Trabajo profundo: cierre #1", energyWindow: "alta" },
-          { id: "b-2", time: "10:30–11:15", title: "Sincronización corta", energyWindow: "media" },
-          { id: "b-3", time: "15:00–15:30", title: "Cierre administrativo", energyWindow: "media" },
-        ],
-        habits: [
-          {
-            id: "h-1",
-            name: "Sueño (consistencia)",
-            week: [
-              { day: "L", score: 78 },
-              { day: "M", score: 71 },
-              { day: "X", score: 66 },
-              { day: "J", score: 62 },
-              { day: "V", score: 59 },
-              { day: "S", score: 64 },
-              { day: "D", score: 67 },
-            ],
-          },
-          {
-            id: "h-2",
-            name: "Movimiento (mínimo viable)",
-            week: [
-              { day: "L", score: 55 },
-              { day: "M", score: 62 },
-              { day: "X", score: 58 },
-              { day: "J", score: 45 },
-              { day: "V", score: 52 },
-              { day: "S", score: 70 },
-              { day: "D", score: 63 },
-            ],
-          },
-        ],
+        decisions: decisionsWidget,
+        agendaToday: agendaWidget,
+        habits: habitsWidget,
       },
     }
 

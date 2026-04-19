@@ -32,9 +32,9 @@ export function StrategicHeader({ model, onGenerateAi, isGenerating }: Strategic
   } as const
 
   return (
-    <div className="sticky top-0 z-20 -mx-4 bg-transparent px-4 pt-4 pb-3">
-      <div className="mx-auto max-w-6xl">
-        <div className="flex items-start justify-between gap-4">
+    <div className="sticky top-0 z-20 bg-transparent pt-4 pb-3">
+      <div className="mx-auto max-w-6xl px-4">
+        <div className="flex min-w-0 items-start justify-between gap-4">
           <div className="min-w-0">
             <p
               className="m-0 text-sm leading-snug text-orbita-secondary sm:text-[15px]"

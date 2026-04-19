@@ -176,7 +176,7 @@ export default function HomePage() {
 
       {model ? <StrategicHeader model={model} onGenerateAi={generateAiAnalysis} isGenerating={isGenerating} /> : null}
 
-      <main className="space-y-10 pb-20 pt-6">
+      <main className="min-w-0 space-y-10 pb-20 pt-6">
         {isLoading && !model ? (
           <section className="mx-auto max-w-6xl px-4">
             <div className="rounded-2xl border border-white/10 bg-orbita-surface p-4 text-sm text-[var(--color-text-secondary)]">

@@ -1,8 +1,126 @@
 "use client"
 
 import clsx from "clsx"
-import { DollarSign, HeartPulse, Home, Settings, SlidersHorizontal } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
+import { Activity, Calendar, Dumbbell, Home, Target } from "lucide-react"
+import type { ReactNode } from "react"
 import { usePathname, useRouter } from "next/navigation"
+
+type TabDef = {
+  name: string
+  /** Etiqueta opcional con salto suave (p. ej. «Entrenamiento» en pantallas estrechas). */
+  label?: ReactNode
+  route: string
+  icon: LucideIcon
+  accent: string
+  match: (pathname: string) => boolean
+  /** Inicio: anclaje visual al centro de la barra. */
+  placement: "left" | "center" | "right"
+}
+
+const TABS: TabDef[] = [
+  {
+    name: "Hábitos",
+    route: "/habitos",
+    icon: Activity,
+    accent: "var(--accent-health-strong)",
+    match: (p) => p === "/habitos" || p.startsWith("/habitos/"),
+    placement: "left",
+  },
+  {
+    name: "Entrenamiento",
+    label: (
+      <>
+        Entren
+        <wbr />
+        miento
+      </>
+    ),
+    route: "/training",
+    icon: Dumbbell,
+    accent: "var(--color-accent-primary)",
+    match: (p) => p === "/training" || p.startsWith("/training/"),
+    placement: "left",
+  },
+  {
+    name: "Inicio",
+    route: "/",
+    icon: Home,
+    accent: "var(--color-text-primary)",
+    match: (p) => p === "/",
+    placement: "center",
+  },
+  {
+    name: "Hoy",
+    route: "/hoy",
+    icon: Target,
+    accent: "var(--color-accent-primary)",
+    match: (p) => p === "/hoy" || p.startsWith("/hoy/"),
+    placement: "right",
+  },
+  {
+    name: "Agenda",
+    route: "/agenda",
+    icon: Calendar,
+    accent: "var(--accent-agenda-strong)",
+    match: (p) => p === "/agenda" || p.startsWith("/agenda/"),
+    placement: "right",
+  },
+]
+
+function NavButton({
+  tab,
+  active,
+  onNavigate,
+}: {
+  tab: TabDef
+  active: boolean
+  onNavigate: () => void
+}) {
+  const Icon = tab.icon
+  const isCenter = tab.placement === "center"
+
+  return (
+    <button
+      type="button"
+      onClick={onNavigate}
+      className={clsx(
+        "orbita-focus-ring flex min-h-[48px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-[var(--radius-card)] px-0.5 transition-[color,background-color,box-shadow,transform] active:opacity-90 sm:min-h-[52px] sm:gap-1",
+        isCenter
+          ? "max-w-[5.75rem] shrink-0 flex-none basis-[5.25rem] sm:max-w-[6.5rem] sm:basis-[5.75rem]"
+          : "min-w-0",
+        active ? "orbita-chrome-tab-active" : "orbita-chrome-tab-idle",
+        isCenter &&
+          !active &&
+          "border border-[color-mix(in_srgb,var(--color-border)_70%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_55%,transparent)] shadow-[inset_0_1px_0_color-mix(in_srgb,var(--color-text-primary)_6%,transparent)]",
+        isCenter && active && "shadow-[0_-2px_14px_color-mix(in_srgb,var(--color-text-primary)_10%,transparent)]",
+      )}
+      style={{
+        color: active ? tab.accent : undefined,
+      }}
+      aria-current={active ? "page" : undefined}
+    >
+      <Icon
+        className={clsx(
+          "shrink-0",
+          isCenter ? "h-[21px] w-[21px] sm:h-[22px] sm:w-[22px]" : "h-[20px] w-[20px] sm:h-[19px] sm:w-[19px]",
+        )}
+        strokeWidth={active ? 2.4 : 2}
+        aria-hidden
+      />
+      <span
+        className={clsx(
+          "w-full text-balance text-center leading-[1.15] tracking-tight",
+          isCenter ? "text-[11px] font-semibold sm:text-xs" : "text-[9px] font-medium sm:text-[11px]",
+          active && !isCenter && "font-semibold",
+          !isCenter && "line-clamp-2 min-h-[2lh] max-w-full break-words",
+        )}
+      >
+        {tab.label ?? tab.name}
+      </span>
+    </button>
+  )
+}
 
 export default function BottomNav() {
   const pathname = usePathname()
@@ -12,55 +130,45 @@ export default function BottomNav() {
     return null
   }
 
-  const tabs = [
-    { name: "Inicio", route: "/", icon: Home, accent: "var(--color-text-primary)" },
-    { name: "Salud", route: "/health", icon: HeartPulse, accent: "var(--accent-health-strong)" },
-    { name: "Capital", route: "/finanzas/overview", icon: DollarSign, accent: "var(--accent-finance-strong)" },
-    { name: "Decisión", route: "/decision", icon: SlidersHorizontal, accent: "var(--accent-warning)" },
-    { name: "Config", route: "/configuracion", icon: Settings, accent: "var(--accent-warning)" },
-  ]
+  const left = TABS.filter((t) => t.placement === "left")
+  const center = TABS.find((t) => t.placement === "center")!
+  const right = TABS.filter((t) => t.placement === "right")
 
   return (
     <nav
       className="orbita-chrome-surface fixed bottom-0 left-0 right-0 z-[100] border-t border-[color-mix(in_srgb,var(--color-border)_85%,transparent)] pb-[env(safe-area-inset-bottom,0px)] shadow-nav"
       aria-label="Navegación principal"
     >
-      <div className="orbita-bottom-nav-safe mx-auto grid max-w-[1400px] grid-cols-5 gap-0.5 px-1 py-2 text-center text-[11px] leading-tight sm:gap-1 sm:px-3 sm:py-3 sm:text-xs sm:leading-normal">
-        {tabs.map((tab) => {
-          const Icon = tab.icon
-          const saludActive =
-            pathname === "/health" ||
-            pathname === "/fisico" ||
-            pathname === "/salud" ||
-            pathname.startsWith("/salud/")
-          const active =
-            pathname === tab.route ||
-            (tab.route === "/health" && saludActive) ||
-            (tab.route === "/finanzas/overview" && pathname.startsWith("/finanzas"))
+      <div className="orbita-bottom-nav-safe mx-auto flex max-w-[1400px] items-stretch justify-between gap-1 px-1 py-2 sm:gap-2 sm:px-3 sm:py-3">
+        <div className="flex min-w-0 flex-1 justify-end gap-0.5 sm:gap-1">
+          {left.map((tab) => (
+            <NavButton
+              key={tab.route}
+              tab={tab}
+              active={tab.match(pathname)}
+              onNavigate={() => router.push(tab.route)}
+            />
+          ))}
+        </div>
 
-          return (
-            <button
-              key={tab.name}
-              onClick={() => router.push(tab.route)}
-              type="button"
-              className={clsx(
-                "orbita-focus-ring flex min-h-[48px] flex-col items-center justify-center gap-0.5 rounded-[var(--radius-card)] transition-[color,background-color,box-shadow] active:opacity-90 sm:min-h-[52px] sm:gap-1",
-                active ? "orbita-chrome-tab-active" : "orbita-chrome-tab-idle",
-              )}
-              style={{
-                color: active ? tab.accent : undefined,
-              }}
-              aria-current={active ? "page" : undefined}
-            >
-              <Icon
-                className="h-[20px] w-[20px] sm:h-[19px] sm:w-[19px]"
-                strokeWidth={active ? 2.4 : 2}
-                aria-hidden
-              />
-              <span className={active ? "font-semibold" : "font-medium"}>{tab.name}</span>
-            </button>
-          )
-        })}
+        <div className="flex shrink-0 items-stretch justify-center px-0.5 sm:px-1">
+          <NavButton
+            tab={center}
+            active={center.match(pathname)}
+            onNavigate={() => router.push(center.route)}
+          />
+        </div>
+
+        <div className="flex min-w-0 flex-1 justify-start gap-0.5 sm:gap-1">
+          {right.map((tab) => (
+            <NavButton
+              key={tab.route}
+              tab={tab}
+              active={tab.match(pathname)}
+              onNavigate={() => router.push(tab.route)}
+            />
+          ))}
+        </div>
       </div>
     </nav>
   )
