@@ -10,6 +10,8 @@ import {
   Circle,
   Clock,
   Flame,
+  LayoutGrid,
+  List,
   Loader2,
   Moon,
   Plus,
@@ -53,6 +55,8 @@ const METRIC_LABELS: Record<HabitSuccessMetricType, string> = {
   cantidad: "Cantidad",
   si_no: "Sí / no",
 }
+
+type HabitsShellView = "resumen" | "stack"
 
 const STACK_BLOCK_META: Record<
   HabitTimeBlockId,
@@ -217,6 +221,7 @@ export default function HabitosPage() {
     deleteHabit,
   } = useHabits()
 
+  const [shellView, setShellView] = useState<HabitsShellView>("stack")
   const [formOpen, setFormOpen] = useState(false)
   const [backfillOpen, setBackfillOpen] = useState(false)
   const [backfillDate, setBackfillDate] = useState(() => addDaysIso(utcTodayIso(), -1))
@@ -245,6 +250,13 @@ export default function HabitosPage() {
     () => buildHabitConsistencyInsight(habits, summary),
     [habits, summary],
   )
+
+  /** Roster para resumen: primero los que más necesitan atención (menor % 30d). */
+  const rosterByAdherence = useMemo(() => {
+    return [...habits].sort(
+      (a, b) => a.metrics.completion_rate_30d - b.metrics.completion_rate_30d || a.name.localeCompare(b.name, "es"),
+    )
+  }, [habits])
   const consistencyTierUi = HABIT_CONSISTENCY_TIER_PRESENTATION[consistencyInsight.tier]
   const consistencyMomentumPct =
     habits.length === 0 ? 0 : Math.min(100, Math.max(0, summary.consistency_30d))
@@ -389,6 +401,50 @@ export default function HabitosPage() {
         </button>
       </header>
 
+      <div
+        className="flex min-w-0 flex-col gap-2 rounded-xl border border-[color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_40%,var(--color-surface))] p-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:p-1.5"
+        role="tablist"
+        aria-label="Vista de hábitos: resumen o stack"
+      >
+        <div className="grid min-w-0 grid-cols-2 gap-1 sm:flex sm:flex-1 sm:gap-1">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={shellView === "resumen"}
+            onClick={() => setShellView("resumen")}
+            className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-2 text-[11px] font-semibold uppercase tracking-[0.1em] transition-colors sm:min-h-9 sm:flex-1 sm:px-3 sm:text-xs ${
+              shellView === "resumen"
+                ? "bg-[var(--color-surface)] text-[var(--color-text-primary)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--color-border)_70%,transparent),0_1px_3px_rgba(15,23,42,0.06)]"
+                : "bg-transparent text-[var(--color-text-secondary)] hover:bg-[color-mix(in_srgb,var(--color-surface)_65%,transparent)]"
+            }`}
+          >
+            <List className="h-3.5 w-3.5 shrink-0 opacity-90" aria-hidden />
+            Resumen
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={shellView === "stack"}
+            onClick={() => setShellView("stack")}
+            className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-2 text-[11px] font-semibold uppercase tracking-[0.1em] transition-colors sm:min-h-9 sm:flex-1 sm:px-3 sm:text-xs ${
+              shellView === "stack"
+                ? "bg-[var(--color-surface)] text-[var(--color-text-primary)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--color-border)_70%,transparent),0_1px_3px_rgba(15,23,42,0.06)]"
+                : "bg-transparent text-[var(--color-text-secondary)] hover:bg-[color-mix(in_srgb,var(--color-surface)_65%,transparent)]"
+            }`}
+          >
+            <LayoutGrid className="h-3.5 w-3.5 shrink-0 opacity-90" aria-hidden />
+            Stack
+          </button>
+        </div>
+        <p className="m-0 px-2 pb-1 text-center text-[10px] leading-snug text-[var(--color-text-secondary)] sm:pb-0 sm:text-left sm:text-[11px]">
+          {shellView === "resumen"
+            ? "Métricas, briefing y roster. Cambia a Stack para marcar y editar por momento del día."
+            : "Acciones por mañana / tarde / noche. Resumen agrupa KPIs y lectura de consistencia."}
+        </p>
+      </div>
+
+      {shellView === "resumen" ? (
+        <>
       <div className="grid min-w-0 grid-cols-1 gap-[var(--layout-gap)] sm:grid-cols-2 md:grid-cols-3">
         <Card hover className="min-w-0">
           <div style={{ padding: "var(--spacing-md)", display: "grid", gap: "6px" }}>
@@ -545,6 +601,76 @@ export default function HabitosPage() {
         </div>
       </Card>
 
+      <Card hover className="min-w-0 overflow-hidden">
+        <div className="border-b border-[color-mix(in_srgb,var(--color-border)_65%,transparent)] px-4 py-3 sm:px-5 sm:py-3.5">
+          <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
+            Roster · adherencia 30d
+          </p>
+          <p className="m-0 mt-1 max-w-prose text-[12px] leading-snug text-[var(--color-text-secondary)] sm:text-[13px]">
+            Ordenados del menor al mayor % de cumplimiento en la ventana de 30 días. Usa Stack para marcar «hecho hoy».
+          </p>
+        </div>
+        <div className="overflow-x-auto px-2 pb-4 pt-2 sm:px-3 sm:pb-5">
+          {rosterByAdherence.length === 0 ? (
+            <p className="m-0 px-2 py-6 text-center text-[12px] text-[var(--color-text-secondary)] sm:px-4">
+              Aún no hay hábitos. Crea el primero con «Nuevo hábito» y vuelve a este resumen.
+            </p>
+          ) : (
+            <table className="w-full min-w-[280px] border-collapse text-left text-[12px] text-[var(--color-text-primary)] sm:text-[13px]">
+              <thead>
+                <tr className="border-b border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] text-[10px] uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
+                  <th className="py-2 pl-2 pr-2 font-semibold sm:pl-3">Hábito</th>
+                  <th className="px-2 py-2 text-right font-semibold tabular-nums">30d</th>
+                  <th className="px-2 py-2 text-right font-semibold tabular-nums">Racha</th>
+                  <th className="px-2 py-2 text-center font-semibold">Hoy</th>
+                  <th className="py-2 pl-2 pr-3 text-right font-semibold sm:pr-4">Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rosterByAdherence.map((h) => (
+                  <tr
+                    key={h.id}
+                    className="border-b border-[color-mix(in_srgb,var(--color-border)_35%,transparent)] last:border-b-0"
+                  >
+                    <td className="max-w-[10rem] py-2.5 pl-2 pr-2 align-middle sm:max-w-none sm:pl-3">
+                      <span className="line-clamp-2 font-medium leading-snug">{h.name}</span>
+                      <span className="mt-0.5 block text-[10px] font-normal text-[var(--color-text-secondary)]">
+                        {DOMAIN_LABELS[h.domain] ?? h.domain}
+                      </span>
+                    </td>
+                    <td className="px-2 py-2.5 text-right align-middle tabular-nums text-[var(--color-text-primary)]">
+                      {h.metrics.completion_rate_30d}%
+                    </td>
+                    <td className="px-2 py-2.5 text-right align-middle tabular-nums text-[var(--color-text-secondary)]">
+                      {h.metrics.current_streak}
+                    </td>
+                    <td className="px-2 py-2.5 text-center align-middle">
+                      {h.metrics.completed_today ? (
+                        <CheckCircle2 className="mx-auto h-4 w-4 text-[var(--color-accent-health)]" aria-label="Hecho hoy" />
+                      ) : (
+                        <Circle className="mx-auto h-4 w-4 text-[var(--color-text-secondary)]" aria-label="Pendiente hoy" />
+                      )}
+                    </td>
+                    <td className="py-2.5 pl-2 pr-2 text-right align-middle sm:pr-4">
+                      {h.metrics.at_risk ? (
+                        <span className="inline-flex rounded-full border border-[color-mix(in_srgb,var(--color-accent-danger)_40%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-danger)_10%,transparent)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-accent-danger)]">
+                          Riesgo
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-[var(--color-text-secondary)]">OK</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </Card>
+        </>
+      ) : null}
+
+      {shellView === "stack" ? (
       <div style={{ display: "grid", gap: "var(--spacing-md)" }}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <p className="m-0 shrink-0 text-[12px] uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
@@ -954,6 +1080,7 @@ export default function HabitosPage() {
             )
           })}
       </div>
+      ) : null}
 
       <HabitFormModal
         open={formOpen}
