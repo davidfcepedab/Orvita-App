@@ -261,7 +261,7 @@ export function HabitFormModal({
               {form.isWaterTracking ? (
                 <div className="space-y-4">
                   <p className="text-xs text-[var(--color-text-secondary)]">
-                    Seguimiento de agua: la meta y el tamaño de botellita definen el progreso y el botón «+1 botellita» en el stack.
+                    Personalizá capacidad de botellita, meta diaria y vaso extra. El progreso, la racha y el riesgo de ruptura usan la meta en ml; «+1 Botellita» suma siempre la capacidad que indiques abajo.
                   </p>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
@@ -283,7 +283,7 @@ export function HabitFormModal({
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="water-goal-ml">Meta diaria (ml)</Label>
+                      <Label htmlFor="water-goal-ml">Meta diaria de agua (ml)</Label>
                       <Input
                         id="water-goal-ml"
                         type="number"
@@ -292,11 +292,15 @@ export function HabitFormModal({
                         inputMode="numeric"
                         value={form.waterGoalMl}
                         onChange={(e) => setForm((p) => ({ ...p, waterGoalMl: e.target.value }))}
+                        aria-describedby="water-goal-hint"
                       />
+                      <p id="water-goal-hint" className="text-[10px] leading-snug text-[var(--color-text-secondary)]">
+                        Editá el valor a mano o usá «Calcular según mi perfil» con tu peso (fórmula: kg × 32 ml).
+                      </p>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="water-body-kg">Peso (kg), opcional — para sugerir meta</Label>
+                    <Label htmlFor="water-body-kg">Peso corporal (kg), opcional</Label>
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
                       <Input
                         id="water-body-kg"
@@ -309,6 +313,7 @@ export function HabitFormModal({
                         placeholder="ej. 72"
                         value={form.bodyWeightKg}
                         onChange={(e) => setForm((p) => ({ ...p, bodyWeightKg: e.target.value }))}
+                        aria-describedby="water-profile-calc-hint"
                       />
                       <button
                         type="button"
@@ -319,13 +324,17 @@ export function HabitFormModal({
                           setForm((p) => ({ ...p, waterGoalMl: String(next) }))
                         }}
                       >
-                        Calcular meta (peso × 32 ml)
+                        Calcular según mi perfil
                       </button>
                     </div>
+                    <p id="water-profile-calc-hint" className="text-[10px] leading-snug text-[var(--color-text-secondary)]">
+                      Aplica <span className="font-medium text-[var(--color-text-primary)]">peso (kg) × 32 ml</span> y
+                      rellena la meta (entre 1200 y 5000 ml sugerido; podés ajustarla después dentro de 500–8000 ml).
+                    </p>
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="water-bottle-ml">Capacidad botellita (ml)</Label>
+                      <Label htmlFor="water-bottle-ml">Capacidad de tu botellita (ml)</Label>
                       <Input
                         id="water-bottle-ml"
                         type="number"
@@ -334,7 +343,11 @@ export function HabitFormModal({
                         inputMode="numeric"
                         value={form.waterBottleMl}
                         onChange={(e) => setForm((p) => ({ ...p, waterBottleMl: e.target.value }))}
+                        aria-describedby="water-bottle-hint"
                       />
+                      <p id="water-bottle-hint" className="text-[10px] leading-snug text-[var(--color-text-secondary)]">
+                        «+1 Botellita» en la tarjeta suma <span className="font-medium tabular-nums text-[var(--color-text-primary)]">{form.waterBottleMl || "—"}</span> ml por pulsación.
+                      </p>
                       <div className="flex flex-wrap gap-1.5">
                         {([500, 750, 1000] as const).map((n) => (
                           <button
@@ -358,7 +371,11 @@ export function HabitFormModal({
                         inputMode="numeric"
                         value={form.waterGlassMl}
                         onChange={(e) => setForm((p) => ({ ...p, waterGlassMl: e.target.value }))}
+                        aria-describedby="water-glass-hint"
                       />
+                      <p id="water-glass-hint" className="text-[10px] leading-snug text-[var(--color-text-secondary)]">
+                        Por defecto 250 ml; «+ Vaso extra» suma exactamente estos ml.
+                      </p>
                     </div>
                   </div>
                 </div>

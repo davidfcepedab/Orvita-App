@@ -76,8 +76,24 @@ export function waterMlForDay(rows: CompletionRowLite[], dayIso: string): number
   return 0
 }
 
-/** Meta sugerida: peso (kg) × 32 ml (mínimo 1200, máximo 5000). */
+/**
+ * Meta sugerida a partir del peso: **peso (kg) × 32 ml/día**.
+ * Acotada a 1200–5000 ml (coherente con validación API 500–8000 al guardar manual).
+ */
 export function suggestedWaterGoalMlFromWeightKg(weightKg: number): number {
   if (!Number.isFinite(weightKg) || weightKg <= 0) return DEFAULT_WATER_GOAL_ML
   return Math.min(5000, Math.max(1200, Math.round(weightKg * 32)))
+}
+
+/** Equivalente en “botellitas” de capacidad `bottleMl` (decimal permitido). */
+export function equivalentBottlesDecimal(todayMl: number, bottleMl: number): number {
+  if (!Number.isFinite(todayMl) || todayMl < 0) return 0
+  if (!Number.isFinite(bottleMl) || bottleMl <= 0) return 0
+  return todayMl / bottleMl
+}
+
+/** Formato legible de ml en es (p. ej. 2400 → "2.400"). */
+export function formatWaterMlEs(ml: number): string {
+  if (!Number.isFinite(ml)) return "0"
+  return Math.round(Math.max(0, ml)).toLocaleString("es-ES", { maximumFractionDigits: 0 })
 }

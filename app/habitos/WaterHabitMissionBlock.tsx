@@ -14,6 +14,8 @@ import type { HabitsToggleTodayResult } from "@/app/hooks/useHabits"
 import type { HabitWeekDayMark } from "@/lib/habits/habitMetrics"
 import {
   bottleMlFromHabitMetadata,
+  equivalentBottlesDecimal,
+  formatWaterMlEs,
   glassMlFromHabitMetadata,
   goalMlFromHabitMetadata,
 } from "@/lib/habits/waterTrackingHelpers"
@@ -72,13 +74,14 @@ function WaterRing({ pct, gradId }: { pct: number; gradId: string }) {
           className="motion-safe:transition-[stroke-dasharray] motion-safe:duration-700 motion-reduce:transition-none"
         />
       </svg>
-      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-1 text-center">
         <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-[color-mix(in_srgb,#22d3ee_88%,var(--color-text-primary))]">
-          Nivel
+          Progreso
         </span>
         <span className="font-black tabular-nums leading-none text-[clamp(1.75rem,6vw,2.35rem)] text-[var(--color-text-primary)]">
           {pct}%
         </span>
+        <span className="mt-0.5 text-[9px] font-medium tabular-nums text-[var(--color-text-secondary)]">del objetivo</span>
       </div>
     </div>
   )
@@ -154,10 +157,8 @@ export function WaterHabitMissionBlock({
           const glassMl = glassMlFromHabitMetadata(habit.metadata)
           const todayMl = habit.water_today_ml ?? 0
           const pct = goalMl > 0 ? Math.min(100, Math.round((todayMl / goalMl) * 100)) : 0
-          const bottlesEqStr =
-            bottleMl > 0
-              ? (todayMl / bottleMl).toLocaleString("es-ES", { maximumFractionDigits: 1 })
-              : "0"
+          const bottlesEq = equivalentBottlesDecimal(todayMl, bottleMl)
+          const bottlesEqStr = bottlesEq.toLocaleString("es-ES", { maximumFractionDigits: 1 })
           const doneToday = habit.metrics.completed_today
           const streakDays = habit.metrics.current_streak
           const weekMarks = weekMarksForHabit(habit)
@@ -210,13 +211,39 @@ export function WaterHabitMissionBlock({
                     <p className="m-0 line-clamp-2 text-[12px] leading-snug text-[var(--color-text-secondary)]">{intention}</p>
                   ) : null}
 
-                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[13px] tabular-nums">
-                    <span className="font-semibold text-[var(--color-text-primary)]">
-                      {todayMl} <span className="text-[var(--color-text-secondary)]">/</span> {goalMl} ml
-                    </span>
-                    <span className="text-[11px] text-[var(--color-text-secondary)]">
-                      ≈ {bottlesEqStr} botellitas · {pct}% del objetivo
-                    </span>
+                  <div
+                    className="rounded-xl border border-[color-mix(in_srgb,#22d3ee_22%,var(--color-border))] bg-[color-mix(in_srgb,#ecfeff_35%,var(--color-surface-alt))] p-3 dark:bg-[color-mix(in_srgb,#0c4a6e_18%,var(--color-surface-alt))]"
+                    role="status"
+                    aria-label={`Progreso de agua: ${formatWaterMlEs(todayMl)} mililitros de ${formatWaterMlEs(goalMl)}, ${pct} por ciento, equivalente a ${bottlesEqStr} botellitas de ${bottleMl} mililitros`}
+                  >
+                    <dl className="m-0 grid gap-2 text-[12px] sm:grid-cols-3 sm:gap-3">
+                      <div>
+                        <dt className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
+                          Hoy (ml)
+                        </dt>
+                        <dd className="m-0 mt-0.5 font-bold tabular-nums text-[var(--color-text-primary)] sm:text-[13px]">
+                          <span className="text-[#0891b2] dark:text-[#67e8f9]">{formatWaterMlEs(todayMl)}</span>
+                          <span className="font-normal text-[var(--color-text-secondary)]"> / </span>
+                          <span>{formatWaterMlEs(goalMl)}</span>
+                          <span className="ml-0.5 text-[11px] font-normal text-[var(--color-text-secondary)]">ml</span>
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
+                          Botellitas
+                        </dt>
+                        <dd className="m-0 mt-0.5 tabular-nums text-[var(--color-text-primary)] sm:text-[13px]">
+                          <span className="font-bold">≈ {bottlesEqStr}</span>
+                          <span className="text-[11px] text-[var(--color-text-secondary)]"> de {bottleMl} ml</span>
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
+                          Objetivo
+                        </dt>
+                        <dd className="m-0 mt-0.5 font-bold tabular-nums text-[var(--color-text-primary)] sm:text-[13px]">{pct}%</dd>
+                      </div>
+                    </dl>
                   </div>
 
                   <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
@@ -244,7 +271,7 @@ export function WaterHabitMissionBlock({
                       ) : (
                         <Droplets className="h-4 w-4 opacity-95" aria-hidden />
                       )}
-                      +1 Botellita ({bottleMl} ml)
+                      +1 Botellita (+{formatWaterMlEs(bottleMl)} ml)
                     </button>
                     <button
                       type="button"
@@ -268,7 +295,7 @@ export function WaterHabitMissionBlock({
                       {waterBusyId === habit.id ? (
                         <Loader2 className="h-4 w-4 animate-spin text-[var(--color-accent-health)]" aria-hidden />
                       ) : null}
-                      + Vaso extra ({glassMl} ml)
+                      + Vaso extra (+{formatWaterMlEs(glassMl)} ml)
                     </button>
                   </div>
 
