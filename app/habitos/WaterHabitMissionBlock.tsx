@@ -137,7 +137,7 @@ export function WaterHabitMissionBlock({
         >
           <Droplets className="h-[22px] w-[22px] text-[#0891b2] dark:text-[#67e8f9]" strokeWidth={2} />
         </div>
-        <div className="min-w-0 flex-1 space-y-1.5">
+        <div className="min-w-0 flex-1 space-y-1">
           <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
             <p
               id="water-mission-heading"
@@ -166,11 +166,21 @@ export function WaterHabitMissionBlock({
             Sumá vasos o botellitas y mirá cómo sube tu porcentaje del día. Podés ajustar tu meta cuando quieras.
           </p>
           {singleWater ? (
-            <p className="m-0 text-[12px] leading-snug text-[var(--color-text-secondary)]">
-              {headerDomain} · diario ·{" "}
-              <span className="font-medium text-[var(--color-text-primary)]">{headerStreak}</span>{" "}
-              {headerStreak === 1 ? "día de racha" : "días de racha"}
-            </p>
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-[color-mix(in_srgb,#22d3ee_18%,transparent)] pt-1.5">
+              <p className="m-0 min-w-0 flex-1 text-[12px] leading-snug text-[var(--color-text-secondary)]">
+                {headerDomain} · diario ·{" "}
+                <span className="font-medium text-[var(--color-text-primary)]">{headerStreak}</span>{" "}
+                {headerStreak === 1 ? "día de racha" : "días de racha"}
+              </p>
+              <button
+                type="button"
+                disabled={!persistenceEnabled && !mock}
+                onClick={() => onEdit(primary)}
+                className="shrink-0 rounded-md py-1 text-right text-[13px] font-medium text-[var(--color-accent-health)] underline-offset-2 hover:underline disabled:opacity-40"
+              >
+                Ajustar meta…
+              </button>
+            </div>
           ) : null}
         </div>
       </header>
@@ -204,13 +214,13 @@ export function WaterHabitMissionBlock({
               )}
             >
               {showMetaRow ? (
-                <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-                  <p className="m-0 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
+                <div className="mb-2 flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                  <p className="m-0 min-w-0 flex-1 text-[12px] leading-snug text-[var(--color-text-secondary)]">
                     {domain} · diario ·{" "}
                     <span className="font-medium text-[var(--color-text-primary)]">{streakDays}</span>{" "}
                     {streakDays === 1 ? "día de racha" : "días de racha"}
                   </p>
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
                     {doneToday ? (
                       <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--color-accent-health)_14%,var(--color-surface))] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-accent-health)] ring-1 ring-[color-mix(in_srgb,var(--color-accent-health)_25%,transparent)]">
                         <Trophy className="h-3 w-3" aria-hidden />
@@ -222,44 +232,23 @@ export function WaterHabitMissionBlock({
                         Riesgo ruptura
                       </span>
                     ) : null}
+                    <button
+                      type="button"
+                      disabled={!persistenceEnabled && !mock}
+                      onClick={() => onEdit(habit)}
+                      className="rounded-md py-1 text-[13px] font-medium text-[var(--color-accent-health)] underline-offset-2 hover:underline disabled:opacity-40"
+                    >
+                      Ajustar meta…
+                    </button>
                   </div>
                 </div>
               ) : null}
 
-              {nudge ? (
-                <p
-                  className={cn(
-                    "m-0 border-l-[3px] pl-3 text-[13px] leading-[1.45] text-[var(--color-text-secondary)]",
-                    habitIndex === 0 && singleWater ? "mt-1" : "mt-2",
-                    nudge.tone === "urgent" ? "border-l-[var(--color-accent-danger)]" : "border-l-amber-500",
-                  )}
-                  role="status"
-                >
-                  <span className="font-medium text-[var(--color-text-primary)]">{nudge.title}.</span> {nudge.body}
-                </p>
-              ) : null}
-
-              <div
-                className={cn("flex flex-wrap gap-2", nudge ? "mt-2" : habitIndex === 0 && singleWater ? "mt-1" : "mt-2")}
-                role="status"
-                aria-label={`Progreso de agua: ${formatWaterMlEs(todayMl)} de ${formatWaterMlEs(goalMl)} mililitros, ${pct} por ciento, unas ${bottlesEqStr} botellitas de ${bottleMl} ml`}
-              >
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-surface-alt)] px-3 py-1.5 text-[12px] font-medium tabular-nums text-[var(--color-text-primary)]">
-                  <Droplets className="h-3.5 w-3.5 shrink-0 text-[var(--color-accent-health)]" aria-hidden />
-                  {formatWaterMlEs(todayMl)} / {formatWaterMlEs(goalMl)} ml
-                </span>
-                <span className="inline-flex items-center rounded-full bg-[var(--color-surface-alt)] px-3 py-1.5 text-[12px] font-medium tabular-nums text-[var(--color-text-secondary)]">
-                  ≈ {bottlesEqStr} bot. · {bottleMl} ml
-                </span>
-                <span className="inline-flex items-center rounded-full bg-[color-mix(in_srgb,var(--color-accent-health)_8%,var(--color-surface-alt))] px-3 py-1.5 text-[12px] font-semibold tabular-nums text-[var(--color-accent-health)]">
-                  {pct}%
-                </span>
-              </div>
-
-              {/* Pie de tarjeta: anillo, semana, acciones */}
+              {/* 1) Pie: anillo, semana, solo botones de ml */}
               <div
                 className={cn(
-                  "mt-4 flex flex-col items-stretch gap-4 border-t border-[color-mix(in_srgb,#22d3ee_24%,var(--color-border))] pt-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6",
+                  "flex flex-col items-stretch gap-4 border-t border-[color-mix(in_srgb,#22d3ee_24%,var(--color-border))] pt-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6",
+                  showMetaRow ? "mt-2" : habitIndex === 0 && singleWater ? "mt-0 border-t-0 pt-0" : "mt-2",
                 )}
               >
                 <div className="flex shrink-0 justify-center sm:justify-start sm:pl-0.5">
@@ -341,7 +330,7 @@ export function WaterHabitMissionBlock({
                   </div>
 
                   <div className="mt-4 flex w-full min-w-0 flex-col gap-2 sm:max-w-none">
-                    <div className="flex w-full min-w-0 flex-col flex-wrap gap-2 sm:flex-row sm:items-center sm:gap-2">
+                    <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-2">
                       <button
                         type="button"
                         disabled={globalBusy || waterBusyId === habit.id || backfillingId === habit.id}
@@ -382,17 +371,40 @@ export function WaterHabitMissionBlock({
                         ) : null}
                         + Vaso (+{formatWaterMlEs(glassMl)} ml)
                       </button>
-                      <button
-                        type="button"
-                        disabled={!persistenceEnabled && !mock}
-                        onClick={() => onEdit(habit)}
-                        className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-md px-2 py-1 text-center text-[13px] font-medium text-[var(--color-accent-health)] underline-offset-2 hover:underline disabled:opacity-40 sm:min-h-0 sm:justify-end sm:py-2 sm:pl-2"
-                      >
-                        Ajustar meta…
-                      </button>
                     </div>
                   </div>
                 </div>
+              </div>
+
+              {/* 2) Nudge y 3) píldoras de progreso — debajo del pie */}
+              {nudge ? (
+                <p
+                  className={cn(
+                    "m-0 border-l-[3px] pl-3 text-[13px] leading-[1.45] text-[var(--color-text-secondary)]",
+                    "mt-3",
+                    nudge.tone === "urgent" ? "border-l-[var(--color-accent-danger)]" : "border-l-amber-500",
+                  )}
+                  role="status"
+                >
+                  <span className="font-medium text-[var(--color-text-primary)]">{nudge.title}.</span> {nudge.body}
+                </p>
+              ) : null}
+
+              <div
+                className={cn("flex flex-wrap gap-2", nudge ? "mt-2" : "mt-3")}
+                role="status"
+                aria-label={`Progreso de agua: ${formatWaterMlEs(todayMl)} de ${formatWaterMlEs(goalMl)} mililitros, ${pct} por ciento, unas ${bottlesEqStr} botellitas de ${bottleMl} ml`}
+              >
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-surface-alt)] px-3 py-1.5 text-[12px] font-medium tabular-nums text-[var(--color-text-primary)]">
+                  <Droplets className="h-3.5 w-3.5 shrink-0 text-[var(--color-accent-health)]" aria-hidden />
+                  {formatWaterMlEs(todayMl)} / {formatWaterMlEs(goalMl)} ml
+                </span>
+                <span className="inline-flex items-center rounded-full bg-[var(--color-surface-alt)] px-3 py-1.5 text-[12px] font-medium tabular-nums text-[var(--color-text-secondary)]">
+                  ≈ {bottlesEqStr} bot. · {bottleMl} ml
+                </span>
+                <span className="inline-flex items-center rounded-full bg-[color-mix(in_srgb,var(--color-accent-health)_8%,var(--color-surface-alt))] px-3 py-1.5 text-[12px] font-semibold tabular-nums text-[var(--color-accent-health)]">
+                  {pct}%
+                </span>
               </div>
             </div>
           )
