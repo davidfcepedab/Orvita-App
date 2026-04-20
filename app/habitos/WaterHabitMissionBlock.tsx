@@ -40,12 +40,16 @@ export type WaterHabitMissionBlockProps = {
 }
 
 function WaterRing({ pct, gradId }: { pct: number; gradId: string }) {
-  const r = 38
+  const r = 44
   const c = 2 * Math.PI * r
   const dash = Math.min(1, Math.max(0, pct / 100)) * c
   return (
-    <div className="relative mx-auto aspect-square w-full max-w-[7.5rem] shrink-0">
-      <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90" aria-hidden>
+    <div className="relative mx-auto aspect-square w-full max-w-[min(11.5rem,calc(100vw-6rem))] shrink-0">
+      <svg
+        viewBox="0 0 100 100"
+        className="h-full w-full -rotate-90 drop-shadow-[0_6px_22px_color-mix(in_srgb,#0891b2_22%,transparent)]"
+        aria-hidden
+      >
         <defs>
           <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#22d3ee" />
@@ -53,23 +57,25 @@ function WaterRing({ pct, gradId }: { pct: number; gradId: string }) {
             <stop offset="100%" stopColor="#0891b2" />
           </linearGradient>
         </defs>
-        <circle cx="50" cy="50" r={r} fill="none" stroke="color-mix(in srgb, var(--color-border) 45%, transparent)" strokeWidth="7" />
+        <circle cx="50" cy="50" r={r} fill="none" stroke="color-mix(in srgb, var(--color-border) 40%, transparent)" strokeWidth="9" />
         <circle
           cx="50"
           cy="50"
           r={r}
           fill="none"
           stroke={`url(#${gradId})`}
-          strokeWidth="7"
+          strokeWidth="9"
           strokeLinecap="round"
           strokeDasharray={`${dash} ${c}`}
           className="motion-safe:transition-[stroke-dasharray] motion-safe:duration-700 motion-reduce:transition-none"
         />
       </svg>
-      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-1 text-center">
-        <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-secondary)]">Hoy</span>
-        <span className="font-semibold tabular-nums leading-none text-[clamp(1.25rem,4vw,1.65rem)] text-[var(--color-text-primary)]">{pct}%</span>
-        <span className="mt-0.5 text-[9px] font-medium tabular-nums text-[var(--color-text-secondary)]">objetivo</span>
+      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-2 text-center">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[color-mix(in_srgb,#0e7490_75%,var(--color-text-secondary))] dark:text-[#a5f3fc]/90">
+          Hoy
+        </span>
+        <span className="font-bold tabular-nums leading-none text-[clamp(1.65rem,5.5vw,2.35rem)] text-[var(--color-text-primary)]">{pct}%</span>
+        <span className="mt-0.5 text-[10px] font-medium tabular-nums text-[var(--color-text-secondary)]">del objetivo</span>
       </div>
     </div>
   )
@@ -93,21 +99,34 @@ export function WaterHabitMissionBlock({
   const globalBusy = (!persistenceEnabled && !mock) || loading || backfillingAll
 
   const shellStyle: CSSProperties = {
-    boxShadow: "0 1px 0 color-mix(in srgb, var(--color-border) 80%, transparent), 0 8px 24px rgba(15, 23, 42, 0.06)",
+    background:
+      "linear-gradient(155deg, color-mix(in srgb, #0e7490 20%, var(--color-surface)) 0%, var(--color-surface) 46%, color-mix(in srgb, #0369a1 12%, var(--color-surface)) 100%)",
+    borderColor: "color-mix(in srgb, #22d3ee 38%, var(--color-border))",
+    boxShadow:
+      "0 1px 0 color-mix(in srgb, #22d3ee 25%, transparent), 0 12px 36px color-mix(in srgb, #0891b2 12%, transparent), inset 0 1px 0 color-mix(in srgb, white 10%, transparent)",
   }
 
   return (
     <section
       aria-labelledby="water-mission-heading"
       className={cn(
-        "overflow-visible rounded-[14px] border bg-[var(--color-surface)] p-4 sm:p-5",
-        "border-[color-mix(in_srgb,var(--color-border)_92%,transparent)]",
+        "relative isolate overflow-visible rounded-[14px] border-2 p-4 sm:p-5",
+        "border-[color-mix(in_srgb,#22d3ee_38%,var(--color-border))]",
       )}
       style={shellStyle}
     >
-      <header className="flex gap-3 border-b border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] pb-4">
+      <div
+        className="pointer-events-none absolute -right-10 -top-14 h-36 w-36 rounded-full bg-[radial-gradient(circle,color-mix(in_srgb,#22d3ee_18%,transparent)_0%,transparent_72%)]"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-[radial-gradient(circle,color-mix(in_srgb,#06b6d4_14%,transparent)_0%,transparent_75%)]"
+        aria-hidden
+      />
+
+      <header className="relative flex gap-3 border-b border-[color-mix(in_srgb,#22d3ee_28%,var(--color-border))] pb-4">
         <div
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-[color-mix(in_srgb,#22d3ee_12%,var(--color-surface-alt))]"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-[color-mix(in_srgb,#22d3ee_22%,transparent)] ring-1 ring-[color-mix(in_srgb,#22d3ee_30%,transparent)]"
           aria-hidden
         >
           <Droplets className="h-[22px] w-[22px] text-[#0891b2] dark:text-[#67e8f9]" strokeWidth={2} />
@@ -115,13 +134,13 @@ export function WaterHabitMissionBlock({
         <div className="min-w-0 flex-1">
           <p
             id="water-mission-heading"
-            className="m-0 flex flex-wrap items-center gap-2 text-[13px] font-semibold leading-tight tracking-[-0.01em] text-[var(--color-text-primary)]"
+            className="m-0 flex flex-wrap items-center gap-2 text-[15px] font-semibold leading-tight tracking-[-0.02em] text-[var(--color-text-primary)]"
           >
-            <span className="uppercase tracking-[0.06em] text-[11px] text-[var(--color-text-secondary)]">Hidratación</span>
-            <Sparkles className="h-3.5 w-3.5 text-amber-500" strokeWidth={2} aria-hidden />
+            Hidratación
+            <Sparkles className="h-4 w-4 text-amber-500" strokeWidth={2} aria-hidden />
           </p>
-          <p className="m-0 mt-1.5 max-w-prose text-[13px] leading-[1.45] text-[var(--color-text-secondary)]">
-            Sumá mililitros durante el día. Esta misión no entra en Mañana / Tarde / Noche del stack.
+          <p className="m-0 mt-1.5 max-w-prose text-[13px] leading-[1.45] text-[color-mix(in_srgb,var(--color-text-secondary)_95%,#0c4a6e)] dark:text-cyan-100/85">
+            Sumá vasos o botellitas y mirá cómo sube tu porcentaje del día. Podés ajustar tu meta cuando quieras.
           </p>
         </div>
       </header>
@@ -138,7 +157,6 @@ export function WaterHabitMissionBlock({
           const doneToday = habit.metrics.completed_today
           const streakDays = habit.metrics.current_streak
           const weekMarks = weekMarksForHabit(habit)
-          const intention = habit.metadata?.intention?.trim()
           const domain = domainLabels[habit.domain] ?? habit.domain
           const atRisk = habit.metrics.at_risk
           const nudge = buildWaterPacingNudge(todayMl, goalMl)
@@ -151,32 +169,23 @@ export function WaterHabitMissionBlock({
                 habitIndex > 0 && "mt-5 border-t border-[color-mix(in_srgb,var(--color-border)_55%,transparent)]",
               )}
             >
-              {/* Título y estado en flujo (sin absolute → nada cortado) */}
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-                <div className="min-w-0 flex-1 space-y-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="m-0 text-[17px] font-semibold leading-snug tracking-[-0.02em] text-[var(--color-text-primary)]">
-                      {habit.name}
-                    </h3>
-                    {doneToday ? (
-                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--color-accent-health)_12%,transparent)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-accent-health)]">
-                        <Trophy className="h-3 w-3" aria-hidden />
-                        Meta
-                      </span>
-                    ) : null}
-                    {atRisk ? (
-                      <span className="inline-flex shrink-0 items-center rounded-full bg-[color-mix(in_srgb,var(--color-accent-danger)_10%,transparent)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-accent-danger)]">
-                        Riesgo ruptura
-                      </span>
-                    ) : null}
-                  </div>
-                  <p className="m-0 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
-                    {domain} · diario ·{" "}
-                    <span className="text-[var(--color-text-primary)]">{streakDays}</span>{" "}
-                    {streakDays === 1 ? "día de racha" : "días de racha"}
-                  </p>
-                  {intention ? (
-                    <p className="m-0 text-[13px] leading-[1.45] text-[var(--color-text-secondary)]">{intention}</p>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                <p className="m-0 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
+                  {domain} · diario ·{" "}
+                  <span className="font-medium text-[var(--color-text-primary)]">{streakDays}</span>{" "}
+                  {streakDays === 1 ? "día de racha" : "días de racha"}
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  {doneToday ? (
+                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--color-accent-health)_14%,var(--color-surface))] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-accent-health)] ring-1 ring-[color-mix(in_srgb,var(--color-accent-health)_25%,transparent)]">
+                      <Trophy className="h-3 w-3" aria-hidden />
+                      Meta
+                    </span>
+                  ) : null}
+                  {atRisk ? (
+                    <span className="inline-flex shrink-0 items-center rounded-full bg-[color-mix(in_srgb,var(--color-accent-danger)_10%,var(--color-surface))] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-accent-danger)]">
+                      Riesgo ruptura
+                    </span>
                   ) : null}
                 </div>
               </div>
@@ -210,9 +219,9 @@ export function WaterHabitMissionBlock({
                 </span>
               </div>
 
-              {/* Bloque visual: anillo + semana con aire; scroll horizontal solo si hace falta */}
-              <div className="mt-6 flex flex-col items-center gap-6 sm:mt-5 sm:flex-row sm:items-start sm:justify-between sm:gap-8">
-                <div className="shrink-0 pt-0.5">
+              {/* Anillo protagonista + semana y acciones */}
+              <div className="mt-7 flex flex-col items-center gap-8 sm:mt-6 sm:flex-row sm:items-start sm:justify-between sm:gap-10">
+                <div className="shrink-0 pt-1 sm:pl-1">
                   <WaterRing pct={pct} gradId={`water-ring-grad-${habit.id.replace(/[^a-zA-Z0-9_-]/g, "")}`} />
                 </div>
 
