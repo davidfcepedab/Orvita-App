@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireUser } from "@/lib/api/requireUser"
+import { requireUser, type AuthedRequest } from "@/lib/api/requireUser"
 import {
   addDaysIso,
   aggregateHabitsSummary,
@@ -26,7 +26,7 @@ import {
 export const runtime = "nodejs"
 
 async function ensureDefaultWaterHabit(
-  supabase: Awaited<ReturnType<typeof requireUser>> extends { supabase: infer S } ? S : never,
+  supabase: AuthedRequest["supabase"],
   userId: string,
 ): Promise<void> {
   const { data: habitRows, error: listErr } = await supabase
