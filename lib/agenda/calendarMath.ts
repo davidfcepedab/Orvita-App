@@ -47,3 +47,16 @@ export function diffCalendarDaysYmd(fromYmd: string, toYmd: string): number {
   const t1 = Date.UTC(y2, m2 - 1, d2)
   return Math.round((t1 - t0) / 86400000)
 }
+
+/** Suma meses a `YYYY-MM` (primer día del mes en calendario gregoriano UTC). */
+export function addCalendarMonthsYm(ym: string, deltaMonths: number): string {
+  const s = ym.trim().slice(0, 7)
+  if (!/^\d{4}-\d{2}$/.test(s)) return s
+  const [y, m] = s.split("-").map(Number)
+  if (!Number.isFinite(y) || !Number.isFinite(m)) return s
+  const d = new Date(Date.UTC(y, m - 1 + deltaMonths, 1, 12, 0, 0))
+  if (Number.isNaN(d.getTime())) return s
+  const yy = d.getUTCFullYear()
+  const mm = d.getUTCMonth() + 1
+  return `${yy}-${String(mm).padStart(2, "0")}`
+}

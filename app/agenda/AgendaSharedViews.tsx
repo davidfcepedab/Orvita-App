@@ -103,6 +103,11 @@ function listDayDividerKey(row: MergedRow): string {
   return `e-${row.event.id}`
 }
 
+/** Clave estable para React (instancias Google recurrentes pueden repetir `id`). */
+function listStableRowKey(row: MergedRow): string {
+  return `${listDayDividerKey(row)}-${row.sortMs}`
+}
+
 function linkedGoogleTaskIdsFromOrvita(tasks: UiAgendaTask[]): Set<string> {
   const ids = new Set<string>()
   for (const t of tasks) {
@@ -652,6 +657,19 @@ export function AgendaSharedList({
     )
   }, [merged, listHorizon, extendMonthHorizon])
 
+  const listDayGroups = useMemo(() => {
+    type G = { bucket: string; dayKey: string | null; rows: MergedRow[] }
+    const groups: G[] = []
+    for (const row of mergedFiltered) {
+      const bucket = mergedRowDayBucket(row)
+      const dayKey = mergedRowDayKey(row)
+      const prev = groups[groups.length - 1]
+      if (prev && prev.bucket === bucket) prev.rows.push(row)
+      else groups.push({ bucket, dayKey, rows: [row] })
+    }
+    return groups
+  }, [mergedFiltered])
+
   const horizonHint = useMemo(() => {
     const { start, end } = unifiedListHorizonRange(listHorizon, {
       extendedAfterMonth: listHorizon === "this_month" && extendMonthHorizon,
@@ -757,7 +775,7 @@ export function AgendaSharedList({
               </div>
             </div>
           ) : null}
-          <div className="flex max-h-[min(68dvh,820px)] min-h-0 min-w-0 flex-col gap-3 overflow-y-auto overscroll-y-contain pr-0.5 sm:gap-4 sm:pr-1">
+          <div className="flex min-h-0 min-w-0 flex-col gap-3 overflow-visible pr-0 sm:gap-4 sm:pr-0 md:max-h-[min(68dvh,820px)] md:overflow-y-auto md:overscroll-y-contain md:pr-1">
             {merged.length > 0 && mergedFiltered.length === 0 ? (
               <p
                 role="status"
@@ -769,31 +787,22 @@ export function AgendaSharedList({
                   : "."}
               </p>
             ) : null}
-            {mergedFiltered.map((row, idx) => {
-              const dayKey = mergedRowDayKey(row)
-              const prevKey = idx > 0 ? mergedRowDayKey(mergedFiltered[idx - 1]!) : null
-              const sectionTitle = unifiedTimelineSectionTitle(dayKey, todayYmd)
-              const prevTitle = prevKey == null ? null : unifiedTimelineSectionTitle(prevKey, todayYmd)
-              const showMacroHeader = idx === 0 || sectionTitle !== prevTitle
-              const rowKey = listDayDividerKey(row)
-
+            {listDayGroups.map((group, gIdx) => {
+              const sectionTitle = unifiedTimelineSectionTitle(group.dayKey, todayYmd)
               return (
-                <Fragment key={rowKey}>
-                  {showMacroHeader ? (
-                    <div className="min-w-0 scroll-mt-2 pt-2 first:pt-0">
-                      <p className="m-0 text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--color-text-secondary)]">
-                        {sectionTitle}
-                      </p>
-                      <div
-                        className="mt-1.5 h-px w-full opacity-[0.65]"
-                        style={{
-                          background:
-                            "linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--color-border) 55%, transparent) 10%, color-mix(in srgb, var(--color-accent-primary) 35%, var(--color-border)) 50%, color-mix(in srgb, var(--color-border) 55%, transparent) 90%, transparent 100%)",
-                        }}
-                        aria-hidden
-                      />
-                    </div>
-                  ) : null}
+                <div key={group.bucket} className="flex min-w-0 flex-col gap-2 sm:gap-2.5">
+                  <div className={`min-w-0 scroll-mt-2 ${gIdx === 0 ? "pt-0" : "pt-2"}`}>
+                    <p className="m-0 text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--color-text-secondary)]">
+                      {sectionTitle}
+                    </p>
+                    <div
+                      className="mt-1.5 h-px w-full border-0 bg-[color-mix(in_srgb,var(--color-border)_72%,transparent)]"
+                      aria-hidden
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2 sm:gap-3">
+                    {group.rows.map((row) => (
+                      <Fragment key={listStableRowKey(row)}>
             {row.kind === "task" ? (
               <AgendaOrvitaTaskCard
                 task={row.task}
@@ -954,9 +963,12 @@ export function AgendaSharedList({
                 deleteBusy={busyDel === `e-${row.event.id}`}
               />
             )}
-          </Fragment>
-        )
-      })}
+                      </Fragment>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
           </div>
           {listHorizon === "this_month" ? (
             <div className="flex flex-col items-center gap-1 border-t border-[color-mix(in_srgb,var(--color-border)_70%,transparent)] pt-2">
@@ -1042,7 +1054,7 @@ export function AgendaSharedWeek({
       <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-stretch lg:gap-2.5 xl:gap-3">
         {weekDays.map((day) => {
           const key = formatDateKey(day)
-          const isToday = key === formatDateKey(new Date())
+          const isToday = key === agendaTodayYmd()
           const dayTasks = weekMap[key] || []
           const g = googleByDay?.[key]
           const gCount = countGoogleDayItems(g)
@@ -1075,7 +1087,7 @@ export function AgendaSharedWeek({
                   ))}
                   {(g?.events ?? []).map((ev) => (
                     <AgendaReadonlyUnifiedCard
-                      key={`gcal-${ev.id}`}
+                      key={`gcal-${ev.id}-${ev.startAt ?? ""}`}
                       variant="compact"
                       embedded
                       shell={googleAgendaCardShell({
@@ -1324,7 +1336,9 @@ export function AgendaSharedMonth({
                   disabled={!cell.date}
                 >
                   <div className="flex items-center justify-between gap-0.5 text-[10px] sm:text-[11px]">
-                    <span className="tabular-nums font-medium">{cell.date ? cell.date.getDate() : ""}</span>
+                    <span className="tabular-nums font-medium">
+                      {dayKey.length === 10 ? Number(dayKey.slice(8, 10)) : ""}
+                    </span>
                     {dayTotal > 0 && (
                       <span className="shrink-0 text-[9px] text-[var(--color-text-secondary)] sm:text-[10px]">{dayTotal}</span>
                     )}

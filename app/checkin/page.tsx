@@ -408,12 +408,13 @@ export default function CheckinPage() {
 
   return (
     <div className="relative mx-auto max-w-2xl space-y-4 px-2 pb-28 pt-1 sm:space-y-5 sm:px-0 sm:pb-32">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 flex-1 space-y-2">
+      <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
           {mockOn && (
             <p
               role="alert"
-              className="rounded-xl border border-[color-mix(in_srgb,var(--color-accent-agenda)_42%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-agenda)_12%,var(--color-surface))] px-4 py-2 text-sm text-orbita-primary"
+              title={UI_CHECKIN_BANNER_MOCK}
+              className="max-w-full truncate rounded-full border border-[color-mix(in_srgb,var(--color-accent-agenda)_42%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-agenda)_12%,var(--color-surface))] px-3 py-1 text-xs text-orbita-primary"
             >
               {UI_CHECKIN_BANNER_MOCK}
             </p>
@@ -421,24 +422,35 @@ export default function CheckinPage() {
           {!mockOn && !supabaseOn && (
             <p
               role="alert"
-              className="rounded-xl border border-[color-mix(in_srgb,var(--color-accent-danger)_42%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-danger)_10%,var(--color-surface))] px-4 py-2 text-sm text-orbita-primary"
+              title={UI_CHECKIN_BANNER_NO_CLOUD}
+              className="max-w-full truncate rounded-full border border-[color-mix(in_srgb,var(--color-accent-danger)_42%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-danger)_10%,var(--color-surface))] px-3 py-1 text-xs text-orbita-primary"
             >
               {UI_CHECKIN_BANNER_NO_CLOUD}
             </p>
           )}
           {apiNotice && (
-            <p className="rounded-xl border border-orbita-border bg-orbita-surface-alt px-4 py-2 text-sm text-orbita-primary">{apiNotice}</p>
+            <p title={apiNotice} className="max-w-full truncate rounded-full border border-orbita-border bg-orbita-surface-alt px-3 py-1 text-xs text-orbita-primary">
+              {apiNotice}
+            </p>
+          )}
+          {preloadStatus && (
+            <p
+              title={preloadStatus}
+              className="max-w-full truncate rounded-full border border-[color-mix(in_srgb,var(--color-accent-warning)_40%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-warning)_12%,var(--color-surface))] px-3 py-1 text-xs text-orbita-primary"
+            >
+              {preloadStatus}
+            </p>
           )}
         </div>
-        <div className="flex shrink-0 items-center gap-2 self-start sm:self-auto">
+        <div className="flex shrink-0 items-center gap-1.5">
           <Link
             href="/hoy"
-            className="inline-flex min-h-[40px] items-center rounded-full border border-orbita-border bg-orbita-surface px-3 py-2 text-xs font-medium text-orbita-secondary shadow-sm transition hover:bg-orbita-surface-alt sm:min-h-0"
+            className="inline-flex h-8 items-center rounded-full border border-orbita-border bg-orbita-surface px-2.5 text-[11px] font-medium text-orbita-secondary shadow-sm transition hover:bg-orbita-surface-alt"
           >
             ← Hoy
           </Link>
           <span
-            className={`inline-flex items-center rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide sm:text-xs ${
+            className={`inline-flex h-8 items-center rounded-full border px-2.5 text-[10px] font-semibold uppercase tracking-wide ${
               supabaseOn
                 ? "border-[color-mix(in_srgb,var(--color-accent-health)_40%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_12%,var(--color-surface))] text-orbita-primary"
                 : "border-orbita-border bg-orbita-surface-alt text-orbita-secondary"
@@ -449,10 +461,6 @@ export default function CheckinPage() {
           </span>
         </div>
       </div>
-
-      {preloadStatus && (
-        <p className="rounded-xl border border-[color-mix(in_srgb,var(--color-accent-warning)_40%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-warning)_12%,var(--color-surface))] px-4 py-2 text-sm text-orbita-primary">{preloadStatus}</p>
-      )}
 
       {/* Cabecera página (referencia Figma) */}
       <header className="flex flex-col gap-4 rounded-2xl border border-orbita-border/90 bg-gradient-to-br from-orbita-surface-alt to-orbita-surface p-4 shadow-card sm:flex-row sm:items-start sm:justify-between sm:p-5">

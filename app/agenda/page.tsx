@@ -35,7 +35,11 @@ import type { HouseholdMemberDTO } from "@/lib/household/memberTypes"
 import { createBrowserClient } from "@/lib/supabase/browser"
 import { buildGoogleByDayIndex, type GoogleDayBucket } from "@/lib/agenda/googleAgendaByDay"
 import type { GoogleTaskLocalPriority } from "@/lib/google/types"
+import { addDaysToYmd } from "@/lib/agenda/agendaDueShift"
+import { addCalendarMonthsYm } from "@/lib/agenda/calendarMath"
+import { getAgendaDisplayTimeZone } from "@/lib/agenda/agendaTimeZone"
 import { agendaTodayYmd, formatLocalDateKey } from "@/lib/agenda/localDateKey"
+import { mondayOfCalendarWeekContainingYmd, weekdayMonday0ForAgendaYmd } from "@/lib/agenda/unifiedListHorizon"
 
 function pickViewerFirstName(
   user: { user_metadata?: Record<string, unknown>; email?: string | null } | null | undefined
@@ -64,39 +68,42 @@ const tabs = [
 const priorities = ["alta", "media", "baja"] as const
 type Priority = typeof priorities[number]
 
-function getWeekDays(base = new Date()) {
-  const date = new Date(base)
-  const day = date.getDay()
-  const diff = day === 0 ? -6 : 1 - day
-  date.setDate(date.getDate() + diff)
-  return Array.from({ length: 7 }).map((_, idx) => {
-    const d = new Date(date)
-    d.setDate(date.getDate() + idx)
-    return d
+function getWeekDays(base: Date = new Date()) {
+  const todayKey = formatLocalDateKey(base)
+  const mon = mondayOfCalendarWeekContainingYmd(todayKey)
+  return Array.from({ length: 7 }, (_, idx) => {
+    const ymd = addDaysToYmd(mon, idx)
+    const [y, m, d] = ymd.split("-").map(Number)
+    return new Date(Date.UTC(y, m - 1, d, 12, 0, 0))
   })
 }
 
 function formatDayLabel(date: Date) {
-  return date.toLocaleDateString("es-CO", { weekday: "short" })
+  return new Intl.DateTimeFormat("es-CO", {
+    timeZone: getAgendaDisplayTimeZone(),
+    weekday: "short",
+  }).format(date)
 }
 
 function formatDateKey(date: Date) {
   return formatLocalDateKey(date)
 }
 
-function buildMonthGrid(date: Date) {
-  const year = date.getFullYear()
-  const month = date.getMonth()
-  const first = new Date(year, month, 1)
-  const last = new Date(year, month + 1, 0)
-  const startOffset = (first.getDay() + 6) % 7
-  const days = [] as { date: Date | null; key: string }[]
+/** Rejilla mensual: mes civil `YYYY-MM` en la zona de agenda (`NEXT_PUBLIC_AGENDA_DISPLAY_TZ`). */
+function buildMonthGridFromYm(ym: string) {
+  const trimmed = ym.trim().slice(0, 7)
+  if (!/^\d{4}-\d{2}$/.test(trimmed)) return [] as { date: Date | null; key: string }[]
+  const [year, month] = trimmed.split("-").map(Number)
+  const ymdFirst = `${year}-${String(month).padStart(2, "0")}-01`
+  const startOffset = weekdayMonday0ForAgendaYmd(ymdFirst)
+  const lastDay = new Date(Date.UTC(year, month, 0, 12, 0, 0)).getUTCDate()
+  const days: { date: Date | null; key: string }[] = []
   for (let i = 0; i < startOffset; i += 1) {
     days.push({ date: null, key: `empty-${i}` })
   }
-  for (let d = 1; d <= last.getDate(); d += 1) {
-    const day = new Date(year, month, d)
-    days.push({ date: day, key: formatDateKey(day) })
+  for (let d = 1; d <= lastDay; d += 1) {
+    const key = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`
+    days.push({ date: new Date(Date.UTC(year, month - 1, d, 12, 0, 0)), key })
   }
   return days
 }
@@ -220,10 +227,7 @@ export default function AgendaPage() {
   const [query, setQuery] = useState("")
   const deferredQuery = useDeferredValue(query)
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
-  const [monthViewDate, setMonthViewDate] = useState(() => {
-    const n = new Date()
-    return new Date(n.getFullYear(), n.getMonth(), 1)
-  })
+  const [monthViewYm, setMonthViewYm] = useState(() => agendaTodayYmd().slice(0, 7))
   const [showPastAgenda, setShowPastAgenda] = useState(false)
   const [formOpen, setFormOpen] = useState(false)
   const [formSubmitError, setFormSubmitError] = useState<string | null>(null)
@@ -275,16 +279,19 @@ export default function AgendaPage() {
 
   useEffect(() => {
     if (view !== "month") return
-    const y = monthViewDate.getFullYear()
-    const m = monthViewDate.getMonth()
-    const start = new Date(y, m, 1)
-    start.setDate(start.getDate() - 7)
-    start.setHours(0, 0, 0, 0)
-    const end = new Date(y, m + 1, 0)
-    end.setDate(end.getDate() + 14)
-    end.setHours(23, 59, 59, 999)
-    void googleCalendar.refreshRange({ timeMin: start.toISOString(), timeMax: end.toISOString() })
-  }, [view, monthViewDate, googleCalendar.refreshRange])
+    const trimmed = monthViewYm.trim().slice(0, 7)
+    if (!/^\d{4}-\d{2}$/.test(trimmed)) return
+    const [y, mo] = trimmed.split("-").map(Number)
+    const firstYmd = `${y}-${String(mo).padStart(2, "0")}-01`
+    const lastDay = new Date(Date.UTC(y, mo, 0, 12, 0, 0)).getUTCDate()
+    const lastYmd = `${y}-${String(mo).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`
+    const rangeStartYmd = addDaysToYmd(firstYmd, -7)
+    const rangeEndYmd = addDaysToYmd(lastYmd, 14)
+    void googleCalendar.refreshRange({
+      timeMin: `${rangeStartYmd}T12:00:00.000Z`,
+      timeMax: `${rangeEndYmd}T12:00:00.000Z`,
+    })
+  }, [view, monthViewYm, googleCalendar.refreshRange])
 
   const prevViewRef = useRef(view)
   useEffect(() => {
@@ -364,11 +371,19 @@ export default function AgendaPage() {
   )
   const totalWeeklyPending = totalWeeklyTasks - totalWeeklyCompleted
 
-  const monthGrid = useMemo(() => buildMonthGrid(monthViewDate), [monthViewDate])
+  const monthGrid = useMemo(() => buildMonthGridFromYm(monthViewYm), [monthViewYm])
   const monthLabel = useMemo(() => {
-    const raw = monthViewDate.toLocaleDateString("es-CO", { month: "long", year: "numeric" })
+    const trimmed = monthViewYm.trim().slice(0, 7)
+    if (!/^\d{4}-\d{2}$/.test(trimmed)) return ""
+    const [yy, mm] = trimmed.split("-").map(Number)
+    const civilNoon = new Date(Date.UTC(yy, mm - 1, 1, 12, 0, 0))
+    const raw = new Intl.DateTimeFormat("es-CO", {
+      timeZone: getAgendaDisplayTimeZone(),
+      month: "long",
+      year: "numeric",
+    }).format(civilNoon)
     return raw.charAt(0).toUpperCase() + raw.slice(1)
-  }, [monthViewDate])
+  }, [monthViewYm])
   const monthSummary = useMemo(() => {
     const total = filtered.length
     const completed = filtered.filter((t) => t.status === "completada").length
@@ -796,15 +811,10 @@ export default function AgendaPage() {
                   onGoogleReminderPatch={googleTasksFeed.connected ? onGoogleReminderPatch : undefined}
                   onDeleteGoogleTask={googleTasksFeed.connected ? onDeleteGoogleTask : undefined}
                   onDeleteCalendarEvent={googleCalendar.connected ? onDeleteCalendarEvent : undefined}
-                  onPrevMonth={() =>
-                    setMonthViewDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))
-                  }
-                  onNextMonth={() =>
-                    setMonthViewDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))
-                  }
+                  onPrevMonth={() => setMonthViewYm((ym) => addCalendarMonthsYm(ym, -1))}
+                  onNextMonth={() => setMonthViewYm((ym) => addCalendarMonthsYm(ym, 1))}
                   onGoThisMonth={() => {
-                    const n = new Date()
-                    setMonthViewDate(new Date(n.getFullYear(), n.getMonth(), 1))
+                    setMonthViewYm(agendaTodayYmd().slice(0, 7))
                   }}
                 />
               )}

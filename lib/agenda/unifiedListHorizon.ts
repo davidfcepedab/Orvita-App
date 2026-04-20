@@ -1,4 +1,5 @@
 import { addDaysToYmd } from "@/lib/agenda/agendaDueShift"
+import { getAgendaDisplayTimeZone } from "@/lib/agenda/agendaTimeZone"
 import { agendaTodayYmd } from "@/lib/agenda/localDateKey"
 
 export type UnifiedListHorizonId = "today" | "tomorrow" | "this_week" | "next_week" | "this_month"
@@ -6,35 +7,39 @@ export type UnifiedListHorizonId = "today" | "tomorrow" | "this_week" | "next_we
 /** Días extra tras el fin de mes cuando el usuario amplía con «+». */
 export const UNIFIED_LIST_EXTENDED_DAYS_AFTER_MONTH = 45
 
-function parseLocalYmd(ymd: string): Date {
+const US_WEEKDAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const
+
+/** Día de la semana (domingo=0 … sábado=6) del civil `YYYY-MM-DD` en la zona de agenda. */
+function sun0WeekdayIndexForAgendaYmd(ymd: string): number {
   const key = ymd.trim().slice(0, 10)
   const [y, m, d] = key.split("-").map(Number)
-  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return new Date()
-  return new Date(y, m - 1, d, 12, 0, 0, 0)
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return 0
+  const inst = new Date(Date.UTC(y, m - 1, d, 12, 0, 0))
+  const tz = getAgendaDisplayTimeZone()
+  const short = new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "short" }).format(inst)
+  const idx = US_WEEKDAY_SHORT.indexOf(short as (typeof US_WEEKDAY_SHORT)[number])
+  return idx >= 0 ? idx : 0
 }
 
-function formatLocalYmd(d: Date): string {
-  const y = d.getFullYear()
-  const mo = String(d.getMonth() + 1).padStart(2, "0")
-  const da = String(d.getDate()).padStart(2, "0")
-  return `${y}-${mo}-${da}`
+/** Lunes=0 … domingo=6 (rejilla Lun–Dom), para el civil `YYYY-MM-DD` en la zona de agenda. */
+export function weekdayMonday0ForAgendaYmd(ymd: string): number {
+  return (sun0WeekdayIndexForAgendaYmd(ymd) + 6) % 7
 }
 
-/** Lunes civil de la semana que contiene `ymd` (lunes–domingo). */
+/** Lunes civil de la semana que contiene `ymd` (lunes–domingo), en la zona de agenda. */
 export function mondayOfCalendarWeekContainingYmd(ymd: string): string {
-  const d = parseLocalYmd(ymd)
-  const day = d.getDay()
+  const key = ymd.trim().slice(0, 10)
+  const day = sun0WeekdayIndexForAgendaYmd(key)
   const delta = day === 0 ? -6 : 1 - day
-  d.setDate(d.getDate() + delta)
-  return formatLocalYmd(d)
+  return addDaysToYmd(key, delta)
 }
 
 function endOfCalendarMonthYmd(ymd: string): string {
-  const d = parseLocalYmd(ymd)
-  const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()
-  const y = d.getFullYear()
-  const mo = String(d.getMonth() + 1).padStart(2, "0")
-  return `${y}-${mo}-${String(last).padStart(2, "0")}`
+  const key = ymd.trim().slice(0, 10)
+  const [y, m] = key.split("-").map(Number)
+  if (!Number.isFinite(y) || !Number.isFinite(m)) return agendaTodayYmd()
+  const lastDay = new Date(Date.UTC(y, m, 0, 12, 0, 0)).getUTCDate()
+  return `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`
 }
 
 export type HorizonRange = { start: string; end: string }
@@ -74,19 +79,28 @@ export function ymdLexInRange(k: string, start: string, end: string): boolean {
 /** Títulos de bloque para separadores visuales (cronología unificada). */
 export function unifiedTimelineSectionTitle(dayKey: string | null, todayYmd: string): string {
   if (!dayKey || dayKey === "__sin_fecha__") return "Sin día en calendario"
+  const tz = getAgendaDisplayTimeZone()
+  const [y, m, d] = dayKey.split("-").map(Number)
+  const civilNoonUtc =
+    Number.isFinite(y) && Number.isFinite(m) && Number.isFinite(d)
+      ? new Date(Date.UTC(y, m - 1, d, 12, 0, 0))
+      : null
   const fmt = new Intl.DateTimeFormat("es-CO", {
     weekday: "long",
     day: "numeric",
     month: "short",
-    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    timeZone: tz,
   })
-  const longDay = (() => {
-    try {
-      return fmt.format(parseLocalYmd(dayKey))
-    } catch {
-      return dayKey
-    }
-  })()
+  const longDay =
+    civilNoonUtc && !Number.isNaN(civilNoonUtc.getTime())
+      ? (() => {
+          try {
+            return fmt.format(civilNoonUtc)
+          } catch {
+            return dayKey
+          }
+        })()
+      : dayKey
 
   if (dayKey === todayYmd) return `Hoy · ${longDay}`
   const tom = addDaysToYmd(todayYmd, 1)
