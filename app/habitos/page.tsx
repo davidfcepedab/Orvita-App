@@ -29,17 +29,13 @@ import {
   TrendingDown,
   Trophy,
   Zap,
-  Droplets,
 } from "lucide-react"
 import { UI_HABITS_MUTATIONS_OFF, UI_HABITS_SAVE_OFF } from "@/lib/checkins/flags"
 import { groupHabitsByDaypart, orderedDaypartBlocks, type HabitTimeBlockId } from "@/lib/habits/habitStackGroups"
 import {
-  bottleMlFromHabitMetadata,
   DEFAULT_WATER_BOTTLE_ML,
   DEFAULT_WATER_GLASS_ML,
   DEFAULT_WATER_GOAL_ML,
-  glassMlFromHabitMetadata,
-  goalMlFromHabitMetadata,
 } from "@/lib/habits/waterTrackingHelpers"
 import { useHabits } from "@/app/hooks/useHabits"
 import { useStreakCelebrationQueue } from "@/app/hooks/useStreakCelebrationQueue"
@@ -51,6 +47,7 @@ import type {
   OperationalDomain,
 } from "@/lib/operational/types"
 import { emptyHabitModalForm, habitToModalValues, HabitFormModal } from "@/app/habitos/HabitFormModal"
+import { WaterHabitMissionBlock } from "@/app/habitos/WaterHabitMissionBlock"
 import { HabitSparkline14 } from "@/app/habitos/HabitSparkline14"
 import { StreakCelebrationOverlay } from "@/app/habitos/StreakCelebrationOverlay"
 import { superhabitStreakRewardMessage } from "@/lib/habits/streakMilestones"
@@ -304,7 +301,15 @@ export default function HabitosPage() {
     [habits]
   )
 
-  const habitsByDaypart = useMemo(() => groupHabitsByDaypart(habits), [habits])
+  const habitsForDaypartStack = useMemo(
+    () => habits.filter((h) => h.metadata?.habit_type !== "water-tracking"),
+    [habits],
+  )
+  const waterHabitsForMission = useMemo(
+    () => habits.filter((h) => h.metadata?.habit_type === "water-tracking"),
+    [habits],
+  )
+  const habitsByDaypart = useMemo(() => groupHabitsByDaypart(habitsForDaypartStack), [habitsForDaypartStack])
 
   const stackBlocksWithOffsets = useMemo(() => {
     const out: { blockId: HabitTimeBlockId; habits: HabitWithMetrics[]; animStart: number }[] = []
@@ -1017,6 +1022,29 @@ export default function HabitosPage() {
           </div>
         ) : null}
 
+        <WaterHabitMissionBlock
+          habits={waterHabitsForMission}
+          domainLabels={DOMAIN_LABELS}
+          persistenceEnabled={persistenceEnabled}
+          mock={mock}
+          loading={loading}
+          waterBusyId={waterBusyId}
+          setWaterBusyId={setWaterBusyId}
+          togglingId={togglingId}
+          backfillingId={backfillingId}
+          backfillingAll={backfillingAll}
+          incrementWaterMl={incrementWaterMl}
+          toggleCompleteToday={toggleCompleteToday}
+          onEdit={(habit) => {
+            setEditing(habit)
+            setForm(habitToModalValues(habit))
+            setFormOpen(true)
+          }}
+          onToggleStreakCelebration={(r) => {
+            if (r.ok && r.streakCelebration) enqueueStreakCelebrations([r.streakCelebration])
+          }}
+        />
+
         {stackBlocksWithOffsets
           .filter(({ blockId, habits }) => blockId !== "sin_hora" || habits.length > 0)
           .map(({ blockId, habits: blockHabits, animStart }) => {
@@ -1071,16 +1099,6 @@ export default function HabitosPage() {
                     const triggerOrTime = habit.metadata?.trigger_or_time?.trim()
                     const sessionMins = habit.metadata?.estimated_session_minutes
                     const metricLine = habitMetricLine(habit.metadata)
-                    const isWater = habit.metadata?.habit_type === "water-tracking"
-                    const goalMlW = goalMlFromHabitMetadata(habit.metadata)
-                    const bottleMlW = bottleMlFromHabitMetadata(habit.metadata)
-                    const glassMlW = glassMlFromHabitMetadata(habit.metadata)
-                    const todayMlW = habit.water_today_ml ?? 0
-                    const pctW = goalMlW > 0 ? Math.min(100, Math.round((todayMlW / goalMlW) * 100)) : 0
-                    const bottlesEqStr =
-                      bottleMlW > 0
-                        ? (todayMlW / bottleMlW).toLocaleString("es-ES", { maximumFractionDigits: 1 })
-                        : "0"
 
                     return (
                       <Card
@@ -1189,81 +1207,11 @@ export default function HabitosPage() {
                                 {intention}
                               </p>
                             ) : null}
-                            {metricLine && !isWater ? (
+                            {metricLine ? (
                               <p className="flex items-start gap-1 text-[10px] leading-snug text-[var(--color-text-secondary)]" style={{ margin: 0 }}>
                                 <Target className="mt-0.5 h-3 w-3 shrink-0 text-[var(--color-accent-health)] opacity-80" aria-hidden />
                                 <span>{metricLine}</span>
                               </p>
-                            ) : null}
-                            {isWater ? (
-                              <div className="space-y-2 pt-0.5">
-                                <p
-                                  className="flex items-start gap-1.5 text-[10px] leading-snug text-[var(--color-text-secondary)]"
-                                  style={{ margin: 0 }}
-                                >
-                                  <Droplets
-                                    className="mt-0.5 h-3 w-3 shrink-0 text-[var(--color-accent-health)] opacity-85"
-                                    aria-hidden
-                                  />
-                                  <span>
-                                    {todayMlW} / {goalMlW} ml ({pctW}%) · ≈ {bottlesEqStr} botellitas
-                                  </span>
-                                </p>
-                                <div className="flex flex-wrap gap-2">
-                                  <button
-                                    type="button"
-                                    disabled={
-                                      (!persistenceEnabled && !mock) ||
-                                      loading ||
-                                      waterBusyId === habit.id ||
-                                      togglingId === habit.id ||
-                                      backfillingId === habit.id ||
-                                      backfillingAll
-                                    }
-                                    onClick={async () => {
-                                      setWaterBusyId(habit.id)
-                                      try {
-                                        const r = await incrementWaterMl(habit.id, bottleMlW)
-                                        if (!r.ok) alert(r.error || "No se pudo registrar")
-                                      } finally {
-                                        setWaterBusyId(null)
-                                      }
-                                    }}
-                                    className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-[10px] bg-[var(--color-accent-health)] px-3 py-1.5 text-[11px] font-semibold text-white shadow-sm transition-opacity disabled:cursor-not-allowed disabled:opacity-45"
-                                  >
-                                    {waterBusyId === habit.id ? (
-                                      <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
-                                    ) : null}
-                                    +1 Botellita ({bottleMlW} ml)
-                                  </button>
-                                  <button
-                                    type="button"
-                                    disabled={
-                                      (!persistenceEnabled && !mock) ||
-                                      loading ||
-                                      waterBusyId === habit.id ||
-                                      togglingId === habit.id ||
-                                      backfillingId === habit.id ||
-                                      backfillingAll
-                                    }
-                                    onClick={async () => {
-                                      setWaterBusyId(habit.id)
-                                      try {
-                                        const r = await incrementWaterMl(habit.id, glassMlW)
-                                        if (!r.ok) alert(r.error || "No se pudo registrar")
-                                      } finally {
-                                        setWaterBusyId(null)
-                                      }
-                                    }}
-                                    className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 py-1.5 text-[11px] font-medium text-[var(--color-text-primary)] transition-opacity disabled:cursor-not-allowed disabled:opacity-45"
-                                  >
-                                    {waterBusyId === habit.id ? (
-                                      <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--color-accent-health)]" aria-hidden />
-                                    ) : null}
-                                    + Vaso extra ({glassMlW} ml)
-                                  </button>
-                                </div>
-                              </div>
                             ) : null}
                             <div className="flex flex-wrap gap-1">
                               {typeof sessionMins === "number" && sessionMins > 0 ? (
