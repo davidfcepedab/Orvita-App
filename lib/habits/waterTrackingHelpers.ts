@@ -1,8 +1,16 @@
+import { localDateKeyFromIso } from "@/lib/agenda/localDateKey"
 import type { HabitMetadata } from "@/lib/operational/types"
 
 export const DEFAULT_WATER_GOAL_ML = 2400
 export const DEFAULT_WATER_BOTTLE_ML = 750
 export const DEFAULT_WATER_GLASS_ML = 250
+
+/**
+ * Disparador fijo (no editable): sin hora parseable; el hábito vive en «Misión hidratación».
+ * Los avisos de ritmo usan reloj del día en la zona de agenda de Órvita.
+ */
+export const WATER_SYSTEM_TRIGGER_OR_TIME =
+  "Sistema Órvita · ritmo hacia tu meta diaria de ml"
 
 /** Metadata inicial del hábito por defecto (sync con migración SQL). */
 export const DEFAULT_WATER_HABIT_METADATA: HabitMetadata = {
@@ -10,7 +18,7 @@ export const DEFAULT_WATER_HABIT_METADATA: HabitMetadata = {
   frequency: "diario",
   weekdays: [0, 1, 2, 3, 4, 5, 6],
   display_days: ["L", "M", "X", "J", "V", "S", "D"],
-  trigger_or_time: "08:00 · Hidratación",
+  trigger_or_time: WATER_SYSTEM_TRIGGER_OR_TIME,
   intention: "Convertir hidratación en un ritual medible sin fricción.",
   water_bottle_ml: DEFAULT_WATER_BOTTLE_ML,
   water_goal_ml: DEFAULT_WATER_GOAL_ML,
@@ -46,6 +54,12 @@ export type CompletionRowLite = { completed_on: string; water_ml: number | null 
  * - estándar: cualquier fila en habit_completions ese día
  * - water-tracking: solo si water_ml >= meta
  */
+function completionCivilDayKey(completedOn: string | null | undefined): string {
+  if (!completedOn || typeof completedOn !== "string") return ""
+  const key = localDateKeyFromIso(completedOn) ?? completedOn.trim().slice(0, 10)
+  return /^\d{4}-\d{2}-\d{2}$/.test(key) ? key : ""
+}
+
 export function deriveHabitCompletionDates(
   meta: HabitMetadata | null | undefined,
   rows: CompletionRowLite[],
@@ -54,23 +68,24 @@ export function deriveHabitCompletionDates(
     const goal = goalMlFromHabitMetadata(meta)
     const out: string[] = []
     for (const r of rows) {
-      const day = typeof r.completed_on === "string" ? r.completed_on.slice(0, 10) : ""
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) continue
+      const day = completionCivilDayKey(r.completed_on)
+      if (!day) continue
       const ml = r.water_ml ?? 0
       if (ml >= goal) out.push(day)
     }
     return Array.from(new Set(out)).sort()
   }
   const out = rows
-    .map((r) => (typeof r.completed_on === "string" ? r.completed_on.slice(0, 10) : ""))
-    .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d))
+    .map((r) => completionCivilDayKey(r.completed_on))
+    .filter((d) => d.length === 10)
   return Array.from(new Set(out)).sort()
 }
 
 export function waterMlForDay(rows: CompletionRowLite[], dayIso: string): number {
   const key = dayIso.slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return 0
   for (const r of rows) {
-    const d = typeof r.completed_on === "string" ? r.completed_on.slice(0, 10) : ""
+    const d = completionCivilDayKey(r.completed_on)
     if (d === key) return Math.max(0, r.water_ml ?? 0)
   }
   return 0

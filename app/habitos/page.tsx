@@ -36,6 +36,7 @@ import {
   DEFAULT_WATER_BOTTLE_ML,
   DEFAULT_WATER_GLASS_ML,
   DEFAULT_WATER_GOAL_ML,
+  WATER_SYSTEM_TRIGGER_OR_TIME,
 } from "@/lib/habits/waterTrackingHelpers"
 import { useHabits } from "@/app/hooks/useHabits"
 import { useStreakCelebrationQueue } from "@/app/hooks/useStreakCelebrationQueue"
@@ -358,7 +359,7 @@ export default function HabitosPage() {
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
-    if (!form.name.trim()) return
+    if (editing?.metadata?.habit_type !== "water-tracking" && !form.name.trim()) return
     if (form.superhabit && !editing && superhabitCount >= 2) return
 
     if (!persistenceEnabled && !mock) {
@@ -372,6 +373,7 @@ export default function HabitosPage() {
       const prev: HabitMetadata = { ...(editing.metadata ?? {}) }
       delete prev.success_metric_type
       delete prev.success_metric_target
+      delete prev.estimated_session_minutes
 
       const goalParsed = Math.round(parseInt(form.waterGoalMl, 10) || 0)
       const goalMl = Math.max(500, Math.min(8000, goalParsed || DEFAULT_WATER_GOAL_ML))
@@ -380,19 +382,23 @@ export default function HabitosPage() {
       const glassParsed = Math.round(parseInt(form.waterGlassMl, 10) || 0)
       const glassMl = Math.max(50, Math.min(1000, glassParsed || DEFAULT_WATER_GLASS_ML))
 
+      const allWeekdays = [0, 1, 2, 3, 4, 5, 6]
+      const allDisplayDays = ["L", "M", "X", "J", "V", "S", "D"]
+
       const metadata: HabitMetadata = {
         ...prev,
         habit_type: "water-tracking",
-        frequency: form.frequency,
-        weekdays: lettersToWeekdays(form.days),
-        display_days: form.days,
-        is_superhabit: form.superhabit,
+        frequency: "diario",
+        weekdays: allWeekdays,
+        display_days: allDisplayDays,
+        is_superhabit: false,
+        trigger_or_time: WATER_SYSTEM_TRIGGER_OR_TIME,
         water_goal_ml: goalMl,
         water_bottle_ml: bottleMl,
         water_glass_ml: glassMl,
       }
-      const intention = form.intention.trim()
-      if (intention) metadata.intention = intention
+      const intentionLocked = (editing.metadata?.intention ?? "").trim()
+      if (intentionLocked) metadata.intention = intentionLocked
       else delete metadata.intention
 
       const bw = form.bodyWeightKg.trim().replace(",", ".")
@@ -403,16 +409,9 @@ export default function HabitosPage() {
         delete metadata.body_weight_kg
       }
 
-      if (sessionMins > 0) metadata.estimated_session_minutes = sessionMins
-      else delete metadata.estimated_session_minutes
-
-      const trigger = form.triggerOrTime.trim()
-      if (trigger) metadata.trigger_or_time = trigger
-      else delete metadata.trigger_or_time
-
       const r = await updateHabit(editing.id, {
-        name: form.name.trim(),
-        domain: form.domainKey,
+        name: editing.name.trim(),
+        domain: "salud",
         metadata,
       })
       if (!r.ok) {
@@ -1030,18 +1029,13 @@ export default function HabitosPage() {
           loading={loading}
           waterBusyId={waterBusyId}
           setWaterBusyId={setWaterBusyId}
-          togglingId={togglingId}
           backfillingId={backfillingId}
           backfillingAll={backfillingAll}
           incrementWaterMl={incrementWaterMl}
-          toggleCompleteToday={toggleCompleteToday}
           onEdit={(habit) => {
             setEditing(habit)
             setForm(habitToModalValues(habit))
             setFormOpen(true)
-          }}
-          onToggleStreakCelebration={(r) => {
-            if (r.ok && r.streakCelebration) enqueueStreakCelebrations([r.streakCelebration])
           }}
         />
 

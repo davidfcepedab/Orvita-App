@@ -18,7 +18,7 @@ select
     'frequency', 'diario',
     'weekdays', jsonb_build_array(0, 1, 2, 3, 4, 5, 6),
     'display_days', jsonb_build_array('L', 'M', 'X', 'J', 'V', 'S', 'D'),
-    'trigger_or_time', '08:00 · Hidratación',
+    'trigger_or_time', 'Sistema Órvita · ritmo hacia tu meta diaria de ml',
     'intention', 'Convertir hidratación en un ritual medible sin fricción.',
     'water_bottle_ml', 750,
     'water_goal_ml', 2400,

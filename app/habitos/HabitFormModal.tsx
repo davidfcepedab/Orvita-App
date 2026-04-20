@@ -28,6 +28,7 @@ import {
   DEFAULT_WATER_GLASS_ML,
   DEFAULT_WATER_GOAL_ML,
   suggestedWaterGoalMlFromWeightKg,
+  WATER_SYSTEM_TRIGGER_OR_TIME,
 } from "@/lib/habits/waterTrackingHelpers"
 import type { HabitSuccessMetricType, HabitWithMetrics, OperationalDomain } from "@/lib/operational/types"
 
@@ -79,18 +80,19 @@ export function habitToModalValues(habit: HabitWithMetrics): HabitModalFormValue
   const displayDays =
     m?.display_days?.length ? [...m.display_days] : weekdaysToLetters(m?.weekdays ?? [])
   const isWater = m?.habit_type === "water-tracking"
+  const allDays = Array.from(DAY_LETTERS)
   return {
     name: habit.name,
     intention: m?.intention ?? "",
-    domainKey: habit.domain,
-    frequency: m?.frequency ?? "diario",
-    days: displayDays.length ? displayDays : [...HABIT_MODAL_DEFAULT_VALUES.days],
-    superhabit: Boolean(m?.is_superhabit),
+    domainKey: isWater ? "salud" : habit.domain,
+    frequency: isWater ? "diario" : m?.frequency ?? "diario",
+    days: isWater ? allDays : displayDays.length ? displayDays : [...HABIT_MODAL_DEFAULT_VALUES.days],
+    superhabit: isWater ? false : Boolean(m?.is_superhabit),
     successMetricType: m?.success_metric_type ?? "duracion",
     successMetricTarget: m?.success_metric_target ?? "",
     sessionDurationMinutes:
       m?.estimated_session_minutes != null ? String(m.estimated_session_minutes) : HABIT_MODAL_DEFAULT_VALUES.sessionDurationMinutes,
-    triggerOrTime: m?.trigger_or_time ?? "",
+    triggerOrTime: isWater ? WATER_SYSTEM_TRIGGER_OR_TIME : m?.trigger_or_time ?? "",
     isWaterTracking: isWater,
     waterBottleMl:
       m?.water_bottle_ml != null ? String(m.water_bottle_ml) : String(DEFAULT_WATER_BOTTLE_ML),
@@ -217,9 +219,11 @@ export function HabitFormModal({
                 {editing ? "Afinar tu sistema" : "Diseña un hábito que aguante la semana"}
               </DialogTitle>
               <DialogDescription className="text-left text-[13px] leading-relaxed">
-                {editing
-                  ? "Ajusta la intención y la métrica para que el seguimiento siga alineado con tu operativa."
-                  : "Un hábito claro —con disparador y éxito medible— es más fácil de defender cuando el día se pone denso."}
+                {form.isWaterTracking && editing
+                  ? "Solo podés ajustar meta, botellita y vaso. Nombre, dominio y ritmo los fija Órvita para que el seguimiento de ml sea coherente."
+                  : editing
+                    ? "Ajusta la intención y la métrica para que el seguimiento siga alineado con tu operativa."
+                    : "Un hábito claro —con disparador y éxito medible— es más fácil de defender cuando el día se pone denso."}
               </DialogDescription>
             </div>
           </div>
@@ -231,27 +235,41 @@ export function HabitFormModal({
               <h3 id="habit-identity" className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-primary)]">
                 Identidad
               </h3>
-              <div className="space-y-2">
-                <Label htmlFor="habit-name">Nombre del hábito</Label>
-                <Input
-                  id="habit-name"
-                  placeholder="ej. Bloque de trabajo profundo"
-                  value={form.name}
-                  onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                  autoComplete="off"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="habit-intention">Intención</Label>
-                <Textarea
-                  id="habit-intention"
-                  placeholder="¿Qué cambio real quieres anclar? Una frase breve basta."
-                  value={form.intention}
-                  onChange={(e) => setForm((p) => ({ ...p, intention: e.target.value }))}
-                  rows={2}
-                  maxLength={500}
-                />
-              </div>
+              {form.isWaterTracking ? (
+                <div className="space-y-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
+                    Definido por Órvita (no editable)
+                  </p>
+                  <p className="m-0 text-[15px] font-semibold text-[var(--color-text-primary)]">{form.name}</p>
+                  {form.intention.trim() ? (
+                    <p className="m-0 text-[13px] leading-snug text-[var(--color-text-secondary)]">{form.intention}</p>
+                  ) : null}
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="habit-name">Nombre del hábito</Label>
+                    <Input
+                      id="habit-name"
+                      placeholder="ej. Bloque de trabajo profundo"
+                      value={form.name}
+                      onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="habit-intention">Intención</Label>
+                    <Textarea
+                      id="habit-intention"
+                      placeholder="¿Qué cambio real quieres anclar? Una frase breve basta."
+                      value={form.intention}
+                      onChange={(e) => setForm((p) => ({ ...p, intention: e.target.value }))}
+                      rows={2}
+                      maxLength={500}
+                    />
+                  </div>
+                </>
+              )}
             </section>
 
             <section className="space-y-4 border-t border-[var(--color-border)] pt-5" aria-labelledby="habit-direction">
@@ -263,26 +281,17 @@ export function HabitFormModal({
                   <p className="text-xs text-[var(--color-text-secondary)]">
                     Personalizá capacidad de botellita, meta diaria y vaso extra. El progreso, la racha y el riesgo de ruptura usan la meta en ml; «+1 Botellita» suma siempre la capacidad que indiques abajo.
                   </p>
+                  <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 py-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
+                      Dominio
+                    </p>
+                    <p className="m-0 text-sm font-medium text-[var(--color-text-primary)]">{domainLabels.salud}</p>
+                    <p className="m-0 mt-0.5 text-[10px] text-[var(--color-text-secondary)]">
+                      Fijo en Salud: la misión de hidratación va ligada a la lógica de bienestar de Órvita.
+                    </p>
+                  </div>
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="habit-domain">Dominio</Label>
-                      <Select
-                        value={form.domainKey}
-                        onValueChange={(v) => setForm((p) => ({ ...p, domainKey: v as OperationalDomain }))}
-                      >
-                        <SelectTrigger id="habit-domain">
-                          <SelectValue placeholder="Elegir" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(Object.keys(domainLabels) as OperationalDomain[]).map((key) => (
-                            <SelectItem key={key} value={key}>
-                              {domainLabels[key]}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
+                    <div className="space-y-2 sm:col-span-2">
                       <Label htmlFor="water-goal-ml">Meta diaria de agua (ml)</Label>
                       <Input
                         id="water-goal-ml"
@@ -441,96 +450,125 @@ export function HabitFormModal({
               <h3 id="habit-rhythm" className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-primary)]">
                 Ritmo
               </h3>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="habit-session-mins">Duración estimada por sesión (min)</Label>
-                  <Input
-                    id="habit-session-mins"
-                    type="number"
-                    min={0}
-                    max={24 * 60}
-                    inputMode="numeric"
-                    value={form.sessionDurationMinutes}
-                    onChange={(e) => setForm((p) => ({ ...p, sessionDurationMinutes: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="habit-trigger">Trigger / hora</Label>
-                  <Input
-                    id="habit-trigger"
-                    placeholder="ej. Tras el café · 07:15 · Antes de abrir el inbox"
-                    value={form.triggerOrTime}
-                    onChange={(e) => setForm((p) => ({ ...p, triggerOrTime: e.target.value }))}
-                  />
-                </div>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2 sm:items-end">
-                <div className="space-y-2">
-                  <Label htmlFor="habit-frequency">Frecuencia</Label>
-                  <Select
-                    value={form.frequency}
-                    onValueChange={(v) => setForm((p) => ({ ...p, frequency: v as "diario" | "semanal" }))}
-                  >
-                    <SelectTrigger id="habit-frequency">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="diario">Diario (días elegidos)</SelectItem>
-                      <SelectItem value="semanal">Semanal (días elegidos)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="rounded-xl border border-dashed border-[color-mix(in_srgb,var(--color-accent-health)_40%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_6%,var(--color-surface))] p-3">
+              {form.isWaterTracking ? (
+                <div className="space-y-3 rounded-xl border border-[color-mix(in_srgb,var(--color-accent-health)_35%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_6%,var(--color-surface))] p-3">
                   <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
                     <Clock className="h-3.5 w-3.5 text-[var(--color-accent-health)]" aria-hidden />
-                    Vista semanal
+                    Seguimiento automático
                   </p>
-                  <p className="mt-1 text-sm font-medium text-[var(--color-text-primary)]">
-                    {sessionsPerWeek === 0
-                      ? "Elige al menos un día para estimar tiempo."
-                      : `${sessionsPerWeek} sesión${sessionsPerWeek === 1 ? "" : "es"} × ${sessionMins || "—"} min`}
+                  <p className="m-0 text-[12px] leading-snug text-[var(--color-text-secondary)]">
+                    No hay disparador manual: el día se mide en la misma zona horaria que tu agenda Órvita. En la misión de
+                    hidratación verás avisos de ritmo si vas por debajo de lo esperado o si queda poco tiempo para cerrar
+                    la meta de ml.
                   </p>
-                  <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">
-                    Compromiso aproximado:{" "}
-                    <span className="font-semibold text-[var(--color-accent-health)]">
-                      {sessionsPerWeek === 0 || !sessionMins ? "—" : formatWeeklyMinutes(weeklyMinutes)}
-                    </span>{" "}
-                    / semana
+                  <p className="m-0 rounded-md bg-[var(--color-surface-alt)] px-2 py-1.5 text-[11px] text-[var(--color-text-secondary)]">
+                    <span className="font-medium text-[var(--color-text-primary)]">Referencia interna:</span>{" "}
+                    {WATER_SYSTEM_TRIGGER_OR_TIME}
+                  </p>
+                  <p className="m-0 text-[11px] text-[var(--color-text-secondary)]">
+                    Frecuencia: <span className="font-medium text-[var(--color-text-primary)]">diario</span> · Días:{" "}
+                    <span className="font-medium text-[var(--color-text-primary)]">todos (L–D)</span>
                   </p>
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Días activos</Label>
-                <div className="flex flex-wrap gap-2">
-                  {DAY_LETTERS.map((day) => {
-                    const on = form.days.includes(day)
-                    return (
-                      <button
-                        key={day}
-                        type="button"
-                        onClick={() =>
-                          setForm((prev) => {
-                            const next = on ? prev.days.filter((d) => d !== day) : [...prev.days, day]
-                            const order = [...DAY_LETTERS]
-                            next.sort((a, b) => order.indexOf(a as (typeof DAY_LETTERS)[number]) - order.indexOf(b as (typeof DAY_LETTERS)[number]))
-                            return { ...prev, days: next }
-                          })
-                        }
-                        className={cn(
-                          "min-h-[40px] min-w-[40px] rounded-full border text-xs font-semibold transition-colors",
-                          on
-                            ? "border-[var(--color-accent-health)] bg-[color-mix(in_srgb,var(--color-accent-health)_12%,var(--color-surface))] text-[var(--color-text-primary)]"
-                            : "border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-secondary)] hover:border-[var(--color-text-secondary)]"
-                        )}
+              ) : (
+                <>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="habit-session-mins">Duración estimada por sesión (min)</Label>
+                      <Input
+                        id="habit-session-mins"
+                        type="number"
+                        min={0}
+                        max={24 * 60}
+                        inputMode="numeric"
+                        value={form.sessionDurationMinutes}
+                        onChange={(e) => setForm((p) => ({ ...p, sessionDurationMinutes: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="habit-trigger">Trigger / hora</Label>
+                      <Input
+                        id="habit-trigger"
+                        placeholder="ej. Tras el café · 07:15 · Antes de abrir el inbox"
+                        value={form.triggerOrTime}
+                        onChange={(e) => setForm((p) => ({ ...p, triggerOrTime: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2 sm:items-end">
+                    <div className="space-y-2">
+                      <Label htmlFor="habit-frequency">Frecuencia</Label>
+                      <Select
+                        value={form.frequency}
+                        onValueChange={(v) => setForm((p) => ({ ...p, frequency: v as "diario" | "semanal" }))}
                       >
-                        {day}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
+                        <SelectTrigger id="habit-frequency">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="diario">Diario (días elegidos)</SelectItem>
+                          <SelectItem value="semanal">Semanal (días elegidos)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="rounded-xl border border-dashed border-[color-mix(in_srgb,var(--color-accent-health)_40%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_6%,var(--color-surface))] p-3">
+                      <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
+                        <Clock className="h-3.5 w-3.5 text-[var(--color-accent-health)]" aria-hidden />
+                        Vista semanal
+                      </p>
+                      <p className="mt-1 text-sm font-medium text-[var(--color-text-primary)]">
+                        {sessionsPerWeek === 0
+                          ? "Elige al menos un día para estimar tiempo."
+                          : `${sessionsPerWeek} sesión${sessionsPerWeek === 1 ? "" : "es"} × ${sessionMins || "—"} min`}
+                      </p>
+                      <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">
+                        Compromiso aproximado:{" "}
+                        <span className="font-semibold text-[var(--color-accent-health)]">
+                          {sessionsPerWeek === 0 || !sessionMins ? "—" : formatWeeklyMinutes(weeklyMinutes)}
+                        </span>{" "}
+                        / semana
+                      </p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Días activos</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {DAY_LETTERS.map((day) => {
+                        const on = form.days.includes(day)
+                        return (
+                          <button
+                            key={day}
+                            type="button"
+                            onClick={() =>
+                              setForm((prev) => {
+                                const next = on ? prev.days.filter((d) => d !== day) : [...prev.days, day]
+                                const order = [...DAY_LETTERS]
+                                next.sort(
+                                  (a, b) =>
+                                    order.indexOf(a as (typeof DAY_LETTERS)[number]) -
+                                    order.indexOf(b as (typeof DAY_LETTERS)[number]),
+                                )
+                                return { ...prev, days: next }
+                              })
+                            }
+                            className={cn(
+                              "min-h-[40px] min-w-[40px] rounded-full border text-xs font-semibold transition-colors",
+                              on
+                                ? "border-[var(--color-accent-health)] bg-[color-mix(in_srgb,var(--color-accent-health)_12%,var(--color-surface))] text-[var(--color-text-primary)]"
+                                : "border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-secondary)] hover:border-[var(--color-text-secondary)]",
+                            )}
+                          >
+                            {day}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
             </section>
 
+            {!form.isWaterTracking ? (
             <section className="flex items-start gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] p-4">
               <Checkbox
                 id="habit-super"
@@ -548,6 +586,7 @@ export function HabitFormModal({
                 </p>
               </div>
             </section>
+            ) : null}
           </div>
 
           <DialogFooter className="w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
@@ -583,7 +622,11 @@ export function HabitFormModal({
                 className="inline-flex h-10 items-center justify-center gap-2 rounded-[10px] bg-[var(--color-accent-health)] px-5 text-sm font-semibold text-white shadow-sm transition-opacity disabled:cursor-not-allowed disabled:opacity-45"
               >
                 <Target className="h-4 w-4 opacity-90" aria-hidden />
-                {editing ? "Guardar rediseño del hábito" : "Añadir al stack estratégico"}
+                {editing
+                  ? form.isWaterTracking
+                    ? "Guardar meta y botellita"
+                    : "Guardar rediseño del hábito"
+                  : "Añadir al stack estratégico"}
               </button>
             </div>
           </DialogFooter>

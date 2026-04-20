@@ -1,17 +1,8 @@
 "use client"
 
-import {
-  CheckCircle2,
-  Circle,
-  Droplets,
-  Flame,
-  Loader2,
-  Sparkles,
-  Trophy,
-  Zap,
-} from "lucide-react"
-import type { HabitsToggleTodayResult } from "@/app/hooks/useHabits"
+import { Droplets, Flame, Loader2, Sparkles, Trophy, Zap } from "lucide-react"
 import type { HabitWeekDayMark } from "@/lib/habits/habitMetrics"
+import { buildWaterPacingNudge } from "@/lib/habits/waterPacingNudge"
 import {
   bottleMlFromHabitMetadata,
   equivalentBottlesDecimal,
@@ -38,13 +29,10 @@ export type WaterHabitMissionBlockProps = {
   loading: boolean
   waterBusyId: string | null
   setWaterBusyId: (id: string | null) => void
-  togglingId: string | null
   backfillingId: string | null
   backfillingAll: boolean
   incrementWaterMl: (id: string, addMl: number) => Promise<{ ok: true } | { ok: false; error: string }>
-  toggleCompleteToday: (id: string) => Promise<HabitsToggleTodayResult>
   onEdit: (habit: HabitWithMetrics) => void
-  onToggleStreakCelebration: (r: HabitsToggleTodayResult) => void
 }
 
 function WaterRing({ pct, gradId }: { pct: number; gradId: string }) {
@@ -95,13 +83,10 @@ export function WaterHabitMissionBlock({
   loading,
   waterBusyId,
   setWaterBusyId,
-  togglingId,
   backfillingId,
   backfillingAll,
   incrementWaterMl,
-  toggleCompleteToday,
   onEdit,
-  onToggleStreakCelebration,
 }: WaterHabitMissionBlockProps) {
   if (habits.length === 0) return null
 
@@ -211,6 +196,21 @@ export function WaterHabitMissionBlock({
                     <p className="m-0 line-clamp-2 text-[12px] leading-snug text-[var(--color-text-secondary)]">{intention}</p>
                   ) : null}
 
+                  {(() => {
+                    const nudge = buildWaterPacingNudge(todayMl, goalMl)
+                    if (!nudge) return null
+                    const wrap =
+                      nudge.tone === "urgent"
+                        ? "border-[color-mix(in_srgb,var(--color-accent-danger)_45%,#22d3ee)] bg-[color-mix(in_srgb,var(--color-accent-danger)_8%,var(--color-surface))] text-[var(--color-text-primary)]"
+                        : "border-[color-mix(in_srgb,#f59e0b_50%,#22d3ee)] bg-[color-mix(in_srgb,#f59e0b_10%,var(--color-surface))] text-[var(--color-text-primary)]"
+                    return (
+                      <div className={cn("rounded-lg border p-2.5 text-[12px] leading-snug", wrap)}>
+                        <p className="m-0 font-semibold">{nudge.title}</p>
+                        <p className="m-0 mt-1 text-[11px] opacity-95">{nudge.body}</p>
+                      </div>
+                    )
+                  })()}
+
                   <div
                     className="rounded-xl border border-[color-mix(in_srgb,#22d3ee_22%,var(--color-border))] bg-[color-mix(in_srgb,#ecfeff_35%,var(--color-surface-alt))] p-3 dark:bg-[color-mix(in_srgb,#0c4a6e_18%,var(--color-surface-alt))]"
                     role="status"
@@ -249,12 +249,7 @@ export function WaterHabitMissionBlock({
                   <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                     <button
                       type="button"
-                      disabled={
-                        globalBusy ||
-                        waterBusyId === habit.id ||
-                        togglingId === habit.id ||
-                        backfillingId === habit.id
-                      }
+                      disabled={globalBusy || waterBusyId === habit.id || backfillingId === habit.id}
                       onClick={async () => {
                         setWaterBusyId(habit.id)
                         try {
@@ -275,12 +270,7 @@ export function WaterHabitMissionBlock({
                     </button>
                     <button
                       type="button"
-                      disabled={
-                        globalBusy ||
-                        waterBusyId === habit.id ||
-                        togglingId === habit.id ||
-                        backfillingId === habit.id
-                      }
+                      disabled={globalBusy || waterBusyId === habit.id || backfillingId === habit.id}
                       onClick={async () => {
                         setWaterBusyId(habit.id)
                         try {
@@ -299,7 +289,7 @@ export function WaterHabitMissionBlock({
                     </button>
                   </div>
 
-                  <div className="flex flex-col gap-3 border-t border-[color-mix(in_srgb,var(--color-border)_70%,transparent)] pt-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex flex-col gap-3 border-t border-[color-mix(in_srgb,var(--color-border)_70%,transparent)] pt-3 sm:flex-row sm:items-end sm:justify-between">
                     <div
                       role="group"
                       aria-label="Semana actual"
@@ -355,42 +345,14 @@ export function WaterHabitMissionBlock({
                       })}
                     </div>
 
-                    <div className="flex flex-row items-center justify-end gap-2 sm:flex-col sm:items-stretch">
-                      <button
-                        type="button"
-                        disabled={!persistenceEnabled && !mock}
-                        onClick={() => onEdit(habit)}
-                        className="min-h-9 rounded-lg px-2 text-xs font-medium text-[var(--color-text-secondary)] underline-offset-2 hover:text-[var(--color-text-primary)] hover:underline"
-                      >
-                        Editar misión
-                      </button>
-                      <button
-                        type="button"
-                        disabled={
-                          (!persistenceEnabled && !mock) ||
-                          loading ||
-                          togglingId === habit.id ||
-                          backfillingId === habit.id ||
-                          backfillingAll
-                        }
-                        aria-label={doneToday ? "Deshacer meta de hoy" : "Marcar meta cumplida hoy"}
-                        title={doneToday ? "Deshacer hoy" : "Meta hoy"}
-                        onClick={async () => {
-                          const r = await toggleCompleteToday(habit.id)
-                          if (!r.ok) alert(r.error || "No se pudo actualizar")
-                          else onToggleStreakCelebration(r)
-                        }}
-                        className="inline-flex h-11 w-11 items-center justify-center rounded-xl border-2 border-[color-mix(in_srgb,#22d3ee_35%,var(--color-border))] bg-[var(--color-surface)] shadow-inner transition-transform active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-45"
-                      >
-                        {togglingId === habit.id ? (
-                          <Loader2 className="h-5 w-5 animate-spin text-[#0891b2]" aria-hidden />
-                        ) : doneToday ? (
-                          <CheckCircle2 className="h-5 w-5 text-[#0891b2]" strokeWidth={2} aria-hidden />
-                        ) : (
-                          <Circle className="h-5 w-5 text-[var(--color-text-secondary)]" strokeWidth={2} aria-hidden />
-                        )}
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      disabled={!persistenceEnabled && !mock}
+                      onClick={() => onEdit(habit)}
+                      className="shrink-0 self-end text-left text-xs font-medium text-[var(--color-text-secondary)] underline-offset-2 hover:text-[var(--color-text-primary)] hover:underline sm:self-auto"
+                    >
+                      Meta, botellita y vaso…
+                    </button>
                   </div>
 
                   <p className="m-0 flex items-center gap-1.5 text-[11px] text-[var(--color-text-secondary)]">

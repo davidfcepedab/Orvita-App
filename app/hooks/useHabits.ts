@@ -84,11 +84,13 @@ function mockHabitRows(): MockHabitRow[] {
     frequency: "diario",
     weekdays: [0, 1, 2, 3, 4, 5, 6],
     display_days: ["L", "M", "X", "J", "V", "S", "D"],
-    trigger_or_time: "08:00 · Hidratación",
+    trigger_or_time:
+      "Sistema Órvita · ritmo hacia tu meta diaria de ml",
     intention: "Convertir hidratación en un ritual medible sin fricción.",
     water_bottle_ml: 750,
     water_goal_ml: 2400,
     water_glass_ml: 250,
+    is_superhabit: false,
   }
   return [
     { id: "mock-1", name: "Dormir antes de las 11", domain: "fisico", metadata: m1 },
@@ -642,9 +644,34 @@ export function useHabits() {
           headers,
           body: JSON.stringify({ addMl: Math.round(addMl) }),
         })
-        const json = (await res.json()) as { success?: boolean; error?: string }
+        const json = (await res.json()) as {
+          success?: boolean
+          error?: string
+          data?: { water_ml?: number; water_goal_ml?: number }
+        }
         if (!res.ok || !json.success) {
           return { ok: false, error: messageForHttpError(res.status, json.error, res.statusText) }
+        }
+        const bump = json.data?.water_ml
+        if (typeof bump === "number") {
+          const today = utcTodayIso()
+          setHabits((prev) =>
+            prev.map((h) => {
+              if (h.id !== id || !isWaterTrackingHabit(h.metadata)) return h
+              const goal = goalMlFromHabitMetadata(h.metadata)
+              const scheduled = isScheduledOnUtcDay(h.metadata ?? null, today)
+              const completedToday = bump >= goal
+              return {
+                ...h,
+                water_today_ml: bump,
+                metrics: {
+                  ...h.metrics,
+                  completed_today: completedToday,
+                  at_risk: scheduled && !completedToday,
+                },
+              }
+            }),
+          )
         }
         await refresh()
         return { ok: true as const }
