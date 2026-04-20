@@ -163,7 +163,7 @@ export function WaterHabitMissionBlock({
             ) : null}
           </div>
           <p className="m-0 max-w-prose text-[13px] leading-[1.45] text-[color-mix(in_srgb,var(--color-text-secondary)_95%,#0c4a6e)] dark:text-cyan-100/85">
-            Sumá vasos o botellitas y mirá cómo sube tu porcentaje del día. Podés ajustar tu meta cuando quieras.
+            Agrega vasos o botellas y ve cómo avanza tu meta del día. Puedes cambiar la cantidad objetivo cuando quieras.
           </p>
           {singleWater ? (
             <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-[color-mix(in_srgb,#22d3ee_18%,transparent)] pt-1.5">
