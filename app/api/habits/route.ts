@@ -59,7 +59,12 @@ export async function GET(req: NextRequest) {
     const legacy = req.nextUrl.searchParams.get("legacy") === "1"
     const domain = req.nextUrl.searchParams.get("domain")
 
-    await ensureDefaultWaterHabit(supabase, userId)
+    try {
+      await ensureDefaultWaterHabit(supabase, userId)
+    } catch (e) {
+      // No bloquear la carga del stack si el insert falla (RLS, duplicado, etc.)
+      console.error("HABITS GET: ensureDefaultWaterHabit:", e)
+    }
 
     const query = supabase
       .from("operational_habits")
@@ -86,15 +91,32 @@ export async function GET(req: NextRequest) {
     type CompletionRow = { habit_id: string; completed_on: string; water_ml: number | null }
     let completions: CompletionRow[] = []
     if (habitIds.length > 0) {
-      const { data: comp, error: compError } = await supabase
+      const withWater = await supabase
         .from("habit_completions")
         .select("habit_id,completed_on,water_ml")
         .eq("user_id", userId)
         .in("habit_id", habitIds)
         .gte("completed_on", cutoff)
 
-      if (compError) throw compError
-      completions = (comp ?? []) as CompletionRow[]
+      if (!withWater.error) {
+        completions = (withWater.data ?? []) as CompletionRow[]
+      } else {
+        // Migración `water_ml` aún no aplicada en este proyecto Supabase
+        console.warn(
+          "HABITS GET: select con water_ml falló, reintentando sin columna:",
+          withWater.error.message,
+        )
+        const noWater = await supabase
+          .from("habit_completions")
+          .select("habit_id,completed_on")
+          .eq("user_id", userId)
+          .in("habit_id", habitIds)
+          .gte("completed_on", cutoff)
+        if (noWater.error) throw noWater.error
+        completions = ((noWater.data ?? []) as { habit_id: string; completed_on: string }[]).map(
+          (r) => ({ ...r, water_ml: null as number | null }),
+        )
+      }
     }
 
     const rowsByHabit = new Map<string, CompletionRow[]>()
