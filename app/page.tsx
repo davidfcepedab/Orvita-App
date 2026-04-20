@@ -2,14 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 
-import { StrategicHeader } from "@/app/home/_components/StrategicHeader"
-import { CriticalAlerts } from "@/app/home/_components/CriticalAlerts"
-import { HeroOperativoWidget } from "@/app/home/_components/HeroOperativoWidget"
-import { OperationalTodayWidget } from "@/app/home/_components/OperationalTodayWidget"
-import { CapitalOperativoPanel } from "@/app/home/_components/CapitalOperativoPanel"
-import { PredictiveStrategic } from "@/app/home/_components/PredictiveStrategic"
-import { SmartActionsSection } from "@/app/home/_components/SmartActionsSection"
-import { MiniWidgets } from "@/app/home/_components/MiniWidgets"
+import { ZenHomeOverview } from "@/app/home/_components/ZenHomeOverview"
 import type { OrbitaHomeModel, SmartAction } from "@/app/home/_lib/orbita-home-types"
 import { isAppMockMode } from "@/lib/checkins/flags"
 
@@ -174,9 +167,7 @@ export default function HomePage() {
         </div>
       ) : null}
 
-      {model ? <StrategicHeader model={model} onGenerateAi={generateAiAnalysis} isGenerating={isGenerating} /> : null}
-
-      <main className="min-w-0 space-y-10 pb-20 pt-6">
+      <main className="min-w-0 pb-20 pt-4 sm:pt-6">
         {isLoading && !model ? (
           <section className="mx-auto max-w-6xl px-4">
             <div className="rounded-2xl border border-white/10 bg-orbita-surface p-4 text-sm text-[var(--color-text-secondary)]">
@@ -186,42 +177,16 @@ export default function HomePage() {
         ) : null}
 
         {model ? (
-          <CriticalAlerts
-            alerts={model.alerts}
+          <ZenHomeOverview
+            model={model}
+            formatCOP={formatCOP}
+            onGenerateAi={generateAiAnalysis}
+            isGenerating={isGenerating}
             onOneClickAction={oneClickAction}
             onResolveWithAi={resolveAlertWithAi}
             pendingAlertId={pendingAlertId}
-          />
-        ) : null}
-
-        {model ? <HeroOperativoWidget model={model} /> : null}
-
-        {model ? <OperationalTodayWidget /> : null}
-
-        {model ? <CapitalOperativoPanel model={model} formatCOP={formatCOP} /> : null}
-
-        {model ? (
-          <PredictiveStrategic
-            points={model.predictive.points30d}
-            insights={model.predictive.insights}
-            onRequestAiRefresh={generateAiAnalysis}
-            isRefreshing={isGenerating}
-          />
-        ) : null}
-
-        {model ? (
-          <SmartActionsSection
-            actions={model.smartActions}
-            onAction={onSmartAction}
-            pendingActionId={pendingSmartActionId}
-          />
-        ) : null}
-
-        {model ? (
-          <MiniWidgets
-            decisions={model.widgets.decisions}
-            agendaToday={model.widgets.agendaToday}
-            habits={model.widgets.habits}
+            onSmartAction={onSmartAction}
+            pendingSmartActionId={pendingSmartActionId}
           />
         ) : null}
       </main>
