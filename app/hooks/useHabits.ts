@@ -14,6 +14,12 @@ import {
 } from "@/lib/habits/habitMetrics"
 import { buildSuperhabitStreakCelebration } from "@/lib/habits/streakMilestones"
 import type { StreakCelebrationPayload } from "@/lib/habits/streakMilestones"
+import {
+  deriveHabitCompletionDates,
+  goalMlFromHabitMetadata,
+  isWaterTrackingHabit,
+  waterMlForDay,
+} from "@/lib/habits/waterTrackingHelpers"
 import type { HabitMetadata, HabitWithMetrics, OperationalDomain } from "@/lib/operational/types"
 
 export type { StreakCelebrationPayload } from "@/lib/habits/streakMilestones"
@@ -73,10 +79,22 @@ function mockHabitRows(): MockHabitRow[] {
     display_days: ["L", "J"],
     is_superhabit: true,
   }
+  const m4: HabitMetadata = {
+    habit_type: "water-tracking",
+    frequency: "diario",
+    weekdays: [0, 1, 2, 3, 4, 5, 6],
+    display_days: ["L", "M", "X", "J", "V", "S", "D"],
+    trigger_or_time: "08:00 · Hidratación",
+    intention: "Convertir hidratación en un ritual medible sin fricción.",
+    water_bottle_ml: 750,
+    water_goal_ml: 2400,
+    water_glass_ml: 250,
+  }
   return [
     { id: "mock-1", name: "Dormir antes de las 11", domain: "fisico", metadata: m1 },
     { id: "mock-2", name: "Movilidad y respiración", domain: "salud", metadata: m2 },
     { id: "mock-3", name: "Revisión financiera de 10 minutos", domain: "profesional", metadata: m3 },
+    { id: "mock-4", name: "Hidratación Estratégica", domain: "salud", metadata: m4 },
   ]
 }
 
@@ -86,14 +104,35 @@ function initialMockDatesById(t: string): Record<string, string[]> {
     [rows[0].id]: mockCompletionSeeds(t, rows[0].metadata, [-1, -2, -3, -5]),
     [rows[1].id]: mockCompletionSeeds(t, rows[1].metadata, [-1, -2, -4]),
     [rows[2].id]: mockCompletionSeeds(t, rows[2].metadata, [-7, -14, -21]),
+    [rows[3].id]: [],
   }
 }
 
-function buildMockHabitsFromDates(datesById: Record<string, string[]>): HabitWithMetrics[] {
+function waterRowsFromMlMap(
+  habitId: string,
+  byDay: Record<string, Record<string, number>>,
+): { completed_on: string; water_ml: number | null }[] {
+  const inner = byDay[habitId] ?? {}
+  return Object.entries(inner).map(([day, ml]) => ({
+    completed_on: day,
+    water_ml: ml,
+  }))
+}
+
+function buildMockHabitsFromDates(
+  datesById: Record<string, string[]>,
+  waterMlByHabitDay: Record<string, Record<string, number>>,
+): HabitWithMetrics[] {
   const t = utcTodayIso()
   return mockHabitRows().map((row) => {
-    const dates = datesById[row.id] ?? []
+    const rawWaterRows = waterRowsFromMlMap(row.id, waterMlByHabitDay)
+    const dates = isWaterTrackingHabit(row.metadata)
+      ? deriveHabitCompletionDates(row.metadata, rawWaterRows)
+      : datesById[row.id] ?? []
     const metrics = computeHabitCompletionMetrics(dates, t, row.metadata)
+    const water_today_ml = isWaterTrackingHabit(row.metadata)
+      ? waterMlForDay(rawWaterRows, t)
+      : undefined
     return {
       id: row.id,
       name: row.name,
@@ -102,6 +141,7 @@ function buildMockHabitsFromDates(datesById: Record<string, string[]>): HabitWit
       created_at: new Date().toISOString(),
       metadata: row.metadata,
       metrics,
+      ...(water_today_ml !== undefined ? { water_today_ml } : {}),
     }
   })
 }
@@ -125,6 +165,8 @@ export function useHabits() {
   const [backfillingId, setBackfillingId] = useState<string | null>(null)
   const [backfillingAll, setBackfillingAll] = useState(false)
   const mockCompletionDatesRef = useRef<Record<string, string[]>>({})
+  /** Mock: ml por día civil por hábito water-tracking */
+  const mockWaterMlByHabitDayRef = useRef<Record<string, Record<string, number>>>({})
   const habitsRef = useRef<HabitWithMetrics[]>([])
 
   useEffect(() => {
@@ -135,7 +177,7 @@ export function useHabits() {
     if (mock) {
       const t = utcTodayIso()
       mockCompletionDatesRef.current = initialMockDatesById(t)
-      const seed = buildMockHabitsFromDates(mockCompletionDatesRef.current)
+      const seed = buildMockHabitsFromDates(mockCompletionDatesRef.current, mockWaterMlByHabitDayRef.current)
       setHabits(seed)
       habitsRef.current = seed
       setSummary(aggregateHabitsSummary(seed.map((h) => h.metrics)))
@@ -188,9 +230,42 @@ export function useHabits() {
         const today = utcTodayIso()
         const map = mockCompletionDatesRef.current
         const before = habitsRef.current.find((h) => h.id === id)
-        const prevStreak = before?.metrics.current_streak ?? 0
-        const wasDoneToday = before?.metrics.completed_today ?? false
-        const isSuper = Boolean(before?.metadata?.is_superhabit)
+        if (!before) return { ok: false as const, error: "Hábito no encontrado" }
+        const prevStreak = before.metrics.current_streak ?? 0
+        const wasDoneToday = before.metrics.completed_today ?? false
+        const isSuper = Boolean(before.metadata?.is_superhabit)
+
+        if (isWaterTrackingHabit(before.metadata)) {
+          const goal = goalMlFromHabitMetadata(before.metadata)
+          const wmap = mockWaterMlByHabitDayRef.current
+          const inner = { ...(wmap[id] ?? {}) }
+          const cur = inner[today] ?? 0
+          if (cur >= goal) {
+            delete inner[today]
+          } else {
+            inner[today] = goal
+          }
+          wmap[id] = inner
+          const nextList = buildMockHabitsFromDates(map, wmap)
+          habitsRef.current = nextList
+          setHabits(nextList)
+          setSummary(aggregateHabitsSummary(nextList.map((h) => h.metrics)))
+          const after = nextList.find((h) => h.id === id)
+          const streakCelebration =
+            after && before
+              ? buildSuperhabitStreakCelebration({
+                  habitId: before.id,
+                  habitName: before.name,
+                  isSuperhabit: isSuper,
+                  wasCompletedToday: wasDoneToday,
+                  nowCompletedToday: after.metrics.completed_today,
+                  prevStreak,
+                  nextStreak: after.metrics.current_streak,
+                })
+              : null
+          return { ok: true as const, streakCelebration }
+        }
+
         const prevDates = [...(map[id] ?? [])]
         const had = prevDates.includes(today)
         const markingDone = !had
@@ -198,7 +273,7 @@ export function useHabits() {
         map[id] = nextDates
 
         let streakCelebration: StreakCelebrationPayload | null = null
-        if (markingDone && before) {
+        if (markingDone) {
           const metrics = computeHabitCompletionMetrics(nextDates, today, before.metadata ?? null)
           streakCelebration = buildSuperhabitStreakCelebration({
             habitId: before.id,
@@ -280,6 +355,24 @@ export function useHabits() {
       if (mock) {
         const t = utcTodayIso()
         const map = mockCompletionDatesRef.current
+        const habit = habitsRef.current.find((h) => h.id === id)
+        if (habit && isWaterTrackingHabit(habit.metadata)) {
+          const goal = goalMlFromHabitMetadata(habit.metadata)
+          const wmap = mockWaterMlByHabitDayRef.current
+          const inner = { ...(wmap[id] ?? {}) }
+          const cur = inner[parsed.day] ?? 0
+          if (cur >= goal) {
+            delete inner[parsed.day]
+          } else {
+            inner[parsed.day] = goal
+          }
+          wmap[id] = inner
+          const nextList = buildMockHabitsFromDates(map, wmap)
+          habitsRef.current = nextList
+          setHabits(nextList)
+          setSummary(aggregateHabitsSummary(nextList.map((h) => h.metrics)))
+          return { ok: true as const }
+        }
         const prevDates = [...(map[id] ?? [])]
         const had = prevDates.includes(parsed.day)
         const nextDates = had ? prevDates.filter((d) => d !== parsed.day) : [...prevDates, parsed.day].sort()
@@ -332,23 +425,28 @@ export function useHabits() {
       }
 
       if (mock) {
-        const t = utcTodayIso()
         const map = mockCompletionDatesRef.current
+        const wmap = mockWaterMlByHabitDayRef.current
         for (const id of habitIds) {
+          const habit = habitsRef.current.find((h) => h.id === id)
+          if (habit && isWaterTrackingHabit(habit.metadata)) {
+            const goal = goalMlFromHabitMetadata(habit.metadata)
+            const inner = { ...(wmap[id] ?? {}) }
+            const cur = inner[parsed.day] ?? 0
+            if (cur >= goal) delete inner[parsed.day]
+            else inner[parsed.day] = goal
+            wmap[id] = inner
+            continue
+          }
           const prevDates = [...(map[id] ?? [])]
           const had = prevDates.includes(parsed.day)
           const nextDates = had ? prevDates.filter((d) => d !== parsed.day) : [...prevDates, parsed.day].sort()
           map[id] = nextDates
         }
-        setHabits((prev) => {
-          const next = prev.map((h) => {
-            const dates = map[h.id] ?? []
-            const metrics = computeHabitCompletionMetrics(dates, t, h.metadata ?? null)
-            return { ...h, completed: metrics.completed_today, metrics }
-          })
-          setSummary(aggregateHabitsSummary(next.map((h) => h.metrics)))
-          return next
-        })
+        const nextList = buildMockHabitsFromDates(map, wmap)
+        habitsRef.current = nextList
+        setHabits(nextList)
+        setSummary(aggregateHabitsSummary(nextList.map((h) => h.metrics)))
         return { ok: true as const }
       }
 
@@ -411,37 +509,40 @@ export function useHabits() {
           })
           .filter((row): row is NonNullable<typeof row> => row != null)
 
+        const wmap = mockWaterMlByHabitDayRef.current
         for (const habitId of unique) {
-          const prevDates = [...(map[habitId] ?? [])]
-          if (!prevDates.includes(t)) map[habitId] = [...prevDates, t].sort()
+          const h = habitsRef.current.find((x) => x.id === habitId)
+          if (h && isWaterTrackingHabit(h.metadata)) {
+            const goal = goalMlFromHabitMetadata(h.metadata)
+            const inner = { ...(wmap[habitId] ?? {}) }
+            inner[t] = goal
+            wmap[habitId] = inner
+          } else {
+            const prevDates = [...(map[habitId] ?? [])]
+            if (!prevDates.includes(t)) map[habitId] = [...prevDates, t].sort()
+          }
         }
 
+        const nextList = buildMockHabitsFromDates(map, wmap)
         const streakCelebrations: StreakCelebrationPayload[] = []
         for (const s of snapshots) {
-          const nextDates = map[s.id] ?? []
-          const metrics = computeHabitCompletionMetrics(nextDates, t, s.h.metadata ?? null)
+          const after = nextList.find((h) => h.id === s.id)
+          if (!after) continue
           const c = buildSuperhabitStreakCelebration({
             habitId: s.h.id,
             habitName: s.h.name,
             isSuperhabit: s.isSuper,
             wasCompletedToday: s.wasDone,
-            nowCompletedToday: metrics.completed_today,
+            nowCompletedToday: after.metrics.completed_today,
             prevStreak: s.prevStreak,
-            nextStreak: metrics.current_streak,
+            nextStreak: after.metrics.current_streak,
           })
           if (c) streakCelebrations.push(c)
         }
 
-        setHabits((prev) => {
-          const next = prev.map((h) => {
-            const dates = map[h.id] ?? []
-            const metrics = computeHabitCompletionMetrics(dates, t, h.metadata ?? null)
-            return { ...h, completed: metrics.completed_today, metrics }
-          })
-          habitsRef.current = next
-          setSummary(aggregateHabitsSummary(next.map((x) => x.metrics)))
-          return next
-        })
+        habitsRef.current = nextList
+        setHabits(nextList)
+        setSummary(aggregateHabitsSummary(nextList.map((x) => x.metrics)))
         return { ok: true as const, streakCelebrations }
       }
 
@@ -510,6 +611,50 @@ export function useHabits() {
     [mock, persistenceEnabled, refresh],
   )
 
+  const incrementWaterMl = useCallback(
+    async (id: string, addMl: number): Promise<{ ok: true } | { ok: false; error: string }> => {
+      if (!Number.isFinite(addMl) || addMl <= 0) {
+        return { ok: false, error: "Cantidad inválida" }
+      }
+      if (mock) {
+        const today = utcTodayIso()
+        const h = habitsRef.current.find((x) => x.id === id)
+        if (!h || !isWaterTrackingHabit(h.metadata)) {
+          return { ok: false, error: "Hábito de agua no encontrado" }
+        }
+        const wmap = mockWaterMlByHabitDayRef.current
+        const inner = { ...(wmap[id] ?? {}) }
+        inner[today] = Math.min(50000, Math.max(0, (inner[today] ?? 0) + Math.round(addMl)))
+        wmap[id] = inner
+        const nextList = buildMockHabitsFromDates(mockCompletionDatesRef.current, wmap)
+        habitsRef.current = nextList
+        setHabits(nextList)
+        setSummary(aggregateHabitsSummary(nextList.map((x) => x.metrics)))
+        return { ok: true as const }
+      }
+      if (!persistenceEnabled) {
+        return { ok: false, error: UI_HABITS_SAVE_OFF }
+      }
+      try {
+        const headers = await buildJsonHeaders()
+        const res = await fetch(`/api/habits/${encodeURIComponent(id)}/water`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ addMl: Math.round(addMl) }),
+        })
+        const json = (await res.json()) as { success?: boolean; error?: string }
+        if (!res.ok || !json.success) {
+          return { ok: false, error: messageForHttpError(res.status, json.error, res.statusText) }
+        }
+        await refresh()
+        return { ok: true as const }
+      } catch {
+        return { ok: false, error: "Error de red" }
+      }
+    },
+    [mock, persistenceEnabled, refresh],
+  )
+
   const createHabit = useCallback(
     async (input: { name: string; domain: OperationalDomain; metadata: HabitMetadata }) => {
       if (mock) {
@@ -517,6 +662,9 @@ export function useHabits() {
         const meta = { ...input.metadata }
         const hid = `mock-${Date.now()}`
         mockCompletionDatesRef.current[hid] = []
+        if (isWaterTrackingHabit(meta)) {
+          mockWaterMlByHabitDayRef.current[hid] = {}
+        }
         const metrics = computeHabitCompletionMetrics([], t, meta)
         const next: HabitWithMetrics = {
           id: hid,
@@ -526,9 +674,11 @@ export function useHabits() {
           created_at: new Date().toISOString(),
           metadata: meta,
           metrics,
+          ...(isWaterTrackingHabit(meta) ? { water_today_ml: 0 } : {}),
         }
         setHabits((prev) => {
           const list = [next, ...prev]
+          habitsRef.current = list
           setSummary(aggregateHabitsSummary(list.map((h) => h.metrics)))
           return list
         })
@@ -568,6 +718,7 @@ export function useHabits() {
         setHabits((prev) => {
           const next = prev.filter((h) => h.id !== id)
           delete mockCompletionDatesRef.current[id]
+          delete mockWaterMlByHabitDayRef.current[id]
           setSummary(aggregateHabitsSummary(next.map((h) => h.metrics)))
           return next
         })
@@ -607,14 +758,23 @@ export function useHabits() {
             if (h.id !== id) return h
             const meta = patch.metadata ?? h.metadata ?? {}
             const t = utcTodayIso()
-            const dates = mockCompletionDatesRef.current[h.id] ?? []
+            const dates = isWaterTrackingHabit(meta)
+              ? deriveHabitCompletionDates(
+                  meta,
+                  waterRowsFromMlMap(h.id, mockWaterMlByHabitDayRef.current),
+                )
+              : mockCompletionDatesRef.current[h.id] ?? []
             const metrics = computeHabitCompletionMetrics(dates, t, meta)
+            const water_today_ml = isWaterTrackingHabit(meta)
+              ? waterMlForDay(waterRowsFromMlMap(h.id, mockWaterMlByHabitDayRef.current), t)
+              : undefined
             return {
               ...h,
               name: patch.name ?? h.name,
               domain: patch.domain ?? h.domain,
               metadata: meta,
               metrics,
+              ...(water_today_ml !== undefined ? { water_today_ml } : {}),
             }
           })
           setSummary(aggregateHabitsSummary(next.map((h) => h.metrics)))
@@ -664,6 +824,7 @@ export function useHabits() {
       createHabit,
       updateHabit,
       deleteHabit,
+      incrementWaterMl,
     }),
     [
       habits,
@@ -683,6 +844,7 @@ export function useHabits() {
       createHabit,
       updateHabit,
       deleteHabit,
+      incrementWaterMl,
     ]
   )
 

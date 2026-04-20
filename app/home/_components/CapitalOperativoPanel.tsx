@@ -36,7 +36,7 @@ export function CapitalOperativoPanel({ model, formatCOP }: CapitalOperativoPane
   const tileIconBase = "h-9 w-9 rounded-xl border flex items-center justify-center"
 
   return (
-    <section className="mx-auto max-w-6xl px-4 mt-6">
+    <section className="mx-auto mt-6 max-w-6xl px-4">
       <div className="flex items-end justify-between gap-3">
         <div>
           <p className="orvita-overline-caps">Desglose</p>
@@ -47,9 +47,9 @@ export function CapitalOperativoPanel({ model, formatCOP }: CapitalOperativoPane
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3 md:grid-cols-3">
+      <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-          <Card className="p-4 sm:p-5 h-full flex flex-col">
+          <Card className="flex min-h-[19rem] min-w-0 flex-col p-4 sm:p-5">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="flex items-center gap-2">
@@ -75,8 +75,8 @@ export function CapitalOperativoPanel({ model, formatCOP }: CapitalOperativoPane
               </span>
             </div>
 
-            <div className="mt-4 flex-1 flex flex-col">
-              <p className="text-3xl font-semibold tabular-nums text-orbita-primary">
+            <div className="mt-4 flex flex-1 flex-col">
+              <p className="text-2xl font-semibold tabular-nums text-orbita-primary sm:text-3xl">
                 {hoursLeftToday.toFixed(1)} h
                 <span className="ml-1.5 text-base font-medium text-orbita-secondary">libres ahora</span>
               </p>
@@ -109,7 +109,7 @@ export function CapitalOperativoPanel({ model, formatCOP }: CapitalOperativoPane
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.05 }}>
-          <Card className="p-4 sm:p-5 h-full flex flex-col">
+          <Card className="flex min-h-[19rem] min-w-0 flex-col p-4 sm:p-5">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-2">
                 <span
@@ -142,9 +142,9 @@ export function CapitalOperativoPanel({ model, formatCOP }: CapitalOperativoPane
               </span>
             </div>
 
-            <div className="mt-4 flex-1 flex items-end justify-between gap-3">
+            <div className="mt-4 flex flex-1 items-end justify-between gap-3">
               <div>
-                <p className="text-2xl font-semibold tabular-nums text-orbita-primary">
+                <p className="text-xl font-semibold tabular-nums text-orbita-primary sm:text-2xl">
                   {Math.round(energy.currentLevelPct)}%
                   <span className="ml-1.5 text-base font-medium text-orbita-secondary">de tu energía hoy</span>
                 </p>
@@ -191,7 +191,7 @@ export function CapitalOperativoPanel({ model, formatCOP }: CapitalOperativoPane
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.1 }}>
-          <Card className="p-4 sm:p-5 h-full flex flex-col">
+          <Card className="flex min-h-[19rem] min-w-0 flex-col p-4 sm:p-5">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-2">
                 <span
@@ -215,11 +215,13 @@ export function CapitalOperativoPanel({ model, formatCOP }: CapitalOperativoPane
               </span>
             </div>
 
-            <div className="mt-4 flex-1 flex flex-col">
+            <div className="mt-4 flex flex-1 flex-col">
               <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-orbita-secondary">
                 Flujo neto mensual (estimado)
               </p>
-              <p className={["mt-1 text-2xl font-semibold tabular-nums", netTone].join(" ")}>{formatCOP(money.netMonthlyCOP)}</p>
+              <p className={["mt-1 break-words text-xl font-semibold tabular-nums sm:text-2xl", netTone].join(" ")}>
+                {formatCOP(money.netMonthlyCOP)}
+              </p>
               <p className="mt-2 text-xs text-orbita-secondary">
                 Presión sobre ingresos:{" "}
                 <span className="tabular-nums font-semibold text-orbita-primary">{Math.round(money.financialPressurePct)}%</span>

@@ -29,9 +29,18 @@ import {
   TrendingDown,
   Trophy,
   Zap,
+  Droplets,
 } from "lucide-react"
 import { UI_HABITS_MUTATIONS_OFF, UI_HABITS_SAVE_OFF } from "@/lib/checkins/flags"
 import { groupHabitsByDaypart, orderedDaypartBlocks, type HabitTimeBlockId } from "@/lib/habits/habitStackGroups"
+import {
+  bottleMlFromHabitMetadata,
+  DEFAULT_WATER_BOTTLE_ML,
+  DEFAULT_WATER_GLASS_ML,
+  DEFAULT_WATER_GOAL_ML,
+  glassMlFromHabitMetadata,
+  goalMlFromHabitMetadata,
+} from "@/lib/habits/waterTrackingHelpers"
 import { useHabits } from "@/app/hooks/useHabits"
 import { useStreakCelebrationQueue } from "@/app/hooks/useStreakCelebrationQueue"
 import type { HabitWeekDayMark } from "@/lib/habits/habitMetrics"
@@ -231,6 +240,7 @@ export default function HabitosPage() {
     createHabit,
     updateHabit,
     deleteHabit,
+    incrementWaterMl,
   } = useHabits()
 
   const [shellView, setShellView] = useState<HabitsShellView>("stack")
@@ -244,6 +254,7 @@ export default function HabitosPage() {
   const [backfillDate, setBackfillDate] = useState(() => addDaysIso(utcTodayIso(), -1))
   const [editing, setEditing] = useState<HabitWithMetrics | null>(null)
   const [form, setForm] = useState(() => emptyHabitModalForm())
+  const [waterBusyId, setWaterBusyId] = useState<string | null>(null)
   const { activeStreak, streakOpen, enqueueStreakCelebrations, dismissFront } = useStreakCelebrationQueue()
 
   useEffect(() => {
@@ -351,6 +362,64 @@ export default function HabitosPage() {
     }
 
     const sessionMins = Math.max(0, Math.min(24 * 60, parseInt(form.sessionDurationMinutes, 10) || 0))
+
+    if (editing?.metadata?.habit_type === "water-tracking") {
+      const prev: HabitMetadata = { ...(editing.metadata ?? {}) }
+      delete prev.success_metric_type
+      delete prev.success_metric_target
+
+      const goalParsed = Math.round(parseInt(form.waterGoalMl, 10) || 0)
+      const goalMl = Math.max(500, Math.min(8000, goalParsed || DEFAULT_WATER_GOAL_ML))
+      const bottleParsed = Math.round(parseInt(form.waterBottleMl, 10) || 0)
+      const bottleMl = Math.max(100, Math.min(5000, bottleParsed || DEFAULT_WATER_BOTTLE_ML))
+      const glassParsed = Math.round(parseInt(form.waterGlassMl, 10) || 0)
+      const glassMl = Math.max(50, Math.min(1000, glassParsed || DEFAULT_WATER_GLASS_ML))
+
+      const metadata: HabitMetadata = {
+        ...prev,
+        habit_type: "water-tracking",
+        frequency: form.frequency,
+        weekdays: lettersToWeekdays(form.days),
+        display_days: form.days,
+        is_superhabit: form.superhabit,
+        water_goal_ml: goalMl,
+        water_bottle_ml: bottleMl,
+        water_glass_ml: glassMl,
+      }
+      const intention = form.intention.trim()
+      if (intention) metadata.intention = intention
+      else delete metadata.intention
+
+      const bw = form.bodyWeightKg.trim().replace(",", ".")
+      const weightNum = parseFloat(bw)
+      if (Number.isFinite(weightNum) && weightNum >= 30 && weightNum <= 250) {
+        metadata.body_weight_kg = Math.round(weightNum * 10) / 10
+      } else {
+        delete metadata.body_weight_kg
+      }
+
+      if (sessionMins > 0) metadata.estimated_session_minutes = sessionMins
+      else delete metadata.estimated_session_minutes
+
+      const trigger = form.triggerOrTime.trim()
+      if (trigger) metadata.trigger_or_time = trigger
+      else delete metadata.trigger_or_time
+
+      const r = await updateHabit(editing.id, {
+        name: form.name.trim(),
+        domain: form.domainKey,
+        metadata,
+      })
+      if (!r.ok) {
+        alert(r.error || "No se pudo guardar")
+        return
+      }
+      setFormOpen(false)
+      setEditing(null)
+      setForm(emptyHabitModalForm())
+      return
+    }
+
     const metadata: HabitMetadata = {
       frequency: form.frequency,
       weekdays: lettersToWeekdays(form.days),
@@ -1002,6 +1071,16 @@ export default function HabitosPage() {
                     const triggerOrTime = habit.metadata?.trigger_or_time?.trim()
                     const sessionMins = habit.metadata?.estimated_session_minutes
                     const metricLine = habitMetricLine(habit.metadata)
+                    const isWater = habit.metadata?.habit_type === "water-tracking"
+                    const goalMlW = goalMlFromHabitMetadata(habit.metadata)
+                    const bottleMlW = bottleMlFromHabitMetadata(habit.metadata)
+                    const glassMlW = glassMlFromHabitMetadata(habit.metadata)
+                    const todayMlW = habit.water_today_ml ?? 0
+                    const pctW = goalMlW > 0 ? Math.min(100, Math.round((todayMlW / goalMlW) * 100)) : 0
+                    const bottlesEqStr =
+                      bottleMlW > 0
+                        ? (todayMlW / bottleMlW).toLocaleString("es-ES", { maximumFractionDigits: 1 })
+                        : "0"
 
                     return (
                       <Card
@@ -1110,11 +1189,81 @@ export default function HabitosPage() {
                                 {intention}
                               </p>
                             ) : null}
-                            {metricLine ? (
+                            {metricLine && !isWater ? (
                               <p className="flex items-start gap-1 text-[10px] leading-snug text-[var(--color-text-secondary)]" style={{ margin: 0 }}>
                                 <Target className="mt-0.5 h-3 w-3 shrink-0 text-[var(--color-accent-health)] opacity-80" aria-hidden />
                                 <span>{metricLine}</span>
                               </p>
+                            ) : null}
+                            {isWater ? (
+                              <div className="space-y-2 pt-0.5">
+                                <p
+                                  className="flex items-start gap-1.5 text-[10px] leading-snug text-[var(--color-text-secondary)]"
+                                  style={{ margin: 0 }}
+                                >
+                                  <Droplets
+                                    className="mt-0.5 h-3 w-3 shrink-0 text-[var(--color-accent-health)] opacity-85"
+                                    aria-hidden
+                                  />
+                                  <span>
+                                    {todayMlW} / {goalMlW} ml ({pctW}%) · ≈ {bottlesEqStr} botellitas
+                                  </span>
+                                </p>
+                                <div className="flex flex-wrap gap-2">
+                                  <button
+                                    type="button"
+                                    disabled={
+                                      (!persistenceEnabled && !mock) ||
+                                      loading ||
+                                      waterBusyId === habit.id ||
+                                      togglingId === habit.id ||
+                                      backfillingId === habit.id ||
+                                      backfillingAll
+                                    }
+                                    onClick={async () => {
+                                      setWaterBusyId(habit.id)
+                                      try {
+                                        const r = await incrementWaterMl(habit.id, bottleMlW)
+                                        if (!r.ok) alert(r.error || "No se pudo registrar")
+                                      } finally {
+                                        setWaterBusyId(null)
+                                      }
+                                    }}
+                                    className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-[10px] bg-[var(--color-accent-health)] px-3 py-1.5 text-[11px] font-semibold text-white shadow-sm transition-opacity disabled:cursor-not-allowed disabled:opacity-45"
+                                  >
+                                    {waterBusyId === habit.id ? (
+                                      <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                                    ) : null}
+                                    +1 Botellita ({bottleMlW} ml)
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={
+                                      (!persistenceEnabled && !mock) ||
+                                      loading ||
+                                      waterBusyId === habit.id ||
+                                      togglingId === habit.id ||
+                                      backfillingId === habit.id ||
+                                      backfillingAll
+                                    }
+                                    onClick={async () => {
+                                      setWaterBusyId(habit.id)
+                                      try {
+                                        const r = await incrementWaterMl(habit.id, glassMlW)
+                                        if (!r.ok) alert(r.error || "No se pudo registrar")
+                                      } finally {
+                                        setWaterBusyId(null)
+                                      }
+                                    }}
+                                    className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 py-1.5 text-[11px] font-medium text-[var(--color-text-primary)] transition-opacity disabled:cursor-not-allowed disabled:opacity-45"
+                                  >
+                                    {waterBusyId === habit.id ? (
+                                      <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--color-accent-health)]" aria-hidden />
+                                    ) : null}
+                                    + Vaso extra ({glassMlW} ml)
+                                  </button>
+                                </div>
+                              </div>
                             ) : null}
                             <div className="flex flex-wrap gap-1">
                               {typeof sessionMins === "number" && sessionMins > 0 ? (

@@ -303,19 +303,20 @@ export default function AgendaPage() {
 
   const filtered = useMemo(() => {
     const todayYmd = agendaTodayYmd()
+    const currentYm = todayYmd.slice(0, 7)
     const q = deferredQuery.trim().toLowerCase()
     return tasks.filter((task) => {
       const tabMatch = tab === "todas" || task.type === tab
       const priorityMatch = !priority || task.priority === priority
       const queryMatch = !q || task.title.toLowerCase().includes(q)
+      const dueYmd = task.due && task.due.length >= 10 ? task.due.slice(0, 10) : ""
       const dateOk =
-        showPastAgenda ||
-        !task.due ||
-        task.due.length < 10 ||
-        task.due.slice(0, 10) >= todayYmd
+        view === "columns"
+          ? dueYmd.length === 10 && dueYmd.slice(0, 7) === currentYm
+          : showPastAgenda || !task.due || task.due.length < 10 || dueYmd >= todayYmd
       return tabMatch && priorityMatch && queryMatch && dateOk
     })
-  }, [tab, priority, deferredQuery, tasks, showPastAgenda])
+  }, [tab, priority, deferredQuery, tasks, showPastAgenda, view])
 
   const googleByDay = useMemo(
     () => buildGoogleByDayIndex(googleCalendar, googleTasksFeed),
@@ -609,7 +610,7 @@ export default function AgendaPage() {
                   />
                 </div>
               </div>
-              <div className="mt-1.5 flex flex-col gap-1.5 border-t border-[var(--color-border)] pt-1.5 sm:mt-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-2 sm:gap-y-1 sm:pt-1.5">
+              <div className="mt-1.5 flex flex-col gap-1.5 border-t border-[var(--color-border)] pt-1.5 sm:mt-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-1.5 sm:gap-y-1 sm:pt-1.5">
                 <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
                   <AgendaColorLegend inline omitHeading sourcesOnly dense />
                 </div>
@@ -620,7 +621,7 @@ export default function AgendaPage() {
                       key={item.key}
                       type="button"
                       onClick={() => setTab(item.key)}
-                      className="inline-flex min-h-8 items-center gap-1 rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[9px] sm:min-h-0 sm:px-2 sm:py-px sm:text-[10px]"
+                      className="inline-flex min-h-7 items-center gap-1 rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[8.5px] sm:min-h-0 sm:px-2 sm:py-px sm:text-[9px]"
                       style={{
                         background: tab === item.key ? "var(--color-surface-alt)" : "transparent",
                         color: tab === item.key ? "var(--color-text-primary)" : "var(--color-text-secondary)",
@@ -636,11 +637,11 @@ export default function AgendaPage() {
                   ))}
                 </div>
                 <span className="hidden h-3 w-px shrink-0 self-stretch bg-[var(--color-border)] lg:block" aria-hidden />
-                <div className="flex w-full min-w-0 flex-wrap items-center gap-1 lg:ml-auto lg:w-auto lg:justify-end">
+                <div className="flex w-full min-w-0 flex-wrap items-center gap-0.5 lg:ml-auto lg:w-auto lg:justify-end">
                   <button
                     type="button"
                     onClick={() => setShowPastAgenda((v) => !v)}
-                    className="min-h-8 rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[8px] font-medium uppercase tracking-[0.08em] sm:min-h-0 sm:px-2 sm:py-px sm:text-[9px]"
+                    className="min-h-7 rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[8px] font-medium uppercase tracking-[0.06em] sm:min-h-0 sm:px-2 sm:py-px sm:text-[8.5px]"
                     style={{
                       background: showPastAgenda ? "var(--color-surface-alt)" : "transparent",
                       color: showPastAgenda ? "var(--color-text-primary)" : "var(--color-text-secondary)",
@@ -654,7 +655,7 @@ export default function AgendaPage() {
                       key={item}
                       type="button"
                       onClick={() => setPriority(priority === item ? "" : item)}
-                      className="min-h-8 rounded-full px-2 py-0.5 text-[8px] uppercase tracking-[0.1em] sm:min-h-0 sm:px-2 sm:py-px sm:text-[9px]"
+                      className="min-h-7 rounded-full px-2 py-0.5 text-[8px] uppercase tracking-[0.06em] sm:min-h-0 sm:px-2 sm:py-px sm:text-[8.5px]"
                       style={priorityFilterControlStyle(item, priority === item)}
                     >
                       {formatPriorityTitle(item)}

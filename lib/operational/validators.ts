@@ -1,6 +1,7 @@
-import type { HabitMetadata, HabitSuccessMetricType, OperationalDomain } from "@/lib/operational/types"
+import type { HabitMetadata, HabitSuccessMetricType, HabitTypeId, OperationalDomain } from "@/lib/operational/types"
 
 const DOMAIN_VALUES: OperationalDomain[] = ["salud", "fisico", "profesional", "agenda"]
+const HABIT_TYPE_VALUES: HabitTypeId[] = ["standard", "water-tracking"]
 
 const SUCCESS_METRIC_TYPES: HabitSuccessMetricType[] = ["duracion", "repeticiones", "cantidad", "si_no"]
 
@@ -12,12 +13,35 @@ function isDomain(value: unknown): value is OperationalDomain {
   return typeof value === "string" && DOMAIN_VALUES.includes(value as OperationalDomain)
 }
 
+function isHabitTypeId(value: unknown): value is HabitTypeId {
+  return typeof value === "string" && HABIT_TYPE_VALUES.includes(value as HabitTypeId)
+}
+
 function coerceHabitMetadataPayload(raw: unknown): HabitMetadata {
   if (raw == null || typeof raw !== "object" || Array.isArray(raw)) {
     return {}
   }
   const o = raw as Record<string, unknown>
   const out: HabitMetadata = {}
+  if (isHabitTypeId(o.habit_type)) {
+    out.habit_type = o.habit_type
+  }
+  if (typeof o.water_bottle_ml === "number" && Number.isFinite(o.water_bottle_ml)) {
+    const n = Math.round(o.water_bottle_ml)
+    if (n >= 100 && n <= 5000) out.water_bottle_ml = n
+  }
+  if (typeof o.water_goal_ml === "number" && Number.isFinite(o.water_goal_ml)) {
+    const n = Math.round(o.water_goal_ml)
+    if (n >= 500 && n <= 8000) out.water_goal_ml = n
+  }
+  if (typeof o.water_glass_ml === "number" && Number.isFinite(o.water_glass_ml)) {
+    const n = Math.round(o.water_glass_ml)
+    if (n >= 50 && n <= 1000) out.water_glass_ml = n
+  }
+  if (typeof o.body_weight_kg === "number" && Number.isFinite(o.body_weight_kg)) {
+    const n = o.body_weight_kg
+    if (n >= 30 && n <= 250) out.body_weight_kg = Math.round(n * 10) / 10
+  }
   if (o.frequency === "diario" || o.frequency === "semanal") {
     out.frequency = o.frequency
   }

@@ -16,8 +16,39 @@ import {
   parseHabitCreate,
   parseHabitPatch,
 } from "@/lib/operational/validators"
+import {
+  DEFAULT_WATER_HABIT_METADATA,
+  deriveHabitCompletionDates,
+  isWaterTrackingHabit,
+  waterMlForDay,
+} from "@/lib/habits/waterTrackingHelpers"
 
 export const runtime = "nodejs"
+
+async function ensureDefaultWaterHabit(
+  supabase: Awaited<ReturnType<typeof requireUser>> extends { supabase: infer S } ? S : never,
+  userId: string,
+): Promise<void> {
+  const { data: habitRows, error: listErr } = await supabase
+    .from("operational_habits")
+    .select("metadata")
+    .eq("user_id", userId)
+  if (listErr) throw listErr
+  const hasWater = (habitRows ?? []).some((r: { metadata?: unknown }) => {
+    const m = r.metadata as { habit_type?: string } | null | undefined
+    return m?.habit_type === "water-tracking"
+  })
+  if (hasWater) return
+
+  const { error: insErr } = await supabase.from("operational_habits").insert({
+    user_id: userId,
+    name: "Hidratación Estratégica",
+    completed: false,
+    domain: "salud",
+    metadata: DEFAULT_WATER_HABIT_METADATA,
+  })
+  if (insErr) throw insErr
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -27,6 +58,8 @@ export async function GET(req: NextRequest) {
 
     const legacy = req.nextUrl.searchParams.get("legacy") === "1"
     const domain = req.nextUrl.searchParams.get("domain")
+
+    await ensureDefaultWaterHabit(supabase, userId)
 
     const query = supabase
       .from("operational_habits")
@@ -50,12 +83,12 @@ export async function GET(req: NextRequest) {
     const cutoff = addDaysIso(todayIso, -400)
     const habitIds = list.map((r) => r.id)
 
-    type CompletionRow = { habit_id: string; completed_on: string }
+    type CompletionRow = { habit_id: string; completed_on: string; water_ml: number | null }
     let completions: CompletionRow[] = []
     if (habitIds.length > 0) {
       const { data: comp, error: compError } = await supabase
         .from("habit_completions")
-        .select("habit_id,completed_on")
+        .select("habit_id,completed_on,water_ml")
         .eq("user_id", userId)
         .in("habit_id", habitIds)
         .gte("completed_on", cutoff)
@@ -64,20 +97,22 @@ export async function GET(req: NextRequest) {
       completions = (comp ?? []) as CompletionRow[]
     }
 
-    const byHabit = new Map<string, string[]>()
+    const rowsByHabit = new Map<string, CompletionRow[]>()
     for (const row of completions) {
-      const on = typeof row.completed_on === "string" ? row.completed_on.slice(0, 10) : ""
-      if (!on) continue
-      const arr = byHabit.get(row.habit_id) ?? []
-      arr.push(on)
-      byHabit.set(row.habit_id, arr)
+      const arr = rowsByHabit.get(row.habit_id) ?? []
+      arr.push(row)
+      rowsByHabit.set(row.habit_id, arr)
     }
 
     const habits: HabitWithMetrics[] = list.map((row) => {
       const habit = mapOperationalHabit(row as OperationalHabitRow)
-      const dates = byHabit.get(row.id) ?? []
+      const rawRows = rowsByHabit.get(row.id) ?? []
+      const dates = deriveHabitCompletionDates(habit.metadata ?? null, rawRows)
       const metrics = computeHabitCompletionMetrics(dates, todayIso, habit.metadata ?? null)
-      return { ...habit, metrics }
+      const water_today_ml = isWaterTrackingHabit(habit.metadata)
+        ? waterMlForDay(rawRows, todayIso)
+        : undefined
+      return { ...habit, metrics, ...(water_today_ml !== undefined ? { water_today_ml } : {}) }
     })
 
     const summary = aggregateHabitsSummary(habits.map((h) => h.metrics))

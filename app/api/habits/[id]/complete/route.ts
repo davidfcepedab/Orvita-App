@@ -2,6 +2,11 @@ import { type NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
 import { parseBackfillCompletionDay, utcTodayIso } from "@/lib/habits/habitMetrics"
 import { habitsMutationBlockedResponse } from "@/lib/habits/habitsMutationGate"
+import {
+  goalMlFromHabitMetadata,
+  isWaterTrackingHabit,
+} from "@/lib/habits/waterTrackingHelpers"
+import { mapOperationalHabit, type OperationalHabitRow } from "@/lib/operational/mappers"
 
 export const runtime = "nodejs"
 
@@ -36,21 +41,26 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       targetDay = parsed.day
     }
 
-    const { data: habit, error: habitError } = await supabase
+    const { data: habitRow, error: habitError } = await supabase
       .from("operational_habits")
-      .select("id")
+      .select("id,name,completed,domain,created_at,metadata")
       .eq("id", id)
       .eq("user_id", userId)
       .maybeSingle()
 
     if (habitError) throw habitError
-    if (!habit) {
+    if (!habitRow) {
       return NextResponse.json({ success: false, error: "Hábito no encontrado" }, { status: 404 })
     }
 
+    const habit = mapOperationalHabit(habitRow as OperationalHabitRow)
+    const meta = habit.metadata
+    const isWater = isWaterTrackingHabit(meta)
+    const goal = goalMlFromHabitMetadata(meta)
+
     const { data: existing, error: findError } = await supabase
       .from("habit_completions")
-      .select("id")
+      .select("id,water_ml")
       .eq("habit_id", id)
       .eq("user_id", userId)
       .eq("completed_on", targetDay)
@@ -60,24 +70,52 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
     let markedOnTargetDay: boolean
 
-    if (existing?.id) {
-      const { error: delError } = await supabase.from("habit_completions").delete().eq("id", existing.id)
-      if (delError) throw delError
-      markedOnTargetDay = false
+    if (isWater) {
+      const prevMl = existing?.water_ml ?? 0
+      if (existing?.id) {
+        if (prevMl >= goal) {
+          const { error: delError } = await supabase.from("habit_completions").delete().eq("id", existing.id)
+          if (delError) throw delError
+          markedOnTargetDay = false
+        } else {
+          const { error: upError } = await supabase
+            .from("habit_completions")
+            .update({ water_ml: goal, notes: notes || null })
+            .eq("id", existing.id)
+          if (upError) throw upError
+          markedOnTargetDay = true
+        }
+      } else {
+        const { error: insError } = await supabase.from("habit_completions").insert({
+          user_id: userId,
+          habit_id: id,
+          completed_on: targetDay,
+          water_ml: goal,
+          notes: notes || null,
+        })
+        if (insError) throw insError
+        markedOnTargetDay = true
+      }
     } else {
-      const { error: insError } = await supabase.from("habit_completions").insert({
-        user_id: userId,
-        habit_id: id,
-        completed_on: targetDay,
-        notes: notes || null,
-      })
-      if (insError) throw insError
-      markedOnTargetDay = true
+      if (existing?.id) {
+        const { error: delError } = await supabase.from("habit_completions").delete().eq("id", existing.id)
+        if (delError) throw delError
+        markedOnTargetDay = false
+      } else {
+        const { error: insError } = await supabase.from("habit_completions").insert({
+          user_id: userId,
+          habit_id: id,
+          completed_on: targetDay,
+          notes: notes || null,
+        })
+        if (insError) throw insError
+        markedOnTargetDay = true
+      }
     }
 
     const { data: todayRow, error: todayErr } = await supabase
       .from("habit_completions")
-      .select("id")
+      .select("id,water_ml")
       .eq("habit_id", id)
       .eq("user_id", userId)
       .eq("completed_on", today)
@@ -85,7 +123,13 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
     if (todayErr) throw todayErr
 
-    const completedToday = Boolean(todayRow?.id)
+    let completedToday: boolean
+    if (isWater) {
+      const ml = todayRow?.water_ml ?? 0
+      completedToday = ml >= goal
+    } else {
+      completedToday = Boolean(todayRow?.id)
+    }
 
     const { error: syncError } = await supabase
       .from("operational_habits")

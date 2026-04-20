@@ -4,8 +4,19 @@ export type OperationalDomain = "salud" | "fisico" | "profesional" | "agenda"
 
 export type HabitSuccessMetricType = "duracion" | "repeticiones" | "cantidad" | "si_no"
 
+/** Tipo de hábito para UI y reglas (p. ej. seguimiento de agua con ml). */
+export type HabitTypeId = "standard" | "water-tracking"
+
 /** Configuración additive en operational_habits.metadata (jsonb). */
 export type HabitMetadata = {
+  /** Por defecto ausente = hábito estándar (toggle diario binario). */
+  habit_type?: HabitTypeId
+  /** Meta y unidades para habit_type water-tracking */
+  water_bottle_ml?: number
+  water_goal_ml?: number
+  water_glass_ml?: number
+  /** Peso corporal (kg) opcional para sugerir meta (peso × 32 ml). */
+  body_weight_kg?: number
   frequency?: "diario" | "semanal"
   /** Día UTC 0–6 (getUTCDay): 0 dom … 6 sáb */
   weekdays?: number[]
@@ -43,6 +54,8 @@ export interface OperationalHabit {
 /** Hábito operacional + métricas derivadas de habit_completions (API /habits enriquecido). */
 export interface HabitWithMetrics extends OperationalHabit {
   metrics: HabitCompletionMetrics
+  /** Solo water-tracking: ml registrados hoy (zona agenda). */
+  water_today_ml?: number
 }
 
 export interface Checkin {

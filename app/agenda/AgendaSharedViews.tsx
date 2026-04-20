@@ -709,7 +709,7 @@ export function AgendaSharedList({
       <div
         role="toolbar"
         aria-label="Ventana temporal de la cronología"
-        className="flex flex-wrap items-center gap-1.5 sm:gap-2"
+        className="flex flex-wrap items-center gap-1 sm:gap-1.5"
       >
         {horizonTabs.map((tab) => {
           const active = listHorizon === tab.id
@@ -719,9 +719,9 @@ export function AgendaSharedList({
               type="button"
               title={tab.title}
               onClick={() => setListHorizon(tab.id)}
-              className={`min-h-8 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] transition sm:px-3 sm:text-[11px] ${
+              className={`min-h-7 rounded-full border px-2 py-0.5 text-[9px] font-medium uppercase tracking-[0.06em] transition sm:px-2.5 sm:text-[10px] ${
                 active
-                  ? "border-[color-mix(in_srgb,var(--color-accent-primary)_48%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-primary)_14%,var(--color-surface))] text-[var(--color-text-primary)] shadow-sm"
+                  ? "border-[color-mix(in_srgb,var(--color-accent-primary)_42%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-primary)_10%,var(--color-surface))] text-[var(--color-text-primary)]"
                   : "border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface)]"
               }`}
             >

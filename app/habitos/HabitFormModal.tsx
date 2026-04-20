@@ -23,6 +23,12 @@ import {
   SelectValue,
 } from "@/src/components/ui/select"
 import { cn } from "@/lib/utils"
+import {
+  DEFAULT_WATER_BOTTLE_ML,
+  DEFAULT_WATER_GLASS_ML,
+  DEFAULT_WATER_GOAL_ML,
+  suggestedWaterGoalMlFromWeightKg,
+} from "@/lib/habits/waterTrackingHelpers"
 import type { HabitSuccessMetricType, HabitWithMetrics, OperationalDomain } from "@/lib/operational/types"
 
 const DAY_LETTERS = ["L", "M", "X", "J", "V", "S", "D"] as const
@@ -38,6 +44,12 @@ export type HabitModalFormValues = {
   successMetricTarget: string
   sessionDurationMinutes: string
   triggerOrTime: string
+  /** Solo hábito agua (no se crea desde UI genérica). */
+  isWaterTracking: boolean
+  waterBottleMl: string
+  waterGoalMl: string
+  waterGlassMl: string
+  bodyWeightKg: string
 }
 
 export const HABIT_MODAL_DEFAULT_VALUES: HabitModalFormValues = {
@@ -51,6 +63,11 @@ export const HABIT_MODAL_DEFAULT_VALUES: HabitModalFormValues = {
   successMetricTarget: "",
   sessionDurationMinutes: "15",
   triggerOrTime: "",
+  isWaterTracking: false,
+  waterBottleMl: String(DEFAULT_WATER_BOTTLE_ML),
+  waterGoalMl: String(DEFAULT_WATER_GOAL_ML),
+  waterGlassMl: String(DEFAULT_WATER_GLASS_ML),
+  bodyWeightKg: "",
 }
 
 export function emptyHabitModalForm(domain: OperationalDomain = "salud"): HabitModalFormValues {
@@ -61,6 +78,7 @@ export function habitToModalValues(habit: HabitWithMetrics): HabitModalFormValue
   const m = habit.metadata
   const displayDays =
     m?.display_days?.length ? [...m.display_days] : weekdaysToLetters(m?.weekdays ?? [])
+  const isWater = m?.habit_type === "water-tracking"
   return {
     name: habit.name,
     intention: m?.intention ?? "",
@@ -73,6 +91,12 @@ export function habitToModalValues(habit: HabitWithMetrics): HabitModalFormValue
     sessionDurationMinutes:
       m?.estimated_session_minutes != null ? String(m.estimated_session_minutes) : HABIT_MODAL_DEFAULT_VALUES.sessionDurationMinutes,
     triggerOrTime: m?.trigger_or_time ?? "",
+    isWaterTracking: isWater,
+    waterBottleMl:
+      m?.water_bottle_ml != null ? String(m.water_bottle_ml) : String(DEFAULT_WATER_BOTTLE_ML),
+    waterGoalMl: m?.water_goal_ml != null ? String(m.water_goal_ml) : String(DEFAULT_WATER_GOAL_ML),
+    waterGlassMl: m?.water_glass_ml != null ? String(m.water_glass_ml) : String(DEFAULT_WATER_GLASS_ML),
+    bodyWeightKg: m?.body_weight_kg != null ? String(m.body_weight_kg) : "",
   }
 }
 
@@ -234,58 +258,166 @@ export function HabitFormModal({
               <h3 id="habit-direction" className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-primary)]">
                 Dirección
               </h3>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="habit-domain">Dominio</Label>
-                  <Select
-                    value={form.domainKey}
-                    onValueChange={(v) => setForm((p) => ({ ...p, domainKey: v as OperationalDomain }))}
-                  >
-                    <SelectTrigger id="habit-domain">
-                      <SelectValue placeholder="Elegir" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(Object.keys(domainLabels) as OperationalDomain[]).map((key) => (
-                        <SelectItem key={key} value={key}>
-                          {domainLabels[key]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              {form.isWaterTracking ? (
+                <div className="space-y-4">
+                  <p className="text-xs text-[var(--color-text-secondary)]">
+                    Seguimiento de agua: la meta y el tamaño de botellita definen el progreso y el botón «+1 botellita» en el stack.
+                  </p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="habit-domain">Dominio</Label>
+                      <Select
+                        value={form.domainKey}
+                        onValueChange={(v) => setForm((p) => ({ ...p, domainKey: v as OperationalDomain }))}
+                      >
+                        <SelectTrigger id="habit-domain">
+                          <SelectValue placeholder="Elegir" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(Object.keys(domainLabels) as OperationalDomain[]).map((key) => (
+                            <SelectItem key={key} value={key}>
+                              {domainLabels[key]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="water-goal-ml">Meta diaria (ml)</Label>
+                      <Input
+                        id="water-goal-ml"
+                        type="number"
+                        min={500}
+                        max={8000}
+                        inputMode="numeric"
+                        value={form.waterGoalMl}
+                        onChange={(e) => setForm((p) => ({ ...p, waterGoalMl: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="water-body-kg">Peso (kg), opcional — para sugerir meta</Label>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                      <Input
+                        id="water-body-kg"
+                        type="number"
+                        min={30}
+                        max={250}
+                        step="0.1"
+                        inputMode="decimal"
+                        className="sm:max-w-[10rem]"
+                        placeholder="ej. 72"
+                        value={form.bodyWeightKg}
+                        onChange={(e) => setForm((p) => ({ ...p, bodyWeightKg: e.target.value }))}
+                      />
+                      <button
+                        type="button"
+                        className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 text-xs font-medium text-[var(--color-text-primary)]"
+                        onClick={() => {
+                          const w = parseFloat(form.bodyWeightKg.replace(",", "."))
+                          const next = suggestedWaterGoalMlFromWeightKg(w)
+                          setForm((p) => ({ ...p, waterGoalMl: String(next) }))
+                        }}
+                      >
+                        Calcular meta (peso × 32 ml)
+                      </button>
+                    </div>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="water-bottle-ml">Capacidad botellita (ml)</Label>
+                      <Input
+                        id="water-bottle-ml"
+                        type="number"
+                        min={100}
+                        max={5000}
+                        inputMode="numeric"
+                        value={form.waterBottleMl}
+                        onChange={(e) => setForm((p) => ({ ...p, waterBottleMl: e.target.value }))}
+                      />
+                      <div className="flex flex-wrap gap-1.5">
+                        {([500, 750, 1000] as const).map((n) => (
+                          <button
+                            key={n}
+                            type="button"
+                            className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-2.5 py-0.5 text-[10px] font-medium text-[var(--color-text-secondary)]"
+                            onClick={() => setForm((p) => ({ ...p, waterBottleMl: String(n) }))}
+                          >
+                            {n} ml
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="water-glass-ml">Vaso extra (ml)</Label>
+                      <Input
+                        id="water-glass-ml"
+                        type="number"
+                        min={50}
+                        max={1000}
+                        inputMode="numeric"
+                        value={form.waterGlassMl}
+                        onChange={(e) => setForm((p) => ({ ...p, waterGlassMl: e.target.value }))}
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="habit-metric-type">Métrica de éxito</Label>
-                  <Select
-                    value={form.successMetricType}
-                    onValueChange={(v) => setForm((p) => ({ ...p, successMetricType: v as HabitSuccessMetricType }))}
-                  >
-                    <SelectTrigger id="habit-metric-type">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {METRIC_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="habit-metric-target">{metricTargetLabel(form.successMetricType)}</Label>
-                <Input
-                  id="habit-metric-target"
-                  placeholder={metricTargetPlaceholder(form.successMetricType)}
-                  value={form.successMetricTarget}
-                  onChange={(e) => setForm((p) => ({ ...p, successMetricTarget: e.target.value }))}
-                  disabled={form.successMetricType === "si_no"}
-                  className={cn(form.successMetricType === "si_no" && "opacity-60")}
-                />
-                {form.successMetricType === "si_no" && (
-                  <p className="text-xs text-[var(--color-text-secondary)]">El éxito es marcar el hábito como hecho en el día.</p>
-                )}
-              </div>
+              ) : (
+                <>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="habit-domain">Dominio</Label>
+                      <Select
+                        value={form.domainKey}
+                        onValueChange={(v) => setForm((p) => ({ ...p, domainKey: v as OperationalDomain }))}
+                      >
+                        <SelectTrigger id="habit-domain">
+                          <SelectValue placeholder="Elegir" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(Object.keys(domainLabels) as OperationalDomain[]).map((key) => (
+                            <SelectItem key={key} value={key}>
+                              {domainLabels[key]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="habit-metric-type">Métrica de éxito</Label>
+                      <Select
+                        value={form.successMetricType}
+                        onValueChange={(v) => setForm((p) => ({ ...p, successMetricType: v as HabitSuccessMetricType }))}
+                      >
+                        <SelectTrigger id="habit-metric-type">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {METRIC_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="habit-metric-target">{metricTargetLabel(form.successMetricType)}</Label>
+                    <Input
+                      id="habit-metric-target"
+                      placeholder={metricTargetPlaceholder(form.successMetricType)}
+                      value={form.successMetricTarget}
+                      onChange={(e) => setForm((p) => ({ ...p, successMetricTarget: e.target.value }))}
+                      disabled={form.successMetricType === "si_no"}
+                      className={cn(form.successMetricType === "si_no" && "opacity-60")}
+                    />
+                    {form.successMetricType === "si_no" && (
+                      <p className="text-xs text-[var(--color-text-secondary)]">El éxito es marcar el hábito como hecho en el día.</p>
+                    )}
+                  </div>
+                </>
+              )}
             </section>
 
             <section className="space-y-4 border-t border-[var(--color-border)] pt-5" aria-labelledby="habit-rhythm">
