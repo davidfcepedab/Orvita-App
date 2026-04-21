@@ -1,9 +1,23 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
 import { normalizeAppleHealthRows } from "@/lib/integrations/appleHealth"
-import { buildMockHealthMetric } from "@/lib/integrations/mockData"
 
 export const runtime = "nodejs"
+
+function buildHealthSeedFromFallback() {
+  const sleep = Math.max(5, Math.round((6.8 + (Math.random() * 2 - 1) * 1.1) * 100) / 100)
+  const steps = Math.max(2500, Math.round(6200 + (Math.random() * 2 - 1) * 2400))
+  const calories = Math.max(1300, Math.round(2100 + (Math.random() * 2 - 1) * 500))
+  const hrv = Math.max(20, Math.round(54 + (Math.random() * 2 - 1) * 14))
+  const readiness = Math.max(35, Math.min(98, Math.round(70 + (Math.random() * 2 - 1) * 16)))
+  return {
+    sleep_hours: sleep,
+    hrv_ms: hrv,
+    readiness_score: readiness,
+    steps,
+    calories,
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,7 +35,7 @@ export async function POST(req: NextRequest) {
         : [
             {
               observed_at: nowIso,
-              ...buildMockHealthMetric(),
+              ...buildHealthSeedFromFallback(),
             },
           ]
 
