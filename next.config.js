@@ -53,4 +53,19 @@ const nextConfig = {
   },
 }
 
-module.exports = nextConfig
+/**
+ * Integración opcional Serwist (mejor compatibilidad con Turbopack / workbox updates).
+ * Activar con: ORVITA_USE_SERWIST=1
+ */
+if (process.env.ORVITA_USE_SERWIST === "1") {
+  // eslint-disable-next-line global-require, @typescript-eslint/no-var-requires
+  const withSerwistInit = require("@serwist/next").default
+  const withSerwist = withSerwistInit({
+    swSrc: "public/sw.js",
+    swDest: "public/sw.js",
+    disable: false,
+  })
+  module.exports = withSerwist(nextConfig)
+} else {
+  module.exports = nextConfig
+}

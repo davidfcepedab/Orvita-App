@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 import type webpush from "web-push"
 import { ORVITA_PUSH_ICON } from "@/lib/notifications/pushBranding"
 import { getVapidPrivateKey, getVapidPublicKey, getVapidSubject, isVapidConfigured } from "@/lib/notifications/vapid"
+import { mergePrefs, type OrbitaNotificationPreferences } from "@/lib/notifications/notificationPrefs"
 
 /** Categorías de push alineadas con copy de producto (ver `public/sw.js` tags). */
 export type OrvitaPushCategory = "palanca" | "presion_critica" | "energia" | "habitos" | "system"
@@ -24,6 +25,14 @@ export type WebPushPayload = {
   category?: OrvitaPushCategory | null
   /** Botones nativos (máx. 2 recomendado; el SW recorta). */
   actions?: WebPushAction[] | null
+}
+
+function muteKeyByCategory(category: OrvitaPushCategory | null | undefined): keyof OrbitaNotificationPreferences | null {
+  if (category === "palanca") return "mute_until_palanca"
+  if (category === "presion_critica") return "mute_until_presion_critica"
+  if (category === "energia") return "mute_until_energia"
+  if (category === "habitos") return "mute_until_habitos"
+  return null
 }
 
 let webPushModule: typeof webpush | null = null
@@ -52,6 +61,23 @@ export async function sendWebPushToUser(
 ): Promise<{ sent: number; errors: number }> {
   const wp = await getWebPush()
   if (!wp) return { sent: 0, errors: 0 }
+
+  const muteKey = muteKeyByCategory(payload.category ?? "system")
+  if (muteKey) {
+    const { data: prefRow } = await supabase
+      .from("orbita_notification_preferences")
+      .select("*")
+      .eq("user_id", userId)
+      .maybeSingle()
+    const prefs = mergePrefs(userId, (prefRow ?? null) as Partial<OrbitaNotificationPreferences> | null)
+    const muteRaw = prefs[muteKey]
+    if (typeof muteRaw === "string" && muteRaw.trim()) {
+      const untilMs = new Date(muteRaw).getTime()
+      if (Number.isFinite(untilMs) && untilMs > Date.now()) {
+        return { sent: 0, errors: 0 }
+      }
+    }
+  }
 
   const { data: rows, error } = await supabase
     .from("orbita_push_subscriptions")

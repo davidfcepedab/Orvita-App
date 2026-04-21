@@ -12,6 +12,7 @@ export type OrbitaNotificationPreferences = {
   push_digest_morning: boolean
   push_weekly_summary: boolean
   push_partner_activity: boolean
+  push_digest_daily: boolean
   finance_savings_threshold_pct: number | null
   reminder_hour_local: number
   digest_hour_local: number
@@ -21,6 +22,10 @@ export type OrbitaNotificationPreferences = {
   quiet_hours_end: number | null
   email_digest_enabled: boolean
   email_weekly_enabled: boolean
+  mute_until_palanca: string | null
+  mute_until_presion_critica: string | null
+  mute_until_energia: string | null
+  mute_until_habitos: string | null
   updated_at?: string
 }
 
@@ -35,6 +40,7 @@ export const DEFAULT_NOTIFICATION_PREFS: Omit<OrbitaNotificationPreferences, "us
   push_digest_morning: false,
   push_weekly_summary: false,
   push_partner_activity: false,
+  push_digest_daily: false,
   finance_savings_threshold_pct: null,
   reminder_hour_local: 21,
   digest_hour_local: 8,
@@ -44,6 +50,10 @@ export const DEFAULT_NOTIFICATION_PREFS: Omit<OrbitaNotificationPreferences, "us
   quiet_hours_end: null,
   email_digest_enabled: false,
   email_weekly_enabled: false,
+  mute_until_palanca: null,
+  mute_until_presion_critica: null,
+  mute_until_energia: null,
+  mute_until_habitos: null,
 }
 
 export function mergePrefs(

@@ -18,6 +18,29 @@ const DOW_OPTS: { v: number; label: string }[] = [
   { v: 5, label: "Viernes" },
   { v: 6, label: "Sábado" },
 ]
+const MUTE_OPTS = [
+  { value: "none", label: "Sin mute" },
+  { value: "1h", label: "1 hora" },
+  { value: "4h", label: "4 horas" },
+  { value: "24h", label: "24 horas" },
+] as const
+
+function nextMuteIso(option: (typeof MUTE_OPTS)[number]["value"]): string | null {
+  if (option === "none") return null
+  const now = Date.now()
+  if (option === "1h") return new Date(now + 60 * 60 * 1000).toISOString()
+  if (option === "4h") return new Date(now + 4 * 60 * 60 * 1000).toISOString()
+  return new Date(now + 24 * 60 * 60 * 1000).toISOString()
+}
+
+function muteOptionFromIso(iso: string | null): (typeof MUTE_OPTS)[number]["value"] {
+  if (!iso) return "none"
+  const ms = new Date(iso).getTime() - Date.now()
+  if (!Number.isFinite(ms) || ms <= 0) return "none"
+  if (ms <= 1.5 * 60 * 60 * 1000) return "1h"
+  if (ms <= 6 * 60 * 60 * 1000) return "4h"
+  return "24h"
+}
 
 const subtleBtn =
   "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-opacity hover:opacity-90 disabled:opacity-50"
@@ -207,6 +230,7 @@ export function ConfigNotificationPreferencesPanel({ theme }: { theme: OrbitaCon
         push_digest_morning: draft.push_digest_morning,
         push_weekly_summary: draft.push_weekly_summary,
         push_partner_activity: draft.push_partner_activity,
+        push_digest_daily: draft.push_digest_daily,
         finance_savings_threshold_pct: draft.finance_savings_threshold_pct,
         reminder_hour_local: draft.reminder_hour_local,
         digest_hour_local: draft.digest_hour_local,
@@ -216,6 +240,10 @@ export function ConfigNotificationPreferencesPanel({ theme }: { theme: OrbitaCon
         quiet_hours_end: draft.quiet_hours_end,
         email_digest_enabled: draft.email_digest_enabled,
         email_weekly_enabled: draft.email_weekly_enabled,
+        mute_until_palanca: draft.mute_until_palanca,
+        mute_until_presion_critica: draft.mute_until_presion_critica,
+        mute_until_energia: draft.mute_until_energia,
+        mute_until_habitos: draft.mute_until_habitos,
       }
       const res = await fetch("/api/notifications/preferences", {
         method: "PATCH",
@@ -419,6 +447,14 @@ export function ConfigNotificationPreferencesPanel({ theme }: { theme: OrbitaCon
                 />
                 <ToggleRow
                   theme={theme}
+                  label="Digest diario (resumen compacto)"
+                  description="Opcional: una sola pieza diaria para reducir ruido."
+                  checked={draft.push_digest_daily}
+                  disabled={disabled || !draft.push_enabled_global}
+                  onChange={(v) => update({ push_digest_daily: v })}
+                />
+                <ToggleRow
+                  theme={theme}
                   label="Resumen de la mañana"
                   description="Vistazo al despertar. La hora la eliges un poco más abajo."
                   checked={draft.push_digest_morning}
@@ -594,6 +630,83 @@ export function ConfigNotificationPreferencesPanel({ theme }: { theme: OrbitaCon
                 <p className="mt-0.5 text-[10px] leading-snug" style={{ color: theme.textMuted }}>
                   Solo cuenta si activaste el aviso «Si el ahorro baja de tu meta». Déjalo vacío si no quieres usar este aviso.
                 </p>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: theme.textMuted }}>
+                Mute temporal por categoría
+              </p>
+              <p className="text-[10px] leading-snug sm:text-[11px]" style={{ color: theme.textMuted }}>
+                Silencia categoría completa por un periodo. No cambia tus toggles base.
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div>
+                  <FieldLabel theme={theme}>Palanca #1</FieldLabel>
+                  <select
+                    className="mt-1 w-full rounded-lg border px-2 py-1.5 text-[13px]"
+                    style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt, color: theme.text }}
+                    disabled={disabled}
+                    onChange={(e) => update({ mute_until_palanca: nextMuteIso(e.target.value as "none" | "1h" | "4h" | "24h") })}
+                    value={muteOptionFromIso(draft.mute_until_palanca)}
+                  >
+                    {MUTE_OPTS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <FieldLabel theme={theme}>Presión crítica</FieldLabel>
+                  <select
+                    className="mt-1 w-full rounded-lg border px-2 py-1.5 text-[13px]"
+                    style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt, color: theme.text }}
+                    disabled={disabled}
+                    onChange={(e) =>
+                      update({ mute_until_presion_critica: nextMuteIso(e.target.value as "none" | "1h" | "4h" | "24h") })
+                    }
+                    value={muteOptionFromIso(draft.mute_until_presion_critica)}
+                  >
+                    {MUTE_OPTS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <FieldLabel theme={theme}>Energía / Agenda</FieldLabel>
+                  <select
+                    className="mt-1 w-full rounded-lg border px-2 py-1.5 text-[13px]"
+                    style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt, color: theme.text }}
+                    disabled={disabled}
+                    onChange={(e) => update({ mute_until_energia: nextMuteIso(e.target.value as "none" | "1h" | "4h" | "24h") })}
+                    value={muteOptionFromIso(draft.mute_until_energia)}
+                  >
+                    {MUTE_OPTS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <FieldLabel theme={theme}>Hábitos</FieldLabel>
+                  <select
+                    className="mt-1 w-full rounded-lg border px-2 py-1.5 text-[13px]"
+                    style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt, color: theme.text }}
+                    disabled={disabled}
+                    onChange={(e) => update({ mute_until_habitos: nextMuteIso(e.target.value as "none" | "1h" | "4h" | "24h") })}
+                    value={muteOptionFromIso(draft.mute_until_habitos)}
+                  >
+                    {MUTE_OPTS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 

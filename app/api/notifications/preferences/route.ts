@@ -16,6 +16,7 @@ const PATCH_KEYS = new Set([
   "push_digest_morning",
   "push_weekly_summary",
   "push_partner_activity",
+  "push_digest_daily",
   "finance_savings_threshold_pct",
   "reminder_hour_local",
   "digest_hour_local",
@@ -25,6 +26,10 @@ const PATCH_KEYS = new Set([
   "quiet_hours_end",
   "email_digest_enabled",
   "email_weekly_enabled",
+  "mute_until_palanca",
+  "mute_until_presion_critica",
+  "mute_until_energia",
+  "mute_until_habitos",
 ] as const)
 
 type PatchKey = (typeof PATCH_KEYS extends Set<infer U> ? U : never) & string
@@ -114,6 +119,7 @@ function parsePrefsPatch(
       case "push_digest_morning":
       case "push_weekly_summary":
       case "push_partner_activity":
+      case "push_digest_daily":
       case "email_digest_enabled":
       case "email_weekly_enabled": {
         if (typeof v !== "boolean") return { error: `${k} debe ser booleano` }
@@ -161,6 +167,24 @@ function parsePrefsPatch(
           return { error: `${k} debe ser null o entero 0–23` }
         }
         out[k] = v
+        break
+      }
+      case "mute_until_palanca":
+      case "mute_until_presion_critica":
+      case "mute_until_energia":
+      case "mute_until_habitos": {
+        if (v === null) {
+          out[k] = null
+          break
+        }
+        if (typeof v !== "string" || !v.trim()) {
+          return { error: `${k} debe ser null o ISO string` }
+        }
+        const iso = new Date(v)
+        if (!Number.isFinite(iso.getTime())) {
+          return { error: `${k} debe ser fecha ISO válida` }
+        }
+        out[k] = iso.toISOString()
         break
       }
       default:

@@ -151,6 +151,30 @@ self.addEventListener("sync", (event) => {
   }
 })
 
+self.addEventListener("message", (event) => {
+  const type = event?.data?.type
+  if (type !== "ORVITA_RECONNECT_NOW") return
+  event.waitUntil(
+    (async () => {
+      try {
+        if (self.registration.sync) {
+          await self.registration.sync.register("orvita-habits")
+        }
+      } catch {
+        /* fallback: sin soporte sync */
+      }
+      const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true })
+      for (const c of clients) {
+        try {
+          c.postMessage({ type: "ORVITA_BG_SYNC", tag: "orvita-habits", source: "manual-reconnect" })
+        } catch {
+          /* ignore */
+        }
+      }
+    })(),
+  )
+})
+
 self.addEventListener("push", (ev) => {
   let payload = {
     title: "Órvita",
