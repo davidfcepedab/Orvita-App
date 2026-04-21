@@ -43,7 +43,8 @@ function flowPathColor(color: OrbitaHomeModel["flow"]["color"]) {
   return "rgb(251 113 133)"
 }
 
-function ZenKpiPill({
+/** KPIs sin tarjeta: chips ligeros “flotantes” sobre el fondo. */
+function ZenKpiFloat({
   label,
   pct,
   tone,
@@ -52,18 +53,25 @@ function ZenKpiPill({
   pct: number
   tone: "sky" | "amber" | "rose"
 }) {
-  const bar =
+  const fill =
     tone === "sky"
-      ? "from-sky-500/85 to-sky-400/45"
+      ? "rgb(56 189 248)"
       : tone === "amber"
-        ? "from-amber-500/80 to-amber-400/45"
-        : "from-rose-500/75 to-rose-400/40"
+        ? "rgb(251 191 36)"
+        : "rgb(251 113 133)"
+  const w = Math.min(100, Math.max(0, pct))
   return (
-    <div className="min-w-0 flex-1 rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_70%,transparent)] bg-[var(--color-surface)] px-3 py-2.5 text-center shadow-[var(--shadow-card)] sm:px-4 sm:py-3">
-      <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">{label}</p>
-      <p className="m-0 mt-1 text-xl font-semibold tabular-nums text-orbita-primary sm:text-2xl">{pct}%</p>
-      <div className="mx-auto mt-2 h-1 max-w-[4.5rem] overflow-hidden rounded-full bg-orbita-surface-alt">
-        <div className={`h-full rounded-full bg-gradient-to-r ${bar}`} style={{ width: `${Math.min(100, Math.max(0, pct))}%` }} />
+    <div
+      className="flex min-w-0 flex-col items-center gap-1 rounded-2xl px-2.5 py-1.5 sm:px-3 sm:py-2"
+      style={{
+        background: "color-mix(in srgb, var(--color-surface-alt) 42%, transparent)",
+        boxShadow: "0 1px 0 color-mix(in srgb, var(--color-text-primary) 6%, transparent)",
+      }}
+    >
+      <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">{label}</span>
+      <span className="text-sm font-semibold tabular-nums text-orbita-primary sm:text-base">{pct}%</span>
+      <div className="h-0.5 w-12 overflow-hidden rounded-full bg-orbita-border/50 sm:w-14">
+        <div className="h-full rounded-full motion-safe:transition-[width] motion-safe:duration-500" style={{ width: `${w}%`, background: fill }} />
       </div>
     </div>
   )
@@ -120,11 +128,11 @@ export function ZenHomeOverview({
     : null
 
   return (
-    <div className="min-w-0 space-y-8 pb-6 sm:space-y-10">
+    <div className="min-w-0 space-y-6 pb-6 sm:space-y-8">
       <section className="mx-auto max-w-6xl px-4" aria-label="Modo Zen — vista principal">
         <Card
           className={[
-            "relative overflow-hidden border p-5 sm:p-7",
+            "relative overflow-hidden border p-4 sm:p-5",
             "border-[color-mix(in_srgb,var(--color-border)_72%,transparent)]",
             tone.glow,
           ].join(" ")}
@@ -136,33 +144,33 @@ export function ZenHomeOverview({
             style={{ background: flowPathColor(model.flow.color) }}
           />
 
-          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between lg:gap-10">
-            <div className="min-w-0 flex-1 space-y-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
+            <div className="min-w-0 flex-1 space-y-3">
+              <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
-                  <p className="m-0 text-sm font-semibold tracking-tight text-orbita-primary">
+                  <p className="m-0 text-[13px] font-semibold leading-tight tracking-tight text-orbita-primary sm:text-sm">
                     {greeting}, {model.user.firstName}
                   </p>
-                  <p className="mt-0.5 text-xs text-orbita-secondary capitalize">{parts.day}</p>
+                  <p className="mt-0.5 text-[11px] text-orbita-secondary capitalize sm:text-xs">{parts.day}</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => void onGenerateAi()}
                   disabled={isGenerating}
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-orbita-border/60 bg-orbita-surface-alt/80 px-3 py-2 text-[11px] font-semibold text-orbita-primary transition hover:bg-orbita-surface-alt disabled:opacity-60"
+                  className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-orbita-border/50 bg-transparent px-2 py-1.5 text-[10px] font-medium text-orbita-secondary transition hover:border-orbita-border hover:text-orbita-primary disabled:opacity-50 sm:text-[11px]"
                 >
-                  <Sparkles className="h-3.5 w-3.5 text-[var(--color-accent-health)]" aria-hidden />
+                  <Sparkles className="h-3 w-3 text-[var(--color-accent-health)]" aria-hidden />
                   {isGenerating ? "IA…" : "Análisis IA"}
                 </button>
               </div>
 
-              <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center sm:gap-8">
-                <div className="flex flex-col items-center gap-2">
+              <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:gap-6">
+                <div className="flex flex-col items-center gap-1.5 sm:items-start">
                   <div
-                    className={["shrink-0 rounded-full p-1 shadow-[var(--shadow-card)]", tone.ring].join(" ")}
+                    className={["shrink-0 rounded-full p-0.5", tone.ring].join(" ")}
                     style={{ background: "color-mix(in srgb, var(--color-surface-alt) 55%, transparent)" }}
                   >
-                    <div className="h-[104px] w-[104px] sm:h-[118px] sm:w-[118px]">
+                    <div className="h-[88px] w-[88px] sm:h-[96px] sm:w-[96px]">
                       <CircularProgressbar
                         value={model.flow.score}
                         text={`${model.flow.score}`}
@@ -170,7 +178,7 @@ export function ZenHomeOverview({
                           textColor: "var(--color-text-primary)",
                           pathColor: flowPathColor(model.flow.color),
                           trailColor: "color-mix(in srgb, var(--color-border) 55%, transparent)",
-                          textSize: "30px",
+                          textSize: "26px",
                         })}
                       />
                     </div>
@@ -178,60 +186,63 @@ export function ZenHomeOverview({
                   <div className="text-center sm:text-left">
                     <span
                       className={[
-                        "inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]",
+                        "inline-flex items-center rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.1em]",
                         tone.chip,
                       ].join(" ")}
                     >
-                      Flujo operativo · {model.flow.label}
+                      Flujo · {model.flow.label}
                     </span>
-                    <p className="mt-2 max-w-md text-center text-xs leading-snug text-orbita-secondary sm:text-left sm:text-[13px]">
+                    <p className="mt-1.5 max-w-md text-center text-[11px] leading-snug text-orbita-secondary sm:text-left sm:text-xs">
                       {model.flow.microcopy}
                     </p>
                   </div>
                 </div>
 
-                <div className="grid w-full min-w-0 max-w-xl grid-cols-3 gap-2 sm:gap-3">
-                  <ZenKpiPill label="Tiempo" pct={timePct} tone="sky" />
-                  <ZenKpiPill label="Energía" pct={energyPct} tone="amber" />
-                  <ZenKpiPill label="Dinero" pct={moneyPct} tone="rose" />
+                <div
+                  className="flex w-full min-w-0 flex-wrap items-center justify-center gap-3 sm:flex-1 sm:justify-start sm:gap-4"
+                  aria-label="Capital operativo: tiempo, energía, dinero"
+                >
+                  <ZenKpiFloat label="Tiempo" pct={timePct} tone="sky" />
+                  <ZenKpiFloat label="Energía" pct={energyPct} tone="amber" />
+                  <ZenKpiFloat label="Dinero" pct={moneyPct} tone="rose" />
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="relative mt-6 border-t border-orbita-border/50 pt-6">
-            <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">Palanca #1 hoy</p>
-            <h2 className="mt-1 text-lg font-semibold leading-snug text-orbita-primary sm:text-xl [text-wrap:pretty]">
+          <div className="relative mt-4 border-t border-orbita-border/40 pt-4">
+            <p className="m-0 text-[9px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">Palanca #1 hoy</p>
+            <h2 className="mt-0.5 text-base font-semibold leading-snug text-orbita-primary sm:text-lg [text-wrap:pretty]">
               {palancaTitle}
             </h2>
-            <p className="mt-1.5 text-xs text-orbita-secondary [text-wrap:pretty]">{palancaHint}</p>
-            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <p className="mt-1 text-[11px] leading-snug text-orbita-secondary [text-wrap:pretty] sm:text-xs">{palancaHint}</p>
+            <div className="mt-3 flex flex-wrap items-center gap-2 sm:gap-3">
               {primaryCta ? (
                 <button
                   type="button"
                   disabled={primaryCta.disabled}
                   onClick={primaryCta.onClick}
-                  className="inline-flex min-h-[52px] w-full items-center justify-center rounded-2xl px-5 text-sm font-semibold text-white shadow-[var(--shadow-card)] transition active:scale-[0.99] disabled:opacity-55 sm:max-w-xs"
-                  style={{ background: "var(--color-text-primary)" }}
+                  className="inline-flex min-h-9 items-center justify-center rounded-lg px-3.5 py-2 text-xs font-medium transition hover:opacity-90 active:scale-[0.99] disabled:opacity-50"
+                  style={{ background: "var(--color-text-primary)", color: "var(--color-surface)" }}
                 >
-                  {primaryCta.pending ? "Aplicando…" : primaryCta.label}
+                  {primaryCta.pending ? "…" : primaryCta.label}
                 </button>
               ) : (
                 <Link
                   href="/hoy"
-                  className="inline-flex min-h-[52px] w-full items-center justify-center rounded-2xl px-5 text-sm font-semibold text-white shadow-[var(--shadow-card)] sm:max-w-xs"
-                  style={{ background: "var(--color-text-primary)", textDecoration: "none" }}
+                  className="inline-flex min-h-9 items-center justify-center rounded-lg px-3.5 py-2 text-xs font-medium hover:opacity-90"
+                  style={{ background: "var(--color-text-primary)", color: "var(--color-surface)", textDecoration: "none" }}
                 >
                   Ir a Hoy
                 </Link>
               )}
               <Link
                 href="/agenda"
-                className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl border border-orbita-border/70 bg-orbita-surface-alt/50 px-4 text-xs font-semibold text-orbita-primary transition hover:bg-orbita-surface-alt sm:w-auto"
+                className="inline-flex min-h-9 items-center gap-1 rounded-lg px-2 py-2 text-[11px] font-medium text-orbita-secondary transition hover:bg-orbita-surface-alt/60 hover:text-orbita-primary"
                 style={{ textDecoration: "none" }}
               >
                 Agenda
-                <ArrowRight className="h-4 w-4 opacity-70" aria-hidden />
+                <ArrowRight className="h-3 w-3 opacity-60" aria-hidden />
               </Link>
             </div>
           </div>
@@ -240,7 +251,7 @@ export function ZenHomeOverview({
 
       <div className="mx-auto max-w-6xl px-4">
         <div
-          className="flex min-w-0 gap-1 overflow-x-auto rounded-2xl border border-orbita-border/60 bg-orbita-surface-alt/40 p-1 [scrollbar-width:thin]"
+          className="flex min-w-0 gap-0 overflow-x-auto border-b border-orbita-border/35 [scrollbar-width:thin]"
           role="tablist"
           aria-label="Más profundidad"
         >
@@ -254,8 +265,10 @@ export function ZenHomeOverview({
                 aria-selected={active}
                 onClick={() => setTab(t.id)}
                 className={[
-                  "min-h-[44px] shrink-0 rounded-xl px-3 py-2 text-center text-[11px] font-semibold transition sm:px-4 sm:text-xs",
-                  active ? "bg-orbita-surface text-orbita-primary shadow-sm" : "text-orbita-secondary hover:text-orbita-primary",
+                  "-mb-px shrink-0 whitespace-nowrap border-b-2 px-2.5 py-2 text-left text-[10px] font-medium transition sm:px-3 sm:text-[11px]",
+                  active
+                    ? "border-orbita-primary text-orbita-primary"
+                    : "border-transparent text-orbita-secondary hover:text-orbita-primary",
                 ].join(" ")}
               >
                 {t.label}
@@ -264,7 +277,7 @@ export function ZenHomeOverview({
           })}
         </div>
 
-        <div className="mt-5 min-w-0" role="tabpanel">
+        <div className="mt-4 min-w-0" role="tabpanel">
           {tab === "sistema" ? (
             <div className="space-y-8">
               <CriticalAlerts
