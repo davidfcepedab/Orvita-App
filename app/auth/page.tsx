@@ -1,11 +1,14 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import Link from "next/link"
+import { Fingerprint, KeyRound, Loader2, Lock, Mail } from "lucide-react"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { createBrowserClient } from "@/lib/supabase/browser"
-import { authCardSurfaceClass } from "@/app/auth/_components/authCardClasses"
-import { AuthScenicBackdrop } from "@/app/auth/_components/AuthScenicBackdrop"
+import { listOrvitaPasskeys } from "@/lib/auth/registerPasskey"
+import { LoginHeader } from "@/app/auth/_components/LoginHeader"
+import { AppleStyleButton } from "@/app/auth/_components/AppleStyleButton"
+import { MagicLinkExplanation } from "@/app/auth/_components/MagicLinkExplanation"
+import { StrategicPreview } from "@/app/auth/_components/StrategicPreview"
 
 type Mode = "login" | "register"
 
@@ -15,9 +18,6 @@ type RegisterPayload = {
 }
 
 const isMock = process.env.NEXT_PUBLIC_APP_MODE === "mock"
-
-/** Supabase: proveedor Apple activado en el proyecto + URL de retorno en el dashboard. */
-const appleSignInEnabled = process.env.NEXT_PUBLIC_AUTH_APPLE_SIGN_IN === "1"
 
 /** Google OAuth en el dashboard de Supabase + URL de retorno. */
 const googleSignInEnabled = process.env.NEXT_PUBLIC_AUTH_GOOGLE_SIGN_IN === "1"
@@ -100,7 +100,7 @@ export default function AuthPage() {
   const [busyHint, setBusyHint] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [oauthLoading, setOauthLoading] = useState(false)
-  const [authChannel, setAuthChannel] = useState<AuthChannel>("password")
+  const [authChannel, setAuthChannel] = useState<AuthChannel>("magic")
   const [magicSent, setMagicSent] = useState(false)
 
   /** Tras OAuth (p. ej. Apple), sincroniza cookie de sesión y redirige si ya hay sesión. */
@@ -356,6 +356,44 @@ export default function AuthPage() {
     }
   }
 
+  const handlePasskeySignIn = async () => {
+    if (isMock) {
+      window.location.href = "/hoy"
+      return
+    }
+    setOauthLoading(true)
+    setError(null)
+    setBusyHint("Validando Face ID / Touch ID…")
+    try {
+      const supabase = createBrowserClient()
+      const listed = await listOrvitaPasskeys(supabase)
+      if (!listed.ok || listed.factors.length === 0) {
+        throw new Error("No tienes passkeys registradas aún. Entra con Google o enlace mágico y registra una en Configuración.")
+      }
+      const verified = listed.factors.find((f) => f.status === "verified") ?? listed.factors[0]
+      const webauthn = (supabase.auth as unknown as { webauthn?: { authenticate?: (x: { factorId: string }) => Promise<unknown> } }).webauthn
+      if (!webauthn?.authenticate) {
+        throw new Error("Tu navegador no soporta login passkey en esta versión.")
+      }
+      const authRes = (await webauthn.authenticate({ factorId: verified.id })) as {
+        error?: { message?: string } | null
+      }
+      if (authRes?.error?.message) throw new Error(authRes.error.message)
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      if (!session?.access_token) throw new Error("No se pudo establecer la sesión con passkey.")
+      await syncSessionCookieWithRetry(session.access_token)
+      window.location.href = "/hoy"
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo iniciar con passkey.")
+    } finally {
+      setBusyHint(null)
+      setOauthLoading(false)
+    }
+  }
+
   const handleMagicLink = async () => {
     if (isMock) return
     if (!email.trim()) {
@@ -386,128 +424,43 @@ export default function AuthPage() {
     }
   }
 
-  const handleAppleSignIn = async () => {
-    if (isMock || !appleSignInEnabled) return
-    setOauthLoading(true)
-    setError(null)
-    try {
-      const supabase = createBrowserClient()
-      const origin = typeof window !== "undefined" ? window.location.origin : ""
-      const { error: oauthError } = await supabase.auth.signInWithOAuth({
-        provider: "apple",
-        options: {
-          redirectTo: `${origin}/auth`,
-          skipBrowserRedirect: false,
-        },
-      })
-      if (oauthError) throw oauthError
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "No se pudo iniciar sesión con Apple.")
-    } finally {
-      setOauthLoading(false)
-    }
-  }
-
   return (
-    <div className="relative isolate flex min-h-[100dvh] min-h-[-webkit-fill-available] w-full flex-col">
-      <AuthScenicBackdrop />
+    <div
+      className="relative min-h-[100dvh] w-full overflow-hidden"
+      style={{
+        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif',
+        background:
+          "radial-gradient(120% 90% at 30% -5%, rgba(0, 212, 255, 0.16), transparent 40%), linear-gradient(160deg, #0A0A0A 0%, #1C2526 100%)",
+      }}
+    >
+      <div className="pointer-events-none absolute inset-0 opacity-[0.16] [background-image:radial-gradient(rgba(255,255,255,0.35)_0.6px,transparent_0.6px)] [background-size:3px_3px]" />
       <main
-        className="relative z-10 mx-auto flex w-full max-w-[26rem] flex-1 flex-col justify-center gap-8 pl-[max(1.25rem,env(safe-area-inset-left,0px))] pr-[max(1.25rem,env(safe-area-inset-right,0px))] pb-[max(2rem,env(safe-area-inset-bottom,0px))] pt-[max(1.25rem,env(safe-area-inset-top,0px))] sm:pl-6 sm:pr-6 sm:pb-12 sm:pt-8"
+        className="relative z-10 mx-auto flex min-h-[100dvh] w-full max-w-[430px] flex-col justify-end px-[max(20px,env(safe-area-inset-left))] pb-[max(20px,env(safe-area-inset-bottom))] pt-[max(20px,env(safe-area-inset-top))] sm:justify-center"
         id="auth-main"
       >
-      <a
-        href="#auth-form"
-        className="sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:block focus:h-auto focus:w-auto focus:overflow-visible focus:rounded-[var(--radius-button)] focus:bg-orbita-surface focus:px-4 focus:py-2.5 focus:text-sm focus:font-semibold focus:text-orbita-primary focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--color-accent-primary)_45%,transparent)]"
-      >
-        Saltar al formulario de acceso
-      </a>
-      <div
-        className={`flex flex-col gap-7 p-6 sm:p-7 ${authCardSurfaceClass}`}
-        aria-busy={loading || oauthLoading}
-      >
-        <header className="space-y-2">
-          <p className="text-overline font-semibold uppercase tracking-[0.16em] text-[var(--color-accent-primary)]">
-            Órvita
-          </p>
-          <h1 className="font-display text-[1.65rem] font-semibold leading-tight tracking-tight text-orbita-primary sm:text-3xl">
-            {isMock ? "Modo demo" : mode === "login" ? "Iniciar sesión" : "Crear cuenta"}
-          </h1>
-          <p className="text-[0.9375rem] leading-relaxed text-orbita-secondary">
-            {isMock
-              ? "Estás en modo visual. Puedes entrar sin autenticación real."
-              : mode === "login"
-                ? "Accede con tu cuenta de Órvita."
-                : "Regístrate con correo y contraseña. Si tienes código de invitación, podrás unirte a un hogar existente."}
-          </p>
-          {!isMock ? (
-            <p className="text-xs leading-relaxed text-orbita-secondary">
-              Passkeys (Face ID / Touch ID):{" "}
-              <Link href="/configuracion#passkeys-section" className="font-semibold text-[var(--color-accent-primary)] underline-offset-2 hover:underline">
-                regístralas en Configuración
-              </Link>{" "}
-              tras iniciar sesión.
-            </p>
-          ) : null}
-        </header>
+        <section
+          className="w-full rounded-[20px] border border-white/15 bg-white/[0.06] p-5 shadow-[0_24px_60px_-28px_rgba(0,0,0,0.95)] backdrop-blur-2xl sm:p-6"
+          aria-busy={loading || oauthLoading}
+        >
+          <LoginHeader />
 
-      {isMock ? (
-        <div className="space-y-4">
-          <div
-            className="rounded-[var(--radius-button)] border p-4 text-sm leading-relaxed text-orbita-primary"
-            style={{
-              borderColor: "color-mix(in srgb, var(--color-accent-warning) 40%, var(--color-border))",
-              background: "color-mix(in srgb, var(--color-accent-warning) 14%, var(--color-surface-alt))",
-            }}
-          >
-            Auth real desactivada en local. Entrarás con datos de referencia.
-          </div>
-          <button type="button" onClick={() => (window.location.href = "/hoy")} className={primaryBtnClass}>
-            Entrar en demo
-          </button>
-        </div>
-      ) : (
-        <>
-          <div
-            className="flex gap-1.5 rounded-[var(--radius-button)] border border-orbita-border/70 bg-[color-mix(in_srgb,var(--color-surface-alt)_88%,var(--color-border))] p-1.5 shadow-inner"
-            role="tablist"
-            aria-label="Tipo de acceso"
-          >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={mode === "login"}
-              aria-controls="auth-form-panel"
-              id="tab-login"
+          <div className="mt-5 space-y-3">
+            <AppleStyleButton
+              onClick={() => void handlePasskeySignIn()}
               disabled={loading || oauthLoading}
-              onClick={() => switchMode("login")}
-              className={`flex-1 min-h-[44px] rounded-md px-3 py-2.5 text-base font-semibold touch-manipulation disabled:cursor-not-allowed disabled:opacity-50 ${mode === "login" ? tabActive : tabIdle}`}
+              variant="light"
+              icon={<Fingerprint className="h-5 w-5" />}
+              ariaLabel="Continuar con Face ID o Touch ID"
             >
-              Entrar
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={mode === "register"}
-              aria-controls="auth-form-panel"
-              id="tab-register"
-              disabled={loading || oauthLoading}
-              onClick={() => switchMode("register")}
-              className={`flex-1 min-h-[44px] rounded-md px-3 py-2.5 text-base font-semibold touch-manipulation disabled:cursor-not-allowed disabled:opacity-50 ${mode === "register" ? tabActive : tabIdle}`}
-            >
-              Crear cuenta
-            </button>
-          </div>
+              {oauthLoading ? "Verificando passkey…" : "Continuar con Face ID / Touch ID"}
+            </AppleStyleButton>
 
-          {(googleSignInEnabled || appleSignInEnabled) ? (
-            <div className="space-y-3">
-              {googleSignInEnabled ? (
-                <button
-                  type="button"
-                  onClick={() => void handleGoogleSignIn()}
-                  disabled={loading || oauthLoading}
-                  className={googleBtnClass}
-                  aria-label="Continuar con Google"
-                >
+            {googleSignInEnabled ? (
+              <AppleStyleButton
+                onClick={() => void handleGoogleSignIn()}
+                disabled={loading || oauthLoading}
+                variant="black"
+                icon={
                   <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden className="shrink-0">
                     <path
                       fill="#FFC107"
@@ -526,59 +479,31 @@ export default function AuthPage() {
                       d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"
                     />
                   </svg>
-                  {oauthLoading ? "Abriendo Google…" : "Continuar con Google"}
-                </button>
-              ) : null}
-              {appleSignInEnabled ? (
-                <button
-                  type="button"
-                  onClick={() => void handleAppleSignIn()}
-                  disabled={loading || oauthLoading}
-                  className={appleBtnClass}
-                  aria-label="Continuar con Apple"
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden className="shrink-0 fill-current">
-                    <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
-                  </svg>
-                  {oauthLoading ? "Abriendo Apple…" : "Continuar con Apple"}
-                </button>
-              ) : null}
-              <p className="text-center text-xs text-orbita-secondary">o con correo</p>
-            </div>
-          ) : null}
-
-          <div
-            className="flex gap-1.5 rounded-[var(--radius-button)] border border-orbita-border/70 bg-[color-mix(in_srgb,var(--color-surface-alt)_88%,var(--color-border))] p-1.5 shadow-inner"
-            role="tablist"
-            aria-label="Método con correo"
-          >
+                }
+                ariaLabel="Continuar con Google"
+              >
+                {oauthLoading ? "Abriendo Google…" : "Continuar con Google"}
+              </AppleStyleButton>
+            ) : null}
+          </div>
+          <div className="mt-5 flex gap-1 rounded-2xl border border-white/15 bg-white/[0.04] p-1">
             <button
               type="button"
-              role="tab"
-              aria-selected={authChannel === "password"}
-              disabled={loading || oauthLoading}
-              onClick={() => {
-                setAuthChannel("password")
-                setMagicSent(false)
-                setError(null)
-              }}
-              className={`flex-1 min-h-[40px] rounded-md px-2 py-2 text-sm font-semibold touch-manipulation disabled:cursor-not-allowed disabled:opacity-50 ${authChannel === "password" ? tabActive : tabIdle}`}
+              onClick={() => setAuthChannel("password")}
+              className={`min-h-11 flex-1 rounded-[14px] px-3 text-sm font-semibold transition-all ${
+                authChannel === "password" ? "bg-white text-[#0E1214]" : "text-[#D1D9DB]"
+              }`}
             >
               Contraseña
             </button>
             <button
               type="button"
-              role="tab"
-              aria-selected={authChannel === "magic"}
-              disabled={loading || oauthLoading}
-              onClick={() => {
-                setAuthChannel("magic")
-                setMagicSent(false)
-                setError(null)
-              }}
-              className={`flex-1 min-h-[40px] rounded-md px-2 py-2 text-sm font-semibold touch-manipulation disabled:cursor-not-allowed disabled:opacity-50 ${authChannel === "magic" ? tabActive : tabIdle}`}
+              onClick={() => setAuthChannel("magic")}
+              className={`min-h-11 flex-1 rounded-[14px] px-3 text-sm font-semibold transition-all ${
+                authChannel === "magic" ? "bg-white text-[#0E1214]" : "text-[#D1D9DB]"
+              }`}
             >
-              Enlace mágico (OTP)
+              Enlace mágico
             </button>
           </div>
 
@@ -586,11 +511,12 @@ export default function AuthPage() {
             id="auth-form-panel"
             role="tabpanel"
             tabIndex={-1}
-            aria-labelledby={mode === "login" ? "tab-login" : "tab-register"}
+            className="mt-4"
           >
             {authChannel === "magic" ? (
-              <div className="space-y-5">
-                <label className="block text-sm font-semibold text-orbita-primary" htmlFor="auth-email-magic">
+              <div className="space-y-3">
+                <MagicLinkExplanation />
+                <label className="block text-sm font-semibold text-white/90" htmlFor="auth-email-magic">
                   Correo electrónico
                   <input
                     id="auth-email-magic"
@@ -604,32 +530,25 @@ export default function AuthPage() {
                     enterKeyHint="send"
                     required
                     disabled={loading || oauthLoading}
-                    className={fieldClass}
+                    className="mt-2 min-h-11 w-full rounded-[16px] border border-white/20 bg-black/35 px-4 text-base text-white outline-none placeholder:text-[#9FAEB2] focus:ring-2 focus:ring-[#00D4FF]/50"
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                   />
                 </label>
                 {magicSent ? (
                   <div
-                    className="rounded-[var(--radius-button)] border p-4 text-sm leading-relaxed text-orbita-primary"
+                    className="rounded-[16px] border border-[#00D4FF]/35 bg-[#00D4FF]/10 p-3 text-sm leading-relaxed text-[#DBF8FF]"
                     style={{
-                      borderColor: "color-mix(in srgb, var(--color-accent-primary) 40%, var(--color-border))",
-                      background: "color-mix(in srgb, var(--color-accent-primary) 10%, var(--color-surface-alt))",
+                      boxShadow: "0 14px 24px -18px rgba(0, 212, 255, 0.6)",
                     }}
                     role="status"
                   >
-                    Revisa tu correo: te enviamos un enlace seguro. Al abrirlo volverás aquí y te llevaremos al panel
-                    Hoy.
+                    Revisa tu correo: te enviamos un enlace seguro. Al abrirlo te llevamos directo a Hoy.
                   </div>
                 ) : null}
-                <button
-                  type="button"
-                  disabled={loading || oauthLoading}
-                  onClick={() => void handleMagicLink()}
-                  className={primaryBtnClass}
-                >
+                <AppleStyleButton onClick={() => void handleMagicLink()} disabled={loading || oauthLoading} variant="glass" icon={<Mail className="h-4 w-4" />}>
                   {loading ? "Enviando…" : mode === "register" ? "Enviar enlace de registro" : "Enviar enlace de acceso"}
-                </button>
+                </AppleStyleButton>
               </div>
             ) : (
               <form
@@ -639,7 +558,7 @@ export default function AuthPage() {
                 autoComplete="on"
                 name={mode === "login" ? "signin" : "signup"}
               >
-                <label className="block text-sm font-semibold text-orbita-primary" htmlFor="auth-email">
+                <label className="block text-sm font-semibold text-white/90" htmlFor="auth-email">
                   Correo electrónico
                   <input
                     id="auth-email"
@@ -653,16 +572,16 @@ export default function AuthPage() {
                     enterKeyHint="next"
                     required
                     disabled={loading || oauthLoading}
-                    className={fieldClass}
+                    className="mt-2 min-h-11 w-full rounded-[16px] border border-white/20 bg-black/35 px-4 text-base text-white outline-none placeholder:text-[#9FAEB2] focus:ring-2 focus:ring-[#00D4FF]/50"
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                   />
                 </label>
 
-                <label className="block text-sm font-semibold text-orbita-primary" htmlFor="auth-password">
+                <label className="block text-sm font-semibold text-white/90" htmlFor="auth-password">
                   Contraseña
                   {mode === "register" ? (
-                    <span className="mt-1 block text-xs font-normal text-orbita-secondary">Mínimo 6 caracteres</span>
+                    <span className="mt-1 block text-xs font-normal text-[#A9B7BA]">Mínimo 6 caracteres</span>
                   ) : null}
                   <input
                     id="auth-password"
@@ -678,14 +597,14 @@ export default function AuthPage() {
                       : {})}
                     enterKeyHint={mode === "register" ? "next" : "go"}
                     disabled={loading || oauthLoading}
-                    className={fieldClass}
+                    className="mt-2 min-h-11 w-full rounded-[16px] border border-white/20 bg-black/35 px-4 text-base text-white outline-none placeholder:text-[#9FAEB2] focus:ring-2 focus:ring-[#00D4FF]/50"
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                   />
                 </label>
 
                 {mode === "register" && (
-                  <label className="block text-sm font-semibold text-orbita-primary" htmlFor="auth-invite">
+                  <label className="block text-sm font-semibold text-white/90" htmlFor="auth-invite">
                     Código de invitación (opcional)
                     <input
                       id="auth-invite"
@@ -694,7 +613,7 @@ export default function AuthPage() {
                       autoComplete="off"
                       enterKeyHint="done"
                       disabled={loading || oauthLoading}
-                      className={fieldClass}
+                      className="mt-2 min-h-11 w-full rounded-[16px] border border-white/20 bg-black/35 px-4 text-base text-white outline-none placeholder:text-[#9FAEB2] focus:ring-2 focus:ring-[#00D4FF]/50"
                       value={inviteCode}
                       onChange={(event) => setInviteCode(event.target.value)}
                       placeholder="Si te invitaron al hogar"
@@ -702,7 +621,11 @@ export default function AuthPage() {
                   </label>
                 )}
 
-                <button type="submit" disabled={loading || oauthLoading} className={primaryBtnClass}>
+                <button
+                  type="submit"
+                  disabled={loading || oauthLoading}
+                  className="min-h-11 w-full rounded-[18px] bg-white px-4 text-[15px] font-semibold text-[#111417] shadow-[0_12px_26px_-16px_rgba(255,255,255,0.85)] transition-all active:scale-[0.985] disabled:opacity-50"
+                >
                   {loading
                     ? mode === "login"
                       ? "Ingresando..."
@@ -714,38 +637,38 @@ export default function AuthPage() {
               </form>
             )}
           </div>
-        </>
-      )}
 
-      {error ? (
-        <div
-          className="rounded-[var(--radius-button)] border p-4 text-sm leading-relaxed"
-          style={{
-            borderColor: "color-mix(in srgb, var(--color-accent-danger) 45%, var(--color-border))",
-            background: "color-mix(in srgb, var(--color-accent-danger) 10%, var(--color-surface-alt))",
-            color: "var(--color-accent-danger)",
-          }}
-          role="alert"
-          aria-live="assertive"
-        >
-          {error}
-        </div>
-      ) : null}
+          <div className="mt-4">
+            <StrategicPreview />
+          </div>
 
-      {loading && (
-        <div
-          className="flex items-center justify-center gap-2.5 text-center text-xs text-orbita-secondary"
-          role="status"
-          aria-live="polite"
-        >
-          <span
-            className="inline-block h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-orbita-border border-t-[var(--color-accent-primary)] motion-reduce:animate-none"
-            aria-hidden
-          />
-          <span className="motion-safe:animate-pulse">{busyHint ?? "Procesando…"}</span>
-        </div>
-      )}
-      </div>
+          {error ? (
+            <div
+              className="mt-4 rounded-[16px] border border-[#ff6b6b]/35 bg-[#ff6b6b]/10 p-3 text-sm leading-relaxed text-[#FFD9D9]"
+              role="alert"
+              aria-live="assertive"
+            >
+              {error}
+            </div>
+          ) : null}
+
+          {(loading || oauthLoading) && busyHint ? (
+            <div className="mt-4 flex items-center justify-center gap-2 text-xs text-[#B7C5C9]" role="status" aria-live="polite">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <span>{busyHint}</span>
+            </div>
+          ) : null}
+
+          {isMock ? (
+            <button
+              type="button"
+              onClick={() => (window.location.href = "/hoy")}
+              className="mt-4 min-h-11 w-full rounded-[18px] border border-[#00D4FF]/45 bg-[#00D4FF]/15 text-sm font-semibold text-[#DDF8FF] transition-all active:scale-[0.985]"
+            >
+              Entrar en demo
+            </button>
+          ) : null}
+        </section>
       </main>
     </div>
   )
