@@ -1,6 +1,6 @@
 "use client"
 
-import { useId, useMemo } from "react"
+import { useId, useMemo, useState } from "react"
 import {
   Area,
   CartesianGrid,
@@ -26,6 +26,8 @@ import {
 import { rechartsTooltipContentStyle } from "@/lib/charts/rechartsShared"
 import { isAppMockMode, isSupabaseEnabled, UI_HEALTH_SUPPLEMENTS_LOCAL } from "@/lib/checkins/flags"
 import { useHealthSummaryNarrative } from "@/app/health/useHealthSummaryNarrative"
+import { useHealthAutoMetrics } from "@/app/hooks/useHealthAutoMetrics"
+import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 
 /** Área “fatiga” (proxy de sueño a partir de check-ins, no polisomnografía). */
 const BIOMETRIC_AREA_TOP = "#E8EAF6"
@@ -67,6 +69,10 @@ function BiometricCorrelationLegend() {
 
 export default function HealthPage() {
   const salud = useSaludContext()
+  const { latest: autoHealth, loading: autoHealthLoading, refetch: refetchAutoHealth } = useHealthAutoMetrics()
+  const [autoHealthBusy, setAutoHealthBusy] = useState(false)
+  const [autoHealthNotice, setAutoHealthNotice] = useState<string | null>(null)
+  const [autoHealthError, setAutoHealthError] = useState<string | null>(null)
   const { today } = useTraining()
   const {
     supplements,
@@ -200,6 +206,83 @@ export default function HealthPage() {
           </p>
         )}
       </div>
+
+      <Card className="min-w-0 border border-[color-mix(in_srgb,var(--color-border)_70%,transparent)]">
+        <div className="grid gap-3 p-4 sm:gap-3.5 sm:p-6">
+          <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
+            Apple Health y datos automáticos
+          </p>
+          <p className="m-0 max-w-prose text-pretty text-[13px] leading-relaxed text-[var(--color-text-secondary)]">
+            En web/PWA no hay acceso directo a HealthKit: Apple no lista Órvita en Salud → Apps. Los datos llegan por
+            importación (Atajo de iOS o export) al servidor; aquí ves lo último guardado en{" "}
+            <span className="font-mono text-[12px]">health_metrics</span>.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { label: "Sueño (h)", value: autoHealth?.sleep_hours != null ? String(autoHealth.sleep_hours) : "—" },
+              { label: "HRV (ms)", value: autoHealth?.hrv_ms != null ? String(autoHealth.hrv_ms) : "—" },
+              {
+                label: "Readiness",
+                value: autoHealth?.readiness_score != null ? String(autoHealth.readiness_score) : "—",
+              },
+              { label: "Pasos", value: autoHealth?.steps != null ? String(autoHealth.steps) : "—" },
+            ].map((m) => (
+              <div
+                key={m.label}
+                className="rounded-xl border border-[color-mix(in_srgb,var(--color-border)_60%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_55%,transparent)] px-3 py-3"
+              >
+                <p className="m-0 text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
+                  {m.label}
+                </p>
+                <p className="m-0 mt-2 text-xl font-semibold tabular-nums text-[var(--color-text-primary)]">{m.value}</p>
+              </div>
+            ))}
+          </div>
+          <p className="m-0 text-[12px] text-[var(--color-text-secondary)]">
+            {autoHealthLoading
+              ? "Cargando métricas automáticas…"
+              : autoHealth?.observed_at
+                ? `Última muestra: ${new Date(autoHealth.observed_at).toLocaleString("es-CO")} · fuente ${autoHealth.source ?? "—"}`
+                : "Sin muestras automáticas todavía. Pulsa importar o usa Configuración → Importar muestra Apple."}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={autoHealthBusy}
+              className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-[color-mix(in_srgb,var(--color-border)_70%,transparent)] px-4 text-xs font-semibold text-[var(--color-text-primary)]"
+              onClick={async () => {
+                setAutoHealthBusy(true)
+                setAutoHealthError(null)
+                setAutoHealthNotice(null)
+                try {
+                  const headers = await browserBearerHeaders(true)
+                  const res = await fetch("/api/integrations/health/apple/import", {
+                    method: "POST",
+                    headers,
+                    body: JSON.stringify({ entries: [] }),
+                  })
+                  const payload = (await res.json()) as { success?: boolean; error?: string; imported?: number }
+                  if (!res.ok || !payload.success) throw new Error(payload.error ?? "No se pudo importar")
+                  setAutoHealthNotice(`Importado (${payload.imported ?? 0} registro).`)
+                  await refetchAutoHealth()
+                } catch (e) {
+                  setAutoHealthError(e instanceof Error ? e.message : "Error importando")
+                } finally {
+                  setAutoHealthBusy(false)
+                }
+              }}
+            >
+              {autoHealthBusy ? "Importando…" : "Traer muestra Apple Health"}
+            </button>
+          </div>
+          {autoHealthNotice ? (
+            <p className="m-0 text-xs text-[var(--color-accent-health)]">{autoHealthNotice}</p>
+          ) : null}
+          {autoHealthError ? (
+            <p className="m-0 text-xs text-[var(--color-accent-danger)]">{autoHealthError}</p>
+          ) : null}
+        </div>
+      </Card>
 
       <Card>
         <div className="grid gap-3 p-4 sm:gap-3.5 sm:p-6">
