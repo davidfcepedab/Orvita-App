@@ -21,7 +21,7 @@ export async function runMorningDigest(
   prefs: OrbitaNotificationPreferences,
 ): Promise<{ sent: boolean; reason?: string }> {
   const p = mergePrefs(userId, prefs)
-  if (!p.push_enabled_global || !p.push_digest_morning) {
+  if (!p.push_enabled_global || (!p.push_digest_morning && !p.push_digest_daily)) {
     return { sent: false, reason: "disabled" }
   }
 

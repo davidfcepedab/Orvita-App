@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useEffect, useRef, useState } from "react"
 import { useFinance } from "../FinanceContext"
 import { FinanceViewHeader } from "../_components/FinanceViewHeader"
+import { ConnectedBankAccountsCard } from "../_components/ConnectedBankAccountsCard"
 import { financeSubnavTabClass, financeViewRootClass } from "../_components/financeChrome"
 import { Card } from "@/src/components/ui/Card"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
@@ -654,6 +655,8 @@ export default function FinanzasOverview() {
       </Card>
 
       <div className="grid min-w-0 max-w-full grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
+        <ConnectedBankAccountsCard />
+
         <Card
           className="relative min-w-0 overflow-hidden p-0"
           style={{

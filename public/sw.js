@@ -230,6 +230,11 @@ self.addEventListener("push", (ev) => {
       .slice(0, 2)
       .map((a) => ({ action: a.action, title: a.title }))
   }
+  if (payload.category === "palanca") {
+    options.requireInteraction = true
+    options.renotify = true
+    options.vibrate = [80, 40, 80]
+  }
 
   ev.waitUntil(self.registration.showNotification(payload.title || "Órvita", options))
 })
@@ -239,6 +244,7 @@ function resolveUrlFromAction(action, fallbackUrl) {
   if (action === "habitos") return "/habitos"
   if (action === "agenda") return "/agenda"
   if (action === "hoy") return "/hoy"
+  if (action === "block90") return "/hoy?focus=90"
   if (action === "ai" || action === "resolver_ia") return "/hoy"
   return fallbackUrl
 }

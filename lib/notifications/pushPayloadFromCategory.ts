@@ -16,16 +16,17 @@ export function enrichWebPushFromNotificationCategory(
   if (c === "checkin" || c === "decision") {
     out.category = "palanca"
     out.actions = [
-      { action: "hoy", title: "Ir a Hoy" },
+      { action: "hoy", title: "Activar Palanca #1" },
       { action: "capital", title: "Ir a Capital" },
     ]
+    out.title = `Palanca #1 · ${base.title}`
     return out
   }
   if (c === "finance") {
     out.category = "presion_critica"
     out.actions = [
       { action: "capital", title: "Ir a Capital" },
-      { action: "ai", title: "Resolver con IA" },
+      { action: "block90", title: "Bloquear 90 min" },
     ]
     return out
   }

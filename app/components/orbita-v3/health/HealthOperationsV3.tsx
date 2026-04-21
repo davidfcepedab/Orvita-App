@@ -22,6 +22,7 @@ import {
   YAxis,
 } from "recharts"
 import { useSaludContext } from "@/app/salud/_hooks/useSaludContext"
+import { useHealthAutoMetrics } from "@/app/hooks/useHealthAutoMetrics"
 
 const metricTone = (value: number) => {
   if (value >= 80) return "var(--accent-health-strong)"
@@ -31,6 +32,7 @@ const metricTone = (value: number) => {
 
 export default function HealthOperationsV3() {
   const health = useSaludContext()
+  const { latest: autoHealth } = useHealthAutoMetrics()
   const [completedSupplements, setCompletedSupplements] = useState<number[]>([])
 
   if (health.loading) {
@@ -66,11 +68,11 @@ export default function HealthOperationsV3() {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         {[
-          { label: "Salud (check-in)", value: health.hrv, meta: "/100", icon: Activity },
-          { label: "Cuerpo (check-in)", value: health.restingHR, meta: "/100", icon: HeartPulse },
-          { label: "Sueño (proxy)", value: health.sleepScore, meta: "/100", icon: MoonStar },
-          { label: "Recuperación", value: health.scoreRecuperacion, meta: "/100", icon: Sparkles },
-          { label: "Índice energía", value: health.bodyBattery, meta: "/100", icon: BatteryCharging },
+          { label: "HRV (auto)", value: autoHealth?.hrv_ms ?? health.hrv, meta: "ms", icon: Activity },
+          { label: "Readiness (auto)", value: autoHealth?.readiness_score ?? health.restingHR, meta: "/100", icon: HeartPulse },
+          { label: "Sueño (auto)", value: autoHealth?.sleep_hours ? Math.round(autoHealth.sleep_hours * 10) / 10 : health.sleepScore, meta: "h", icon: MoonStar },
+          { label: "Pasos (auto)", value: autoHealth?.steps ?? health.scoreRecuperacion, meta: "pasos", icon: Sparkles },
+          { label: "Índice energía", value: autoHealth?.energy_index ?? health.bodyBattery, meta: "/100", icon: BatteryCharging },
         ].map((metric) => {
           const Icon = metric.icon
 
@@ -90,6 +92,11 @@ export default function HealthOperationsV3() {
           )
         })}
       </div>
+      {autoHealth?.observed_at ? (
+        <p className="text-xs text-[var(--text-muted)]">
+          Fuente automática: {autoHealth.source ?? "health"} · Última sincronización {new Date(autoHealth.observed_at).toLocaleString("es-CO")}
+        </p>
+      ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
         <div className="card border border-[var(--border-soft)]">

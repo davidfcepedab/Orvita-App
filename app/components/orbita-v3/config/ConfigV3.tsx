@@ -12,6 +12,7 @@ import {
 import { OrbitaImageCropDialog } from "@/app/components/OrbitaImageCropDialog"
 import { ConfigHouseholdSection } from "@/app/components/orbita-v3/config/ConfigHouseholdSection"
 import { ConfigIntegrationsPanel } from "@/app/components/orbita-v3/config/ConfigIntegrationsPanel"
+import { ConfigStrategicIntegrationsPanel } from "@/app/components/orbita-v3/config/ConfigStrategicIntegrationsPanel"
 import { ConfigNotificationPreferencesPanel } from "@/app/components/orbita-v3/config/ConfigNotificationPreferencesPanel"
 import { ConfigPwaInstallPanel } from "@/app/components/orbita-v3/config/ConfigPwaInstallPanel"
 import { ConfigPasskeyPanel } from "@/app/components/orbita-v3/config/ConfigPasskeyPanel"
@@ -772,6 +773,7 @@ export default function ConfigV3() {
             googleLastSyncAt={googleLastSyncAt}
             hevyLastSyncAt={hevyLastSyncAt}
           />
+          <ConfigStrategicIntegrationsPanel theme={theme} />
         </div>
 
         <aside className="space-y-3 lg:sticky lg:top-24">

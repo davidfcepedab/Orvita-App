@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useOrbitaSkin } from "@/app/contexts/AppContext"
 import { Activity, AlertCircle, CheckCircle2, Wind } from "lucide-react"
 import { useOperationalContext } from "@/app/hooks/useOperationalContext"
+import { useHealthAutoMetrics } from "@/app/hooks/useHealthAutoMetrics"
 import type { OperationalHabit } from "@/lib/operational/types"
 
 export default function HomeV3() {
@@ -11,6 +12,7 @@ export default function HomeV3() {
   const [note, setNote] = useState("")
   const [period, setPeriod] = useState<"Dia" | "Semana" | "Mes">("Dia")
   const { data } = useOperationalContext()
+  const { latest: autoHealth } = useHealthAutoMetrics()
 
   const clusters = [
     { id: "hoy", title: "Hoy (siguiente acción)" },
@@ -23,7 +25,7 @@ export default function HomeV3() {
   const nextImpact = data?.next_impact ?? "-"
   const nextTimeRequired = data?.next_time_required ?? "-"
   const habits = data?.habits ?? []
-  const energy = data?.score_salud ?? 0
+  const energy = autoHealth?.energy_index ?? data?.score_salud ?? 0
 
   return (
     <div className="mx-auto min-w-0 max-w-5xl space-y-8 overflow-x-hidden">
@@ -191,6 +193,11 @@ export default function HomeV3() {
                   >
                     {energy}%
                   </p>
+                  {autoHealth?.observed_at ? (
+                    <p className="mt-1 text-[11px]" style={{ color: theme.textMuted }}>
+                      Auto-sync salud · {new Date(autoHealth.observed_at).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  ) : null}
                 </div>
               </div>
             )}
