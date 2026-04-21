@@ -143,22 +143,13 @@ export function CapitalOperativoPanel({ model, formatCOP, embedded }: CapitalOpe
               </span>
             </div>
 
-            <div className="mt-4 flex flex-1 items-end justify-between gap-3">
-              <div>
-                <p className="text-xl font-semibold tabular-nums text-orbita-primary sm:text-2xl">
-                  {Math.round(energy.currentLevelPct)}%
-                  <span className="ml-1.5 text-base font-medium text-orbita-secondary">de tu energía hoy</span>
-                </p>
-                <p className="mt-1 text-xs leading-snug text-orbita-secondary">
-                  Si este nivel cae 5 días seguidos, conviene bajar carga y recuperar.
-                </p>
-              </div>
-              <div className="h-14 w-28">
+            <div className="mt-4 flex min-h-0 flex-1 flex-col gap-3">
+              <div className="h-28 w-full shrink-0 sm:h-32">
                 <ClientOnly
                   fallback={<div className="h-full w-full rounded-xl border border-orbita-border/40 bg-orbita-surface/35" />}
                 >
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={energySeries}>
+                    <LineChart data={energySeries} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
                       <Tooltip
                         contentStyle={{
                           background: "rgba(17,17,17,0.9)",
@@ -174,6 +165,15 @@ export function CapitalOperativoPanel({ model, formatCOP, embedded }: CapitalOpe
                     </LineChart>
                   </ResponsiveContainer>
                 </ClientOnly>
+              </div>
+              <div className="min-w-0">
+                <p className="text-xl font-semibold tabular-nums text-orbita-primary sm:text-2xl">
+                  {Math.round(energy.currentLevelPct)}%
+                  <span className="text-base font-medium text-orbita-secondary"> de tu energía hoy</span>
+                </p>
+                <p className="mt-1 text-xs leading-snug text-orbita-secondary">
+                  Si este nivel cae 5 días seguidos, conviene bajar carga y recuperar.
+                </p>
               </div>
             </div>
 

@@ -62,7 +62,7 @@ function ZenKpiFloat({
   const w = Math.min(100, Math.max(0, pct))
   return (
     <div
-      className="flex min-w-0 flex-col items-center gap-1 rounded-2xl px-2.5 py-1.5 sm:px-3 sm:py-2"
+      className="flex h-full min-w-0 flex-col items-center justify-between gap-1 rounded-2xl px-2 py-1.5 sm:px-2.5 sm:py-2"
       style={{
         background: "color-mix(in srgb, var(--color-surface-alt) 42%, transparent)",
         boxShadow: "0 1px 0 color-mix(in srgb, var(--color-text-primary) 6%, transparent)",
@@ -168,8 +168,8 @@ export function ZenHomeOverview({
                 </button>
               </div>
 
-              <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:gap-6">
-                <div className="flex flex-col items-center gap-1.5 sm:items-start">
+              <div className="grid min-w-0 gap-5 sm:grid-cols-[auto,minmax(0,1fr)] sm:items-start sm:gap-6">
+                <div className="flex justify-center sm:justify-start sm:pt-0.5">
                   <div
                     className={["shrink-0 rounded-full p-0.5", tone.ring].join(" ")}
                     style={{ background: "color-mix(in srgb, var(--color-surface-alt) 55%, transparent)" }}
@@ -187,7 +187,10 @@ export function ZenHomeOverview({
                       />
                     </div>
                   </div>
-                  <div className="text-center sm:text-left">
+                </div>
+
+                <div className="flex min-w-0 flex-col gap-3">
+                  <div className="space-y-1.5 text-center sm:text-left">
                     <span
                       className={[
                         "inline-flex items-center rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.1em]",
@@ -196,19 +199,19 @@ export function ZenHomeOverview({
                     >
                       Flujo · {model.flow.label}
                     </span>
-                    <p className="mt-1.5 max-w-md text-center text-[11px] leading-snug text-orbita-secondary sm:text-left sm:text-xs">
+                    <p className="m-0 max-w-prose text-[11px] leading-snug text-orbita-secondary sm:text-xs [text-wrap:pretty]">
                       {model.flow.microcopy}
                     </p>
                   </div>
-                </div>
 
-                <div
-                  className="flex w-full min-w-0 flex-wrap items-center justify-center gap-3 sm:flex-1 sm:justify-start sm:gap-4"
-                  aria-label="Capital operativo: tiempo, energía, dinero"
-                >
-                  <ZenKpiFloat label="Tiempo" pct={timePct} tone="sky" />
-                  <ZenKpiFloat label="Energía" pct={energyPct} tone="amber" />
-                  <ZenKpiFloat label="Dinero" pct={moneyPct} tone="rose" />
+                  <div
+                    className="grid min-w-0 grid-cols-3 gap-2 sm:max-w-md sm:gap-3"
+                    aria-label="Capital operativo: tiempo, energía, dinero"
+                  >
+                    <ZenKpiFloat label="Tiempo" pct={timePct} tone="sky" />
+                    <ZenKpiFloat label="Energía" pct={energyPct} tone="amber" />
+                    <ZenKpiFloat label="Dinero" pct={moneyPct} tone="rose" />
+                  </div>
                 </div>
               </div>
             </div>
