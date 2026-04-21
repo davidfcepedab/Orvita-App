@@ -433,56 +433,62 @@ export default function HoyCommandCenter() {
 
       <nav
         aria-label="Check-in por momento del día"
-        className="rounded-[var(--radius-card)] border border-[color-mix(in_srgb,var(--color-accent-health)_30%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_9%,var(--color-surface))] p-3 sm:p-4"
+        className="min-w-0 rounded-[var(--radius-card)] border border-[color-mix(in_srgb,var(--color-accent-health)_30%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_9%,var(--color-surface))] p-3 sm:p-4"
       >
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0">
+        <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
+          <div className="min-w-0 lg:max-w-xl lg:shrink">
             <SectionLabel>Check-in del día</SectionLabel>
-            <p className="m-0 mt-1 max-w-xl text-xs leading-snug text-[var(--color-text-secondary)]">
-              Tres momentos: elige el bloque que toque ahora. En check-in, termina con{" "}
+            <p className="m-0 mt-1 text-xs leading-snug text-[var(--color-text-secondary)] [text-wrap:pretty]">
+              Tres momentos: abre el bloque que te toque. Al final, usa{" "}
               <span className="font-medium text-[var(--color-text-primary)]">Guardar check-in completo</span>.
             </p>
           </div>
-          <div className="flex flex-wrap items-stretch gap-2 sm:justify-end">
-            {(
-              [
-                {
-                  href: "/checkin#checkin-manana",
-                  label: "Mañana",
-                  hint: "Sueño · energía",
-                  Icon: Sunrise,
-                },
-                {
-                  href: "/checkin#checkin-dia",
-                  label: "Día",
-                  hint: "Foco · cuerpo · vínculos",
-                  Icon: Sun,
-                },
-                {
-                  href: "/checkin#checkin-noche",
-                  label: "Noche",
-                  hint: "Cierre · medidas",
-                  Icon: Moon,
-                },
-              ] as const
-            ).map(({ href, label, hint, Icon }) => (
-              <Link
-                key={href}
-                href={href}
-                className="inline-flex min-h-[48px] min-w-[5.75rem] flex-1 flex-col items-center justify-center gap-0.5 rounded-[var(--radius-button)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-2 text-center motion-safe:transition-[background,transform] motion-safe:active:scale-[0.99] motion-safe:hover:bg-[var(--color-surface-alt)] sm:min-h-[52px] sm:flex-none sm:min-w-[6.5rem] sm:px-3"
-                style={{ textDecoration: "none" }}
-              >
-                <Icon className="h-3.5 w-3.5 shrink-0 text-[var(--color-accent-health)]" aria-hidden />
-                <span className="text-[11px] font-semibold leading-tight text-[var(--color-text-primary)]">{label}</span>
-                <span className="hidden text-[9px] leading-tight text-[var(--color-text-secondary)] sm:block">{hint}</span>
-              </Link>
-            ))}
+          <div className="flex w-full min-w-0 flex-col gap-2 lg:w-auto lg:max-w-none lg:shrink-0">
+            <div className="grid min-w-0 grid-cols-3 gap-2 lg:flex lg:w-auto lg:gap-2">
+              {(
+                [
+                  {
+                    href: "/checkin#checkin-manana",
+                    label: "Mañana",
+                    hint: "Sueño · energía",
+                    Icon: Sunrise,
+                  },
+                  {
+                    href: "/checkin#checkin-dia",
+                    label: "Día",
+                    hint: "Foco · cuerpo · vínculos",
+                    Icon: Sun,
+                  },
+                  {
+                    href: "/checkin#checkin-noche",
+                    label: "Noche",
+                    hint: "Cierre · medidas",
+                    Icon: Moon,
+                  },
+                ] as const
+              ).map(({ href, label, hint, Icon }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className="inline-flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-[var(--radius-button)] border border-[color-mix(in_srgb,var(--color-accent-health)_22%,var(--color-border))] bg-[var(--color-surface)] px-1.5 py-2 text-center motion-safe:transition-[background,transform,border-color] motion-safe:active:scale-[0.99] motion-safe:hover:border-[color-mix(in_srgb,var(--color-accent-health)_40%,var(--color-border))] motion-safe:hover:bg-[var(--color-surface-alt)] sm:px-2.5 lg:min-h-[52px] lg:min-w-[6.25rem] lg:px-3"
+                  style={{ textDecoration: "none" }}
+                >
+                  <Icon className="h-3.5 w-3.5 shrink-0 text-[var(--color-accent-health)]" aria-hidden />
+                  <span className="text-[11px] font-semibold leading-tight text-[var(--color-text-primary)]">{label}</span>
+                  <span className="line-clamp-2 max-w-[11rem] text-[9px] leading-tight text-[var(--color-text-secondary)] sm:max-w-none">
+                    {hint}
+                  </span>
+                </Link>
+              ))}
+            </div>
             <Link
               href="/checkin"
-              className="inline-flex min-h-[48px] items-center justify-center self-stretch rounded-[var(--radius-button)] border border-dashed border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-text-secondary)_5%,transparent)] px-3 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--color-text-secondary)] motion-safe:hover:border-[var(--color-accent-health)] motion-safe:hover:text-[var(--color-text-primary)] sm:min-h-[52px] sm:px-4"
+              className="inline-flex min-h-[48px] w-full min-w-0 items-center justify-center rounded-[var(--radius-button)] border border-dashed border-[color-mix(in_srgb,var(--color-accent-health)_28%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_6%,transparent)] px-2 py-2.5 text-center text-[10px] font-semibold uppercase leading-snug tracking-[0.1em] text-[var(--color-text-secondary)] motion-safe:hover:border-[var(--color-accent-health)] motion-safe:hover:text-[var(--color-text-primary)] sm:min-h-[52px] sm:px-4 lg:w-auto lg:self-center lg:px-5 lg:py-3"
               style={{ textDecoration: "none" }}
+              title="Abrir el check-in completo en una sola vista"
             >
-              Todo el formulario
+              <span className="hidden min-[400px]:inline">Todo el formulario</span>
+              <span className="inline min-[400px]:hidden [text-wrap:balance]">Formulario completo</span>
             </Link>
           </div>
         </div>
@@ -768,8 +774,12 @@ export default function HoyCommandCenter() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="group flex min-h-[52px] items-center justify-between gap-3 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-3 motion-safe:transition-[box-shadow,transform] motion-safe:duration-300 motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-[var(--shadow-hover)]"
-                  style={{ textDecoration: "none" }}
+                  className="group flex min-h-[52px] items-center justify-between gap-3 rounded-[var(--radius-card)] border px-3 py-3 motion-safe:transition-[box-shadow,transform,background-color,border-color] motion-safe:duration-300 motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-[var(--shadow-hover)]"
+                  style={{
+                    textDecoration: "none",
+                    background: `color-mix(in srgb, ${item.accent} 12%, var(--color-surface))`,
+                    borderColor: `color-mix(in srgb, ${item.accent} 34%, var(--color-border))`,
+                  }}
                 >
                   <div className="min-w-0">
                     <p className="m-0 text-sm font-semibold text-[var(--color-text-primary)]">{item.title}</p>
