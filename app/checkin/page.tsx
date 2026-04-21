@@ -42,6 +42,8 @@ import {
 import { CheckinSection } from "./CheckinSection"
 import { agendaTodayYmd } from "@/lib/agenda/localDateKey"
 import { addDaysIso } from "@/lib/habits/habitMetrics"
+import { buildOfflineSnapshotFromCheckinForm, saveOfflineCheckinSnapshot } from "@/lib/pwa/offlineSnapshot"
+import { markPushValueDeliveredForPrompt } from "@/lib/notifications/pushClient"
 
 async function buildJsonHeaders(): Promise<HeadersInit> {
   const base: HeadersInit = { "Content-Type": "application/json" }
@@ -391,6 +393,8 @@ export default function CheckinPage() {
         return
       }
       if (json.flags) setApiFlags(json.flags)
+      saveOfflineCheckinSnapshot(buildOfflineSnapshotFromCheckinForm(form))
+      markPushValueDeliveredForPrompt()
       setSavePhase("success")
       if (saveSuccessTimerRef.current) clearTimeout(saveSuccessTimerRef.current)
       saveSuccessTimerRef.current = setTimeout(() => {

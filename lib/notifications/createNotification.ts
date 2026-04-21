@@ -1,4 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/server"
+import { enrichWebPushFromNotificationCategory } from "@/lib/notifications/pushPayloadFromCategory"
 import { sendWebPushToUser } from "@/lib/notifications/sendWebPushToUser"
 
 export type NotificationCategory = "system" | "finance" | "habits" | "agenda" | "decision" | "checkin" | "training"
@@ -39,12 +40,17 @@ export async function createNotificationForUser(params: {
     return { id: null, error: error?.message ?? "insert failed" }
   }
 
-  void sendWebPushToUser(supabase, params.userId, {
+  const basePush = {
     title: params.title,
     body: params.body,
     url: params.link ?? "/",
     notificationId: data.id,
-  })
+  }
+  void sendWebPushToUser(
+    supabase,
+    params.userId,
+    enrichWebPushFromNotificationCategory(params.category, basePush),
+  )
 
   return { id: data.id }
 }

@@ -3,6 +3,11 @@ import type webpush from "web-push"
 import { ORVITA_PUSH_ICON } from "@/lib/notifications/pushBranding"
 import { getVapidPrivateKey, getVapidPublicKey, getVapidSubject, isVapidConfigured } from "@/lib/notifications/vapid"
 
+/** Categorías de push alineadas con copy de producto (ver `public/sw.js` tags). */
+export type OrvitaPushCategory = "palanca" | "presion_critica" | "energia" | "habitos" | "system"
+
+export type WebPushAction = { action: string; title: string }
+
 export type WebPushPayload = {
   title: string
   body: string
@@ -15,6 +20,10 @@ export type WebPushPayload = {
   badge?: string | null
   /** Imagen grande opcional (ruta o https), p. ej. hero de la alerta. */
   image?: string | null
+  /** Canal lógico para agrupar en el SO (Android) y depuración. */
+  category?: OrvitaPushCategory | null
+  /** Botones nativos (máx. 2 recomendado; el SW recorta). */
+  actions?: WebPushAction[] | null
 }
 
 let webPushModule: typeof webpush | null = null
@@ -58,6 +67,8 @@ export async function sendWebPushToUser(
     url: payload.url ?? "/",
     notificationId: payload.notificationId,
     icon: payload.icon?.trim() || ORVITA_PUSH_ICON,
+    category: payload.category ?? "system",
+    ...(payload.actions?.length ? { actions: payload.actions } : {}),
     ...(payload.badge?.trim() ? { badge: payload.badge.trim() } : {}),
     ...(payload.image?.trim() ? { image: payload.image.trim() } : {}),
   })

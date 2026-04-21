@@ -25,9 +25,12 @@ export const metadata: Metadata = {
     telephone: false,
   },
   icons: {
-    icon: [{ url: "/brand/orvita-logo-on-dark-bg.png", type: "image/png", sizes: "1024x1024" }],
-    apple: [{ url: "/brand/orvita-logo-on-light-bg.png", type: "image/png", sizes: "1024x1024" }],
-    shortcut: ["/brand/orvita-logo-on-dark-bg.png"],
+    icon: [
+      { url: "/pwa/icon-192.png", type: "image/png", sizes: "192x192" },
+      { url: "/pwa/icon-512.png", type: "image/png", sizes: "512x512" },
+    ],
+    apple: [{ url: "/pwa/icon-192.png", type: "image/png", sizes: "192x192" }],
+    shortcut: ["/pwa/icon-192.png"],
   },
 }
 
@@ -39,7 +42,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#0d9488",
+  themeColor: "#0A0A0A",
 }
 
 export default function RootLayout({

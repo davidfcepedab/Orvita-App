@@ -1,5 +1,26 @@
 /** Cliente: registro de Web Push + utilidad VAPID (Push API). */
 
+/** Tras el primer check-in guardado: habilita el prompt de permisos (valor entregado). */
+export const PUSH_VALUE_DELIVERED_KEY = "orvita:push:value_delivered"
+
+export function markPushValueDeliveredForPrompt() {
+  if (typeof window === "undefined") return
+  try {
+    window.localStorage.setItem(PUSH_VALUE_DELIVERED_KEY, "1")
+  } catch {
+    /* ignore */
+  }
+}
+
+export function hasPushValueDeliveredForPrompt(): boolean {
+  if (typeof window === "undefined") return true
+  try {
+    return window.localStorage.getItem(PUSH_VALUE_DELIVERED_KEY) === "1"
+  } catch {
+    return true
+  }
+}
+
 export function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4)
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/")
@@ -28,9 +49,17 @@ export async function registerOrvitaServiceWorker(): Promise<ServiceWorkerRegist
 export async function subscribeOrvitaPush(
   vapidPublicKey: string,
   accessToken: string,
+  opts?: { skipFirstCheckinGate?: boolean },
 ): Promise<{ ok: boolean; error?: string }> {
   if (!isPushSupported()) {
     return { ok: false, error: "Este navegador no admite notificaciones push." }
+  }
+
+  if (!opts?.skipFirstCheckinGate && !hasPushValueDeliveredForPrompt()) {
+    return {
+      ok: false,
+      error: "Primero guarda un check-in; así evitamos pedir permiso antes de entregarte valor.",
+    }
   }
 
   await registerOrvitaServiceWorker()

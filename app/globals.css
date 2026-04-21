@@ -171,6 +171,14 @@
   --layout-gap: var(--spacing-2xl);
 }
 
+/* PWA instalada + modo Zen: respeta barra y curva del iPhone sin recortar contenido */
+@media (display-mode: standalone) {
+  [data-layout="zen"] body.orbita-app-root {
+    padding-left: max(0px, env(safe-area-inset-left, 0px));
+    padding-right: max(0px, env(safe-area-inset-right, 0px));
+  }
+}
+
 /* ===================================================== */
 /* BASE GLOBAL                                           */
 /* ===================================================== */

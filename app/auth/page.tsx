@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { createBrowserClient } from "@/lib/supabase/browser"
 import { authCardSurfaceClass } from "@/app/auth/_components/authCardClasses"
@@ -17,6 +18,11 @@ const isMock = process.env.NEXT_PUBLIC_APP_MODE === "mock"
 
 /** Supabase: proveedor Apple activado en el proyecto + URL de retorno en el dashboard. */
 const appleSignInEnabled = process.env.NEXT_PUBLIC_AUTH_APPLE_SIGN_IN === "1"
+
+/** Google OAuth en el dashboard de Supabase + URL de retorno. */
+const googleSignInEnabled = process.env.NEXT_PUBLIC_AUTH_GOOGLE_SIGN_IN === "1"
+
+type AuthChannel = "password" | "magic"
 
 /** Vercel inyecta esto en build; en prod suele haber más cold start (Hobby). */
 const isVercelProduction = process.env.NEXT_PUBLIC_VERCEL_ENV === "production"
@@ -94,6 +100,8 @@ export default function AuthPage() {
   const [busyHint, setBusyHint] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [oauthLoading, setOauthLoading] = useState(false)
+  const [authChannel, setAuthChannel] = useState<AuthChannel>("password")
+  const [magicSent, setMagicSent] = useState(false)
 
   /** Tras OAuth (p. ej. Apple), sincroniza cookie de sesión y redirige si ya hay sesión. */
   useEffect(() => {
@@ -112,7 +120,7 @@ export default function AuthPage() {
           headers: { Authorization: `Bearer ${session.access_token}` },
         })
         if (!res.ok || cancelled) return
-        window.location.replace("/")
+        window.location.replace("/hoy")
       } catch {
         /* sin sesión o error de red */
       }
@@ -127,6 +135,8 @@ export default function AuthPage() {
   const switchMode = (next: Mode) => {
     setMode(next)
     setError(null)
+    setMagicSent(false)
+    setAuthChannel("password")
   }
 
   const syncSessionCookieOnce = async (accessToken: string) => {
@@ -191,7 +201,7 @@ export default function AuthPage() {
     event.preventDefault()
 
     if (isMock) {
-      window.location.href = "/"
+      window.location.href = "/hoy"
       return
     }
 
@@ -278,7 +288,7 @@ export default function AuthPage() {
       if (mode === "register") {
         window.location.href = "/household/invite"
       } else {
-        window.location.href = "/"
+        window.location.href = "/hoy"
       }
     } catch (err) {
       let message: string
@@ -320,6 +330,61 @@ export default function AuthPage() {
 
   const appleBtnClass =
     "flex min-h-[44px] w-full touch-manipulation items-center justify-center gap-2 rounded-[var(--radius-button)] border border-black/10 bg-black px-4 py-3 text-base font-semibold text-white shadow-sm transition-[opacity,box-shadow] duration-200 hover:bg-neutral-900 hover:shadow-md active:opacity-95 motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-50"
+
+  const googleBtnClass =
+    "flex min-h-[44px] w-full touch-manipulation items-center justify-center gap-2 rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface px-4 py-3 text-base font-semibold text-orbita-primary shadow-sm transition-[opacity,box-shadow] duration-200 hover:bg-orbita-surface-alt hover:shadow-md active:opacity-95 motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-50"
+
+  const handleGoogleSignIn = async () => {
+    if (isMock || !googleSignInEnabled) return
+    setOauthLoading(true)
+    setError(null)
+    try {
+      const supabase = createBrowserClient()
+      const origin = typeof window !== "undefined" ? window.location.origin : ""
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${origin}/auth`,
+          skipBrowserRedirect: false,
+        },
+      })
+      if (oauthError) throw oauthError
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo iniciar sesión con Google.")
+    } finally {
+      setOauthLoading(false)
+    }
+  }
+
+  const handleMagicLink = async () => {
+    if (isMock) return
+    if (!email.trim()) {
+      setError("Introduce tu correo para el enlace mágico.")
+      return
+    }
+    setLoading(true)
+    setError(null)
+    setMagicSent(false)
+    setBusyHint("Enviando enlace seguro…")
+    try {
+      const supabase = createBrowserClient()
+      const origin = typeof window !== "undefined" ? window.location.origin : ""
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email: email.trim(),
+        options: {
+          emailRedirectTo: `${origin}/auth`,
+          shouldCreateUser: mode === "register",
+        },
+      })
+      if (otpError) throw otpError
+      setMagicSent(true)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo enviar el enlace.")
+    } finally {
+      setBusyHint(null)
+      setLoading(false)
+    }
+  }
 
   const handleAppleSignIn = async () => {
     if (isMock || !appleSignInEnabled) return
@@ -374,6 +439,15 @@ export default function AuthPage() {
                 ? "Accede con tu cuenta de Órvita."
                 : "Regístrate con correo y contraseña. Si tienes código de invitación, podrás unirte a un hogar existente."}
           </p>
+          {!isMock ? (
+            <p className="text-xs leading-relaxed text-orbita-secondary">
+              Passkeys (Face ID / Touch ID):{" "}
+              <Link href="/configuracion#passkeys-section" className="font-semibold text-[var(--color-accent-primary)] underline-offset-2 hover:underline">
+                regístralas en Configuración
+              </Link>{" "}
+              tras iniciar sesión.
+            </p>
+          ) : null}
         </header>
 
       {isMock ? (
@@ -387,7 +461,7 @@ export default function AuthPage() {
           >
             Auth real desactivada en local. Entrarás con datos de referencia.
           </div>
-          <button type="button" onClick={() => (window.location.href = "/")} className={primaryBtnClass}>
+          <button type="button" onClick={() => (window.location.href = "/hoy")} className={primaryBtnClass}>
             Entrar en demo
           </button>
         </div>
@@ -424,23 +498,89 @@ export default function AuthPage() {
             </button>
           </div>
 
-          {appleSignInEnabled ? (
+          {(googleSignInEnabled || appleSignInEnabled) ? (
             <div className="space-y-3">
-              <button
-                type="button"
-                onClick={() => void handleAppleSignIn()}
-                disabled={loading || oauthLoading}
-                className={appleBtnClass}
-                aria-label="Continuar con Apple"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden className="shrink-0 fill-current">
-                  <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
-                </svg>
-                {oauthLoading ? "Abriendo Apple…" : "Continuar con Apple"}
-              </button>
-              <p className="text-center text-xs text-orbita-secondary">o con correo y contraseña</p>
+              {googleSignInEnabled ? (
+                <button
+                  type="button"
+                  onClick={() => void handleGoogleSignIn()}
+                  disabled={loading || oauthLoading}
+                  className={googleBtnClass}
+                  aria-label="Continuar con Google"
+                >
+                  <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden className="shrink-0">
+                    <path
+                      fill="#FFC107"
+                      d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"
+                    />
+                    <path
+                      fill="#FF3D00"
+                      d="m6.306 14.691 6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"
+                    />
+                    <path
+                      fill="#4CAF50"
+                      d="M24 44c5.166 0 9.86-1.977 13.409-5.197l-6.19-5.238A11.91 11.91 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"
+                    />
+                    <path
+                      fill="#1976D2"
+                      d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"
+                    />
+                  </svg>
+                  {oauthLoading ? "Abriendo Google…" : "Continuar con Google"}
+                </button>
+              ) : null}
+              {appleSignInEnabled ? (
+                <button
+                  type="button"
+                  onClick={() => void handleAppleSignIn()}
+                  disabled={loading || oauthLoading}
+                  className={appleBtnClass}
+                  aria-label="Continuar con Apple"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden className="shrink-0 fill-current">
+                    <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
+                  </svg>
+                  {oauthLoading ? "Abriendo Apple…" : "Continuar con Apple"}
+                </button>
+              ) : null}
+              <p className="text-center text-xs text-orbita-secondary">o con correo</p>
             </div>
           ) : null}
+
+          <div
+            className="flex gap-1.5 rounded-[var(--radius-button)] border border-orbita-border/70 bg-[color-mix(in_srgb,var(--color-surface-alt)_88%,var(--color-border))] p-1.5 shadow-inner"
+            role="tablist"
+            aria-label="Método con correo"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={authChannel === "password"}
+              disabled={loading || oauthLoading}
+              onClick={() => {
+                setAuthChannel("password")
+                setMagicSent(false)
+                setError(null)
+              }}
+              className={`flex-1 min-h-[40px] rounded-md px-2 py-2 text-sm font-semibold touch-manipulation disabled:cursor-not-allowed disabled:opacity-50 ${authChannel === "password" ? tabActive : tabIdle}`}
+            >
+              Contraseña
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={authChannel === "magic"}
+              disabled={loading || oauthLoading}
+              onClick={() => {
+                setAuthChannel("magic")
+                setMagicSent(false)
+                setError(null)
+              }}
+              className={`flex-1 min-h-[40px] rounded-md px-2 py-2 text-sm font-semibold touch-manipulation disabled:cursor-not-allowed disabled:opacity-50 ${authChannel === "magic" ? tabActive : tabIdle}`}
+            >
+              Enlace mágico (OTP)
+            </button>
+          </div>
 
           <div
             id="auth-form-panel"
@@ -448,86 +588,131 @@ export default function AuthPage() {
             tabIndex={-1}
             aria-labelledby={mode === "login" ? "tab-login" : "tab-register"}
           >
-          <form
-            id="auth-form"
-            onSubmit={handleSubmit}
-            className="space-y-5"
-            autoComplete="on"
-            name={mode === "login" ? "signin" : "signup"}
-          >
-            <label className="block text-sm font-semibold text-orbita-primary" htmlFor="auth-email">
-              Correo electrónico
-              <input
-                id="auth-email"
-                name="email"
-                type="email"
-                autoComplete={emailAutoComplete}
-                inputMode="email"
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-                enterKeyHint="next"
-                required
-                disabled={loading || oauthLoading}
-                className={fieldClass}
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-              />
-            </label>
-
-            <label className="block text-sm font-semibold text-orbita-primary" htmlFor="auth-password">
-              Contraseña
-              {mode === "register" ? (
-                <span className="mt-1 block text-xs font-normal text-orbita-secondary">Mínimo 6 caracteres</span>
-              ) : null}
-              <input
-                id="auth-password"
-                name="password"
-                type="password"
-                autoComplete={passwordAutoComplete}
-                required
-                {...(mode === "register" ? { minLength: 6 } : {})}
-                {...(mode === "register"
-                  ? ({
-                      passwordrules: newPasswordRules,
-                    } as React.InputHTMLAttributes<HTMLInputElement> & { passwordrules?: string })
-                  : {})}
-                enterKeyHint={mode === "register" ? "next" : "go"}
-                disabled={loading || oauthLoading}
-                className={fieldClass}
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-              />
-            </label>
-
-            {mode === "register" && (
-              <label className="block text-sm font-semibold text-orbita-primary" htmlFor="auth-invite">
-                Código de invitación (opcional)
-                <input
-                  id="auth-invite"
-                  name="inviteCode"
-                  type="text"
-                  autoComplete="off"
-                  enterKeyHint="done"
+            {authChannel === "magic" ? (
+              <div className="space-y-5">
+                <label className="block text-sm font-semibold text-orbita-primary" htmlFor="auth-email-magic">
+                  Correo electrónico
+                  <input
+                    id="auth-email-magic"
+                    name="email"
+                    type="email"
+                    autoComplete={emailAutoComplete}
+                    inputMode="email"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    enterKeyHint="send"
+                    required
+                    disabled={loading || oauthLoading}
+                    className={fieldClass}
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                  />
+                </label>
+                {magicSent ? (
+                  <div
+                    className="rounded-[var(--radius-button)] border p-4 text-sm leading-relaxed text-orbita-primary"
+                    style={{
+                      borderColor: "color-mix(in srgb, var(--color-accent-primary) 40%, var(--color-border))",
+                      background: "color-mix(in srgb, var(--color-accent-primary) 10%, var(--color-surface-alt))",
+                    }}
+                    role="status"
+                  >
+                    Revisa tu correo: te enviamos un enlace seguro. Al abrirlo volverás aquí y te llevaremos al panel
+                    Hoy.
+                  </div>
+                ) : null}
+                <button
+                  type="button"
                   disabled={loading || oauthLoading}
-                  className={fieldClass}
-                  value={inviteCode}
-                  onChange={(event) => setInviteCode(event.target.value)}
-                  placeholder="Si te invitaron al hogar"
-                />
-              </label>
-            )}
+                  onClick={() => void handleMagicLink()}
+                  className={primaryBtnClass}
+                >
+                  {loading ? "Enviando…" : mode === "register" ? "Enviar enlace de registro" : "Enviar enlace de acceso"}
+                </button>
+              </div>
+            ) : (
+              <form
+                id="auth-form"
+                onSubmit={handleSubmit}
+                className="space-y-5"
+                autoComplete="on"
+                name={mode === "login" ? "signin" : "signup"}
+              >
+                <label className="block text-sm font-semibold text-orbita-primary" htmlFor="auth-email">
+                  Correo electrónico
+                  <input
+                    id="auth-email"
+                    name="email"
+                    type="email"
+                    autoComplete={emailAutoComplete}
+                    inputMode="email"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    enterKeyHint="next"
+                    required
+                    disabled={loading || oauthLoading}
+                    className={fieldClass}
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                  />
+                </label>
 
-            <button type="submit" disabled={loading || oauthLoading} className={primaryBtnClass}>
-              {loading
-                ? mode === "login"
-                  ? "Ingresando..."
-                  : "Creando cuenta..."
-                : mode === "login"
-                  ? "Entrar"
-                  : "Registrarme"}
-            </button>
-          </form>
+                <label className="block text-sm font-semibold text-orbita-primary" htmlFor="auth-password">
+                  Contraseña
+                  {mode === "register" ? (
+                    <span className="mt-1 block text-xs font-normal text-orbita-secondary">Mínimo 6 caracteres</span>
+                  ) : null}
+                  <input
+                    id="auth-password"
+                    name="password"
+                    type="password"
+                    autoComplete={passwordAutoComplete}
+                    required
+                    {...(mode === "register" ? { minLength: 6 } : {})}
+                    {...(mode === "register"
+                      ? ({
+                          passwordrules: newPasswordRules,
+                        } as React.InputHTMLAttributes<HTMLInputElement> & { passwordrules?: string })
+                      : {})}
+                    enterKeyHint={mode === "register" ? "next" : "go"}
+                    disabled={loading || oauthLoading}
+                    className={fieldClass}
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                  />
+                </label>
+
+                {mode === "register" && (
+                  <label className="block text-sm font-semibold text-orbita-primary" htmlFor="auth-invite">
+                    Código de invitación (opcional)
+                    <input
+                      id="auth-invite"
+                      name="inviteCode"
+                      type="text"
+                      autoComplete="off"
+                      enterKeyHint="done"
+                      disabled={loading || oauthLoading}
+                      className={fieldClass}
+                      value={inviteCode}
+                      onChange={(event) => setInviteCode(event.target.value)}
+                      placeholder="Si te invitaron al hogar"
+                    />
+                  </label>
+                )}
+
+                <button type="submit" disabled={loading || oauthLoading} className={primaryBtnClass}>
+                  {loading
+                    ? mode === "login"
+                      ? "Ingresando..."
+                      : "Creando cuenta..."
+                    : mode === "login"
+                      ? "Entrar"
+                      : "Registrarme"}
+                </button>
+              </form>
+            )}
           </div>
         </>
       )}

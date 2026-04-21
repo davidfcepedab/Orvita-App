@@ -37,8 +37,13 @@ export async function POST(req: NextRequest) {
   const push = await sendWebPushToUser(auth.supabase, auth.userId, {
     title,
     body,
-    url: "/",
+    url: "/hoy",
     notificationId: data.id,
+    category: "palanca",
+    actions: [
+      { action: "capital", title: "Ir a Capital" },
+      { action: "ai", title: "Resolver con IA" },
+    ],
   })
 
   return NextResponse.json({

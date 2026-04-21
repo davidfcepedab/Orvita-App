@@ -354,6 +354,14 @@ export function ConfigNotificationPreferencesPanel({ theme }: { theme: OrbitaCon
               onChange={(v) => update({ push_enabled_global: v })}
             />
 
+            <p className="text-[10px] leading-snug sm:text-[11px]" style={{ color: theme.textMuted }}>
+              <span className="font-semibold" style={{ color: theme.text }}>
+                Categorías en el sistema:
+              </span>{" "}
+              Palanca #1 (cerrar el día), presión crítica (meta de ahorro), energía / agenda-entreno y recordatorios
+              de hábitos se traducen en los interruptores de abajo y en los botones de la notificación nativa.
+            </p>
+
             <div className="space-y-1.5">
               <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: theme.textMuted }}>
                 Qué te avisamos

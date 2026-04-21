@@ -13,6 +13,8 @@ import { OrbitaImageCropDialog } from "@/app/components/OrbitaImageCropDialog"
 import { ConfigHouseholdSection } from "@/app/components/orbita-v3/config/ConfigHouseholdSection"
 import { ConfigIntegrationsPanel } from "@/app/components/orbita-v3/config/ConfigIntegrationsPanel"
 import { ConfigNotificationPreferencesPanel } from "@/app/components/orbita-v3/config/ConfigNotificationPreferencesPanel"
+import { ConfigPwaInstallPanel } from "@/app/components/orbita-v3/config/ConfigPwaInstallPanel"
+import { ConfigPasskeyPanel } from "@/app/components/orbita-v3/config/ConfigPasskeyPanel"
 import { designTokens } from "@/src/theme/design-tokens"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { createBrowserClient } from "@/lib/supabase/browser"
@@ -502,6 +504,9 @@ export default function ConfigV3() {
           Control paramétrico de la interfaz Órvita
         </p>
       </header>
+
+      <ConfigPwaInstallPanel theme={theme} />
+      <ConfigPasskeyPanel theme={theme} />
 
       <Link
         href="/perfil"

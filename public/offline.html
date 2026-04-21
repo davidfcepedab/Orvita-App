@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0A0A0A" />
+  <title>Sin conexión · Órvita</title>
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --fg: #f4f4f5;
+      --muted: #a1a1aa;
+      --accent: #14b8a6;
+      --card: #18181b;
+      --border: #27272a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: radial-gradient(120% 80% at 50% 0%, #14532d22, var(--bg));
+      color: var(--fg);
+      padding: max(1.25rem, env(safe-area-inset-top)) max(1.25rem, env(safe-area-inset-right))
+        max(1.5rem, env(safe-area-inset-bottom)) max(1.25rem, env(safe-area-inset-left));
+    }
+    .wrap { max-width: 28rem; margin: 0 auto; }
+    h1 { font-size: 1.35rem; font-weight: 650; letter-spacing: -0.02em; margin: 0 0 0.35rem; }
+    p.lead { margin: 0; color: var(--muted); font-size: 0.95rem; line-height: 1.5; }
+    .card {
+      margin-top: 1.5rem;
+      padding: 1.1rem 1.15rem;
+      border-radius: 1rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      box-shadow: 0 18px 50px #0008;
+    }
+    .card h2 {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--accent);
+      margin: 0 0 0.5rem;
+      font-weight: 700;
+    }
+    .card p { margin: 0; font-size: 0.92rem; line-height: 1.55; color: #e4e4e7; }
+    .muted { color: var(--muted) !important; font-size: 0.85rem !important; margin-top: 0.65rem !important; }
+    .actions { margin-top: 1.75rem; display: flex; flex-direction: column; gap: 0.65rem; }
+    a.btn {
+      display: block;
+      text-align: center;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.95rem;
+      padding: 0.85rem 1rem;
+      border-radius: 0.75rem;
+      background: linear-gradient(135deg, #0d9488, #0f766e);
+      color: #042f2e;
+    }
+    a.btn.secondary {
+      background: transparent;
+      color: var(--fg);
+      border: 1px solid var(--border);
+    }
+    .logo {
+      width: 3rem;
+      height: 3rem;
+      border-radius: 0.75rem;
+      margin-bottom: 1rem;
+      border: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <img class="logo" src="/pwa/icon-192.png" width="48" height="48" alt="" />
+    <h1>Órvita está offline</h1>
+    <p class="lead">No hay red ahora mismo. Aquí va el último resumen que guardamos en este dispositivo tras tu check-in.</p>
+
+    <div class="card">
+      <h2>Flujo operativo</h2>
+      <p id="flow">—</p>
+      <p class="muted" id="stamp"></p>
+    </div>
+
+    <div class="card" style="margin-top: 1rem;">
+      <h2>Palanca #1</h2>
+      <p id="palanca">—</p>
+    </div>
+
+    <div class="actions">
+      <a class="btn" href="/" id="retry">Reintentar</a>
+      <a class="btn secondary" href="/hoy">Ir a Hoy</a>
+    </div>
+  </div>
+  <script>
+    (function () {
+      var KEY = "orvita:pwa:offline_snapshot"
+      var flowEl = document.getElementById("flow")
+      var palancaEl = document.getElementById("palanca")
+      var stampEl = document.getElementById("stamp")
+      try {
+        var raw = localStorage.getItem(KEY)
+        if (raw) {
+          var j = JSON.parse(raw)
+          if (j && j.flowSummary) flowEl.textContent = j.flowSummary
+          if (j && j.palanca1) palancaEl.textContent = j.palanca1
+          if (j && j.savedAt) stampEl.textContent = "Guardado local: " + j.savedAt
+        } else {
+          flowEl.textContent = "Aún no hay un check-in guardado en este dispositivo."
+          palancaEl.textContent = "Cuando completes un check-in con conexión, verás aquí tu palanca prioritaria."
+        }
+      } catch (e) {
+        flowEl.textContent = "No se pudo leer el resumen local."
+      }
+      document.getElementById("retry").addEventListener("click", function (e) {
+        e.preventDefault()
+        location.reload()
+      })
+    })()
+  </script>
+</body>
+</html>

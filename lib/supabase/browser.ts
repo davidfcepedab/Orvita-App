@@ -73,6 +73,12 @@ export function createBrowserClient(): SupabaseClient {
             error: new Error("OAuth no disponible en modo demo"),
           }
         },
+        async signInWithOtp() {
+          return {
+            data: { user: null, session: null },
+            error: new Error("Magic link no disponible en modo demo"),
+          }
+        },
       },
     } as unknown as SupabaseClient
   }
@@ -81,7 +87,14 @@ export function createBrowserClient(): SupabaseClient {
   if (!anonKey) throw new Error("NEXT_PUBLIC_SUPABASE_ANON_KEY is not configured")
 
   if (!browserClient) {
-    browserClient = createClient(url, anonKey)
+    browserClient = createClient(url, anonKey, {
+      auth: {
+        flowType: "pkce",
+        detectSessionInUrl: true,
+        persistSession: true,
+        autoRefreshToken: true,
+      },
+    })
   }
 
   return browserClient

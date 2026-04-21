@@ -12,6 +12,7 @@
     "validate:release": "npx tsc --noEmit && npx jest --no-cache && npm run build",
     "guard:no-mocks": "bash scripts/guard-no-mocks.sh",
     "prebuild": "npm run guard:no-mocks",
+    "pwa:icons": "node scripts/generate-pwa-icons.mjs",
     "import-finance:sheets": "npx tsx scripts/import-finance-from-sheets.ts",
     "diagnose:finance-sheet": "npx tsx scripts/diagnose-finance-sheet.ts",
     "release:sync": "bash scripts/sync-release-branches.sh",
