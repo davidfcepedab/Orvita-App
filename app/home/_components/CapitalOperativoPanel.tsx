@@ -11,9 +11,10 @@ import { ClientOnly } from "@/app/home/_components/ClientOnly"
 type CapitalOperativoPanelProps = {
   model: OrbitaHomeModel
   formatCOP: (n: number) => string
+  embedded?: boolean
 }
 
-export function CapitalOperativoPanel({ model, formatCOP }: CapitalOperativoPanelProps) {
+export function CapitalOperativoPanel({ model, formatCOP, embedded }: CapitalOperativoPanelProps) {
   const { time, energy, money } = model.capital
 
   /** Cupo de horas del día (denominador del % usado en API). */
@@ -36,7 +37,7 @@ export function CapitalOperativoPanel({ model, formatCOP }: CapitalOperativoPane
   const tileIconBase = "h-9 w-9 rounded-xl border flex items-center justify-center"
 
   return (
-    <section className="mx-auto mt-6 max-w-6xl px-4">
+    <section className={embedded ? "w-full min-w-0" : "mx-auto mt-6 max-w-6xl px-4"}>
       <div className="flex items-end justify-between gap-3">
         <div>
           <p className="orvita-overline-caps">Desglose</p>

@@ -51,7 +51,11 @@ function taskDueSortMs(due: string | null): number {
   return Number.isFinite(t) ? t : Number.MAX_SAFE_INTEGER - 1000
 }
 
-export function OperationalTodayWidget() {
+type OperationalTodayWidgetProps = {
+  embedded?: boolean
+}
+
+export function OperationalTodayWidget({ embedded }: OperationalTodayWidgetProps) {
   const todayKey = agendaTodayYmd()
   const { events, loading: calendarLoading, connected: calendarConnected, notice: calendarNotice } = useGoogleCalendar()
   const {
@@ -171,7 +175,7 @@ export function OperationalTodayWidget() {
   return (
     <section
       id="inicio-operacion"
-      className="mx-auto min-w-0 max-w-6xl px-4"
+      className={clsx("min-w-0", embedded ? "w-full" : "mx-auto max-w-6xl px-4")}
       aria-label="Timeline de hoy, tareas operativas y hábitos"
     >
       <Card className="min-w-0 border-[color-mix(in_srgb,var(--color-border)_75%,transparent)] p-4 shadow-[var(--shadow-card)] sm:p-5">

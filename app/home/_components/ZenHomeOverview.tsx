@@ -127,9 +127,13 @@ export function ZenHomeOverview({
       }
     : null
 
+  /** Un solo ancho + padding horizontal (HIG: misma guía para hero, segmento y contenido). */
+  const shell = "mx-auto min-w-0 max-w-6xl px-4 sm:px-5"
+
   return (
-    <div className="min-w-0 space-y-6 pb-6 sm:space-y-8">
-      <section className="mx-auto max-w-6xl px-4" aria-label="Modo Zen — vista principal">
+    <div className={`${shell} min-w-0 pb-8`}>
+      <div className="flex min-w-0 flex-col gap-3">
+        <section aria-label="Modo Zen — vista principal">
         <Card
           className={[
             "relative overflow-hidden border p-4 sm:p-5",
@@ -247,81 +251,87 @@ export function ZenHomeOverview({
             </div>
           </div>
         </Card>
-      </section>
+        </section>
 
-      <div className="mx-auto max-w-6xl px-4">
+        {/* Control segmentado (misma anchura que la tarjeta; ritmo 8pt respecto al hero). */}
         <div
-          className="flex min-w-0 gap-0 overflow-x-auto border-b border-orbita-border/35 [scrollbar-width:thin]"
+          className="rounded-xl border border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_50%,var(--color-surface))] p-1 shadow-[inset_0_1px_0_color-mix(in_srgb,var(--color-text-primary)_4%,transparent)]"
           role="tablist"
           aria-label="Más profundidad"
         >
-          {TABS.map((t) => {
-            const active = tab === t.id
-            return (
-              <button
-                key={t.id}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                onClick={() => setTab(t.id)}
-                className={[
-                  "-mb-px shrink-0 whitespace-nowrap border-b-2 px-2.5 py-2 text-left text-[10px] font-medium transition sm:px-3 sm:text-[11px]",
-                  active
-                    ? "border-orbita-primary text-orbita-primary"
-                    : "border-transparent text-orbita-secondary hover:text-orbita-primary",
-                ].join(" ")}
-              >
-                {t.label}
-              </button>
-            )
-          })}
+          <div className="flex min-w-0 gap-1 overflow-x-auto [scrollbar-width:thin]">
+            {TABS.map((t) => {
+              const active = tab === t.id
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setTab(t.id)}
+                  className={[
+                    "min-h-10 min-w-0 flex-1 rounded-lg px-2 py-2 text-center text-[11px] font-semibold leading-snug transition sm:min-h-11 sm:px-3 sm:text-xs",
+                    active
+                      ? "bg-[var(--color-surface)] text-orbita-primary shadow-sm ring-1 ring-[color-mix(in_srgb,var(--color-border)_65%,transparent)]"
+                      : "text-orbita-secondary hover:bg-[color-mix(in_srgb,var(--color-text-primary)_4%,transparent)] hover:text-orbita-primary",
+                  ].join(" ")}
+                >
+                  {t.label}
+                </button>
+              )
+            })}
+          </div>
         </div>
+      </div>
 
-        <div className="mt-4 min-w-0" role="tabpanel">
-          {tab === "sistema" ? (
-            <div className="space-y-8">
-              <CriticalAlerts
-                alerts={model.alerts}
-                onOneClickAction={onOneClickAction}
-                onResolveWithAi={onResolveWithAi}
-                pendingAlertId={pendingAlertId}
-              />
-              <PredictiveStrategic
-                points={model.predictive.points30d}
-                insights={model.predictive.insights}
-                onRequestAiRefresh={onGenerateAi}
-                isRefreshing={isGenerating}
-              />
-              <SmartActionsSection
-                actions={model.smartActions}
-                onAction={onSmartAction}
-                pendingActionId={pendingSmartActionId}
-              />
-              <MiniWidgets
-                decisions={model.widgets.decisions}
-                agendaToday={model.widgets.agendaToday}
-                habits={model.widgets.habits}
-              />
-            </div>
-          ) : null}
+      <div className="mt-5 min-w-0 space-y-8" role="tabpanel">
+        {tab === "sistema" ? (
+          <>
+            <CriticalAlerts
+              embedded
+              alerts={model.alerts}
+              onOneClickAction={onOneClickAction}
+              onResolveWithAi={onResolveWithAi}
+              pendingAlertId={pendingAlertId}
+            />
+            <PredictiveStrategic
+              embedded
+              points={model.predictive.points30d}
+              insights={model.predictive.insights}
+              onRequestAiRefresh={onGenerateAi}
+              isRefreshing={isGenerating}
+            />
+            <SmartActionsSection
+              embedded
+              actions={model.smartActions}
+              onAction={onSmartAction}
+              pendingActionId={pendingSmartActionId}
+            />
+            <MiniWidgets
+              embedded
+              decisions={model.widgets.decisions}
+              agendaToday={model.widgets.agendaToday}
+              habits={model.widgets.habits}
+            />
+          </>
+        ) : null}
 
-          {tab === "capital" ? <CapitalOperativoPanel model={model} formatCOP={formatCOP} /> : null}
+        {tab === "capital" ? <CapitalOperativoPanel embedded model={model} formatCOP={formatCOP} /> : null}
 
-          {tab === "hoy" ? <OperationalTodayWidget /> : null}
+        {tab === "hoy" ? <OperationalTodayWidget embedded /> : null}
 
-          {tab === "habitos" ? (
-            <div className="space-y-4">
-              <MiniWidgets variant="habitsOnly" decisions={[]} agendaToday={[]} habits={model.widgets.habits} />
-              <Link
-                href="/habitos"
-                className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-orbita-border/70 px-4 text-xs font-semibold text-orbita-primary"
-                style={{ textDecoration: "none" }}
-              >
-                Abrir módulo Hábitos
-              </Link>
-            </div>
-          ) : null}
-        </div>
+        {tab === "habitos" ? (
+          <div className="flex min-w-0 flex-col gap-3">
+            <MiniWidgets variant="habitsOnly" embedded decisions={[]} agendaToday={[]} habits={model.widgets.habits} />
+            <Link
+              href="/habitos"
+              className="inline-flex min-h-10 w-fit items-center justify-center rounded-lg px-3 text-xs font-medium text-orbita-secondary transition hover:bg-orbita-surface-alt hover:text-orbita-primary"
+              style={{ textDecoration: "none" }}
+            >
+              Abrir Hábitos →
+            </Link>
+          </div>
+        ) : null}
       </div>
     </div>
   )

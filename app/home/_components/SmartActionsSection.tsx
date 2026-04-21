@@ -11,6 +11,7 @@ type SmartActionsSectionProps = {
   actions: SmartAction[]
   onAction: (id: string, action: SmartAction["primaryAction"]) => Promise<void> | void
   pendingActionId?: string | null
+  embedded?: boolean
 }
 
 function actionIcon(a: SmartAction["primaryAction"]) {
@@ -29,9 +30,9 @@ function parseRoiLine(roi: string): { label: string; detail: string } {
   return { label: "Por qué ahora", detail: t }
 }
 
-export function SmartActionsSection({ actions, onAction, pendingActionId }: SmartActionsSectionProps) {
+export function SmartActionsSection({ actions, onAction, pendingActionId, embedded }: SmartActionsSectionProps) {
   return (
-    <section className="mx-auto max-w-6xl px-4 mt-6">
+    <section className={embedded ? "w-full min-w-0" : "mx-auto mt-6 max-w-6xl px-4"}>
       <div>
         <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Inputs generados con IA</p>
         <h2 className="mt-1 text-lg font-semibold text-orbita-primary">Acciones sugeridas</h2>

@@ -15,9 +15,10 @@ type MiniWidgetsProps = {
   habits: HabitTrend[]
   /** Solo panel de hábitos (pestaña Zen). */
   variant?: "default" | "habitsOnly"
+  embedded?: boolean
 }
 
-export function MiniWidgets({ decisions, agendaToday, habits, variant = "default" }: MiniWidgetsProps) {
+export function MiniWidgets({ decisions, agendaToday, habits, variant = "default", embedded }: MiniWidgetsProps) {
   const widgetIconBase = "h-9 w-9 rounded-xl border flex items-center justify-center"
 
   const habitsCard = (
@@ -86,14 +87,14 @@ export function MiniWidgets({ decisions, agendaToday, habits, variant = "default
 
   if (variant === "habitsOnly") {
     return (
-      <section className="mx-auto max-w-6xl pb-6">
-        <div className="max-w-xl">{habitsCard}</div>
+      <section className={embedded ? "w-full min-w-0 pb-0" : "mx-auto max-w-6xl pb-6"}>
+        <div className={embedded ? "max-w-full" : "max-w-xl"}>{habitsCard}</div>
       </section>
     )
   }
 
   return (
-    <section className="mx-auto max-w-6xl px-4 mt-6 pb-10">
+    <section className={embedded ? "w-full min-w-0 pb-10" : "mx-auto mt-6 max-w-6xl px-4 pb-10"}>
       <div>
         <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Mini-widgets rápidos</p>
         <h2 className="mt-1 text-lg font-semibold text-orbita-primary">Señales rápidas</h2>

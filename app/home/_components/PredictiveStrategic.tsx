@@ -13,6 +13,7 @@ type PredictiveStrategicProps = {
   insights: OrbitaInsight[]
   onRequestAiRefresh: () => Promise<void> | void
   isRefreshing?: boolean
+  embedded?: boolean
 }
 
 function insightIcon(sev: OrbitaInsight["severity"]) {
@@ -21,9 +22,15 @@ function insightIcon(sev: OrbitaInsight["severity"]) {
   return <TriangleAlert className="h-4 w-4" style={{ color: "var(--color-accent-warning)" }} />
 }
 
-export function PredictiveStrategic({ points, insights, onRequestAiRefresh, isRefreshing }: PredictiveStrategicProps) {
+export function PredictiveStrategic({
+  points,
+  insights,
+  onRequestAiRefresh,
+  isRefreshing,
+  embedded,
+}: PredictiveStrategicProps) {
   return (
-    <section className="mx-auto max-w-6xl px-4 mt-6">
+    <section className={embedded ? "w-full min-w-0" : "mx-auto mt-6 max-w-6xl px-4"}>
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
           <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Análisis predictivo</p>

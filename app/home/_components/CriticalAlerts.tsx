@@ -13,13 +13,21 @@ type CriticalAlertsProps = {
   onOneClickAction: (id: string) => Promise<void> | void
   onResolveWithAi: (id: string) => Promise<void> | void
   pendingAlertId?: string | null
+  /** Dentro de Modo Zen: sin segundo max-width ni padding horizontal (evita doble gutter). */
+  embedded?: boolean
 }
 
-export function CriticalAlerts({ alerts, onOneClickAction, onResolveWithAi, pendingAlertId }: CriticalAlertsProps) {
+export function CriticalAlerts({
+  alerts,
+  onOneClickAction,
+  onResolveWithAi,
+  pendingAlertId,
+  embedded,
+}: CriticalAlertsProps) {
   const top = alerts.slice(0, 4)
 
   return (
-    <section className="mx-auto max-w-6xl px-4">
+    <section className={embedded ? "w-full min-w-0" : "mx-auto max-w-6xl px-4"}>
       <div className="flex min-w-0 items-end justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Primero lo primero</p>
