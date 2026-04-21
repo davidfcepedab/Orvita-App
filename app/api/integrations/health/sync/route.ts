@@ -6,6 +6,22 @@ import { createServiceClient } from "@/lib/supabase/server"
 
 export const runtime = "nodejs"
 
+function toHealthSyncErrorMessage(error: unknown) {
+  const raw = error instanceof Error ? error.message : "No se pudo sincronizar salud"
+  const lower = raw.toLowerCase()
+  if (
+    lower.includes("insufficient permissions") ||
+    lower.includes("permission_denied") ||
+    lower.includes("google fit aggregate failed (403)")
+  ) {
+    return "Google Fit no tiene permisos suficientes. Desconecta y vuelve a conectar Google para aprobar sueño, frecuencia cardíaca y actividad."
+  }
+  if (lower.includes("google oauth válida") || lower.includes("google integration not found")) {
+    return "No hay conexión Google válida para Health. Ve a Configuración y vuelve a conectar Google."
+  }
+  return raw
+}
+
 function buildHealthSeedFromFallback() {
   const sleep = Math.max(5, Math.round((7 + (Math.random() * 2 - 1) * 1.2) * 100) / 100)
   const steps = Math.max(2500, Math.round(7000 + (Math.random() * 2 - 1) * 3000))
@@ -146,7 +162,7 @@ export async function POST(req: NextRequest) {
       connectionLabel: resolvedSource === "google_fit" ? "Conectado vía Google Fit" : "Conectado vía Apple Health",
     })
   } catch (error) {
-    const message = error instanceof Error ? error.message : "No se pudo sincronizar salud"
+    const message = toHealthSyncErrorMessage(error)
     return NextResponse.json({ success: false, error: message }, { status: 500 })
   }
 }

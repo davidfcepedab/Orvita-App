@@ -6,6 +6,18 @@ type BankProvider = "bancolombia" | "davivienda" | "nequi"
 
 export const runtime = "nodejs"
 
+function toBankConnectErrorMessage(error: unknown) {
+  const raw = error instanceof Error ? error.message : "No se pudo conectar banco"
+  const lower = raw.toLowerCase()
+  if (lower.includes("integración bancaria real no configurada")) {
+    return "Integración bancaria real no configurada en servidor. Configura BANKING_COLOMBIA_BASE_URL, CLIENT_ID, CLIENT_SECRET y REDIRECT_URI."
+  }
+  if (lower.includes("oauth bancario falló")) {
+    return "El banco rechazó la autorización OAuth. Intenta de nuevo y confirma permisos en el banco."
+  }
+  return raw
+}
+
 export async function POST(req: NextRequest) {
   try {
     const auth = await requireUser(req)
@@ -78,7 +90,7 @@ export async function POST(req: NextRequest) {
       connectionLabel: `Conectado a ${provider[0].toUpperCase()}${provider.slice(1)}`,
     })
   } catch (error) {
-    const message = error instanceof Error ? error.message : "No se pudo conectar banco"
+    const message = toBankConnectErrorMessage(error)
     return NextResponse.json({ success: false, error: message }, { status: 500 })
   }
 }
