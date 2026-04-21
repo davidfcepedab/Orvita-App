@@ -101,8 +101,8 @@ export function OperationalTodayWidget({ embedded }: OperationalTodayWidgetProps
         return {
           id: `task:${task.id}`,
           type: "task" as const,
-          title: task.title || "Task sin título",
-          hint: done ? "Google Tasks · hecha" : "Google Tasks · hoy",
+          title: task.title || "Tarea sin título",
+          hint: done ? "Google Tasks · lista" : "Google Tasks · para hoy",
           sortTime: taskDueSortMs(task.due),
           done,
         }
@@ -163,10 +163,10 @@ export function OperationalTodayWidget({ embedded }: OperationalTodayWidgetProps
     try {
       const updated = await patchTask(id, { status: "completed" })
       if (!updated) {
-        throw new Error("No se pudo actualizar Google Task")
+        throw new Error("No se pudo actualizar la tarea en Google")
       }
     } catch (error) {
-      setInlineError(error instanceof Error ? error.message : "Error actualizando Google Task")
+      setInlineError(error instanceof Error ? error.message : "Error al actualizar la tarea en Google")
     } finally {
       setGoogleTaskPendingId(null)
     }
@@ -176,15 +176,15 @@ export function OperationalTodayWidget({ embedded }: OperationalTodayWidgetProps
     <section
       id="inicio-operacion"
       className={clsx("min-w-0", embedded ? "w-full" : "mx-auto max-w-6xl px-4")}
-      aria-label="Timeline de hoy, tareas operativas y hábitos"
+      aria-label="Agenda de hoy, tareas y hábitos"
     >
       <Card className="min-w-0 border-[color-mix(in_srgb,var(--color-border)_75%,transparent)] p-4 shadow-[var(--shadow-card)] sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="m-0 text-[11px] uppercase tracking-[0.14em] text-orbita-secondary">Operación rápida</p>
-            <h2 className="m-0 mt-1 text-lg font-semibold text-orbita-primary">Timeline de hoy + checks</h2>
+            <p className="m-0 text-[11px] uppercase tracking-[0.14em] text-orbita-secondary">Tu día en un solo lugar</p>
+            <h2 className="m-0 mt-1 text-lg font-semibold text-orbita-primary">Agenda, tareas y hábitos</h2>
             <p className="m-0 mt-1 text-sm text-orbita-secondary">
-              Revisa eventos, completa tasks y marca hábitos sin salir de Inicio.
+              Mira tu calendario, marca tareas y hábitos sin salir del inicio.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -209,7 +209,7 @@ export function OperationalTodayWidget({ embedded }: OperationalTodayWidgetProps
         <div className="mt-4 grid min-w-0 gap-4 lg:grid-cols-3">
           <div className="min-w-0 rounded-2xl border border-orbita-border/40 bg-orbita-surface/35 p-3">
             <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
-              Timeline operativo
+              Calendario y tareas externas
             </p>
             <ul className="m-0 mt-2 list-none space-y-2 p-0">
               {timeline.map((item) => (
@@ -232,7 +232,7 @@ export function OperationalTodayWidget({ embedded }: OperationalTodayWidgetProps
                         item.done ? "text-[var(--color-accent-health)]" : "text-orbita-secondary",
                       )}
                     >
-                      {item.done ? "Listo" : item.type}
+                      {item.done ? "Listo" : item.type === "task" ? "Tarea" : "Evento"}
                     </span>
                   </div>
                   <p
@@ -248,14 +248,14 @@ export function OperationalTodayWidget({ embedded }: OperationalTodayWidgetProps
               {timeline.length === 0 ? (
                 <li className="text-xs text-orbita-secondary">
                   {calendarLoading || tasksLoading
-                    ? "Sincronizando eventos y tasks..."
-                    : "No hay eventos ni tasks para hoy."}
+                    ? "Sincronizando calendario y tareas…"
+                    : "No hay eventos ni tareas para hoy."}
                 </li>
               ) : null}
             </ul>
             {!calendarConnected || !tasksConnected ? (
               <p className="m-0 mt-2 text-[11px] text-orbita-secondary">
-                {(calendarNotice || tasksNotice || "Conecta Google para más contexto diario.") + " "}
+                {(calendarNotice || tasksNotice || "Conecta Google para ver más detalle de tu día.") + " "}
                 <Link href="/configuracion" className="text-[var(--color-accent-primary)] underline">
                   Configurar
                 </Link>
@@ -265,7 +265,7 @@ export function OperationalTodayWidget({ embedded }: OperationalTodayWidgetProps
 
           <div className="min-w-0 rounded-2xl border border-orbita-border/40 bg-orbita-surface/35 p-3">
             <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
-              Tasks para cerrar
+              Tareas por cerrar
             </p>
             <ul className="m-0 mt-2 list-none space-y-2 p-0">
               {operationalSplit.pending.map((task) => (
@@ -308,7 +308,7 @@ export function OperationalTodayWidget({ embedded }: OperationalTodayWidgetProps
             </ul>
 
             <p className="m-0 mt-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
-              Google Tasks de hoy
+              Tareas de Google para hoy
             </p>
             <ul className="m-0 mt-2 list-none space-y-2 p-0">
               {googleTasksTodaySplit.pending.map((task) => (

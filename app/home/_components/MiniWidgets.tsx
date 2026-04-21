@@ -36,12 +36,12 @@ export function MiniWidgets({ decisions, agendaToday, habits, variant = "default
           </span>
           <div>
             <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Hábitos clave</p>
-            <p className="text-sm text-orbita-primary/90 font-medium">Cómo vas esta semana</p>
+            <p className="text-sm text-orbita-primary/90 font-medium">Cómo vas en la semana</p>
           </div>
         </div>
 
         <p className="mt-2 text-[11px] leading-snug text-orbita-secondary">
-          Cada barra es un día (L–D). Altura ≈ cumplimiento del hábito (0–100).
+          Cada barra es un día (lun–dom). La altura muestra qué tanto cumpliste el hábito (0 a 100%).
         </p>
 
         <div className="mt-3 grid gap-3">
@@ -50,7 +50,7 @@ export function MiniWidgets({ decisions, agendaToday, habits, variant = "default
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="text-sm font-semibold leading-snug text-orbita-primary">{h.name}</p>
-                  <p className="mt-0.5 text-[11px] text-orbita-secondary">Ventana: últimos 7 días</p>
+                  <p className="mt-0.5 text-[11px] text-orbita-secondary">Últimos 7 días</p>
                 </div>
                 <span className="shrink-0 rounded-md border border-orbita-border/70 bg-orbita-surface px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-orbita-secondary">
                   7D
@@ -96,10 +96,10 @@ export function MiniWidgets({ decisions, agendaToday, habits, variant = "default
   return (
     <section className={embedded ? "w-full min-w-0 pb-10" : "mx-auto mt-6 max-w-6xl px-4 pb-10"}>
       <div>
-        <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Mini-widgets rápidos</p>
-        <h2 className="mt-1 text-lg font-semibold text-orbita-primary">Señales rápidas</h2>
+        <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Vistazo rápido</p>
+        <h2 className="mt-1 text-lg font-semibold text-orbita-primary">Lo esencial en un vistazo</h2>
         <p className="mt-1 text-sm text-orbita-secondary">
-          Tres paneles para ver lo importante sin perder tiempo.
+          Tres recuadros con lo que más importa, sin rodeos.
         </p>
       </div>
 
@@ -118,7 +118,7 @@ export function MiniWidgets({ decisions, agendaToday, habits, variant = "default
               </span>
               <div>
                 <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Decisiones críticas</p>
-                <p className="text-sm text-orbita-primary/90 font-medium">Las 3 que cambian la semana</p>
+                <p className="text-sm text-orbita-primary/90 font-medium">Las tres que marcan la semana</p>
               </div>
             </div>
 
@@ -141,7 +141,7 @@ export function MiniWidgets({ decisions, agendaToday, habits, variant = "default
                       <Timer className="h-3.5 w-3.5" />
                       {d.deadline}
                     </span>
-                    <span className="text-orbita-secondary">Regla: cierre &gt; perfección</span>
+                    <span className="text-orbita-secondary">Mejor cerrar que buscar perfección</span>
                   </div>
                 </div>
               ))}
@@ -167,7 +167,7 @@ export function MiniWidgets({ decisions, agendaToday, habits, variant = "default
               </span>
               <div>
                 <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Agenda de hoy</p>
-                <p className="text-sm text-orbita-primary/90 font-medium">En tu mejor hora</p>
+                <p className="text-sm text-orbita-primary/90 font-medium">En tu hora con más energía</p>
               </div>
             </div>
 

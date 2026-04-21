@@ -40,10 +40,10 @@ export function CapitalOperativoPanel({ model, formatCOP, embedded }: CapitalOpe
     <section className={embedded ? "w-full min-w-0" : "mx-auto mt-6 max-w-6xl px-4"}>
       <div className="flex items-end justify-between gap-3">
         <div>
-          <p className="orvita-overline-caps">Desglose</p>
-          <h2 className="mt-1 text-lg font-semibold tracking-tight text-orbita-primary">Las tres palancas</h2>
+          <p className="orvita-overline-caps">Detalle</p>
+          <h2 className="mt-1 text-lg font-semibold tracking-tight text-orbita-primary">Tus tres frentes</h2>
           <p className="mt-1 text-sm text-orbita-secondary">
-            Tiempo, energía y dinero — si uno cae, el sistema entero se nota.
+            Tiempo, energía y dinero: si uno baja, lo sientes en todo lo demás.
           </p>
         </div>
       </div>
@@ -82,7 +82,7 @@ export function CapitalOperativoPanel({ model, formatCOP, embedded }: CapitalOpe
                 <span className="ml-1.5 text-base font-medium text-orbita-secondary">libres ahora</span>
               </p>
               <p className="mt-1 text-sm text-orbita-secondary">
-                Cupo hoy: <span className="font-semibold text-orbita-primary/90">{dayCapacityH.toFixed(1)} h</span>
+                Horas previstas hoy: <span className="font-semibold text-orbita-primary/90">{dayCapacityH.toFixed(1)} h</span>
                 {" · "}
                 Ya usaste <span className="font-semibold text-orbita-primary/90">{time.consumedHours.toFixed(1)} h</span>
               </p>
@@ -139,7 +139,7 @@ export function CapitalOperativoPanel({ model, formatCOP, embedded }: CapitalOpe
                 }`}
                 title="Probabilidad de agotamiento (modelo)"
               >
-                Riesgo burnout {burnoutRounded}%
+                Riesgo de agotamiento {burnoutRounded}%
               </span>
             </div>
 
@@ -172,7 +172,7 @@ export function CapitalOperativoPanel({ model, formatCOP, embedded }: CapitalOpe
                   <span className="text-base font-medium text-orbita-secondary"> de tu energía hoy</span>
                 </p>
                 <p className="mt-1 text-xs leading-snug text-orbita-secondary">
-                  Si este nivel cae 5 días seguidos, conviene bajar carga y recuperar.
+                  Si este nivel baja 5 días seguidos, es buena idea bajar la carga y recuperarte.
                 </p>
               </div>
             </div>
@@ -212,7 +212,7 @@ export function CapitalOperativoPanel({ model, formatCOP, embedded }: CapitalOpe
                 </div>
               </div>
               <span className="shrink-0 rounded-full border border-orbita-border/80 bg-orbita-surface-alt/80 px-2 py-0.5 text-[11px] font-medium tabular-nums text-orbita-secondary">
-                Runway ~{money.runwayDays} d
+                Reserva ~{money.runwayDays} d
               </span>
             </div>
 
@@ -237,8 +237,8 @@ export function CapitalOperativoPanel({ model, formatCOP, embedded }: CapitalOpe
 
               <div className="mt-3 space-y-1 border-t border-orbita-border/50 pt-3 text-[11px] leading-snug text-orbita-secondary">
                 <p>
-                  <span className="font-medium text-orbita-primary">Si el runway cae por debajo de ~21 días</span>, activa
-                  modo caja: cobros primero y recorte mínimo de gasto.
+                  <span className="font-medium text-orbita-primary">Si tu reserva cae por debajo de ~21 días</span>,
+                  activa modo caja: cobros primero y un recorte mínimo de gastos.
                 </p>
               </div>
             </div>

@@ -77,41 +77,41 @@ export function getOrbitaHomeMock(): OrbitaHomeModel & { formatCOP: (n: number) 
     flow: {
       score,
       color: flowColor(score),
-      label: "Flujo Operativo",
-      microcopy: "Estable, pero con presión latente en energía y runway.",
+      label: "Flujo operativo",
+      microcopy: "Vas bien en general, pero conviene vigilar energía y el colchón de efectivo.",
     },
     alerts: [
       {
         id: "a-runway",
-        title: "Runway financiero bajo: 18 días",
+        title: "Poca reserva: te quedan unos 18 días",
         description:
-          "Si no ajustas salida o cobros esta semana, tu margen de maniobra cae a decisiones reactivas.",
+          "Si esta semana no ajustas cobros o gastos, te quedas poco margen para decidir con calma.",
         impact: "alto",
         oneClickActionLabel: "Recortar 2 gastos hoy",
       },
       {
         id: "a-energy",
-        title: "Energía en zona amarilla: 4 días seguidos",
+        title: "Energía en amarillo: 4 días seguidos",
         description:
-          "Tu rendimiento está sosteniéndose con deuda de recuperación. Riesgo de caída abrupta en 72h.",
+          "Vas al límite sin recuperarte del todo. En 2–3 días puede pegarte más fuerte si no frenas un poco.",
         impact: "alto",
-        oneClickActionLabel: "Bloquear 90m recuperación",
+        oneClickActionLabel: "Bloquear 90m de recuperación",
       },
       {
         id: "a-time",
-        title: "Tiempo estratégico bajo: 22%",
+        title: "Poco tiempo para lo estratégico: 22%",
         description:
-          "Estás operando demasiado cerca del día a día. Tu dirección a 90 días pierde tracción.",
+          "Estás muy metido en lo urgente del día a día. Lo importante a mediano plazo queda de lado.",
         impact: "medio",
-        oneClickActionLabel: "Defender 1 bloque profundo",
+        oneClickActionLabel: "Defender un bloque profundo",
       },
       {
         id: "a-decisions",
-        title: "Decisión crítica sin cierre: propuesta cliente",
+        title: "Decisión pendiente: propuesta al cliente",
         description:
-          "Cada día sin decisión incrementa presión financiera y fragmenta agenda. Cierra hoy o redefine alcance.",
+          "Cada día sin cerrar suma presión y te parte la agenda. Ciérrala hoy o ajusta el alcance.",
         impact: "medio",
-        oneClickActionLabel: "Redactar cierre (20m)",
+        oneClickActionLabel: "Redactar cierre (20 min)",
       },
     ],
     capital: {
@@ -136,23 +136,23 @@ export function getOrbitaHomeMock(): OrbitaHomeModel & { formatCOP: (n: number) 
       insights: [
         {
           id: "i-pressure",
-          title: "Qué está generando más presión esta semana",
+          title: "Qué te está presionando más esta semana",
           body:
-            "La combinación de **runway corto + agenda fragmentada** está elevando tu carga cognitiva. No es “más trabajo”: es **trabajo sin cierre**.",
+            "Juntar poca reserva de efectivo con una agenda muy partida te cansa la cabeza. No es solo “más trabajo”: son muchas cosas abiertas a la vez.",
           severity: "presion",
         },
         {
           id: "i-impact",
-          title: "Acción de alto impacto que puedes ejecutar hoy",
+          title: "Una acción con alto impacto para hoy",
           body:
-            "Define un **corte de gastos mínimo** y ejecuta **1 cobro pendiente**. Eso compra tiempo real y libera enfoque para decisiones estratégicas.",
+            "Define un recorte mínimo de gastos y haz un cobro pendiente. Eso te da aire y claridad para decidir mejor.",
           severity: "oportunidad",
         },
         {
           id: "i-risk",
-          title: "Riesgo latente y cómo mitigarlo",
+          title: "Riesgo a la vista y cómo bajarlo",
           body:
-            "Si mantienes energía < 65% por 5 días más, tu probabilidad de burnout sube fuerte. Mitiga con **1 bloque de recuperación + 1 límite de reuniones**.",
+            "Si la energía se queda baja 5 días más, sube mucho el riesgo de agotarte. Ayuda un bloque para recuperarte y menos reuniones por unos días.",
           severity: "riesgo",
         },
       ],
@@ -161,21 +161,21 @@ export function getOrbitaHomeMock(): OrbitaHomeModel & { formatCOP: (n: number) 
       {
         id: "s-cash",
         title: "Activar “modo caja” por 7 días (cobros + recorte mínimo)",
-        roi: "ROI estratégico: +alto (compra runway + reduce ruido)",
+        roi: "Por qué ahora: alto impacto — sumas días de reserva y bajas ruido mental.",
         timeRequiredMin: 25,
         primaryAction: "Ejecutar",
       },
       {
         id: "s-focus",
-        title: "Blindar 1 bloque de trabajo profundo (90m) en ventana de energía alta",
-        roi: "ROI estratégico: +alto (dirección 90D)",
+        title: "Reservar 90 min de trabajo profundo cuando tengas más energía",
+        roi: "Por qué ahora: protege lo importante para los próximos 90 días.",
         timeRequiredMin: 5,
         primaryAction: "Agendar",
       },
       {
         id: "s-boundary",
-        title: "Re-negociar 1 compromiso de baja palanca",
-        roi: "ROI estratégico: medio (libera tiempo + reduce carga)",
+        title: "Replantear un compromiso que no aporta tanto",
+        roi: "Por qué ahora: impacto medio — libera tiempo y baja la carga.",
         timeRequiredMin: 15,
         primaryAction: "Ignorar",
       },

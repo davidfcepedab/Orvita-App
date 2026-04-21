@@ -30,10 +30,10 @@ export function CriticalAlerts({
     <section className={embedded ? "w-full min-w-0" : "mx-auto max-w-6xl px-4"}>
       <div className="flex min-w-0 items-end justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Primero lo primero</p>
-          <h2 className="mt-1 text-lg font-semibold text-orbita-primary">Alertas críticas</h2>
+          <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Antes que nada</p>
+          <h2 className="mt-1 text-lg font-semibold text-orbita-primary">Alertas importantes</h2>
           <p className="mt-1 text-sm text-orbita-secondary">
-            Son pocos puntos. Si los bajas, recuperas calma y control.
+            Son pocas cosas: si las atiendes, recuperas calma y control.
           </p>
         </div>
         <div className="hidden sm:flex items-center gap-2 text-xs text-orbita-secondary">
@@ -69,7 +69,7 @@ export function CriticalAlerts({
                         <Zap className="h-3.5 w-3.5" />
                         Impacto {a.impact}
                       </span>
-                      <span className="text-xs text-orbita-secondary">Un paso y baja presión</span>
+                      <span className="text-xs text-orbita-secondary">Un solo paso reduce la presión</span>
                     </div>
                     <h3 className="mt-2 text-base sm:text-lg font-semibold text-orbita-primary">{a.title}</h3>
                     <p className="mt-1 text-sm text-orbita-secondary max-w-3xl">{a.description}</p>
@@ -97,7 +97,7 @@ export function CriticalAlerts({
                       className="rounded-xl !min-h-10 inline-flex items-center gap-2"
                     >
                       <Bot className="h-4 w-4 text-sky-400/90" aria-hidden />
-                      Resolver con IA
+                      Resolver con la IA
                     </Button>
                   </div>
                 </div>
@@ -106,10 +106,10 @@ export function CriticalAlerts({
               <div className="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
               <div className="px-4 sm:px-5 py-3 flex items-center justify-between gap-3">
                 <p className="text-xs text-orbita-secondary">
-                  Resultado: <span className="text-orbita-primary/90 font-medium">claridad</span> sin apuro.
+                  Lo que ganas: <span className="text-orbita-primary/90 font-medium">claridad</span>, sin correr.
                 </p>
                 <span className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">
-                  Órbita: cierre &gt; volumen
+                  Prioridad: cerrar, no acumular
                 </span>
               </div>
             </Card>

@@ -23,9 +23,13 @@ function actionIcon(a: SmartAction["primaryAction"]) {
 /** Convierte copy largo "ROI estratégico: …" en título + detalle escaneable. */
 function parseRoiLine(roi: string): { label: string; detail: string } {
   const t = roi.trim()
-  const stripped = t.replace(/^ROI estratégico:\s*/i, "").trim()
-  if (stripped !== t) {
-    return { label: "Retorno esperado", detail: stripped }
+  const strippedRoi = t.replace(/^ROI estratégico:\s*/i, "").trim()
+  if (strippedRoi !== t) {
+    return { label: "Retorno esperado", detail: strippedRoi }
+  }
+  const strippedPorQue = t.replace(/^Por qué ahora:\s*/i, "").trim()
+  if (strippedPorQue !== t) {
+    return { label: "Por qué ahora", detail: strippedPorQue }
   }
   return { label: "Por qué ahora", detail: t }
 }
@@ -34,10 +38,10 @@ export function SmartActionsSection({ actions, onAction, pendingActionId, embedd
   return (
     <section className={embedded ? "w-full min-w-0" : "mx-auto mt-6 max-w-6xl px-4"}>
       <div>
-        <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Inputs generados con IA</p>
-        <h2 className="mt-1 text-lg font-semibold text-orbita-primary">Acciones sugeridas</h2>
+        <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Sugerencias con IA</p>
+        <h2 className="mt-1 text-lg font-semibold text-orbita-primary">Próximos pasos sugeridos</h2>
         <p className="mt-1 text-sm text-orbita-secondary">
-          Menos tareas. Más decisiones que cambian tu semana.
+          Menos tareas sueltas: más decisiones que sí mueven tu semana.
         </p>
       </div>
 
@@ -52,7 +56,7 @@ export function SmartActionsSection({ actions, onAction, pendingActionId, embedd
           >
             <Card className="p-4 sm:p-5 h-full flex flex-col">
               <div className="flex-1">
-                <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Acción sugerida</p>
+                <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Sugerencia</p>
                 <h3 className="mt-1.5 text-base font-semibold leading-snug text-orbita-primary">{a.title}</h3>
                 {(() => {
                   const { label, detail } = parseRoiLine(a.roi)
@@ -67,7 +71,7 @@ export function SmartActionsSection({ actions, onAction, pendingActionId, embedd
                   <div className="rounded-xl border border-orbita-border/70 bg-orbita-surface-alt/60 p-3">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">Tiempo</p>
                     <p className="mt-1 text-base font-semibold tabular-nums text-orbita-primary">{a.timeRequiredMin} min</p>
-                    <p className="mt-0.5 text-[10px] text-orbita-secondary">Inversión única</p>
+                    <p className="mt-0.5 text-[10px] text-orbita-secondary">Solo esta vez</p>
                   </div>
                   <div
                     className="rounded-xl border p-3"
@@ -80,7 +84,7 @@ export function SmartActionsSection({ actions, onAction, pendingActionId, embedd
                     <p className="mt-1 text-base font-semibold" style={{ color: "var(--color-accent-health)" }}>
                       Alto
                     </p>
-                    <p className="mt-0.5 text-[10px] text-orbita-secondary">En tu semana</p>
+                    <p className="mt-0.5 text-[10px] text-orbita-secondary">En los próximos días</p>
                   </div>
                 </div>
               </div>

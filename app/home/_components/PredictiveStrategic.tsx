@@ -33,10 +33,10 @@ export function PredictiveStrategic({
     <section className={embedded ? "w-full min-w-0" : "mx-auto mt-6 max-w-6xl px-4"}>
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
-          <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Análisis predictivo</p>
-          <h2 className="mt-1 text-lg font-semibold text-orbita-primary">Qué viene y qué hacer</h2>
+          <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Mirada hacia adelante</p>
+          <h2 className="mt-1 text-lg font-semibold text-orbita-primary">Qué se viene y qué puedes hacer</h2>
           <p className="mt-1 text-sm text-orbita-secondary">
-            Un mapa simple para no entrar en modo “apagar incendios”.
+            Un mapa sencillo para no vivir solo apagando urgencias.
           </p>
         </div>
         <button
@@ -46,7 +46,7 @@ export function PredictiveStrategic({
           className="inline-flex h-10 w-fit items-center gap-2 rounded-xl border border-orbita-border/50 bg-orbita-surface px-4 text-sm font-semibold text-orbita-primary transition hover:bg-orbita-surface-alt/70"
         >
           <Bot className="h-4 w-4 text-sky-200" />
-          {isRefreshing ? "Actualizando…" : "Actualizar análisis"}
+          {isRefreshing ? "Actualizando…" : "Actualizar vista"}
         </button>
       </div>
 
@@ -56,7 +56,7 @@ export function PredictiveStrategic({
             <div>
               <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Próximos 30 días</p>
               <p className="mt-1 text-sm text-orbita-secondary">
-                Barras: presión · Línea: energía · Línea fina: flujo
+                Barras: presión · Línea gruesa: energía · Línea fina: flujo
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs text-orbita-secondary">
@@ -66,7 +66,7 @@ export function PredictiveStrategic({
               </span>
               <span className="inline-flex items-center gap-1">
                 <span className="h-2 w-2 rounded-full bg-amber-300/80" />
-                Carga tiempo
+                Carga de tiempo
               </span>
               <span className="inline-flex items-center gap-1">
                 <span className="h-2 w-2 rounded-full bg-sky-300/80" />
@@ -119,16 +119,16 @@ export function PredictiveStrategic({
 
           <div className="mt-4 grid gap-2 sm:grid-cols-3">
             <div className="rounded-2xl border border-orbita-border/40 bg-orbita-surface/35 p-3">
-              <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Lo que pesa</p>
-              <p className="mt-1 text-sm font-semibold text-orbita-primary">Dinero apretado + cierres pendientes</p>
+              <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Lo que más pesa</p>
+              <p className="mt-1 text-sm font-semibold text-orbita-primary">Dinero justo y decisiones sin cerrar</p>
             </div>
             <div className="rounded-2xl border border-orbita-border/40 bg-orbita-surface/35 p-3">
-              <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Lo que quiebra</p>
-              <p className="mt-1 text-sm font-semibold text-orbita-primary">Energía baja + agenda partida</p>
+              <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Lo que te puede frenar</p>
+              <p className="mt-1 text-sm font-semibold text-orbita-primary">Poca energía y agenda muy partida</p>
             </div>
             <div className="rounded-2xl border border-orbita-border/40 bg-orbita-surface/35 p-3">
-              <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Mejor paso</p>
-              <p className="mt-1 text-sm font-semibold text-orbita-primary">Cierra 1 cosa + compra runway</p>
+              <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Mejor siguiente paso</p>
+              <p className="mt-1 text-sm font-semibold text-orbita-primary">Cierra una cosa y suma días de reserva</p>
             </div>
           </div>
         </Card>
@@ -155,7 +155,7 @@ export function PredictiveStrategic({
                       {insightIcon(ins.severity)}
                     </span>
                     <div>
-                      <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Clave del día</p>
+                      <p className="text-[11px] tracking-[0.14em] uppercase text-orbita-secondary">Idea clave</p>
                       <h3 className="mt-1 text-base font-semibold text-orbita-primary">{ins.title}</h3>
                     </div>
                   </div>

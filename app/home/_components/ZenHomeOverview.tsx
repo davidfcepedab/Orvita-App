@@ -19,8 +19,8 @@ import { Card } from "@/src/components/ui/Card"
 type ZenTab = "sistema" | "capital" | "hoy" | "habitos"
 
 const TABS: { id: ZenTab; label: string }[] = [
-  { id: "sistema", label: "Ver todo el sistema" },
-  { id: "capital", label: "Capital detallado" },
+  { id: "sistema", label: "Resumen" },
+  { id: "capital", label: "Capital" },
   { id: "hoy", label: "Hoy" },
   { id: "habitos", label: "Hábitos" },
 ]
@@ -111,12 +111,16 @@ export function ZenHomeOverview({
   const palancaTitle = decision?.title ?? smart?.title ?? "Elige un cierre claro para hoy"
   const palancaHint =
     decision?.pressure === "alta"
-      ? "Prioridad alta"
+      ? "Alta prioridad"
       : decision
-        ? "En radar"
+        ? "En seguimiento"
         : smart
-          ? smart.roi.replace(/^ROI estratégico:\s*/i, "").slice(0, 72)
-          : "Abre Hoy y marca el primer movimiento."
+          ? smart.roi
+              .replace(/^ROI estratégico:\s*/i, "")
+              .replace(/^Por qué ahora:\s*/i, "")
+              .trim()
+              .slice(0, 72)
+          : "Ve a Hoy y marca tu primer avance."
 
   const primaryCta = smart
     ? {
@@ -133,7 +137,7 @@ export function ZenHomeOverview({
   return (
     <div className={`${shell} min-w-0 pb-8`}>
       <div className="flex min-w-0 flex-col gap-3">
-        <section aria-label="Modo Zen — vista principal">
+        <section aria-label="Inicio — vista principal">
         <Card
           className={[
             "relative overflow-hidden border p-4 sm:p-5",
@@ -218,7 +222,7 @@ export function ZenHomeOverview({
           </div>
 
           <div className="relative mt-4 border-t border-orbita-border/40 pt-4">
-            <p className="m-0 text-[9px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">Palanca #1 hoy</p>
+            <p className="m-0 text-[9px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">Lo más importante hoy</p>
             <h2 className="mt-0.5 text-base font-semibold leading-snug text-orbita-primary sm:text-lg [text-wrap:pretty]">
               {palancaTitle}
             </h2>
@@ -256,13 +260,9 @@ export function ZenHomeOverview({
         </Card>
         </section>
 
-        {/* Control segmentado (misma anchura que la tarjeta; ritmo 8pt respecto al hero). */}
-        <div
-          className="rounded-xl border border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_50%,var(--color-surface))] p-1 shadow-[inset_0_1px_0_color-mix(in_srgb,var(--color-text-primary)_4%,transparent)]"
-          role="tablist"
-          aria-label="Más profundidad"
-        >
-          <div className="flex min-w-0 gap-1 overflow-x-auto [scrollbar-width:thin]">
+        {/* Navegación por pestañas: solo texto + subrayado (sin cromo pesado). */}
+        <div role="tablist" aria-label="Secciones del inicio" className="min-w-0 border-b border-orbita-border/45">
+          <div className="flex min-w-0 gap-0 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] sm:gap-1 [&::-webkit-scrollbar]:hidden">
             {TABS.map((t) => {
               const active = tab === t.id
               return (
@@ -273,10 +273,10 @@ export function ZenHomeOverview({
                   aria-selected={active}
                   onClick={() => setTab(t.id)}
                   className={[
-                    "min-h-10 min-w-0 flex-1 rounded-lg px-2 py-2 text-center text-[11px] font-semibold leading-snug transition sm:min-h-11 sm:px-3 sm:text-xs",
+                    "min-h-9 shrink-0 border-b-2 px-2.5 py-2 text-center text-[11px] font-medium leading-snug transition sm:min-h-10 sm:px-3 sm:text-xs",
                     active
-                      ? "bg-[var(--color-surface)] text-orbita-primary shadow-sm ring-1 ring-[color-mix(in_srgb,var(--color-border)_65%,transparent)]"
-                      : "text-orbita-secondary hover:bg-[color-mix(in_srgb,var(--color-text-primary)_4%,transparent)] hover:text-orbita-primary",
+                      ? "border-orbita-primary text-orbita-primary"
+                      : "border-transparent text-orbita-secondary hover:text-orbita-primary",
                   ].join(" ")}
                 >
                   {t.label}
@@ -331,7 +331,7 @@ export function ZenHomeOverview({
               className="inline-flex min-h-10 w-fit items-center justify-center rounded-lg px-3 text-xs font-medium text-orbita-secondary transition hover:bg-orbita-surface-alt hover:text-orbita-primary"
               style={{ textDecoration: "none" }}
             >
-              Abrir Hábitos →
+              Ir a Hábitos →
             </Link>
           </div>
         ) : null}
