@@ -1,9 +1,11 @@
 import type {
+  AppleHealthContextSignals,
   Checkin,
   OperationalContextData,
   OperationalHabit,
   OperationalTask,
 } from "@/lib/operational/types"
+import { buildAppleOperationalInsights } from "@/lib/health/appleOperationalMerge"
 import { applyDerivedCommandFocusToContext } from "@/lib/hoy/commandDerivation"
 
 function normalizeScore(value: number | null | undefined) {
@@ -28,6 +30,8 @@ export function buildOperationalContext(params: {
   latestCheckin: Checkin | null
   /** Hasta 7 check-ins, más reciente primero (misma query que el último). Alimenta tendencia_7d y deltas MoM. */
   recentCheckinsDesc?: Checkin[] | null
+  /** Última fila `health_metrics` (Apple / importación). null = sin señales recientes. */
+  appleHealthLatest?: AppleHealthContextSignals | null
 }): OperationalContextData {
   const latest = params.latestCheckin
   const score_global_raw = latest?.score_global
@@ -55,6 +59,9 @@ export function buildOperationalContext(params: {
     delta_disciplina = normalizeScore(last.score_profesional) - normalizeScore(prev.score_profesional)
   }
 
+  const apple_health = params.appleHealthLatest ?? null
+  const appleInsights = buildAppleOperationalInsights(score_salud, score_fisico, apple_health)
+
   const base: OperationalContextData = {
     score_global,
     score_fisico,
@@ -68,7 +75,8 @@ export function buildOperationalContext(params: {
     delta_tendencia: 0,
     tendencia_7d,
     prediction: null,
-    insights: [],
+    insights: appleInsights,
+    apple_health,
     today_tasks: params.tasks,
     habits: params.habits,
   }

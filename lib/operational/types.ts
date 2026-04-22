@@ -67,6 +67,22 @@ export interface Checkin {
   created_at: string
 }
 
+/** Instantánea Apple Health / `health_metrics` para cruzar con check-ins en todo el sistema. */
+export type AppleHealthContextSignals = {
+  observed_at: string
+  source: string | null
+  sleep_hours: number | null
+  hrv_ms: number | null
+  readiness_score: number | null
+  steps: number | null
+  calories: number | null
+  energy_index: number | null
+  workouts_count: number | null
+  workout_minutes: number | null
+  /** true si la última muestra tiene más de ~36 h (convén reimportar). */
+  sync_stale: boolean
+}
+
 export interface OperationalContextData {
   score_global: number
   score_fisico: number
@@ -81,6 +97,8 @@ export interface OperationalContextData {
   tendencia_7d: { value: number }[]
   prediction: unknown
   insights: string[]
+  /** null = sin datos Apple recientes en `health_metrics`. */
+  apple_health: AppleHealthContextSignals | null
   today_tasks: OperationalTask[]
   habits: OperationalHabit[]
   next_action?: string

@@ -1,5 +1,4 @@
 import { test, expect } from "@playwright/test"
-// @ts-expect-error Optional typing from package
 import { playAudit } from "playwright-lighthouse"
 
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000"

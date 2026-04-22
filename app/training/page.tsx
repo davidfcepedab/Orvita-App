@@ -326,10 +326,10 @@ export default function TrainingPage() {
                 {appleHevyBridge}
               </p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "10px 14px", fontSize: "11px", color: "var(--color-text-secondary)" }}>
-                <span>Apple · entrenos: {appleSignals.workoutsCount ?? "—"}</span>
-                <span>Apple · min entreno: {appleSignals.workoutMinutes ?? "—"}</span>
-                <span>Apple · kcal activas: {appleSignals.activeEnergyKcal != null ? Math.round(appleSignals.activeEnergyKcal) : "—"}</span>
-                <span>Apple · sueño: {appleSignals.sleepHours != null ? `${appleSignals.sleepHours.toFixed(1)} h` : "—"}</span>
+                <span>Apple · entrenos: {appleSignals?.workouts_count ?? "—"}</span>
+                <span>Apple · min entreno: {appleSignals?.workout_minutes ?? "—"}</span>
+                <span>Apple · kcal activas: {appleSignals?.calories != null ? Math.round(appleSignals.calories) : "—"}</span>
+                <span>Apple · sueño: {appleSignals?.sleep_hours != null ? `${appleSignals.sleep_hours.toFixed(1)} h` : "—"}</span>
               </div>
             </div>
           </div>

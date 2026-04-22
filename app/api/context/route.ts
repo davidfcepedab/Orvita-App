@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
 import { isAppMockMode } from "@/lib/checkins/flags"
 import { buildOperationalContext } from "@/lib/operational/context"
+import { mapHealthMetricsRowToAppleSignals } from "@/lib/health/appleOperationalMerge"
 import {
   mapCheckin,
   mapOperationalHabit,
@@ -16,6 +17,7 @@ export async function GET(req: NextRequest) {
     if (isAppMockMode()) {
       const now = new Date().toISOString()
       const data = buildOperationalContext({
+        appleHealthLatest: null,
         tasks: [
           {
             id: "mock-ctx-task-1",
@@ -77,24 +79,37 @@ export async function GET(req: NextRequest) {
 
     if (habitError) throw habitError
 
-    const { data: recentCheckinRows, error: checkinError } = await supabase
-      .from("checkins")
-      .select("id,score_global,score_fisico,score_salud,score_profesional,created_at,updated_at")
-      .eq("user_id", userId)
-      .order("updated_at", { ascending: false })
-      .order("created_at", { ascending: false })
-      .limit(7)
+    const [{ data: recentCheckinRows, error: checkinError }, { data: healthRow, error: healthError }] =
+      await Promise.all([
+        supabase
+          .from("checkins")
+          .select("id,score_global,score_fisico,score_salud,score_profesional,created_at,updated_at")
+          .eq("user_id", userId)
+          .order("updated_at", { ascending: false })
+          .order("created_at", { ascending: false })
+          .limit(7),
+        supabase
+          .from("health_metrics")
+          .select("observed_at, source, sleep_hours, hrv_ms, readiness_score, steps, calories, energy_index, metadata")
+          .eq("user_id", userId)
+          .order("observed_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ])
 
     if (checkinError) throw checkinError
+    if (healthError) throw healthError
 
     const recentCheckinsDesc = (recentCheckinRows ?? []).map((row) => mapCheckin(row as CheckinRow))
     const latestCheckin = recentCheckinsDesc[0] ?? null
+    const appleHealthLatest = mapHealthMetricsRowToAppleSignals(healthRow)
 
     const context = buildOperationalContext({
       tasks: (tasks ?? []).map((row) => mapOperationalTask(row as OperationalTaskRow)),
       habits: (habits ?? []).map((row) => mapOperationalHabit(row as OperationalHabitRow)),
       latestCheckin,
       recentCheckinsDesc,
+      appleHealthLatest,
     })
 
     return NextResponse.json({ success: true, data: context })

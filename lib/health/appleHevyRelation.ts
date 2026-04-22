@@ -1,47 +1,41 @@
 import type { TrainingDay } from "@/src/modules/training/types"
+import type { AppleHealthContextSignals } from "@/lib/operational/types"
+import { mapHealthMetricsRowToAppleSignals } from "@/lib/health/appleOperationalMerge"
 
 /** Marca de integración de entrenos en código (Hevy; a veces se escribe “Heavy” en chat). */
 export const HEVY_INTEGRATION_LABEL = "Hevy"
 
-export type AppleDaySignals = {
-  workoutsCount: number | null
-  workoutMinutes: number | null
-  activeEnergyKcal: number | null
-  sleepHours: number | null
-}
-
-/** Lee señales guardadas en `health_metrics` (columnas + metadata del Atajo). */
-export function appleDaySignalsFromHealthMetric(metric: {
-  sleep_hours: number | null
-  calories: number | null
-  metadata?: Record<string, unknown> | null
-} | null): AppleDaySignals {
-  if (!metric) {
-    return { workoutsCount: null, workoutMinutes: null, activeEnergyKcal: null, sleepHours: null }
-  }
-  const meta = metric.metadata ?? {}
-  const wc = typeof meta.apple_workouts_count === "number" ? meta.apple_workouts_count : null
-  const wds = typeof meta.apple_workouts_duration_seconds === "number" ? meta.apple_workouts_duration_seconds : null
-  const wmin = wds != null && wds > 0 ? Math.round(wds / 60) : null
-  return {
-    workoutsCount: wc,
-    workoutMinutes: wmin,
-    activeEnergyKcal: metric.calories ?? null,
-    sleepHours: metric.sleep_hours ?? null,
-  }
+/**
+ * Lee señales guardadas en `health_metrics` (columnas + metadata del Atajo).
+ * Misma forma que el contexto operativo (`mapHealthMetricsRowToAppleSignals`).
+ */
+export function appleDaySignalsFromHealthMetric(
+  metric: {
+    observed_at: string
+    sleep_hours?: number | null
+    calories?: number | null
+    hrv_ms?: number | null
+    readiness_score?: number | null
+    steps?: number | null
+    energy_index?: number | null
+    source?: string | null
+    metadata?: Record<string, unknown> | null
+  } | null,
+): AppleHealthContextSignals | null {
+  return mapHealthMetricsRowToAppleSignals(metric)
 }
 
 /**
  * Copy listo para usuario final: cruza lo que Apple Health midió hoy con lo que Hevy registró.
  * No es diagnóstico; evita culpa y prioriza coherencia entre fuentes.
  */
-export function describeAppleHealthVersusHevy(hevyToday: TrainingDay | null, apple: AppleDaySignals): string {
+export function describeAppleHealthVersusHevy(hevyToday: TrainingDay | null, apple: AppleHealthContextSignals | null): string {
   const hevyTrained = hevyToday?.status === "trained" || hevyToday?.status === "swim"
   const hevyVolume = hevyToday?.volumeScore ?? 0
-  const wCount = apple.workoutsCount ?? 0
-  const wMin = apple.workoutMinutes ?? 0
-  const kcal = apple.activeEnergyKcal
-  const sleep = apple.sleepHours
+  const wCount = apple?.workouts_count ?? 0
+  const wMin = apple?.workout_minutes ?? 0
+  const kcal = apple?.calories ?? null
+  const sleep = apple?.sleep_hours ?? null
 
   const hasAppleMove = wCount > 0 || wMin > 0 || (kcal != null && kcal > 50)
 

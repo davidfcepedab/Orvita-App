@@ -90,12 +90,12 @@ export default function HealthOperationsV3({ salud: health }: Props) {
             { label: "Sueño", value: appleSleep, meta: "h", icon: MoonStar },
             { label: "Pasos", value: appleSteps, meta: "", icon: Sparkles },
             { label: "Energía activa (kcal)", value: autoHealth?.calories ?? null, meta: "kcal", icon: BatteryCharging },
-            { label: "Entrenos (Apple)", value: appleSignals.workoutsCount, meta: "", icon: Dumbbell },
-            { label: "Min entreno (Apple)", value: appleSignals.workoutMinutes, meta: "min", icon: Dumbbell },
+            { label: "Entrenos (Apple)", value: appleSignals?.workouts_count ?? null, meta: "", icon: Dumbbell },
+            { label: "Min entreno (Apple)", value: appleSignals?.workout_minutes ?? null, meta: "min", icon: Dumbbell },
           ].map((metric, index) => {
             const Icon = metric.icon
             const hasValue = typeof metric.value === "number"
-            const numeric = hasValue ? metric.value : 0
+            const numericForTone = typeof metric.value === "number" ? metric.value : 0
             const display =
               !hasValue
                 ? "—"
@@ -120,7 +120,7 @@ export default function HealthOperationsV3({ salud: health }: Props) {
                 <p
                   className="mt-4 text-3xl font-semibold tracking-tight text-white"
                   style={{
-                    color: hasValue ? metricTone(numeric) : "rgba(255,255,255,0.85)",
+                    color: hasValue ? metricTone(numericForTone) : "rgba(255,255,255,0.85)",
                   }}
                 >
                   {display}

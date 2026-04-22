@@ -16,10 +16,32 @@ import {
   TRAINING_WEEKLY_VOLUME,
 } from "@/app/data/training/visualSeeds"
 import { buildOperationalContext } from "@/lib/operational/context"
-import type { Checkin, OperationalContextData } from "@/lib/operational/types"
+import type { AppleHealthContextSignals, Checkin, OperationalContextData } from "@/lib/operational/types"
 import type { HealthPreferencesPayload } from "@/lib/health/healthPrefsTypes"
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
+
+function isAppleHealthContextPayload(value: unknown): value is AppleHealthContextSignals {
+  if (!value || typeof value !== "object") return false
+  const a = value as Record<string, unknown>
+  if (typeof a.observed_at !== "string") return false
+  if (typeof a.sync_stale !== "boolean") return false
+  if (a.source != null && typeof a.source !== "string") return false
+  for (const key of [
+    "sleep_hours",
+    "hrv_ms",
+    "readiness_score",
+    "steps",
+    "calories",
+    "energy_index",
+    "workouts_count",
+    "workout_minutes",
+  ] as const) {
+    const v = a[key]
+    if (v != null && typeof v !== "number") return false
+  }
+  return true
+}
 
 function isOperationalContextData(value: unknown): value is OperationalContextData {
   if (!value || typeof value !== "object") return false
@@ -29,6 +51,10 @@ function isOperationalContextData(value: unknown): value is OperationalContextDa
   if (typeof o.score_recuperacion !== "number") return false
   if (!Array.isArray(o.tendencia_7d)) return false
   if (!Array.isArray(o.today_tasks) || !Array.isArray(o.habits)) return false
+  if ("apple_health" in o) {
+    const ah = o.apple_health
+    if (ah !== null && ah !== undefined && !isAppleHealthContextPayload(ah)) return false
+  }
   return o.tendencia_7d.every((item) => {
     if (!item || typeof item !== "object") return false
     const record = item as Record<string, unknown>
@@ -91,7 +117,11 @@ export function useSaludContext() {
           return
         }
 
-        setData(response)
+        const r = response as OperationalContextData
+        const apple_health: AppleHealthContextSignals | null =
+          r.apple_health != null && isAppleHealthContextPayload(r.apple_health) ? r.apple_health : null
+
+        setData({ ...r, apple_health })
         setError(null)
       } catch {
         if (active) {
@@ -192,9 +222,13 @@ export function useSaludContext() {
       progress: clamp(40 + scoreFisico / 2 - index * 4, 18, 96),
     }))
 
+    const appleHealth = data?.apple_health ?? null
+
     return {
       loading,
       error,
+      /** Instantánea Apple / `health_metrics` enlazada al mismo contrato que `/api/context`. */
+      appleHealth,
       scoreGlobal,
       scoreSalud,
       scoreFisico,

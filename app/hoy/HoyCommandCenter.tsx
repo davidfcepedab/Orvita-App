@@ -38,7 +38,7 @@ import { isGoogleTaskDone } from "@/lib/agenda/googleTasksUpcoming"
 import {
   bandColor,
   domainAccentVar,
-  energyPressureFromCheckin,
+  energyPressureFromOperationalContext,
   moneyPressureFromMonth,
   sortTasksByDomainPriority,
   timePressureFromMeetings,
@@ -322,7 +322,7 @@ export default function HoyCommandCenter() {
   }, [ctx])
 
   const timeP = useMemo(() => timePressureFromMeetings(meetingMinutes), [meetingMinutes])
-  const energyP = useMemo(() => energyPressureFromCheckin(ctx?.score_global ?? 0), [ctx?.score_global])
+  const energyP = useMemo(() => energyPressureFromOperationalContext(ctx), [ctx])
   const moneyP = useMemo(() => {
     if (!finance) {
       return {

@@ -260,12 +260,12 @@ export default function HealthPage() {
               {
                 label: "Entrenos (Apple)",
                 value:
-                  appleSignals.workoutsCount != null ? String(Math.round(appleSignals.workoutsCount)) : "—",
+                  appleSignals?.workouts_count != null ? String(Math.round(appleSignals.workouts_count)) : "—",
               },
               {
                 label: "Min entreno (Apple)",
                 value:
-                  appleSignals.workoutMinutes != null ? String(Math.round(appleSignals.workoutMinutes)) : "—",
+                  appleSignals?.workout_minutes != null ? String(Math.round(appleSignals.workout_minutes)) : "—",
               },
             ].map((m) => (
               <div

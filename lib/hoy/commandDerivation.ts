@@ -173,6 +173,43 @@ export function energyPressureFromCheckin(scoreGlobal: number): {
   return { band, fillPct, hint, unknown: false }
 }
 
+export type EnergyPressureFromContext = ReturnType<typeof energyPressureFromCheckin>
+
+/**
+ * Presión energética del centro de mando: parte del check-in y refina con Apple (readiness / sync).
+ */
+export function energyPressureFromOperationalContext(data: OperationalContextData | null): EnergyPressureFromContext {
+  const base = energyPressureFromCheckin(data?.score_global ?? 0)
+  const apple = data?.apple_health
+  if (!apple) return base
+
+  if (apple.sync_stale) {
+    return {
+      ...base,
+      hint: `${base.hint} Apple Health lleva sin actualizar: corre el Atajo para calibrar.`,
+    }
+  }
+
+  const readiness = apple.readiness_score
+  const sg = data?.score_global ?? 0
+  if (
+    readiness != null &&
+    readiness < 48 &&
+    sg >= 62 &&
+    !base.unknown &&
+    base.band === "bajo"
+  ) {
+    return {
+      band: "moderado",
+      fillPct: Math.min(88, base.fillPct + 18),
+      hint: "Readiness bajo en Apple frente a un check-in optimista: ajusta el ritmo antes de apretar el día.",
+      unknown: false,
+    }
+  }
+
+  return base
+}
+
 export function moneyPressureFromMonth(
   income: number,
   expense: number,

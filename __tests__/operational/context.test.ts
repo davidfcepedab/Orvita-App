@@ -1,5 +1,5 @@
 import { buildOperationalContext } from "@/lib/operational/context"
-import type { Checkin } from "@/lib/operational/types"
+import type { AppleHealthContextSignals, Checkin } from "@/lib/operational/types"
 
 describe("buildOperationalContext", () => {
   test("builds defaults when no checkin is present", () => {
@@ -10,6 +10,7 @@ describe("buildOperationalContext", () => {
     })
 
     expect(context.score_global).toBe(0)
+    expect(context.apple_health).toBeNull()
     expect(context.today_tasks).toHaveLength(0)
     expect(context.habits).toHaveLength(0)
     expect(context.next_action).toMatch(/movimiento ejecutable/i)
@@ -111,5 +112,37 @@ describe("buildOperationalContext", () => {
     expect(context.next_task_id).toBe("t-pro")
     expect(context.command_focus_domain).toBe("profesional")
     expect(context.current_block).toBe("Profesional")
+  })
+
+  test("merges Apple Health insights when latest metrics are present", () => {
+    const apple: AppleHealthContextSignals = {
+      observed_at: new Date().toISOString(),
+      source: "apple_health_export",
+      sleep_hours: 5.1,
+      hrv_ms: 40,
+      readiness_score: 70,
+      steps: 8000,
+      calories: 500,
+      energy_index: 70,
+      workouts_count: 0,
+      workout_minutes: null,
+      sync_stale: false,
+    }
+    const context = buildOperationalContext({
+      tasks: [],
+      habits: [],
+      latestCheckin: {
+        id: "c-apple",
+        score_global: 78,
+        score_fisico: 75,
+        score_salud: 80,
+        score_profesional: 60,
+        created_at: "2026-03-26T00:00:00Z",
+      },
+      appleHealthLatest: apple,
+    })
+
+    expect(context.apple_health?.sleep_hours).toBe(5.1)
+    expect(context.insights.some((line) => /sueño/i.test(line))).toBe(true)
   })
 })
