@@ -153,8 +153,13 @@ export function ConfigHealthUnifiedPanel({ theme }: { theme: OrbitaThemeSkin }) 
             Permisos en Salud → Atajos
           </p>
           <p className="mt-1 text-[11px] leading-relaxed sm:text-xs" style={{ color: theme.textMuted }}>
-            Activa lectura para: Pasos, Energía activa, Variabilidad de la FC (HRV), FC en reposo, Análisis del sueño y Entrenamientos. Si ves “Acción
-            desconocida” en el atajo, bórralo y reinstálalo desde Órvita en Safari.
+            Órvita usa del atajo: pasos, energía activa, HRV, FC en reposo, sueño y entrenamientos. En Salud → Atajos activa al menos esas lecturas.
+            Otras métricas (peso, SpO2, presión, etc.) pueden enviarse como números extra en el JSON; hoy se guardan en metadatos, no en columnas
+            principales.
+          </p>
+          <p className="mt-2 text-[11px] leading-relaxed sm:text-xs" style={{ color: theme.textMuted }}>
+            “Acción desconocida” o un diccionario con “0 elementos” no se arregla dando más permisos: el flujo del atajo está roto o incompleto. Borra
+            copias viejas, reinstala el .shortcut desde Órvita en Safari y vuelve a probar.
           </p>
         </div>
       </div>

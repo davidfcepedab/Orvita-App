@@ -65,3 +65,8 @@ Estructura mínima lógica (alineada con el .shortcut de Órvita)
 - Búsquedas y agregado por separado: pasos (suma), energía activa (suma), HRV (promedio o última), FC en reposo (promedio o última), análisis del sueño (suele sumar duración de segmentos; «hoy» solo puede faltar si el bloque de sueño cruzó medianoche: entonces amplía la ventana)
 - Entrenamientos: buscar entrenamientos con filtro de fecha; contar y sumar duración
 - Diccionario JSON con claves del contrato (apple_bundle) y POST a la API; token desde la app
+
+Métricas de Apple Salud: cuáles usa Órvita hoy
+- Sí, columnas y gráficos (el atajo oficial las envía): Pasos, Energía de actividad, Variabilidad de la FC (HRV), FC en reposo, Sueño (duración vía análisis del sueño), Entrenamientos (conteo y minutos o duración).
+- No hay columna dedicada aún, pero si envías otras claves numéricas en el mismo JSON, Órvita las guarda en metadatos (p. ej. peso, SpO2, distancia) para análisis futuro; no sustituyen al bloque de pasos/energía/sueño arriba.
+- Activar muchos interruptores en Salud → Atajos no basta: el atajo debe tener acciones que lean cada tipo. Si en el editor solo queda un «Diccionario» vacío o tarjetas grises «Acción desconocida», reinstala el .shortcut; no es un fallo de permisos sueltos.

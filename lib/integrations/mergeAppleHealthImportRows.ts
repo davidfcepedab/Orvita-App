@@ -1,6 +1,30 @@
 import type { AppleHealthImportRow } from "@/lib/integrations/appleHealth"
 import { deriveMetricsFromAppleBundle } from "@/lib/integrations/appleHealthBundle"
 
+/** Claves que ya mapeamos a columnas o cálculo; el resto numérico va a `metadata.shortcut_bundle_extras`. */
+const APPLE_BUNDLE_MAPPED_KEYS = new Set([
+  "observed_at",
+  "steps",
+  "active_energy_kcal",
+  "sleep_hours",
+  "sleep_duration_seconds",
+  "hrv_ms",
+  "resting_hr_bpm",
+  "workouts_count",
+  "workouts_minutes",
+  "workouts_duration_seconds",
+  "readiness_score",
+])
+
+function collectBundleExtras(bundle: Record<string, unknown>): Record<string, number> | undefined {
+  const out: Record<string, number> = {}
+  for (const [k, v] of Object.entries(bundle)) {
+    if (APPLE_BUNDLE_MAPPED_KEYS.has(k)) continue
+    if (typeof v === "number" && Number.isFinite(v)) out[k] = v
+  }
+  return Object.keys(out).length ? out : undefined
+}
+
 function readNumber(obj: Record<string, unknown>, key: string) {
   const v = obj[key]
   return typeof v === "number" && Number.isFinite(v) ? v : undefined
@@ -42,6 +66,7 @@ export function rowsFromAppleBundlePayload(bundle: Record<string, unknown>): App
       : workouts_minutes_from_seconds
 
   const readiness_score = readNumber(bundle, "readiness_score")
+  const bundleExtras = collectBundleExtras(bundle)
 
   const derived = deriveMetricsFromAppleBundle({
     observed_at: observedAt.toISOString(),
@@ -67,7 +92,8 @@ export function rowsFromAppleBundlePayload(bundle: Record<string, unknown>): App
     workouts_count !== undefined ||
     workouts_minutes !== undefined ||
     typeof workouts_duration_seconds === "number" ||
-    readiness_score !== undefined
+    readiness_score !== undefined ||
+    (bundleExtras && Object.keys(bundleExtras).length > 0)
 
   if (!hasSignal) return []
 
@@ -99,6 +125,7 @@ export function rowsFromAppleBundlePayload(bundle: Record<string, unknown>): App
       metadata: {
         ...derived.metadata,
         shortcut_bundle_keys: Object.keys(bundle),
+        shortcut_bundle_extras: bundleExtras ?? null,
         apple_sleep_duration_seconds: sleep_duration_seconds ?? null,
         apple_workouts_duration_seconds: workouts_duration_seconds ?? null,
         apple_workouts_count: workouts_count ?? null,

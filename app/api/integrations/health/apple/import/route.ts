@@ -15,7 +15,12 @@ function rowHasSignal(row: {
   resting_hr_bpm?: number
   apple_workouts_count?: number
   apple_workout_minutes?: number
+  metadata?: Record<string, unknown>
 }) {
+  const extras = row.metadata?.shortcut_bundle_extras
+  if (extras && typeof extras === "object" && extras !== null && Object.keys(extras as Record<string, unknown>).length > 0) {
+    return true
+  }
   return (
     typeof row.sleep_hours === "number" ||
     typeof row.hrv_ms === "number" ||
