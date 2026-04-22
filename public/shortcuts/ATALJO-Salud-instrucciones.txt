@@ -41,3 +41,27 @@ Archivo .shortcut
 
 «Acción desconocida» en el editor del atajo
 - Suele ser atajo antiguo o iOS antiguo respecto a las acciones de Salud. Borra el atajo del teléfono, instala de nuevo el .shortcut desde orvita.app (Safari) y concede permisos a Atajos en Salud. Mínimo recomendable: iOS reciente con acciones de Salud actualizadas.
+
+Diagnóstico rápido (tres fallos que a veces aparecen juntos)
+1) «Acción desconocida» — «No se encontró esta acción en esta versión de Atajos»
+   - La tarjeta quedó corrupta o usa acciones que tu iOS no reconoce (import incompleto, duplicado que se rompió, o acción de otra app).
+   - No intentes «reparar» la misma tarjeta: bórrala e importa de nuevo el .shortcut oficial desde Órvita, o reconstruye ese bloque con acciones nativas de Salud.
+
+2) «No hay más muestras de (null)…» en «Buscar muestras de Salud»
+   - Falta el tipo concreto de dato. Toca el chip azul «Muestras de Salud» y elige un tipo real (p. ej. Pasos, Energía activa, Variabilidad de la frecuencia cardiaca).
+   - No uses una sola búsqueda genérica para todo: el atajo oficial hace una búsqueda por métrica (pasos, energía, HRV, FC en reposo, análisis del sueño, entrenamientos) y luego agrega o promedia según corresponda.
+
+3) «El archivo no existe» / «No se encontró el atajo «Órvita – Importar Salud Hoy»»
+   - El enlace shortcuts://run-shortcut?name=… exige el **nombre exacto** del atajo en tu biblioteca (tildes, guiones, espacios, «–» en Órvita).
+   - Si lo renombraste (p. ej. «Orvita-Importar-Salud-Hoy 2»), o bien vuelve a ponerle el nombre canónico, o actualiza en automatizaciones y widgets el nombre que se ejecuta.
+   - Vuelve a instalar el .shortcut desde la web para recuperar el nombre y el flujo completo.
+
+Permisos en el iPhone
+- Salud → Perfil (arriba a la derecha) → Apps o Privacidad → Atajos: permite lectura de las categorías que el atajo consulta.
+- Tras instalar, ejecuta el atajo una vez y acepta lo que pida iOS (Salud, red si aplica).
+
+Estructura mínima lógica (alineada con el .shortcut de Órvita)
+- Fecha actual → formatear (ISO) para observed_at
+- Búsquedas y agregado por separado: pasos (suma), energía activa (suma), HRV (promedio o última), FC en reposo (promedio o última), análisis del sueño (suele sumar duración de segmentos; «hoy» solo puede faltar si el bloque de sueño cruzó medianoche: entonces amplía la ventana)
+- Entrenamientos: buscar entrenamientos con filtro de fecha; contar y sumar duración
+- Diccionario JSON con claves del contrato (apple_bundle) y POST a la API; token desde la app

@@ -1,6 +1,12 @@
 import { siteOrigin } from "@/lib/site/origin"
 
-/** Debe coincidir con `WFWorkflowName` en el plist / script del .shortcut. */
+/**
+ * Nombre canónico del atajo. Debe coincidir con `WFWorkflowName` al importar
+ * y con cualquier enlace `shortcuts://run-shortcut?name=...` o acción
+ * "Ejecutar atajo" / "Abrir atajo" que iOS resuelve por **nombre exacto** (tildes, guiones, espacios).
+ * Si en Atajos lo renombraste, el botón "Abrir atajo" de la web o un widget con el nombre antiguo fallará con
+ * "el archivo no existe" hasta que reinstales el .shortcut o restaures el nombre.
+ */
 export const ORVITA_HEALTH_SHORTCUT_NAME = "Órvita – Importar Salud Hoy"
 
 export const ORVITA_HEALTH_SHORTCUT_FILE_PATH = "/shortcuts/Orvita-Importar-Salud-Hoy.shortcut"
@@ -56,8 +62,10 @@ export function buildOrvitaShortcutImportHrefXCallback(): string {
   return `shortcuts://x-callback-url/import-shortcut?url=${encodeURIComponent(getOrvitaHealthShortcutFileUrl())}`
 }
 
-export function buildOrvitaRunShortcutHref(): string {
-  return `shortcuts://run-shortcut?name=${encodeURIComponent(ORVITA_HEALTH_SHORTCUT_NAME)}`
+/** @param shortcutName Nombre del atajo tal como aparece en la biblioteca de Atajos; por defecto el canónico. */
+export function buildOrvitaRunShortcutHref(shortcutName?: string): string {
+  const name = shortcutName?.trim() || ORVITA_HEALTH_SHORTCUT_NAME
+  return `shortcuts://run-shortcut?name=${encodeURIComponent(name)}`
 }
 
 /** true si el import vía enlace es frágil (p. ej. solo HTTP, sin site URL). */

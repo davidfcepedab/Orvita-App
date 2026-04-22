@@ -234,6 +234,15 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
             </a>
           ) : null}
         </div>
+        {isIOS ? (
+          <p className="mt-2 text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
+            Si al tocar «Abrir atajo» aparece que el archivo no existe, el atajo en Atajos no se llama exactamente{" "}
+            <span className="font-medium" style={{ color: theme.text }}>
+              {ORVITA_HEALTH_SHORTCUT_NAME}
+            </span>
+            . Reinstala con «Instalar atajo» arriba o renómbralo a ese nombre; iOS exige una coincidencia exacta.
+          </p>
+        ) : null}
         {toast ? (
           <p className="mt-3 text-xs leading-relaxed" style={{ color: theme.text }}>
             {toast}
