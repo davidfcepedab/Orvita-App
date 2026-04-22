@@ -17,11 +17,12 @@ import { ConfigNotificationPreferencesPanel } from "@/app/components/orbita-v3/c
 import { ConfigPwaInstallPanel } from "@/app/components/orbita-v3/config/ConfigPwaInstallPanel"
 import { ConfigPasskeyPanel } from "@/app/components/orbita-v3/config/ConfigPasskeyPanel"
 import { ConfigSettingsSection } from "@/app/components/orbita-v3/config/ConfigSettingsSection"
+import { ConfigAppleShortcutPanel } from "@/app/components/orbita-v3/config/ConfigAppleShortcutPanel"
 import { designTokens } from "@/src/theme/design-tokens"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { createBrowserClient } from "@/lib/supabase/browser"
 import Link from "next/link"
-import { Bell, ChevronRight, Home, Link2, Monitor, Palette, Sliders, Smartphone, Sparkles } from "lucide-react"
+import { Apple, Bell, ChevronRight, Home, Link2, Monitor, Palette, Sliders, Smartphone, Sparkles } from "lucide-react"
 import { defaultCustomPalette, normalizeHex, type CustomPalette } from "@/lib/theme/customPalette"
 import type { HouseholdMemberDTO } from "@/lib/household/memberTypes"
 
@@ -584,6 +585,15 @@ export default function ConfigV3() {
         icon={<Bell className="h-4 w-4" aria-hidden />}
       >
         <ConfigNotificationPreferencesPanel theme={theme} />
+      </ConfigSettingsSection>
+
+      <ConfigSettingsSection
+        theme={theme}
+        title="Salud en el iPhone (atajo y widget)"
+        description="Conecta la app Salud con Órvita: instala el atajo oficial, genera un código seguro y, si quieres, añade un widget de Atajos para ejecutarlo con un toque. La web no puede abrir HealthKit sola: esto es el flujo que Apple permite."
+        icon={<Apple className="h-4 w-4" aria-hidden />}
+      >
+        <ConfigAppleShortcutPanel theme={theme} />
       </ConfigSettingsSection>
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(260px,340px)] lg:items-start">
