@@ -11,7 +11,14 @@ import {
 } from "@/lib/pwa/installPrompt"
 
 /** Configuración → Instalar como app (usa el evento `beforeinstallprompt` capturado globalmente). */
-export function ConfigPwaInstallPanel({ theme }: { theme: OrbitaConfigTheme }) {
+export function ConfigPwaInstallPanel({
+  theme,
+  moduleCard,
+}: {
+  theme: OrbitaConfigTheme
+  /** Dentro de ConfigSettingsSection en modo tarjeta: sin segundo borde exterior. */
+  moduleCard?: boolean
+}) {
   const [hasPrompt, setHasPrompt] = useState(false)
   const [standalone, setStandalone] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -26,8 +33,16 @@ export function ConfigPwaInstallPanel({ theme }: { theme: OrbitaConfigTheme }) {
 
   return (
     <section
-      className="rounded-2xl border p-4 sm:p-5"
-      style={{ borderColor: theme.border, backgroundColor: theme.surface }}
+      className={
+        moduleCard
+          ? "rounded-xl p-3 sm:p-4"
+          : "rounded-2xl border p-4 sm:p-5"
+      }
+      style={
+        moduleCard
+          ? { backgroundColor: theme.surfaceAlt }
+          : { borderColor: theme.border, backgroundColor: theme.surface }
+      }
     >
       <div className="flex items-start gap-3">
         <div

@@ -6,8 +6,10 @@ import { Activity, Apple, ClipboardCopy, Download, MoonStar, Sparkles, Zap } fro
 import type { SaludContextSnapshot } from "@/app/salud/_hooks/useSaludContext"
 import { useHealthAutoMetrics } from "@/app/hooks/useHealthAutoMetrics"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
-
-const SHORTCUT_NAME = "Órvita – Importar Salud Hoy"
+import {
+  buildOrvitaRunShortcutHref,
+  buildOrvitaShortcutImportHref,
+} from "@/lib/shortcuts/orvitaHealthShortcut"
 
 type Props = {
   salud: SaludContextSnapshot
@@ -51,16 +53,9 @@ export default function AppleHealthLuxurySection({ salud }: Props) {
     return typeof r === "number" && r > 0 ? r : salud.scoreSalud || 60
   }, [salud.scoreSalud, salud.trendAverage])
 
-  const shortcutInstallHref = useMemo(() => {
-    if (typeof window === "undefined") return "#"
-    const fileUrl = `${window.location.origin}/shortcuts/Orvita-Importar-Salud-Hoy.shortcut`
-    return `shortcuts://import-shortcut/?url=${encodeURIComponent(fileUrl)}&name=${encodeURIComponent(SHORTCUT_NAME)}`
-  }, [])
+  const shortcutInstallHref = useMemo(() => buildOrvitaShortcutImportHref(), [])
 
-  const runShortcutHref = useMemo(
-    () => `shortcuts://run-shortcut?name=${encodeURIComponent(SHORTCUT_NAME)}`,
-    [],
-  )
+  const runShortcutHref = useMemo(() => buildOrvitaRunShortcutHref(), [])
 
   const mintToken = useCallback(async () => {
     setMinting(true)
@@ -100,14 +95,6 @@ export default function AppleHealthLuxurySection({ salud }: Props) {
       setToast("No se pudo copiar automáticamente; selecciona el token a mano.")
     }
   }, [token])
-
-  const openInstall = useCallback(() => {
-    window.location.href = shortcutInstallHref
-  }, [shortcutInstallHref])
-
-  const runShortcut = useCallback(() => {
-    window.location.href = runShortcutHref
-  }, [runShortcutHref])
 
   if (salud.loading) {
     return (
@@ -166,22 +153,20 @@ export default function AppleHealthLuxurySection({ salud }: Props) {
             >
               {minting ? "Generando enlace seguro…" : "Preparar token para el Atajo"}
             </button>
-            <button
-              type="button"
-              onClick={openInstall}
-              className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/5 px-5 text-[15px] font-semibold text-white backdrop-blur-xl transition hover:bg-white/10 active:scale-[0.99]"
+            <a
+              href={shortcutInstallHref}
+              className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/5 px-5 text-[15px] font-semibold text-white no-underline backdrop-blur-xl transition hover:bg-white/10 active:scale-[0.99]"
             >
               <Download className="h-4 w-4" aria-hidden />
               Instalar Atajo (archivo .shortcut)
-            </button>
-            <button
-              type="button"
-              onClick={runShortcut}
-              className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-2xl border border-emerald-300/40 bg-emerald-400/15 px-5 text-[15px] font-semibold text-emerald-50 transition hover:bg-emerald-400/25 active:scale-[0.99]"
+            </a>
+            <a
+              href={runShortcutHref}
+              className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-2xl border border-emerald-300/40 bg-emerald-400/15 px-5 text-[15px] font-semibold text-emerald-50 no-underline transition hover:bg-emerald-400/25 active:scale-[0.99]"
             >
               <Zap className="h-4 w-4" aria-hidden />
               Traer datos de hoy desde Apple Health
-            </button>
+            </a>
             <p className="text-[12px] leading-relaxed text-white/50">
               1) Instala el Atajo una vez. 2) Genera token aquí y cópialo. 3) Ejecuta el Atajo: pedirá el token y enviará
               sueño (análisis), entrenos del día, pasos, energía activa, HRV y FC en reposo.

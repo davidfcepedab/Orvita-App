@@ -4,13 +4,19 @@ import { useCallback, useMemo, useState } from "react"
 import { Apple, ClipboardCopy, Download, LayoutGrid, Play, Sparkles, Zap } from "lucide-react"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import type { OrbitaConfigTheme } from "@/app/components/orbita-v3/config/configThemeTypes"
+import {
+  buildOrvitaRunShortcutHref,
+  buildOrvitaShortcutImportHref,
+  getOrvitaHealthShortcutDownloadFileUrl,
+  isOrvitaShortcutImportFromHttpDev,
+  ORVITA_HEALTH_SHORTCUT_NAME,
+} from "@/lib/shortcuts/orvitaHealthShortcut"
 
-const SHORTCUT_NAME = "Órvita – Importar Salud Hoy"
-const SHORTCUT_FILE = "/shortcuts/Orvita-Importar-Salud-Hoy.shortcut"
 const INSTRUCCIONES = "/shortcuts/ATALJO-Salud-instrucciones.txt"
 
 type Props = {
   theme: OrbitaConfigTheme
+  moduleCard?: boolean
 }
 
 function formatWhen(iso: string | null | undefined) {
@@ -26,7 +32,7 @@ function formatWhen(iso: string | null | undefined) {
  * Instalación del atajo vía esquema de iOS, token de importación y guía para widget de Atajos.
  * La web no puede instalar nada en el sistema; solo ofrece enlaces y pasos.
  */
-export function ConfigAppleShortcutPanel({ theme }: Props) {
+export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
   const [minting, setMinting] = useState(false)
   const [token, setToken] = useState<string | null>(null)
   const [tokenUntil, setTokenUntil] = useState<string | null>(null)
@@ -38,21 +44,12 @@ export function ConfigAppleShortcutPanel({ theme }: Props) {
   }, [])
 
   const { shortcutInstallHref, runShortcutHref, fileUrl, instructionsUrl } = useMemo(() => {
-    if (typeof window === "undefined") {
-      return {
-        shortcutInstallHref: "#",
-        runShortcutHref: "#",
-        fileUrl: SHORTCUT_FILE,
-        instructionsUrl: INSTRUCCIONES,
-      }
-    }
-    const origin = window.location.origin
-    const fileUrl = `${origin}${SHORTCUT_FILE}`
     return {
-      fileUrl,
-      instructionsUrl: `${origin}${INSTRUCCIONES}`,
-      shortcutInstallHref: `shortcuts://import-shortcut/?url=${encodeURIComponent(fileUrl)}&name=${encodeURIComponent(SHORTCUT_NAME)}`,
-      runShortcutHref: `shortcuts://run-shortcut?name=${encodeURIComponent(SHORTCUT_NAME)}`,
+      fileUrl: getOrvitaHealthShortcutDownloadFileUrl(),
+      /** Ruta relativa: evita orígenes distintos en SSR y cliente. */
+      instructionsUrl: INSTRUCCIONES,
+      shortcutInstallHref: buildOrvitaShortcutImportHref(),
+      runShortcutHref: buildOrvitaRunShortcutHref(),
     }
   }, [])
 
@@ -96,10 +93,13 @@ export function ConfigAppleShortcutPanel({ theme }: Props) {
   }, [token])
 
   return (
-    <div className="space-y-4">
+    <div
+      className={moduleCard ? "space-y-0 divide-y" : "space-y-4"}
+      style={moduleCard ? { borderColor: theme.border } : undefined}
+    >
       <div
-        className="rounded-2xl border p-4 sm:p-5"
-        style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt }}
+        className={moduleCard ? "pb-4 pt-0" : "rounded-2xl border p-4 sm:p-5"}
+        style={moduleCard ? undefined : { borderColor: theme.border, backgroundColor: theme.surfaceAlt }}
       >
         <div className="flex items-start gap-3">
           <div
@@ -122,12 +122,9 @@ export function ConfigAppleShortcutPanel({ theme }: Props) {
 
         <div className="mt-4 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap">
           {isIOS ? (
-            <button
-              type="button"
-              onClick={() => {
-                window.location.href = shortcutInstallHref
-              }}
-              className="inline-flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold transition hover:opacity-95"
+            <a
+              href={shortcutInstallHref}
+              className="inline-flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold no-underline transition hover:opacity-95"
               style={{
                 borderColor: theme.accent.health,
                 backgroundColor: theme.accent.health,
@@ -136,7 +133,7 @@ export function ConfigAppleShortcutPanel({ theme }: Props) {
             >
               <Download className="h-4 w-4 shrink-0" aria-hidden />
               Instalar atajo ahora
-            </button>
+            </a>
           ) : (
             <p className="text-xs leading-relaxed" style={{ color: theme.textMuted }}>
               Abre esta página en <strong className="font-medium text-inherit">Safari en el iPhone</strong> y pulsa
@@ -163,11 +160,18 @@ export function ConfigAppleShortcutPanel({ theme }: Props) {
             Ver guía de pasos
           </a>
         </div>
+        {isIOS && isOrvitaShortcutImportFromHttpDev() ? (
+          <p className="mt-3 text-xs leading-relaxed" style={{ color: theme.textMuted }}>
+            Estás en HTTP (desarrollo). iOS a menudo exige <strong className="font-medium text-inherit">HTTPS</strong> o
+            usa <strong className="font-medium text-inherit">Descargar archivo del atajo</strong> y abre el .shortcut desde
+            Archivos. En producción (orvita.app) el enlace «Instalar» debería abrir Atajos sin pasos extra.
+          </p>
+        ) : null}
       </div>
 
       <div
-        className="rounded-2xl border p-4 sm:p-5"
-        style={{ borderColor: theme.border, backgroundColor: theme.surface }}
+        className={moduleCard ? "pt-4" : "rounded-2xl border p-4 sm:p-5"}
+        style={moduleCard ? undefined : { borderColor: theme.border, backgroundColor: theme.surface }}
       >
         <p className="text-xs font-semibold uppercase tracking-[0.14em]" style={{ color: theme.textMuted }}>
           Código de un solo uso
@@ -188,17 +192,14 @@ export function ConfigAppleShortcutPanel({ theme }: Props) {
             {minting ? "Generando…" : "Generar código"}
           </button>
           {isIOS ? (
-            <button
-              type="button"
-              onClick={() => {
-                window.location.href = runShortcutHref
-              }}
-              className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold transition"
+            <a
+              href={runShortcutHref}
+              className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold no-underline transition"
               style={{ borderColor: theme.accent.health, color: theme.accent.health, backgroundColor: "transparent" }}
             >
               <Zap className="h-4 w-4" aria-hidden />
               Abrir atajo
-            </button>
+            </a>
           ) : null}
         </div>
         {toast ? (
@@ -235,8 +236,12 @@ export function ConfigAppleShortcutPanel({ theme }: Props) {
       </div>
 
       <details
-        className="group rounded-2xl border p-4"
-        style={{ borderColor: theme.border, backgroundColor: theme.surface }}
+        className={
+          moduleCard
+            ? "group border-t pt-4 [&[open]]:pb-0"
+            : "group rounded-2xl border p-4"
+        }
+        style={moduleCard ? { borderColor: theme.border } : { borderColor: theme.border, backgroundColor: theme.surface }}
       >
         <summary
           className="flex cursor-pointer list-none items-center gap-2 text-sm font-medium marker:hidden [&::-webkit-details-marker]:hidden"
@@ -262,7 +267,7 @@ export function ConfigAppleShortcutPanel({ theme }: Props) {
             grande) y tócalo.
           </li>
           <li>
-            Al configurar, selecciona <strong className="font-medium text-inherit">{SHORTCUT_NAME}</strong>. Luego, al
+            Al configurar, selecciona <strong className="font-medium text-inherit">{ORVITA_HEALTH_SHORTCUT_NAME}</strong>. Luego, al
             tocar el widget, se abre el atajo: ahí pega el código si hace falta y confirma el envío a Órvita.
           </li>
         </ol>

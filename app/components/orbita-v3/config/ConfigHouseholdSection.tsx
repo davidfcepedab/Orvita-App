@@ -35,6 +35,7 @@ export function ConfigHouseholdSection({
   members,
   membersLoading,
   membersError,
+  moduleCard = false,
 }: {
   theme: OrbitaConfigTheme
   householdInviteLoading: boolean
@@ -49,27 +50,40 @@ export function ConfigHouseholdSection({
   members: HouseholdMemberDTO[]
   membersLoading: boolean
   membersError: string | null
+  /** Dentro de la tarjeta del módulo: sin título duplicado ni caja anidada. */
+  moduleCard?: boolean
 }) {
   const familyPhotoInputId = useId()
+  const headingId = "config-household-heading"
 
   return (
-    <section className="space-y-3" aria-labelledby="config-household-heading">
-      <h3
-        id="config-household-heading"
-        className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.14em]"
-        style={{ color: theme.textMuted }}
-      >
-        <Users className="h-4 w-4 shrink-0" aria-hidden />
-        Hogar y familia
-      </h3>
+    <section className="space-y-3" aria-labelledby={headingId}>
+      {!moduleCard ? (
+        <h3
+          id={headingId}
+          className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.14em]"
+          style={{ color: theme.textMuted }}
+        >
+          <Users className="h-4 w-4 shrink-0" aria-hidden />
+          Hogar y familia
+        </h3>
+      ) : (
+        <span id={headingId} className="sr-only">
+          Hogar y familia
+        </span>
+      )}
 
       <div
-        className="rounded-2xl border p-5 sm:p-6"
-        style={{
-          backgroundColor: theme.surface,
-          borderColor: theme.border,
-          boxShadow: "0 1px 0 rgba(15, 23, 42, 0.04)",
-        }}
+        className={moduleCard ? "space-y-0" : "rounded-2xl border p-5 sm:p-6"}
+        style={
+          moduleCard
+            ? undefined
+            : {
+                backgroundColor: theme.surface,
+                borderColor: theme.border,
+                boxShadow: "0 1px 0 rgba(15, 23, 42, 0.04)",
+              }
+        }
       >
         <p className="text-sm font-medium" style={{ color: theme.text }}>
           Código de invitación al hogar

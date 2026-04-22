@@ -22,7 +22,7 @@ import { designTokens } from "@/src/theme/design-tokens"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { createBrowserClient } from "@/lib/supabase/browser"
 import Link from "next/link"
-import { Apple, Bell, ChevronRight, Home, Link2, Monitor, Palette, Sliders, Smartphone, Sparkles } from "lucide-react"
+import { Apple, Bell, ChevronDown, ChevronRight, Home, Link2, Monitor, Palette, Sliders, Smartphone, Sparkles } from "lucide-react"
 import { defaultCustomPalette, normalizeHex, type CustomPalette } from "@/lib/theme/customPalette"
 import type { HouseholdMemberDTO } from "@/lib/household/memberTypes"
 
@@ -522,16 +522,17 @@ export default function ConfigV3() {
         title="Instalar, entrar y tu perfil"
         description="PWA, passkey o huella, y enlace a tu perfil (foto y nombre)."
         icon={<Smartphone className="h-4 w-4" aria-hidden />}
+        container="card"
       >
-        <ConfigPwaInstallPanel theme={theme} />
-        <ConfigPasskeyPanel theme={theme} />
+        <ConfigPwaInstallPanel theme={theme} moduleCard />
+        <ConfigPasskeyPanel theme={theme} moduleCard />
 
         <Link
           href="/perfil"
-          className="orbita-focus-ring flex items-center justify-between gap-3 rounded-2xl border p-4 no-underline transition-opacity hover:opacity-95"
+          className="orbita-focus-ring flex items-center justify-between gap-3 rounded-xl p-3.5 no-underline transition-opacity hover:opacity-95 sm:p-4"
           style={{
             backgroundColor: theme.surfaceAlt,
-            borderColor: theme.border,
+            border: `1px solid ${theme.border}`,
             boxShadow: "0 1px 0 rgba(15, 23, 42, 0.04)",
           }}
         >
@@ -560,8 +561,10 @@ export default function ConfigV3() {
         title="Tu hogar y familia"
         description="Código, foto y miembros del hogar (calendario y hábitos con contexto)."
         icon={<Home className="h-4 w-4" aria-hidden />}
+        container="card"
       >
         <ConfigHouseholdSection
+          moduleCard
           theme={theme}
           householdInviteLoading={householdInviteLoading}
           householdInviteCode={householdInviteCode}
@@ -592,6 +595,7 @@ export default function ConfigV3() {
         title="Avisos y recordatorios"
         description="Notificaciones del navegador o del sistema."
         icon={<Bell className="h-4 w-4" aria-hidden />}
+        container="stack"
       >
         <ConfigNotificationPreferencesPanel theme={theme} />
       </ConfigSettingsSection>
@@ -601,17 +605,44 @@ export default function ConfigV3() {
         title="Salud en el iPhone (atajo)"
         description="Atajo + token seguro. La web no abre HealthKit sola: es el flujo que Apple permite."
         icon={<Apple className="h-4 w-4" aria-hidden />}
+        container="card"
       >
-        <ConfigAppleShortcutPanel theme={theme} />
+        <ConfigAppleShortcutPanel theme={theme} moduleCard />
       </ConfigSettingsSection>
 
-      <div className="space-y-10">
-          <ConfigSettingsSection
-            theme={theme}
-            title="Aspecto y comodidad"
-            description="Paleta, densidad y animaciones. El cambio es inmediato."
-            icon={<Palette className="h-4 w-4" aria-hidden />}
+      <div
+        className="overflow-hidden rounded-2xl border shadow-[0_1px_0_rgba(15,23,42,0.04)]"
+        style={{ borderColor: theme.border, backgroundColor: theme.surface }}
+      >
+        <details className="group">
+          <summary
+            className="flex cursor-pointer list-none items-center justify-between gap-3 border-b px-4 py-3.5 sm:px-5 sm:py-4 [&::-webkit-details-marker]:hidden"
+            style={{ borderColor: theme.border }}
           >
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9"
+                style={{ backgroundColor: theme.surfaceAlt, color: theme.accent.health }}
+                aria-hidden
+              >
+                <Palette className="h-4 w-4" />
+              </span>
+              <div className="min-w-0 text-left">
+                <p className="m-0 text-base font-semibold tracking-tight" style={{ color: theme.text }}>
+                  Aspecto y comodidad
+                </p>
+                <p className="m-0 mt-0.5 text-xs" style={{ color: theme.textMuted }}>
+                  Paleta, densidad y animaciones. Despliega para ajustar.
+                </p>
+              </div>
+            </div>
+            <ChevronDown
+              className="h-5 w-5 shrink-0 transition-transform duration-200 group-open:rotate-180"
+              style={{ color: theme.textMuted }}
+              aria-hidden
+            />
+          </summary>
+          <div className="flex flex-col gap-6 p-4 sm:p-5">
           <div className="space-y-3">
             <h3
               className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.14em]"
@@ -782,38 +813,41 @@ export default function ConfigV3() {
               />
             </div>
           </div>
-          </ConfigSettingsSection>
-
-          <ConfigSettingsSection
-            theme={theme}
-            title="Conexiones"
-            description="Google, Hevy y otras. Solo usamos lo que actives."
-            icon={<Link2 className="h-4 w-4" aria-hidden />}
-          >
-            <ConfigIntegrationsPanel
-              theme={theme}
-              googleConnected={googleConnected}
-              googleError={googleError}
-              googleSync={googleSync}
-              connecting={connecting}
-              disconnectingGoogle={disconnectingGoogle}
-              syncingCalendar={syncingCalendar}
-              syncingTasks={syncingTasks}
-              onConnectGoogle={() => void handleConnectGoogle()}
-              onDisconnectGoogle={() => void handleDisconnectGoogle()}
-              onSyncCalendar={() => void handleSync("calendar")}
-              onSyncTasks={() => void handleSync("tasks")}
-              hevyConnected={hevyConnected}
-              hevyChecking={hevyChecking}
-              hevySyncing={hevySyncing}
-              hevyMessage={hevyMessage}
-              onHevySync={() => void handleHevySync()}
-              googleLastSyncAt={googleLastSyncAt}
-              hevyLastSyncAt={hevyLastSyncAt}
-            />
-            <ConfigStrategicIntegrationsPanel theme={theme} />
-          </ConfigSettingsSection>
+          </div>
+        </details>
       </div>
+
+      <ConfigSettingsSection
+        theme={theme}
+        title="Conexiones"
+        description="Google, Hevy y otras. Solo usamos lo que actives."
+        icon={<Link2 className="h-4 w-4" aria-hidden />}
+        container="card"
+      >
+        <ConfigIntegrationsPanel
+          theme={theme}
+          googleConnected={googleConnected}
+          googleError={googleError}
+          googleSync={googleSync}
+          connecting={connecting}
+          disconnectingGoogle={disconnectingGoogle}
+          syncingCalendar={syncingCalendar}
+          syncingTasks={syncingTasks}
+          onConnectGoogle={() => void handleConnectGoogle()}
+          onDisconnectGoogle={() => void handleDisconnectGoogle()}
+          onSyncCalendar={() => void handleSync("calendar")}
+          onSyncTasks={() => void handleSync("tasks")}
+          hevyConnected={hevyConnected}
+          hevyChecking={hevyChecking}
+          hevySyncing={hevySyncing}
+          hevyMessage={hevyMessage}
+          onHevySync={() => void handleHevySync()}
+          googleLastSyncAt={googleLastSyncAt}
+          hevyLastSyncAt={hevyLastSyncAt}
+          unified
+        />
+        <ConfigStrategicIntegrationsPanel theme={theme} unified />
+      </ConfigSettingsSection>
 
       <OrbitaImageCropDialog
         open={familyCropOpen}

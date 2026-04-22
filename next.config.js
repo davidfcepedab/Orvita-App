@@ -49,6 +49,10 @@ const nextConfig = {
           },
         ],
       },
+      {
+        source: "/shortcuts/Orvita-Importar-Salud-Hoy.shortcut",
+        headers: [{ key: "Content-Type", value: "application/x-shortcut" }],
+      },
     ]
   },
 }

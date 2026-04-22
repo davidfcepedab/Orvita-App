@@ -3,6 +3,10 @@
 Qué hace
 - Lee en el iPhone las muestras que elijas en el atajo (pasos, sueño, energía activa, entrenos, variación del latido, ritmo en reposo, etc.) y las envía a Órvita para guardarlas en tu cuenta.
 
+Instalar o reinstalar (desde la web de Órvita)
+- El botón «Instalar atajo» abre un enlace con esquema de iOS (import-shortcut). El servidor debe publicar el .shortcut por **HTTPS** sin inicio de sesión.
+- Si el sistema muestra “la URL no es válida”: usa **Descargar archivo del atajo** y ábrelo desde Archivos; o pega en Safari el enlace directo al .shortcut. En otras atajos propias, si “Abrir URL” falla con “Texto enriquecido”, añade antes una acción **Obtener texto** o el contenido de la URL en texto plano.
+
 Cómo actualizarlo en el iPhone
 1. Abre la app Atajos.
 2. Toca el atajo y el menú (⋯) o «Editar atajo».

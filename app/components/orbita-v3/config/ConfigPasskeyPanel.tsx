@@ -17,7 +17,13 @@ import { isAppMockMode } from "@/lib/checkins/flags"
  * Passkeys (Face ID / Touch ID) vía WebAuthn MFA de Supabase.
  * Tras registrar, el dashboard de Auth del proyecto debe tener MFA/WebAuthn habilitado.
  */
-export function ConfigPasskeyPanel({ theme }: { theme: OrbitaConfigTheme }) {
+export function ConfigPasskeyPanel({
+  theme,
+  moduleCard,
+}: {
+  theme: OrbitaConfigTheme
+  moduleCard?: boolean
+}) {
   const [busy, setBusy] = useState(false)
   const [listBusy, setListBusy] = useState(false)
   const [factors, setFactors] = useState<OrvitaPasskeyFactor[]>([])
@@ -49,8 +55,12 @@ export function ConfigPasskeyPanel({ theme }: { theme: OrbitaConfigTheme }) {
   return (
     <section
       id="passkeys-section"
-      className="rounded-2xl border p-4 sm:p-5"
-      style={{ borderColor: theme.border, backgroundColor: theme.surface }}
+      className={moduleCard ? "rounded-xl p-3 sm:p-4" : "rounded-2xl border p-4 sm:p-5"}
+      style={
+        moduleCard
+          ? { backgroundColor: theme.surfaceAlt }
+          : { borderColor: theme.border, backgroundColor: theme.surface }
+      }
     >
       <div className="flex items-start gap-3">
         <div

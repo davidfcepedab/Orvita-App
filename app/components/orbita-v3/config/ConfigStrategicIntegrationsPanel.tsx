@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react"
 import { CheckCircle2, HeartPulse, Landmark, RefreshCw } from "lucide-react"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import type { OrbitaConfigTheme } from "@/app/components/orbita-v3/config/configThemeTypes"
+import { configConnectionActionClass } from "@/lib/config/configSettingsUi"
 import { formatRelativeSyncAgo } from "@/lib/time/formatRelativeSyncAgo"
 
 type IntegrationSettings = {
@@ -35,7 +36,14 @@ const defaultSettings: IntegrationSettings = {
   updated_at: null,
 }
 
-export function ConfigStrategicIntegrationsPanel({ theme }: { theme: OrbitaConfigTheme }) {
+export function ConfigStrategicIntegrationsPanel({
+  theme,
+  unified = true,
+}: {
+  theme: OrbitaConfigTheme
+  /** Misma columna que Google/Hevy, separada por líneas. */
+  unified?: boolean
+}) {
   const [settings, setSettings] = useState<IntegrationSettings>(defaultSettings)
   const [healthConnected, setHealthConnected] = useState(false)
   const [healthLastSync, setHealthLastSync] = useState<string | null>(null)
@@ -221,120 +229,135 @@ export function ConfigStrategicIntegrationsPanel({ theme }: { theme: OrbitaConfi
     }
   }
 
-  return (
-    <section className="space-y-3" aria-labelledby="config-integraciones-fase1">
-      <h3 id="config-integraciones-fase1" className="text-xs font-medium uppercase tracking-[0.14em]" style={{ color: theme.textMuted }}>
-        Integraciones estratégicas (Fase 1)
-      </h3>
+  const pill = `${configConnectionActionClass} flex-1 min-w-[9rem] justify-start sm:justify-center`
 
-      <div className="rounded-2xl border p-5 sm:p-6" style={{ backgroundColor: theme.surface, borderColor: theme.border }}>
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0">
-            <p className="text-sm font-semibold" style={{ color: theme.text }}>Activación por módulo</p>
-            <p className="mt-1 text-xs" style={{ color: theme.textMuted }}>
-              Activa salud, banca y push mejorado. Tokens OAuth se quedan solo en servidor.
-            </p>
-          </div>
-        </div>
-        <div className="mt-4 grid gap-2 sm:grid-cols-3">
-          {TOGGLE_OPTIONS.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              disabled={busy === "settings"}
-              onClick={() =>
-                void patchSettings({
-                  [item.key]: !settings[item.key],
-                } as Partial<IntegrationSettings>)
-              }
-              className="min-h-[44px] rounded-xl border px-3 text-xs font-semibold text-left"
-              style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surfaceAlt }}
-            >
-              {settings[item.key] ? "Conectado" : "Desactivado"} · {item.label}
-            </button>
-          ))}
-        </div>
+  const togglesBlock = (
+    <div className={unified ? "pb-5" : "rounded-2xl border p-5 sm:p-6"} style={unified ? undefined : { backgroundColor: theme.surface, borderColor: theme.border }}>
+      <p className="text-sm font-semibold" style={{ color: theme.text }}>
+        {unified ? "Módulos activos" : "Activación por módulo"}
+      </p>
+      <p className="mt-1 text-xs" style={{ color: theme.textMuted }}>
+        Salud, banca y avisos. Los tokens viven en el servidor.
+      </p>
+      <div className="mt-3.5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+        {TOGGLE_OPTIONS.map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            disabled={busy === "settings"}
+            onClick={() =>
+              void patchSettings({
+                [item.key]: !settings[item.key],
+              } as Partial<IntegrationSettings>)
+            }
+            className={pill}
+            style={{
+              borderColor: settings[item.key] ? theme.accent.health : theme.border,
+              color: settings[item.key] ? "#fff" : theme.text,
+              backgroundColor: settings[item.key] ? theme.accent.health : theme.surfaceAlt,
+            }}
+          >
+            {settings[item.key] ? "On" : "Off"} · {item.label}
+          </button>
+        ))}
       </div>
+    </div>
+  )
 
-      <div className="grid gap-3 lg:grid-cols-2">
-        <div className="rounded-2xl border p-5" style={{ backgroundColor: theme.surface, borderColor: theme.border }}>
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <HeartPulse className="h-4 w-4" style={{ color: theme.accent.health }} />
-              <p className="text-sm font-semibold" style={{ color: theme.text }}>Apple Health (prioridad) + Google Fit</p>
-            </div>
-            {healthConnected && <CheckCircle2 className="h-4 w-4" style={{ color: theme.accent.health }} />}
-          </div>
-          <p className="mt-2 text-xs" style={{ color: theme.textMuted }}>
-            Fuente primaria: Apple Health vía import seguro (Shortcut/export). Fallback: Google Fit.
-          </p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => void connectAppleHealth()}
-              disabled={busy === "apple-connect" || !settings.health_enabled}
-              className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border px-4 text-xs font-semibold"
-              style={{ borderColor: theme.border, color: theme.text }}
-            >
-              {busy === "apple-connect" ? "Conectando…" : "Conectar Apple Health"}
-            </button>
-            <button
-              type="button"
-              onClick={() => void importAppleSample()}
-              disabled={busy === "apple-import" || !settings.health_enabled}
-              className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border px-4 text-xs font-semibold"
-              style={{ borderColor: theme.border, color: theme.text }}
-            >
-              {busy === "apple-import" ? "Importando…" : "Importar muestra Apple"}
-            </button>
-            <button
-              type="button"
-              onClick={() => void syncHealth()}
-              disabled={busy === "health" || !settings.health_enabled}
-              className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border px-4 text-xs font-semibold"
-              style={{ borderColor: theme.border, color: theme.text }}
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-              {busy === "health" ? "Sincronizando…" : "Sincronizar salud"}
-            </button>
-          </div>
-          <p className="mt-3 text-[11px]" style={{ color: theme.textMuted }}>{formatRelativeSyncAgo(healthLastSync)}</p>
-          <p className="mt-1 text-[11px]" style={{ color: theme.textMuted }}>
-            Fuente actual: {healthSource === "apple_health_export" ? "Apple Health" : healthSource === "google_fit" ? "Google Fit" : "Sin datos"}
+  const healthBlock = (
+    <div
+      className={unified ? "py-5" : "rounded-2xl border p-5"}
+      style={unified ? undefined : { backgroundColor: theme.surface, borderColor: theme.border }}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <HeartPulse className="h-4 w-4" style={{ color: theme.accent.health }} />
+          <p className="text-sm font-semibold" style={{ color: theme.text }}>
+            Apple Health + Google Fit
           </p>
         </div>
-
-        <div className="rounded-2xl border p-5" style={{ backgroundColor: theme.surface, borderColor: theme.border }}>
-          <div className="flex items-center gap-2">
-            <Landmark className="h-4 w-4" style={{ color: theme.accent.finance }} />
-            <p className="text-sm font-semibold" style={{ color: theme.text }}>Banca abierta (CO)</p>
-          </div>
-          <p className="mt-2 text-xs" style={{ color: theme.textMuted }}>Conecta Bancolombia, Davivienda o Nequi para conciliación automática.</p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {(["bancolombia", "davivienda", "nequi"] as const).map((provider) => (
-              <button
-                key={provider}
-                type="button"
-                onClick={() => void connectBank(provider)}
-                disabled={busy === `bank-${provider}` || !settings.banking_enabled}
-                className="min-h-[44px] rounded-xl border px-3 text-xs font-semibold capitalize"
-                style={{ borderColor: theme.border, color: theme.text }}
-              >
-                {busy === `bank-${provider}` ? "Conectando…" : `Conectar ${provider}`}
-              </button>
-            ))}
-          </div>
-          <p className="mt-3 text-[11px]" style={{ color: theme.textMuted }}>
-            {(bankAccounts.length > 0
-              ? `Conectado a ${bankAccounts[0]?.provider?.[0]?.toUpperCase() ?? ""}${bankAccounts[0]?.provider?.slice(1) ?? "banco"} (${bankAccounts.length} cuenta(s))`
-              : "No conectado") +
-              " · " + formatRelativeSyncAgo(bankLastSync)}
-          </p>
-        </div>
+        {healthConnected && <CheckCircle2 className="h-4 w-4" style={{ color: theme.accent.health }} aria-label="Conectado" />}
       </div>
+      <p className="mt-1.5 text-xs" style={{ color: theme.textMuted }}>
+        Import (Atajo) o sincronizar Google Fit según ajustes del servidor.
+      </p>
+      <div className="mt-3.5 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => void connectAppleHealth()}
+          disabled={busy === "apple-connect" || !settings.health_enabled}
+          className={configConnectionActionClass}
+          style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surfaceAlt }}
+        >
+          {busy === "apple-connect" ? "…" : "Conectar Apple"}
+        </button>
+        <button
+          type="button"
+          onClick={() => void importAppleSample()}
+          disabled={busy === "apple-import" || !settings.health_enabled}
+          className={configConnectionActionClass}
+          style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surfaceAlt }}
+        >
+          {busy === "apple-import" ? "…" : "Importar muestra"}
+        </button>
+        <button
+          type="button"
+          onClick={() => void syncHealth()}
+          disabled={busy === "health" || !settings.health_enabled}
+          className={configConnectionActionClass}
+          style={{ borderColor: theme.accent.health, backgroundColor: theme.accent.health, color: "#fff" }}
+        >
+          <RefreshCw className="h-3.5 w-3.5" />
+          {busy === "health" ? "…" : "Sync salud"}
+        </button>
+      </div>
+      <p className="mt-2.5 text-[11px]" style={{ color: theme.textMuted }}>
+        {formatRelativeSyncAgo(healthLastSync)} · {healthSource === "apple_health_export" ? "Apple" : healthSource === "google_fit" ? "Google Fit" : "Sin datos"}
+      </p>
+    </div>
+  )
 
-      {notice && <p className="text-xs" style={{ color: theme.textMuted }}>{notice}</p>}
-      {error && <p className="text-xs" style={{ color: theme.accent.finance }}>{error}</p>}
+  const bankBlock = (
+    <div
+      className={unified ? "pt-5" : "rounded-2xl border p-5"}
+      style={unified ? undefined : { backgroundColor: theme.surface, borderColor: theme.border }}
+    >
+      <div className="flex items-center gap-2">
+        <Landmark className="h-4 w-4" style={{ color: theme.accent.finance }} />
+        <p className="text-sm font-semibold" style={{ color: theme.text }}>
+          Banca (CO)
+        </p>
+      </div>
+      <p className="mt-1.5 text-xs" style={{ color: theme.textMuted }}>
+        Bancolombia, Davivienda, Nequi.
+      </p>
+      <div className="mt-3.5 flex flex-wrap gap-2">
+        {(["bancolombia", "davivienda", "nequi"] as const).map((provider) => (
+          <button
+            key={provider}
+            type="button"
+            onClick={() => void connectBank(provider)}
+            disabled={busy === `bank-${provider}` || !settings.banking_enabled}
+            className={configConnectionActionClass}
+            style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surfaceAlt }}
+            title={`Conectar ${provider}`}
+          >
+            {busy === `bank-${provider}` ? "…" : provider[0].toUpperCase() + provider.slice(1)}
+          </button>
+        ))}
+      </div>
+      <p className="mt-2.5 text-[11px]" style={{ color: theme.textMuted }}>
+        {bankAccounts.length > 0
+          ? `${bankAccounts.length} cuenta(s) · ${formatRelativeSyncAgo(bankLastSync)}`
+          : `Sin banca · ${formatRelativeSyncAgo(bankLastSync)}`}
+      </p>
+    </div>
+  )
+
+  const foot = (
+    <>
+      {notice ? <p className="text-xs" style={{ color: theme.textMuted }}>{notice}</p> : null}
+      {error ? <p className="text-xs" style={{ color: theme.accent.finance }}>{error}</p> : null}
       {error && lastFailedAction ? (
         <button
           type="button"
@@ -345,12 +368,48 @@ export function ConfigStrategicIntegrationsPanel({ theme }: { theme: OrbitaConfi
               void connectBank("bancolombia")
             }
           }}
-          className="min-h-[44px] rounded-xl border px-4 text-xs font-semibold"
+          className={configConnectionActionClass}
           style={{ borderColor: theme.border, color: theme.text }}
         >
-          Reintentar conexión
+          Reintentar
         </button>
       ) : null}
+    </>
+  )
+
+  if (unified) {
+    return (
+      <div aria-labelledby="config-strategic-heading" className="mt-0 border-t pt-5" style={{ borderColor: theme.border }}>
+        <p
+          id="config-strategic-heading"
+          className="m-0 text-[10px] font-semibold uppercase tracking-[0.16em]"
+          style={{ color: theme.textMuted }}
+        >
+          Salud, banca y avisos
+        </p>
+        <div className="mt-3 flex flex-col divide-y" style={{ borderColor: theme.border }}>
+          {togglesBlock}
+          {healthBlock}
+          {bankBlock}
+        </div>
+        <div className="mt-3 space-y-2">{foot}</div>
+      </div>
+    )
+  }
+
+  return (
+    <section className="space-y-3" aria-labelledby="config-integraciones-fase1-legacy">
+      <h3 id="config-integraciones-fase1-legacy" className="text-xs font-medium uppercase tracking-[0.14em]" style={{ color: theme.textMuted }}>
+        Integraciones estratégicas
+      </h3>
+      <div className="space-y-3">
+        {togglesBlock}
+        <div className="grid gap-3 lg:grid-cols-2">
+          {healthBlock}
+          {bankBlock}
+        </div>
+        {foot}
+      </div>
     </section>
   )
 }
