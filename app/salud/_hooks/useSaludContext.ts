@@ -18,6 +18,8 @@ import {
 import { buildOperationalContext } from "@/lib/operational/context"
 import type { AppleHealthContextSignals, Checkin, OperationalContextData } from "@/lib/operational/types"
 import type { HealthPreferencesPayload } from "@/lib/health/healthPrefsTypes"
+import { goalMlFromHabitMetadata, isWaterTrackingHabit } from "@/lib/habits/waterTrackingHelpers"
+import type { HabitMetadata } from "@/lib/operational/types"
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
 
@@ -36,6 +38,7 @@ function isAppleHealthContextPayload(value: unknown): value is AppleHealthContex
     "energy_index",
     "workouts_count",
     "workout_minutes",
+    "resting_hr_bpm",
   ] as const) {
     const v = a[key]
     if (v != null && typeof v !== "number") return false
@@ -80,9 +83,17 @@ const MOCK_CONTEXT: OperationalContextData = buildOperationalContext({
   recentCheckinsDesc: MOCK_CHECKINS_DESC,
 })
 
+type HabitWaterSnapshot = {
+  /** Suma de ml del día para hábitos tipo agua (Misión en /hoy). */
+  totalMl: number
+  /** Meta en ml del hábito más exigente (si hay varios). */
+  goalMl: number
+}
+
 export function useSaludContext() {
   const [data, setData] = useState<OperationalContextData | null>(null)
   const [prefs, setPrefs] = useState<HealthPreferencesPayload | null>(null)
+  const [habitWater, setHabitWater] = useState<HabitWaterSnapshot | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -99,17 +110,37 @@ export function useSaludContext() {
       }
 
       try {
-        const [response, prefsRes] = await Promise.all([
+        const [response, prefsRes, habitsPayload] = await Promise.all([
           getContext(),
           fetch("/api/health/preferences", { cache: "no-store", credentials: "include" }).then(async (r) => {
             const j = (await r.json()) as { success?: boolean; preferences?: HealthPreferencesPayload }
             return r.ok && j.success ? j.preferences ?? {} : {}
+          }),
+          fetch("/api/habits", { cache: "no-store", credentials: "include" }).then(async (r) => {
+            const j = (await r.json()) as {
+              success?: boolean
+              data?: { habits?: Array<{ water_today_ml?: number; metadata?: HabitMetadata | null }> }
+            }
+            return r.ok && j.success ? j.data?.habits ?? [] : []
           }),
         ])
 
         if (!active) return
 
         setPrefs(prefsRes)
+
+        let totalMl = 0
+        let maxGoal = 0
+        let sawWaterHabit = false
+        for (const h of habitsPayload) {
+          const meta = h.metadata ?? undefined
+          if (isWaterTrackingHabit(meta)) {
+            sawWaterHabit = true
+            totalMl += typeof h.water_today_ml === "number" ? h.water_today_ml : 0
+            maxGoal = Math.max(maxGoal, goalMlFromHabitMetadata(meta))
+          }
+        }
+        setHabitWater(sawWaterHabit ? { totalMl, goalMl: maxGoal } : null)
 
         if (!response || !isOperationalContextData(response)) {
           setError(UI_HEALTH_CONTEXT_ERROR)
@@ -173,12 +204,24 @@ export function useSaludContext() {
     }))
 
     const p = prefs ?? {}
-    const hydrationTarget = typeof p.hydrationTargetLiters === "number" && p.hydrationTargetLiters > 0
-      ? p.hydrationTargetLiters
-      : HEALTH_HYDRATION_TARGET
-    const hydrationTracked =
-      typeof p.hydrationLitersToday === "number" && Number.isFinite(p.hydrationLitersToday) && p.hydrationLitersToday >= 0
-    const hydrationCurrent = hydrationTracked ? Math.max(0, Number(p.hydrationLitersToday!.toFixed(2))) : 0
+    const targetFromPrefs =
+      typeof p.hydrationTargetLiters === "number" && p.hydrationTargetLiters > 0 ? p.hydrationTargetLiters : null
+    const targetFromHabitL = habitWater && habitWater.goalMl > 0 ? habitWater.goalMl / 1000 : null
+    const hydrationTarget = targetFromPrefs ?? targetFromHabitL ?? HEALTH_HYDRATION_TARGET
+
+    let hydrationCurrent = 0
+    let hydrationTracked = false
+    if (habitWater) {
+      hydrationCurrent = Math.max(0, Number((habitWater.totalMl / 1000).toFixed(2)))
+      hydrationTracked = true
+    } else if (
+      typeof p.hydrationLitersToday === "number" &&
+      Number.isFinite(p.hydrationLitersToday) &&
+      p.hydrationLitersToday >= 0
+    ) {
+      hydrationCurrent = Math.max(0, Number(p.hydrationLitersToday.toFixed(2)))
+      hydrationTracked = true
+    }
 
     const mg = p.macrosGramsToday
     const macrosFromLog =
@@ -262,7 +305,7 @@ export function useSaludContext() {
       trainingDays,
       trainingMinutes,
     }
-  }, [data, error, loading, prefs])
+  }, [data, error, loading, prefs, habitWater])
 }
 
 export type SaludContextSnapshot = ReturnType<typeof useSaludContext>

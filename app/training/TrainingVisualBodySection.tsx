@@ -89,9 +89,6 @@ export function TrainingVisualBodySection({
   const heroImageKey =
     useUserImage && imageSrc.startsWith("data:") ? `goal-${goalImageDisplayKey}` : imageSrc
 
-  const ghostActionClass =
-    "rounded px-0 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-orbita-secondary underline-offset-2 transition hover:text-orbita-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orbita-border"
-
   return (
     <section aria-labelledby="training-visual-body-heading" className="grid gap-6">
       <input
@@ -102,88 +99,100 @@ export function TrainingVisualBodySection({
         onChange={onFileChange}
       />
 
-      <header className="space-y-1">
-        <h2
-          id="training-visual-body-heading"
-          className="text-lg font-semibold tracking-tight text-orbita-primary sm:text-xl"
-        >
-          Objetivo Visual & Seguimiento Corporal
-        </h2>
-        <p className="flex flex-wrap items-baseline gap-x-1 text-[10px] uppercase tracking-[0.12em] text-orbita-secondary">
-          <button type="button" onClick={onPickImage} className={ghostActionClass}>
-            Agregar imagen
-          </button>
-          <span className="select-none text-orbita-border" aria-hidden>
-            {" "}
-            -{" "}
-          </span>
-          <button
-            type="button"
-            disabled={goalImageGenerating || !visualGoalDescription.trim()}
-            onClick={() => void onGenerateGoalWithAI()}
-            className={`${ghostActionClass} disabled:pointer-events-none disabled:opacity-40`}
+      <header className="space-y-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <h2
+            id="training-visual-body-heading"
+            className="text-lg font-semibold tracking-tight text-orbita-primary sm:text-xl"
           >
-            {goalImageGenerating ? (
-              <span className="inline-flex items-center gap-1.5 normal-case tracking-normal">
-                <Loader2 className="h-3 w-3 animate-spin" strokeWidth={2.5} aria-hidden />
-                Generando…
-              </span>
-            ) : (
-              "Generar con IA"
-            )}
-          </button>
-        </p>
+            Objetivo visual y medidas
+          </h2>
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+            <button
+              type="button"
+              onClick={onPickImage}
+              className="rounded-lg border border-orbita-border/90 bg-orbita-surface px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-orbita-primary transition hover:bg-orbita-surface-alt"
+            >
+              Foto
+            </button>
+            <button
+              type="button"
+              disabled={goalImageGenerating || !visualGoalDescription.trim()}
+              onClick={() => void onGenerateGoalWithAI()}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-orbita-border/90 bg-orbita-surface px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-orbita-primary transition hover:bg-orbita-surface-alt disabled:pointer-events-none disabled:opacity-40"
+            >
+              {goalImageGenerating ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={2.5} aria-hidden />
+                  Generando…
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-3.5 w-3.5" strokeWidth={2.2} aria-hidden />
+                  Imagen con IA
+                </>
+              )}
+            </button>
+          </div>
+        </div>
         {prefsLoading && remotePrefs && (
           <p className="text-[10px] text-orbita-secondary">Cargando preferencias…</p>
         )}
-        <div className="mt-3 space-y-1.5">
-          <label className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary" htmlFor="training-visual-ai-prompt">
-            Prompt para la IA
-          </label>
-          <textarea
-            id="training-visual-ai-prompt"
-            value={visualGoalDescription}
-            onChange={(e) => onVisualGoalDescriptionChange(e.target.value)}
-            maxLength={900}
-            rows={3}
-            placeholder="Describe el objetivo visual: musculatura, composición corporal, iluminación, estilo de foto…"
-            className="w-full resize-y rounded-xl border border-orbita-border bg-orbita-surface px-3 py-2.5 text-sm leading-relaxed text-orbita-primary shadow-sm placeholder:text-orbita-secondary focus:border-[color-mix(in_srgb,var(--color-accent-primary)_38%,var(--color-border))] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--color-accent-primary)_26%,transparent)]"
-          />
-          <fieldset className="mt-2 space-y-1.5 border-0 p-0">
-            <legend className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
-              Modo IA
-            </legend>
-            <label className="flex cursor-pointer items-start gap-2 text-[11px] leading-snug text-orbita-secondary">
-              <input
-                type="radio"
-                name="training-goal-ai-mode"
-                className="mt-0.5"
-                checked={goalImageAiMode === "create"}
-                onChange={() => onGoalImageAiModeChange("create")}
-              />
-              <span>
-                <span className="font-medium text-orbita-primary">Imagen nueva desde el prompt</span> (DALL·E 3) — escena distinta,
-                recomendado para objetivos visuales llamativos. No usa tu foto.
-              </span>
+        <details className="group rounded-2xl border border-orbita-border/80 bg-orbita-surface/50 p-3 sm:p-4">
+          <summary className="cursor-pointer list-none text-sm font-medium text-orbita-primary marker:hidden [&::-webkit-details-marker]:hidden">
+            <span className="group-open:hidden">Instrucciones para la imagen (opcional)</span>
+            <span className="hidden group-open:inline">Ocultar instrucciones de imagen</span>
+            <span className="ml-2 text-[11px] font-normal text-orbita-secondary">— texto, modo y límites</span>
+          </summary>
+          <div className="mt-3 space-y-1.5">
+            <label className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary" htmlFor="training-visual-ai-prompt">
+              Qué quieres mostrar
             </label>
-            <label className="flex cursor-pointer items-start gap-2 text-[11px] leading-snug text-orbita-secondary">
-              <input
-                type="radio"
-                name="training-goal-ai-mode"
-                className="mt-0.5"
-                checked={goalImageAiMode === "edit"}
-                onChange={() => onGoalImageAiModeChange("edit")}
-              />
-              <span>
-                <span className="font-medium text-orbita-primary">Editar referencia</span> (DALL·E 2) — ajuste sobre tu imagen o el
-                placeholder; suele cambiar poco.
-              </span>
-            </label>
-          </fieldset>
-          <p className="text-[10px] text-orbita-secondary">
-            {visualGoalDescription.length}/900 · En modo edición, la base es tu imagen o el placeholder si no hay foto.
-          </p>
-        </div>
+            <textarea
+              id="training-visual-ai-prompt"
+              value={visualGoalDescription}
+              onChange={(e) => onVisualGoalDescriptionChange(e.target.value)}
+              maxLength={900}
+              rows={3}
+              placeholder="Describe el objetivo visual: musculatura, composición corporal, luz, estilo de foto…"
+              className="w-full resize-y rounded-xl border border-orbita-border bg-orbita-surface px-3 py-2.5 text-sm leading-relaxed text-orbita-primary shadow-sm placeholder:text-orbita-secondary focus:border-[color-mix(in_srgb,var(--color-accent-primary)_38%,var(--color-border))] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--color-accent-primary)_26%,transparent)]"
+            />
+            <fieldset className="mt-2 space-y-1.5 border-0 p-0">
+              <legend className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
+                Cómo genera la imagen
+              </legend>
+              <label className="flex cursor-pointer items-start gap-2 text-[11px] leading-snug text-orbita-secondary">
+                <input
+                  type="radio"
+                  name="training-goal-ai-mode"
+                  className="mt-0.5"
+                  checked={goalImageAiMode === "create"}
+                  onChange={() => onGoalImageAiModeChange("create")}
+                />
+                <span>
+                  <span className="font-medium text-orbita-primary">Escena nueva</span> a partir de tu texto (suele verse más
+                  distinta; no parte de tu foto).
+                </span>
+              </label>
+              <label className="flex cursor-pointer items-start gap-2 text-[11px] leading-snug text-orbita-secondary">
+                <input
+                  type="radio"
+                  name="training-goal-ai-mode"
+                  className="mt-0.5"
+                  checked={goalImageAiMode === "edit"}
+                  onChange={() => onGoalImageAiModeChange("edit")}
+                />
+                <span>
+                  <span className="font-medium text-orbita-primary">Ajuste sobre referencia</span> (tu subida o la imagen de
+                  ejemplo); los cambios suelen ser más suaves.
+                </span>
+              </label>
+            </fieldset>
+            <p className="text-[10px] text-orbita-secondary">
+              {visualGoalDescription.length}/900 caracteres · En edición, la base es tu imagen o el placeholder si aún no subes nada.
+            </p>
+          </div>
+        </details>
       </header>
 
       <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8 lg:items-stretch">

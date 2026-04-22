@@ -26,6 +26,7 @@ import {
 import { rechartsTooltipContentStyle } from "@/lib/charts/rechartsShared"
 import { isAppMockMode, isSupabaseEnabled, UI_HEALTH_SUPPLEMENTS_LOCAL } from "@/lib/checkins/flags"
 import { useHealthSummaryNarrative } from "@/app/health/useHealthSummaryNarrative"
+import { useAppleHevyCorrelationNarrative } from "@/app/health/useAppleHevyCorrelationNarrative"
 import { useHealthAutoMetrics } from "@/app/hooks/useHealthAutoMetrics"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import {
@@ -191,6 +192,14 @@ export default function HealthPage() {
     [today, appleSignals],
   )
 
+  const appleHevyInsight = useAppleHevyCorrelationNarrative({
+    loading: salud.loading || autoHealthLoading,
+    apple: appleSignals,
+    hevyToday: today ?? null,
+    checkSalud: salud.scoreSalud,
+    checkFisico: salud.scoreFisico,
+  })
+
   const healthSummary = useHealthSummaryNarrative({
     loading: salud.loading,
     bodyBattery: salud.bodyBattery,
@@ -216,8 +225,8 @@ export default function HealthPage() {
           Operaciones de Salud
         </h1>
         <p className="m-0 mt-1.5 max-w-[40rem] text-[13px] leading-relaxed text-[var(--color-text-secondary)]">
-          Check-ins reales (Supabase), tendencia de 7 días y preferencias opcionales de hidratación/macros. Lo que no
-          registres aquí no se inventa: sin wearable integrado no mostramos HRV ni FC medidas.
+          Check-ins, tendencia de la semana y, si quieres, agua y comida. Lo que no anotes no lo inventamos: si no
+          conectas el teléfono, no rellenamos mediciones avanzadas del corazón.
         </p>
         {salud.error && (
           <p style={{ margin: "8px 0 0", fontSize: "11px", color: "var(--color-accent-danger)" }}>{salud.error}</p>
@@ -240,16 +249,15 @@ export default function HealthPage() {
             Apple Health y datos automáticos
           </p>
           <p className="m-0 max-w-prose text-pretty text-[13px] leading-relaxed text-[var(--color-text-secondary)]">
-            En web/PWA no hay acceso directo a HealthKit: Apple no lista Órvita en Salud → Apps. Los datos llegan por
-            importación (Atajo de iOS o export) al servidor; aquí ves lo último guardado en{" "}
-            <span className="font-mono text-[12px]">health_metrics</span>.
+            Desde el navegador no abrimos la app Salud al detalle: lo que ves aquí es lo que envías tú con el atajo de
+            iPhone (o una importación similar). Así respetamos privacidad y reglas de Apple, y tú controlas el envío.
           </p>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7">
             {[
               { label: "Sueño (h)", value: autoHealth?.sleep_hours != null ? String(autoHealth.sleep_hours) : "—" },
-              { label: "HRV (ms)", value: autoHealth?.hrv_ms != null ? String(autoHealth.hrv_ms) : "—" },
+              { label: "Calma del pulso (ms)", value: autoHealth?.hrv_ms != null ? String(autoHealth.hrv_ms) : "—" },
               {
-                label: "Readiness",
+                label: "Disposición hoy",
                 value: autoHealth?.readiness_score != null ? String(autoHealth.readiness_score) : "—",
               },
               { label: "Pasos", value: autoHealth?.steps != null ? String(autoHealth.steps) : "—" },
@@ -258,14 +266,18 @@ export default function HealthPage() {
                 value: autoHealth?.calories != null ? String(Math.round(autoHealth.calories)) : "—",
               },
               {
-                label: "Entrenos (Apple)",
+                label: "Movimientos (Apple)",
                 value:
                   appleSignals?.workouts_count != null ? String(Math.round(appleSignals.workouts_count)) : "—",
               },
               {
-                label: "Min entreno (Apple)",
+                label: "Minutos de entreno (Apple)",
                 value:
                   appleSignals?.workout_minutes != null ? String(Math.round(appleSignals.workout_minutes)) : "—",
+              },
+              {
+                label: "Ritmo en reposo (lpm)",
+                value: appleSignals?.resting_hr_bpm != null ? String(Math.round(appleSignals.resting_hr_bpm)) : "—",
               },
             ].map((m) => (
               <div
@@ -341,11 +353,33 @@ export default function HealthPage() {
       <Card>
         <div className="grid gap-3 p-4 sm:gap-3.5 sm:p-6">
           <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
+            Reloj, entreno y check-in
+          </p>
+          {salud.loading || autoHealthLoading ? (
+            <p className="m-0 text-[13px] leading-relaxed text-[var(--color-text-secondary)]">Preparando la lectura…</p>
+          ) : (
+            <p className="m-0 max-w-prose text-pretty text-[14px] leading-relaxed text-[var(--color-text-primary)] sm:text-[15px] sm:leading-[1.55]">
+              {appleHevyInsight.paragraph}
+            </p>
+          )}
+          {!salud.loading && !autoHealthLoading && (
+            <p className="m-0 text-[10px] leading-snug text-[var(--color-text-secondary)]">
+              {appleHevyInsight.usedAi
+                ? "Texto con inteligencia artificial a partir de lo que mide el teléfono y de lo que figura en Hevy, en lenguaje sencillo. No sustituye consejo médico."
+                : "Lectura automática: cruza reloj y plan de gimnasio. Con el asistente de redacción activo en el servidor, el tono de este bloque se vuelve más conversacional."}
+            </p>
+          )}
+        </div>
+      </Card>
+
+      <Card>
+        <div className="grid gap-3 p-4 sm:gap-3.5 sm:p-6">
+          <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
             Sueño importado (Apple Health)
           </p>
           <p className="m-0 max-w-prose text-pretty text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
-            Serie a partir de tus últimas filas en <span className="font-mono text-[11px]">health_metrics</span> (cada
-            importación del Atajo). No es polisomnografía; es la suma de sueño que Apple calculó para cada día.
+            Cada barra es un día en el que importaste datos; Apple resume horas de sueño, no un estudio de laboratorio. Si
+            faltan días, conviene correr otra vez el atajo.
           </p>
           <div className="h-[200px] w-full min-w-0 min-h-[180px]">
             {autoHealthLoading ? (
@@ -527,8 +561,8 @@ export default function HealthPage() {
             </p>
             {!salud.hydrationTracked ? (
               <p className="m-0 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
-                Sin registro de agua hoy: no mostramos litros inventados. Cuando guardes tu consumo en preferencias de
-                salud (mismo endpoint que suplementos), aparecerá aquí con la barra de progreso.
+                Aún no tenemos litros para hoy. Si marcas vasos en la misión de agua de Inicio, o anotas agua en
+                preferencias de salud, verás la barra aquí sin repetir el dato a mano.
               </p>
             ) : (
               <>

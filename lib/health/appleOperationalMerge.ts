@@ -20,6 +20,15 @@ export function mapHealthMetricsRowToAppleSignals(row: unknown): AppleHealthCont
   const ageMs = Date.now() - Date.parse(observed_at)
   const sync_stale = Number.isFinite(ageMs) && ageMs > 36 * 60 * 60 * 1000
 
+  const wc = num(meta.apple_workouts_count)
+  const wmMeta = num(meta.workouts_minutes)
+  const workout_minutes_final =
+    workout_minutes != null && workout_minutes > 0
+      ? workout_minutes
+      : wmMeta != null && wmMeta > 0
+        ? Math.round(wmMeta)
+        : null
+
   return {
     observed_at,
     source: typeof r.source === "string" ? r.source : null,
@@ -29,8 +38,9 @@ export function mapHealthMetricsRowToAppleSignals(row: unknown): AppleHealthCont
     steps: num(r.steps),
     calories: num(r.calories),
     energy_index: num(r.energy_index),
-    workouts_count: num(meta.apple_workouts_count),
-    workout_minutes,
+    workouts_count: wc,
+    workout_minutes: workout_minutes_final,
+    resting_hr_bpm: num(meta.resting_hr_bpm),
     sync_stale,
   }
 }

@@ -28,6 +28,7 @@ import { isAppMockMode, isSupabaseEnabled, UI_TRAINING_PREFS_LOCAL } from "@/lib
 import { TrainingVisualBodySection } from "./TrainingVisualBodySection"
 import { agendaTodayYmd } from "@/lib/agenda/localDateKey"
 import { useHealthAutoMetrics } from "@/app/hooks/useHealthAutoMetrics"
+import { useAppleHevyCorrelationNarrative } from "@/app/health/useAppleHevyCorrelationNarrative"
 import {
   appleDaySignalsFromHealthMetric,
   describeAppleHealthVersusHevy,
@@ -43,7 +44,7 @@ function formatStatus(status: TrainingStatus) {
 
 export default function TrainingPage() {
   const { today, days, loading, error, manualStatus, setManualStatus } = useTraining()
-  const { latest: appleHealth } = useHealthAutoMetrics()
+  const { latest: appleHealth, loading: appleHealthLoading } = useHealthAutoMetrics()
   const {
     bodyRows,
     mealDays,
@@ -218,6 +219,12 @@ export default function TrainingPage() {
     [today, appleSignals],
   )
 
+  const appleHevyTrainingInsight = useAppleHevyCorrelationNarrative({
+    loading: loading || appleHealthLoading,
+    apple: appleSignals,
+    hevyToday: today ?? null,
+  })
+
   return (
     <div className="orbita-page-stack">
       <div className="min-w-0">
@@ -225,9 +232,9 @@ export default function TrainingPage() {
           Operaciones de Entrenamiento
         </h1>
         <p style={{ margin: "6px 0 0", fontSize: "13px", color: "var(--color-text-secondary)" }}>
-          Mantenimiento físico, carga y objetivos de rendimiento. Los entrenos vienen de{" "}
-          <span style={{ fontWeight: 600 }}>{HEVY_INTEGRATION_LABEL}</span>; Apple Health refuerza gasto energético y
-          sueño cuando importas con el Atajo.
+          Entrenos y volumen salen de{" "}
+          <span style={{ fontWeight: 600 }}>{HEVY_INTEGRATION_LABEL}</span>. Lo que añade el teléfono (sueño, pasos,
+          calorías) llega solo cuando tú importas con el atajo: así mantienes el control.
         </p>
         {!remotePrefs && !isAppMockMode() && (
           <p style={{ margin: "8px 0 0", fontSize: "11px", color: "var(--color-text-secondary)" }}>
@@ -370,6 +377,39 @@ export default function TrainingPage() {
               </p>
             </div>
           </div>
+        </div>
+      </Card>
+
+      <Card>
+        <div className="p-[var(--spacing-lg)]" style={{ display: "grid", gap: 12 }}>
+          <p
+            style={{
+              margin: 0,
+              fontSize: "11px",
+              textTransform: "uppercase",
+              letterSpacing: "0.14em",
+              color: "var(--color-text-secondary)",
+            }}
+          >
+            Lectura de hoy: reloj y gimnasio
+          </p>
+          {loading || appleHealthLoading ? (
+            <p style={{ margin: 0, fontSize: "13px", color: "var(--color-text-secondary)" }}>Preparando la lectura…</p>
+          ) : (
+            <p
+              className="max-w-prose text-pretty"
+              style={{ margin: 0, fontSize: "15px", lineHeight: 1.55, color: "var(--color-text-primary)" }}
+            >
+              {appleHevyTrainingInsight.paragraph}
+            </p>
+          )}
+          {!loading && !appleHealthLoading && (
+            <p style={{ margin: 0, fontSize: "10px", lineHeight: 1.4, color: "var(--color-text-secondary)" }}>
+              {appleHevyTrainingInsight.usedAi
+                ? "Redactado con inteligencia artificial a partir de Hevy y del último dato de Apple que enviaste. No sustituye consejo médico."
+                : "Resumen fijo a partir de reloj y entreno; con asistente de redacción activo en el servidor, el estilo gana matices."}
+            </p>
+          )}
         </div>
       </Card>
 

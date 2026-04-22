@@ -73,43 +73,92 @@ export type MilestoneView = {
   subtitle: string
 }
 
+function formatEsShortYmd(ymd: string): string {
+  const parts = ymd.trim().slice(0, 10).split("-").map(Number)
+  if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) return ymd
+  const [y, m, d] = parts
+  try {
+    return new Date(Date.UTC(y!, m! - 1, d!)).toLocaleDateString("es", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    })
+  } catch {
+    return ymd
+  }
+}
+
+/** Último día Hevy cuyo nombre coincide (todo el historial disponible). */
+function findLastHevyNameMatch(allDays: TrainingDay[], re: RegExp): TrainingDay | null {
+  const matches = allDays.filter((d) => d.source === "hevy" && re.test((d.workoutName ?? "").toLowerCase()))
+  if (matches.length === 0) return null
+  return [...matches].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))[0] ?? null
+}
+
 export function buildMilestoneViews(days: TrainingDay[], seeds: TrainingMilestoneSeed[]): MilestoneView[] {
   const cutoff = addCalendarDaysYmd(agendaTodayYmd(), -14)
   const recent = days.filter((d) => d.date >= cutoff && d.source === "hevy")
+  const hevyAll = days.filter((d) => d.source === "hevy")
 
   return seeds.map((seed) => {
     if (seed.unit === "kg") {
-      const n = countWorkoutNameMatches(recent, /dead|peso muerto|rumo|rdl|sumo/i)
-      const pct = n > 0 ? Math.min(100, Math.round((n / 6) * 100)) : 0
+      const re = /dead|peso muerto|rumo|rdl|sumo/i
+      const n = countWorkoutNameMatches(recent, re)
+      const lastEver = findLastHevyNameMatch(hevyAll, re)
+      const pct =
+        n > 0
+          ? Math.min(100, Math.round((n / 6) * 100))
+          : lastEver
+            ? 14
+            : 0
       return {
         id: seed.id,
         title: seed.title.replace(/Deadlift/i, "Peso muerto"),
         progressLabel:
           n > 0
             ? `Hevy (14 días): ${n} sesión(es) con patrón de fuerza · referencia ${seed.target} ${seed.unit}`
-            : `Referencia ${seed.target} ${seed.unit} — sin sesiones Hevy con patrón de peso muerto (14 días)`,
+            : lastEver
+              ? `Referencia ${seed.target} ${seed.unit} — última señal similar en Hevy: ${formatEsShortYmd(lastEver.date)}${
+                  lastEver.workoutName ? ` (“${lastEver.workoutName.slice(0, 48)}${lastEver.workoutName.length > 48 ? "…" : ""}”)` : ""
+                }. En 14 días no volvió a aparecer.`
+              : `Referencia ${seed.target} ${seed.unit} — aún no hay entrenos Hevy con nombre afín a peso muerto o similar.`,
         barPct: pct,
         subtitle:
           n > 0
             ? "La barra refleja consistencia de sesiones con nombre/ejercicios tipo peso muerto; no sustituye el registro de cargas en Hevy."
-            : "Registra entrenos en Hevy cuyo nombre o bloque sugiera peso muerto/RDL para seguir este hito.",
+            : lastEver
+              ? "La franja baja mira solo los últimos 14 días; igual ves arriba cuándo fue la vez anterior en tu historial."
+              : "Registra entrenos en Hevy cuyo nombre o bloque sugiera peso muerto o RDL para llenar este hito.",
       }
     }
     if (seed.unit === "min" && seed.reverse) {
-      const n = countWorkoutNameMatches(recent, /run|carrera|5k|5 k|rodaje|interval|tempo/i)
-      const pct = n > 0 ? Math.min(100, Math.round((n / 4) * 100)) : 0
+      const re = /run|carrera|5k|5 k|rodaje|interval|tempo/i
+      const n = countWorkoutNameMatches(recent, re)
+      const lastEver = findLastHevyNameMatch(hevyAll, re)
+      const pct =
+        n > 0
+          ? Math.min(100, Math.round((n / 4) * 100))
+          : lastEver
+            ? 14
+            : 0
       return {
         id: seed.id,
         title: seed.title.replace(/5 km Run/i, "Carrera 5 km"),
         progressLabel:
           n > 0
             ? `Hevy (14 días): ${n} sesión(es) tipo carrera/rodaje · objetivo tiempo ~${seed.target} min`
-            : `Objetivo ~${seed.target} min (5K) — sin carreras/rodajes detectados en Hevy (14 días)`,
+            : lastEver
+              ? `Objetivo ~${seed.target} min (5K) — última carrera/rodaje similar: ${formatEsShortYmd(lastEver.date)}${
+                  lastEver.workoutName ? ` (“${lastEver.workoutName.slice(0, 48)}${lastEver.workoutName.length > 48 ? "…" : ""}”)` : ""
+                }. En 14 días no se repitió.`
+              : `Objetivo ~${seed.target} min (5K) — aún no hay carreras o rodajes Hevy con nombre afín.`,
         barPct: pct,
         subtitle:
           n > 0
             ? "La barra refleja frecuencia de sesiones con patrón carrera/intervalo; el tiempo de carrera no se infiere aún desde la API."
-            : "Añade entrenos con nombre tipo carrera, 5K o rodaje en Hevy para seguir este hito.",
+            : lastEver
+              ? "Contamos 14 días para la racha; la fecha de arriba es la última que encontramos en todo tu historial importado."
+              : "Añade entrenos con nombre tipo carrera, 5K o rodaje en Hevy para seguir este hito.",
       }
     }
     const pct = Math.min(100, Math.round((seed.current / seed.target) * 100))

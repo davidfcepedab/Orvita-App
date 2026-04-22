@@ -16,11 +16,12 @@ import { ConfigStrategicIntegrationsPanel } from "@/app/components/orbita-v3/con
 import { ConfigNotificationPreferencesPanel } from "@/app/components/orbita-v3/config/ConfigNotificationPreferencesPanel"
 import { ConfigPwaInstallPanel } from "@/app/components/orbita-v3/config/ConfigPwaInstallPanel"
 import { ConfigPasskeyPanel } from "@/app/components/orbita-v3/config/ConfigPasskeyPanel"
+import { ConfigSettingsSection } from "@/app/components/orbita-v3/config/ConfigSettingsSection"
 import { designTokens } from "@/src/theme/design-tokens"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { createBrowserClient } from "@/lib/supabase/browser"
 import Link from "next/link"
-import { ChevronRight, Monitor, Palette, Sliders, Sparkles } from "lucide-react"
+import { Bell, ChevronRight, Home, Link2, Monitor, Palette, Sliders, Smartphone, Sparkles } from "lucide-react"
 import { defaultCustomPalette, normalizeHex, type CustomPalette } from "@/lib/theme/customPalette"
 import type { HouseholdMemberDTO } from "@/lib/household/memberTypes"
 
@@ -463,7 +464,7 @@ export default function ConfigV3() {
       },
       {
         id: "custom",
-        label: "Personalizado (hex)",
+        label: "Personalizado (tus colores)",
         colors: [paletteDraft.background, paletteDraft.surface, paletteDraft.accentHealth],
       },
     ],
@@ -496,88 +497,114 @@ export default function ConfigV3() {
   ]
 
   return (
-    <div className="mx-auto min-w-0 max-w-5xl space-y-7 overflow-x-hidden">
+    <div className="mx-auto min-w-0 max-w-5xl space-y-10 overflow-x-hidden">
       <header>
         <h2 className="text-2xl font-medium tracking-tight" style={{ color: theme.text }}>
-          Configuración del sistema
+          Ajustes
         </h2>
         <p className="mt-1 text-sm leading-snug" style={{ color: theme.textMuted }}>
-          Control paramétrico de la interfaz Órvita
+          Ordena cómo entras, cómo se ve la app y qué se conecta con tu día. Cada bloque explica en qué te ayuda.
         </p>
       </header>
 
-      <ConfigPwaInstallPanel theme={theme} />
-      <ConfigPasskeyPanel theme={theme} />
-
-      <Link
-        href="/perfil"
-        className="orbita-focus-ring flex items-center justify-between gap-3 rounded-2xl border p-4 no-underline transition-opacity hover:opacity-95"
-        style={{
-          backgroundColor: theme.surfaceAlt,
-          borderColor: theme.border,
-          boxShadow: "0 1px 0 rgba(15, 23, 42, 0.04)",
-        }}
-      >
-        <div className="flex min-w-0 items-start gap-2.5">
-          <span
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-            style={{ backgroundColor: theme.surface, color: theme.accent.health }}
-          >
-            <Sparkles className="h-4 w-4" aria-hidden />
-          </span>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold tracking-tight" style={{ color: theme.text }}>
-              Tu espacio
-            </p>
-            <p className="mt-1 text-xs leading-relaxed" style={{ color: theme.textMuted }}>
-              Foto y nombre: personaliza cómo te muestra Órvita y gana un poco de gamificación ligera.
-            </p>
-          </div>
-        </div>
-        <ChevronRight className="h-5 w-5 shrink-0" style={{ color: theme.textMuted }} aria-hidden />
-      </Link>
-
-      <ConfigHouseholdSection
+      <ConfigSettingsSection
         theme={theme}
-        householdInviteLoading={householdInviteLoading}
-        householdInviteCode={householdInviteCode}
-        householdInviteError={householdInviteError}
-        inviteCopied={inviteCopied}
-        onCopyInvite={() => {
-          if (!householdInviteCode) return
-          void navigator.clipboard.writeText(householdInviteCode).then(() => {
-            setInviteCopied(true)
-            window.setTimeout(() => setInviteCopied(false), 2500)
-          })
-        }}
-        familyPhotoUrl={familyPhotoUrl}
-        familyPhotoBusy={familyPhotoBusy}
-        familyPhotoError={familyPhotoError}
-        onPickFamilyPhoto={(file) => {
-          setFamilyCropFile(file)
-          setFamilyCropOpen(true)
-        }}
-        members={members}
-        membersLoading={membersLoading}
-        membersError={membersError}
-      />
+        title="Instalar, entrar y tu perfil"
+        description="Aquí pasa todo lo básico: icono en la pantalla de inicio, inicio con la huella o la cara, y la foto o el nombre con el que te reconoce Órvita."
+        icon={<Smartphone className="h-4 w-4" aria-hidden />}
+      >
+        <ConfigPwaInstallPanel theme={theme} />
+        <ConfigPasskeyPanel theme={theme} />
 
-      <ConfigNotificationPreferencesPanel theme={theme} />
+        <Link
+          href="/perfil"
+          className="orbita-focus-ring flex items-center justify-between gap-3 rounded-2xl border p-4 no-underline transition-opacity hover:opacity-95"
+          style={{
+            backgroundColor: theme.surfaceAlt,
+            borderColor: theme.border,
+            boxShadow: "0 1px 0 rgba(15, 23, 42, 0.04)",
+          }}
+        >
+          <div className="flex min-w-0 items-start gap-2.5">
+            <span
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+              style={{ backgroundColor: theme.surface, color: theme.accent.health }}
+            >
+              <Sparkles className="h-4 w-4" aria-hidden />
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold tracking-tight" style={{ color: theme.text }}>
+                Tu espacio
+              </p>
+              <p className="mt-1 text-xs leading-relaxed" style={{ color: theme.textMuted }}>
+                Foto y nombre: así te muestra la app a ti y, si quieres, a quien comparte contigo el tablero.
+              </p>
+            </div>
+          </div>
+          <ChevronRight className="h-5 w-5 shrink-0" style={{ color: theme.textMuted }} aria-hidden />
+        </Link>
+      </ConfigSettingsSection>
+
+      <ConfigSettingsSection
+        theme={theme}
+        title="Tu hogar y familia"
+        description="Un mismo lugar para la foto de familia, el código de invitación y quién ya entró. Sirve para ver el calendario y los hábitos con contexto compartido."
+        icon={<Home className="h-4 w-4" aria-hidden />}
+      >
+        <ConfigHouseholdSection
+          theme={theme}
+          householdInviteLoading={householdInviteLoading}
+          householdInviteCode={householdInviteCode}
+          householdInviteError={householdInviteError}
+          inviteCopied={inviteCopied}
+          onCopyInvite={() => {
+            if (!householdInviteCode) return
+            void navigator.clipboard.writeText(householdInviteCode).then(() => {
+              setInviteCopied(true)
+              window.setTimeout(() => setInviteCopied(false), 2500)
+            })
+          }}
+          familyPhotoUrl={familyPhotoUrl}
+          familyPhotoBusy={familyPhotoBusy}
+          familyPhotoError={familyPhotoError}
+          onPickFamilyPhoto={(file) => {
+            setFamilyCropFile(file)
+            setFamilyCropOpen(true)
+          }}
+          members={members}
+          membersLoading={membersLoading}
+          membersError={membersError}
+        />
+      </ConfigSettingsSection>
+
+      <ConfigSettingsSection
+        theme={theme}
+        title="Avisos y recordatorios"
+        description="Decide si Órvita te puede avisar en el teléfono. No sustituyen un calendario externo, pero te mantienen cerca de lo que marcaste como importante."
+        icon={<Bell className="h-4 w-4" aria-hidden />}
+      >
+        <ConfigNotificationPreferencesPanel theme={theme} />
+      </ConfigSettingsSection>
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(260px,340px)] lg:items-start">
-        <div className="space-y-9">
-          {/* 2. Entorno de color */}
+        <div className="space-y-10">
+          <ConfigSettingsSection
+            theme={theme}
+            title="Aspecto y comodidad al leer"
+            description="Tres cosas: paleta, cuánta información entra en cada pantalla, y qué tan vivos se sienten los movimientos. Puedes probar; el cambio es inmediato."
+            icon={<Palette className="h-4 w-4" aria-hidden />}
+          >
           <div className="space-y-3">
             <h3
               className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.14em]"
               style={{ color: theme.textMuted }}
             >
               <Palette className="h-4 w-4 shrink-0" aria-hidden />
-              Entorno de color
+              Paleta y ambiente
             </h3>
             <p className="max-w-2xl text-xs leading-relaxed" style={{ color: theme.textMuted }}>
-              Los presets aplican variables CSS en toda la app. «Personalizado» te deja elegir hex; superficie
-              alterna, borde y acentos secundarios se derivan automáticamente para mantener contraste legible.
+              Elige un conjunto de colores o crea el tuyo. Los ajustes finos del modo personal se guardan con «Aplicar
+              colores» para no perder nada a mitad de camino.
             </p>
             <div className="grid gap-2">
               {themeOptions.map((option) => (
@@ -611,10 +638,11 @@ export default function ConfigV3() {
                 }}
               >
                 <p className="text-xs font-medium" style={{ color: theme.text }}>
-                  Colores hex
+                  Tus colores
                 </p>
                 <p className="text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
-                  Formato #RRGGBB. Tras editar, pulsa «Aplicar colores» para guardar y refrescar variables en vivo.
+                  Usa el cuadro de color o escribe el código que ya tengas (empieza por #). Al terminar, pulsa «Aplicar
+                  colores» para que toda la app use la misma combinación.
                 </p>
                 <div className="space-y-3">
                   {paletteFields.map(({ key, label }) => (
@@ -688,9 +716,8 @@ export default function ConfigV3() {
               Densidad de datos
             </h3>
             <p className="max-w-2xl text-xs leading-relaxed" style={{ color: theme.textMuted }}>
-              Cambia <strong className="font-medium text-[inherit]">--layout-gap</strong> y{" "}
-              <strong className="font-medium text-[inherit]">--layout-padding</strong> en toda la app (Inicio, Salud,
-              Agenda, etc.). No es solo decorativo.
+              Compacta o abre el espacio entre tarjetas y bordes en Inicio, Salud, Agenda y el resto. «Alta densidad»
+              concentra más líneas en pantalla; «Modo foco» deja más aire.
             </p>
             <div className="grid gap-2">
               {layoutOptions.map((option) => (
@@ -722,11 +749,11 @@ export default function ConfigV3() {
               style={{ color: theme.textMuted }}
             >
               <Sliders className="h-4 w-4 shrink-0" aria-hidden />
-              Intensidad háptica / animaciones
+              Movimiento en pantalla
             </h3>
             <p className="max-w-2xl text-xs leading-relaxed" style={{ color: theme.textMuted }}>
-              Ajusta <strong className="font-medium text-[inherit]">--motion-factor</strong> (p. ej. sombras y
-              transiciones en tarjetas). El alcance es acotado; si quieres animación global, habría que extender tokens.
+              De «casi quieto» a «más vivo»: afecta sombras y transiciones suaves en las tarjetas. No cambia la lógica de
+              la app, solo la sensación al navegar.
             </p>
             <div
               className="rounded-2xl border p-5 sm:p-6"
@@ -750,39 +777,46 @@ export default function ConfigV3() {
               />
             </div>
           </div>
+          </ConfigSettingsSection>
 
-          {/* 5. Integraciones */}
-          <ConfigIntegrationsPanel
+          <ConfigSettingsSection
             theme={theme}
-            googleConnected={googleConnected}
-            googleError={googleError}
-            googleSync={googleSync}
-            connecting={connecting}
-            disconnectingGoogle={disconnectingGoogle}
-            syncingCalendar={syncingCalendar}
-            syncingTasks={syncingTasks}
-            onConnectGoogle={() => void handleConnectGoogle()}
-            onDisconnectGoogle={() => void handleDisconnectGoogle()}
-            onSyncCalendar={() => void handleSync("calendar")}
-            onSyncTasks={() => void handleSync("tasks")}
-            hevyConnected={hevyConnected}
-            hevyChecking={hevyChecking}
-            hevySyncing={hevySyncing}
-            hevyMessage={hevyMessage}
-            onHevySync={() => void handleHevySync()}
-            googleLastSyncAt={googleLastSyncAt}
-            hevyLastSyncAt={hevyLastSyncAt}
-          />
-          <ConfigStrategicIntegrationsPanel theme={theme} />
+            title="Conexiones con otras herramientas"
+            description="Calendario y tareas de Google, entrenos desde Hevy y, si aplica, otras piezas de tu flujo. Solo se usa lo que conectes; puedes desligar en cualquier momento."
+            icon={<Link2 className="h-4 w-4" aria-hidden />}
+          >
+            <ConfigIntegrationsPanel
+              theme={theme}
+              googleConnected={googleConnected}
+              googleError={googleError}
+              googleSync={googleSync}
+              connecting={connecting}
+              disconnectingGoogle={disconnectingGoogle}
+              syncingCalendar={syncingCalendar}
+              syncingTasks={syncingTasks}
+              onConnectGoogle={() => void handleConnectGoogle()}
+              onDisconnectGoogle={() => void handleDisconnectGoogle()}
+              onSyncCalendar={() => void handleSync("calendar")}
+              onSyncTasks={() => void handleSync("tasks")}
+              hevyConnected={hevyConnected}
+              hevyChecking={hevyChecking}
+              hevySyncing={hevySyncing}
+              hevyMessage={hevyMessage}
+              onHevySync={() => void handleHevySync()}
+              googleLastSyncAt={googleLastSyncAt}
+              hevyLastSyncAt={hevyLastSyncAt}
+            />
+            <ConfigStrategicIntegrationsPanel theme={theme} />
+          </ConfigSettingsSection>
         </div>
 
         <aside className="space-y-3 lg:sticky lg:top-24">
-          <h3 className="text-xs font-medium uppercase tracking-[0.14em]" style={{ color: theme.textMuted }}>
+          <h3 className="text-sm font-semibold" style={{ color: theme.text }}>
             Vista previa
           </h3>
           <p className="text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
-            Maqueta de color reactiva al tema (incl. personalizado). El espaciado usa ahora{" "}
-            <span className="font-mono text-[10px]">var(--layout-gap)</span> para acercarse a la densidad elegida.
+            Así se verán fondo, tarjetas y separación aproximada. Si cambiaste la densidad arriba, este bloque refleja
+            más o menos aire entre líneas, sin ser una copia píxel a píxel de tu teléfono.
           </p>
           <div
             className="flex min-h-[360px] flex-col rounded-3xl border-2 lg:min-h-[440px]"

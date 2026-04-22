@@ -1,0 +1,20 @@
+Órvita — Atajo «Importar Salud Hoy» (iPhone)
+
+Qué hace
+- Lee en el iPhone las muestras que elijas en el atajo (pasos, sueño, energía activa, entrenos, variación del latido, ritmo en reposo, etc.) y las envía a Órvita para guardarlas en tu cuenta.
+
+Cómo actualizarlo en el iPhone
+1. Abre la app Atajos.
+2. Toca el atajo y el menú (⋯) o «Editar atajo».
+3. Asegúrate de que antes del paso «Obtener contenido de URL» o «Contenido web» tengas acciones de Salud que rellenan un diccionario o texto JSON con al menos:
+   - observed_at (fecha/hora de la muestra, idealmente hoy)
+   - steps, active_energy_kcal, sleep_hours o sleep_duration_seconds
+   - hrv_ms, resting_hr_bpm, readiness_score
+   - workouts_count, workouts_minutes o workouts_duration_seconds
+4. El cuerpo que envía el atajo debe seguir el contrato que usa la API de Órvita (apple_bundle o entries).
+
+Escribir en Apple Health desde Órvita
+- La web de Órvita no puede escribir en Salud. Solo en el iPhone, con atajos o apps que usen HealthKit, puedes guardar datos en la app Salud. Órvita guarda en la nube lo que importas o registras en la app; no sustituye a Salud como base en el teléfono.
+
+Archivo .shortcut
+- El binario en esta carpeta se edita en Atajos; si hace falta añadir tipos de muestra (p. ej. frecuencia respiratoria del sueño), se hace en el editor de atajos añadiendo acciones de Salud y mapeando al JSON que envía tu cuenta.
