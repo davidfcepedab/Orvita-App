@@ -219,7 +219,10 @@ export default function HealthPage() {
   })
 
   return (
-    <div className="orbita-page-stack mx-auto w-full max-w-[min(72rem,calc(100vw-1.5rem))]">
+    <main
+      className="orbita-page-stack mx-auto w-full max-w-[min(72rem,calc(100vw-1.5rem))]"
+      aria-label="Operaciones de salud"
+    >
       <div className="min-w-0 rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_65%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_6%,var(--color-surface))] px-4 py-4 shadow-[0_12px_40px_-16px_color-mix(in_srgb,var(--color-accent-health)_18%,transparent)] sm:px-6 sm:py-5">
         <h1 className="m-0 text-2xl font-medium tracking-tight text-[var(--color-text-primary)] phone:text-[1.75rem]">
           Operaciones de Salud
@@ -513,8 +516,8 @@ export default function HealthPage() {
                       contentStyle={rechartsTooltipContentStyle}
                       formatter={(value, name) => {
                         const n = String(name)
-                        if (n === "fatigue") return [value, "Sleep debt / fatigue"]
-                        if (n === "energy") return [value, "Energy level"]
+                        if (n === "fatigue") return [value, "Deuda de sueño / fatiga"]
+                        if (n === "energy") return [value, "Nivel de energía (proxy)"]
                         return [value, n]
                       }}
                       labelFormatter={(_, payload) => {
@@ -618,6 +621,6 @@ export default function HealthPage() {
           </div>
         </Card>
       </div>
-    </div>
+    </main>
   )
 }

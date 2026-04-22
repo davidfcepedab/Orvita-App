@@ -12,6 +12,9 @@ function rowHasSignal(row: {
   steps?: number
   calories?: number
   energy_index?: number
+  resting_hr_bpm?: number
+  apple_workouts_count?: number
+  apple_workout_minutes?: number
 }) {
   return (
     typeof row.sleep_hours === "number" ||
@@ -19,7 +22,10 @@ function rowHasSignal(row: {
     typeof row.readiness_score === "number" ||
     typeof row.steps === "number" ||
     typeof row.calories === "number" ||
-    typeof row.energy_index === "number"
+    typeof row.energy_index === "number" ||
+    typeof row.resting_hr_bpm === "number" ||
+    typeof row.apple_workouts_count === "number" ||
+    typeof row.apple_workout_minutes === "number"
   )
 }
 
@@ -70,6 +76,9 @@ export async function POST(req: NextRequest) {
         steps: row.steps ?? null,
         calories: row.calories ?? null,
         energy_index: row.energy_index ?? null,
+        resting_hr_bpm: row.resting_hr_bpm ?? null,
+        apple_workouts_count: row.apple_workouts_count ?? null,
+        apple_workout_minutes: row.apple_workout_minutes ?? null,
         metadata: {
           imported_via: "apple_health_json",
           phase: "1.2",

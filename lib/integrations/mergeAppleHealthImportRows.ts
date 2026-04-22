@@ -71,6 +71,19 @@ export function rowsFromAppleBundlePayload(bundle: Record<string, unknown>): App
 
   if (!hasSignal) return []
 
+  const restRounded =
+    typeof resting_hr_bpm === "number" && Number.isFinite(resting_hr_bpm)
+      ? Math.round(Math.min(220, Math.max(30, resting_hr_bpm)))
+      : undefined
+  const wCountInt =
+    typeof workouts_count === "number" && Number.isFinite(workouts_count) && workouts_count >= 0
+      ? Math.round(workouts_count)
+      : undefined
+  const wMinInt =
+    typeof workouts_minutes === "number" && Number.isFinite(workouts_minutes) && workouts_minutes > 0
+      ? Math.min(24 * 60, Math.round(workouts_minutes))
+      : undefined
+
   return [
     {
       observed_at: observedAt.toISOString(),
@@ -80,12 +93,17 @@ export function rowsFromAppleBundlePayload(bundle: Record<string, unknown>): App
       steps: derived.steps ?? undefined,
       calories: derived.calories ?? undefined,
       energy_index: derived.energy_index ?? undefined,
+      resting_hr_bpm: restRounded,
+      apple_workouts_count: wCountInt,
+      apple_workout_minutes: wMinInt,
       metadata: {
         ...derived.metadata,
         shortcut_bundle_keys: Object.keys(bundle),
         apple_sleep_duration_seconds: sleep_duration_seconds ?? null,
         apple_workouts_duration_seconds: workouts_duration_seconds ?? null,
         apple_workouts_count: workouts_count ?? null,
+        resting_hr_bpm: restRounded ?? null,
+        workouts_minutes: wMinInt ?? null,
       },
     },
   ]

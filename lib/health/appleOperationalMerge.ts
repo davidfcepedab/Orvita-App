@@ -15,19 +15,30 @@ export function mapHealthMetricsRowToAppleSignals(row: unknown): AppleHealthCont
   const meta = metaRaw && typeof metaRaw === "object" && !Array.isArray(metaRaw) ? (metaRaw as Record<string, unknown>) : {}
 
   const wds = num(meta.apple_workouts_duration_seconds)
-  const workout_minutes = wds != null && wds > 0 ? Math.round(wds / 60) : null
+  const workout_minutes_from_sec = wds != null && wds > 0 ? Math.min(24 * 60, Math.round(wds / 60)) : null
+
+  const wmCol = num(r.apple_workout_minutes)
+  const wmMeta = num(meta.workouts_minutes)
+  const workout_minutes_stacked =
+    wmCol != null && wmCol > 0
+      ? wmCol
+      : workout_minutes_from_sec != null && workout_minutes_from_sec > 0
+        ? workout_minutes_from_sec
+        : wmMeta != null && wmMeta > 0
+          ? Math.round(wmMeta)
+          : null
 
   const ageMs = Date.now() - Date.parse(observed_at)
   const sync_stale = Number.isFinite(ageMs) && ageMs > 36 * 60 * 60 * 1000
 
-  const wc = num(meta.apple_workouts_count)
-  const wmMeta = num(meta.workouts_minutes)
-  const workout_minutes_final =
-    workout_minutes != null && workout_minutes > 0
-      ? workout_minutes
-      : wmMeta != null && wmMeta > 0
-        ? Math.round(wmMeta)
-        : null
+  const wcCol = num(r.apple_workouts_count)
+  const wcMeta = num(meta.apple_workouts_count)
+  const workouts_count =
+    wcCol != null && wcCol >= 0 ? Math.round(wcCol) : wcMeta != null && wcMeta >= 0 ? Math.round(wcMeta) : null
+
+  const rRest = num(r.resting_hr_bpm)
+  const mRest = num(meta.resting_hr_bpm)
+  const resting_hr_bpm = rRest != null ? rRest : mRest
 
   return {
     observed_at,
@@ -38,9 +49,9 @@ export function mapHealthMetricsRowToAppleSignals(row: unknown): AppleHealthCont
     steps: num(r.steps),
     calories: num(r.calories),
     energy_index: num(r.energy_index),
-    workouts_count: wc,
-    workout_minutes: workout_minutes_final,
-    resting_hr_bpm: num(meta.resting_hr_bpm),
+    workouts_count,
+    workout_minutes: workout_minutes_stacked,
+    resting_hr_bpm,
     sync_stale,
   }
 }

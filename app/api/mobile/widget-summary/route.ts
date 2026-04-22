@@ -84,7 +84,9 @@ async function widgetPayloadForUser(auth: AuthedRequest, webBaseUrl: string): Pr
         .maybeSingle(),
       supabase
         .from("health_metrics")
-        .select("observed_at, source, sleep_hours, hrv_ms, readiness_score, steps, calories, energy_index, metadata")
+        .select(
+          "observed_at, source, sleep_hours, hrv_ms, readiness_score, steps, calories, energy_index, resting_hr_bpm, apple_workouts_count, apple_workout_minutes, metadata",
+        )
         .eq("user_id", userId)
         .order("observed_at", { ascending: false })
         .limit(1)

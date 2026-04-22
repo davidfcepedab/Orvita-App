@@ -498,12 +498,21 @@ export default function ConfigV3() {
   ]
 
   return (
-    <div className="mx-auto min-w-0 max-w-5xl space-y-10 overflow-x-hidden">
-      <header>
-        <h2 className="text-2xl font-medium tracking-tight" style={{ color: theme.text }}>
+    <main
+      className="orbita-page-stack mx-auto w-full min-w-0 max-w-[min(72rem,calc(100vw-1.5rem))] space-y-10 overflow-x-hidden"
+      aria-label="Configuración y conexiones"
+    >
+      <header
+        className="rounded-2xl border px-4 py-4 shadow-[0_10px_36px_-14px_rgba(15,23,42,0.12)] sm:px-6 sm:py-5"
+        style={{
+          backgroundColor: colorTheme === "carbon" || colorTheme === "midnight" ? theme.surfaceAlt : theme.surface,
+          borderColor: theme.border,
+        }}
+      >
+        <h1 className="m-0 text-2xl font-medium tracking-tight" style={{ color: theme.text }}>
           Ajustes
-        </h2>
-        <p className="mt-1 text-sm leading-snug" style={{ color: theme.textMuted }}>
+        </h1>
+        <p className="m-0 mt-1.5 max-w-[40rem] text-sm leading-relaxed" style={{ color: theme.textMuted }}>
           Ordena cómo entras, cómo se ve la app y qué se conecta con tu día. Cada bloque explica en qué te ayuda.
         </p>
       </header>
@@ -898,6 +907,6 @@ export default function ConfigV3() {
           void handleUploadFamilyPhoto(cropped)
         }}
       />
-    </div>
+    </main>
   )
 }

@@ -226,23 +226,24 @@ export default function TrainingPage() {
   })
 
   return (
-    <div className="orbita-page-stack">
-      <div className="min-w-0">
+    <main
+      className="orbita-page-stack mx-auto w-full max-w-[min(72rem,calc(100vw-1.5rem))]"
+      aria-label="Operaciones de entrenamiento"
+    >
+      <div className="min-w-0 rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_65%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_5%,var(--color-surface))] px-4 py-4 shadow-[0_12px_40px_-16px_color-mix(in_srgb,var(--color-accent-health)_16%,transparent)] sm:px-6 sm:py-5">
         <h1 className="m-0 text-2xl font-medium tracking-tight text-[var(--color-text-primary)] phone:text-[1.75rem]">
           Operaciones de Entrenamiento
         </h1>
-        <p style={{ margin: "6px 0 0", fontSize: "13px", color: "var(--color-text-secondary)" }}>
-          Entrenos y volumen salen de{" "}
-          <span style={{ fontWeight: 600 }}>{HEVY_INTEGRATION_LABEL}</span>. Lo que añade el teléfono (sueño, pasos,
-          calorías) llega solo cuando tú importas con el atajo: así mantienes el control.
+        <p className="m-0 mt-1.5 max-w-[40rem] text-[13px] leading-relaxed text-[var(--color-text-secondary)]">
+          Entrenos y volumen salen de <span className="font-semibold text-[var(--color-text-primary)]">{HEVY_INTEGRATION_LABEL}</span>.
+          Lo que añade el teléfono (sueño, pasos, calorías) llega solo cuando tú importas con el atajo: así mantienes el
+          control.
         </p>
         {!remotePrefs && !isAppMockMode() && (
-          <p style={{ margin: "8px 0 0", fontSize: "11px", color: "var(--color-text-secondary)" }}>
-            {UI_TRAINING_PREFS_LOCAL}
-          </p>
+          <p className="m-0 mt-2 text-[11px] text-[var(--color-text-secondary)]">{UI_TRAINING_PREFS_LOCAL}</p>
         )}
         {isAppMockMode() && (
-          <p style={{ margin: "8px 0 0", fontSize: "11px", color: "var(--color-text-secondary)" }}>
+          <p className="m-0 mt-2 text-[11px] text-[var(--color-text-secondary)]">
             Modo mock: datos de Hevy simulados; preferencias solo en localStorage.
           </p>
         )}
@@ -372,8 +373,9 @@ export default function TrainingPage() {
                   textTransform: "uppercase",
                   letterSpacing: "0.12em",
                 }}
+                title="Carga relativa a partir del volumen Hevy (7 días); no es dato clínico."
               >
-                Strain
+                Carga
               </p>
             </div>
           </div>
@@ -710,6 +712,6 @@ export default function TrainingPage() {
           </div>
         </div>
       </Card>
-    </div>
+    </main>
   )
 }

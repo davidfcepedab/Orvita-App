@@ -11,6 +11,9 @@ export const HEALTH_METRICS_NUMERIC_KEYS = [
   "steps",
   "calories",
   "energy_index",
+  "resting_hr_bpm",
+  "apple_workouts_count",
+  "apple_workout_minutes",
 ] as const
 
 /**
@@ -31,7 +34,7 @@ export const APPLE_SHORTCUT_BUNDLE_INPUT_KEYS = [
   "readiness_score",
 ] as const
 
-/** En `metadata` suelen quedar, entre otras: apple_workouts_count, apple_workouts_duration_seconds, shortcut_bundle_keys. */
+/** En `metadata` suelen quedar, entre otras: apple_workouts_count, apple_workouts_duration_seconds, shortcut_bundle_keys; las columnas explícitas son preferentes en lectura. */
 export const HEALTH_METRICS_METADATA_NOTES = {
   apple_workouts: "Número y duración de entrenos que Apple asoció al día (si el atajo las envió).",
   merge: "La fila mezcla columnas y metadatos para no perder nada de lo que manda el iPhone.",

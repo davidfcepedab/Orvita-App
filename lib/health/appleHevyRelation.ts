@@ -18,6 +18,9 @@ export function appleDaySignalsFromHealthMetric(
     readiness_score?: number | null
     steps?: number | null
     energy_index?: number | null
+    resting_hr_bpm?: number | null
+    apple_workouts_count?: number | null
+    apple_workout_minutes?: number | null
     source?: string | null
     metadata?: Record<string, unknown> | null
   } | null,
