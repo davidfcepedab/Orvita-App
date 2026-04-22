@@ -37,6 +37,7 @@ export function ConfigHouseholdSection({
   membersError,
   moduleCard = false,
   variant = "default" as "default" | "minimal",
+  integratedLead = false,
 }: {
   theme: OrbitaConfigTheme
   householdInviteLoading: boolean
@@ -55,19 +56,22 @@ export function ConfigHouseholdSection({
   moduleCard?: boolean
   /** Vista aligerada: cabecera visual compacta, texto mínimo y lista de miembros limpia. */
   variant?: "default" | "minimal"
+  /** Títulos "Hogar" ya están en la tarjeta padre: compactar bloques. */
+  integratedLead?: boolean
 }) {
   const familyPhotoInputId = useId()
   const headingId = "config-household-heading"
   const isMinimal = variant === "minimal"
+  const compact = isMinimal && integratedLead
 
   if (isMinimal) {
     return (
-      <section className="space-y-8" aria-labelledby={headingId}>
+      <section className={compact ? "space-y-5" : "space-y-8"} aria-labelledby={headingId}>
         <span id={headingId} className="sr-only">
           Hogar y familia
         </span>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           <div className="flex items-center justify-between gap-3">
             <p className="m-0 text-sm font-medium tracking-tight" style={{ color: theme.textMuted }}>
               Imagen del hogar
@@ -102,7 +106,7 @@ export function ConfigHouseholdSection({
 
           {familyPhotoUrl ? (
             <div
-              className="h-32 overflow-hidden rounded-2xl sm:h-36"
+              className={`overflow-hidden rounded-2xl ${compact ? "h-40 sm:h-44" : "h-32 sm:h-36"}`}
               style={{ backgroundColor: theme.surfaceAlt }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -110,7 +114,7 @@ export function ConfigHouseholdSection({
             </div>
           ) : (
             <div
-              className="flex h-28 items-center justify-center rounded-2xl border border-dashed sm:h-32"
+              className={`flex items-center justify-center rounded-2xl border border-dashed ${compact ? "h-36 sm:h-40" : "h-28 sm:h-32"}`}
               style={{ borderColor: theme.border, color: theme.textMuted }}
             >
               <span className="text-xs">Sin imagen aún</span>
@@ -124,13 +128,16 @@ export function ConfigHouseholdSection({
           ) : null}
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           <div>
-            <p className="m-0 text-2xl font-light tracking-[-0.02em] sm:text-3xl" style={{ color: theme.text }}>
-              Código
+            <p
+              className={`m-0 font-light tracking-[-0.02em] ${compact ? "text-lg sm:text-xl" : "text-2xl sm:text-3xl"}`}
+              style={{ color: theme.text }}
+            >
+              {compact ? "Invitación" : "Código"}
             </p>
-            <p className="m-0 mt-1.5 text-sm" style={{ color: theme.textMuted }}>
-              Un único código. Lo pegan al crear cuenta.
+            <p className="m-0 mt-1 text-sm" style={{ color: theme.textMuted }}>
+              {compact ? "Un código al registrarse." : "Un único código. Lo pegan al crear cuenta."}
             </p>
           </div>
 
@@ -140,9 +147,9 @@ export function ConfigHouseholdSection({
             </p>
           )}
           {!householdInviteLoading && householdInviteCode && (
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch sm:gap-4">
+            <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-3">
               <code
-                className="min-w-0 flex-1 rounded-2xl px-5 py-4 text-center text-lg font-medium tracking-[0.28em] sm:text-xl"
+                className={`min-w-0 flex-1 rounded-xl text-center font-medium tracking-[0.2em] ${compact ? "px-3 py-2.5 text-sm sm:text-base" : "rounded-2xl px-5 py-4 text-lg sm:text-xl"}`}
                 style={{
                   backgroundColor: theme.surfaceAlt,
                   color: theme.text,
@@ -153,7 +160,7 @@ export function ConfigHouseholdSection({
               </code>
               <button
                 type="button"
-                className="shrink-0 rounded-2xl px-8 py-4 text-sm font-semibold transition-opacity hover:opacity-90"
+                className="shrink-0 rounded-lg px-4 py-2 text-xs font-semibold transition-opacity hover:opacity-90"
                 style={{
                   backgroundColor: theme.accent.health,
                   color: "#fff",
@@ -201,7 +208,7 @@ export function ConfigHouseholdSection({
                 return (
                   <li key={m.id} className="flex items-center gap-3 py-3 first:pt-0">
                     <div
-                      className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full text-[10px] font-semibold"
+                      className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full font-semibold ${compact ? "h-10 w-10 text-[11px]" : "h-8 w-8 text-[10px]"}`}
                       style={{
                         backgroundColor: theme.surfaceAlt,
                         color: theme.text,
@@ -210,7 +217,13 @@ export function ConfigHouseholdSection({
                     >
                       {m.avatarUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={m.avatarUrl} alt="" className="h-full w-full object-cover" width={32} height={32} />
+                        <img
+                          src={m.avatarUrl}
+                          alt=""
+                          className="h-full w-full object-cover"
+                          width={40}
+                          height={40}
+                        />
                       ) : (
                         memberInitials(m.displayName, m.email)
                       )}

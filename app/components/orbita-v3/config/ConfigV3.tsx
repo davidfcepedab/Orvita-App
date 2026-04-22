@@ -16,12 +16,13 @@ import { ConfigStrategicIntegrationsPanel } from "@/app/components/orbita-v3/con
 import { ConfigNotificationPreferencesPanel } from "@/app/components/orbita-v3/config/ConfigNotificationPreferencesPanel"
 import { ConfigPwaInstallPanel } from "@/app/components/orbita-v3/config/ConfigPwaInstallPanel"
 import { ConfigPasskeyPanel } from "@/app/components/orbita-v3/config/ConfigPasskeyPanel"
+import { ConfigConnectionPill } from "@/app/components/orbita-v3/config/ConfigConnectionPill"
 import { ConfigHealthUnifiedPanel } from "@/app/components/orbita-v3/config/ConfigHealthUnifiedPanel"
 import { designTokens } from "@/src/theme/design-tokens"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { createBrowserClient } from "@/lib/supabase/browser"
 import Link from "next/link"
-import { ChevronDown, KeyRound, Monitor, Palette, Sliders, Smartphone, User } from "lucide-react"
+import { CalendarDays, ChevronDown, Dumbbell, KeyRound, Monitor, Palette, Sliders, Smartphone, User } from "lucide-react"
 import { defaultCustomPalette, normalizeHex, type CustomPalette } from "@/lib/theme/customPalette"
 import type { HouseholdMemberDTO } from "@/lib/household/memberTypes"
 
@@ -538,7 +539,7 @@ export default function ConfigV3() {
   const pageVariant = searchParams.get("v") || "0"
   const isAltCard = pageVariant === "1"
   const isDense = pageVariant === "2"
-  const sectionGap = isDense ? "space-y-16 sm:space-y-20" : "space-y-20 sm:space-y-24"
+  const sectionGap = isDense ? "space-y-8 sm:space-y-10" : "space-y-10 sm:space-y-12"
   const maxW = isDense ? "max-w-xl" : "max-w-2xl"
   const cardShell = isAltCard
     ? "shadow-[0_1px_0_rgba(15,23,42,0.05)] ring-1 ring-black/[0.05]"
@@ -550,49 +551,48 @@ export default function ConfigV3() {
 
   return (
     <main
-      className={`orbita-page-stack config-page--minimal mx-auto w-full min-w-0 ${maxW} ${sectionGap} overflow-x-hidden px-5 py-12 sm:px-8 sm:py-16 md:py-20 lg:max-w-4xl`}
+      className={`orbita-page-stack config-page--minimal mx-auto w-full min-w-0 ${maxW} ${sectionGap} overflow-x-hidden px-4 py-8 sm:px-6 sm:py-10 md:py-12 lg:max-w-4xl`}
       aria-label="Configuración y conexiones"
       data-config-variant={pageVariant}
       data-config-variant-hint="v0 default · v1 ring · v2 dense"
     >
-      <header className="min-w-0">
-        <p
-          className="m-0 text-[0.7rem] font-medium uppercase tracking-[0.25em] sm:text-xs"
-          style={{ color: theme.textMuted }}
-        >
-          Centro de mando
-        </p>
-        <h1
-          className="m-0 mt-3 text-3xl font-light tracking-[-0.03em] sm:text-4xl md:text-[2.5rem]"
-          style={{ color: theme.text }}
-        >
-          Ajustes
-        </h1>
-        <p
-          className="m-0 mt-3 max-w-md text-sm font-normal leading-relaxed sm:text-base"
-          style={{ color: theme.textMuted }}
-        >
-          Tiempo, energía y dinero. Solo lo esencial, cuando lo elijas tú.
-        </p>
-      </header>
-
-      {/* 1. Perfil — hero */}
+      {/* 1. Título + perfil (compacto) */}
       <section
-        className="scroll-mt-20"
+        className="scroll-mt-16"
         data-orvita-section="profile-hero"
-        aria-label="Tu perfil"
+        aria-label="Ajustes y tu perfil"
       >
-        <div className="flex flex-col gap-8 sm:flex-row sm:items-end sm:justify-between sm:gap-10">
-          <div className="flex min-w-0 items-end gap-5">
+        <div className="mb-3 max-w-2xl sm:mb-2">
+          <p
+            className="m-0 text-[0.65rem] font-medium uppercase tracking-[0.2em] sm:text-[0.7rem]"
+            style={{ color: theme.textMuted }}
+          >
+            Centro de mando
+          </p>
+          <h1
+            className="m-0 mt-1.5 text-2xl font-light tracking-[-0.03em] sm:mt-2 sm:text-3xl"
+            style={{ color: theme.text }}
+          >
+            Ajustes
+          </h1>
+          <p
+            className="m-0 mt-1.5 text-sm font-normal leading-snug sm:max-w-md"
+            style={{ color: theme.textMuted }}
+          >
+            Tiempo, energía y dinero, sin ruido.
+          </p>
+        </div>
+        <div className="mt-3 flex flex-col gap-3 sm:mt-4 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
+          <div className="flex min-w-0 items-end gap-4">
             {profileLoading ? (
               <div
-                className="h-20 w-20 shrink-0 animate-pulse rounded-full"
+                className="h-[4.5rem] w-[4.5rem] shrink-0 animate-pulse rounded-full"
                 style={{ backgroundColor: theme.surfaceAlt }}
                 aria-hidden
               />
             ) : (
               <div
-                className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full"
+                className="relative h-[4.5rem] w-[4.5rem] shrink-0 overflow-hidden rounded-full"
                 style={{ backgroundColor: theme.surfaceAlt, boxShadow: "0 0 0 1px rgba(15,23,42,0.06)" }}
               >
                 {profile?.avatarUrl ? (
@@ -601,37 +601,34 @@ export default function ConfigV3() {
                     src={profile.avatarUrl}
                     alt=""
                     className="h-full w-full object-cover"
-                    width={80}
-                    height={80}
+                    width={72}
+                    height={72}
                   />
                 ) : (
                   <div
-                    className="flex h-full w-full items-center justify-center text-lg font-medium"
+                    className="flex h-full w-full items-center justify-center"
                     style={{ color: theme.textMuted }}
                     aria-hidden
                   >
-                    <User className="h-8 w-8" />
+                    <User className="h-7 w-7" />
                   </div>
                 )}
               </div>
             )}
             <div className="min-w-0 pb-0.5">
-              <h2
-                className="m-0 text-2xl font-light leading-none tracking-[-0.02em] sm:text-3xl"
-                style={{ color: theme.text }}
-              >
+              <p className="m-0 text-lg font-light leading-tight tracking-[-0.02em] sm:text-xl" style={{ color: theme.text }}>
                 {profileLoading ? "…" : displayName}
-              </h2>
-              <p className="m-0 mt-2.5 text-sm" style={{ color: theme.textMuted }}>
+              </p>
+              <p className="m-0 mt-0.5 text-xs sm:text-sm" style={{ color: theme.textMuted }}>
                 {homeRole}
                 {profile?.email ? ` · ${profile.email}` : ""}
               </p>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2 sm:shrink-0 sm:pb-0.5 sm:gap-2.5">
+          <div className="flex flex-wrap gap-1.5 sm:shrink-0 sm:justify-end sm:pb-0.5 sm:pl-2">
             <a
               href="#config-pwa"
-              className="inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent px-3.5 py-2 text-xs font-medium transition-colors hover:opacity-90"
+              className="inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent px-3 py-1.5 text-[11px] font-medium no-underline transition-opacity hover:opacity-90"
               style={{
                 color: theme.text,
                 backgroundColor: theme.surfaceAlt,
@@ -639,11 +636,11 @@ export default function ConfigV3() {
               }}
             >
               <Smartphone className="h-3.5 w-3.5 opacity-80" aria-hidden />
-              Instalar PWA
+              PWA
             </a>
             <a
               href="#config-passkey"
-              className="inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent px-3.5 py-2 text-xs font-medium transition-colors hover:opacity-90"
+              className="inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent px-3 py-1.5 text-[11px] font-medium no-underline transition-opacity hover:opacity-90"
               style={{
                 color: theme.text,
                 backgroundColor: theme.surfaceAlt,
@@ -655,7 +652,7 @@ export default function ConfigV3() {
             </a>
             <Link
               href="/perfil"
-              className="inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent px-3.5 py-2 text-xs font-medium no-underline transition-colors hover:opacity-90"
+              className="inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent px-3 py-1.5 text-[11px] font-medium no-underline transition-opacity hover:opacity-90"
               style={{
                 color: theme.text,
                 backgroundColor: theme.surfaceAlt,
@@ -670,22 +667,25 @@ export default function ConfigV3() {
       </section>
 
       {/* 2. Hogar */}
-      <section className="scroll-mt-8" data-orvita-section="household">
-        <h2
-          className="m-0 text-[0.7rem] font-medium uppercase tracking-[0.2em] sm:text-xs"
-          style={{ color: theme.textMuted }}
-        >
-          Hogar
-        </h2>
-        <p className="m-0 mt-2.5 text-xl font-light tracking-[-0.02em] sm:text-2xl" style={{ color: theme.text }}>
-          Código, imagen, personas
-        </p>
+      <section className="scroll-mt-6" data-orvita-section="household">
         <div
-          className={`mt-10 overflow-hidden rounded-2xl p-6 sm:p-8 md:mt-12 ${cardShell}`}
+          className={`mt-1 overflow-hidden rounded-2xl p-5 sm:p-6 ${cardShell}`}
           style={{ backgroundColor: theme.surface }}
         >
+          <div className="mb-5 border-b pb-4 sm:mb-6 sm:pb-5" style={{ borderColor: theme.border }}>
+            <h2
+              className="m-0 text-[0.65rem] font-medium uppercase tracking-[0.2em] sm:text-xs"
+              style={{ color: theme.textMuted }}
+            >
+              Hogar
+            </h2>
+            <p className="m-0 mt-1.5 text-lg font-light tracking-[-0.02em] sm:text-xl" style={{ color: theme.text }}>
+              Código, imagen, personas
+            </p>
+          </div>
           <ConfigHouseholdSection
             moduleCard
+            integratedLead
             variant="minimal"
             theme={theme}
             householdInviteLoading={householdInviteLoading}
@@ -714,17 +714,17 @@ export default function ConfigV3() {
       </section>
 
       {/* 3. Conexiones */}
-      <section className="scroll-mt-8" data-orvita-section="connections" aria-label="Conexiones">
+      <section className="scroll-mt-6" data-orvita-section="connections" aria-label="Conexiones">
         <h2
-          className="m-0 text-[0.7rem] font-medium uppercase tracking-[0.2em] sm:text-xs"
+          className="m-0 text-[0.65rem] font-medium uppercase tracking-[0.2em] sm:text-xs"
           style={{ color: theme.textMuted }}
         >
           Conexiones
         </h2>
-        <p className="m-0 mt-2.5 text-xl font-light tracking-[-0.02em] sm:text-2xl" style={{ color: theme.text }}>
+        <p className="m-0 mt-1 text-base font-light tracking-[-0.02em] sm:text-lg" style={{ color: theme.text }}>
           Un gesto, un bloque
         </p>
-        <div className="mt-10 space-y-2 md:mt-12">
+        <div className="mt-4 space-y-1.5 sm:mt-5">
           <details
             className="group open:shadow-sm"
             style={{
@@ -737,26 +737,43 @@ export default function ConfigV3() {
             data-orvita-subsection="google-calendar"
           >
             <summary
-              className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 sm:px-5 [&::-webkit-details-marker]:hidden"
+              className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-3 sm:px-4 [&::-webkit-details-marker]:hidden"
               style={{ color: theme.text }}
             >
-              <div className="min-w-0 text-left">
-                <p className="m-0 text-[0.95rem] font-medium tracking-tight" style={{ color: theme.text }}>
-                  Calendario y tareas
-                </p>
-                <p className="m-0 mt-0.5 text-xs" style={{ color: theme.textMuted }}>
-                  Google
-                </p>
+              <div className="flex min-w-0 flex-1 items-start gap-2.5 sm:gap-3">
+                <span
+                  className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+                  style={{ backgroundColor: theme.surfaceAlt }}
+                  aria-hidden
+                >
+                  <CalendarDays className="h-4 w-4" style={{ color: theme.accent.agenda }} />
+                </span>
+                <div className="min-w-0 text-left">
+                  <p className="m-0 text-sm font-medium tracking-tight" style={{ color: theme.text }}>
+                    Google
+                  </p>
+                  <p className="m-0 mt-0.5 text-[12px] leading-snug" style={{ color: theme.textMuted }}>
+                    Mantén tu calendario y tareas alineados.
+                  </p>
+                </div>
               </div>
-              <ChevronDown
-                className="h-4 w-4 shrink-0 transition-transform duration-200 group-open:rotate-180"
-                style={{ color: theme.textMuted }}
-                aria-hidden
-              />
+              <div className="flex shrink-0 items-center gap-2">
+                <ConfigConnectionPill
+                  state={connecting ? "checking" : googleConnected ? "connected" : "disconnected"}
+                  connectedLabel="Conectado"
+                  disconnectedLabel="Conectar"
+                />
+                <ChevronDown
+                  className="h-4 w-4 shrink-0 transition-transform duration-200 group-open:rotate-180"
+                  style={{ color: theme.textMuted }}
+                  aria-hidden
+                />
+              </div>
             </summary>
             <div className="border-t" style={{ borderColor: theme.border }}>
               <ConfigIntegrationsPanel
                 theme={theme}
+                accordionMode
                 only="google"
                 googleConnected={googleConnected}
                 googleError={googleError}
@@ -793,26 +810,43 @@ export default function ConfigV3() {
             data-orvita-subsection="hevy"
           >
             <summary
-              className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 sm:px-5 [&::-webkit-details-marker]:hidden"
+              className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-3 sm:px-4 [&::-webkit-details-marker]:hidden"
               style={{ color: theme.text }}
             >
-              <div className="min-w-0 text-left">
-                <p className="m-0 text-[0.95rem] font-medium tracking-tight" style={{ color: theme.text }}>
-                  Entrenamiento
-                </p>
-                <p className="m-0 mt-0.5 text-xs" style={{ color: theme.textMuted }}>
-                  Hevy
-                </p>
+              <div className="flex min-w-0 flex-1 items-start gap-2.5 sm:gap-3">
+                <span
+                  className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+                  style={{ backgroundColor: theme.surfaceAlt }}
+                  aria-hidden
+                >
+                  <Dumbbell className="h-4 w-4" style={{ color: theme.textMuted }} />
+                </span>
+                <div className="min-w-0 text-left">
+                  <p className="m-0 text-sm font-medium tracking-tight" style={{ color: theme.text }}>
+                    Hevy
+                  </p>
+                  <p className="m-0 mt-0.5 text-[12px] leading-snug" style={{ color: theme.textMuted }}>
+                    Registra y revisa entrenamientos.
+                  </p>
+                </div>
               </div>
-              <ChevronDown
-                className="h-4 w-4 shrink-0 transition-transform duration-200 group-open:rotate-180"
-                style={{ color: theme.textMuted }}
-                aria-hidden
-              />
+              <div className="flex shrink-0 items-center gap-2">
+                <ConfigConnectionPill
+                  state={hevyChecking ? "checking" : hevySyncing ? "checking" : hevyConnected ? "connected" : "disconnected"}
+                  connectedLabel="Conectado"
+                  disconnectedLabel="Conectar"
+                />
+                <ChevronDown
+                  className="h-4 w-4 shrink-0 transition-transform duration-200 group-open:rotate-180"
+                  style={{ color: theme.textMuted }}
+                  aria-hidden
+                />
+              </div>
             </summary>
             <div className="border-t" style={{ borderColor: theme.border }}>
               <ConfigIntegrationsPanel
                 theme={theme}
+                accordionMode
                 only="hevy"
                 googleConnected={googleConnected}
                 googleError={googleError}
@@ -838,17 +872,15 @@ export default function ConfigV3() {
           </details>
         </div>
 
-        <div className="mt-2" id="conexion-salud" data-orvita-section="strategic-stack">
+        <div className="mt-1.5" id="conexion-salud" data-orvita-section="strategic-stack">
           <ConfigStrategicIntegrationsPanel
             theme={theme}
             unified
             layout="accordions"
             showHealth
             beforeHealthServer={
-              <div className="border-b px-0 py-0" style={{ borderColor: theme.border }}>
-                <div className="p-0">
-                  <ConfigHealthUnifiedPanel theme={theme} />
-                </div>
+              <div className="border-b" style={{ borderColor: theme.border }}>
+                <ConfigHealthUnifiedPanel theme={theme} embedInStrategic />
               </div>
             }
           />
@@ -856,18 +888,18 @@ export default function ConfigV3() {
       </section>
 
       {/* 4. Sistema — colapsable */}
-      <section className="scroll-mt-8 pb-8" data-orvita-section="system" aria-label="Sistema y preferencias">
+      <section className="scroll-mt-6 pb-6" data-orvita-section="system" aria-label="Sistema y preferencias">
         <h2
-          className="m-0 text-[0.7rem] font-medium uppercase tracking-[0.2em] sm:text-xs"
+          className="m-0 text-[0.65rem] font-medium uppercase tracking-[0.2em] sm:text-xs"
           style={{ color: theme.textMuted }}
         >
           Sistema
         </h2>
-        <p className="m-0 mt-2.5 text-xl font-light tracking-[-0.02em] sm:text-2xl" style={{ color: theme.text }}>
-          Menos ruido, más control
+        <p className="m-0 mt-1 text-base font-light tracking-[-0.02em] sm:text-lg" style={{ color: theme.text }}>
+          App, aspecto y atajos
         </p>
         <details
-          className="group mt-10 md:mt-12"
+          className="group mt-4 sm:mt-5"
           style={{
             backgroundColor: theme.surface,
             borderRadius: "1rem",
@@ -877,15 +909,15 @@ export default function ConfigV3() {
           }}
         >
           <summary
-            className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 sm:px-5 sm:py-4 [&::-webkit-details-marker]:hidden"
+            className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-3.5 sm:px-4 sm:py-4 [&::-webkit-details-marker]:hidden"
             style={{ color: theme.text }}
           >
             <div className="min-w-0 text-left">
-              <p className="m-0 text-[0.95rem] font-medium" style={{ color: theme.text }}>
-                Preferencias avanzadas
+              <p className="m-0 text-sm font-medium" style={{ color: theme.text }}>
+                Más ajustes
               </p>
-              <p className="m-0 mt-0.5 text-xs" style={{ color: theme.textMuted }}>
-                Aplicación, avisos, aspecto, atajos
+              <p className="m-0 mt-0.5 text-[11px]" style={{ color: theme.textMuted }}>
+                PWA, passkey, atajos, aspecto
               </p>
             </div>
             <ChevronDown
@@ -896,28 +928,14 @@ export default function ConfigV3() {
           </summary>
           <div className="space-y-0 border-t" style={{ borderColor: theme.border }}>
             <div className="border-b" style={{ borderColor: theme.border }} data-orvita-section="install-and-profile" id="config-sistema-app">
-              <div className="px-4 py-2 text-[0.65rem] font-medium uppercase tracking-[0.2em] sm:px-5" style={{ color: theme.textMuted }}>
-                Aplicación y acceso
+              <div className="px-3 py-1.5 text-[0.6rem] font-medium uppercase tracking-[0.2em] sm:px-4" style={{ color: theme.textMuted }}>
+                Aplicación
               </div>
-              <div id="config-pwa" className="min-w-0 scroll-mt-24">
-                <ConfigPwaInstallPanel theme={theme} moduleCard />
+              <div id="config-pwa" className="min-w-0 scroll-mt-20">
+                <ConfigPwaInstallPanel theme={theme} moduleCard compact />
               </div>
-              <div id="config-passkey" className="min-w-0 scroll-mt-24">
-                <ConfigPasskeyPanel theme={theme} moduleCard />
-              </div>
-            </div>
-
-            <div className="border-b" style={{ borderColor: theme.border }} data-orvita-section="notifications">
-              <div className="px-4 py-3 sm:px-5">
-                <p className="m-0 text-sm font-medium" style={{ color: theme.text }}>
-                  Avisos y recordatorios
-                </p>
-                <p className="m-0 mt-1 text-xs" style={{ color: theme.textMuted }}>
-                  Navegador y sistema; silencios por horas.
-                </p>
-                <div className="mt-4">
-                  <ConfigNotificationPreferencesPanel theme={theme} />
-                </div>
+              <div id="config-passkey" className="min-w-0 scroll-mt-20">
+                <ConfigPasskeyPanel theme={theme} moduleCard compact />
               </div>
             </div>
 
@@ -926,12 +944,12 @@ export default function ConfigV3() {
               style={{ borderColor: theme.border }}
               data-orvita-section="shortcuts-hint"
             >
-              <div className="px-4 py-4 sm:px-5">
-                <p className="m-0 text-sm font-medium" style={{ color: theme.text }}>
-                  Atajos y un toque
+              <div className="px-3 py-3 sm:px-4">
+                <p className="m-0 text-xs font-medium" style={{ color: theme.text }}>
+                  Atajos
                 </p>
-                <p className="m-0 mt-2 text-sm leading-relaxed" style={{ color: theme.textMuted }}>
-                  El atajo de salud y la importación viven en{" "}
+                <p className="m-0 mt-1.5 text-[12px] leading-relaxed" style={{ color: theme.textMuted }}>
+                  El atajo de salud está en{" "}
                   <a
                     href="#conexion-salud"
                     className="font-medium underline-offset-2 hover:underline"
@@ -939,7 +957,7 @@ export default function ConfigV3() {
                   >
                     Conexiones → Salud
                   </a>
-                  . La guía de permisos está en la tarjeta de salud.
+                  .
                 </p>
               </div>
             </div>
@@ -1147,6 +1165,45 @@ export default function ConfigV3() {
                 </div>
               </details>
             </div>
+          </div>
+        </details>
+
+        <details
+          className="group mt-2"
+          data-orvita-section="notifications"
+          id="config-notif-chip"
+          style={{
+            backgroundColor: theme.surface,
+            borderRadius: "9999px",
+            boxShadow: "0 0 0 1px rgba(15, 23, 42, 0.08)",
+          }}
+        >
+          <summary
+            className="flex cursor-pointer list-none items-center justify-between gap-2 px-3.5 py-2.5 sm:px-4 [&::-webkit-details-marker]:hidden"
+            style={{ color: theme.text }}
+          >
+            <span className="text-[12px] font-medium sm:text-sm" style={{ color: theme.text }}>
+              Notificaciones
+            </span>
+            <div className="flex items-center gap-2">
+              <span
+                className="hidden shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-medium sm:inline sm:text-xs"
+                style={{ backgroundColor: theme.surfaceAlt, color: theme.textMuted }}
+              >
+                Inbox + push
+              </span>
+              <ChevronDown
+                className="h-3.5 w-3.5 shrink-0 transition-transform duration-200 group-open:rotate-180"
+                style={{ color: theme.textMuted }}
+                aria-hidden
+              />
+            </div>
+          </summary>
+          <div
+            className="mt-1 rounded-2xl border p-1.5 sm:p-2"
+            style={{ borderColor: theme.border, backgroundColor: theme.surface }}
+          >
+            <ConfigNotificationPreferencesPanel theme={theme} />
           </div>
         </details>
       </section>

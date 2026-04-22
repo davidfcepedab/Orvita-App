@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { CalendarDays, CheckCircle2, Dumbbell, ListTodo } from "lucide-react"
+import { CalendarDays, Check, CheckCircle2, Dumbbell, ListTodo } from "lucide-react"
 import type { OrbitaConfigTheme } from "@/app/components/orbita-v3/config/configThemeTypes"
 import { configConnectionActionClass, configSettingsSectionKickerClass } from "@/lib/config/configSettingsUi"
 import { formatRelativeSyncAgo } from "@/lib/time/formatRelativeSyncAgo"
@@ -33,6 +33,8 @@ export function ConfigIntegrationsPanel({
   unified = true,
   /** Mostrar solo un bloque (p. ej. acordeones independientes en configuración minimal). */
   only = "all" as "all" | "google" | "hevy",
+  /** Título e icono van en el `<summary>`; el cuerpo solo acciones y textos. */
+  accordionMode = false,
 }: {
   theme: OrbitaConfigTheme
   googleConnected: boolean
@@ -55,12 +57,90 @@ export function ConfigIntegrationsPanel({
   hevyLastSyncAt: string | null
   unified?: boolean
   only?: "all" | "google" | "hevy"
+  accordionMode?: boolean
 }) {
   const btn = (extra?: string) =>
     [configConnectionActionClass, extra].filter(Boolean).join(" ")
 
+  const linkText = "text-[13px] font-medium"
+
   const googleRow = (
-      <div className={unified ? "px-4 pb-4 pt-0 sm:px-5 sm:pb-5" : ""}>
+    <div className={unified ? "px-4 pb-4 pt-0 sm:px-5 sm:pb-5" : ""}>
+      {accordionMode && only === "google" ? (
+        <div className="min-w-0">
+          {!googleConnected ? (
+            <button
+              type="button"
+              onClick={onConnectGoogle}
+              className={btn()}
+              style={{ borderColor: theme.accent.health, backgroundColor: theme.accent.health, color: "#fff" }}
+              disabled={connecting}
+            >
+              {connecting ? "Conectando…" : "Conectar Google"}
+            </button>
+          ) : (
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+                <button
+                  type="button"
+                  onClick={onSyncCalendar}
+                  className="inline-flex items-center gap-1.5 border-0 bg-transparent p-0"
+                  style={{ color: theme.text }}
+                  disabled={syncingCalendar}
+                >
+                  <span className={linkText}>{syncingCalendar ? "Sincronizando…" : "Calendario"}</span>
+                  <Check
+                    className="h-3.5 w-3.5 shrink-0"
+                    strokeWidth={2.5}
+                    style={{ color: theme.accent.health }}
+                    aria-hidden
+                  />
+                </button>
+                <button
+                  type="button"
+                  onClick={onSyncTasks}
+                  className="inline-flex items-center gap-1.5 border-0 bg-transparent p-0"
+                  style={{ color: theme.text }}
+                  disabled={syncingTasks}
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    <ListTodo className="h-3.5 w-3.5 opacity-70" aria-hidden />
+                    <span className={linkText}>{syncingTasks ? "Sincronizando…" : "Tareas"}</span>
+                  </span>
+                  <Check
+                    className="h-3.5 w-3.5 shrink-0"
+                    strokeWidth={2.5}
+                    style={{ color: theme.accent.health }}
+                    aria-hidden
+                  />
+                </button>
+                <button
+                  type="button"
+                  onClick={onDisconnectGoogle}
+                  className="text-[12px] font-medium underline-offset-2 hover:underline"
+                  style={{ color: theme.textMuted }}
+                  disabled={disconnectingGoogle}
+                >
+                  {disconnectingGoogle ? "…" : "Desconectar"}
+                </button>
+              </div>
+            </div>
+          )}
+          {googleSync ? (
+            <p className="mt-2 text-xs leading-relaxed" style={{ color: theme.textMuted }}>
+              {googleSync}
+            </p>
+          ) : null}
+          {googleError ? (
+            <p className="mt-2 text-xs leading-relaxed" style={{ color: theme.accent.finance }}>
+              {googleError}
+            </p>
+          ) : null}
+          <p className="mt-1 text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
+            {formatRelativeSyncAgo(googleLastSyncAt)}
+          </p>
+        </div>
+      ) : (
         <div className="flex flex-wrap items-start gap-3 sm:gap-4">
           <div
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg sm:h-10 sm:w-10"
@@ -157,19 +237,57 @@ export function ConfigIntegrationsPanel({
             </p>
           </div>
         </div>
-      </div>
+      )}
+    </div>
   )
 
   const hevyRow = (
-      <div
-        className={
+    <div
+      className={
         unified
           ? only === "hevy"
             ? "px-4 pb-1 pt-0 sm:px-5 sm:pb-2 sm:pt-0"
             : "px-4 pb-1 pt-4 sm:px-5 sm:pb-2 sm:pt-5"
           : ""
-        }
-      >
+      }
+    >
+      {accordionMode && only === "hevy" ? (
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+            <Link
+              href="/training"
+              className={`${linkText} no-underline underline-offset-2 hover:underline`}
+              style={{ color: theme.text }}
+            >
+              Ver entrenamiento
+            </Link>
+            <span style={{ color: theme.border }} aria-hidden>
+              ·
+            </span>
+            <button
+              type="button"
+              onClick={onHevySync}
+              className={btn()}
+              style={{
+                borderColor: theme.accent.health,
+                backgroundColor: theme.accent.health,
+                color: "#fff",
+              }}
+              disabled={hevySyncing || hevyChecking}
+            >
+              {hevySyncing ? "Sincronizando…" : "Sincronizar"}
+            </button>
+          </div>
+          {hevyMessage ? (
+            <p className="mt-2 text-xs leading-relaxed" style={{ color: theme.textMuted }}>
+              {hevyMessage}
+            </p>
+          ) : null}
+          <p className="mt-1 text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
+            {formatRelativeSyncAgo(hevyLastSyncAt)}
+          </p>
+        </div>
+      ) : (
         <div className="flex flex-wrap items-start gap-3 sm:gap-4">
           <div
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg sm:h-10 sm:w-10"
@@ -243,7 +361,8 @@ export function ConfigIntegrationsPanel({
             </p>
           </div>
         </div>
-      </div>
+      )}
+    </div>
   )
 
   const body = (

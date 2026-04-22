@@ -19,7 +19,14 @@ const defaultSettings: IntegrationSettings = {
   updated_at: null,
 }
 
-export function ConfigHealthUnifiedPanel({ theme }: { theme: OrbitaThemeSkin }) {
+export function ConfigHealthUnifiedPanel({
+  theme,
+  /** Solo atajo + nota; el sync en servidor vive en el panel estratégico. */
+  embedInStrategic = false,
+}: {
+  theme: OrbitaThemeSkin
+  embedInStrategic?: boolean
+}) {
   const [settings, setSettings] = useState<IntegrationSettings>(defaultSettings)
   const [healthConnected, setHealthConnected] = useState(false)
   const [healthLastSync, setHealthLastSync] = useState<string | null>(null)
@@ -134,6 +141,41 @@ export function ConfigHealthUnifiedPanel({ theme }: { theme: OrbitaThemeSkin }) 
     } finally {
       setBusy(null)
     }
+  }
+
+  if (embedInStrategic) {
+    return (
+      <div
+        className="px-3 py-3 sm:px-4 sm:py-4"
+        data-orvita-section="health-iphone-shortcut-embed"
+        style={{ color: theme.text }}
+      >
+        <div className="mb-3 flex min-w-0 items-start gap-2.5">
+          <span
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+            style={{ backgroundColor: theme.surfaceAlt, color: theme.accent.health }}
+            aria-hidden
+          >
+            <HeartPulse className="h-3.5 w-3.5" />
+          </span>
+          <div className="min-w-0">
+            <p className="m-0 text-sm font-medium leading-snug" style={{ color: theme.text }}>
+              Atajo en el iPhone
+            </p>
+            <p className="m-0 mt-0.5 text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
+              Descarga, permisos y un toque. El sync con servidor va abajo.
+            </p>
+          </div>
+        </div>
+        <div className="min-w-0">
+          <ConfigAppleShortcutPanel theme={theme} moduleCard />
+        </div>
+        <p className="m-0 mt-3 text-[10px] leading-relaxed" style={{ color: theme.textMuted }}>
+          <strong className="font-medium" style={{ color: theme.text }}>Atajos:</strong> pasos, ejercicio, energía, HRV, FC, entrenamientos. Sueño omitido en
+          el flujo (evita «Acción desconocida»). Si eso o «0 elementos», reinstala el .shortcut desde Órvita.
+        </p>
+      </div>
+    )
   }
 
   return (

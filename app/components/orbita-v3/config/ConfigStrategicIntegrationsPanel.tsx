@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from "react"
 import { CheckCircle2, ChevronDown, HeartPulse, Landmark, RefreshCw } from "lucide-react"
+import { ConfigConnectionPill } from "@/app/components/orbita-v3/config/ConfigConnectionPill"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import type { OrbitaConfigTheme } from "@/app/components/orbita-v3/config/configThemeTypes"
 import { configConnectionActionClass, configSettingsSectionKickerClass } from "@/lib/config/configSettingsUi"
@@ -245,7 +246,73 @@ export function ConfigStrategicIntegrationsPanel({
     }
   }
 
-  const makeTogglesBlock = (keys: ToggleKey[], compactCopy?: string) => (
+  const makeTogglesBlock = (
+    keys: ToggleKey[],
+    compactCopy: string | undefined,
+    layout: "default" | "accordion",
+    iconEl: "finance" | "health",
+  ) => {
+    const icon =
+      iconEl === "finance" ? (
+        <span
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+          style={{ backgroundColor: theme.surfaceAlt, color: theme.accent.finance }}
+          aria-hidden
+        >
+          <Landmark className="h-4 w-4" />
+        </span>
+      ) : (
+        <span
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+          style={{ backgroundColor: theme.surfaceAlt, color: theme.accent.health }}
+          aria-hidden
+        >
+          <HeartPulse className="h-4 w-4" />
+        </span>
+      )
+    if (layout === "accordion") {
+      return (
+        <div
+          className="flex gap-3 border-b px-4 py-3 sm:px-5 sm:py-3.5"
+          style={{ borderColor: theme.border }}
+        >
+          {icon}
+          <div className="min-w-0 flex-1">
+            <p className="m-0 text-sm font-medium" style={{ color: theme.text }}>
+              {iconEl === "finance" ? "Módulos" : "Capa servidor"}
+            </p>
+            <p className="m-0 mt-0.5 text-[11px] leading-relaxed sm:text-xs" style={{ color: theme.textMuted }}>
+              {compactCopy}
+            </p>
+            <div className="mt-2.5 flex flex-wrap gap-1.5 sm:gap-2">
+              {toggleOptions
+                .filter((item) => keys.includes(item.key))
+                .map((item) => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    disabled={busy === "settings"}
+                    onClick={() =>
+                      void patchSettings({
+                        [item.key]: !settings[item.key],
+                      } as Partial<IntegrationSettings>)
+                    }
+                    className={configConnectionActionClass}
+                    style={{
+                      borderColor: settings[item.key] ? theme.accent.health : theme.border,
+                      color: settings[item.key] ? "#fff" : theme.text,
+                      backgroundColor: settings[item.key] ? theme.accent.health : theme.surfaceAlt,
+                    }}
+                  >
+                    {settings[item.key] ? "On" : "Off"} · {item.label}
+                  </button>
+                ))}
+            </div>
+          </div>
+        </div>
+      )
+    }
+    return (
     <div
       className={unified ? "px-4 py-3 sm:px-5 sm:py-3.5" : "rounded-2xl border p-5 sm:p-6"}
       style={unified ? undefined : { backgroundColor: theme.surface, borderColor: theme.border }}
@@ -289,11 +356,10 @@ export function ConfigStrategicIntegrationsPanel({
           ))}
       </div>
     </div>
-  )
+    )
+  }
 
-  const togglesBlock = makeTogglesBlock(
-    toggleOptions.map((o) => o.key),
-  )
+  const togglesBlock = makeTogglesBlock(toggleOptions.map((o) => o.key), undefined, "default", "finance")
 
   const healthBlock = !showHealth
     ? null
@@ -303,7 +369,7 @@ export function ConfigStrategicIntegrationsPanel({
         style={unified ? undefined : { backgroundColor: theme.surface, borderColor: theme.border }}
         data-orvita-subsection="health-server-sync"
       >
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-start justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2.5">
             <span
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
@@ -312,15 +378,17 @@ export function ConfigStrategicIntegrationsPanel({
             >
               <HeartPulse className="h-4 w-4" />
             </span>
-            <p className="min-w-0 text-sm font-semibold leading-snug" style={{ color: theme.text }}>
-              Apple Health + Google Fit
-            </p>
+            <div>
+              <p className="min-w-0 text-sm font-semibold leading-snug" style={{ color: theme.text }}>
+                Apple Health + Google Fit
+              </p>
+              <p className="mt-0.5 text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
+                Sincroniza o importa desde el atajo.
+              </p>
+            </div>
           </div>
-          {healthConnected && <CheckCircle2 className="h-4 w-4 shrink-0" style={{ color: theme.accent.health }} aria-label="Conectado" />}
+          {healthConnected ? <CheckCircle2 className="h-4 w-4 shrink-0" style={{ color: theme.accent.health }} aria-label="Conectado" /> : null}
         </div>
-        <p className="mt-1.5 text-[11px] leading-relaxed sm:text-xs" style={{ color: theme.textMuted }}>
-          Import (Atajo) o sincronizar Google Fit según ajustes del servidor.
-        </p>
         <div className="mt-2.5 flex flex-wrap gap-1.5 sm:mt-3 sm:gap-2">
           <button
             type="button"
@@ -423,22 +491,18 @@ export function ConfigStrategicIntegrationsPanel({
     </>
   )
 
-  const summaryBar = (title: string, hint: string) => (
-    <>
-      <div className="min-w-0 text-left">
-        <p className="m-0 text-[0.95rem] font-medium tracking-tight" style={{ color: theme.text }}>
-          {title}
-        </p>
-        <p className="m-0 mt-0.5 text-xs font-normal" style={{ color: theme.textMuted }}>
-          {hint}
-        </p>
-      </div>
-      <ChevronDown
-        className="h-4 w-4 shrink-0 transition-transform duration-200 group-open:rotate-180"
-        style={{ color: theme.textMuted }}
-        aria-hidden
-      />
-    </>
+  const finanzasPill = !settings.banking_enabled ? (
+    <ConfigConnectionPill state="disabled" disconnectedLabel="Banca inactiva" />
+  ) : bankAccounts.length > 0 ? (
+    <ConfigConnectionPill state="connected" connectedLabel="Banca lista" />
+  ) : (
+    <ConfigConnectionPill state="disconnected" disconnectedLabel="Conectar" />
+  )
+
+  const saludPill = healthConnected ? (
+    <ConfigConnectionPill state="connected" connectedLabel="Sync listo" />
+  ) : (
+    <ConfigConnectionPill state="disconnected" disconnectedLabel="Sin datos" />
   )
 
   if (unified && layout === "accordions") {
@@ -453,13 +517,42 @@ export function ConfigStrategicIntegrationsPanel({
           }}
         >
           <summary
-            className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 sm:px-5 [&::-webkit-details-marker]:hidden"
+            className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3.5 sm:px-5 [&::-webkit-details-marker]:hidden"
             style={{ color: theme.text }}
           >
-            {summaryBar("Finanzas", "Bancos Colombia y avisos.")}
+            <div className="flex min-w-0 flex-1 items-start gap-3">
+              <span
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+                style={{ backgroundColor: theme.surfaceAlt, color: theme.accent.finance }}
+                aria-hidden
+              >
+                <Landmark className="h-4 w-4" />
+              </span>
+              <div className="min-w-0 text-left">
+                <p className="m-0 text-[0.9rem] font-medium tracking-tight" style={{ color: theme.text }}>
+                  Finanzas
+                </p>
+                <p className="m-0 mt-0.5 text-[12px] leading-snug" style={{ color: theme.textMuted }}>
+                  Bancos en Colombia, Nequi, avisos.
+                </p>
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              {finanzasPill}
+              <ChevronDown
+                className="h-4 w-4 shrink-0 transition-transform duration-200 group-open:rotate-180"
+                style={{ color: theme.textMuted }}
+                aria-hidden
+              />
+            </div>
           </summary>
           <div className="flex flex-col gap-0 border-t" style={{ borderColor: theme.border }}>
-            {makeTogglesBlock(["banking_enabled", "push_enhanced_enabled"], "Banca y notificaciones inteligentes (servidor).")}
+            {makeTogglesBlock(
+              ["banking_enabled", "push_enhanced_enabled"],
+              "Banca y push en el servidor (tokens).",
+              "accordion",
+              "finance",
+            )}
             {bankBlock}
           </div>
         </details>
@@ -474,18 +567,49 @@ export function ConfigStrategicIntegrationsPanel({
             }}
           >
             <summary
-              className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 sm:px-5 [&::-webkit-details-marker]:hidden"
+              className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3.5 sm:px-5 [&::-webkit-details-marker]:hidden"
               style={{ color: theme.text }}
             >
-              {summaryBar("Salud", "Atajos, Apple Health, Google Fit y sync.")}
+              <div className="flex min-w-0 flex-1 items-start gap-3">
+                <span
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+                  style={{ backgroundColor: theme.surfaceAlt, color: theme.accent.health }}
+                  aria-hidden
+                >
+                  <HeartPulse className="h-4 w-4" />
+                </span>
+                <div className="min-w-0 text-left">
+                  <p className="m-0 text-[0.9rem] font-medium tracking-tight" style={{ color: theme.text }}>
+                    Salud
+                  </p>
+                  <p className="m-0 mt-0.5 text-[12px] leading-snug" style={{ color: theme.textMuted }}>
+                    Atajos, Apple Health, Google Fit y sync.
+                  </p>
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                {saludPill}
+                <ChevronDown
+                  className="h-4 w-4 shrink-0 transition-transform duration-200 group-open:rotate-180"
+                  style={{ color: theme.textMuted }}
+                  aria-hidden
+                />
+              </div>
             </summary>
             <div
               className="flex flex-col gap-0 border-t"
               style={{ borderColor: theme.border }}
               data-orvita-subsection="health-unified-wrap"
             >
-              {beforeHealthServer ? <div className="px-0 pb-0 pt-0">{beforeHealthServer}</div> : null}
-              {makeTogglesBlock(["health_enabled"], "Habilita la capa de salud en el servidor (tokens y sync).")}
+              {beforeHealthServer ? (
+                <div className="px-0 pb-0 pt-0">{beforeHealthServer}</div>
+              ) : null}
+              {makeTogglesBlock(
+                ["health_enabled"],
+                "Activa salud en servidor (tokens, Apple, Google).",
+                "accordion",
+                "health",
+              )}
               {healthBlock}
             </div>
           </details>

@@ -20,9 +20,11 @@ import { isAppMockMode } from "@/lib/checkins/flags"
 export function ConfigPasskeyPanel({
   theme,
   moduleCard,
+  compact = false,
 }: {
   theme: OrbitaConfigTheme
   moduleCard?: boolean
+  compact?: boolean
 }) {
   const [busy, setBusy] = useState(false)
   const [listBusy, setListBusy] = useState(false)
@@ -55,24 +57,24 @@ export function ConfigPasskeyPanel({
   return (
     <section
       id="passkeys-section"
-      className={moduleCard ? "px-4 py-3.5 sm:px-5 sm:py-4" : "rounded-2xl border p-4 sm:p-5"}
+      className={moduleCard ? (compact ? "px-3 py-2.5 sm:px-4 sm:py-3" : "px-4 py-3.5 sm:px-5 sm:py-4") : "rounded-2xl border p-4 sm:p-5"}
       style={moduleCard ? undefined : { borderColor: theme.border, backgroundColor: theme.surface }}
     >
-      <div className="flex items-start gap-3 sm:gap-3.5">
+      <div className="flex items-start gap-2.5 sm:gap-3.5">
         <div
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg sm:h-10 sm:w-10"
+          className={`flex shrink-0 items-center justify-center rounded-lg ${compact ? "h-8 w-8" : "h-9 w-9 sm:h-10 sm:w-10"}`}
           style={{ backgroundColor: theme.surfaceAlt, color: theme.accent.finance }}
         >
-          <Fingerprint className="h-[1.1rem] w-[1.1rem] sm:h-5 sm:w-5" aria-hidden />
+          <Fingerprint className={compact ? "h-4 w-4" : "h-[1.1rem] w-[1.1rem] sm:h-5 sm:w-5"} aria-hidden />
         </div>
-        <div className="min-w-0 flex-1 space-y-1">
+        <div className="min-w-0 flex-1 space-y-0.5">
           <h3 className="text-sm font-semibold leading-snug" style={{ color: theme.text }}>
-            Llave de acceso (Passkey)
+            Passkey
           </h3>
-          <p className="text-[11px] leading-relaxed sm:text-xs" style={{ color: theme.textMuted }}>
-            Añade Face ID / Touch ID como segundo factor en este dispositivo. El inicio principal sigue siendo
-            correo + contraseña o enlace mágico hasta que tu proyecto Supabase active passkeys nativos en el
-            proveedor.
+          <p className="text-[11px] leading-snug sm:text-xs" style={{ color: theme.textMuted }}>
+            {compact
+              ? "Face ID / Touch ID como segundo factor en este dispositivo."
+              : "Añade Face ID / Touch ID como segundo factor en este dispositivo. El inicio principal sigue siendo correo + contraseña o enlace mágico hasta que tu proyecto Supabase active passkeys nativos en el proveedor."}
           </p>
         </div>
       </div>
@@ -93,10 +95,10 @@ export function ConfigPasskeyPanel({
             setBusy(false)
           }
         }}
-        className="mt-3 w-full max-w-md rounded-lg border px-3 py-2.5 text-xs font-semibold transition-opacity hover:opacity-95 disabled:opacity-50"
+        className={`w-full max-w-md rounded-lg border px-3 text-xs font-semibold transition-opacity hover:opacity-95 disabled:opacity-50 ${compact ? "mt-2 py-2" : "mt-3 py-2.5"}`}
         style={{ borderColor: theme.border, color: theme.text, backgroundColor: moduleCard ? "transparent" : theme.surfaceAlt }}
       >
-        {busy ? "Registrando…" : "Registrar passkey en este dispositivo"}
+        {busy ? "Registrando…" : compact ? "Registrar passkey" : "Registrar passkey en este dispositivo"}
       </button>
       <div className="mt-3 space-y-2">
         <p className="text-xs font-semibold" style={{ color: theme.text }}>
