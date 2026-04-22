@@ -5,6 +5,7 @@ import { deriveMetricsFromAppleBundle } from "@/lib/integrations/appleHealthBund
 const APPLE_BUNDLE_MAPPED_KEYS = new Set([
   "observed_at",
   "steps",
+  "exercise_minutes",
   "active_energy_kcal",
   "sleep_hours",
   "sleep_duration_seconds",
@@ -41,6 +42,7 @@ export function rowsFromAppleBundlePayload(bundle: Record<string, unknown>): App
   if (Number.isNaN(observedAt.getTime())) return []
 
   const steps = readNumber(bundle, "steps")
+  const exercise_minutes = readNumber(bundle, "exercise_minutes")
   const active_energy_kcal = readNumber(bundle, "active_energy_kcal")
   const sleep_hours_raw = readNumber(bundle, "sleep_hours")
   const sleep_duration_seconds = readNumber(bundle, "sleep_duration_seconds")
@@ -71,6 +73,7 @@ export function rowsFromAppleBundlePayload(bundle: Record<string, unknown>): App
   const derived = deriveMetricsFromAppleBundle({
     observed_at: observedAt.toISOString(),
     steps,
+    exercise_minutes,
     active_energy_kcal,
     sleep_hours,
     hrv_ms,
@@ -84,6 +87,7 @@ export function rowsFromAppleBundlePayload(bundle: Record<string, unknown>): App
 
   const hasSignal =
     steps !== undefined ||
+    exercise_minutes !== undefined ||
     active_energy_kcal !== undefined ||
     sleep_hours !== undefined ||
     typeof sleep_duration_seconds === "number" ||

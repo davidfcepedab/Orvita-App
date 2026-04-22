@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
-"""Genera el plist del atajo iOS, listo para `plutil` + `shortcuts sign`."""
+"""Genera el plist del atajo iOS, listo para `plutil` + `shortcuts sign`.
+
+Métricas incluidas (aportan columnas o `readiness` derivado en Órvita):
+- Pasos, energía activa, HRV, FC en reposo, sueño (análisis), entrenamientos (conteo + duración).
+- Minutos de ejercicio (anillo verde): complementan «pasos» en el modelo de recuperación si hay Apple Watch.
+
+No añadimos más tipos HealthKit aquí sin columna/UI en la app (peso, SpO2, presión, etc.):
+sí puedes mandarlos como números extra en el JSON y se guardan en `metadata.shortcut_bundle_extras`.
+"""
 from __future__ import annotations
 
 import plistlib
@@ -178,6 +186,7 @@ def dictionary_bundle(
     u_dict: str,
     u_iso: str,
     u_steps: str,
+    u_exercise_min: str,
     u_energy: str,
     u_hrv: str,
     u_rhr: str,
@@ -196,6 +205,14 @@ def dictionary_bundle(
             "WFKey": text_plain("steps"),
             "WFValue": {
                 "Value": text_token_string(u_steps, "Calculation Result"),
+                "WFSerializationType": "WFTextTokenString",
+            },
+        },
+        {
+            "WFItemType": 1,
+            "WFKey": text_plain("exercise_minutes"),
+            "WFValue": {
+                "Value": text_token_string(u_exercise_min, "Calculation Result"),
                 "WFSerializationType": "WFTextTokenString",
             },
         },
@@ -375,6 +392,8 @@ def main() -> int:
 
     u_find_steps = uid()
     u_stat_steps = uid()
+    u_find_exercise = uid()
+    u_stat_exercise = uid()
     u_find_energy = uid()
     u_stat_energy = uid()
     u_find_hrv = uid()
@@ -395,7 +414,7 @@ def main() -> int:
 
     actions: list[dict] = [
         comment(
-            "Lee sueño (análisis), entrenos del día, pasos, energía activa, HRV y FC en reposo; envía todo a Órvita. "
+            "Lee sueño (análisis), entrenos del día, pasos, minutos de ejercicio, energía activa, HRV y FC en reposo; envía todo a Órvita. "
             "Genera un token en la app (Salud) y pégalo cuando te lo pida el atajo."
         ),
         ask_text(
@@ -406,6 +425,10 @@ def main() -> int:
         format_iso8601(u=u_iso, u_date=u_date),
         find_health_quantity(u_find=u_find_steps, identifier="HKQuantityTypeIdentifierStepCount"),
         statistics_on(u_find_steps, u_stat_steps, "Sum"),
+        find_health_quantity(
+            u_find=u_find_exercise, identifier="HKQuantityTypeIdentifierAppleExerciseTime"
+        ),
+        statistics_on(u_find_exercise, u_stat_exercise, "Sum"),
         find_health_quantity(u_find=u_find_energy, identifier="HKQuantityTypeIdentifierActiveEnergyBurned"),
         statistics_on(u_find_energy, u_stat_energy, "Sum"),
         find_health_quantity(u_find=u_find_hrv, identifier="HKQuantityTypeIdentifierHeartRateVariabilitySDNN"),
@@ -433,6 +456,7 @@ def main() -> int:
             u_dict=u_dict,
             u_iso=u_iso,
             u_steps=u_stat_steps,
+            u_exercise_min=u_stat_exercise,
             u_energy=u_stat_energy,
             u_hrv=u_stat_hrv,
             u_rhr=u_stat_rhr,

@@ -57,7 +57,7 @@ Diagnóstico rápido (tres fallos que a veces aparecen juntos)
    - Vuelve a instalar el .shortcut desde la web para recuperar el nombre y el flujo completo.
 
 Permisos en el iPhone
-- Salud → Perfil (arriba a la derecha) → Apps o Privacidad → Atajos: permite lectura de **Pasos, Energía activa, Variabilidad de FC (HRV), FC en reposo, Análisis del sueño y Entrenamientos**. No dejes solo “Pasos”.
+- Salud → Perfil (arriba a la derecha) → Apps o Privacidad → Atajos: permite lectura de **Pasos, Minutos de ejercicio, Energía activa, Variabilidad de FC (HRV), FC en reposo, Análisis del sueño y Entrenamientos**. No dejes solo “Pasos”.
 - Tras instalar, ejecuta el atajo una vez y acepta lo que pida iOS (Salud, red si aplica). Si ves «Acción desconocida», bórralo y reinstálalo desde Órvita en Safari.
 
 Estructura mínima lógica (alineada con el .shortcut de Órvita)
@@ -67,6 +67,6 @@ Estructura mínima lógica (alineada con el .shortcut de Órvita)
 - Diccionario JSON con claves del contrato (apple_bundle) y POST a la API; token desde la app
 
 Métricas de Apple Salud: cuáles usa Órvita hoy
-- Sí, columnas y gráficos (el atajo oficial las envía): Pasos, Energía de actividad, Variabilidad de la FC (HRV), FC en reposo, Sueño (duración vía análisis del sueño), Entrenamientos (conteo y minutos o duración).
+- Sí, columnas y gráficos (el atajo oficial las envía): Pasos, Minutos de ejercicio (anillo verde; mejora el «readiness» junto a pasos), Energía de actividad, Variabilidad de la FC (HRV), FC en reposo, Sueño (duración vía análisis del sueño), Entrenamientos (conteo y minutos o duración).
 - No hay columna dedicada aún, pero si envías otras claves numéricas en el mismo JSON, Órvita las guarda en metadatos (p. ej. peso, SpO2, distancia) para análisis futuro; no sustituyen al bloque de pasos/energía/sueño arriba.
 - Activar muchos interruptores en Salud → Atajos no basta: el atajo debe tener acciones que lean cada tipo. Si en el editor solo queda un «Diccionario» vacío o tarjetas grises «Acción desconocida», reinstala el .shortcut; no es un fallo de permisos sueltos.
