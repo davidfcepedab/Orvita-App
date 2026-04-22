@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { isAppMockMode, UI_HEALTH_CONTEXT_ERROR } from "@/lib/checkins/flags"
+import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import { getContext } from "@/lib/getContext"
 import {
   HEALTH_ENERGY_PROFILE,
@@ -110,13 +111,14 @@ export function useSaludContext() {
       }
 
       try {
+        const authHeaders = await browserBearerHeaders()
         const [response, prefsRes, habitsPayload] = await Promise.all([
           getContext(),
-          fetch("/api/health/preferences", { cache: "no-store", credentials: "include" }).then(async (r) => {
+          fetch("/api/health/preferences", { cache: "no-store", headers: authHeaders }).then(async (r) => {
             const j = (await r.json()) as { success?: boolean; preferences?: HealthPreferencesPayload }
             return r.ok && j.success ? j.preferences ?? {} : {}
           }),
-          fetch("/api/habits", { cache: "no-store", credentials: "include" }).then(async (r) => {
+          fetch("/api/habits", { cache: "no-store", headers: authHeaders }).then(async (r) => {
             const j = (await r.json()) as {
               success?: boolean
               data?: { habits?: Array<{ water_today_ml?: number; metadata?: HabitMetadata | null }> }
@@ -296,6 +298,8 @@ export function useSaludContext() {
       hydrationCurrent,
       hydrationTarget,
       hydrationTracked,
+      /** true cuando el total de litros viene de hábitos de agua (p. ej. misión en Inicio), no solo de preferencias. */
+      hydrationFromHabit: habitWater != null,
       macrosFromLog,
       macros,
       weeklyVolume,

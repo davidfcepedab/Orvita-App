@@ -2,11 +2,12 @@
 
 import { useId, useMemo, useState } from "react"
 import {
-  Area,
+  Bar,
   CartesianGrid,
   ComposedChart,
   Legend,
   Line,
+  Area,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -29,11 +30,7 @@ import { useHealthSummaryNarrative } from "@/app/health/useHealthSummaryNarrativ
 import { useAppleHevyCorrelationNarrative } from "@/app/health/useAppleHevyCorrelationNarrative"
 import { useHealthAutoMetrics } from "@/app/hooks/useHealthAutoMetrics"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
-import {
-  appleDaySignalsFromHealthMetric,
-  describeAppleHealthVersusHevy,
-  HEVY_INTEGRATION_LABEL,
-} from "@/lib/health/appleHevyRelation"
+import { appleDaySignalsFromHealthMetric, HEVY_INTEGRATION_LABEL } from "@/lib/health/appleHevyRelation"
 
 /** Área “fatiga” (proxy de sueño a partir de check-ins, no polisomnografía). */
 const BIOMETRIC_AREA_TOP = "#E8EAF6"
@@ -41,6 +38,14 @@ const BIOMETRIC_AREA_BOTTOM = "#E8EAF6"
 const BIOMETRIC_ENERGY_STROKE = "#22B455"
 
 const biometricChartMargin = { top: 14, right: 42, left: 4, bottom: 28 } as const
+
+function splitSummarySentences(text: string): string[] {
+  return text
+    .trim()
+    .split(/(?<=[.!?])\s+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0)
+}
 
 function BiometricCorrelationLegend() {
   return (
@@ -177,6 +182,76 @@ export default function HealthPage() {
 
   const appleSignals = useMemo(() => appleDaySignalsFromHealthMetric(autoHealth), [autoHealth])
 
+  const appleKpiItems = useMemo(
+    () => [
+      {
+        k: "sleep",
+        label: "Sueño",
+        value: autoHealth?.sleep_hours != null ? autoHealth.sleep_hours.toFixed(1) : "—",
+        unit: "h",
+        hint: "Horas de sueño según el último import (Apple).",
+        accent: "var(--color-accent-primary)",
+      },
+      {
+        k: "hrv",
+        label: "HRV",
+        value: autoHealth?.hrv_ms != null ? String(Math.round(autoHealth.hrv_ms)) : "—",
+        unit: "ms",
+        hint: "Variabilidad del ritmo cardíaco. Valores más bajos suelen ir con estrés o fatiga; no es diagnóstico clínico.",
+        accent: "var(--color-accent-warning)",
+      },
+      {
+        k: "readiness",
+        label: "Disposición",
+        value: autoHealth?.readiness_score != null ? String(Math.round(autoHealth.readiness_score)) : "—",
+        unit: "/100",
+        hint: "Índice de disposición del día (si el atajo lo envía; distinto a tu check-in en Órvita).",
+        accent: "var(--color-accent-health)",
+      },
+      {
+        k: "steps",
+        label: "Pasos",
+        value: autoHealth?.steps != null ? String(Math.round(autoHealth.steps)) : "—",
+        unit: "",
+        hint: "Conteo aproximado del día en Apple.",
+        accent: "var(--color-accent-primary)",
+      },
+      {
+        k: "kcal",
+        label: "Energía activa",
+        value: autoHealth?.calories != null ? String(Math.round(autoHealth.calories)) : "—",
+        unit: "kcal",
+        hint: "Calorías de movimiento (activas), no ingesta de comida.",
+        accent: "var(--color-accent-danger)",
+      },
+      {
+        k: "wcount",
+        label: "Sesiones (Apple)",
+        value: appleSignals?.workouts_count != null ? String(Math.round(appleSignals.workouts_count)) : "—",
+        unit: "",
+        hint: "Sesiones de entreno o movimiento que Apple asoció al día importado.",
+        accent: "var(--color-accent-health)",
+      },
+      {
+        k: "wmin",
+        label: "Min. entreno",
+        value: appleSignals?.workout_minutes != null ? String(Math.round(appleSignals.workout_minutes)) : "—",
+        unit: "min",
+        hint: "Minutos de entreno (directos o calculados en import).",
+        accent: "var(--color-accent-warning)",
+      },
+      {
+        k: "rhr",
+        label: "FC en reposo",
+        value: appleSignals?.resting_hr_bpm != null ? String(Math.round(appleSignals.resting_hr_bpm)) : "—",
+        unit: "lpm",
+        hint: "Pulsaciones en reposo en el muestreo de Apple, si las envió el atajo.",
+        accent: "var(--color-accent-primary)",
+      },
+    ],
+    [autoHealth, appleSignals],
+  )
+
   const appleSleepSeries = useMemo(() => {
     return (autoHealthTimeline ?? [])
       .filter((row) => row.sleep_hours != null && typeof row.sleep_hours === "number")
@@ -186,11 +261,6 @@ export default function HealthPage() {
         hours: Number(row.sleep_hours),
       }))
   }, [autoHealthTimeline])
-
-  const appleHevyBridge = useMemo(
-    () => describeAppleHealthVersusHevy(today ?? null, appleSignals),
-    [today, appleSignals],
-  )
 
   const appleHevyInsight = useAppleHevyCorrelationNarrative({
     loading: salud.loading || autoHealthLoading,
@@ -251,46 +321,32 @@ export default function HealthPage() {
           <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
             Apple Health y datos automáticos
           </p>
-          <p className="m-0 max-w-prose text-pretty text-[13px] leading-relaxed text-[var(--color-text-secondary)]">
-            Desde el navegador no abrimos la app Salud al detalle: lo que ves aquí es lo que envías tú con el atajo de
-            iPhone (o una importación similar). Así respetamos privacidad y reglas de Apple, y tú controlas el envío.
+          <p className="m-0 max-w-prose text-pretty text-[12px] leading-relaxed text-[var(--color-text-secondary)] sm:text-[13px]">
+            Viste tu Salud y envías con el atajo; la web no abre HealthKit sola. El cruce con {HEVY_INTEGRATION_LABEL} y el
+            check-in está en la tarjeta siguiente, no la repetimos aquí.
           </p>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7">
-            {[
-              { label: "Sueño (h)", value: autoHealth?.sleep_hours != null ? String(autoHealth.sleep_hours) : "—" },
-              { label: "Calma del pulso (ms)", value: autoHealth?.hrv_ms != null ? String(autoHealth.hrv_ms) : "—" },
-              {
-                label: "Disposición hoy",
-                value: autoHealth?.readiness_score != null ? String(autoHealth.readiness_score) : "—",
-              },
-              { label: "Pasos", value: autoHealth?.steps != null ? String(autoHealth.steps) : "—" },
-              {
-                label: "Energía activa (kcal)",
-                value: autoHealth?.calories != null ? String(Math.round(autoHealth.calories)) : "—",
-              },
-              {
-                label: "Movimientos (Apple)",
-                value:
-                  appleSignals?.workouts_count != null ? String(Math.round(appleSignals.workouts_count)) : "—",
-              },
-              {
-                label: "Minutos de entreno (Apple)",
-                value:
-                  appleSignals?.workout_minutes != null ? String(Math.round(appleSignals.workout_minutes)) : "—",
-              },
-              {
-                label: "Ritmo en reposo (lpm)",
-                value: appleSignals?.resting_hr_bpm != null ? String(Math.round(appleSignals.resting_hr_bpm)) : "—",
-              },
-            ].map((m) => (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4">
+            {appleKpiItems.map((m) => (
               <div
-                key={m.label}
-                className="rounded-xl border border-[color-mix(in_srgb,var(--color-border)_60%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_55%,transparent)] px-3 py-3"
+                key={m.k}
+                title={m.hint}
+                className="group relative overflow-hidden rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_50%,transparent)] px-3.5 py-3 shadow-[0_1px_0_rgba(15,23,42,0.04)] transition duration-200 [transition-property:transform,box-shadow] hover:-translate-y-0.5 hover:shadow-md"
               >
-                <p className="m-0 text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
+                <div
+                  className="absolute left-0 top-0 h-full w-1 opacity-80 transition group-hover:opacity-100"
+                  style={{ background: m.accent }}
+                  aria-hidden
+                />
+                <p className="m-0 pl-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
                   {m.label}
                 </p>
-                <p className="m-0 mt-2 text-xl font-semibold tabular-nums text-[var(--color-text-primary)]">{m.value}</p>
+                <p className="m-0 mt-1.5 pl-2.5 text-2xl font-semibold leading-none tabular-nums tracking-tight text-[var(--color-text-primary)]">
+                  {m.value}
+                  {m.unit ? <span className="text-sm font-medium text-[var(--color-text-secondary)]"> {m.unit}</span> : null}
+                </p>
+                <p className="m-0 mt-1.5 pl-2.5 text-[10px] leading-snug text-[var(--color-text-secondary)] line-clamp-2 sm:line-clamp-none">
+                  {m.hint}
+                </p>
               </div>
             ))}
           </div>
@@ -300,11 +356,6 @@ export default function HealthPage() {
               : autoHealth?.observed_at
                 ? `Última muestra: ${new Date(autoHealth.observed_at).toLocaleString("es-CO")} · fuente ${autoHealth.source ?? "—"}`
                 : "Sin muestras automáticas todavía. Pulsa importar o usa Configuración → Importar muestra Apple."}
-          </p>
-          <p className="m-0 max-w-prose text-pretty text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
-            <span className="font-semibold text-[var(--color-text-primary)]">{HEVY_INTEGRATION_LABEL}</span> sigue siendo
-            la fuente de entrenos en esta app; Apple Health refuerza sueño, pasos y gasto energético del día.{" "}
-            {appleHevyBridge}
           </p>
           <div className="flex flex-wrap gap-2">
             <button
@@ -381,10 +432,14 @@ export default function HealthPage() {
             Sueño importado (Apple Health)
           </p>
           <p className="m-0 max-w-prose text-pretty text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
-            Cada barra es un día en el que importaste datos; Apple resume horas de sueño, no un estudio de laboratorio. Si
-            faltan días, conviene correr otra vez el atajo.
+            Una barra = un día con import. Es la serie temporal del atajo, no un estudio de laboratorio. Si faltan días,
+            vuelve a ejecutar el atajo.
           </p>
-          <div className="h-[200px] w-full min-w-0 min-h-[180px]">
+          <div
+            className="h-[200px] w-full min-w-0 min-h-[180px]"
+            role="img"
+            aria-label="Sueño por día según importaciones de Apple Health"
+          >
             {autoHealthLoading ? (
               <div className="h-full rounded-xl border border-[color-mix(in_srgb,var(--color-border)_60%,transparent)] bg-[var(--color-surface-alt)]" />
             ) : appleSleepSeries.length === 0 ? (
@@ -393,18 +448,19 @@ export default function HealthPage() {
               </p>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={appleSleepSeries} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
+                <ComposedChart data={appleSleepSeries} margin={{ top: 8, right: 12, left: 0, bottom: 4 }} barCategoryGap="18%">
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
                   <XAxis dataKey="day" tick={{ fontSize: 10 }} stroke="var(--color-text-secondary)" interval={0} angle={-25} textAnchor="end" height={56} />
                   <YAxis width={32} domain={[0, "auto"]} tick={{ fontSize: 10 }} stroke="var(--color-text-secondary)" unit="h" />
                   <Tooltip contentStyle={rechartsTooltipContentStyle} formatter={(v) => [`${v} h`, "Sueño"]} />
-                  <Area
-                    type="monotone"
+                  <Bar
                     dataKey="hours"
                     name="Sueño"
-                    stroke="var(--color-accent-health)"
-                    fill="color-mix(in srgb, var(--color-accent-health) 22%, transparent)"
-                    strokeWidth={2}
+                    fill="var(--color-accent-health)"
+                    fillOpacity={0.85}
+                    radius={[6, 6, 0, 0]}
+                    maxBarSize={36}
+                    isAnimationActive
                   />
                 </ComposedChart>
               </ResponsiveContainer>
@@ -413,24 +469,37 @@ export default function HealthPage() {
         </div>
       </Card>
 
-      <Card>
-        <div className="grid gap-3 p-4 sm:gap-3.5 sm:p-6">
-          <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
-            Cómo te lee el día
-          </p>
-          {salud.loading ? (
-            <p className="m-0 text-[14px] leading-relaxed text-[var(--color-text-secondary)]">Preparando tu lectura…</p>
-          ) : (
-            <p className="m-0 max-w-prose text-pretty text-[14px] leading-relaxed tracking-[-0.01em] text-[var(--color-text-primary)] sm:text-[15px] sm:leading-[1.55]">
-              {healthSummary.paragraph}
+      <Card className="overflow-hidden">
+        <div className="grid gap-4 p-4 sm:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] sm:items-start sm:gap-6 sm:p-6">
+          <div className="min-w-0">
+            <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
+              Cómo te lee el día
             </p>
-          )}
+            {salud.loading ? (
+              <p className="m-0 mt-2 text-[14px] leading-relaxed text-[var(--color-text-secondary)]">Preparando tu lectura…</p>
+            ) : (
+              <ul className="m-0 mt-2 list-none space-y-2.5 p-0">
+                {splitSummarySentences(healthSummary.paragraph).map((line, idx) => (
+                  <li key={idx} className="relative pl-3 text-[14px] leading-[1.55] text-[var(--color-text-primary)] sm:text-[15px] sm:leading-[1.6]">
+                    <span
+                      className="absolute left-0 top-2.5 h-1.5 w-1.5 rounded-full bg-[var(--color-accent-health)]"
+                      aria-hidden
+                    />
+                    {line}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
           {!salud.loading && (
-            <p className="m-0 text-[10px] leading-snug text-[var(--color-text-secondary)]">
-              {healthSummary.usedAi
-                ? "Texto redactado con inteligencia artificial a partir de lo mismo que ves en esta pantalla, en lenguaje cotidiano. No sustituye consejo médico."
-                : "Resumen automático en palabras sencillas, a partir de lo que ya ves en tus tarjetas. No sustituye consejo médico."}
-            </p>
+            <div className="rounded-xl border border-[color-mix(in_srgb,var(--color-border)_60%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_40%,transparent)] p-3 sm:max-w-sm sm:self-stretch sm:p-3.5">
+              <p className="m-0 text-[11px] font-medium text-[var(--color-text-primary)]">Nota</p>
+              <p className="m-0 mt-1.5 text-[10px] leading-relaxed text-[var(--color-text-secondary)]">
+                {healthSummary.usedAi
+                  ? "Generado con IA a partir de lo que ya ves en pantalla. No es consejo médico."
+                  : "Resumen automático con tus mismas tarjetas. No es consejo médico."}
+              </p>
+            </div>
           )}
         </div>
       </Card>
@@ -477,11 +546,11 @@ export default function HealthPage() {
       <Card>
         <div className="grid gap-2 p-4 sm:gap-3 sm:p-6">
           <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
-            Correlación proxy: sueño vs energía
+            Correlación (proxy: check-in)
           </p>
           <p className="m-0 max-w-prose text-[11px] leading-relaxed text-[var(--color-text-secondary)] sm:text-[12px]">
-            Siete puntos alineados con tus últimos check-ins (score salud como energía y un proxy de “carga de sueño”
-            derivado del mismo dato). El eje inferior es solo referencia visual tipo jornada, no hora real de medición.
+            Últimos check-ins: energía (score salud) frente a carga de sueño proxy. Eje abajo: referencia visual, no reloj
+            real.
           </p>
           <div className="w-full min-w-0 overflow-x-auto overscroll-x-contain">
             <div className="h-[260px] min-h-[220px] w-full min-w-[280px] sm:h-[280px]">
@@ -564,8 +633,8 @@ export default function HealthPage() {
             </p>
             {!salud.hydrationTracked ? (
               <p className="m-0 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
-                Aún no tenemos litros para hoy. Si marcas vasos en la misión de agua de Inicio, o anotas agua en
-                preferencias de salud, verás la barra aquí sin repetir el dato a mano.
+                Aún no tenemos litros de hoy. Suma vasos en <span className="font-medium text-[var(--color-text-primary)]">Inicio</span> (misión
+                de agua) o regístralo en preferencias de salud: aquí se sincroniza automáticamente.
               </p>
             ) : (
               <>
@@ -575,6 +644,11 @@ export default function HealthPage() {
                 <div className="h-2 overflow-hidden rounded-full bg-[var(--color-border)]">
                   <div className="h-full rounded-full bg-[#3B82F6]" style={{ width: `${hydrationPct}%` }} />
                 </div>
+                <p className="m-0 text-[10px] leading-snug text-[var(--color-text-secondary)]">
+                  {salud.hydrationFromHabit
+                    ? "Total del día desde tus hábitos de agua en Inicio (suma de vasos)."
+                    : "Desde preferencias de salud (litros anotados hoy)."}
+                </p>
               </>
             )}
           </div>

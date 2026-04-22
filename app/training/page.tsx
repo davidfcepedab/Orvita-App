@@ -29,11 +29,7 @@ import { TrainingVisualBodySection } from "./TrainingVisualBodySection"
 import { agendaTodayYmd } from "@/lib/agenda/localDateKey"
 import { useHealthAutoMetrics } from "@/app/hooks/useHealthAutoMetrics"
 import { useAppleHevyCorrelationNarrative } from "@/app/health/useAppleHevyCorrelationNarrative"
-import {
-  appleDaySignalsFromHealthMetric,
-  describeAppleHealthVersusHevy,
-  HEVY_INTEGRATION_LABEL,
-} from "@/lib/health/appleHevyRelation"
+import { appleDaySignalsFromHealthMetric, HEVY_INTEGRATION_LABEL } from "@/lib/health/appleHevyRelation"
 
 function formatStatus(status: TrainingStatus) {
   if (status === "trained") return "Zona óptima de entrenamiento"
@@ -214,10 +210,6 @@ export default function TrainingPage() {
   const chartEmpty = chartRows.every((r) => r.volumen === 0)
 
   const appleSignals = useMemo(() => appleDaySignalsFromHealthMetric(appleHealth), [appleHealth])
-  const appleHevyBridge = useMemo(
-    () => describeAppleHealthVersusHevy(today ?? null, appleSignals),
-    [today, appleSignals],
-  )
 
   const appleHevyTrainingInsight = useAppleHevyCorrelationNarrative({
     loading: loading || appleHealthLoading,
@@ -328,16 +320,30 @@ export default function TrainingPage() {
                   color: "var(--color-text-secondary)",
                 }}
               >
-                Apple Health + {HEVY_INTEGRATION_LABEL}
+                Señal del reloj (Apple)
               </p>
-              <p className="max-w-prose text-pretty" style={{ margin: 0, fontSize: "12px", lineHeight: 1.55, color: "var(--color-text-primary)" }}>
-                {appleHevyBridge}
+              <p className="max-w-prose text-pretty" style={{ margin: 0, fontSize: "12px", lineHeight: 1.5, color: "var(--color-text-secondary)" }}>
+                El detalle reloj vs. gimnasio está en «Lectura de hoy» abajo. Aquí van los números crudos.
               </p>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "10px 14px", fontSize: "11px", color: "var(--color-text-secondary)" }}>
-                <span>Apple · entrenos: {appleSignals?.workouts_count ?? "—"}</span>
-                <span>Apple · min entreno: {appleSignals?.workout_minutes ?? "—"}</span>
-                <span>Apple · kcal activas: {appleSignals?.calories != null ? Math.round(appleSignals.calories) : "—"}</span>
-                <span>Apple · sueño: {appleSignals?.sleep_hours != null ? `${appleSignals.sleep_hours.toFixed(1)} h` : "—"}</span>
+              <div
+                className="flex flex-wrap gap-2"
+                style={{ fontSize: "11px", color: "var(--color-text-secondary)" }}
+                aria-label="Resumen de Apple Health importado"
+              >
+                {[
+                  { k: "Entrenos", v: appleSignals?.workouts_count },
+                  { k: "Min entreno", v: appleSignals?.workout_minutes },
+                  { k: "Kcal activas", v: appleSignals?.calories != null ? Math.round(appleSignals.calories) : null },
+                  { k: "Sueño", v: appleSignals?.sleep_hours != null ? `${appleSignals.sleep_hours.toFixed(1)} h` : null },
+                ].map((x) => (
+                  <span
+                    key={x.k}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--color-border)_70%,transparent)] bg-[var(--color-surface)] px-2.5 py-1 tabular-nums"
+                  >
+                    <span className="text-[10px] uppercase tracking-wide text-[var(--color-text-secondary)]">{x.k}</span>
+                    <span className="font-medium text-[var(--color-text-primary)]">{x.v ?? "—"}</span>
+                  </span>
+                ))}
               </div>
             </div>
           </div>
@@ -480,24 +486,39 @@ export default function TrainingPage() {
         </Card>
         <Card>
           <div style={{ padding: "var(--spacing-md)", display: "grid", gap: "var(--spacing-sm)" }}>
-            <p
-              style={{
-                margin: 0,
-                fontSize: "11px",
-                textTransform: "uppercase",
-                letterSpacing: "0.14em",
-                color: "var(--color-text-secondary)",
-              }}
-            >
-              Hitos estratégicos
-            </p>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: "11px",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.14em",
+                  color: "var(--color-text-secondary)",
+                }}
+              >
+                Hitos (datos Hevy)
+              </p>
+              <span
+                className="inline-flex rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-text-secondary)]"
+                title="Cálculo automático a partir de nombres de sesión importados"
+              >
+                Auto
+              </span>
+            </div>
             {milestones.map((item) => (
               <div key={item.id} style={{ padding: "12px", borderRadius: "14px", background: "var(--color-surface-alt)" }}>
                 <p style={{ margin: 0, fontSize: "13px", fontWeight: 500 }}>{item.title}</p>
-                <p style={{ margin: "4px 0 0", fontSize: "11px", color: "var(--color-text-secondary)" }}>{item.progressLabel}</p>
-                <p style={{ margin: "4px 0 0", fontSize: "10px", color: "var(--color-text-secondary)" }}>{item.subtitle}</p>
+                <p style={{ margin: "4px 0 0", fontSize: "11px", color: "var(--color-text-secondary)", lineHeight: 1.45 }}>{item.progressLabel}</p>
+                <p style={{ margin: "4px 0 0", fontSize: "10px", color: "var(--color-text-secondary)", lineHeight: 1.4 }}>{item.subtitle}</p>
                 <div style={{ height: "6px", borderRadius: "999px", background: "var(--color-border)", marginTop: "10px" }}>
-                  <div style={{ height: "6px", borderRadius: "999px", width: `${item.barPct}%`, background: "#0F172A" }} />
+                  <div
+                    style={{
+                      height: "6px",
+                      borderRadius: "999px",
+                      width: `${item.barPct}%`,
+                      background: "color-mix(in srgb, var(--color-accent-health) 70%, #0f172a)",
+                    }}
+                  />
                 </div>
               </div>
             ))}

@@ -20,22 +20,22 @@ export function ConfigSettingsSection({ title, description, children, icon, them
     <div className={className} style={{ display: "grid", gap: 14 }}>
       <header className="min-w-0">
         <h2
-          className="m-0 flex items-center gap-2.5 text-lg font-semibold tracking-tight"
+          className="m-0 flex min-w-0 flex-wrap items-center gap-2.5 text-base font-semibold tracking-tight sm:text-lg"
           style={{ color: theme.text }}
         >
           {icon ? (
             <span
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9"
               style={{ backgroundColor: theme.surfaceAlt, color: theme.accent.health }}
               aria-hidden
             >
               {icon}
             </span>
           ) : null}
-          {title}
+          <span className="min-w-0 break-words">{title}</span>
         </h2>
         {description ? (
-          <p className="m-0 mt-2 max-w-prose text-sm leading-relaxed" style={{ color: theme.textMuted }}>
+          <p className="m-0 mt-1.5 max-w-prose text-xs leading-relaxed sm:text-sm" style={{ color: theme.textMuted }}>
             {description}
           </p>
         ) : null}

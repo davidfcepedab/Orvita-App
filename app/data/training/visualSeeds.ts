@@ -44,7 +44,7 @@ export const TRAINING_WEEKLY_VOLUME: WeeklyTrainingSeed[] = [
 export const TRAINING_MILESTONES: TrainingMilestoneSeed[] = [
   {
     id: 1,
-    title: "Deadlift 100 kg",
+    title: "Peso muerto 100 kg",
     current: 85,
     target: 100,
     unit: "kg",
@@ -52,7 +52,7 @@ export const TRAINING_MILESTONES: TrainingMilestoneSeed[] = [
   },
   {
     id: 2,
-    title: "5 km Run",
+    title: "Carrera 5 km",
     current: 24.2,
     target: 22,
     unit: "min",

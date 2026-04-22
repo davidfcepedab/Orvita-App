@@ -116,19 +116,19 @@ export function buildMilestoneViews(days: TrainingDay[], seeds: TrainingMileston
         title: seed.title.replace(/Deadlift/i, "Peso muerto"),
         progressLabel:
           n > 0
-            ? `Hevy (14 días): ${n} sesión(es) con patrón de fuerza · referencia ${seed.target} ${seed.unit}`
+            ? `Hevy · 14 d: ${n} sesión(es) · ref. ${seed.target} ${seed.unit}`
             : lastEver
-              ? `Referencia ${seed.target} ${seed.unit} — última señal similar en Hevy: ${formatEsShortYmd(lastEver.date)}${
-                  lastEver.workoutName ? ` (“${lastEver.workoutName.slice(0, 48)}${lastEver.workoutName.length > 48 ? "…" : ""}”)` : ""
-                }. En 14 días no volvió a aparecer.`
-              : `Referencia ${seed.target} ${seed.unit} — aún no hay entrenos Hevy con nombre afín a peso muerto o similar.`,
+              ? `Sin coincidencias en 14 d · último similar: ${formatEsShortYmd(lastEver.date)}${
+                  lastEver.workoutName ? ` (“${lastEver.workoutName.slice(0, 40)}${lastEver.workoutName.length > 40 ? "…" : ""}”)` : ""
+                }`
+              : `Sin entrenos Hevy con nombre tipo peso muerto / RDL · ref. ${seed.target} ${seed.unit}`,
         barPct: pct,
         subtitle:
           n > 0
-            ? "La barra refleja consistencia de sesiones con nombre/ejercicios tipo peso muerto; no sustituye el registro de cargas en Hevy."
+            ? "Consistencia por nombre de sesión; no sustituye el log de cargas en Hevy."
             : lastEver
-              ? "La franja baja mira solo los últimos 14 días; igual ves arriba cuándo fue la vez anterior en tu historial."
-              : "Registra entrenos en Hevy cuyo nombre o bloque sugiera peso muerto o RDL para llenar este hito.",
+              ? "La barra mira 14 d; la fecha arriba es el historial completo importado."
+              : "Añade sesiones con nombre que mencione peso muerto o RDL.",
       }
     }
     if (seed.unit === "min" && seed.reverse) {
@@ -146,19 +146,19 @@ export function buildMilestoneViews(days: TrainingDay[], seeds: TrainingMileston
         title: seed.title.replace(/5 km Run/i, "Carrera 5 km"),
         progressLabel:
           n > 0
-            ? `Hevy (14 días): ${n} sesión(es) tipo carrera/rodaje · objetivo tiempo ~${seed.target} min`
+            ? `Hevy · 14 d: ${n} sesión(es) carrera/rodaje · ~${seed.target} min (5K)`
             : lastEver
-              ? `Objetivo ~${seed.target} min (5K) — última carrera/rodaje similar: ${formatEsShortYmd(lastEver.date)}${
-                  lastEver.workoutName ? ` (“${lastEver.workoutName.slice(0, 48)}${lastEver.workoutName.length > 48 ? "…" : ""}”)` : ""
-                }. En 14 días no se repitió.`
-              : `Objetivo ~${seed.target} min (5K) — aún no hay carreras o rodajes Hevy con nombre afín.`,
+              ? `Sin carrera en 14 d · última: ${formatEsShortYmd(lastEver.date)}${
+                  lastEver.workoutName ? ` (“${lastEver.workoutName.slice(0, 40)}${lastEver.workoutName.length > 40 ? "…" : ""}”)` : ""
+                }`
+              : `Sin sesiones con nombre de carrera/5K/rodaje · obj. ~${seed.target} min`,
         barPct: pct,
         subtitle:
           n > 0
-            ? "La barra refleja frecuencia de sesiones con patrón carrera/intervalo; el tiempo de carrera no se infiere aún desde la API."
+            ? "Frecuencia de sesión; el tiempo de 5K aún no se infiere desde la API."
             : lastEver
-              ? "Contamos 14 días para la racha; la fecha de arriba es la última que encontramos en todo tu historial importado."
-              : "Añade entrenos con nombre tipo carrera, 5K o rodaje en Hevy para seguir este hito.",
+              ? "Barra = 14 d; la fecha = historial importado completo."
+              : "Añade nombres tipo carrera, 5K o rodaje en Hevy.",
       }
     }
     const pct = Math.min(100, Math.round((seed.current / seed.target) * 100))

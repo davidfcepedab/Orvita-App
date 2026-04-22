@@ -513,14 +513,14 @@ export default function ConfigV3() {
           Ajustes
         </h1>
         <p className="m-0 mt-1.5 max-w-[40rem] text-sm leading-relaxed" style={{ color: theme.textMuted }}>
-          Ordena cómo entras, cómo se ve la app y qué se conecta con tu día. Cada bloque explica en qué te ayuda.
+          Cuenta, apariencia e integraciones. Toca un bloque y ajusta dentro.
         </p>
       </header>
 
       <ConfigSettingsSection
         theme={theme}
         title="Instalar, entrar y tu perfil"
-        description="Aquí pasa todo lo básico: icono en la pantalla de inicio, inicio con la huella o la cara, y la foto o el nombre con el que te reconoce Órvita."
+        description="PWA, passkey o huella, y enlace a tu perfil (foto y nombre)."
         icon={<Smartphone className="h-4 w-4" aria-hidden />}
       >
         <ConfigPwaInstallPanel theme={theme} />
@@ -558,7 +558,7 @@ export default function ConfigV3() {
       <ConfigSettingsSection
         theme={theme}
         title="Tu hogar y familia"
-        description="Un mismo lugar para la foto de familia, el código de invitación y quién ya entró. Sirve para ver el calendario y los hábitos con contexto compartido."
+        description="Código, foto y miembros del hogar (calendario y hábitos con contexto)."
         icon={<Home className="h-4 w-4" aria-hidden />}
       >
         <ConfigHouseholdSection
@@ -590,7 +590,7 @@ export default function ConfigV3() {
       <ConfigSettingsSection
         theme={theme}
         title="Avisos y recordatorios"
-        description="Decide si Órvita te puede avisar en el teléfono. No sustituyen un calendario externo, pero te mantienen cerca de lo que marcaste como importante."
+        description="Notificaciones del navegador o del sistema."
         icon={<Bell className="h-4 w-4" aria-hidden />}
       >
         <ConfigNotificationPreferencesPanel theme={theme} />
@@ -598,19 +598,18 @@ export default function ConfigV3() {
 
       <ConfigSettingsSection
         theme={theme}
-        title="Salud en el iPhone (atajo y widget)"
-        description="Conecta la app Salud con Órvita: instala el atajo oficial, genera un código seguro y, si quieres, añade un widget de Atajos para ejecutarlo con un toque. La web no puede abrir HealthKit sola: esto es el flujo que Apple permite."
+        title="Salud en el iPhone (atajo)"
+        description="Atajo + token seguro. La web no abre HealthKit sola: es el flujo que Apple permite."
         icon={<Apple className="h-4 w-4" aria-hidden />}
       >
         <ConfigAppleShortcutPanel theme={theme} />
       </ConfigSettingsSection>
 
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(260px,340px)] lg:items-start">
-        <div className="space-y-10">
+      <div className="space-y-10">
           <ConfigSettingsSection
             theme={theme}
-            title="Aspecto y comodidad al leer"
-            description="Tres cosas: paleta, cuánta información entra en cada pantalla, y qué tan vivos se sienten los movimientos. Puedes probar; el cambio es inmediato."
+            title="Aspecto y comodidad"
+            description="Paleta, densidad y animaciones. El cambio es inmediato."
             icon={<Palette className="h-4 w-4" aria-hidden />}
           >
           <div className="space-y-3">
@@ -619,12 +618,8 @@ export default function ConfigV3() {
               style={{ color: theme.textMuted }}
             >
               <Palette className="h-4 w-4 shrink-0" aria-hidden />
-              Paleta y ambiente
+              Paleta
             </h3>
-            <p className="max-w-2xl text-xs leading-relaxed" style={{ color: theme.textMuted }}>
-              Elige un conjunto de colores o crea el tuyo. Los ajustes finos del modo personal se guardan con «Aplicar
-              colores» para no perder nada a mitad de camino.
-            </p>
             <div className="grid gap-2">
               {themeOptions.map((option) => (
                 <button
@@ -660,8 +655,7 @@ export default function ConfigV3() {
                   Tus colores
                 </p>
                 <p className="text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
-                  Usa el cuadro de color o escribe el código que ya tengas (empieza por #). Al terminar, pulsa «Aplicar
-                  colores» para que toda la app use la misma combinación.
+                  Hex o selector; luego «Aplicar colores».
                 </p>
                 <div className="space-y-3">
                   {paletteFields.map(({ key, label }) => (
@@ -732,12 +726,8 @@ export default function ConfigV3() {
               style={{ color: theme.textMuted }}
             >
               <Monitor className="h-4 w-4 shrink-0" aria-hidden />
-              Densidad de datos
+              Densidad
             </h3>
-            <p className="max-w-2xl text-xs leading-relaxed" style={{ color: theme.textMuted }}>
-              Compacta o abre el espacio entre tarjetas y bordes en Inicio, Salud, Agenda y el resto. «Alta densidad»
-              concentra más líneas en pantalla; «Modo foco» deja más aire.
-            </p>
             <div className="grid gap-2">
               {layoutOptions.map((option) => (
                 <button
@@ -768,12 +758,8 @@ export default function ConfigV3() {
               style={{ color: theme.textMuted }}
             >
               <Sliders className="h-4 w-4 shrink-0" aria-hidden />
-              Movimiento en pantalla
+              Movimiento
             </h3>
-            <p className="max-w-2xl text-xs leading-relaxed" style={{ color: theme.textMuted }}>
-              De «casi quieto» a «más vivo»: afecta sombras y transiciones suaves en las tarjetas. No cambia la lógica de
-              la app, solo la sensación al navegar.
-            </p>
             <div
               className="rounded-2xl border p-5 sm:p-6"
               style={{
@@ -800,8 +786,8 @@ export default function ConfigV3() {
 
           <ConfigSettingsSection
             theme={theme}
-            title="Conexiones con otras herramientas"
-            description="Calendario y tareas de Google, entrenos desde Hevy y, si aplica, otras piezas de tu flujo. Solo se usa lo que conectes; puedes desligar en cualquier momento."
+            title="Conexiones"
+            description="Google, Hevy y otras. Solo usamos lo que actives."
             icon={<Link2 className="h-4 w-4" aria-hidden />}
           >
             <ConfigIntegrationsPanel
@@ -827,70 +813,6 @@ export default function ConfigV3() {
             />
             <ConfigStrategicIntegrationsPanel theme={theme} />
           </ConfigSettingsSection>
-        </div>
-
-        <aside className="space-y-3 lg:sticky lg:top-24">
-          <h3 className="text-sm font-semibold" style={{ color: theme.text }}>
-            Vista previa
-          </h3>
-          <p className="text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
-            Así se verán fondo, tarjetas y separación aproximada. Si cambiaste la densidad arriba, este bloque refleja
-            más o menos aire entre líneas, sin ser una copia píxel a píxel de tu teléfono.
-          </p>
-          <div
-            className="flex min-h-[360px] flex-col rounded-3xl border-2 lg:min-h-[440px]"
-            style={{
-              backgroundColor: theme.bg,
-              borderColor: theme.border,
-              gap: "var(--layout-gap)",
-              padding: "var(--layout-padding)",
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <div className="h-6 w-24 rounded-md" style={{ backgroundColor: theme.surfaceAlt }} />
-              <div className="h-8 w-8 rounded-full" style={{ backgroundColor: theme.surfaceAlt }} />
-            </div>
-            <div
-              className="flex-1 rounded-2xl border p-5"
-              style={{
-                backgroundColor: theme.surface,
-                borderColor: theme.border,
-                gap: "var(--layout-gap)",
-              }}
-            >
-              <div className="mb-4 h-4 w-1/3 rounded" style={{ backgroundColor: theme.textMuted, opacity: 0.2 }} />
-              <div className="flex flex-col" style={{ gap: "var(--layout-gap)" }}>
-                {[1, 2, 3].map((item) => (
-                  <div key={item} className="flex items-center gap-4">
-                    <div
-                      className="h-10 w-10 rounded-xl"
-                      style={{
-                        backgroundColor: item === 1 ? theme.accent.finance : theme.surfaceAlt,
-                        opacity: item === 1 ? 1 : 0.5,
-                      }}
-                    />
-                    <div className="min-w-0 flex-1 space-y-2">
-                      <div className="h-3 w-3/4 max-w-[85%] rounded" style={{ backgroundColor: theme.text, opacity: 0.8 }} />
-                      <div className="h-2 w-1/2 max-w-[60%] rounded" style={{ backgroundColor: theme.textMuted, opacity: 0.4 }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div
-              className="flex h-12 items-center justify-around rounded-2xl border px-3"
-              style={{ backgroundColor: theme.surfaceAlt, borderColor: theme.border }}
-            >
-              {[1, 2, 3, 4].map((item) => (
-                <div
-                  key={item}
-                  className="h-6 w-6 rounded"
-                  style={{ backgroundColor: theme.textMuted, opacity: item === 1 ? 0.8 : 0.2 }}
-                />
-              ))}
-            </div>
-          </div>
-        </aside>
       </div>
 
       <OrbitaImageCropDialog
