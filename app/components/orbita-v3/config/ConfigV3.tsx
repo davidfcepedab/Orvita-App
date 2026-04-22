@@ -17,12 +17,12 @@ import { ConfigNotificationPreferencesPanel } from "@/app/components/orbita-v3/c
 import { ConfigPwaInstallPanel } from "@/app/components/orbita-v3/config/ConfigPwaInstallPanel"
 import { ConfigPasskeyPanel } from "@/app/components/orbita-v3/config/ConfigPasskeyPanel"
 import { ConfigSettingsSection } from "@/app/components/orbita-v3/config/ConfigSettingsSection"
-import { ConfigAppleShortcutPanel } from "@/app/components/orbita-v3/config/ConfigAppleShortcutPanel"
+import { ConfigHealthUnifiedPanel } from "@/app/components/orbita-v3/config/ConfigHealthUnifiedPanel"
 import { designTokens } from "@/src/theme/design-tokens"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { createBrowserClient } from "@/lib/supabase/browser"
 import Link from "next/link"
-import { Apple, Bell, ChevronDown, ChevronRight, Home, Link2, Monitor, Palette, Sliders, Smartphone, Sparkles } from "lucide-react"
+import { Bell, ChevronDown, ChevronRight, Home, Link2, Monitor, Palette, Sliders, Smartphone, Sparkles } from "lucide-react"
 import { defaultCustomPalette, normalizeHex, type CustomPalette } from "@/lib/theme/customPalette"
 import type { HouseholdMemberDTO } from "@/lib/household/memberTypes"
 
@@ -594,16 +594,7 @@ export default function ConfigV3() {
         <ConfigNotificationPreferencesPanel theme={theme} />
       </ConfigSettingsSection>
 
-      <ConfigSettingsSection
-        theme={theme}
-        title="Salud en el iPhone (atajo)"
-        description="Atajo + token seguro. La web no abre HealthKit sola: es el flujo que Apple permite."
-        icon={<Apple className="h-4 w-4" aria-hidden />}
-        container="card"
-        dataOrvitaSection="health-iphone-shortcut"
-      >
-        <ConfigAppleShortcutPanel theme={theme} moduleCard />
-      </ConfigSettingsSection>
+      <ConfigHealthUnifiedPanel theme={theme} />
 
       <div
         className="overflow-hidden rounded-2xl border shadow-[0_1px_0_rgba(15,23,42,0.04)]"
@@ -844,7 +835,7 @@ export default function ConfigV3() {
           hevyLastSyncAt={hevyLastSyncAt}
           unified
         />
-        <ConfigStrategicIntegrationsPanel theme={theme} unified />
+        <ConfigStrategicIntegrationsPanel theme={theme} unified showHealth={false} />
       </ConfigSettingsSection>
 
       <OrbitaImageCropDialog

@@ -39,10 +39,13 @@ const defaultSettings: IntegrationSettings = {
 export function ConfigStrategicIntegrationsPanel({
   theme,
   unified = true,
+  showHealth = true,
 }: {
   theme: OrbitaConfigTheme
   /** Misma columna que Google/Hevy, separada por líneas. */
   unified?: boolean
+  /** Oculta el bloque de Salud (se usa en la tarjeta unificada de Salud). */
+  showHealth?: boolean
 }) {
   const [settings, setSettings] = useState<IntegrationSettings>(defaultSettings)
   const [healthConnected, setHealthConnected] = useState(false)
@@ -54,6 +57,7 @@ export function ConfigStrategicIntegrationsPanel({
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [lastFailedAction, setLastFailedAction] = useState<"health" | "banking" | null>(null)
+  const toggleOptions = showHealth ? TOGGLE_OPTIONS : TOGGLE_OPTIONS.filter((item) => item.key !== "health_enabled")
 
   const load = useCallback(async () => {
     const headers = await browserBearerHeaders()
@@ -249,7 +253,7 @@ export function ConfigStrategicIntegrationsPanel({
         </p>
       )}
       <div className="mt-2 flex flex-wrap gap-1.5 sm:mt-2.5 sm:gap-2">
-        {TOGGLE_OPTIONS.map((item) => (
+        {toggleOptions.map((item) => (
           <button
             key={item.key}
             type="button"
@@ -273,65 +277,67 @@ export function ConfigStrategicIntegrationsPanel({
     </div>
   )
 
-  const healthBlock = (
-    <div
-      className={unified ? "px-4 py-3.5 sm:px-5 sm:py-4" : "rounded-2xl border p-5"}
-      style={unified ? undefined : { backgroundColor: theme.surface, borderColor: theme.border }}
-      data-orvita-subsection="health-server-sync"
-    >
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
-            style={{ backgroundColor: theme.surfaceAlt, color: theme.accent.health }}
-            aria-hidden
-          >
-            <HeartPulse className="h-4 w-4" />
-          </span>
-          <p className="min-w-0 text-sm font-semibold leading-snug" style={{ color: theme.text }}>
-            Apple Health + Google Fit
-          </p>
+  const healthBlock = !showHealth
+    ? null
+    : (
+      <div
+        className={unified ? "px-4 py-3.5 sm:px-5 sm:py-4" : "rounded-2xl border p-5"}
+        style={unified ? undefined : { backgroundColor: theme.surface, borderColor: theme.border }}
+        data-orvita-subsection="health-server-sync"
+      >
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+              style={{ backgroundColor: theme.surfaceAlt, color: theme.accent.health }}
+              aria-hidden
+            >
+              <HeartPulse className="h-4 w-4" />
+            </span>
+            <p className="min-w-0 text-sm font-semibold leading-snug" style={{ color: theme.text }}>
+              Apple Health + Google Fit
+            </p>
+          </div>
+          {healthConnected && <CheckCircle2 className="h-4 w-4 shrink-0" style={{ color: theme.accent.health }} aria-label="Conectado" />}
         </div>
-        {healthConnected && <CheckCircle2 className="h-4 w-4 shrink-0" style={{ color: theme.accent.health }} aria-label="Conectado" />}
+        <p className="mt-1.5 text-[11px] leading-relaxed sm:text-xs" style={{ color: theme.textMuted }}>
+          Import (Atajo) o sincronizar Google Fit según ajustes del servidor.
+        </p>
+        <div className="mt-2.5 flex flex-wrap gap-1.5 sm:mt-3 sm:gap-2">
+          <button
+            type="button"
+            onClick={() => void connectAppleHealth()}
+            disabled={busy === "apple-connect" || !settings.health_enabled}
+            className={configConnectionActionClass}
+            style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surfaceAlt }}
+          >
+            {busy === "apple-connect" ? "…" : "Conectar Apple"}
+          </button>
+          <button
+            type="button"
+            onClick={() => void importAppleSample()}
+            disabled={busy === "apple-import" || !settings.health_enabled}
+            className={configConnectionActionClass}
+            style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surfaceAlt }}
+          >
+            {busy === "apple-import" ? "…" : "Importar muestra"}
+          </button>
+          <button
+            type="button"
+            onClick={() => void syncHealth()}
+            disabled={busy === "health" || !settings.health_enabled}
+            className={configConnectionActionClass}
+            style={{ borderColor: theme.accent.health, backgroundColor: theme.accent.health, color: "#fff" }}
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            {busy === "health" ? "…" : "Sync salud"}
+          </button>
+        </div>
+        <p className="mt-2.5 text-[11px]" style={{ color: theme.textMuted }}>
+          {formatRelativeSyncAgo(healthLastSync)} · {healthSource === "apple_health_export" ? "Apple" : healthSource === "google_fit" ? "Google Fit" : "Sin datos"}
+        </p>
       </div>
-      <p className="mt-1.5 text-[11px] leading-relaxed sm:text-xs" style={{ color: theme.textMuted }}>
-        Import (Atajo) o sincronizar Google Fit según ajustes del servidor.
-      </p>
-      <div className="mt-2.5 flex flex-wrap gap-1.5 sm:mt-3 sm:gap-2">
-        <button
-          type="button"
-          onClick={() => void connectAppleHealth()}
-          disabled={busy === "apple-connect" || !settings.health_enabled}
-          className={configConnectionActionClass}
-          style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surfaceAlt }}
-        >
-          {busy === "apple-connect" ? "…" : "Conectar Apple"}
-        </button>
-        <button
-          type="button"
-          onClick={() => void importAppleSample()}
-          disabled={busy === "apple-import" || !settings.health_enabled}
-          className={configConnectionActionClass}
-          style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surfaceAlt }}
-        >
-          {busy === "apple-import" ? "…" : "Importar muestra"}
-        </button>
-        <button
-          type="button"
-          onClick={() => void syncHealth()}
-          disabled={busy === "health" || !settings.health_enabled}
-          className={configConnectionActionClass}
-          style={{ borderColor: theme.accent.health, backgroundColor: theme.accent.health, color: "#fff" }}
-        >
-          <RefreshCw className="h-3.5 w-3.5" />
-          {busy === "health" ? "…" : "Sync salud"}
-        </button>
-      </div>
-      <p className="mt-2.5 text-[11px]" style={{ color: theme.textMuted }}>
-        {formatRelativeSyncAgo(healthLastSync)} · {healthSource === "apple_health_export" ? "Apple" : healthSource === "google_fit" ? "Google Fit" : "Sin datos"}
-      </p>
-    </div>
-  )
+    )
 
   const bankBlock = (
     <div

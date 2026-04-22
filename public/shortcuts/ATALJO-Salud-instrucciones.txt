@@ -57,8 +57,8 @@ Diagnóstico rápido (tres fallos que a veces aparecen juntos)
    - Vuelve a instalar el .shortcut desde la web para recuperar el nombre y el flujo completo.
 
 Permisos en el iPhone
-- Salud → Perfil (arriba a la derecha) → Apps o Privacidad → Atajos: permite lectura de las categorías que el atajo consulta.
-- Tras instalar, ejecuta el atajo una vez y acepta lo que pida iOS (Salud, red si aplica).
+- Salud → Perfil (arriba a la derecha) → Apps o Privacidad → Atajos: permite lectura de **Pasos, Energía activa, Variabilidad de FC (HRV), FC en reposo, Análisis del sueño y Entrenamientos**. No dejes solo “Pasos”.
+- Tras instalar, ejecuta el atajo una vez y acepta lo que pida iOS (Salud, red si aplica). Si ves «Acción desconocida», bórralo y reinstálalo desde Órvita en Safari.
 
 Estructura mínima lógica (alineada con el .shortcut de Órvita)
 - Fecha actual → formatear (ISO) para observed_at
