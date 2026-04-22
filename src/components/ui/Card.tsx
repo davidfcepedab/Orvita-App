@@ -28,8 +28,6 @@ export function Card({
     return shadow
   }, [hover, isHovering, shadow, hoverShadow])
 
-  const glass = typeof className === "string" && className.split(/\s+/).includes("orv-glass-panel")
-
   return (
     <div
       className={className}
@@ -37,14 +35,10 @@ export function Card({
       onMouseLeave={() => setIsHovering(false)}
       {...divRest}
       style={{
-        background: glass
-          ? "color-mix(in srgb, var(--color-surface) 86%, transparent)"
-          : "var(--color-surface)",
+        background: "var(--color-surface)",
         border: "0.5px solid var(--color-border)",
         borderRadius: "var(--radius-card)",
         boxShadow: resolvedShadow,
-        WebkitBackdropFilter: glass ? "var(--chrome-blur)" : undefined,
-        backdropFilter: glass ? "var(--chrome-blur)" : undefined,
         transition:
           "box-shadow calc(300ms * var(--motion-factor, 1)) ease, transform calc(300ms * var(--motion-factor, 1)) ease",
         ...style,

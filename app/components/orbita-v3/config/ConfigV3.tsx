@@ -23,7 +23,6 @@ import Link from "next/link"
 import { ChevronRight, Monitor, Palette, Sliders, Sparkles } from "lucide-react"
 import { defaultCustomPalette, normalizeHex, type CustomPalette } from "@/lib/theme/customPalette"
 import type { HouseholdMemberDTO } from "@/lib/household/memberTypes"
-import OrvitaArcticPageShell from "@/app/components/orvita-ui/OrvitaArcticPageShell"
 
 const HEVY_LAST_SYNC_STORAGE_KEY = "orvita:config:hevyLastSyncIso"
 
@@ -497,36 +496,26 @@ export default function ConfigV3() {
   ]
 
   return (
-    <OrvitaArcticPageShell>
-      <div className="orv-page-shell mx-auto min-w-0 max-w-5xl space-y-8 overflow-x-hidden px-1 pb-14 sm:px-0">
-      <header
-        className="orv-glass-panel orv-fade-lift rounded-[1.25rem] border p-6 sm:p-7"
-        style={{ borderColor: theme.border }}
-      >
-        <h2 className="text-2xl font-semibold tracking-tight [text-wrap:balance]" style={{ color: theme.text }}>
+    <div className="orv-page-shell mx-auto min-w-0 max-w-5xl space-y-7 overflow-x-hidden">
+      <header>
+        <h2 className="text-2xl font-medium tracking-tight" style={{ color: theme.text }}>
           Configuración del sistema
         </h2>
-        <p className="mt-2 max-w-2xl text-sm leading-relaxed [text-wrap:pretty]" style={{ color: theme.textMuted }}>
-          Ajusta Órvita con calma: cómo se instala la app, cómo entras con el dispositivo y qué datos conectas. Nada de
-          jerga — solo control claro.
+        <p className="mt-1 text-sm leading-snug" style={{ color: theme.textMuted }}>
+          Control paramétrico de la interfaz Órvita
         </p>
       </header>
 
-      <div>
-        <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em]" style={{ color: theme.textMuted }}>
-          App y acceso
-        </h3>
-        <div className="grid gap-5 lg:grid-cols-2">
-          <ConfigPwaInstallPanel theme={theme} />
-          <ConfigPasskeyPanel theme={theme} />
-        </div>
-      </div>
+      <ConfigPwaInstallPanel theme={theme} />
+      <ConfigPasskeyPanel theme={theme} />
 
       <Link
         href="/perfil"
-        className="orbita-focus-ring orv-glass-panel orv-fade-lift flex min-h-[52px] items-center justify-between gap-3 rounded-[1.1rem] border p-4 no-underline transition-opacity hover:opacity-95"
+        className="orbita-focus-ring flex items-center justify-between gap-3 rounded-2xl border p-4 no-underline transition-opacity hover:opacity-95"
         style={{
+          backgroundColor: theme.surfaceAlt,
           borderColor: theme.border,
+          boxShadow: "0 1px 0 rgba(15, 23, 42, 0.04)",
         }}
       >
         <div className="flex min-w-0 items-start gap-2.5">
@@ -865,7 +854,6 @@ export default function ConfigV3() {
           void handleUploadFamilyPhoto(cropped)
         }}
       />
-      </div>
-    </OrvitaArcticPageShell>
+    </div>
   )
 }

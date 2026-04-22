@@ -29,29 +29,3 @@ export function bioStackCorrelationLine(name: string): string | null {
   }
   return null
 }
-
-const quetiapinaLike = (name: string) => {
-  const n = name.toLowerCase()
-  return n.includes("quetiapin") || n.includes("quentiapin")
-}
-
-/**
- * Cruce cálido readiness Apple + fármacos marcados hoy (solo educación, no ajuste de dosis).
- */
-export function recoveryHintWithMeds(
-  readiness: number | null | undefined,
-  takenSupplementNames: string[],
-): string | null {
-  const r = readiness
-  const hasQ = takenSupplementNames.some(quetiapinaLike)
-  if (r != null && r < 50 && hasQ) {
-    return "Tu readiness está bajo y hoy consta medicación de perfil nocturno (p. ej. quetiapina) en la pila: lo estratégico es proteger un bloque de 90 min de bajar revoluciones, sin culpa. Si el patrón se repite, coméntalo con tu médico."
-  }
-  if (r != null && r < 50 && !hasQ) {
-    return `Tu readiness en Apple va en ${r}. Conviene tratar hoy el día como “recuperación activa” antes de sumar más carga, aunque el calendario pida lo contrario.`
-  }
-  if (r != null && r >= 65) {
-    return `Readiness en ${r}: buen margen para ejecutar, siempre y cuando al final del día aún respetes el apagado.`
-  }
-  return null
-}

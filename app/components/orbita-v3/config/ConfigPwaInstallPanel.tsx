@@ -9,10 +9,9 @@ import {
   runDeferredInstallPrompt,
   subscribeInstallPrompt,
 } from "@/lib/pwa/installPrompt"
-import { cn } from "@/lib/utils"
 
 /** Configuración → Instalar como app (usa el evento `beforeinstallprompt` capturado globalmente). */
-export function ConfigPwaInstallPanel({ theme, className }: { theme: OrbitaConfigTheme; className?: string }) {
+export function ConfigPwaInstallPanel({ theme }: { theme: OrbitaConfigTheme }) {
   const [hasPrompt, setHasPrompt] = useState(false)
   const [standalone, setStandalone] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -27,8 +26,8 @@ export function ConfigPwaInstallPanel({ theme, className }: { theme: OrbitaConfi
 
   return (
     <section
-      className={cn("orv-glass-panel orv-fade-lift rounded-[1.1rem] border p-4 sm:p-5", className)}
-      style={{ borderColor: theme.border }}
+      className="rounded-2xl border p-4 sm:p-5"
+      style={{ borderColor: theme.border, backgroundColor: theme.surface }}
     >
       <div className="flex items-start gap-3">
         <div
