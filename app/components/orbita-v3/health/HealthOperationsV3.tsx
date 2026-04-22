@@ -25,7 +25,6 @@ import {
 } from "recharts"
 import type { SaludContextSnapshot } from "@/app/salud/_hooks/useSaludContext"
 import { useHealthAutoMetrics } from "@/app/hooks/useHealthAutoMetrics"
-import { bioStackCorrelationLine } from "@/lib/health/bioStackCorrelations"
 import { appleDaySignalsFromHealthMetric } from "@/lib/health/appleHevyRelation"
 
 const metricTone = (value: number) => {
@@ -200,7 +199,6 @@ export default function HealthOperationsV3({ salud: health }: Props) {
           <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
             {health.supplementStack.map((item, index) => {
               const isDone = item.taken || completedSupplements.includes(index)
-              const bioLine = bioStackCorrelationLine(item.name)
 
               return (
                 <button
@@ -227,11 +225,6 @@ export default function HealthOperationsV3({ salud: health }: Props) {
                   </div>
                   <p className="mt-4 text-sm font-semibold leading-snug">{item.name}</p>
                   <p className="text-xs text-white/55">{item.dose}</p>
-                  {bioLine ? (
-                    <p className="mt-2 line-clamp-3 text-left text-[10px] leading-snug text-sky-200/80 [text-wrap:pretty]">
-                      {bioLine}
-                    </p>
-                  ) : null}
                 </button>
               )
             })}

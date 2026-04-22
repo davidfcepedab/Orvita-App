@@ -529,7 +529,7 @@ export default function AgendaPage() {
       <TaskCardIterationProvider>
       <section
         aria-label="Agenda unificada"
-        className="orv-page-shell overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] shadow-card"
+        className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] shadow-card"
         style={{ borderWidth: "0.5px", background: "var(--agenda-shell-bg)" }}
       >
         <header

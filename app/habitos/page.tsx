@@ -485,7 +485,7 @@ export default function HabitosPage() {
   }
 
   return (
-    <div className="orbita-page-stack orv-page-shell mx-auto w-full max-w-[min(72rem,calc(100vw-1.5rem))]">
+    <div className="orbita-page-stack mx-auto w-full max-w-[min(72rem,calc(100vw-1.5rem))]">
       {!persistenceEnabled && !mock && (
         <p
           role="alert"
