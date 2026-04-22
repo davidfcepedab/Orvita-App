@@ -33,26 +33,18 @@ export function ConfigPwaInstallPanel({
 
   return (
     <section
-      className={
-        moduleCard
-          ? "rounded-xl p-3 sm:p-4"
-          : "rounded-2xl border p-4 sm:p-5"
-      }
-      style={
-        moduleCard
-          ? { backgroundColor: theme.surfaceAlt }
-          : { borderColor: theme.border, backgroundColor: theme.surface }
-      }
+      className={moduleCard ? "px-4 py-3.5 sm:px-5 sm:py-4" : "rounded-2xl border p-4 sm:p-5"}
+      style={moduleCard ? undefined : { borderColor: theme.border, backgroundColor: theme.surface }}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-3 sm:gap-3.5">
         <div
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg sm:h-10 sm:w-10"
           style={{ backgroundColor: theme.surfaceAlt, color: theme.accent.agenda }}
         >
-          <Smartphone className="h-5 w-5" aria-hidden />
+          <Smartphone className="h-[1.1rem] w-[1.1rem] sm:h-5 sm:w-5" aria-hidden />
         </div>
         <div className="min-w-0 flex-1 space-y-1">
-          <h3 className="text-sm font-semibold" style={{ color: theme.text }}>
+          <h3 className="text-sm font-semibold leading-snug" style={{ color: theme.text }}>
             Instalar como app (PWA)
           </h3>
           <p className="text-[11px] leading-relaxed sm:text-xs" style={{ color: theme.textMuted }}>
@@ -63,7 +55,7 @@ export function ConfigPwaInstallPanel({
       </div>
 
       {standalone ? (
-        <p className="mt-3 text-xs font-medium" style={{ color: theme.accent.health }}>
+        <p className="mt-2.5 text-xs font-medium" style={{ color: theme.accent.health }}>
           Ya estás en modo app instalada.
         </p>
       ) : (
@@ -80,10 +72,10 @@ export function ConfigPwaInstallPanel({
               else setMsg("Tu navegador no ofreció instalación PWA todavía (prueba desde Chrome o vuelve tras visitar la app).")
             })
           }}
-          className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
-          style={{ backgroundColor: theme.accent.health }}
+          className="mt-3 inline-flex w-full max-w-md items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-xs font-semibold text-white transition-opacity disabled:opacity-50 sm:py-2.5"
+          style={{ backgroundColor: theme.accent.health, borderColor: "transparent" }}
         >
-          <Download className="h-4 w-4" aria-hidden />
+          <Download className="h-3.5 w-3.5" aria-hidden />
           {hasPrompt ? "Instalar Órvita" : "Instalación no disponible aún"}
         </button>
       )}

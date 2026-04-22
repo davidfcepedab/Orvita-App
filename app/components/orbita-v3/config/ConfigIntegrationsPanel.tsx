@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { CalendarDays, CheckCircle2, Dumbbell, ListTodo } from "lucide-react"
 import type { OrbitaConfigTheme } from "@/app/components/orbita-v3/config/configThemeTypes"
-import { configConnectionActionClass } from "@/lib/config/configSettingsUi"
+import { configConnectionActionClass, configSettingsSectionKickerClass } from "@/lib/config/configSettingsUi"
 import { formatRelativeSyncAgo } from "@/lib/time/formatRelativeSyncAgo"
 
 const subtleLegacy =
@@ -61,22 +61,22 @@ export function ConfigIntegrationsPanel({
       className={unified ? "flex flex-col divide-y" : "flex flex-col gap-5"}
       style={{ borderColor: theme.border }}
     >
-      <div className={unified ? "pb-5" : ""}>
-        <div className="flex flex-wrap items-start gap-4">
+      <div className={unified ? "px-4 pb-4 pt-0 sm:px-5 sm:pb-5" : ""}>
+        <div className="flex flex-wrap items-start gap-3 sm:gap-4">
           <div
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border"
-            style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt }}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg sm:h-10 sm:w-10"
+            style={{ backgroundColor: theme.surfaceAlt }}
             aria-hidden
           >
-            <CalendarDays className="h-6 w-6" style={{ color: theme.accent.agenda }} />
+            <CalendarDays className="h-5 w-5" style={{ color: theme.accent.agenda }} />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex flex-wrap items-start justify-between gap-2.5 sm:gap-3">
               <div>
-                <p className="text-base font-semibold tracking-tight" style={{ color: theme.text }}>
+                <p className="text-sm font-semibold leading-snug tracking-tight" style={{ color: theme.text }}>
                   Google (Calendar + Tasks)
                 </p>
-                <p className="mt-1.5 max-w-xl text-xs leading-relaxed" style={{ color: theme.textMuted }}>
+                <p className="mt-1 max-w-xl text-[11px] leading-relaxed sm:text-xs" style={{ color: theme.textMuted }}>
                   Eventos y tareas. Importa cuando quieras.
                 </p>
               </div>
@@ -95,7 +95,7 @@ export function ConfigIntegrationsPanel({
               </div>
             </div>
 
-            <div className="mt-3.5 flex flex-wrap gap-2">
+            <div className="mt-2.5 flex flex-wrap gap-1.5 sm:mt-3 sm:gap-2">
               {!googleConnected ? (
                 <button
                   type="button"
@@ -153,29 +153,29 @@ export function ConfigIntegrationsPanel({
               </p>
             )}
 
-            <p className="mt-3 border-t pt-3 text-[11px] leading-relaxed" style={{ color: theme.textMuted, borderColor: theme.border }}>
+            <p className="mt-2 text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
               {formatRelativeSyncAgo(googleLastSyncAt)}
             </p>
           </div>
         </div>
       </div>
 
-      <div className={unified ? "pt-5" : ""}>
-        <div className="flex flex-wrap items-start gap-4">
+      <div className={unified ? "px-4 pb-1 pt-4 sm:px-5 sm:pb-2 sm:pt-5" : ""}>
+        <div className="flex flex-wrap items-start gap-3 sm:gap-4">
           <div
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border"
-            style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt }}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg sm:h-10 sm:w-10"
+            style={{ backgroundColor: theme.surfaceAlt }}
             aria-hidden
           >
-            <Dumbbell className="h-6 w-6" style={{ color: theme.textMuted }} />
+            <Dumbbell className="h-5 w-5" style={{ color: theme.textMuted }} />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex flex-wrap items-start justify-between gap-2.5 sm:gap-3">
               <div>
-                <p className="text-base font-semibold tracking-tight" style={{ color: theme.text }}>
+                <p className="text-sm font-semibold leading-snug tracking-tight" style={{ color: theme.text }}>
                   Hevy
                 </p>
-                <p className="mt-1.5 max-w-xl text-xs leading-relaxed" style={{ color: theme.textMuted }}>
+                <p className="mt-1 max-w-xl text-[11px] leading-relaxed sm:text-xs" style={{ color: theme.textMuted }}>
                   Volumen y sesiones. API en el servidor.
                 </p>
               </div>
@@ -196,7 +196,7 @@ export function ConfigIntegrationsPanel({
               </div>
             </div>
 
-            <div className="mt-3.5 flex flex-wrap gap-2">
+            <div className="mt-2.5 flex flex-wrap gap-1.5 sm:mt-3 sm:gap-2">
               <Link
                 href="/training"
                 className={unified ? btn() : `inline-flex items-center justify-center ${subtleLegacy}`}
@@ -229,7 +229,7 @@ export function ConfigIntegrationsPanel({
               </p>
             )}
 
-            <p className="mt-3 border-t pt-3 text-[11px] leading-relaxed" style={{ color: theme.textMuted, borderColor: theme.border }}>
+            <p className="mt-2 text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
               {formatRelativeSyncAgo(hevyLastSyncAt)}
             </p>
           </div>
@@ -240,15 +240,15 @@ export function ConfigIntegrationsPanel({
 
   if (unified) {
     return (
-      <div aria-labelledby="config-integrations-core">
+      <div className="min-w-0" aria-labelledby="config-integrations-core">
         <p
           id="config-integrations-core"
-          className="m-0 text-[10px] font-semibold uppercase tracking-[0.16em]"
+          className={`${configSettingsSectionKickerClass} m-0`}
           style={{ color: theme.textMuted }}
         >
           Calendario y gimnasio
         </p>
-        <div className="mt-3">{body}</div>
+        {body}
       </div>
     )
   }

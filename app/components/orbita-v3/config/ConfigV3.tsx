@@ -499,21 +499,15 @@ export default function ConfigV3() {
 
   return (
     <main
-      className="orbita-page-stack mx-auto w-full min-w-0 max-w-[min(72rem,calc(100vw-1.5rem))] space-y-10 overflow-x-hidden"
+      className="orbita-page-stack mx-auto w-full min-w-0 max-w-[min(72rem,calc(100vw-1.5rem))] space-y-6 overflow-x-hidden sm:space-y-7"
       aria-label="Configuración y conexiones"
     >
-      <header
-        className="rounded-2xl border px-4 py-4 shadow-[0_10px_36px_-14px_rgba(15,23,42,0.12)] sm:px-6 sm:py-5"
-        style={{
-          backgroundColor: colorTheme === "carbon" || colorTheme === "midnight" ? theme.surfaceAlt : theme.surface,
-          borderColor: theme.border,
-        }}
-      >
-        <h1 className="m-0 text-2xl font-medium tracking-tight" style={{ color: theme.text }}>
+      <header className="min-w-0 px-0.5">
+        <h1 className="m-0 text-2xl font-semibold leading-tight tracking-tight" style={{ color: theme.text }}>
           Ajustes
         </h1>
-        <p className="m-0 mt-1.5 max-w-[40rem] text-sm leading-relaxed" style={{ color: theme.textMuted }}>
-          Cuenta, apariencia e integraciones. Toca un bloque y ajusta dentro.
+        <p className="m-0 mt-1.5 max-w-[40rem] text-[13px] leading-relaxed sm:text-sm" style={{ color: theme.textMuted }}>
+          Cuenta, apariencia e integraciones. Cada bloque resume un tema: entra, edita o conecta.
         </p>
       </header>
 
@@ -523,36 +517,33 @@ export default function ConfigV3() {
         description="PWA, passkey o huella, y enlace a tu perfil (foto y nombre)."
         icon={<Smartphone className="h-4 w-4" aria-hidden />}
         container="card"
+        listStyle="insetGrouped"
       >
         <ConfigPwaInstallPanel theme={theme} moduleCard />
         <ConfigPasskeyPanel theme={theme} moduleCard />
 
         <Link
           href="/perfil"
-          className="orbita-focus-ring flex items-center justify-between gap-3 rounded-xl p-3.5 no-underline transition-opacity hover:opacity-95 sm:p-4"
-          style={{
-            backgroundColor: theme.surfaceAlt,
-            border: `1px solid ${theme.border}`,
-            boxShadow: "0 1px 0 rgba(15, 23, 42, 0.04)",
-          }}
+          className="orbita-focus-ring flex min-w-0 items-center justify-between gap-3 px-4 py-3.5 no-underline transition-opacity hover:opacity-90 sm:px-5 sm:py-4"
+          style={{ color: theme.text }}
         >
-          <div className="flex min-w-0 items-start gap-2.5">
+          <div className="flex min-w-0 items-start gap-3 sm:gap-3.5">
             <span
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-              style={{ backgroundColor: theme.surface, color: theme.accent.health }}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg sm:h-10 sm:w-10"
+              style={{ backgroundColor: theme.surfaceAlt, color: theme.accent.health }}
             >
-              <Sparkles className="h-4 w-4" aria-hidden />
+              <Sparkles className="h-[1.1rem] w-[1.1rem] sm:h-4 sm:w-4" aria-hidden />
             </span>
             <div className="min-w-0">
-              <p className="text-sm font-semibold tracking-tight" style={{ color: theme.text }}>
+              <p className="text-sm font-semibold leading-snug tracking-tight" style={{ color: theme.text }}>
                 Tu espacio
               </p>
-              <p className="mt-1 text-xs leading-relaxed" style={{ color: theme.textMuted }}>
+              <p className="mt-0.5 text-[11px] leading-relaxed sm:text-xs" style={{ color: theme.textMuted }}>
                 Foto y nombre: así te muestra la app a ti y, si quieres, a quien comparte contigo el tablero.
               </p>
             </div>
           </div>
-          <ChevronRight className="h-5 w-5 shrink-0" style={{ color: theme.textMuted }} aria-hidden />
+          <ChevronRight className="h-4 w-4 shrink-0 opacity-50 sm:h-5 sm:w-5" style={{ color: theme.textMuted }} aria-hidden />
         </Link>
       </ConfigSettingsSection>
 
@@ -616,7 +607,7 @@ export default function ConfigV3() {
       >
         <details className="group">
           <summary
-            className="flex cursor-pointer list-none items-center justify-between gap-3 border-b px-4 py-3.5 sm:px-5 sm:py-4 [&::-webkit-details-marker]:hidden"
+            className="flex cursor-pointer list-none items-center justify-between gap-3 border-b px-4 py-3 sm:px-5 sm:py-3.5 [&::-webkit-details-marker]:hidden"
             style={{ borderColor: theme.border }}
           >
             <div className="flex min-w-0 items-center gap-2.5">
@@ -823,6 +814,7 @@ export default function ConfigV3() {
         description="Google, Hevy y otras. Solo usamos lo que actives."
         icon={<Link2 className="h-4 w-4" aria-hidden />}
         container="card"
+        listStyle="insetGrouped"
       >
         <ConfigIntegrationsPanel
           theme={theme}
