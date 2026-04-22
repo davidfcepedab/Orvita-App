@@ -36,6 +36,7 @@ export function ConfigHouseholdSection({
   membersLoading,
   membersError,
   moduleCard = false,
+  variant = "default" as "default" | "minimal",
 }: {
   theme: OrbitaConfigTheme
   householdInviteLoading: boolean
@@ -52,9 +53,191 @@ export function ConfigHouseholdSection({
   membersError: string | null
   /** Dentro de la tarjeta del módulo: sin título duplicado ni caja anidada. */
   moduleCard?: boolean
+  /** Vista aligerada: cabecera visual compacta, texto mínimo y lista de miembros limpia. */
+  variant?: "default" | "minimal"
 }) {
   const familyPhotoInputId = useId()
   const headingId = "config-household-heading"
+  const isMinimal = variant === "minimal"
+
+  if (isMinimal) {
+    return (
+      <section className="space-y-8" aria-labelledby={headingId}>
+        <span id={headingId} className="sr-only">
+          Hogar y familia
+        </span>
+
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="m-0 text-sm font-medium tracking-tight" style={{ color: theme.textMuted }}>
+              Imagen del hogar
+            </p>
+            <input
+              id={familyPhotoInputId}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="sr-only"
+              disabled={familyPhotoBusy}
+              onChange={(ev) => {
+                const file = ev.target.files?.[0] ?? null
+                ev.target.value = ""
+                if (file) onPickFamilyPhoto(file)
+              }}
+            />
+            <label
+              htmlFor={familyPhotoInputId}
+              className={`${subtleButton} inline-flex cursor-pointer items-center justify-center text-[11px]`}
+              style={{
+                borderColor: theme.border,
+                color: theme.textMuted,
+                backgroundColor: "transparent",
+                opacity: familyPhotoBusy ? 0.55 : 1,
+                pointerEvents: familyPhotoBusy ? "none" : "auto",
+              }}
+            >
+              <ImagePlus className="h-3.5 w-3.5" aria-hidden />
+              {familyPhotoBusy ? "…" : familyPhotoUrl ? "Cambiar" : "Añadir"}
+            </label>
+          </div>
+
+          {familyPhotoUrl ? (
+            <div
+              className="h-32 overflow-hidden rounded-2xl sm:h-36"
+              style={{ backgroundColor: theme.surfaceAlt }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={familyPhotoUrl} alt="" className="h-full w-full object-cover" />
+            </div>
+          ) : (
+            <div
+              className="flex h-28 items-center justify-center rounded-2xl border border-dashed sm:h-32"
+              style={{ borderColor: theme.border, color: theme.textMuted }}
+            >
+              <span className="text-xs">Sin imagen aún</span>
+            </div>
+          )}
+
+          {familyPhotoError ? (
+            <p className="m-0 text-xs" style={{ color: theme.accent.finance }}>
+              {familyPhotoError}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <p className="m-0 text-2xl font-light tracking-[-0.02em] sm:text-3xl" style={{ color: theme.text }}>
+              Código
+            </p>
+            <p className="m-0 mt-1.5 text-sm" style={{ color: theme.textMuted }}>
+              Un único código. Lo pegan al crear cuenta.
+            </p>
+          </div>
+
+          {householdInviteLoading && (
+            <p className="m-0 text-sm" style={{ color: theme.textMuted }}>
+              Cargando…
+            </p>
+          )}
+          {!householdInviteLoading && householdInviteCode && (
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch sm:gap-4">
+              <code
+                className="min-w-0 flex-1 rounded-2xl px-5 py-4 text-center text-lg font-medium tracking-[0.28em] sm:text-xl"
+                style={{
+                  backgroundColor: theme.surfaceAlt,
+                  color: theme.text,
+                  boxShadow: "inset 0 0 0 1px rgba(15, 23, 42, 0.06)",
+                }}
+              >
+                {householdInviteCode}
+              </code>
+              <button
+                type="button"
+                className="shrink-0 rounded-2xl px-8 py-4 text-sm font-semibold transition-opacity hover:opacity-90"
+                style={{
+                  backgroundColor: theme.accent.health,
+                  color: "#fff",
+                }}
+                onClick={onCopyInvite}
+              >
+                {inviteCopied ? "Listo" : "Copiar"}
+              </button>
+            </div>
+          )}
+          {!householdInviteLoading && householdInviteError && (
+            <p className="m-0 text-sm" style={{ color: theme.accent.finance }}>
+              {householdInviteError}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <p className="m-0 text-xs font-medium uppercase tracking-[0.2em]" style={{ color: theme.textMuted }}>
+            En el hogar
+          </p>
+          {membersLoading && (
+            <p className="m-0 mt-4 text-sm" style={{ color: theme.textMuted }}>
+              Cargando…
+            </p>
+          )}
+          {!membersLoading && membersError && (
+            <p className="m-0 mt-4 text-sm" style={{ color: theme.accent.finance }}>
+              {membersError}
+            </p>
+          )}
+          {!membersLoading && !membersError && members.length === 0 && (
+            <p className="m-0 mt-4 text-sm" style={{ color: theme.textMuted }}>
+              Aún no hay miembros.
+            </p>
+          )}
+          {!membersLoading && members.length > 0 && (
+            <ul
+              className="m-0 mt-5 list-none space-y-0 divide-y p-0"
+              style={{ borderColor: theme.border }}
+              aria-label="Miembros del hogar"
+            >
+              {members.map((m) => {
+                const label = m.displayName || m.email || "Miembro"
+                return (
+                  <li key={m.id} className="flex items-center gap-3 py-3 first:pt-0">
+                    <div
+                      className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full text-[10px] font-semibold"
+                      style={{
+                        backgroundColor: theme.surfaceAlt,
+                        color: theme.text,
+                      }}
+                      aria-hidden
+                    >
+                      {m.avatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={m.avatarUrl} alt="" className="h-full w-full object-cover" width={32} height={32} />
+                      ) : (
+                        memberInitials(m.displayName, m.email)
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium" style={{ color: theme.text }}>
+                        {label}
+                      </p>
+                    </div>
+                    {m.isOwner ? (
+                      <span className="shrink-0 text-[11px] font-medium" style={{ color: theme.textMuted }}>
+                        Admin
+                      </span>
+                    ) : (
+                      <span className="shrink-0 text-[11px] font-medium" style={{ color: theme.textMuted }}>
+                        Miembro
+                      </span>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </div>
+      </section>
+    )
+  }
 
   return (
     <section className="space-y-3" aria-labelledby={headingId}>

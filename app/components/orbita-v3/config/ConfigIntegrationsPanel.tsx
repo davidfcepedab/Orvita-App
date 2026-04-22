@@ -31,6 +31,8 @@ export function ConfigIntegrationsPanel({
   hevyLastSyncAt,
   /** Una sola columna con separadores, pensado para ir dentro de la tarjeta «Conexiones». */
   unified = true,
+  /** Mostrar solo un bloque (p. ej. acordeones independientes en configuración minimal). */
+  only = "all" as "all" | "google" | "hevy",
 }: {
   theme: OrbitaConfigTheme
   googleConnected: boolean
@@ -52,15 +54,12 @@ export function ConfigIntegrationsPanel({
   googleLastSyncAt: string | null
   hevyLastSyncAt: string | null
   unified?: boolean
+  only?: "all" | "google" | "hevy"
 }) {
   const btn = (extra?: string) =>
     [configConnectionActionClass, extra].filter(Boolean).join(" ")
 
-  const body = (
-    <div
-      className={unified ? "flex flex-col divide-y" : "flex flex-col gap-5"}
-      style={{ borderColor: theme.border }}
-    >
+  const googleRow = (
       <div className={unified ? "px-4 pb-4 pt-0 sm:px-5 sm:pb-5" : ""}>
         <div className="flex flex-wrap items-start gap-3 sm:gap-4">
           <div
@@ -159,8 +158,18 @@ export function ConfigIntegrationsPanel({
           </div>
         </div>
       </div>
+  )
 
-      <div className={unified ? "px-4 pb-1 pt-4 sm:px-5 sm:pb-2 sm:pt-5" : ""}>
+  const hevyRow = (
+      <div
+        className={
+        unified
+          ? only === "hevy"
+            ? "px-4 pb-1 pt-0 sm:px-5 sm:pb-2 sm:pt-0"
+            : "px-4 pb-1 pt-4 sm:px-5 sm:pb-2 sm:pt-5"
+          : ""
+        }
+      >
         <div className="flex flex-wrap items-start gap-3 sm:gap-4">
           <div
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg sm:h-10 sm:w-10"
@@ -235,19 +244,33 @@ export function ConfigIntegrationsPanel({
           </div>
         </div>
       </div>
+  )
+
+  const body = (
+    <div
+      className={unified ? "flex flex-col divide-y" : "flex flex-col gap-5"}
+      style={{ borderColor: theme.border }}
+    >
+      {only === "hevy" ? hevyRow : googleRow}
+      {only === "all" ? hevyRow : null}
     </div>
   )
 
   if (unified) {
     return (
-      <div className="min-w-0" aria-labelledby="config-integrations-core">
-        <p
-          id="config-integrations-core"
-          className={`${configSettingsSectionKickerClass} m-0`}
-          style={{ color: theme.textMuted }}
-        >
-          Calendario y gimnasio
-        </p>
+      <div
+        className="min-w-0"
+        aria-labelledby={only === "all" ? "config-integrations-core" : undefined}
+      >
+        {only === "all" ? (
+          <p
+            id="config-integrations-core"
+            className={`${configSettingsSectionKickerClass} m-0`}
+            style={{ color: theme.textMuted }}
+          >
+            Calendario y gimnasio
+          </p>
+        ) : null}
         {body}
       </div>
     )

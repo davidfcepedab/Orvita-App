@@ -16,13 +16,12 @@ import { ConfigStrategicIntegrationsPanel } from "@/app/components/orbita-v3/con
 import { ConfigNotificationPreferencesPanel } from "@/app/components/orbita-v3/config/ConfigNotificationPreferencesPanel"
 import { ConfigPwaInstallPanel } from "@/app/components/orbita-v3/config/ConfigPwaInstallPanel"
 import { ConfigPasskeyPanel } from "@/app/components/orbita-v3/config/ConfigPasskeyPanel"
-import { ConfigSettingsSection } from "@/app/components/orbita-v3/config/ConfigSettingsSection"
 import { ConfigHealthUnifiedPanel } from "@/app/components/orbita-v3/config/ConfigHealthUnifiedPanel"
 import { designTokens } from "@/src/theme/design-tokens"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { createBrowserClient } from "@/lib/supabase/browser"
 import Link from "next/link"
-import { Bell, ChevronDown, ChevronRight, Home, Link2, Monitor, Palette, Sliders, Smartphone, Sparkles } from "lucide-react"
+import { ChevronDown, KeyRound, Monitor, Palette, Sliders, Smartphone, User } from "lucide-react"
 import { defaultCustomPalette, normalizeHex, type CustomPalette } from "@/lib/theme/customPalette"
 import type { HouseholdMemberDTO } from "@/lib/household/memberTypes"
 
@@ -55,6 +54,12 @@ export default function ConfigV3() {
   const [familyCropOpen, setFamilyCropOpen] = useState(false)
   const [familyCropFile, setFamilyCropFile] = useState<File | null>(null)
   const [paletteDraft, setPaletteDraft] = useState<CustomPalette>(() => defaultCustomPalette())
+  const [profile, setProfile] = useState<{
+    displayName: string | null
+    email: string
+    avatarUrl: string | null
+  } | null>(null)
+  const [profileLoading, setProfileLoading] = useState(true)
 
   useEffect(() => {
     setPaletteDraft(customPalette)
@@ -66,6 +71,32 @@ export default function ConfigV3() {
   const [googleLastSyncAt, setGoogleLastSyncAt] = useState<string | null>(null)
   const [hevyLastSyncAt, setHevyLastSyncAt] = useState<string | null>(null)
   const googleRedirectErrorHandled = useRef(false)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        setProfileLoading(true)
+        const res = await fetch("/api/profile/me", { cache: "no-store" })
+        const payload = (await res.json()) as {
+          success?: boolean
+          data?: { displayName: string | null; email: string; avatarUrl: string | null }
+        }
+        if (cancelled || !res.ok || !payload.success || !payload.data) {
+          if (!cancelled) setProfile(null)
+          return
+        }
+        setProfile(payload.data)
+      } catch {
+        if (!cancelled) setProfile(null)
+      } finally {
+        if (!cancelled) setProfileLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     if (connectedFromParam) {
@@ -497,139 +528,452 @@ export default function ConfigV3() {
     { key: "accentHealth", label: "Acento (salud / primario)" },
   ]
 
+  const homeRole = useMemo(() => {
+    const email = profile?.email?.trim().toLowerCase()
+    if (!email) return "Tu espacio"
+    const m = members.find((x) => x.email.trim().toLowerCase() === email)
+    return m?.isOwner ? "Administrador" : "Miembro"
+  }, [members, profile?.email])
+
+  const pageVariant = searchParams.get("v") || "0"
+  const isAltCard = pageVariant === "1"
+  const isDense = pageVariant === "2"
+  const sectionGap = isDense ? "space-y-16 sm:space-y-20" : "space-y-20 sm:space-y-24"
+  const maxW = isDense ? "max-w-xl" : "max-w-2xl"
+  const cardShell = isAltCard
+    ? "shadow-[0_1px_0_rgba(15,23,42,0.05)] ring-1 ring-black/[0.05]"
+    : "shadow-[0_1px_0_rgba(15,23,42,0.04),0_0_0_1px_rgba(15,23,42,0.04)]"
+  const displayName =
+    profile?.displayName?.trim() ||
+    (profile?.email ? profile.email.split("@")[0] : null) ||
+    "Cuenta"
+
   return (
     <main
-      className="orbita-page-stack mx-auto w-full min-w-0 max-w-[min(72rem,calc(100vw-1.5rem))] space-y-6 overflow-x-hidden sm:space-y-7"
+      className={`orbita-page-stack config-page--minimal mx-auto w-full min-w-0 ${maxW} ${sectionGap} overflow-x-hidden px-5 py-12 sm:px-8 sm:py-16 md:py-20 lg:max-w-4xl`}
       aria-label="Configuración y conexiones"
+      data-config-variant={pageVariant}
+      data-config-variant-hint="v0 default · v1 ring · v2 dense"
     >
-      <header className="min-w-0 px-0.5">
-        <h1 className="m-0 text-2xl font-semibold leading-tight tracking-tight" style={{ color: theme.text }}>
+      <header className="min-w-0">
+        <p
+          className="m-0 text-[0.7rem] font-medium uppercase tracking-[0.25em] sm:text-xs"
+          style={{ color: theme.textMuted }}
+        >
+          Centro de mando
+        </p>
+        <h1
+          className="m-0 mt-3 text-3xl font-light tracking-[-0.03em] sm:text-4xl md:text-[2.5rem]"
+          style={{ color: theme.text }}
+        >
           Ajustes
         </h1>
-        <p className="m-0 mt-1.5 max-w-[40rem] text-[13px] leading-relaxed sm:text-sm" style={{ color: theme.textMuted }}>
-          Cuenta, apariencia e integraciones. Cada bloque resume un tema: entra, edita o conecta.
+        <p
+          className="m-0 mt-3 max-w-md text-sm font-normal leading-relaxed sm:text-base"
+          style={{ color: theme.textMuted }}
+        >
+          Tiempo, energía y dinero. Solo lo esencial, cuando lo elijas tú.
         </p>
       </header>
 
-      <ConfigSettingsSection
-        theme={theme}
-        title="Instalar, entrar y tu perfil"
-        description="PWA, passkey o huella, y enlace a tu perfil (foto y nombre)."
-        icon={<Smartphone className="h-4 w-4" aria-hidden />}
-        container="card"
-        listStyle="insetGrouped"
-        dataOrvitaSection="install-and-profile"
+      {/* 1. Perfil — hero */}
+      <section
+        className="scroll-mt-20"
+        data-orvita-section="profile-hero"
+        aria-label="Tu perfil"
       >
-        <ConfigPwaInstallPanel theme={theme} moduleCard />
-        <ConfigPasskeyPanel theme={theme} moduleCard />
-
-        <Link
-          href="/perfil"
-          className="orbita-focus-ring flex min-w-0 items-center justify-between gap-3 px-4 py-3.5 no-underline transition-opacity hover:opacity-90 sm:px-5 sm:py-4"
-          style={{ color: theme.text }}
-        >
-          <div className="flex min-w-0 items-start gap-3 sm:gap-3.5">
-            <span
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg sm:h-10 sm:w-10"
-              style={{ backgroundColor: theme.surfaceAlt, color: theme.accent.health }}
-            >
-              <Sparkles className="h-[1.1rem] w-[1.1rem] sm:h-4 sm:w-4" aria-hidden />
-            </span>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold leading-snug tracking-tight" style={{ color: theme.text }}>
-                Tu espacio
-              </p>
-              <p className="mt-0.5 text-[11px] leading-relaxed sm:text-xs" style={{ color: theme.textMuted }}>
-                Foto y nombre: así te muestra la app a ti y, si quieres, a quien comparte contigo el tablero.
+        <div className="flex flex-col gap-8 sm:flex-row sm:items-end sm:justify-between sm:gap-10">
+          <div className="flex min-w-0 items-end gap-5">
+            {profileLoading ? (
+              <div
+                className="h-20 w-20 shrink-0 animate-pulse rounded-full"
+                style={{ backgroundColor: theme.surfaceAlt }}
+                aria-hidden
+              />
+            ) : (
+              <div
+                className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full"
+                style={{ backgroundColor: theme.surfaceAlt, boxShadow: "0 0 0 1px rgba(15,23,42,0.06)" }}
+              >
+                {profile?.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={profile.avatarUrl}
+                    alt=""
+                    className="h-full w-full object-cover"
+                    width={80}
+                    height={80}
+                  />
+                ) : (
+                  <div
+                    className="flex h-full w-full items-center justify-center text-lg font-medium"
+                    style={{ color: theme.textMuted }}
+                    aria-hidden
+                  >
+                    <User className="h-8 w-8" />
+                  </div>
+                )}
+              </div>
+            )}
+            <div className="min-w-0 pb-0.5">
+              <h2
+                className="m-0 text-2xl font-light leading-none tracking-[-0.02em] sm:text-3xl"
+                style={{ color: theme.text }}
+              >
+                {profileLoading ? "…" : displayName}
+              </h2>
+              <p className="m-0 mt-2.5 text-sm" style={{ color: theme.textMuted }}>
+                {homeRole}
+                {profile?.email ? ` · ${profile.email}` : ""}
               </p>
             </div>
           </div>
-          <ChevronRight className="h-4 w-4 shrink-0 opacity-50 sm:h-5 sm:w-5" style={{ color: theme.textMuted }} aria-hidden />
-        </Link>
-      </ConfigSettingsSection>
+          <div className="flex flex-wrap gap-2 sm:shrink-0 sm:pb-0.5 sm:gap-2.5">
+            <a
+              href="#config-pwa"
+              className="inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent px-3.5 py-2 text-xs font-medium transition-colors hover:opacity-90"
+              style={{
+                color: theme.text,
+                backgroundColor: theme.surfaceAlt,
+                boxShadow: "0 0 0 1px rgba(15,23,42,0.08)",
+              }}
+            >
+              <Smartphone className="h-3.5 w-3.5 opacity-80" aria-hidden />
+              Instalar PWA
+            </a>
+            <a
+              href="#config-passkey"
+              className="inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent px-3.5 py-2 text-xs font-medium transition-colors hover:opacity-90"
+              style={{
+                color: theme.text,
+                backgroundColor: theme.surfaceAlt,
+                boxShadow: "0 0 0 1px rgba(15,23,42,0.08)",
+              }}
+            >
+              <KeyRound className="h-3.5 w-3.5 opacity-80" aria-hidden />
+              Passkey
+            </a>
+            <Link
+              href="/perfil"
+              className="inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent px-3.5 py-2 text-xs font-medium no-underline transition-colors hover:opacity-90"
+              style={{
+                color: theme.text,
+                backgroundColor: theme.surfaceAlt,
+                boxShadow: "0 0 0 1px rgba(15,23,42,0.08)",
+              }}
+            >
+              <User className="h-3.5 w-3.5 opacity-80" aria-hidden />
+              Perfil
+            </Link>
+          </div>
+        </div>
+      </section>
 
-      <ConfigSettingsSection
-        theme={theme}
-        title="Tu hogar y familia"
-        description="Código, foto y miembros del hogar (calendario y hábitos con contexto)."
-        icon={<Home className="h-4 w-4" aria-hidden />}
-        container="card"
-        dataOrvitaSection="household"
-      >
-        <ConfigHouseholdSection
-          moduleCard
-          theme={theme}
-          householdInviteLoading={householdInviteLoading}
-          householdInviteCode={householdInviteCode}
-          householdInviteError={householdInviteError}
-          inviteCopied={inviteCopied}
-          onCopyInvite={() => {
-            if (!householdInviteCode) return
-            void navigator.clipboard.writeText(householdInviteCode).then(() => {
-              setInviteCopied(true)
-              window.setTimeout(() => setInviteCopied(false), 2500)
-            })
-          }}
-          familyPhotoUrl={familyPhotoUrl}
-          familyPhotoBusy={familyPhotoBusy}
-          familyPhotoError={familyPhotoError}
-          onPickFamilyPhoto={(file) => {
-            setFamilyCropFile(file)
-            setFamilyCropOpen(true)
-          }}
-          members={members}
-          membersLoading={membersLoading}
-          membersError={membersError}
-        />
-      </ConfigSettingsSection>
+      {/* 2. Hogar */}
+      <section className="scroll-mt-8" data-orvita-section="household">
+        <h2
+          className="m-0 text-[0.7rem] font-medium uppercase tracking-[0.2em] sm:text-xs"
+          style={{ color: theme.textMuted }}
+        >
+          Hogar
+        </h2>
+        <p className="m-0 mt-2.5 text-xl font-light tracking-[-0.02em] sm:text-2xl" style={{ color: theme.text }}>
+          Código, imagen, personas
+        </p>
+        <div
+          className={`mt-10 overflow-hidden rounded-2xl p-6 sm:p-8 md:mt-12 ${cardShell}`}
+          style={{ backgroundColor: theme.surface }}
+        >
+          <ConfigHouseholdSection
+            moduleCard
+            variant="minimal"
+            theme={theme}
+            householdInviteLoading={householdInviteLoading}
+            householdInviteCode={householdInviteCode}
+            householdInviteError={householdInviteError}
+            inviteCopied={inviteCopied}
+            onCopyInvite={() => {
+              if (!householdInviteCode) return
+              void navigator.clipboard.writeText(householdInviteCode).then(() => {
+                setInviteCopied(true)
+                window.setTimeout(() => setInviteCopied(false), 2500)
+              })
+            }}
+            familyPhotoUrl={familyPhotoUrl}
+            familyPhotoBusy={familyPhotoBusy}
+            familyPhotoError={familyPhotoError}
+            onPickFamilyPhoto={(file) => {
+              setFamilyCropFile(file)
+              setFamilyCropOpen(true)
+            }}
+            members={members}
+            membersLoading={membersLoading}
+            membersError={membersError}
+          />
+        </div>
+      </section>
 
-      <ConfigSettingsSection
-        theme={theme}
-        title="Avisos y recordatorios"
-        description="Notificaciones del navegador o del sistema."
-        icon={<Bell className="h-4 w-4" aria-hidden />}
-        container="stack"
-        dataOrvitaSection="notifications"
-      >
-        <ConfigNotificationPreferencesPanel theme={theme} />
-      </ConfigSettingsSection>
-
-      <ConfigHealthUnifiedPanel theme={theme} />
-
-      <div
-        className="overflow-hidden rounded-2xl border shadow-[0_1px_0_rgba(15,23,42,0.04)]"
-        style={{ borderColor: theme.border, backgroundColor: theme.surface }}
-        data-orvita-section="appearance"
-      >
-        <details className="group">
-          <summary
-            className="flex cursor-pointer list-none items-center justify-between gap-3 border-b px-4 py-3 sm:px-5 sm:py-3.5 [&::-webkit-details-marker]:hidden"
-            style={{ borderColor: theme.border }}
+      {/* 3. Conexiones */}
+      <section className="scroll-mt-8" data-orvita-section="connections" aria-label="Conexiones">
+        <h2
+          className="m-0 text-[0.7rem] font-medium uppercase tracking-[0.2em] sm:text-xs"
+          style={{ color: theme.textMuted }}
+        >
+          Conexiones
+        </h2>
+        <p className="m-0 mt-2.5 text-xl font-light tracking-[-0.02em] sm:text-2xl" style={{ color: theme.text }}>
+          Un gesto, un bloque
+        </p>
+        <div className="mt-10 space-y-2 md:mt-12">
+          <details
+            className="group open:shadow-sm"
+            style={{
+              backgroundColor: theme.surface,
+              borderRadius: "1rem",
+              boxShadow: isAltCard
+                ? "0 1px 0 rgba(15, 23, 42, 0.05), 0 0 0 1px rgba(15, 23, 42, 0.06)"
+                : "0 1px 0 rgba(15, 23, 42, 0.04), 0 0 0 1px rgba(15, 23, 42, 0.04)",
+            }}
+            data-orvita-subsection="google-calendar"
           >
-            <div className="flex min-w-0 items-center gap-2.5">
-              <span
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9"
-                style={{ backgroundColor: theme.surfaceAlt, color: theme.accent.health }}
-                aria-hidden
-              >
-                <Palette className="h-4 w-4" />
-              </span>
+            <summary
+              className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 sm:px-5 [&::-webkit-details-marker]:hidden"
+              style={{ color: theme.text }}
+            >
               <div className="min-w-0 text-left">
-                <p className="m-0 text-base font-semibold tracking-tight" style={{ color: theme.text }}>
-                  Aspecto y comodidad
+                <p className="m-0 text-[0.95rem] font-medium tracking-tight" style={{ color: theme.text }}>
+                  Calendario y tareas
                 </p>
                 <p className="m-0 mt-0.5 text-xs" style={{ color: theme.textMuted }}>
-                  Paleta, densidad y animaciones. Despliega para ajustar.
+                  Google
                 </p>
               </div>
+              <ChevronDown
+                className="h-4 w-4 shrink-0 transition-transform duration-200 group-open:rotate-180"
+                style={{ color: theme.textMuted }}
+                aria-hidden
+              />
+            </summary>
+            <div className="border-t" style={{ borderColor: theme.border }}>
+              <ConfigIntegrationsPanel
+                theme={theme}
+                only="google"
+                googleConnected={googleConnected}
+                googleError={googleError}
+                googleSync={googleSync}
+                connecting={connecting}
+                disconnectingGoogle={disconnectingGoogle}
+                syncingCalendar={syncingCalendar}
+                syncingTasks={syncingTasks}
+                onConnectGoogle={() => void handleConnectGoogle()}
+                onDisconnectGoogle={() => void handleDisconnectGoogle()}
+                onSyncCalendar={() => void handleSync("calendar")}
+                onSyncTasks={() => void handleSync("tasks")}
+                hevyConnected={hevyConnected}
+                hevyChecking={hevyChecking}
+                hevySyncing={hevySyncing}
+                hevyMessage={hevyMessage}
+                onHevySync={() => void handleHevySync()}
+                googleLastSyncAt={googleLastSyncAt}
+                hevyLastSyncAt={hevyLastSyncAt}
+                unified
+              />
+            </div>
+          </details>
+
+          <details
+            className="group open:shadow-sm"
+            style={{
+              backgroundColor: theme.surface,
+              borderRadius: "1rem",
+              boxShadow: isAltCard
+                ? "0 1px 0 rgba(15, 23, 42, 0.05), 0 0 0 1px rgba(15, 23, 42, 0.06)"
+                : "0 1px 0 rgba(15, 23, 42, 0.04), 0 0 0 1px rgba(15, 23, 42, 0.04)",
+            }}
+            data-orvita-subsection="hevy"
+          >
+            <summary
+              className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 sm:px-5 [&::-webkit-details-marker]:hidden"
+              style={{ color: theme.text }}
+            >
+              <div className="min-w-0 text-left">
+                <p className="m-0 text-[0.95rem] font-medium tracking-tight" style={{ color: theme.text }}>
+                  Entrenamiento
+                </p>
+                <p className="m-0 mt-0.5 text-xs" style={{ color: theme.textMuted }}>
+                  Hevy
+                </p>
+              </div>
+              <ChevronDown
+                className="h-4 w-4 shrink-0 transition-transform duration-200 group-open:rotate-180"
+                style={{ color: theme.textMuted }}
+                aria-hidden
+              />
+            </summary>
+            <div className="border-t" style={{ borderColor: theme.border }}>
+              <ConfigIntegrationsPanel
+                theme={theme}
+                only="hevy"
+                googleConnected={googleConnected}
+                googleError={googleError}
+                googleSync={googleSync}
+                connecting={connecting}
+                disconnectingGoogle={disconnectingGoogle}
+                syncingCalendar={syncingCalendar}
+                syncingTasks={syncingTasks}
+                onConnectGoogle={() => void handleConnectGoogle()}
+                onDisconnectGoogle={() => void handleDisconnectGoogle()}
+                onSyncCalendar={() => void handleSync("calendar")}
+                onSyncTasks={() => void handleSync("tasks")}
+                hevyConnected={hevyConnected}
+                hevyChecking={hevyChecking}
+                hevySyncing={hevySyncing}
+                hevyMessage={hevyMessage}
+                onHevySync={() => void handleHevySync()}
+                googleLastSyncAt={googleLastSyncAt}
+                hevyLastSyncAt={hevyLastSyncAt}
+                unified
+              />
+            </div>
+          </details>
+        </div>
+
+        <div className="mt-2" id="conexion-salud" data-orvita-section="strategic-stack">
+          <ConfigStrategicIntegrationsPanel
+            theme={theme}
+            unified
+            layout="accordions"
+            showHealth
+            beforeHealthServer={
+              <div className="border-b px-0 py-0" style={{ borderColor: theme.border }}>
+                <div className="p-0">
+                  <ConfigHealthUnifiedPanel theme={theme} />
+                </div>
+              </div>
+            }
+          />
+        </div>
+      </section>
+
+      {/* 4. Sistema — colapsable */}
+      <section className="scroll-mt-8 pb-8" data-orvita-section="system" aria-label="Sistema y preferencias">
+        <h2
+          className="m-0 text-[0.7rem] font-medium uppercase tracking-[0.2em] sm:text-xs"
+          style={{ color: theme.textMuted }}
+        >
+          Sistema
+        </h2>
+        <p className="m-0 mt-2.5 text-xl font-light tracking-[-0.02em] sm:text-2xl" style={{ color: theme.text }}>
+          Menos ruido, más control
+        </p>
+        <details
+          className="group mt-10 md:mt-12"
+          style={{
+            backgroundColor: theme.surface,
+            borderRadius: "1rem",
+            boxShadow: isAltCard
+              ? "0 1px 0 rgba(15, 23, 42, 0.05), 0 0 0 1px rgba(15, 23, 42, 0.06)"
+              : "0 1px 0 rgba(15, 23, 42, 0.04), 0 0 0 1px rgba(15, 23, 42, 0.04)",
+          }}
+        >
+          <summary
+            className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 sm:px-5 sm:py-4 [&::-webkit-details-marker]:hidden"
+            style={{ color: theme.text }}
+          >
+            <div className="min-w-0 text-left">
+              <p className="m-0 text-[0.95rem] font-medium" style={{ color: theme.text }}>
+                Preferencias avanzadas
+              </p>
+              <p className="m-0 mt-0.5 text-xs" style={{ color: theme.textMuted }}>
+                Aplicación, avisos, aspecto, atajos
+              </p>
             </div>
             <ChevronDown
-              className="h-5 w-5 shrink-0 transition-transform duration-200 group-open:rotate-180"
+              className="h-4 w-4 shrink-0 transition-transform duration-200 group-open:rotate-180"
               style={{ color: theme.textMuted }}
               aria-hidden
             />
           </summary>
-          <div className="flex flex-col gap-6 p-4 sm:p-5">
+          <div className="space-y-0 border-t" style={{ borderColor: theme.border }}>
+            <div className="border-b" style={{ borderColor: theme.border }} data-orvita-section="install-and-profile" id="config-sistema-app">
+              <div className="px-4 py-2 text-[0.65rem] font-medium uppercase tracking-[0.2em] sm:px-5" style={{ color: theme.textMuted }}>
+                Aplicación y acceso
+              </div>
+              <div id="config-pwa" className="min-w-0 scroll-mt-24">
+                <ConfigPwaInstallPanel theme={theme} moduleCard />
+              </div>
+              <div id="config-passkey" className="min-w-0 scroll-mt-24">
+                <ConfigPasskeyPanel theme={theme} moduleCard />
+              </div>
+            </div>
+
+            <div className="border-b" style={{ borderColor: theme.border }} data-orvita-section="notifications">
+              <div className="px-4 py-3 sm:px-5">
+                <p className="m-0 text-sm font-medium" style={{ color: theme.text }}>
+                  Avisos y recordatorios
+                </p>
+                <p className="m-0 mt-1 text-xs" style={{ color: theme.textMuted }}>
+                  Navegador y sistema; silencios por horas.
+                </p>
+                <div className="mt-4">
+                  <ConfigNotificationPreferencesPanel theme={theme} />
+                </div>
+              </div>
+            </div>
+
+            <div
+              className="border-b"
+              style={{ borderColor: theme.border }}
+              data-orvita-section="shortcuts-hint"
+            >
+              <div className="px-4 py-4 sm:px-5">
+                <p className="m-0 text-sm font-medium" style={{ color: theme.text }}>
+                  Atajos y un toque
+                </p>
+                <p className="m-0 mt-2 text-sm leading-relaxed" style={{ color: theme.textMuted }}>
+                  El atajo de salud y la importación viven en{" "}
+                  <a
+                    href="#conexion-salud"
+                    className="font-medium underline-offset-2 hover:underline"
+                    style={{ color: theme.accent.health }}
+                  >
+                    Conexiones → Salud
+                  </a>
+                  . La guía de permisos está en la tarjeta de salud.
+                </p>
+              </div>
+            </div>
+
+            <div className="overflow-hidden" data-orvita-section="appearance" id="config-appearance">
+              <details className="group border-t border-transparent">
+                <summary
+                  className="flex cursor-pointer list-none items-center justify-between gap-3 border-b px-4 py-4 sm:px-5 sm:py-3.5 [&::-webkit-details-marker]:hidden"
+                  style={{ borderColor: theme.border }}
+                >
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <span
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9"
+                      style={{ backgroundColor: theme.surfaceAlt, color: theme.accent.health }}
+                      aria-hidden
+                    >
+                      <Palette className="h-4 w-4" />
+                    </span>
+                    <div className="min-w-0 text-left">
+                      <p className="m-0 text-sm font-medium tracking-tight" style={{ color: theme.text }}>
+                        Aspecto y comodidad
+                      </p>
+                      <p className="m-0 mt-0.5 text-xs" style={{ color: theme.textMuted }}>
+                        Paleta, densidad y movimiento
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronDown
+                    className="h-4 w-4 shrink-0 transition-transform duration-200 group-open:rotate-180"
+                    style={{ color: theme.textMuted }}
+                    aria-hidden
+                  />
+                </summary>
+                <div className="flex flex-col gap-6 p-4 sm:p-5">
           <div className="space-y-3">
             <h3
               className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.14em]"
@@ -800,43 +1144,12 @@ export default function ConfigV3() {
               />
             </div>
           </div>
+                </div>
+              </details>
+            </div>
           </div>
         </details>
-      </div>
-
-      <ConfigSettingsSection
-        theme={theme}
-        title="Conexiones"
-        description="Google, Hevy y otras. Solo usamos lo que actives."
-        icon={<Link2 className="h-4 w-4" aria-hidden />}
-        container="card"
-        listStyle="insetGrouped"
-        dataOrvitaSection="connections"
-      >
-        <ConfigIntegrationsPanel
-          theme={theme}
-          googleConnected={googleConnected}
-          googleError={googleError}
-          googleSync={googleSync}
-          connecting={connecting}
-          disconnectingGoogle={disconnectingGoogle}
-          syncingCalendar={syncingCalendar}
-          syncingTasks={syncingTasks}
-          onConnectGoogle={() => void handleConnectGoogle()}
-          onDisconnectGoogle={() => void handleDisconnectGoogle()}
-          onSyncCalendar={() => void handleSync("calendar")}
-          onSyncTasks={() => void handleSync("tasks")}
-          hevyConnected={hevyConnected}
-          hevyChecking={hevyChecking}
-          hevySyncing={hevySyncing}
-          hevyMessage={hevyMessage}
-          onHevySync={() => void handleHevySync()}
-          googleLastSyncAt={googleLastSyncAt}
-          hevyLastSyncAt={hevyLastSyncAt}
-          unified
-        />
-        <ConfigStrategicIntegrationsPanel theme={theme} unified showHealth={false} />
-      </ConfigSettingsSection>
+      </section>
 
       <OrbitaImageCropDialog
         open={familyCropOpen}

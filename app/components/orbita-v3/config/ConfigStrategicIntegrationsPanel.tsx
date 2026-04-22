@@ -1,7 +1,7 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
-import { CheckCircle2, HeartPulse, Landmark, RefreshCw } from "lucide-react"
+import { useCallback, useEffect, useState, type ReactNode } from "react"
+import { CheckCircle2, ChevronDown, HeartPulse, Landmark, RefreshCw } from "lucide-react"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import type { OrbitaConfigTheme } from "@/app/components/orbita-v3/config/configThemeTypes"
 import { configConnectionActionClass, configSettingsSectionKickerClass } from "@/lib/config/configSettingsUi"
@@ -40,12 +40,24 @@ export function ConfigStrategicIntegrationsPanel({
   theme,
   unified = true,
   showHealth = true,
+  /**
+   * `accordions`: un bloque Finanzas (toggles banca + push + banca CO) y otro Salud (toggle + sync servidor),
+   * con `<details>` nativos, para la vista minimal de ajustes.
+   */
+  layout = "default" as "default" | "accordions",
+  /**
+   * Contenido a mostrar antes del bloque «servidor» dentro del acordeón Salud
+   * (p. ej. atajo iOS y sync del panel unificado).
+   */
+  beforeHealthServer = null as ReactNode,
 }: {
   theme: OrbitaConfigTheme
   /** Misma columna que Google/Hevy, separada por líneas. */
   unified?: boolean
   /** Oculta el bloque de Salud (se usa en la tarjeta unificada de Salud). */
   showHealth?: boolean
+  layout?: "default" | "accordions"
+  beforeHealthServer?: ReactNode
 }) {
   const [settings, setSettings] = useState<IntegrationSettings>(defaultSettings)
   const [healthConnected, setHealthConnected] = useState(false)
@@ -233,7 +245,7 @@ export function ConfigStrategicIntegrationsPanel({
     }
   }
 
-  const togglesBlock = (
+  const makeTogglesBlock = (keys: ToggleKey[], compactCopy?: string) => (
     <div
       className={unified ? "px-4 py-3 sm:px-5 sm:py-3.5" : "rounded-2xl border p-5 sm:p-6"}
       style={unified ? undefined : { backgroundColor: theme.surface, borderColor: theme.border }}
@@ -249,32 +261,38 @@ export function ConfigStrategicIntegrationsPanel({
         </>
       ) : (
         <p className="m-0 text-[11px] leading-snug sm:text-xs" style={{ color: theme.textMuted }}>
-          Activa o desactiva qué piezas pueden conectarse o notificarte (ajustes en servidor).
+          {compactCopy ?? "Activa o desactiva qué piezas pueden conectarse o notificarte (ajustes en servidor)."}
         </p>
       )}
       <div className="mt-2 flex flex-wrap gap-1.5 sm:mt-2.5 sm:gap-2">
-        {toggleOptions.map((item) => (
-          <button
-            key={item.key}
-            type="button"
-            disabled={busy === "settings"}
-            onClick={() =>
-              void patchSettings({
-                [item.key]: !settings[item.key],
-              } as Partial<IntegrationSettings>)
-            }
-            className={configConnectionActionClass}
-            style={{
-              borderColor: settings[item.key] ? theme.accent.health : theme.border,
-              color: settings[item.key] ? "#fff" : theme.text,
-              backgroundColor: settings[item.key] ? theme.accent.health : theme.surfaceAlt,
-            }}
-          >
-            {settings[item.key] ? "On" : "Off"} · {item.label}
-          </button>
-        ))}
+        {toggleOptions
+          .filter((item) => keys.includes(item.key))
+          .map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              disabled={busy === "settings"}
+              onClick={() =>
+                void patchSettings({
+                  [item.key]: !settings[item.key],
+                } as Partial<IntegrationSettings>)
+              }
+              className={configConnectionActionClass}
+              style={{
+                borderColor: settings[item.key] ? theme.accent.health : theme.border,
+                color: settings[item.key] ? "#fff" : theme.text,
+                backgroundColor: settings[item.key] ? theme.accent.health : theme.surfaceAlt,
+              }}
+            >
+              {settings[item.key] ? "On" : "Off"} · {item.label}
+            </button>
+          ))}
       </div>
     </div>
+  )
+
+  const togglesBlock = makeTogglesBlock(
+    toggleOptions.map((o) => o.key),
   )
 
   const healthBlock = !showHealth
@@ -404,6 +422,89 @@ export function ConfigStrategicIntegrationsPanel({
       ) : null}
     </>
   )
+
+  const summaryBar = (title: string, hint: string) => (
+    <>
+      <div className="min-w-0 text-left">
+        <p className="m-0 text-[0.95rem] font-medium tracking-tight" style={{ color: theme.text }}>
+          {title}
+        </p>
+        <p className="m-0 mt-0.5 text-xs font-normal" style={{ color: theme.textMuted }}>
+          {hint}
+        </p>
+      </div>
+      <ChevronDown
+        className="h-4 w-4 shrink-0 transition-transform duration-200 group-open:rotate-180"
+        style={{ color: theme.textMuted }}
+        aria-hidden
+      />
+    </>
+  )
+
+  if (unified && layout === "accordions") {
+    return (
+      <div className="min-w-0 space-y-2" data-orvita-section="strategic-integrations-accordion" aria-label="Módulos y banca">
+        <details
+          className="group open:shadow-sm"
+          style={{
+            backgroundColor: theme.surface,
+            borderRadius: "1rem",
+            boxShadow: "0 1px 0 rgba(15, 23, 42, 0.04), 0 0 0 1px rgba(15, 23, 42, 0.04)",
+          }}
+        >
+          <summary
+            className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 sm:px-5 [&::-webkit-details-marker]:hidden"
+            style={{ color: theme.text }}
+          >
+            {summaryBar("Finanzas", "Bancos Colombia y avisos.")}
+          </summary>
+          <div className="flex flex-col gap-0 border-t" style={{ borderColor: theme.border }}>
+            {makeTogglesBlock(["banking_enabled", "push_enhanced_enabled"], "Banca y notificaciones inteligentes (servidor).")}
+            {bankBlock}
+          </div>
+        </details>
+
+        {showHealth ? (
+          <details
+            className="group open:shadow-sm"
+            style={{
+              backgroundColor: theme.surface,
+              borderRadius: "1rem",
+              boxShadow: "0 1px 0 rgba(15, 23, 42, 0.04), 0 0 0 1px rgba(15, 23, 42, 0.04)",
+            }}
+          >
+            <summary
+              className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 sm:px-5 [&::-webkit-details-marker]:hidden"
+              style={{ color: theme.text }}
+            >
+              {summaryBar("Salud", "Atajos, Apple Health, Google Fit y sync.")}
+            </summary>
+            <div
+              className="flex flex-col gap-0 border-t"
+              style={{ borderColor: theme.border }}
+              data-orvita-subsection="health-unified-wrap"
+            >
+              {beforeHealthServer ? <div className="px-0 pb-0 pt-0">{beforeHealthServer}</div> : null}
+              {makeTogglesBlock(["health_enabled"], "Habilita la capa de salud en el servidor (tokens y sync).")}
+              {healthBlock}
+            </div>
+          </details>
+        ) : beforeHealthServer ? (
+            <div
+              className="overflow-hidden rounded-2xl"
+              style={{
+                backgroundColor: theme.surface,
+                boxShadow: "0 1px 0 rgba(15, 23, 42, 0.04), 0 0 0 1px rgba(15, 23, 42, 0.04)",
+              }}
+            >
+              {beforeHealthServer}
+            </div>
+          ) : null}
+
+        <div className="space-y-2 px-1 pt-1 sm:pt-2">{foot}</div>
+      </div>
+    )
+  }
 
   if (unified) {
     return (
