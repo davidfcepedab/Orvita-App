@@ -12,10 +12,12 @@ export type AutoHealthMetric = {
   calories: number | null
   energy_index: number | null
   source: string | null
+  metadata?: Record<string, unknown> | null
 }
 
 export function useHealthAutoMetrics() {
   const [latest, setLatest] = useState<AutoHealthMetric | null>(null)
+  const [timeline, setTimeline] = useState<AutoHealthMetric[]>([])
   const [loading, setLoading] = useState(true)
 
   const refetch = useCallback(async () => {
@@ -23,9 +25,14 @@ export function useHealthAutoMetrics() {
     try {
       const headers = await browserBearerHeaders()
       const res = await fetch("/api/integrations/health/metrics", { headers, cache: "no-store" })
-      const payload = (await res.json()) as { success?: boolean; latest?: AutoHealthMetric | null }
+      const payload = (await res.json()) as {
+        success?: boolean
+        latest?: AutoHealthMetric | null
+        timeline?: AutoHealthMetric[]
+      }
       if (res.ok && payload.success) {
         setLatest(payload.latest ?? null)
+        setTimeline(Array.isArray(payload.timeline) ? payload.timeline : [])
       }
     } finally {
       setLoading(false)
@@ -36,5 +43,5 @@ export function useHealthAutoMetrics() {
     void refetch()
   }, [refetch])
 
-  return { latest, loading, refetch }
+  return { latest, timeline, loading, refetch }
 }

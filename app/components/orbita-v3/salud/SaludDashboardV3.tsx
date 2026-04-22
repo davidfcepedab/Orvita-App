@@ -2,22 +2,19 @@
 
 import HealthOperationsV3 from "@/app/components/orbita-v3/health/HealthOperationsV3"
 import TrainingOperationsV3 from "@/app/components/orbita-v3/training/TrainingOperationsV3"
+import AppleHealthLuxurySection from "@/app/components/orbita-v3/salud/AppleHealthLuxurySection"
+import { useSaludContext } from "@/app/salud/_hooks/useSaludContext"
 
 export default function SaludDashboardV3() {
-  return (
-    <div className="space-y-8 pb-24">
-      <div className="rounded-[28px] border border-white/70 bg-[linear-gradient(135deg,rgba(167,243,208,0.45),rgba(199,210,254,0.35),rgba(255,255,255,0.96))] p-8 shadow-[0_16px_42px_rgba(15,23,42,0.06)]">
-        <p className="text-xs uppercase tracking-[0.24em] text-[var(--text-muted)]">Salud</p>
-        <h1 className="mt-4 text-4xl font-semibold tracking-tight text-[var(--text-primary)]">
-          Physical Operations Center
-        </h1>
-        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[var(--text-secondary)]">
-          Entrada canonica para recuperar estado fisico, energia, volumen de entrenamiento y adherencia diaria.
-        </p>
-      </div>
+  const salud = useSaludContext()
 
-      <HealthOperationsV3 />
-      <TrainingOperationsV3 />
+  return (
+    <div className="relative isolate min-h-screen space-y-10 pb-32 pt-2">
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(120%_70%_at_50%_-10%,rgba(56,189,248,0.14),transparent_55%),radial-gradient(90%_60%_at_100%_0%,rgba(52,211,153,0.12),transparent_45%),linear-gradient(180deg,#020617_0%,#0b1224_45%,#020617_100%)]" />
+
+      <AppleHealthLuxurySection salud={salud} />
+      <HealthOperationsV3 salud={salud} />
+      <TrainingOperationsV3 salud={salud} />
     </div>
   )
 }

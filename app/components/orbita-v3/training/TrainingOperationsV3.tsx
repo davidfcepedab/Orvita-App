@@ -2,63 +2,62 @@
 
 import { Activity, ArrowDown, ArrowUp, Dumbbell, Flame, Target, Trophy, Utensils } from "lucide-react"
 import { Bar, CartesianGrid, ComposedChart, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
-import { useSaludContext } from "@/app/salud/_hooks/useSaludContext"
+import type { SaludContextSnapshot } from "@/app/salud/_hooks/useSaludContext"
 
-export default function TrainingOperationsV3() {
-  const health = useSaludContext()
+type Props = {
+  salud: SaludContextSnapshot
+}
 
-  if (health.loading) {
-    return <div className="card">Cargando Training Operations...</div>
-  }
+const panel =
+  "rounded-[26px] border border-white/10 bg-white/[0.04] p-6 text-white shadow-[0_18px_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl"
 
-  if (health.error) {
-    return <div className="card text-sm text-red-500">{health.error}</div>
-  }
+export default function TrainingOperationsV3({ salud: health }: Props) {
+  if (health.loading) return null
+  if (health.error) return null
 
   const isOverreaching = health.strain > health.scoreRecuperacion + 10
 
   return (
-    <section className="space-y-6">
-      <div className="card border border-[var(--border-soft)] bg-[var(--surface-card)]">
+    <section className="space-y-8">
+      <div className={panel}>
         <div className="flex items-center gap-3">
-          <div className="rounded-2xl bg-[var(--accent-finance)] p-3 text-[var(--text-primary)]">
+          <div className="rounded-3xl bg-amber-300/15 p-3 text-amber-100 ring-1 ring-amber-200/25">
             <Dumbbell className="h-6 w-6" />
           </div>
           <div>
-            <p className="text-xs uppercase tracking-[0.22em] text-[var(--text-muted)]">Training</p>
-            <h2 className="mt-1 text-2xl font-semibold tracking-tight text-[var(--text-primary)]">
-              Training Operations
-            </h2>
-            <p className="mt-1 text-sm text-[var(--text-secondary)]">
-              Strain, volumen e hitos fisicos con referencia visual de la version adjunta.
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/45">Entrenamiento</p>
+            <h2 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">Ritmo, volumen y metas</h2>
+            <p className="mt-2 text-sm leading-relaxed text-white/65">
+              Una lectura sobria de tu semana: intensidad, recuperación y combustible. Piensa en esto como tablero de
+              apoyo, no como exigencia.
             </p>
           </div>
         </div>
       </div>
 
-      <div className="card border border-[var(--border-soft)]">
+      <div className={panel}>
         <div className="flex flex-col gap-8 md:flex-row md:items-center">
           <div className="flex-1">
-            <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Daily Capacity</p>
-            <h3 className="mt-3 text-2xl font-semibold text-[var(--text-primary)]">
-              {isOverreaching ? "Overreaching State" : "Optimal Training Zone"}
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/45">Capacidad del día</p>
+            <h3 className="mt-3 text-2xl font-semibold">
+              {isOverreaching ? "Carga alta vs recuperación" : "Zona de entrenamiento equilibrada"}
             </h3>
-            <p className="mt-3 text-sm leading-relaxed text-[var(--text-secondary)]">
+            <p className="mt-3 text-sm leading-relaxed text-white/65">
               {isOverreaching
-                ? `El strain (${health.strain}) supera la recuperacion (${health.scoreRecuperacion}%). Hoy conviene descargar o bajar intensidad.`
-                : `Recuperacion al ${health.scoreRecuperacion}%. Hay margen para sostener una carga fisica exigente sin comprometer el sistema.`}
+                ? `Tu esfuerzo percibido (${health.strain}) está por encima de tu recuperación (${health.scoreRecuperacion}). Hoy conviene bajar volumen o priorizar sueño.`
+                : `Tu recuperación va en ${health.scoreRecuperacion}%. Hay margen para exigirte con cabeza, sin castigar el cuerpo.`}
             </p>
           </div>
 
           <div className="relative flex h-48 w-48 items-center justify-center self-center">
             <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 192 192">
-              <circle cx="96" cy="96" r="80" stroke="var(--border-soft)" strokeWidth="6" fill="none" />
-              <circle cx="96" cy="96" r="60" stroke="var(--border-soft)" strokeWidth="6" fill="none" />
+              <circle cx="96" cy="96" r="80" stroke="rgba(255,255,255,0.12)" strokeWidth="6" fill="none" />
+              <circle cx="96" cy="96" r="60" stroke="rgba(255,255,255,0.12)" strokeWidth="6" fill="none" />
               <circle
                 cx="96"
                 cy="96"
                 r="60"
-                stroke="var(--accent-health-strong)"
+                stroke="#6ee7b7"
                 strokeWidth="6"
                 fill="none"
                 strokeDasharray={String(2 * Math.PI * 60)}
@@ -69,7 +68,7 @@ export default function TrainingOperationsV3() {
                 cx="96"
                 cy="96"
                 r="80"
-                stroke="var(--accent-finance-strong)"
+                stroke="#fcd34d"
                 strokeWidth="6"
                 fill="none"
                 strokeDasharray={String(2 * Math.PI * 80)}
@@ -79,46 +78,50 @@ export default function TrainingOperationsV3() {
             </svg>
 
             <div className="text-center">
-              <p className="text-3xl font-semibold leading-none text-[var(--accent-finance-strong)]">
-                {health.strain}
-              </p>
-              <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">Strain</p>
+              <p className="text-3xl font-semibold leading-none text-amber-200">{health.strain}</p>
+              <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45">Esfuerzo</p>
             </div>
           </div>
         </div>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <div className="card border border-[var(--border-soft)]">
+        <div className={panel}>
           <div className="flex items-center gap-2">
-            <Activity className="h-4 w-4 text-[var(--accent-finance-strong)]" />
-            <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Volume & Intensity</p>
+            <Activity className="h-4 w-4 text-sky-200" />
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/45">Volumen e intensidad</p>
           </div>
           <div className="mt-5 h-[220px]">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={health.weeklyVolume}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-soft)" vertical={false} />
-                <XAxis dataKey="day" stroke="var(--text-muted)" style={{ fontSize: "11px" }} />
-                <YAxis yAxisId="left" stroke="var(--text-muted)" style={{ fontSize: "11px" }} tickFormatter={(value: number) => `${Math.round(value / 1000)}k`} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" vertical={false} />
+                <XAxis dataKey="day" stroke="rgba(255,255,255,0.45)" style={{ fontSize: "11px" }} />
+                <YAxis
+                  yAxisId="left"
+                  stroke="rgba(255,255,255,0.45)"
+                  style={{ fontSize: "11px" }}
+                  tickFormatter={(value: number) => `${Math.round(value / 1000)}k`}
+                />
                 <YAxis yAxisId="right" orientation="right" hide domain={[0, 100]} />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: "var(--surface-card)",
-                    border: "1px solid var(--border-soft)",
+                    backgroundColor: "rgba(2,6,23,0.92)",
+                    border: "1px solid rgba(255,255,255,0.12)",
                     borderRadius: "16px",
+                    color: "#e2e8f0",
                   }}
                 />
-                <Bar yAxisId="left" dataKey="volume" fill="var(--accent-finance-strong)" radius={[4, 4, 0, 0]} barSize={24} />
-                <Line yAxisId="right" type="monotone" dataKey="intensity" stroke="var(--text-primary)" strokeWidth={2} dot={{ r: 3 }} />
+                <Bar yAxisId="left" dataKey="volume" fill="#38bdf8" radius={[4, 4, 0, 0]} barSize={24} />
+                <Line yAxisId="right" type="monotone" dataKey="intensity" stroke="#e2e8f0" strokeWidth={2} dot={{ r: 3 }} />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="card border border-[var(--border-soft)]">
+        <div className={panel}>
           <div className="flex items-center gap-2">
-            <Trophy className="h-4 w-4 text-[var(--accent-health-strong)]" />
-            <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Strategic Milestones</p>
+            <Trophy className="h-4 w-4 text-emerald-200" />
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/45">Hitos estratégicos</p>
           </div>
 
           <div className="mt-5 space-y-4">
@@ -128,28 +131,35 @@ export default function TrainingOperationsV3() {
                 : Math.min(100, (milestone.current / milestone.target) * 100)
 
               return (
-                <div key={milestone.id} className="rounded-2xl bg-[var(--surface-muted)] p-4">
+                <div key={milestone.id} className="rounded-2xl border border-white/10 bg-black/25 p-4">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <p className="text-sm font-semibold text-[var(--text-primary)]">{milestone.title}</p>
-                      <p className="mt-1 text-[11px] uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                      <p className="text-sm font-semibold">{milestone.title}</p>
+                      <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/45">
                         {milestone.current} / {milestone.target} {milestone.unit}
                       </p>
                     </div>
                     <div className="h-8 w-20">
                       <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={milestone.history.map((value, index) => ({ value, index }))}>
-                          <Line type="monotone" dataKey="value" stroke="var(--text-primary)" strokeWidth={1.5} dot={false} isAnimationActive={false} />
+                          <Line
+                            type="monotone"
+                            dataKey="value"
+                            stroke="#cbd5f5"
+                            strokeWidth={1.5}
+                            dot={false}
+                            isAnimationActive={false}
+                          />
                         </LineChart>
                       </ResponsiveContainer>
                     </div>
                   </div>
-                  <div className="mt-4 h-1.5 rounded-full bg-[var(--border-soft)]">
+                  <div className="mt-4 h-1.5 rounded-full bg-white/10">
                     <div
                       className="h-full rounded-full"
                       style={{
                         width: `${progress}%`,
-                        backgroundColor: progress >= 100 ? "var(--accent-health-strong)" : "var(--text-primary)",
+                        backgroundColor: progress >= 100 ? "#6ee7b7" : "#e2e8f0",
                       }}
                     />
                   </div>
@@ -161,30 +171,30 @@ export default function TrainingOperationsV3() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <div className="card border border-[var(--border-soft)]">
+        <div className={panel}>
           <div className="flex items-center gap-2">
-            <Target className="h-4 w-4 text-[var(--accent-agenda-strong)]" />
-            <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Body Tracking</p>
+            <Target className="h-4 w-4 text-indigo-200" />
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/45">Seguimiento corporal</p>
           </div>
           <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {health.bodyMetrics.map((metric) => {
               const TrendIcon = metric.trend === "up" ? ArrowUp : ArrowDown
 
               return (
-                <div key={metric.label} className="rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-muted)] p-4">
+                <div key={metric.label} className="rounded-2xl border border-white/10 bg-black/25 p-4">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold text-[var(--text-primary)]">{metric.label}</p>
-                    <TrendIcon className="h-4 w-4 text-[var(--accent-agenda-strong)]" />
+                    <p className="text-sm font-semibold">{metric.label}</p>
+                    <TrendIcon className="h-4 w-4 text-indigo-200" />
                   </div>
-                  <p className="mt-3 text-2xl font-semibold tracking-tight text-[var(--text-primary)]">
+                  <p className="mt-3 text-2xl font-semibold tracking-tight">
                     {metric.current}
-                    <span className="ml-1 text-sm font-medium text-[var(--text-muted)]">{metric.unit}</span>
+                    <span className="ml-1 text-sm font-medium text-white/45">{metric.unit}</span>
                   </p>
-                  <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                  <p className="mt-1 text-xs text-white/55">
                     Objetivo {metric.target} {metric.unit}
                   </p>
-                  <div className="mt-4 h-1.5 rounded-full bg-[var(--border-soft)]">
-                    <div className="h-full rounded-full bg-[var(--accent-agenda-strong)]" style={{ width: `${metric.progress}%` }} />
+                  <div className="mt-4 h-1.5 rounded-full bg-white/10">
+                    <div className="h-full rounded-full bg-indigo-300" style={{ width: `${metric.progress}%` }} />
                   </div>
                 </div>
               )
@@ -192,36 +202,36 @@ export default function TrainingOperationsV3() {
           </div>
         </div>
 
-        <div className="card border border-[var(--border-soft)]">
+        <div className={panel}>
           <div className="flex items-center gap-2">
-            <Utensils className="h-4 w-4 text-[var(--accent-warning)]" />
-            <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Weekly Meal Plan</p>
+            <Utensils className="h-4 w-4 text-amber-200" />
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/45">Plan semanal de comida</p>
           </div>
           <div className="mt-5 space-y-3">
             {health.weeklyMealPlan.map((day) => (
-              <div key={day.day} className="rounded-2xl bg-[var(--surface-muted)] p-4">
+              <div key={day.day} className="rounded-2xl border border-white/10 bg-black/25 p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-[var(--text-primary)]">{day.day}</p>
-                    <p className="text-xs text-[var(--text-secondary)]">{day.cals} kcal</p>
+                    <p className="text-sm font-semibold">{day.day}</p>
+                    <p className="text-xs text-white/55">{day.cals} kcal</p>
                   </div>
-                  <div className="flex items-center gap-2 rounded-full bg-orbita-surface/75 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                    <Flame className="h-3.5 w-3.5 text-[var(--accent-warning)]" />
-                    fuel
+                  <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/55">
+                    <Flame className="h-3.5 w-3.5 text-amber-200" />
+                    energía
                   </div>
                 </div>
                 <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
                   <div>
-                    <p className="text-[var(--text-muted)]">P</p>
-                    <p className="font-semibold text-[var(--text-primary)]">{day.protein} g</p>
+                    <p className="text-white/45">P</p>
+                    <p className="font-semibold">{day.protein} g</p>
                   </div>
                   <div>
-                    <p className="text-[var(--text-muted)]">C</p>
-                    <p className="font-semibold text-[var(--text-primary)]">{day.carbs} g</p>
+                    <p className="text-white/45">C</p>
+                    <p className="font-semibold">{day.carbs} g</p>
                   </div>
                   <div>
-                    <p className="text-[var(--text-muted)]">F</p>
-                    <p className="font-semibold text-[var(--text-primary)]">{day.fats} g</p>
+                    <p className="text-white/45">F</p>
+                    <p className="font-semibold">{day.fats} g</p>
                   </div>
                 </div>
               </div>

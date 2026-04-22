@@ -168,10 +168,18 @@ export function ConfigStrategicIntegrationsPanel({ theme }: { theme: OrbitaConfi
         headers,
         body: JSON.stringify({ entries: [] }),
       })
-      const payload = (await res.json()) as { success?: boolean; imported?: number; error?: string }
+      const payload = (await res.json()) as {
+        success?: boolean
+        imported?: number
+        error?: string
+        notice?: string
+      }
       if (!res.ok || !payload.success) throw new Error(payload.error ?? "No se pudo importar Apple Health")
       await load()
-      setNotice(`Apple Health importado (${payload.imported ?? 0} registro(s)).`)
+      setNotice(
+        payload.notice ??
+          `Apple Health importado (${payload.imported ?? 0} registro(s)).`,
+      )
     } catch (e) {
       setLastFailedAction("health")
       setError(e instanceof Error ? e.message : "Error importando Apple Health")

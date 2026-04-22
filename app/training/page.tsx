@@ -27,6 +27,12 @@ import { rechartsDefaultMargin, rechartsTooltipContentStyle } from "@/lib/charts
 import { isAppMockMode, isSupabaseEnabled, UI_TRAINING_PREFS_LOCAL } from "@/lib/checkins/flags"
 import { TrainingVisualBodySection } from "./TrainingVisualBodySection"
 import { agendaTodayYmd } from "@/lib/agenda/localDateKey"
+import { useHealthAutoMetrics } from "@/app/hooks/useHealthAutoMetrics"
+import {
+  appleDaySignalsFromHealthMetric,
+  describeAppleHealthVersusHevy,
+  HEVY_INTEGRATION_LABEL,
+} from "@/lib/health/appleHevyRelation"
 
 function formatStatus(status: TrainingStatus) {
   if (status === "trained") return "Zona óptima de entrenamiento"
@@ -37,6 +43,7 @@ function formatStatus(status: TrainingStatus) {
 
 export default function TrainingPage() {
   const { today, days, loading, error, manualStatus, setManualStatus } = useTraining()
+  const { latest: appleHealth } = useHealthAutoMetrics()
   const {
     bodyRows,
     mealDays,
@@ -205,6 +212,12 @@ export default function TrainingPage() {
 
   const chartEmpty = chartRows.every((r) => r.volumen === 0)
 
+  const appleSignals = useMemo(() => appleDaySignalsFromHealthMetric(appleHealth), [appleHealth])
+  const appleHevyBridge = useMemo(
+    () => describeAppleHealthVersusHevy(today ?? null, appleSignals),
+    [today, appleSignals],
+  )
+
   return (
     <div className="orbita-page-stack">
       <div className="min-w-0">
@@ -212,7 +225,9 @@ export default function TrainingPage() {
           Operaciones de Entrenamiento
         </h1>
         <p style={{ margin: "6px 0 0", fontSize: "13px", color: "var(--color-text-secondary)" }}>
-          Mantenimiento físico, carga y objetivos de rendimiento
+          Mantenimiento físico, carga y objetivos de rendimiento. Los entrenos vienen de{" "}
+          <span style={{ fontWeight: 600 }}>{HEVY_INTEGRATION_LABEL}</span>; Apple Health refuerza gasto energético y
+          sueño cuando importas con el Atajo.
         </p>
         {!remotePrefs && !isAppMockMode() && (
           <p style={{ margin: "8px 0 0", fontSize: "11px", color: "var(--color-text-secondary)" }}>
@@ -287,6 +302,36 @@ export default function TrainingPage() {
                 {loading ? "Sincronizando con Hevy…" : "Sin conexión con Hevy. Operando en modo manual o con datos locales."}
               </p>
             )}
+            <div
+              style={{
+                marginTop: 14,
+                paddingTop: 14,
+                borderTop: "0.5px solid var(--color-border)",
+                display: "grid",
+                gap: 8,
+              }}
+            >
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: "11px",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.14em",
+                  color: "var(--color-text-secondary)",
+                }}
+              >
+                Apple Health + {HEVY_INTEGRATION_LABEL}
+              </p>
+              <p className="max-w-prose text-pretty" style={{ margin: 0, fontSize: "12px", lineHeight: 1.55, color: "var(--color-text-primary)" }}>
+                {appleHevyBridge}
+              </p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "10px 14px", fontSize: "11px", color: "var(--color-text-secondary)" }}>
+                <span>Apple · entrenos: {appleSignals.workoutsCount ?? "—"}</span>
+                <span>Apple · min entreno: {appleSignals.workoutMinutes ?? "—"}</span>
+                <span>Apple · kcal activas: {appleSignals.activeEnergyKcal != null ? Math.round(appleSignals.activeEnergyKcal) : "—"}</span>
+                <span>Apple · sueño: {appleSignals.sleepHours != null ? `${appleSignals.sleepHours.toFixed(1)} h` : "—"}</span>
+              </div>
+            </div>
           </div>
           <div
             className="mx-auto shrink-0 sm:mx-0"

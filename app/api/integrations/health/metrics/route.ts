@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
 
     const { data: rows, error } = await supabase
       .from("health_metrics")
-      .select("observed_at,sleep_hours,hrv_ms,readiness_score,steps,calories,energy_index,source")
+      .select("observed_at,sleep_hours,hrv_ms,readiness_score,steps,calories,energy_index,source,metadata")
       .eq("user_id", userId)
       .order("observed_at", { ascending: false })
       .limit(30)

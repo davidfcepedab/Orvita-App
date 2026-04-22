@@ -28,6 +28,11 @@ import { isAppMockMode, isSupabaseEnabled, UI_HEALTH_SUPPLEMENTS_LOCAL } from "@
 import { useHealthSummaryNarrative } from "@/app/health/useHealthSummaryNarrative"
 import { useHealthAutoMetrics } from "@/app/hooks/useHealthAutoMetrics"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
+import {
+  appleDaySignalsFromHealthMetric,
+  describeAppleHealthVersusHevy,
+  HEVY_INTEGRATION_LABEL,
+} from "@/lib/health/appleHevyRelation"
 
 /** Área “fatiga” (proxy de sueño a partir de check-ins, no polisomnografía). */
 const BIOMETRIC_AREA_TOP = "#E8EAF6"
@@ -69,7 +74,12 @@ function BiometricCorrelationLegend() {
 
 export default function HealthPage() {
   const salud = useSaludContext()
-  const { latest: autoHealth, loading: autoHealthLoading, refetch: refetchAutoHealth } = useHealthAutoMetrics()
+  const {
+    latest: autoHealth,
+    timeline: autoHealthTimeline,
+    loading: autoHealthLoading,
+    refetch: refetchAutoHealth,
+  } = useHealthAutoMetrics()
   const [autoHealthBusy, setAutoHealthBusy] = useState(false)
   const [autoHealthNotice, setAutoHealthNotice] = useState<string | null>(null)
   const [autoHealthError, setAutoHealthError] = useState<string | null>(null)
@@ -164,6 +174,23 @@ export default function HealthPage() {
     ? Math.min(100, Math.round((salud.hydrationCurrent / Math.max(0.1, hydrationTarget)) * 100))
     : 0
 
+  const appleSignals = useMemo(() => appleDaySignalsFromHealthMetric(autoHealth), [autoHealth])
+
+  const appleSleepSeries = useMemo(() => {
+    return (autoHealthTimeline ?? [])
+      .filter((row) => row.sleep_hours != null && typeof row.sleep_hours === "number")
+      .slice(-14)
+      .map((row) => ({
+        day: new Date(row.observed_at).toLocaleDateString("es-LA", { weekday: "short", day: "numeric" }),
+        hours: Number(row.sleep_hours),
+      }))
+  }, [autoHealthTimeline])
+
+  const appleHevyBridge = useMemo(
+    () => describeAppleHealthVersusHevy(today ?? null, appleSignals),
+    [today, appleSignals],
+  )
+
   const healthSummary = useHealthSummaryNarrative({
     loading: salud.loading,
     bodyBattery: salud.bodyBattery,
@@ -217,7 +244,7 @@ export default function HealthPage() {
             importación (Atajo de iOS o export) al servidor; aquí ves lo último guardado en{" "}
             <span className="font-mono text-[12px]">health_metrics</span>.
           </p>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7">
             {[
               { label: "Sueño (h)", value: autoHealth?.sleep_hours != null ? String(autoHealth.sleep_hours) : "—" },
               { label: "HRV (ms)", value: autoHealth?.hrv_ms != null ? String(autoHealth.hrv_ms) : "—" },
@@ -226,6 +253,20 @@ export default function HealthPage() {
                 value: autoHealth?.readiness_score != null ? String(autoHealth.readiness_score) : "—",
               },
               { label: "Pasos", value: autoHealth?.steps != null ? String(autoHealth.steps) : "—" },
+              {
+                label: "Energía activa (kcal)",
+                value: autoHealth?.calories != null ? String(Math.round(autoHealth.calories)) : "—",
+              },
+              {
+                label: "Entrenos (Apple)",
+                value:
+                  appleSignals.workoutsCount != null ? String(Math.round(appleSignals.workoutsCount)) : "—",
+              },
+              {
+                label: "Min entreno (Apple)",
+                value:
+                  appleSignals.workoutMinutes != null ? String(Math.round(appleSignals.workoutMinutes)) : "—",
+              },
             ].map((m) => (
               <div
                 key={m.label}
@@ -245,6 +286,11 @@ export default function HealthPage() {
                 ? `Última muestra: ${new Date(autoHealth.observed_at).toLocaleString("es-CO")} · fuente ${autoHealth.source ?? "—"}`
                 : "Sin muestras automáticas todavía. Pulsa importar o usa Configuración → Importar muestra Apple."}
           </p>
+          <p className="m-0 max-w-prose text-pretty text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
+            <span className="font-semibold text-[var(--color-text-primary)]">{HEVY_INTEGRATION_LABEL}</span> sigue siendo
+            la fuente de entrenos en esta app; Apple Health refuerza sueño, pasos y gasto energético del día.{" "}
+            {appleHevyBridge}
+          </p>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -261,9 +307,17 @@ export default function HealthPage() {
                     headers,
                     body: JSON.stringify({ entries: [] }),
                   })
-                  const payload = (await res.json()) as { success?: boolean; error?: string; imported?: number }
+                  const payload = (await res.json()) as {
+                    success?: boolean
+                    error?: string
+                    imported?: number
+                    notice?: string
+                  }
                   if (!res.ok || !payload.success) throw new Error(payload.error ?? "No se pudo importar")
-                  setAutoHealthNotice(`Importado (${payload.imported ?? 0} registro).`)
+                  setAutoHealthNotice(
+                    payload.notice ??
+                      `Importado (${payload.imported ?? 0} registro).`,
+                  )
                   await refetchAutoHealth()
                 } catch (e) {
                   setAutoHealthError(e instanceof Error ? e.message : "Error importando")
@@ -281,6 +335,44 @@ export default function HealthPage() {
           {autoHealthError ? (
             <p className="m-0 text-xs text-[var(--color-accent-danger)]">{autoHealthError}</p>
           ) : null}
+        </div>
+      </Card>
+
+      <Card>
+        <div className="grid gap-3 p-4 sm:gap-3.5 sm:p-6">
+          <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
+            Sueño importado (Apple Health)
+          </p>
+          <p className="m-0 max-w-prose text-pretty text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
+            Serie a partir de tus últimas filas en <span className="font-mono text-[11px]">health_metrics</span> (cada
+            importación del Atajo). No es polisomnografía; es la suma de sueño que Apple calculó para cada día.
+          </p>
+          <div className="h-[200px] w-full min-w-0 min-h-[180px]">
+            {autoHealthLoading ? (
+              <div className="h-full rounded-xl border border-[color-mix(in_srgb,var(--color-border)_60%,transparent)] bg-[var(--color-surface-alt)]" />
+            ) : appleSleepSeries.length === 0 ? (
+              <p className="m-0 text-[12px] text-[var(--color-text-secondary)]">
+                Aún no hay suficientes puntos con sueño guardado. Importa unos días con el Atajo y vuelve aquí.
+              </p>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={appleSleepSeries} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+                  <XAxis dataKey="day" tick={{ fontSize: 10 }} stroke="var(--color-text-secondary)" interval={0} angle={-25} textAnchor="end" height={56} />
+                  <YAxis width={32} domain={[0, "auto"]} tick={{ fontSize: 10 }} stroke="var(--color-text-secondary)" unit="h" />
+                  <Tooltip contentStyle={rechartsTooltipContentStyle} formatter={(v) => [`${v} h`, "Sueño"]} />
+                  <Area
+                    type="monotone"
+                    dataKey="hours"
+                    name="Sueño"
+                    stroke="var(--color-accent-health)"
+                    fill="color-mix(in srgb, var(--color-accent-health) 22%, transparent)"
+                    strokeWidth={2}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            )}
+          </div>
         </div>
       </Card>
 

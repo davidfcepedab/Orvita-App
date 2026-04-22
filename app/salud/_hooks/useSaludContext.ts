@@ -230,3 +230,5 @@ export function useSaludContext() {
     }
   }, [data, error, loading, prefs])
 }
+
+export type SaludContextSnapshot = ReturnType<typeof useSaludContext>
