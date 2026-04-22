@@ -2,8 +2,10 @@
 """Genera el plist del atajo iOS, listo para `plutil` + `shortcuts sign`.
 
 Métricas incluidas (aportan columnas o `readiness` derivado en Órvita):
-- Pasos, energía activa, HRV, FC en reposo, sueño (análisis), entrenamientos (conteo + duración).
-- Minutos de ejercicio (anillo verde): complementan «pasos» en el modelo de recuperación si hay Apple Watch.
+- Pasos, minutos de ejercicio, energía activa, HRV, FC en reposo, entrenamientos (conteo + duración).
+- **No** incluimos agregado de sueño por categoría + «Calcular estadísticas (duración)» en dispositivos donde Atajos muestra
+  «Acción desconocida»; ese par es el fallo más habitual. Puedes añadir sueño a mano en el atajo o registrar sueño en la app
+  / otras fuentes. El diccionario ya no manda `sleep_duration_seconds` desde el atajo generado.
 
 No añadimos más tipos HealthKit aquí sin columna/UI en la app (peso, SpO2, presión, etc.):
 sí puedes mandarlos como números extra en el JSON y se guardan en `metadata.shortcut_bundle_extras`.
@@ -67,20 +69,6 @@ def find_health_quantity(
             "WFQuantityType": {
                 "Value": {"WFQuantityTypeIdentifier": identifier},
                 "WFSerializationType": "WFQuantityTypeFieldValue",
-            },
-        },
-    }
-
-
-def find_health_category_sleep(*, u_find: str) -> dict:
-    return {
-        "WFWorkflowActionIdentifier": "is.workflow.actions.filter.health.category",
-        "WFWorkflowActionParameters": {
-            "UUID": u_find,
-            "WFContentItemFilter": content_filter_today(),
-            "WFCategorySampleType": {
-                "Value": {"WFCategoryTypeIdentifier": "HKCategoryTypeIdentifierSleepAnalysis"},
-                "WFSerializationType": "WFCategoryTypeFieldValue",
             },
         },
     }
@@ -190,7 +178,6 @@ def dictionary_bundle(
     u_energy: str,
     u_hrv: str,
     u_rhr: str,
-    u_sleep_sec: str,
     u_workout_count: str,
     u_workout_dur_sec: str,
 ) -> dict:
@@ -237,14 +224,6 @@ def dictionary_bundle(
             "WFKey": text_plain("resting_hr_bpm"),
             "WFValue": {
                 "Value": text_token_string(u_rhr, "Calculation Result"),
-                "WFSerializationType": "WFTextTokenString",
-            },
-        },
-        {
-            "WFItemType": 1,
-            "WFKey": text_plain("sleep_duration_seconds"),
-            "WFValue": {
-                "Value": text_token_string(u_sleep_sec, "Calculation Result"),
                 "WFSerializationType": "WFTextTokenString",
             },
         },
@@ -401,9 +380,6 @@ def main() -> int:
     u_find_rhr = uid()
     u_stat_rhr = uid()
 
-    u_find_sleep = uid()
-    u_stat_sleep = uid()
-
     u_find_workouts = uid()
     u_count_workouts = uid()
     u_stat_workout_dur = uid()
@@ -414,7 +390,8 @@ def main() -> int:
 
     actions: list[dict] = [
         comment(
-            "Lee sueño (análisis), entrenos del día, pasos, minutos de ejercicio, energía activa, HRV y FC en reposo; envía todo a Órvita. "
+            "Entrenos del día, pasos, minutos de ejercicio, energía activa, HRV y FC en reposo; envía todo a Órvita. "
+            "Sin agregado automático de sueño (categoría) para evitar «Acción desconocida» en Atajos. "
             "Genera un token en la app (Salud) y pégalo cuando te lo pida el atajo."
         ),
         ask_text(
@@ -435,14 +412,6 @@ def main() -> int:
         statistics_on(u_find_hrv, u_stat_hrv, "Average"),
         find_health_quantity(u_find=u_find_rhr, identifier="HKQuantityTypeIdentifierRestingHeartRate"),
         statistics_on(u_find_rhr, u_stat_rhr, "Average"),
-        find_health_category_sleep(u_find=u_find_sleep),
-        statistics_on(
-            u_find_sleep,
-            u_stat_sleep,
-            "Sum",
-            output_name="Health Samples",
-            aggregate_property="Duration",
-        ),
         find_workouts(u_find=u_find_workouts),
         count_items(u_input=u_find_workouts, u_count=u_count_workouts, output_name="Workouts"),
         statistics_on(
@@ -460,7 +429,6 @@ def main() -> int:
             u_energy=u_stat_energy,
             u_hrv=u_stat_hrv,
             u_rhr=u_stat_rhr,
-            u_sleep_sec=u_stat_sleep,
             u_workout_count=u_count_workouts,
             u_workout_dur_sec=u_stat_workout_dur,
         ),

@@ -153,7 +153,9 @@ export function ConfigHealthUnifiedPanel({ theme }: { theme: OrbitaThemeSkin }) 
             Permisos en Salud → Atajos
           </p>
           <p className="mt-1 text-[11px] leading-relaxed sm:text-xs" style={{ color: theme.textMuted }}>
-            Órvita usa del atajo: pasos, minutos de ejercicio (anillo verde), energía activa, HRV, FC en reposo, sueño y entrenamientos. En Salud → Atajos activa al menos esas lecturas.
+            El atajo oficial envía: pasos, minutos de ejercicio, energía activa, HRV, FC en reposo y entrenamientos. El agregado automático de sueño se omitió
+            en Atajos (provocaba «Acción desconocida» en muchos dispositivos); puedes añadir sueño a mano en el flujo o en la guía. En Salud → Atajos, activa
+            lectura de lo que vayas a leer.
             Otras métricas (peso, SpO2, presión, etc.) pueden enviarse como números extra en el JSON; hoy se guardan en metadatos, no en columnas
             principales.
           </p>

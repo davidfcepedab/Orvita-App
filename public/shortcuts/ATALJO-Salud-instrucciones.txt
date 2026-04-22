@@ -45,7 +45,8 @@ Archivo .shortcut
 Diagnóstico rápido (tres fallos que a veces aparecen juntos)
 1) «Acción desconocida» — «No se encontró esta acción en esta versión de Atajos»
    - La tarjeta quedó corrupta o usa acciones que tu iOS no reconoce (import incompleto, duplicado que se rompió, o acción de otra app).
-   - No intentes «reparar» la misma tarjeta: bórrala e importa de nuevo el .shortcut oficial desde Órvita, o reconstruye ese bloque con acciones nativas de Salud.
+   - Causa muy frecuente (arreglada en el atajo generado por Órvita): el par **Buscar muestras de categoría «Análisis del sueño»** + **Calcular estadísticas (suma de duración)**; en muchos iOS/Atajos una de las dos queda como «desconocida». El .shortcut oficial ya no usa ese bloque; reinstala desde la web.
+   - No intentes «reparar» la misma tarjeta gris: bórrala e importa de nuevo el .shortcut oficial desde Órvita, o reconstruye ese bloque con acciones nativas de Salud.
 
 2) «No hay más muestras de (null)…» en «Buscar muestras de Salud»
    - Falta el tipo concreto de dato. Toca el chip azul «Muestras de Salud» y elige un tipo real (p. ej. Pasos, Energía activa, Variabilidad de la frecuencia cardiaca).
@@ -67,6 +68,6 @@ Estructura mínima lógica (alineada con el .shortcut de Órvita)
 - Diccionario JSON con claves del contrato (apple_bundle) y POST a la API; token desde la app
 
 Métricas de Apple Salud: cuáles usa Órvita hoy
-- Sí, columnas y gráficos (el atajo oficial las envía): Pasos, Minutos de ejercicio (anillo verde; mejora el «readiness» junto a pasos), Energía de actividad, Variabilidad de la FC (HRV), FC en reposo, Sueño (duración vía análisis del sueño), Entrenamientos (conteo y minutos o duración).
-- No hay columna dedicada aún, pero si envías otras claves numéricas en el mismo JSON, Órvita las guarda en metadatos (p. ej. peso, SpO2, distancia) para análisis futuro; no sustituyen al bloque de pasos/energía/sueño arriba.
+- Sí, columnas y gráficos (el atajo oficial las envía): Pasos, Minutos de ejercicio (anillo verde; mejora el «readiness» junto a pasos), Energía de actividad, Variabilidad de la FC (HRV), FC en reposo, Entrenamientos (conteo y duración). **Sueño en automático:** el atajo generado por Órvita ya no suma duración vía «análisis del sueño + estadísticas» (evita «Acción desconocida» en muchos iPhone). Puedes añadir tú al diccionario `sleep_hours` o `sleep_duration_seconds` si hace falta, u otra fuente.
+- No hay columna dedicada aún, pero si envías otras claves numéricas en el mismo JSON, Órvita las guarda en metadatos (p. ej. peso, SpO2, distancia) para análisis futuro; no sustituyen al bloque de pasos/energía o sueño que envíes explícitamente.
 - Activar muchos interruptores en Salud → Atajos no basta: el atajo debe tener acciones que lean cada tipo. Si en el editor solo queda un «Diccionario» vacío o tarjetas grises «Acción desconocida», reinstala el .shortcut; no es un fallo de permisos sueltos.
