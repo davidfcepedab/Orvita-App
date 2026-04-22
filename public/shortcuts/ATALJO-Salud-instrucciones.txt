@@ -4,8 +4,17 @@ Qué hace
 - Lee en el iPhone las muestras que elijas en el atajo (pasos, sueño, energía activa, entrenos, variación del latido, ritmo en reposo, etc.) y las envía a Órvita para guardarlas en tu cuenta.
 
 Instalar o reinstalar (desde la web de Órvita)
-- El botón «Instalar atajo» abre un enlace con esquema de iOS (import-shortcut). El servidor debe publicar el .shortcut por **HTTPS** sin inicio de sesión.
-- Si el sistema muestra “la URL no es válida”: usa **Descargar archivo del atajo** y ábrelo desde Archivos; o pega en Safari el enlace directo al .shortcut. En otras atajos propias, si “Abrir URL” falla con “Texto enriquecido”, añade antes una acción **Obtener texto** o el contenido de la URL en texto plano.
+- El botón «Instalar atajo» abre un enlace con esquema de iOS (import-shortcut). El .shortcut debe estar en **HTTPS** público, sin inicio de sesión.
+- Si sale «La importación falló / la URL no es válida»: (1) Abre orvita.app en **Safari** (no en el visor de Outlook, Instagram, etc.); (2) **Copiar enlace HTTPS** y pégalo en la barra de direcciones de Safari, descarga; (3) **Descargar archivo** y tócalo en Archivos. (4) Prueba en la app el enlace **Otra apertura (x-callback)**.
+- A veces un aviso pide abrir “contenido web con imágenes” y en miniatura vuelve a salir un error: suele ser un fallo distinto; termina con el paso 2 o 3.
+
+Atajos propios: «Texto enriquecido» / «Expandir» / «Abrir URL» (p. ej. “Abrir en Safari”, “Expandir una URL”)
+- Eso no es un fallo de Órvita. Las acciones **Ampliar URL (Expand URL)** y **Abrir URL** exigen un tipo **URL o texto con URL cruda**. Hoja de compartir, Safari o el portapapeles pueden darte **Texto enriquecido**; Atajos no lo convierte solo.
+- Qué añadir en el editor de Atajos, antes de Expandir/Abrir:
+  • Desde hoja de compartir: busca “URL” o “entradas” y usa **Obtener URLs de la entrada** (o **Obtener detalles de …** y elige enlace) sobre la **Entrada de atajo**. Si la entrada es una lista, **Obtener el primer elemento** o **Elegir de la lista** y pasa eso a la siguiente acción.
+  • Si tomas el **portapapeles**: añade **Obtener texto** del portapapeles, o **Ajustar texto** (quitar formatos) y luego **Obtener URLs de la entrada** si hace falta.
+- Si usas un **Si / Entonces**: no dejes la rama “Si conteo > 0” **vacía**. Si hay elementos, pasa el primer elemento o la variable **Entrada** a la acción “Abrir/Expandir”. Si “Si el resultado es” viene de un **Si vacío**, el tipo no es URL y verás el error de texto enriquecido.
+- Flujo mínimo de ejemplo: Contar entradas → Si conteo > 0 → **Obtener el primer ítem** de Entrada (o “Obtener URLs”) → (opcional) “Obtener el primer URL” del texto → **Ampliar URL** / **Abrir URL**. Si no, portapapeles → **Obtener texto** → continuar.
 
 Cómo actualizarlo en el iPhone
 1. Abre la app Atajos.

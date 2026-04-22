@@ -7,7 +7,9 @@ import type { OrbitaConfigTheme } from "@/app/components/orbita-v3/config/config
 import {
   buildOrvitaRunShortcutHref,
   buildOrvitaShortcutImportHref,
+  buildOrvitaShortcutImportHrefXCallback,
   getOrvitaHealthShortcutDownloadFileUrl,
+  getOrvitaHealthShortcutFileUrl,
   isOrvitaShortcutImportFromHttpDev,
   ORVITA_HEALTH_SHORTCUT_NAME,
 } from "@/lib/shortcuts/orvitaHealthShortcut"
@@ -43,12 +45,13 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
     return /iPad|iPhone|iPod/i.test(navigator.userAgent) || (navigator.userAgent.includes("Mac") && "ontouchend" in document)
   }, [])
 
-  const { shortcutInstallHref, runShortcutHref, fileUrl, instructionsUrl } = useMemo(() => {
+  const { shortcutInstallHref, shortcutInstallHrefAlt, runShortcutHref, fileUrl, instructionsUrl } = useMemo(() => {
     return {
       fileUrl: getOrvitaHealthShortcutDownloadFileUrl(),
       /** Ruta relativa: evita orígenes distintos en SSR y cliente. */
       instructionsUrl: INSTRUCCIONES,
       shortcutInstallHref: buildOrvitaShortcutImportHref(),
+      shortcutInstallHrefAlt: buildOrvitaShortcutImportHrefXCallback(),
       runShortcutHref: buildOrvitaRunShortcutHref(),
     }
   }, [])
@@ -92,6 +95,15 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
     }
   }, [token])
 
+  const copyDirectShortcutUrl = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(getOrvitaHealthShortcutFileUrl())
+      setToast("Enlace HTTPS del .shortcut copiado. Ábrelo en Safari y descarga, o pégalo en la barra de direcciones.")
+    } catch {
+      setToast("No se pudo copiar. Usa «Descargar archivo del atajo» o copia la URL a mano desde la guía.")
+    }
+  }, [])
+
   return (
     <div
       className={moduleCard ? "space-y-0 divide-y" : "space-y-4"}
@@ -113,28 +125,39 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
               Un solo toque al día: del teléfono a Órvita
             </p>
             <p className="text-xs leading-relaxed" style={{ color: theme.textMuted }}>
-              Instala el atajo en el iPhone (una vez). Cada mañana o cuando quieras, ejecútalo: lee lo que tú permitas en
-              Salud y lo envía a tu cuenta. Órvita en el navegador no puede abrir la app Salud sola: por eso hace falta
-              el atajo.
+              Instala el atajo en el iPhone (una vez). Abre esta sección de Órvita en <strong className="font-medium text-inherit">Safari</strong>{" "}
+              (no en Outlook, Instagram ni vista embebida: a veces no entrega bien{" "}
+              <code className="text-[10px]">shortcuts://</code>). Si falla el botón verde, usa «Copiar enlace HTTPS» o
+              descarga el archivo.
             </p>
           </div>
         </div>
 
         <div className="mt-4 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap">
           {isIOS ? (
-            <a
-              href={shortcutInstallHref}
-              className="inline-flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold no-underline transition hover:opacity-95"
-              style={{
-                borderColor: theme.accent.health,
-                backgroundColor: theme.accent.health,
-                color: "#fff",
-              }}
-            >
-              <Download className="h-4 w-4 shrink-0" aria-hidden />
-              Instalar atajo ahora
-            </a>
-          ) : (
+            <>
+              <a
+                href={shortcutInstallHref}
+                className="inline-flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold no-underline transition hover:opacity-95"
+                style={{
+                  borderColor: theme.accent.health,
+                  backgroundColor: theme.accent.health,
+                  color: "#fff",
+                }}
+              >
+                <Download className="h-4 w-4 shrink-0" aria-hidden />
+                Instalar atajo ahora
+              </a>
+              <a
+                href={shortcutInstallHrefAlt}
+                className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-xl border px-3 text-center text-xs font-medium no-underline leading-snug transition hover:opacity-90"
+                style={{ borderColor: theme.border, color: theme.textMuted, backgroundColor: theme.surface }}
+              >
+                Otra apertura (x-callback)
+              </a>
+            </>
+          ) : null}
+          {isIOS ? null : (
             <p className="text-xs leading-relaxed" style={{ color: theme.textMuted }}>
               Abre esta página en <strong className="font-medium text-inherit">Safari en el iPhone</strong> y pulsa
               «Descargar atajo»; iOS te pedirá añadirlo a Atajos. Desde un ordenador solo puedes bajar el archivo y
@@ -150,6 +173,15 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
             <Download className="h-4 w-4" aria-hidden />
             Descargar archivo del atajo
           </a>
+          <button
+            type="button"
+            onClick={() => void copyDirectShortcutUrl()}
+            className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-xl border px-4 text-sm font-medium transition hover:opacity-90"
+            style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surface }}
+          >
+            <ClipboardCopy className="h-4 w-4" aria-hidden />
+            Copiar enlace HTTPS
+          </button>
           <a
             href={instructionsUrl}
             target="_blank"

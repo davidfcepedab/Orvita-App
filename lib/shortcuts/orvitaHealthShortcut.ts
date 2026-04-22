@@ -51,6 +51,11 @@ export function buildOrvitaShortcutImportHref(): string {
   return `shortcuts://import-shortcut?url=${encodeURIComponent(getOrvitaHealthShortcutFileUrl())}`
 }
 
+/** Algunas versiones o contextos (p. ej. visor in-app) responden mejor a x-callback-url. Misma `url` codificada. */
+export function buildOrvitaShortcutImportHrefXCallback(): string {
+  return `shortcuts://x-callback-url/import-shortcut?url=${encodeURIComponent(getOrvitaHealthShortcutFileUrl())}`
+}
+
 export function buildOrvitaRunShortcutHref(): string {
   return `shortcuts://run-shortcut?name=${encodeURIComponent(ORVITA_HEALTH_SHORTCUT_NAME)}`
 }

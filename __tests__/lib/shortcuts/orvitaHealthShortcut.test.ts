@@ -1,4 +1,4 @@
-import { buildOrvitaShortcutImportHref } from "@/lib/shortcuts/orvitaHealthShortcut"
+import { buildOrvitaShortcutImportHref, buildOrvitaShortcutImportHrefXCallback } from "@/lib/shortcuts/orvitaHealthShortcut"
 
 describe("orvitaHealthShortcut", () => {
   const prev = process.env.NEXT_PUBLIC_SITE_URL
@@ -20,5 +20,11 @@ describe("orvitaHealthShortcut", () => {
     const after = href.split("?url=")[1]
     expect(after).toBeDefined()
     expect(decodeURIComponent(after!)).toBe("https://orvita.app/shortcuts/Orvita-Importar-Salud-Hoy.shortcut")
+  })
+
+  test("x-callback import encodes the same file URL", () => {
+    process.env.NEXT_PUBLIC_SITE_URL = "https://orvita.app"
+    const h = buildOrvitaShortcutImportHrefXCallback()
+    expect(h.startsWith("shortcuts://x-callback-url/import-shortcut?url=")).toBe(true)
   })
 })
