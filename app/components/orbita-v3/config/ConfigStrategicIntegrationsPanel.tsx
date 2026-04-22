@@ -250,116 +250,92 @@ export function ConfigStrategicIntegrationsPanel({
     keys: ToggleKey[],
     compactCopy: string | undefined,
     layout: "default" | "accordion",
-    iconEl: "finance" | "health",
   ) => {
-    const icon =
-      iconEl === "finance" ? (
-        <span
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
-          style={{ backgroundColor: theme.surfaceAlt, color: theme.accent.finance }}
-          aria-hidden
-        >
-          <Landmark className="h-4 w-4" />
-        </span>
-      ) : (
-        <span
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
-          style={{ backgroundColor: theme.surfaceAlt, color: theme.accent.health }}
-          aria-hidden
-        >
-          <HeartPulse className="h-4 w-4" />
-        </span>
-      )
     if (layout === "accordion") {
+      const n = toggleOptions.filter((item) => keys.includes(item.key)).length
       return (
-        <div
-          className="flex gap-3 border-b px-4 py-3 sm:px-5 sm:py-3.5"
-          style={{ borderColor: theme.border }}
-        >
-          {icon}
-          <div className="min-w-0 flex-1">
-            <p className="m-0 text-sm font-medium" style={{ color: theme.text }}>
-              {iconEl === "finance" ? "Módulos" : "Capa servidor"}
-            </p>
-            <p className="m-0 mt-0.5 text-[11px] leading-relaxed sm:text-xs" style={{ color: theme.textMuted }}>
+        <div className="border-b px-4 py-3 sm:px-5 sm:py-3.5" style={{ borderColor: theme.border }}>
+          {compactCopy ? (
+            <p className="m-0 mb-2.5 text-[11px] leading-relaxed sm:text-xs" style={{ color: theme.textMuted }}>
               {compactCopy}
             </p>
-            <div className="mt-2.5 flex flex-wrap gap-1.5 sm:gap-2">
-              {toggleOptions
-                .filter((item) => keys.includes(item.key))
-                .map((item) => (
-                  <button
-                    key={item.key}
-                    type="button"
-                    disabled={busy === "settings"}
-                    onClick={() =>
-                      void patchSettings({
-                        [item.key]: !settings[item.key],
-                      } as Partial<IntegrationSettings>)
-                    }
-                    className={configConnectionActionClass}
-                    style={{
-                      borderColor: settings[item.key] ? theme.accent.health : theme.border,
-                      color: settings[item.key] ? "#fff" : theme.text,
-                      backgroundColor: settings[item.key] ? theme.accent.health : theme.surfaceAlt,
-                    }}
-                  >
-                    {settings[item.key] ? "On" : "Off"} · {item.label}
-                  </button>
-                ))}
-            </div>
+          ) : null}
+          <div className={`grid gap-2 ${n > 1 ? "sm:grid-cols-2" : "grid-cols-1"} max-w-xl`}>
+            {toggleOptions
+              .filter((item) => keys.includes(item.key))
+              .map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  disabled={busy === "settings"}
+                  onClick={() =>
+                    void patchSettings({
+                      [item.key]: !settings[item.key],
+                    } as Partial<IntegrationSettings>)
+                  }
+                  className={`${configConnectionActionClass} w-full min-h-10 justify-center text-[11px] font-medium`}
+                  style={{
+                    borderColor: settings[item.key] ? theme.accent.health : theme.border,
+                    color: settings[item.key] ? "#fff" : theme.text,
+                    backgroundColor: settings[item.key] ? theme.accent.health : theme.surfaceAlt,
+                    boxShadow: "none",
+                  }}
+                >
+                  {item.label}
+                </button>
+              ))}
           </div>
         </div>
       )
     }
     return (
-    <div
-      className={unified ? "px-4 py-3 sm:px-5 sm:py-3.5" : "rounded-2xl border p-5 sm:p-6"}
-      style={unified ? undefined : { backgroundColor: theme.surface, borderColor: theme.border }}
-    >
-      {!unified ? (
-        <>
-          <p className="text-sm font-semibold" style={{ color: theme.text }}>
-            Activación por módulo
+      <div
+        className={unified ? "px-4 py-3 sm:px-5 sm:py-3.5" : "rounded-2xl border p-5 sm:p-6"}
+        style={unified ? undefined : { backgroundColor: theme.surface, borderColor: theme.border }}
+      >
+        {!unified ? (
+          <>
+            <p className="text-sm font-semibold" style={{ color: theme.text }}>
+              Activación por módulo
+            </p>
+            <p className="mt-1 text-xs" style={{ color: theme.textMuted }}>
+              Salud, banca y avisos. Los tokens viven en el servidor.
+            </p>
+          </>
+        ) : (
+          <p className="m-0 text-[11px] leading-snug sm:text-xs" style={{ color: theme.textMuted }}>
+            {compactCopy ?? "Activa o desactiva qué piezas pueden conectarse o notificarte (ajustes en servidor)."}
           </p>
-          <p className="mt-1 text-xs" style={{ color: theme.textMuted }}>
-            Salud, banca y avisos. Los tokens viven en el servidor.
-          </p>
-        </>
-      ) : (
-        <p className="m-0 text-[11px] leading-snug sm:text-xs" style={{ color: theme.textMuted }}>
-          {compactCopy ?? "Activa o desactiva qué piezas pueden conectarse o notificarte (ajustes en servidor)."}
-        </p>
-      )}
-      <div className="mt-2 flex flex-wrap gap-1.5 sm:mt-2.5 sm:gap-2">
-        {toggleOptions
-          .filter((item) => keys.includes(item.key))
-          .map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              disabled={busy === "settings"}
-              onClick={() =>
-                void patchSettings({
-                  [item.key]: !settings[item.key],
-                } as Partial<IntegrationSettings>)
-              }
-              className={configConnectionActionClass}
-              style={{
-                borderColor: settings[item.key] ? theme.accent.health : theme.border,
-                color: settings[item.key] ? "#fff" : theme.text,
-                backgroundColor: settings[item.key] ? theme.accent.health : theme.surfaceAlt,
-              }}
-            >
-              {settings[item.key] ? "On" : "Off"} · {item.label}
-            </button>
-          ))}
+        )}
+        <div className="mt-2 flex flex-wrap gap-1.5 sm:mt-2.5 sm:gap-2">
+          {toggleOptions
+            .filter((item) => keys.includes(item.key))
+            .map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                disabled={busy === "settings"}
+                onClick={() =>
+                  void patchSettings({
+                    [item.key]: !settings[item.key],
+                  } as Partial<IntegrationSettings>)
+                }
+                className={configConnectionActionClass}
+                style={{
+                  borderColor: settings[item.key] ? theme.accent.health : theme.border,
+                  color: settings[item.key] ? "#fff" : theme.text,
+                  backgroundColor: settings[item.key] ? theme.accent.health : theme.surfaceAlt,
+                }}
+              >
+                {item.label}
+              </button>
+            ))}
+        </div>
       </div>
-    </div>
     )
   }
 
-  const togglesBlock = makeTogglesBlock(toggleOptions.map((o) => o.key), undefined, "default", "finance")
+  const togglesBlock = makeTogglesBlock(toggleOptions.map((o) => o.key), undefined, "default")
 
   const healthBlock = !showHealth
     ? null
@@ -425,34 +401,79 @@ export function ConfigStrategicIntegrationsPanel({
       </div>
     )
 
+  const healthBlockAccordion = !showHealth
+    ? null
+    : (
+        <div
+          className="px-4 py-3.5 sm:px-5 sm:py-4"
+          style={unified ? undefined : { backgroundColor: theme.surface, borderColor: theme.border }}
+          data-orvita-subsection="health-server-sync"
+        >
+          <p className="m-0 text-sm font-medium" style={{ color: theme.text }}>
+            Apple y Google
+          </p>
+          <p className="m-0 mt-1 text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
+            Sincroniza o prueba con una importación.
+          </p>
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <button
+              type="button"
+              onClick={() => void connectAppleHealth()}
+              disabled={busy === "apple-connect" || !settings.health_enabled}
+              className={`${configConnectionActionClass} w-full min-h-10 justify-center text-[11px] font-medium`}
+              style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surfaceAlt }}
+            >
+              {busy === "apple-connect" ? "…" : "Conectar Apple"}
+            </button>
+            <button
+              type="button"
+              onClick={() => void importAppleSample()}
+              disabled={busy === "apple-import" || !settings.health_enabled}
+              className={`${configConnectionActionClass} w-full min-h-10 justify-center text-[11px] font-medium`}
+              style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surfaceAlt }}
+            >
+              {busy === "apple-import" ? "…" : "Probar importación"}
+            </button>
+            <button
+              type="button"
+              onClick={() => void syncHealth()}
+              disabled={busy === "health" || !settings.health_enabled}
+              className={`${configConnectionActionClass} w-full min-h-10 justify-center text-[11px] font-medium`}
+              style={{ borderColor: theme.accent.health, backgroundColor: theme.accent.health, color: "#fff" }}
+            >
+              {busy === "health" ? "…" : "Sincronizar salud"}
+            </button>
+          </div>
+          <p className="mt-2.5 text-[11px]" style={{ color: theme.textMuted }}>
+            {formatRelativeSyncAgo(healthLastSync)} ·{" "}
+            {healthSource === "apple_health_export"
+              ? "Apple"
+              : healthSource === "google_fit"
+                ? "Google Fit"
+                : "Sin datos aún"}
+          </p>
+        </div>
+      )
+
   const bankBlock = (
     <div
       className={unified ? "px-4 py-3.5 sm:px-5 sm:py-4" : "rounded-2xl border p-5"}
       style={unified ? undefined : { backgroundColor: theme.surface, borderColor: theme.border }}
     >
-      <div className="flex min-w-0 items-center gap-2.5">
-        <span
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
-          style={{ backgroundColor: theme.surfaceAlt, color: theme.accent.finance }}
-          aria-hidden
-        >
-          <Landmark className="h-4 w-4" />
-        </span>
-        <p className="min-w-0 text-sm font-semibold leading-snug" style={{ color: theme.text }}>
-          Banca (CO)
-        </p>
-      </div>
-      <p className="mt-1.5 text-[11px] leading-relaxed sm:text-xs" style={{ color: theme.textMuted }}>
-        Bancolombia, Davivienda, Nequi.
+      <p className="m-0 text-sm font-medium" style={{ color: theme.text }}>
+        Bancos en Colombia
       </p>
-      <div className="mt-2.5 flex flex-wrap gap-1.5 sm:mt-3 sm:gap-2">
+      <p className="m-0 mt-1 text-[11px] leading-relaxed sm:text-xs" style={{ color: theme.textMuted }}>
+        Bancolombia, Davivienda o Nequi (Open Finance, cuando apliquen).
+      </p>
+      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
         {(["bancolombia", "davivienda", "nequi"] as const).map((provider) => (
           <button
             key={provider}
             type="button"
             onClick={() => void connectBank(provider)}
             disabled={busy === `bank-${provider}` || !settings.banking_enabled}
-            className={configConnectionActionClass}
+            className={`${configConnectionActionClass} w-full min-h-11 justify-center text-[11px] font-medium`}
             style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surfaceAlt }}
             title={`Conectar ${provider}`}
           >
@@ -549,9 +570,8 @@ export function ConfigStrategicIntegrationsPanel({
           <div className="flex flex-col gap-0 border-t" style={{ borderColor: theme.border }}>
             {makeTogglesBlock(
               ["banking_enabled", "push_enhanced_enabled"],
-              "Banca y push en el servidor (tokens).",
+              "Activa banca y notificaciones en el servidor para conectar cuentas y avisos.",
               "accordion",
-              "finance",
             )}
             {bankBlock}
           </div>
@@ -606,11 +626,10 @@ export function ConfigStrategicIntegrationsPanel({
               ) : null}
               {makeTogglesBlock(
                 ["health_enabled"],
-                "Activa salud en servidor (tokens, Apple, Google).",
+                "Debe estar activa para conectar o importar salud desde el servidor.",
                 "accordion",
-                "health",
               )}
-              {healthBlock}
+              {healthBlockAccordion}
             </div>
           </details>
         ) : beforeHealthServer ? (

@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { Apple, ClipboardCopy, Download, LayoutGrid, Play, Sparkles, Zap } from "lucide-react"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import type { OrbitaConfigTheme } from "@/app/components/orbita-v3/config/configThemeTypes"
@@ -34,11 +34,26 @@ function formatWhen(iso: string | null | undefined) {
  * Instalación del atajo vía esquema de iOS, token de importación y guía para widget de Atajos.
  * La web no puede instalar nada en el sistema; solo ofrece enlaces y pasos.
  */
+const subtleCta = "min-h-10 w-full sm:w-auto items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition hover:opacity-90 sm:inline-flex"
+const strongCta = "min-h-10 w-full sm:w-auto items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition hover:opacity-95 sm:inline-flex"
+
 export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
   const [minting, setMinting] = useState(false)
   const [token, setToken] = useState<string | null>(null)
   const [tokenUntil, setTokenUntil] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
+  const [guideOpen, setGuideOpen] = useState(false)
+
+  useEffect(() => {
+    if (typeof document === "undefined") return
+    if (guideOpen) {
+      const prev = document.body.style.overflow
+      document.body.style.overflow = "hidden"
+      return () => {
+        document.body.style.overflow = prev
+      }
+    }
+  }, [guideOpen])
 
   const isIOS = useMemo(() => {
     if (typeof navigator === "undefined") return false
@@ -113,84 +128,81 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
         className={moduleCard ? "pb-4 pt-0" : "rounded-2xl border p-4 sm:p-5"}
         style={moduleCard ? undefined : { borderColor: theme.border, backgroundColor: theme.surfaceAlt }}
       >
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-2.5 sm:gap-3">
           <div
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg sm:h-10 sm:w-10"
             style={{ backgroundColor: theme.surface, color: theme.accent.health }}
           >
-            <Apple className="h-5 w-5" aria-hidden />
+            <Apple className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden />
           </div>
-          <div className="min-w-0 flex-1 space-y-2">
+          <div className="min-w-0 flex-1 space-y-1.5">
             <p className="text-sm font-semibold" style={{ color: theme.text }}>
-              Un solo toque al día: del teléfono a Órvita
+              Un toque: del iPhone a Órvita
             </p>
             <p className="text-xs leading-relaxed" style={{ color: theme.textMuted }}>
-              Instala el atajo en el iPhone (una vez). Abre esta sección de Órvita en <strong className="font-medium text-inherit">Safari</strong>{" "}
-              (no en Outlook, Instagram ni vista embebida: a veces no entrega bien{" "}
-              <code className="text-[10px]">shortcuts://</code>). Si falla el botón verde, usa «Copiar enlace HTTPS» o
-              descarga el archivo.
+              Instala el atajo una vez. Usa <strong className="font-medium text-inherit">Safari</strong> en el iPhone (no
+              otras apps): así el enlace abre Atajos. Si no responde, baja de nuevo el archivo desde aquí o copia el
+              enlace HTTPS.
             </p>
           </div>
         </div>
 
-        <div className="mt-4 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap">
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           {isIOS ? (
             <>
               <a
                 href={shortcutInstallHref}
-                className="inline-flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold no-underline transition hover:opacity-95"
+                className={`${strongCta} no-underline flex`}
                 style={{
                   borderColor: theme.accent.health,
                   backgroundColor: theme.accent.health,
                   color: "#fff",
+                  border: "1px solid transparent",
                 }}
               >
-                <Download className="h-4 w-4 shrink-0" aria-hidden />
-                Instalar atajo ahora
+                <Download className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                Instalar atajo
               </a>
               <a
                 href={shortcutInstallHrefAlt}
-                className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-xl border px-3 text-center text-xs font-medium no-underline leading-snug transition hover:opacity-90"
+                className={`${subtleCta} no-underline text-center sm:text-left flex`}
                 style={{ borderColor: theme.border, color: theme.textMuted, backgroundColor: theme.surface }}
               >
-                Otra apertura (x-callback)
+                Apertura alternativa
               </a>
             </>
           ) : null}
           {isIOS ? null : (
             <p className="text-xs leading-relaxed" style={{ color: theme.textMuted }}>
-              Abre esta página en <strong className="font-medium text-inherit">Safari en el iPhone</strong> y pulsa
-              «Descargar atajo»; iOS te pedirá añadirlo a Atajos. Desde un ordenador solo puedes bajar el archivo y
-              enviártelo al móvil.
+              En el iPhone, abre esta pantalla en Safari y toca <strong className="font-medium text-inherit">Descargar</strong>.
             </p>
           )}
           <a
             href={fileUrl}
             download
-            className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold no-underline transition hover:opacity-90"
+            className={`${subtleCta} no-underline flex`}
             style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surface }}
           >
-            <Download className="h-4 w-4" aria-hidden />
-            Descargar archivo del atajo
+            <Download className="h-3.5 w-3.5" aria-hidden />
+            Descargar .shortcut
           </a>
           <button
             type="button"
             onClick={() => void copyDirectShortcutUrl()}
-            className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-xl border px-4 text-sm font-medium transition hover:opacity-90"
+            className={`${subtleCta} flex`}
             style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surface }}
           >
-            <ClipboardCopy className="h-4 w-4" aria-hidden />
-            Copiar enlace HTTPS
+            <ClipboardCopy className="h-3.5 w-3.5" aria-hidden />
+            Copiar enlace
           </button>
-          <a
-            href={instructionsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-xl border px-4 text-sm font-medium no-underline transition hover:opacity-90"
+          <button
+            type="button"
+            onClick={() => setGuideOpen(true)}
+            className={`${subtleCta} flex border-dashed`}
             style={{ borderColor: theme.border, color: theme.textMuted, backgroundColor: "transparent" }}
           >
-            Ver guía de pasos
-          </a>
+            Guía (widget y permisos)
+          </button>
         </div>
         {isIOS && isOrvitaShortcutImportFromHttpDev() ? (
           <p className="mt-3 text-xs leading-relaxed" style={{ color: theme.textMuted }}>
@@ -209,27 +221,26 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
           Código de un solo uso
         </p>
         <p className="mt-1.5 text-xs leading-relaxed" style={{ color: theme.textMuted }}>
-          El atajo lo pide al enviar datos. Genera uno aquí, cópialo y pégalo cuando iOS te lo muestre. Caduca al cabo
-          de unas horas.
+          Código que pide iOS al enviar. Válido unas horas: genera, copia y pega cuando aparezca el diálogo.
         </p>
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => void mintToken()}
             disabled={minting}
-            className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold transition disabled:opacity-50"
+            className={`${subtleCta} flex disabled:opacity-50`}
             style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surfaceAlt }}
           >
-            <Sparkles className="h-4 w-4" aria-hidden />
-            {minting ? "Generando…" : "Generar código"}
+            <Sparkles className="h-3.5 w-3.5" aria-hidden />
+            {minting ? "Generando…" : "Obtener código"}
           </button>
           {isIOS ? (
             <a
               href={runShortcutHref}
-              className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold no-underline transition"
+              className={`${subtleCta} no-underline flex`}
               style={{ borderColor: theme.accent.health, color: theme.accent.health, backgroundColor: "transparent" }}
             >
-              <Zap className="h-4 w-4" aria-hidden />
+              <Zap className="h-3.5 w-3.5" aria-hidden />
               Abrir atajo
             </a>
           ) : null}
@@ -276,47 +287,77 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
         ) : null}
       </div>
 
-      <details
-        className={
-          moduleCard
-            ? "group border-t pt-4 [&[open]]:pb-0"
-            : "group rounded-2xl border p-4"
-        }
-        style={moduleCard ? { borderColor: theme.border } : { borderColor: theme.border, backgroundColor: theme.surface }}
-      >
-        <summary
-          className="flex cursor-pointer list-none items-center gap-2 text-sm font-medium marker:hidden [&::-webkit-details-marker]:hidden"
-          style={{ color: theme.text }}
+      {guideOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4"
+          style={{ backgroundColor: "rgba(15, 23, 42, 0.45)" }}
+          role="presentation"
+          onClick={() => setGuideOpen(false)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setGuideOpen(false)
+          }}
         >
-          <LayoutGrid className="h-4 w-4 shrink-0" style={{ color: theme.accent.health }} aria-hidden />
-          Widget en la pantalla de inicio (un toque, sin abrir Órvita)
-        </summary>
-        <p className="mt-2 text-xs leading-relaxed" style={{ color: theme.textMuted }}>
-          Apple no deja que una web ponga el widget por ti: lo eliges tú en el iPhone. Así añades el atajo a la
-          cuadrícula y lo lanzas con un toque, igual que abrir el clima o el reloj.
-        </p>
-        <ol className="mt-3 list-decimal space-y-2 pl-4 text-xs leading-relaxed" style={{ color: theme.text }}>
-          <li>
-            En la pantalla de inicio, mantén un dedo en un espacio vacío (modo edición) o entra a editar el fondo,
-            según tu versión de iOS.
-          </li>
-          <li>
-            Toca <strong className="font-medium text-inherit">+</strong> o «Añadir widget».
-          </li>
-          <li>
-            Busca <strong className="font-medium text-inherit">Atajos</strong>, elige un tamaño (pequeño, mediano o
-            grande) y tócalo.
-          </li>
-          <li>
-            Al configurar, selecciona <strong className="font-medium text-inherit">{ORVITA_HEALTH_SHORTCUT_NAME}</strong>. Luego, al
-            tocar el widget, se abre el atajo: ahí pega el código si hace falta y confirma el envío a Órvita.
-          </li>
-        </ol>
-        <p className="mt-2 flex items-center gap-2 text-[11px]" style={{ color: theme.textMuted }}>
-          <Play className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          El atajo hace de puente: Órvita sigue en la nube; el widget no guarda la sesión, solo inicia el gesto.
-        </p>
-      </details>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="health-shortcut-guide-title"
+            className="max-h-[min(92dvh,720px)] w-full max-w-lg overflow-y-auto rounded-t-2xl border p-4 shadow-xl sm:rounded-2xl sm:p-5"
+            style={{ borderColor: theme.border, backgroundColor: theme.surface }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-start justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <LayoutGrid className="h-4 w-4 shrink-0" style={{ color: theme.accent.health }} aria-hidden />
+                <h2
+                  id="health-shortcut-guide-title"
+                  className="m-0 text-sm font-semibold sm:text-base"
+                  style={{ color: theme.text }}
+                >
+                  Guía rápida: atajo y widget
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setGuideOpen(false)}
+                className="rounded-md px-2 py-1 text-xs font-medium"
+                style={{ color: theme.textMuted }}
+              >
+                Cerrar
+              </button>
+            </div>
+            <p className="m-0 text-xs leading-relaxed" style={{ color: theme.textMuted }}>
+              La web no puede instalar nada en tu iPhone. Tú añades el atajo a la pantalla de inicio, como el clima o el
+              reloj. Órvita queda en la nube: el atajo solo envía el día.
+            </p>
+            <ol className="mt-3 list-decimal space-y-2 pl-4 text-xs leading-relaxed" style={{ color: theme.text }}>
+              <li>Pantalla de inicio: modo edición, luego <strong className="font-medium text-inherit">+</strong> o Añadir widget.</li>
+              <li>
+                Busca <strong className="font-medium text-inherit">Atajos</strong>, elige tamaño, y al configurar, el
+                atajo <strong className="font-medium text-inherit">{ORVITA_HEALTH_SHORTCUT_NAME}</strong>.
+              </li>
+              <li>
+                Si en Salud ves <strong className="font-medium text-inherit">(null)</strong> o «Acción desconocida»:
+                vuelve a descargar el .shortcut desde aquí, abre <strong className="font-medium text-inherit">Salud</strong> →{" "}
+                <strong className="font-medium text-inherit">Atajos</strong> y activa permisos para los tipos (pasos, ejercicio,
+                energía, HRV, FC). Reinstala el atajo con el nombre exacto.
+              </li>
+            </ol>
+            <p className="mt-3 flex items-start gap-2 text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
+              <Play className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+              El widget no inicia sesión: solo abre el atajo; tu cuenta sigue en Órvita.
+            </p>
+            <a
+              href={instructionsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 inline-flex text-xs font-medium underline-offset-2 hover:underline"
+              style={{ color: theme.textMuted }}
+            >
+              Notas técnicas (archivo)
+            </a>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

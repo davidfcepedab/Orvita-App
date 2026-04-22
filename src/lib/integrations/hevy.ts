@@ -6,6 +6,11 @@ function requireHevyEnv(): { baseUrl: string; apiKey: string } {
   return { baseUrl, apiKey }
 }
 
+/** True when the server can call Hevy (avoids throw before fetch). */
+export function isHevyEnvConfigured(): boolean {
+  return Boolean(process.env.HEVY_BASE_URL?.trim() && process.env.HEVY_API_KEY?.trim())
+}
+
 export async function fetchHevyWorkouts(page = 1) {
   const { baseUrl, apiKey } = requireHevyEnv()
   const res = await fetch(`${baseUrl}/workouts?page=${page}`, {

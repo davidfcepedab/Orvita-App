@@ -8,6 +8,12 @@ type Props = {
   connectedLabel?: string
   disconnectedLabel?: string
   className?: string
+  /**
+   * Convierte la pill "desconectado" en botón (p. ej. sincronizar al tocar "Conectar").
+   * En `<summary>`, el clic no debe abrir el acordeón: usa `stopEvent`.
+   */
+  onDisconnectedClick?: () => void
+  stopEventOnDisconnectedClick?: boolean
 }
 
 /**
@@ -18,6 +24,8 @@ export function ConfigConnectionPill({
   connectedLabel = "Conectado",
   disconnectedLabel = "Conectar",
   className = "",
+  onDisconnectedClick,
+  stopEventOnDisconnectedClick = true,
 }: Props) {
   if (state === "checking") {
     return (
@@ -49,6 +57,24 @@ export function ConfigConnectionPill({
       >
         {disconnectedLabel}
       </span>
+    )
+  }
+  if (onDisconnectedClick) {
+    return (
+      <button
+        type="button"
+        className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium transition-opacity hover:opacity-90 ${className}`.trim()}
+        style={{ backgroundColor: "rgba(251, 191, 36, 0.2)", color: "rgb(180, 83, 9)" }}
+        onClick={(e) => {
+          if (stopEventOnDisconnectedClick) {
+            e.preventDefault()
+            e.stopPropagation()
+          }
+          onDisconnectedClick()
+        }}
+      >
+        {disconnectedLabel}
+      </button>
     )
   }
   return (

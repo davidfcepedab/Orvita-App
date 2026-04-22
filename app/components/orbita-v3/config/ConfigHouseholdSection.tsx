@@ -66,7 +66,7 @@ export function ConfigHouseholdSection({
 
   if (isMinimal) {
     return (
-      <section className={compact ? "space-y-5" : "space-y-8"} aria-labelledby={headingId}>
+      <section className={compact ? "space-y-4" : "space-y-8"} aria-labelledby={headingId}>
         <span id={headingId} className="sr-only">
           Hogar y familia
         </span>
@@ -106,7 +106,7 @@ export function ConfigHouseholdSection({
 
           {familyPhotoUrl ? (
             <div
-              className={`overflow-hidden rounded-2xl ${compact ? "h-40 sm:h-44" : "h-32 sm:h-36"}`}
+              className={`overflow-hidden rounded-2xl ${compact ? "h-48 sm:h-52" : "h-32 sm:h-36"}`}
               style={{ backgroundColor: theme.surfaceAlt }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -147,9 +147,9 @@ export function ConfigHouseholdSection({
             </p>
           )}
           {!householdInviteLoading && householdInviteCode && (
-            <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-3">
+            <div className="flex flex-row items-stretch gap-2.5 sm:items-center sm:gap-3">
               <code
-                className={`min-w-0 flex-1 rounded-xl text-center font-medium tracking-[0.2em] ${compact ? "px-3 py-2.5 text-sm sm:text-base" : "rounded-2xl px-5 py-4 text-lg sm:text-xl"}`}
+                className={`flex min-h-[44px] min-w-0 flex-1 items-center justify-center rounded-xl text-center font-medium tracking-[0.2em] ${compact ? "px-3 py-2.5 text-sm sm:text-base" : "rounded-2xl px-5 py-4 text-lg sm:text-xl"}`}
                 style={{
                   backgroundColor: theme.surfaceAlt,
                   color: theme.text,

@@ -22,7 +22,7 @@ import { designTokens } from "@/src/theme/design-tokens"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { createBrowserClient } from "@/lib/supabase/browser"
 import Link from "next/link"
-import { CalendarDays, ChevronDown, Dumbbell, KeyRound, Monitor, Palette, Sliders, Smartphone, User } from "lucide-react"
+import { CalendarDays, ChevronDown, Dumbbell, KeyRound, Monitor, Palette, Smartphone, User } from "lucide-react"
 import { defaultCustomPalette, normalizeHex, type CustomPalette } from "@/lib/theme/customPalette"
 import type { HouseholdMemberDTO } from "@/lib/household/memberTypes"
 
@@ -31,7 +31,6 @@ const HEVY_LAST_SYNC_STORAGE_KEY = "orvita:config:hevyLastSyncIso"
 export default function ConfigV3() {
   const { colorTheme, setColorTheme, layoutMode, setLayoutMode, customPalette, setCustomPalette } = useApp()
   const theme = useOrbitaSkin()
-  const [intensity, setIntensity] = useState(50)
   const router = useRouter()
   const searchParams = useSearchParams()
   const connectedFromParam = searchParams.get("connected") === "google"
@@ -257,11 +256,22 @@ export default function ConfigV3() {
           cache: "no-store",
           headers: { Authorization: `Bearer ${token}` },
         })
-        const payload = (await res.json()) as { success?: boolean }
+        const payload = (await res.json()) as { success?: boolean; error?: string; code?: string }
         if (!cancelled) {
-          setHevyConnected(res.ok && payload.success === true)
-          if (!res.ok || !payload.success) {
-            setHevyMessage("No hay respuesta válida de Hevy (revisa API del servidor o modo mock).")
+          const ok = res.ok && payload.success === true
+          setHevyConnected(ok)
+          if (!ok) {
+            if (res.status === 503 && payload.code === "not_configured") {
+              setHevyMessage(
+                "Hevy aún no está conectado en el servidor. Si despliegas tú el proyecto, añade HEVY_BASE_URL y HEVY_API_KEY.",
+              )
+            } else {
+              setHevyMessage(
+                payload.error ?? "No pudimos conectar con Hevy. Revisa la app, tu conexión o inténtalo más tarde.",
+              )
+            }
+          } else {
+            setHevyMessage(null)
           }
         }
       } catch {
@@ -279,9 +289,8 @@ export default function ConfigV3() {
   }, [])
 
   useEffect(() => {
-    const factor = 0.6 + (intensity / 100) * 0.8
-    document.documentElement.style.setProperty("--motion-factor", factor.toFixed(2))
-  }, [intensity])
+    document.documentElement.style.setProperty("--motion-factor", "0.85")
+  }, [])
 
   useEffect(() => {
     try {
@@ -411,10 +420,22 @@ export default function ConfigV3() {
         cache: "no-store",
         headers: { Authorization: `Bearer ${token}` },
       })
-      const payload = (await res.json()) as { success?: boolean; trainingDays?: unknown[] }
+      const payload = (await res.json()) as {
+        success?: boolean
+        trainingDays?: unknown[]
+        error?: string
+        code?: string
+      }
       if (!res.ok || !payload.success) {
         setHevyConnected(false)
-        throw new Error("Sincronización Hevy no disponible")
+        if (res.status === 503 && payload.code === "not_configured") {
+          throw new Error(
+            "Hevy no está conectado en el servidor. Si administras el despliegue, configura HEVY_BASE_URL y HEVY_API_KEY.",
+          )
+        }
+        throw new Error(
+          payload.error ?? "No pudimos conectar con Hevy. Revisa la app, tu conexión o vuelve a intentar.",
+        )
       }
       setHevyConnected(true)
       const n = Array.isArray(payload.trainingDays) ? payload.trainingDays.length : 0
@@ -547,7 +568,12 @@ export default function ConfigV3() {
   const displayName =
     profile?.displayName?.trim() ||
     (profile?.email ? profile.email.split("@")[0] : null) ||
-    "Cuenta"
+    (profile && !profile.email ? "Tu perfil" : "…")
+  const profileSubtitle = profile?.email
+    ? `${homeRole} · ${profile.email}`
+    : !profile?.email && profile
+      ? homeRole
+      : null
 
   return (
     <main
@@ -582,17 +608,17 @@ export default function ConfigV3() {
             Tiempo, energía y dinero, sin ruido.
           </p>
         </div>
-        <div className="mt-3 flex flex-col gap-3 sm:mt-4 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
-          <div className="flex min-w-0 items-end gap-4">
+        <div className="mt-3 flex min-w-0 flex-col gap-3 sm:mt-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
             {profileLoading ? (
               <div
-                className="h-[4.5rem] w-[4.5rem] shrink-0 animate-pulse rounded-full"
+                className="h-[3.5rem] w-[3.5rem] shrink-0 animate-pulse rounded-full sm:h-16 sm:w-16"
                 style={{ backgroundColor: theme.surfaceAlt }}
                 aria-hidden
               />
             ) : (
               <div
-                className="relative h-[4.5rem] w-[4.5rem] shrink-0 overflow-hidden rounded-full"
+                className="relative h-[3.5rem] w-[3.5rem] shrink-0 overflow-hidden rounded-full sm:h-16 sm:w-16"
                 style={{ backgroundColor: theme.surfaceAlt, boxShadow: "0 0 0 1px rgba(15,23,42,0.06)" }}
               >
                 {profile?.avatarUrl ? (
@@ -601,8 +627,8 @@ export default function ConfigV3() {
                     src={profile.avatarUrl}
                     alt=""
                     className="h-full w-full object-cover"
-                    width={72}
-                    height={72}
+                    width={64}
+                    height={64}
                   />
                 ) : (
                   <div
@@ -610,22 +636,26 @@ export default function ConfigV3() {
                     style={{ color: theme.textMuted }}
                     aria-hidden
                   >
-                    <User className="h-7 w-7" />
+                    <User className="h-6 w-6 sm:h-7 sm:w-7" />
                   </div>
                 )}
               </div>
             )}
-            <div className="min-w-0 pb-0.5">
-              <p className="m-0 text-lg font-light leading-tight tracking-[-0.02em] sm:text-xl" style={{ color: theme.text }}>
+            <div className="min-w-0">
+              <p
+                className="m-0 text-base font-light leading-tight tracking-[-0.02em] sm:text-lg"
+                style={{ color: theme.text }}
+              >
                 {profileLoading ? "…" : displayName}
               </p>
-              <p className="m-0 mt-0.5 text-xs sm:text-sm" style={{ color: theme.textMuted }}>
-                {homeRole}
-                {profile?.email ? ` · ${profile.email}` : ""}
-              </p>
+              {profileSubtitle ? (
+                <p className="m-0 mt-0.5 text-xs sm:text-sm" style={{ color: theme.textMuted }}>
+                  {profileSubtitle}
+                </p>
+              ) : null}
             </div>
           </div>
-          <div className="flex flex-wrap gap-1.5 sm:shrink-0 sm:justify-end sm:pb-0.5 sm:pl-2">
+          <div className="flex w-full min-w-0 flex-wrap items-center justify-start gap-1.5 sm:w-auto sm:justify-end sm:pl-0">
             <a
               href="#config-pwa"
               className="inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent px-3 py-1.5 text-[11px] font-medium no-underline transition-opacity hover:opacity-90"
@@ -636,7 +666,7 @@ export default function ConfigV3() {
               }}
             >
               <Smartphone className="h-3.5 w-3.5 opacity-80" aria-hidden />
-              PWA
+              Instalar app
             </a>
             <a
               href="#config-passkey"
@@ -648,7 +678,7 @@ export default function ConfigV3() {
               }}
             >
               <KeyRound className="h-3.5 w-3.5 opacity-80" aria-hidden />
-              Passkey
+              Face ID o huella
             </a>
             <Link
               href="/perfil"
@@ -660,7 +690,7 @@ export default function ConfigV3() {
               }}
             >
               <User className="h-3.5 w-3.5 opacity-80" aria-hidden />
-              Perfil
+              Editar perfil
             </Link>
           </div>
         </div>
@@ -672,7 +702,7 @@ export default function ConfigV3() {
           className={`mt-1 overflow-hidden rounded-2xl p-5 sm:p-6 ${cardShell}`}
           style={{ backgroundColor: theme.surface }}
         >
-          <div className="mb-5 border-b pb-4 sm:mb-6 sm:pb-5" style={{ borderColor: theme.border }}>
+          <div className="mb-4 border-b pb-3 sm:mb-5 sm:pb-4" style={{ borderColor: theme.border }}>
             <h2
               className="m-0 text-[0.65rem] font-medium uppercase tracking-[0.2em] sm:text-xs"
               style={{ color: theme.textMuted }}
@@ -835,6 +865,9 @@ export default function ConfigV3() {
                   state={hevyChecking ? "checking" : hevySyncing ? "checking" : hevyConnected ? "connected" : "disconnected"}
                   connectedLabel="Conectado"
                   disconnectedLabel="Conectar"
+                  onDisconnectedClick={
+                    hevyConnected || hevyChecking || hevySyncing ? undefined : () => void handleHevySync()
+                  }
                 />
                 <ChevronDown
                   className="h-4 w-4 shrink-0 transition-transform duration-200 group-open:rotate-180"
@@ -917,7 +950,7 @@ export default function ConfigV3() {
                 Más ajustes
               </p>
               <p className="m-0 mt-0.5 text-[11px]" style={{ color: theme.textMuted }}>
-                PWA, passkey, atajos, aspecto
+                Instalación, acceso con biometría, atajos
               </p>
             </div>
             <ChevronDown
@@ -927,15 +960,19 @@ export default function ConfigV3() {
             />
           </summary>
           <div className="space-y-0 border-t" style={{ borderColor: theme.border }}>
-            <div className="border-b" style={{ borderColor: theme.border }} data-orvita-section="install-and-profile" id="config-sistema-app">
-              <div className="px-3 py-1.5 text-[0.6rem] font-medium uppercase tracking-[0.2em] sm:px-4" style={{ color: theme.textMuted }}>
-                Aplicación
-              </div>
-              <div id="config-pwa" className="min-w-0 scroll-mt-20">
-                <ConfigPwaInstallPanel theme={theme} moduleCard compact />
-              </div>
-              <div id="config-passkey" className="min-w-0 scroll-mt-20">
-                <ConfigPasskeyPanel theme={theme} moduleCard compact />
+            <div
+              className="border-b px-3 py-3 sm:px-4"
+              style={{ borderColor: theme.border }}
+              data-orvita-section="install-and-profile"
+              id="config-sistema-app"
+            >
+              <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-3">
+                <div id="config-pwa" className="min-w-0 flex-1 scroll-mt-24">
+                  <ConfigPwaInstallPanel theme={theme} moduleCard compact showHeader={false} />
+                </div>
+                <div id="config-passkey" className="min-w-0 flex-1 scroll-mt-24">
+                  <ConfigPasskeyPanel theme={theme} moduleCard compact showHeader={false} />
+                </div>
               </div>
             </div>
 
@@ -961,37 +998,51 @@ export default function ConfigV3() {
                 </p>
               </div>
             </div>
+          </div>
+        </details>
 
-            <div className="overflow-hidden" data-orvita-section="appearance" id="config-appearance">
-              <details className="group border-t border-transparent">
-                <summary
-                  className="flex cursor-pointer list-none items-center justify-between gap-3 border-b px-4 py-4 sm:px-5 sm:py-3.5 [&::-webkit-details-marker]:hidden"
-                  style={{ borderColor: theme.border }}
-                >
-                  <div className="flex min-w-0 items-center gap-2.5">
-                    <span
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9"
-                      style={{ backgroundColor: theme.surfaceAlt, color: theme.accent.health }}
-                      aria-hidden
-                    >
-                      <Palette className="h-4 w-4" />
-                    </span>
-                    <div className="min-w-0 text-left">
-                      <p className="m-0 text-sm font-medium tracking-tight" style={{ color: theme.text }}>
-                        Aspecto y comodidad
-                      </p>
-                      <p className="m-0 mt-0.5 text-xs" style={{ color: theme.textMuted }}>
-                        Paleta, densidad y movimiento
-                      </p>
-                    </div>
-                  </div>
-                  <ChevronDown
-                    className="h-4 w-4 shrink-0 transition-transform duration-200 group-open:rotate-180"
-                    style={{ color: theme.textMuted }}
-                    aria-hidden
-                  />
-                </summary>
-                <div className="flex flex-col gap-6 p-4 sm:p-5">
+        <details
+          className="group mt-2"
+          data-orvita-section="appearance"
+          id="config-appearance"
+          style={{
+            backgroundColor: theme.surface,
+            borderRadius: "9999px",
+            boxShadow: "0 0 0 1px rgba(15, 23, 42, 0.08)",
+          }}
+        >
+          <summary
+            className="flex cursor-pointer list-none items-center justify-between gap-2 px-3.5 py-2.5 sm:px-4 [&::-webkit-details-marker]:hidden"
+            style={{ color: theme.text }}
+          >
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full sm:h-8 sm:w-8"
+                style={{ backgroundColor: theme.surfaceAlt, color: theme.accent.health }}
+                aria-hidden
+              >
+                <Palette className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              </span>
+              <div className="min-w-0 text-left">
+                <span className="text-[12px] font-medium sm:text-sm" style={{ color: theme.text }}>
+                  Aspecto
+                </span>
+                <p className="m-0 mt-0.5 text-[10px] sm:text-xs" style={{ color: theme.textMuted }}>
+                  Paleta y densidad
+                </p>
+              </div>
+            </div>
+            <ChevronDown
+              className="h-3.5 w-3.5 shrink-0 transition-transform duration-200 group-open:rotate-180 sm:h-4 sm:w-4"
+              style={{ color: theme.textMuted }}
+              aria-hidden
+            />
+          </summary>
+          <div
+            className="mt-1 rounded-2xl border p-1.5 sm:p-2"
+            style={{ borderColor: theme.border, backgroundColor: theme.surface }}
+          >
+            <div className="flex flex-col gap-4 p-3 sm:gap-5 sm:p-4">
           <div className="space-y-3">
             <h3
               className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.14em]"
@@ -1130,40 +1181,6 @@ export default function ConfigV3() {
               ))}
             </div>
           </div>
-
-          {/* 4. Intensidad háptica / animaciones */}
-          <div className="space-y-3">
-            <h3
-              className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.14em]"
-              style={{ color: theme.textMuted }}
-            >
-              <Sliders className="h-4 w-4 shrink-0" aria-hidden />
-              Movimiento
-            </h3>
-            <div
-              className="rounded-2xl border p-5 sm:p-6"
-              style={{
-                backgroundColor: theme.surface,
-                borderColor: theme.border,
-                boxShadow: "0 1px 0 rgba(15, 23, 42, 0.04)",
-              }}
-            >
-              <div className="mb-3 flex justify-between text-xs" style={{ color: theme.textMuted }}>
-                <span>Sutil</span>
-                <span>Inmersivo</span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={intensity}
-                onChange={(event) => setIntensity(Number(event.target.value))}
-                className="w-full cursor-pointer appearance-none rounded-lg"
-              />
-            </div>
-          </div>
-                </div>
-              </details>
             </div>
           </div>
         </details>

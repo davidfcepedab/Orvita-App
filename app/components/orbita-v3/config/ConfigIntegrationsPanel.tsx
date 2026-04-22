@@ -65,7 +65,15 @@ export function ConfigIntegrationsPanel({
   const linkText = "text-[13px] font-medium"
 
   const googleRow = (
-    <div className={unified ? "px-4 pb-4 pt-0 sm:px-5 sm:pb-5" : ""}>
+    <div
+      className={
+        unified
+          ? `px-4 pb-4 sm:px-5 sm:pb-5 ${
+              accordionMode && only === "google" ? "pt-2.5 sm:pt-2.5" : "pt-0"
+            }`
+          : ""
+      }
+    >
       {accordionMode && only === "google" ? (
         <div className="min-w-0">
           {!googleConnected ? (
@@ -261,22 +269,10 @@ export function ConfigIntegrationsPanel({
             >
               Ver entrenamiento
             </Link>
-            <span style={{ color: theme.border }} aria-hidden>
-              ·
-            </span>
-            <button
-              type="button"
-              onClick={onHevySync}
-              className={btn()}
-              style={{
-                borderColor: theme.accent.health,
-                backgroundColor: theme.accent.health,
-                color: "#fff",
-              }}
-              disabled={hevySyncing || hevyChecking}
-            >
-              {hevySyncing ? "Sincronizando…" : "Sincronizar"}
-            </button>
+            <p className="m-0 text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
+              El botón <strong className="font-medium text-inherit">Conectar</strong> en la fila de arriba vuelve a
+              comprobar Hevy.
+            </p>
           </div>
           {hevyMessage ? (
             <p className="mt-2 text-xs leading-relaxed" style={{ color: theme.textMuted }}>
