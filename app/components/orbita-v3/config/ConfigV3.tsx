@@ -518,6 +518,7 @@ export default function ConfigV3() {
         icon={<Smartphone className="h-4 w-4" aria-hidden />}
         container="card"
         listStyle="insetGrouped"
+        dataOrvitaSection="install-and-profile"
       >
         <ConfigPwaInstallPanel theme={theme} moduleCard />
         <ConfigPasskeyPanel theme={theme} moduleCard />
@@ -553,6 +554,7 @@ export default function ConfigV3() {
         description="Código, foto y miembros del hogar (calendario y hábitos con contexto)."
         icon={<Home className="h-4 w-4" aria-hidden />}
         container="card"
+        dataOrvitaSection="household"
       >
         <ConfigHouseholdSection
           moduleCard
@@ -587,6 +589,7 @@ export default function ConfigV3() {
         description="Notificaciones del navegador o del sistema."
         icon={<Bell className="h-4 w-4" aria-hidden />}
         container="stack"
+        dataOrvitaSection="notifications"
       >
         <ConfigNotificationPreferencesPanel theme={theme} />
       </ConfigSettingsSection>
@@ -597,6 +600,7 @@ export default function ConfigV3() {
         description="Atajo + token seguro. La web no abre HealthKit sola: es el flujo que Apple permite."
         icon={<Apple className="h-4 w-4" aria-hidden />}
         container="card"
+        dataOrvitaSection="health-iphone-shortcut"
       >
         <ConfigAppleShortcutPanel theme={theme} moduleCard />
       </ConfigSettingsSection>
@@ -604,6 +608,7 @@ export default function ConfigV3() {
       <div
         className="overflow-hidden rounded-2xl border shadow-[0_1px_0_rgba(15,23,42,0.04)]"
         style={{ borderColor: theme.border, backgroundColor: theme.surface }}
+        data-orvita-section="appearance"
       >
         <details className="group">
           <summary
@@ -815,6 +820,7 @@ export default function ConfigV3() {
         icon={<Link2 className="h-4 w-4" aria-hidden />}
         container="card"
         listStyle="insetGrouped"
+        dataOrvitaSection="connections"
       >
         <ConfigIntegrationsPanel
           theme={theme}

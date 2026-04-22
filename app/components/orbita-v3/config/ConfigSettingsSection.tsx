@@ -21,6 +21,8 @@ type Props = {
    * @see https://developer.apple.com/design/human-interface-guidelines/
    */
   listStyle?: "stacked" | "insetGrouped"
+  /** Afinidad p. ej. con DevTools: `health-shortcut` ≠ `connections`. */
+  dataOrvitaSection?: string
 }
 
 export function ConfigSettingsSection({
@@ -32,8 +34,10 @@ export function ConfigSettingsSection({
   className = "",
   container = "card",
   listStyle = "stacked",
+  dataOrvitaSection,
 }: Props) {
   const listStyleIsInset = container === "card" && listStyle === "insetGrouped"
+  const dataAttrs = dataOrvitaSection ? { "data-orvita-section": dataOrvitaSection } : {}
   const header = (
     <header className="min-w-0">
       <h2
@@ -64,7 +68,7 @@ export function ConfigSettingsSection({
 
   if (container === "stack") {
     return (
-      <div className={className} style={{ display: "grid", gap: 14 }}>
+      <div className={className} style={{ display: "grid", gap: 14 }} {...dataAttrs}>
         {header}
         <div className="min-w-0" style={{ display: "grid", gap: 12 }}>
           {children}
@@ -77,6 +81,7 @@ export function ConfigSettingsSection({
     <div
       className={`overflow-hidden rounded-2xl border shadow-[0_1px_0_rgba(15,23,42,0.04)] ${className}`.trim()}
       style={{ borderColor: theme.border, backgroundColor: theme.surface }}
+      {...dataAttrs}
     >
       <div className="border-b px-4 py-3 sm:px-5 sm:py-3.5" style={{ borderColor: theme.border }}>
         {header}

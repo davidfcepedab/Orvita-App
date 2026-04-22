@@ -277,6 +277,7 @@ export function ConfigStrategicIntegrationsPanel({
     <div
       className={unified ? "px-4 py-3.5 sm:px-5 sm:py-4" : "rounded-2xl border p-5"}
       style={unified ? undefined : { backgroundColor: theme.surface, borderColor: theme.border }}
+      data-orvita-subsection="health-server-sync"
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2.5">
