@@ -46,6 +46,8 @@ import {
   type PressureBand,
 } from "@/lib/hoy/commandDerivation"
 import type { OperationalDomain, OperationalTask } from "@/lib/operational/types"
+import { buildStrategicDay } from "@/lib/insights/buildStrategicDay"
+import StrategicDayHero from "@/app/components/orvita-ui/StrategicDayHero"
 
 const TIMELINE_FALLBACK_EXAMPLE = [
   { time: "08:00", label: "Bloque de trabajo profundo" },
@@ -380,8 +382,18 @@ export default function HoyCommandCenter() {
     [],
   )
 
+  const strategic = useMemo(
+    () =>
+      buildStrategicDay({
+        ctx: ctx ?? null,
+        finance: finance ?? null,
+        meetingMinutes,
+      }),
+    [ctx, finance, meetingMinutes],
+  )
+
   return (
-    <div className="flex w-full min-w-0 max-w-full flex-col gap-[var(--layout-gap)] overflow-x-hidden">
+    <div className="orv-page-shell flex w-full min-w-0 max-w-full flex-col gap-[var(--layout-gap)] overflow-x-hidden">
       {/* —— Cabecera —— */}
       <header className="flex flex-col gap-4 border-b border-[var(--color-border)] pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0 space-y-2">
@@ -430,6 +442,8 @@ export default function HoyCommandCenter() {
           </div>
         </div>
       </header>
+
+      <StrategicDayHero payload={strategic} loading={ctxLoading} eyebrow="Lectura del día" />
 
       <nav
         aria-label="Check-in por momento del día"

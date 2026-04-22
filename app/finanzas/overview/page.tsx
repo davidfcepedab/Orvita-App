@@ -450,7 +450,7 @@ export default function FinanzasOverview() {
   const flowChartMargin = { top: 8, right: 2, left: 2, bottom: xAxisHeight + 6 } as const
 
   return (
-    <div className={`${financeViewRootClass} max-w-full`}>
+    <div className={`orv-page-shell ${financeViewRootClass} max-w-full`}>
       <section className="min-w-0 space-y-2.5" aria-labelledby="fin-overview-kpis-heading">
         <FinanceViewHeader
           kicker="Resumen"

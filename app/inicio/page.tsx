@@ -21,7 +21,7 @@ const HabitosV3 = dynamic(() => import("@/app/components/orbita-v3/habitos/Habit
 
 export default function InicioPage() {
   return (
-    <div className="mx-auto min-w-0 max-w-6xl space-y-10 overflow-x-hidden px-4 pb-24 pt-4 phone:space-y-12">
+    <div className="orv-page-shell mx-auto min-w-0 max-w-6xl space-y-10 overflow-x-hidden px-4 pb-24 pt-4 phone:space-y-12">
       <HomeV3 />
       <HoyV3 />
       <AgendaV3 />

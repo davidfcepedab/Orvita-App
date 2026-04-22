@@ -512,3 +512,28 @@ body.orbita-app-root {
   max-width: 100%;
   overflow-x: hidden;
 }
+
+/* —— Primitivas estilo Apple HIG (vista unificada / PWA) —— */
+.orv-apple-text,
+.orv-page-shell {
+  font-family: var(--font-sans);
+  font-feature-settings: "kern" 1, "liga" 1;
+  letter-spacing: -0.01em;
+}
+
+.orv-glass-panel {
+  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+  -webkit-backdrop-filter: var(--chrome-blur);
+  backdrop-filter: var(--chrome-blur);
+  border: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent);
+  box-shadow: var(--shadow-card);
+}
+
+.orv-apple-cta {
+  box-shadow: 0 1px 0 color-mix(in srgb, #fff 18%, transparent) inset, var(--shadow-hover);
+}
+@media (prefers-reduced-motion: reduce) {
+  .orv-apple-cta {
+    transition: none;
+  }
+}

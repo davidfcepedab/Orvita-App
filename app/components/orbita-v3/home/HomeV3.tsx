@@ -4,7 +4,9 @@ import { useState } from "react"
 import { useOrbitaSkin } from "@/app/contexts/AppContext"
 import { Activity, AlertCircle, CheckCircle2, Wind } from "lucide-react"
 import { useOperationalContext } from "@/app/hooks/useOperationalContext"
+import { useStrategicDay } from "@/app/hooks/useStrategicDay"
 import { useHealthAutoMetrics } from "@/app/hooks/useHealthAutoMetrics"
+import StrategicDayHero from "@/app/components/orvita-ui/StrategicDayHero"
 import type { OperationalHabit } from "@/lib/operational/types"
 
 export default function HomeV3() {
@@ -12,6 +14,7 @@ export default function HomeV3() {
   const [note, setNote] = useState("")
   const [period, setPeriod] = useState<"Dia" | "Semana" | "Mes">("Dia")
   const { data } = useOperationalContext()
+  const { strategic, loading: strategicLoading } = useStrategicDay(0)
   const { latest: autoHealth } = useHealthAutoMetrics()
 
   const clusters = [
@@ -28,7 +31,7 @@ export default function HomeV3() {
   const energy = autoHealth?.energy_index ?? data?.score_salud ?? 0
 
   return (
-    <div className="mx-auto min-w-0 max-w-5xl space-y-8 overflow-x-hidden">
+    <div className="orv-page-shell mx-auto min-w-0 max-w-5xl space-y-8 overflow-x-hidden">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-3xl tracking-tight">Órvita Control</h2>
@@ -53,6 +56,8 @@ export default function HomeV3() {
           </span>
         </div>
       </div>
+
+      <StrategicDayHero payload={strategic} loading={strategicLoading} eyebrow="Inicio" />
 
       <div
         className="flex w-max items-center rounded-xl border p-1"

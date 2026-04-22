@@ -54,7 +54,7 @@ export default function RootLayout({
 
   return (
     <html lang="es">
-      <body className="orbita-app-root">
+      <body className="orbita-app-root orv-apple-text">
         {figmaCapture ? (
           <Script
             src="https://mcp.figma.com/mcp/html-to-design/capture.js"
