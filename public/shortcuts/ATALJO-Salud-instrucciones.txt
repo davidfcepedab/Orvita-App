@@ -7,6 +7,13 @@ Dos cosas distintas en Ajustes (no confundir)
 Si Safari muestra caracteres raros al abrir la URL del .shortcut
 - Es normal: el .shortcut es binario. No pegues esa URL en la barra para «verla»; usa «Descargar», «Copiar enlace HTTPS» → abre la descarga, o el botón «Instalar atajo» para abrir Atajos.
 
+Compatibilidad iOS / Atajos (qué significa «Acción desconocida» con tu iPhone, p. ej. iOS 26.4.1)
+- El atajo **oficial** de Órvita (generado desde el plist en el repositorio) **no** usa acciones reservadas a un iOS “más nuevo que el tuyo” en el sentido de nombres internos inexistentes: el flujo se basa en acciones clásicas de la app **Atajos** (p. ej. filtrar muestras de salud, calcular estadísticas, buscar entrenamientos, contar, diccionario, descargar URL). Esas primitivas llevan años en iOS.
+- Si **varias** acciones de Salud o entrenos aparecen grises con «Acción desconocida» **pero** otras básicas (solicitar texto, fecha, formato de fecha) sí, lo más frecuente **no** es “tu versión de iOS es demasiado baja para el archivo”, sino: **archivo .shortcut desactualizado, dañado o mezclado** con una copia vieja; atajo importado a medias; o **cadenas rotas** (p. ej. un «Contar» o estadística apuntando a un paso que el editor ya no resuelve).
+- Causa frecuente y local: un **tipo** de dato concreto (p. ej. minutos de ejercicio) no se resuelve en tu instalación. Si el resto de tarjetas son reconocibles, abre el atajo, **quita** solo esa acción o **reinstala** el .shortcut desde orvita.app (Safari) y concede de nuevo permisos en **Salud → Atajos** para los tipos que pida.
+- Cómo validar en 1 minuto: en Atajos crea un atajo **nuevo** y busca manualmente (nombre puede variar con el idioma) acciones del estilo **Filtrar muestras de salud** y **Buscar entrenamientos**. Si el catálogo **no** las ofrece, el problema es el sistema o la app Atajos (actualizar / reiniciar). Si **sí** las ofrece y aun así nuestro archivo falla, prioriza **borrar** el atajo antiguo y **volver a descargar** el .shortcut publicado, sin duplicar nombres.
+- El build final (`Orvita-Importar-Salud-Hoy.shortcut`) debe generarse a partir del plist del proyecto; un `.shortcut` copiado de otro sitio o muy antiguo **no** garantiza el mismo juego de acciones.
+
 Qué hace
 - Lee en el iPhone las muestras que elijas en el atajo (pasos, sueño, energía activa, entrenos, variación del latido, ritmo en reposo, etc.) y las envía a Órvita para guardarlas en tu cuenta.
 

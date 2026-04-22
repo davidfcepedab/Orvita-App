@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """Genera el plist del atajo iOS, listo para `plutil` + `shortcuts sign`.
 
+Compatibilidad: las acciones usan identificadores estándar de Shortcuts
+(`is.workflow.actions.filter.health.quantity`, `calculatestatistics`, `filter.workouts`, etc.),
+no dependen de un iOS "futuro". Si en el iPhone muchas acciones salen «Acción desconocida»,
+suele ser import corrupto, .shortcut desactualizado o permisos de Salud; no el número de
+versión de iOS por encima o por debajo de un mínimo mágico.
+
 Métricas incluidas (aportan columnas o `readiness` derivado en Órvita):
 - Pasos, minutos de ejercicio, energía activa, HRV, FC en reposo, entrenamientos (conteo + duración).
 - **No** incluimos agregado de sueño por categoría + «Calcular estadísticas (duración)» en dispositivos donde Atajos muestra
