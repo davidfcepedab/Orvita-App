@@ -12,12 +12,13 @@ import {
   type OrvitaPasskeyFactor,
 } from "@/lib/auth/registerPasskey"
 import { isAppMockMode } from "@/lib/checkins/flags"
+import { cn } from "@/lib/utils"
 
 /**
  * Passkeys (Face ID / Touch ID) vía WebAuthn MFA de Supabase.
  * Tras registrar, el dashboard de Auth del proyecto debe tener MFA/WebAuthn habilitado.
  */
-export function ConfigPasskeyPanel({ theme }: { theme: OrbitaConfigTheme }) {
+export function ConfigPasskeyPanel({ theme, className }: { theme: OrbitaConfigTheme; className?: string }) {
   const [busy, setBusy] = useState(false)
   const [listBusy, setListBusy] = useState(false)
   const [factors, setFactors] = useState<OrvitaPasskeyFactor[]>([])
@@ -49,8 +50,8 @@ export function ConfigPasskeyPanel({ theme }: { theme: OrbitaConfigTheme }) {
   return (
     <section
       id="passkeys-section"
-      className="rounded-2xl border p-4 sm:p-5"
-      style={{ borderColor: theme.border, backgroundColor: theme.surface }}
+      className={cn("orv-glass-panel orv-fade-lift rounded-[1.1rem] border p-4 sm:p-5", className)}
+      style={{ borderColor: theme.border }}
     >
       <div className="flex items-start gap-3">
         <div

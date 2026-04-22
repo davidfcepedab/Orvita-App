@@ -537,3 +537,32 @@ body.orbita-app-root {
     transition: none;
   }
 }
+
+/* —— Páginas “premium” / ártico: profundidad + grano sutil (no sustituye al tema) —— */
+.orv-arctic-ambient {
+  position: relative;
+  isolation: isolate;
+  min-height: 100%;
+  background-color: color-mix(in srgb, #0a1628 4%, var(--color-background));
+  background-image: radial-gradient(
+      ellipse 120% 80% at 50% -25%,
+      color-mix(in srgb, var(--color-accent-primary) 10%, transparent),
+      transparent 58%
+    ),
+    radial-gradient(ellipse 90% 55% at 100% 0%, color-mix(in srgb, var(--color-accent-finance) 7%, transparent), transparent 48%),
+    repeating-linear-gradient(
+      0deg,
+      color-mix(in srgb, var(--color-text-primary) 0.12%, transparent) 0 1px,
+      transparent 1px 4px
+    );
+  background-blend-mode: normal, normal, soft-light;
+}
+
+.orv-fade-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .orv-fade-lift:hover {
+    transform: translateY(-2px);
+  }
+}

@@ -33,11 +33,16 @@ import {
   describeAppleHealthVersusHevy,
   HEVY_INTEGRATION_LABEL,
 } from "@/lib/health/appleHevyRelation"
+import { recoveryHintWithMeds } from "@/lib/health/bioStackCorrelations"
+import OrvitaArcticPageShell from "@/app/components/orvita-ui/OrvitaArcticPageShell"
+import StrategicDayHero from "@/app/components/orvita-ui/StrategicDayHero"
+import { useStrategicDay } from "@/app/hooks/useStrategicDay"
+import { motion } from "framer-motion"
 
-/** Área “fatiga” (proxy de sueño a partir de check-ins, no polisomnografía). */
-const BIOMETRIC_AREA_TOP = "#E8EAF6"
-const BIOMETRIC_AREA_BOTTOM = "#E8EAF6"
-const BIOMETRIC_ENERGY_STROKE = "#22B455"
+/** Área “fatiga” (proxy) y energía — stops legibles en Recharts. */
+const BIOMETRIC_AREA_TOP = "#99F6E4"
+const BIOMETRIC_AREA_BOTTOM = "#F0FDFA"
+const BIOMETRIC_ENERGY_STROKE = "#0F9F7A"
 
 const biometricChartMargin = { top: 14, right: 42, left: 4, bottom: 28 } as const
 
@@ -97,6 +102,17 @@ export default function HealthPage() {
     loading: suppLoading,
     error: suppError,
   } = useHealthSupplements()
+
+  const { strategic, loading: strategicLoading } = useStrategicDay(0)
+
+  const takenSupplementNames = useMemo(
+    () => supplements.filter((s) => s.active && takenToday(s.id)).map((s) => s.name),
+    [supplements, takenToday],
+  )
+  const recoveryMedHint = useMemo(
+    () => recoveryHintWithMeds(autoHealth?.readiness_score ?? null, takenSupplementNames),
+    [autoHealth?.readiness_score, takenSupplementNames],
+  )
 
   const trainedToday = today?.status === "trained"
   const recoveryInput = useMemo(
@@ -210,14 +226,20 @@ export default function HealthPage() {
   })
 
   return (
-    <div className="orbita-page-stack mx-auto w-full max-w-[min(72rem,calc(100vw-1.5rem))]">
-      <div className="min-w-0 rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_65%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_6%,var(--color-surface))] px-4 py-4 shadow-[0_12px_40px_-16px_color-mix(in_srgb,var(--color-accent-health)_18%,transparent)] sm:px-6 sm:py-5">
-        <h1 className="m-0 text-2xl font-medium tracking-tight text-[var(--color-text-primary)] phone:text-[1.75rem]">
+    <OrvitaArcticPageShell>
+    <div className="orv-page-shell orbita-page-stack mx-auto w-full max-w-[min(72rem,calc(100vw-1.5rem))] px-1 pb-16 sm:px-0">
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+        className="min-w-0 rounded-[1.25rem] border border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_92%,transparent)] px-4 py-5 shadow-[0_12px_48px_-20px_color-mix(in_srgb,var(--color-accent-health)_22%,transparent)] backdrop-blur-xl sm:px-7 sm:py-6"
+      >
+        <h1 className="m-0 text-2xl font-semibold tracking-tight text-[var(--color-text-primary)] [text-wrap:balance] phone:text-[1.75rem]">
           Operaciones de Salud
         </h1>
-        <p className="m-0 mt-1.5 max-w-[40rem] text-[13px] leading-relaxed text-[var(--color-text-secondary)]">
-          Check-ins reales (Supabase), tendencia de 7 días y preferencias opcionales de hidratación/macros. Lo que no
-          registres aquí no se inventa: sin wearable integrado no mostramos HRV ni FC medidas.
+        <p className="m-0 mt-2 max-w-[42rem] text-[13px] leading-relaxed text-[var(--color-text-secondary)] [text-wrap:pretty]">
+          Tu pulso humano y lo que Apple importa, en un solo lugar. Sin ruido técnico: solo señales para decidir con
+          calma qué priorizar hoy.
         </p>
         {salud.error && (
           <p style={{ margin: "8px 0 0", fontSize: "11px", color: "var(--color-accent-danger)" }}>{salud.error}</p>
@@ -232,9 +254,11 @@ export default function HealthPage() {
             Modo mock: check-ins de ejemplo; suplementos siguen en localStorage si no hay Supabase.
           </p>
         )}
-      </div>
+      </motion.div>
 
-      <Card className="min-w-0 border border-[color-mix(in_srgb,var(--color-border)_70%,transparent)]">
+      <StrategicDayHero payload={strategic} loading={strategicLoading} eyebrow="Palanca del día" />
+
+      <Card className="orv-glass-panel orv-fade-lift min-w-0 border-[color-mix(in_srgb,var(--color-border)_60%,transparent)]">
         <div className="grid gap-3 p-4 sm:gap-3.5 sm:p-6">
           <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
             Apple Health y datos automáticos
@@ -270,7 +294,7 @@ export default function HealthPage() {
             ].map((m) => (
               <div
                 key={m.label}
-                className="rounded-xl border border-[color-mix(in_srgb,var(--color-border)_60%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_55%,transparent)] px-3 py-3"
+                className="orv-fade-lift min-h-[88px] rounded-[1rem] border border-[color-mix(in_srgb,var(--color-border)_50%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_78%,transparent)] px-3.5 py-3.5 backdrop-blur-md"
               >
                 <p className="m-0 text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
                   {m.label}
@@ -423,6 +447,20 @@ export default function HealthPage() {
             ))}
       </div>
 
+      {recoveryMedHint ? (
+        <div
+          className="orv-glass-panel orv-fade-lift rounded-[1.1rem] border border-[color-mix(in_srgb,var(--color-accent-warning)_35%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-warning)_7%,var(--color-surface))] p-4 sm:p-5"
+          role="status"
+        >
+          <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--color-text-secondary)]">
+            Lectura bio + Apple
+          </p>
+          <p className="m-0 mt-2 text-sm leading-relaxed text-[var(--color-text-primary)] [text-wrap:pretty]">
+            {recoveryMedHint}
+          </p>
+        </div>
+      ) : null}
+
       <SupplementStackSection
         supplements={supplements}
         activeCount={activeCount}
@@ -437,17 +475,18 @@ export default function HealthPage() {
         toggleComplianceToday={toggleComplianceToday}
       />
 
-      <Card>
-        <div className="grid gap-2 p-4 sm:gap-3 sm:p-6">
-          <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
-            Correlación proxy: sueño vs energía
+      <Card className="orv-glass-panel orv-fade-lift">
+        <div className="grid gap-3 p-4 sm:gap-4 sm:p-6">
+          <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
+            Correlación: cómo se cruzan sueño y energía
           </p>
-          <p className="m-0 max-w-prose text-[11px] leading-relaxed text-[var(--color-text-secondary)] sm:text-[12px]">
-            Siete puntos alineados con tus últimos check-ins (score salud como energía y un proxy de “carga de sueño”
-            derivado del mismo dato). El eje inferior es solo referencia visual tipo jornada, no hora real de medición.
+          <p className="m-0 max-w-prose text-[11px] leading-relaxed text-[var(--color-text-secondary)] sm:text-[12px] [text-wrap:pretty]">
+            Siete puntos a partir de tus check-ins: la banda turquesa es “carga de sueño” (proxy) y la línea es tu
+            energía percibida. Si el área sube y la línea cae, merece la pena proteger descanso antes de exigirte otro
+            sprint.
           </p>
           <div className="w-full min-w-0 overflow-x-auto overscroll-x-contain">
-            <div className="h-[260px] min-h-[220px] w-full min-w-[280px] sm:h-[280px]">
+            <div className="h-[260px] min-h-[220px] w-full min-w-[280px] sm:h-[300px]">
               {salud.loading ? (
                 <div
                   style={{
@@ -466,7 +505,7 @@ export default function HealthPage() {
                         <stop offset="100%" stopColor={BIOMETRIC_AREA_BOTTOM} stopOpacity={0.08} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="4 4" stroke="var(--color-border)" strokeOpacity={0.65} vertical={false} />
+                    <CartesianGrid strokeDasharray="4 8" stroke="var(--color-border)" strokeOpacity={0.45} vertical={false} />
                     <XAxis
                       dataKey="hour"
                       tick={{ fontSize: 11, fill: "var(--color-text-secondary)" }}
@@ -585,5 +624,6 @@ export default function HealthPage() {
         </Card>
       </div>
     </div>
+    </OrvitaArcticPageShell>
   )
 }

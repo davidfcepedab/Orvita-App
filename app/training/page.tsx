@@ -28,6 +28,10 @@ import { isAppMockMode, isSupabaseEnabled, UI_TRAINING_PREFS_LOCAL } from "@/lib
 import { TrainingVisualBodySection } from "./TrainingVisualBodySection"
 import { agendaTodayYmd } from "@/lib/agenda/localDateKey"
 import { useHealthAutoMetrics } from "@/app/hooks/useHealthAutoMetrics"
+import { useOperationalContext } from "@/app/hooks/useOperationalContext"
+import { useStrategicDay } from "@/app/hooks/useStrategicDay"
+import OrvitaArcticPageShell from "@/app/components/orvita-ui/OrvitaArcticPageShell"
+import StrategicDayHero from "@/app/components/orvita-ui/StrategicDayHero"
 import {
   appleDaySignalsFromHealthMetric,
   describeAppleHealthVersusHevy,
@@ -43,6 +47,8 @@ function formatStatus(status: TrainingStatus) {
 
 export default function TrainingPage() {
   const { today, days, loading, error, manualStatus, setManualStatus } = useTraining()
+  const { data: opCtx, loading: opCtxLoading } = useOperationalContext()
+  const { strategic, loading: strategicLoading } = useStrategicDay(0)
   const { latest: appleHealth } = useHealthAutoMetrics()
   const {
     bodyRows,
@@ -218,16 +224,18 @@ export default function TrainingPage() {
     [today, appleSignals],
   )
 
+  const strategicLoadingMerged = strategicLoading || opCtxLoading
+
   return (
-    <div className="orbita-page-stack">
+    <OrvitaArcticPageShell>
+    <div className="orv-page-shell orbita-page-stack max-w-[min(72rem,calc(100vw-1.5rem))] px-1 pb-16 sm:mx-auto sm:px-0">
       <div className="min-w-0">
-        <h1 className="m-0 text-2xl font-medium tracking-tight text-[var(--color-text-primary)] phone:text-[1.75rem]">
+        <h1 className="m-0 text-2xl font-semibold tracking-tight text-[var(--color-text-primary)] [text-wrap:balance] phone:text-[1.75rem]">
           Operaciones de Entrenamiento
         </h1>
-        <p style={{ margin: "6px 0 0", fontSize: "13px", color: "var(--color-text-secondary)" }}>
-          Mantenimiento físico, carga y objetivos de rendimiento. Los entrenos vienen de{" "}
-          <span style={{ fontWeight: 600 }}>{HEVY_INTEGRATION_LABEL}</span>; Apple Health refuerza gasto energético y
-          sueño cuando importas con el Atajo.
+        <p className="m-0 mt-2 max-w-[42rem] text-[13px] leading-relaxed text-[var(--color-text-secondary)] [text-wrap:pretty]">
+          Hevy anota el trabajo; Apple refuerza sueño, pasos y energía cuando quieres. Aquí ves si el cuerpo puede
+          sostener la semana, sin jerga de laboratorio.
         </p>
         {!remotePrefs && !isAppMockMode() && (
           <p style={{ margin: "8px 0 0", fontSize: "11px", color: "var(--color-text-secondary)" }}>
@@ -241,7 +249,15 @@ export default function TrainingPage() {
         )}
       </div>
 
-      <Card>
+      <StrategicDayHero payload={strategic} loading={strategicLoadingMerged} eyebrow="Contexto de Órvita" />
+      {opCtx?.insights?.[0] ? (
+        <p className="m-0 max-w-2xl rounded-2xl border border-[color-mix(in_srgb,var(--color-accent-primary)_25%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-primary)_6%,var(--color-surface))] px-4 py-3 text-sm leading-relaxed text-[var(--color-text-primary)] [text-wrap:pretty]">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">Insight del día</span>
+          <span className="mt-1 block text-[13px] text-[var(--color-text-primary)]">{opCtx.insights[0]}</span>
+        </p>
+      ) : null}
+
+      <Card className="orv-glass-panel orv-fade-lift">
         <div className="flex min-w-0 flex-col gap-5 p-[var(--spacing-lg)] sm:flex-row sm:items-center sm:justify-between sm:gap-[var(--spacing-lg)]">
           <div className="min-w-0 flex-1" style={{ display: "grid", gap: "var(--spacing-sm)" }}>
             <p
@@ -255,19 +271,19 @@ export default function TrainingPage() {
             >
               Capacidad diaria
             </p>
-            <h2 className="text-xl font-medium sm:text-[22px]" style={{ margin: 0 }}>
+            <h2 className="text-xl font-semibold sm:text-[22px]" style={{ margin: 0 }}>
               {formatStatus(today?.status ?? manualStatus ?? "rest")}
             </h2>
-            <p className="max-w-prose text-pretty" style={{ margin: 0, fontSize: "12px", color: "var(--color-text-secondary)" }}>
+            <p className="max-w-prose text-pretty" style={{ margin: 0, fontSize: "13px", lineHeight: 1.55, color: "var(--color-text-secondary)" }}>
               {strainHasSignal && recoveryPct != null && strain != null ? (
                 <>
-                  Recuperación estimada ~{recoveryPct}% · Carga (strain) {strain} (heurística a partir del volumen Hevy
-                  últimos 7 días y hoy; no es dato clínico).
+                  Capacidad estimada: recuperación alrededor del {recoveryPct}% y strain en {strain}. No es diagnóstico:
+                  resume cómo de “llena” está la semana en Hevy frente a hoy, para decidir sin culpa.
                 </>
               ) : (
                 <>
-                  Sin volumen Hevy en los últimos 7 días ni hoy: no mostramos strain ni % de recuperación para no
-                  inventar números. Tras registrar entrenos en Hevy verás la estimación aquí.
+                  Aún no hay volumen en Hevy reciente. Cuando entres rutinas, aquí te diremos, en una frase, si el
+                  cuerpo va sobrado o justo.
                 </>
               )}
             </p>
@@ -333,48 +349,37 @@ export default function TrainingPage() {
               </div>
             </div>
           </div>
-          <div
-            className="mx-auto shrink-0 sm:mx-0"
-            style={{
-              width: "120px",
-              height: "120px",
-              borderRadius: "50%",
-              border: "6px solid color-mix(in srgb, var(--color-accent-health) 40%, transparent)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              position: "relative",
-            }}
-          >
+          <div className="mx-auto shrink-0 sm:mx-0" aria-label="Carga y recuperación visuales">
             <div
+              className="flex h-[132px] w-[132px] items-center justify-center rounded-full p-1.5"
               style={{
-                position: "absolute",
-                width: "92px",
-                height: "92px",
-                borderRadius: "50%",
-                border: "6px solid color-mix(in srgb, var(--color-accent-warning) 40%, transparent)",
+                background: strainHasSignal && recoveryPct != null
+                  ? `conic-gradient(var(--color-accent-health) ${Math.max(0, Math.min(100, recoveryPct))}%, color-mix(in srgb, var(--color-border) 80%, transparent) 0)`
+                  : "color-mix(in srgb, var(--color-border) 50%, transparent)",
+                boxShadow: "0 8px 32px color-mix(in srgb, var(--color-text-primary) 6%, transparent)",
               }}
-            />
-            <div style={{ textAlign: "center" }}>
-              <p style={{ margin: 0, fontSize: "22px", fontWeight: 600 }}>{strainHasSignal && strain != null ? strain : "—"}</p>
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: "10px",
-                  color: "var(--color-text-secondary)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.12em",
-                }}
+            >
+              <div
+                className="flex h-full w-full flex-col items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--color-border)_45%,transparent)]"
+                style={{ background: "var(--color-surface)" }}
               >
-                Strain
-              </p>
+                <p className="m-0 text-[1.4rem] font-semibold tabular-nums text-[var(--color-text-primary)]">
+                  {strainHasSignal && strain != null ? strain : "—"}
+                </p>
+                <p className="m-0 text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--color-text-secondary)]">
+                  Strain
+                </p>
+                {strainHasSignal && recoveryPct != null ? (
+                  <p className="m-0 mt-1.5 text-[10px] font-medium text-[var(--color-accent-health)]">~{recoveryPct}% rec.</p>
+                ) : null}
+              </div>
             </div>
           </div>
         </div>
       </Card>
 
       <div className="grid grid-cols-1 gap-[var(--layout-gap)] lg:grid-cols-2">
-        <Card>
+        <Card className="orv-glass-panel orv-fade-lift">
           <div style={{ padding: "var(--spacing-md)", display: "grid", gap: "var(--spacing-sm)" }}>
             <p
               style={{
@@ -436,7 +441,7 @@ export default function TrainingPage() {
             </div>
           </div>
         </Card>
-        <Card>
+        <Card className="orv-glass-panel orv-fade-lift">
           <div style={{ padding: "var(--spacing-md)", display: "grid", gap: "var(--spacing-sm)" }}>
             <p
               style={{
@@ -447,7 +452,7 @@ export default function TrainingPage() {
                 color: "var(--color-text-secondary)",
               }}
             >
-              Hitos estratégicos
+              Hitos
             </p>
             {milestones.map((item) => (
               <div key={item.id} style={{ padding: "12px", borderRadius: "14px", background: "var(--color-surface-alt)" }}>
@@ -514,7 +519,7 @@ export default function TrainingPage() {
         onGenerateGoalWithAI={onGenerateGoalWithAI}
       />
 
-      <Card>
+      <Card className="orv-glass-panel orv-fade-lift">
         <div style={{ padding: "var(--spacing-lg)", display: "grid", gap: "var(--spacing-md)" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
             <div>
@@ -671,5 +676,6 @@ export default function TrainingPage() {
         </div>
       </Card>
     </div>
+    </OrvitaArcticPageShell>
   )
 }
