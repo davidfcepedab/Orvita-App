@@ -565,10 +565,6 @@ export default function ConfigV3() {
   const cardShell = isAltCard
     ? "shadow-[0_1px_0_rgba(15,23,42,0.05)] ring-1 ring-black/[0.05]"
     : "shadow-[0_1px_0_rgba(15,23,42,0.04),0_0_0_1px_rgba(15,23,42,0.04)]"
-  const displayName =
-    profile?.displayName?.trim() ||
-    (profile?.email ? profile.email.split("@")[0] : null) ||
-    (profile && !profile.email ? "Tu perfil" : "…")
   const profileSubtitle = profile?.email
     ? `${homeRole} · ${profile.email}`
     : !profile?.email && profile
@@ -608,51 +604,20 @@ export default function ConfigV3() {
             Tiempo, energía y dinero, sin ruido.
           </p>
         </div>
-        <div className="mt-3 flex min-w-0 flex-wrap items-center gap-3 sm:mt-4 sm:justify-between sm:gap-4">
+        <div
+          className={`mt-3 flex min-w-0 flex-wrap items-center gap-3 sm:mt-4 sm:gap-4 ${
+            profileLoading || profileSubtitle ? "sm:justify-between" : "sm:justify-end"
+          }`}
+        >
           {profileLoading ? (
-            <div
-              className="h-[3.5rem] w-[3.5rem] shrink-0 animate-pulse rounded-full sm:h-16 sm:w-16"
-              style={{ backgroundColor: theme.surfaceAlt }}
-              aria-hidden
-            />
-          ) : (
-            <div
-              className="relative h-[3.5rem] w-[3.5rem] shrink-0 overflow-hidden rounded-full sm:h-16 sm:w-16"
-              style={{ backgroundColor: theme.surfaceAlt, boxShadow: "0 0 0 1px rgba(15,23,42,0.06)" }}
-            >
-              {profile?.avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={profile.avatarUrl}
-                  alt=""
-                  className="h-full w-full object-cover"
-                  width={64}
-                  height={64}
-                />
-              ) : (
-                <div
-                  className="flex h-full w-full items-center justify-center"
-                  style={{ color: theme.textMuted }}
-                  aria-hidden
-                >
-                  <User className="h-6 w-6 sm:h-7 sm:w-7" />
-                </div>
-              )}
-            </div>
-          )}
-          <div className="min-w-0 flex-1">
-            <p
-              className="m-0 text-base font-light leading-tight tracking-[-0.02em] sm:text-lg"
-              style={{ color: theme.text }}
-            >
-              {profileLoading ? "…" : displayName}
+            <p className="m-0 min-w-0 flex-1 text-xs sm:text-sm" style={{ color: theme.textMuted }} aria-live="polite">
+              Cargando perfil…
             </p>
-            {profileSubtitle ? (
-              <p className="m-0 mt-0.5 text-xs sm:text-sm" style={{ color: theme.textMuted }}>
-                {profileSubtitle}
-              </p>
-            ) : null}
-          </div>
+          ) : profileSubtitle ? (
+            <p className="m-0 min-w-0 flex-1 text-xs sm:text-sm" style={{ color: theme.textMuted }}>
+              {profileSubtitle}
+            </p>
+          ) : null}
           <div className="flex min-w-0 basis-full flex-wrap items-center justify-start gap-1.5 sm:basis-auto sm:w-auto sm:justify-end sm:pl-0">
             <a
               href="#config-pwa"
