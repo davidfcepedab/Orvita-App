@@ -27,11 +27,13 @@ export async function POST(req: NextRequest) {
     })
     if (error) throw new Error(error.message)
 
+    const icloud = process.env.NEXT_PUBLIC_ORVITA_HEALTH_SHORTCUT_ICLOUD_URL?.trim() || null
     return NextResponse.json({
       success: true,
       import_token: plain,
       expires_at: expiresAt,
       shortcut_file_url: "/shortcuts/Orvita-Importar-Salud-Hoy.shortcut",
+      ...(icloud ? { shortcut_icloud_url: icloud } : {}),
       import_path: "/api/integrations/health/apple/import",
     })
   } catch (error) {

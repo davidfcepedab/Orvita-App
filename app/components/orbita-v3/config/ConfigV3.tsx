@@ -608,54 +608,52 @@ export default function ConfigV3() {
             Tiempo, energía y dinero, sin ruido.
           </p>
         </div>
-        <div className="mt-3 flex min-w-0 flex-col gap-3 sm:mt-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-          <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
-            {profileLoading ? (
-              <div
-                className="h-[3.5rem] w-[3.5rem] shrink-0 animate-pulse rounded-full sm:h-16 sm:w-16"
-                style={{ backgroundColor: theme.surfaceAlt }}
-                aria-hidden
-              />
-            ) : (
-              <div
-                className="relative h-[3.5rem] w-[3.5rem] shrink-0 overflow-hidden rounded-full sm:h-16 sm:w-16"
-                style={{ backgroundColor: theme.surfaceAlt, boxShadow: "0 0 0 1px rgba(15,23,42,0.06)" }}
-              >
-                {profile?.avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={profile.avatarUrl}
-                    alt=""
-                    className="h-full w-full object-cover"
-                    width={64}
-                    height={64}
-                  />
-                ) : (
-                  <div
-                    className="flex h-full w-full items-center justify-center"
-                    style={{ color: theme.textMuted }}
-                    aria-hidden
-                  >
-                    <User className="h-6 w-6 sm:h-7 sm:w-7" />
-                  </div>
-                )}
-              </div>
-            )}
-            <div className="min-w-0">
-              <p
-                className="m-0 text-base font-light leading-tight tracking-[-0.02em] sm:text-lg"
-                style={{ color: theme.text }}
-              >
-                {profileLoading ? "…" : displayName}
-              </p>
-              {profileSubtitle ? (
-                <p className="m-0 mt-0.5 text-xs sm:text-sm" style={{ color: theme.textMuted }}>
-                  {profileSubtitle}
-                </p>
-              ) : null}
+        <div className="mt-3 flex min-w-0 flex-wrap items-center gap-3 sm:mt-4 sm:justify-between sm:gap-4">
+          {profileLoading ? (
+            <div
+              className="h-[3.5rem] w-[3.5rem] shrink-0 animate-pulse rounded-full sm:h-16 sm:w-16"
+              style={{ backgroundColor: theme.surfaceAlt }}
+              aria-hidden
+            />
+          ) : (
+            <div
+              className="relative h-[3.5rem] w-[3.5rem] shrink-0 overflow-hidden rounded-full sm:h-16 sm:w-16"
+              style={{ backgroundColor: theme.surfaceAlt, boxShadow: "0 0 0 1px rgba(15,23,42,0.06)" }}
+            >
+              {profile?.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={profile.avatarUrl}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  width={64}
+                  height={64}
+                />
+              ) : (
+                <div
+                  className="flex h-full w-full items-center justify-center"
+                  style={{ color: theme.textMuted }}
+                  aria-hidden
+                >
+                  <User className="h-6 w-6 sm:h-7 sm:w-7" />
+                </div>
+              )}
             </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <p
+              className="m-0 text-base font-light leading-tight tracking-[-0.02em] sm:text-lg"
+              style={{ color: theme.text }}
+            >
+              {profileLoading ? "…" : displayName}
+            </p>
+            {profileSubtitle ? (
+              <p className="m-0 mt-0.5 text-xs sm:text-sm" style={{ color: theme.textMuted }}>
+                {profileSubtitle}
+              </p>
+            ) : null}
           </div>
-          <div className="flex w-full min-w-0 flex-wrap items-center justify-start gap-1.5 sm:w-auto sm:justify-end sm:pl-0">
+          <div className="flex min-w-0 basis-full flex-wrap items-center justify-start gap-1.5 sm:basis-auto sm:w-auto sm:justify-end sm:pl-0">
             <a
               href="#config-pwa"
               className="inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent px-3 py-1.5 text-[11px] font-medium no-underline transition-opacity hover:opacity-90"

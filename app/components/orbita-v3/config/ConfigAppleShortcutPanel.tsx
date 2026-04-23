@@ -10,6 +10,7 @@ import {
   buildOrvitaShortcutImportHrefXCallback,
   getOrvitaHealthShortcutDownloadFileUrl,
   getOrvitaHealthShortcutFileUrl,
+  getOrvitaHealthShortcutIcloudUrl,
   isOrvitaShortcutImportFromHttpDev,
   ORVITA_HEALTH_SHORTCUT_NAME,
 } from "@/lib/shortcuts/orvitaHealthShortcut"
@@ -60,16 +61,18 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
     return /iPad|iPhone|iPod/i.test(navigator.userAgent) || (navigator.userAgent.includes("Mac") && "ontouchend" in document)
   }, [])
 
-  const { shortcutInstallHref, shortcutInstallHrefAlt, runShortcutHref, fileUrl, instructionsUrl } = useMemo(() => {
-    return {
-      fileUrl: getOrvitaHealthShortcutDownloadFileUrl(),
-      /** Ruta relativa: evita orígenes distintos en SSR y cliente. */
-      instructionsUrl: INSTRUCCIONES,
-      shortcutInstallHref: buildOrvitaShortcutImportHref(),
-      shortcutInstallHrefAlt: buildOrvitaShortcutImportHrefXCallback(),
-      runShortcutHref: buildOrvitaRunShortcutHref(),
-    }
-  }, [])
+  const { shortcutInstallHref, shortcutInstallHrefAlt, runShortcutHref, fileUrl, instructionsUrl, icloudUrl } =
+    useMemo(() => {
+      return {
+        fileUrl: getOrvitaHealthShortcutDownloadFileUrl(),
+        /** Ruta relativa: evita orígenes distintos en SSR y cliente. */
+        instructionsUrl: INSTRUCCIONES,
+        icloudUrl: getOrvitaHealthShortcutIcloudUrl(),
+        shortcutInstallHref: buildOrvitaShortcutImportHref(),
+        shortcutInstallHrefAlt: buildOrvitaShortcutImportHrefXCallback(),
+        runShortcutHref: buildOrvitaRunShortcutHref(),
+      }
+    }, [])
 
   const mintToken = useCallback(async () => {
     setMinting(true)
@@ -141,8 +144,8 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
             </p>
             <p className="text-xs leading-relaxed" style={{ color: theme.textMuted }}>
               Instala el atajo una vez. Usa <strong className="font-medium text-inherit">Safari</strong> en el iPhone (no
-              otras apps): así el enlace abre Atajos. Si no responde, baja de nuevo el archivo desde aquí o copia el
-              enlace HTTPS.
+              otras apps).{icloudUrl ? " Si hay enlace de iCloud, suele ser la vía más fiable; si no, el archivo en Órvita. " : " "}
+              Si no responde, baja de nuevo el archivo o copia el enlace.
             </p>
           </div>
         </div>
@@ -150,18 +153,37 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
         <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           {isIOS ? (
             <>
+              {icloudUrl ? (
+                <a
+                  href={icloudUrl}
+                  className={`${strongCta} no-underline flex`}
+                  style={{
+                    borderColor: theme.accent.health,
+                    backgroundColor: theme.accent.health,
+                    color: "#fff",
+                    border: "1px solid transparent",
+                  }}
+                >
+                  <Download className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  Instalar desde iCloud
+                </a>
+              ) : null}
               <a
                 href={shortcutInstallHref}
-                className={`${strongCta} no-underline flex`}
-                style={{
-                  borderColor: theme.accent.health,
-                  backgroundColor: theme.accent.health,
-                  color: "#fff",
-                  border: "1px solid transparent",
-                }}
+                className={`${icloudUrl ? subtleCta : strongCta} no-underline flex`}
+                style={
+                  icloudUrl
+                    ? { borderColor: theme.border, color: theme.text, backgroundColor: theme.surface }
+                    : {
+                        borderColor: theme.accent.health,
+                        backgroundColor: theme.accent.health,
+                        color: "#fff",
+                        border: "1px solid transparent",
+                      }
+                }
               >
                 <Download className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                Instalar atajo
+                {icloudUrl ? "Instalar (archivo en Órvita)" : "Instalar atajo"}
               </a>
               <a
                 href={shortcutInstallHrefAlt}
@@ -175,6 +197,22 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
           {isIOS ? null : (
             <p className="text-xs leading-relaxed" style={{ color: theme.textMuted }}>
               En el iPhone, abre esta pantalla en Safari y toca <strong className="font-medium text-inherit">Descargar</strong>.
+              {icloudUrl ? (
+                <>
+                  {" "}
+                  O pega en Safari del iPhone el{" "}
+                  <a
+                    href={icloudUrl}
+                    className="font-medium underline decoration-dotted"
+                    style={{ color: theme.accent.health }}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    enlace de iCloud
+                  </a>{" "}
+                  (misma instalación, sin el archivo de la web).
+                </>
+              ) : null}
             </p>
           )}
           <a

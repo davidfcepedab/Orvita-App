@@ -11,6 +11,20 @@ export const ORVITA_HEALTH_SHORTCUT_NAME = "Órvita – Importar Salud Hoy"
 
 export const ORVITA_HEALTH_SHORTCUT_FILE_PATH = "/shortcuts/Orvita-Importar-Salud-Hoy.shortcut"
 
+const ICLOUD_URL_ENV = "NEXT_PUBLIC_ORVITA_HEALTH_SHORTCUT_ICLOUD_URL"
+
+/**
+ * Enlace de Apple «Compartir atajo» (p. ej. `https://www.icloud.com/shortcuts/…`).
+ * No pasa por `import-shortcut?url=`: se abre en Safari y Atajos lo importa firmado.
+ * Definir en `.env` / Vercel para priorizarlo en la UI cuando `shortcuts sign` falle en el Mac.
+ */
+export function getOrvitaHealthShortcutIcloudUrl(): string | null {
+  const raw = process.env[ICLOUD_URL_ENV]?.trim()
+  if (!raw) return null
+  if (!/^https:\/\//i.test(raw)) return null
+  return raw
+}
+
 /**
  * URL absoluta y GET sin auth al .shortcut. iOS la descarga al importar;
  * exige origen fiable (HTTPS o misma red en pruebas).

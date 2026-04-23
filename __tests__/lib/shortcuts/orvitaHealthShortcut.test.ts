@@ -1,13 +1,23 @@
-import { buildOrvitaShortcutImportHref, buildOrvitaShortcutImportHrefXCallback } from "@/lib/shortcuts/orvitaHealthShortcut"
+import {
+  buildOrvitaShortcutImportHref,
+  buildOrvitaShortcutImportHrefXCallback,
+  getOrvitaHealthShortcutIcloudUrl,
+} from "@/lib/shortcuts/orvitaHealthShortcut"
 
 describe("orvitaHealthShortcut", () => {
   const prev = process.env.NEXT_PUBLIC_SITE_URL
+  const prevIcloud = process.env.NEXT_PUBLIC_ORVITA_HEALTH_SHORTCUT_ICLOUD_URL
 
   afterEach(() => {
     if (prev === undefined) {
       delete process.env.NEXT_PUBLIC_SITE_URL
     } else {
       process.env.NEXT_PUBLIC_SITE_URL = prev
+    }
+    if (prevIcloud === undefined) {
+      delete process.env.NEXT_PUBLIC_ORVITA_HEALTH_SHORTCUT_ICLOUD_URL
+    } else {
+      process.env.NEXT_PUBLIC_ORVITA_HEALTH_SHORTCUT_ICLOUD_URL = prevIcloud
     }
   })
 
@@ -26,5 +36,14 @@ describe("orvitaHealthShortcut", () => {
     process.env.NEXT_PUBLIC_SITE_URL = "https://orvita.app"
     const h = buildOrvitaShortcutImportHrefXCallback()
     expect(h.startsWith("shortcuts://x-callback-url/import-shortcut?url=")).toBe(true)
+  })
+
+  test("iCloud URL is null when unset; https only when set", () => {
+    delete process.env.NEXT_PUBLIC_ORVITA_HEALTH_SHORTCUT_ICLOUD_URL
+    expect(getOrvitaHealthShortcutIcloudUrl()).toBeNull()
+    process.env.NEXT_PUBLIC_ORVITA_HEALTH_SHORTCUT_ICLOUD_URL = "  https://www.icloud.com/shortcuts/abc  "
+    expect(getOrvitaHealthShortcutIcloudUrl()).toBe("https://www.icloud.com/shortcuts/abc")
+    process.env.NEXT_PUBLIC_ORVITA_HEALTH_SHORTCUT_ICLOUD_URL = "http://insecure"
+    expect(getOrvitaHealthShortcutIcloudUrl()).toBeNull()
   })
 })

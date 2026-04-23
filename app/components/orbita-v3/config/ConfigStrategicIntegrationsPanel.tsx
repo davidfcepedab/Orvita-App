@@ -409,12 +409,32 @@ export function ConfigStrategicIntegrationsPanel({
           style={unified ? undefined : { backgroundColor: theme.surface, borderColor: theme.border }}
           data-orvita-subsection="health-server-sync"
         >
-          <p className="m-0 text-sm font-medium" style={{ color: theme.text }}>
-            Apple y Google
-          </p>
-          <p className="m-0 mt-1 text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
-            Sincroniza o prueba con una importación.
-          </p>
+          <div className="flex min-w-0 flex-row items-start justify-between gap-3 sm:items-center">
+            <div className="min-w-0 flex-1">
+              <p className="m-0 text-sm font-medium" style={{ color: theme.text }}>
+                Apple y Google
+              </p>
+              <p className="m-0 mt-0.5 text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
+                Sincroniza o prueba con una importación.
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={busy === "settings"}
+              onClick={() => void patchSettings({ health_enabled: !settings.health_enabled })}
+              className="shrink-0 select-none rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] transition [transition-property:box-shadow,transform,opacity] active:scale-[0.99] disabled:pointer-events-none disabled:opacity-40"
+              style={{
+                borderColor: settings.health_enabled ? theme.accent.health : theme.border,
+                color: settings.health_enabled ? "#fff" : theme.textMuted,
+                backgroundColor: settings.health_enabled ? theme.accent.health : theme.surfaceAlt,
+                boxShadow: settings.health_enabled ? "none" : "0 1px 0 rgba(15,23,42,0.04)",
+              }}
+              aria-pressed={settings.health_enabled}
+              title="Salud automática: activa el módulo en el servidor para conectar e importar."
+            >
+              {settings.health_enabled ? "Activa" : "Activar"}
+            </button>
+          </div>
           <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
             <button
               type="button"
@@ -624,11 +644,6 @@ export function ConfigStrategicIntegrationsPanel({
               {beforeHealthServer ? (
                 <div className="px-0 pb-0 pt-0">{beforeHealthServer}</div>
               ) : null}
-              {makeTogglesBlock(
-                ["health_enabled"],
-                "Debe estar activa para conectar o importar salud desde el servidor.",
-                "accordion",
-              )}
               {healthBlockAccordion}
             </div>
           </details>

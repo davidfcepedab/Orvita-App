@@ -9,6 +9,7 @@ import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import {
   buildOrvitaRunShortcutHref,
   buildOrvitaShortcutImportHref,
+  getOrvitaHealthShortcutIcloudUrl,
 } from "@/lib/shortcuts/orvitaHealthShortcut"
 
 type Props = {
@@ -54,6 +55,7 @@ export default function AppleHealthLuxurySection({ salud }: Props) {
   }, [salud.scoreSalud, salud.trendAverage])
 
   const shortcutInstallHref = useMemo(() => buildOrvitaShortcutImportHref(), [])
+  const shortcutIcloudUrl = useMemo(() => getOrvitaHealthShortcutIcloudUrl(), [])
 
   const runShortcutHref = useMemo(() => buildOrvitaRunShortcutHref(), [])
 
@@ -153,12 +155,21 @@ export default function AppleHealthLuxurySection({ salud }: Props) {
             >
               {minting ? "Generando enlace seguro…" : "Preparar token para el Atajo"}
             </button>
+            {shortcutIcloudUrl ? (
+              <a
+                href={shortcutIcloudUrl}
+                className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white px-5 text-[15px] font-semibold text-slate-900 no-underline shadow-lg transition hover:bg-white/95 active:scale-[0.99]"
+              >
+                <Download className="h-4 w-4" aria-hidden />
+                Instalar atajo (iCloud)
+              </a>
+            ) : null}
             <a
               href={shortcutInstallHref}
               className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/5 px-5 text-[15px] font-semibold text-white no-underline backdrop-blur-xl transition hover:bg-white/10 active:scale-[0.99]"
             >
               <Download className="h-4 w-4" aria-hidden />
-              Instalar Atajo (archivo .shortcut)
+              {shortcutIcloudUrl ? "Instalar (.shortcut en Órvita)" : "Instalar Atajo (archivo .shortcut)"}
             </a>
             <a
               href={runShortcutHref}

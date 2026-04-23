@@ -14,6 +14,44 @@ Compatibilidad iOS / Atajos (qué significa «Acción desconocida» con tu iPhon
 - Cómo validar en 1 minuto: en Atajos crea un atajo **nuevo** y busca manualmente (nombre puede variar con el idioma) acciones del estilo **Filtrar muestras de salud** y **Buscar entrenamientos**. Si el catálogo **no** las ofrece, el problema es el sistema o la app Atajos (actualizar / reiniciar). Si **sí** las ofrece y aun así nuestro archivo falla, prioriza **borrar** el atajo antiguo y **volver a descargar** el .shortcut publicado, sin duplicar nombres.
 - El build final (`Orvita-Importar-Salud-Hoy.shortcut`) debe generarse a partir del plist del proyecto; un `.shortcut` copiado de otro sitio o muy antiguo **no** garantiza el mismo juego de acciones.
 
+Generador en el repositorio (dev)
+- Ruta: `scripts/build-orvita-health-shortcut.py` escribe un plist XML (por defecto `scripts/shortcuts/orvita-importar-salud-hoy.shortcut.src.plist`). Úsalo en macOS: convierte/ firma con la cadena de Atajos que ya emplees (`shortcuts` / `plutil` según tu flujo) para publicar un `.shortcut` en HTTPS.
+- Si en el iPhone el tipo de muestra sale (null) o una tarjeta intermedia en gris no reconoce la acción, prueba de forma aislada (sin tocar aún el binario publicado, puedes abrir el plist o importar en Atajos):
+  • `python3 scripts/build-orvita-health-shortcut.py ruta/salida.plist --mode minimal` — solo token, fecha, pasos (suma), diccionario mínimo, POST. Si esto se ve bien, el fallo no es permisos genéricos: sube de a una la complejidad.
+  • `--quantity-type plain` — alterna cómo se guarda `WFQuantityType` (string del identificador HK en lugar del dict `WFQuantityTypeFieldValue`). Si (null) desaparece, el problema era esa serialización.
+  • `--omit-workout-duration-stat` (y, si quieres, `--workout-duration-placeholder omit` para no enviar `workouts_duration_seconds`) — quita el bloque «Calcular estadísticas» sobre `Duration` de entrenamientos, que a veces aparece como «Acción desconocida».
+- El binario en `public/shortcuts/Orvita-Importar-Salud-Hoy.shortcut` no se regenera con este script solo: hace falta el paso de firma/conversión de Apple en un Mac. Tras tocar el plist, vuelve a generar y publica ese binario.
+
+Cómo generar y publicar el .shortcut firmado (macOS, en tu Mac)
+1) Generar el plist fuente (desde la raíz del repo):
+   `python3 scripts/build-orvita-health-shortcut.py`
+   (Opcional: flags como `--mode minimal` o `--quantity-type plain` y ruta de salida; ver `python3 scripts/build-orvita-health-shortcut.py -h`.)
+2) Convertir el XML a binario “sin firmar” (en macOS el formato de `plutil` es **binary1**, no `binary`):
+   `plutil -convert binary1 -o /tmp/Orvita-Importar-unsigned.shortcut scripts/shortcuts/orvita-importar-salud-hoy.shortcut.src.plist`
+   Comprueba: `file /tmp/Orvita-Importar-unsigned.shortcut` debería decir *Apple binary property list*.
+3) Firmar con la herramienta del sistema (Monterey o posterior; hace falta la app **Atajos** y, para compartir con cualquiera, sesión de Apple / iCloud según el modo):
+   `shortcuts sign --mode anyone --input /tmp/Orvita-Importar-unsigned.shortcut --output public/shortcuts/Orvita-Importar-Salud-Hoy.shortcut`
+   - `anyone`: cualquiera puede importar (vía web; suele pasar notificación por iCloud; comprueba que tengas iCloud activo si falla).
+   - `people-who-know-me`: firmado local más restrictivo (no suele valer para enlace público a desconocidos).
+4) Commit del `Orvita-Importar-Salud-Hoy.shortcut` y deploy como el resto del sitio (el navegado sirve el archivo estático por HTTPS).
+
+Si `shortcuts sign` muestra el error
+`Unrecognized attribute string flag '?' … debugDescription`
+- Es un **bug conocido** de Apple en **macOS Sonoma 14.4+ y versiones posteriores** (Atajos al abrir un .shortcut sin firmar dirá: «No es posible importar archivos de un atajo sin firmar»). **No** indica que tu plist esté mal; el `plutil -convert binary1` sigue siendo el paso correcto.
+- **Qué probar, en este orden:**
+  1) **Otro Mac** con sistema **anterior a Sonoma 14.4** (o una VM / máquina de CI con macOS 12–13) y allí el mismo `shortcuts sign` — en muchos equipos aún funciona.
+  2) Herramienta de firma de terceros con soporte de shorts sin firmar, p. ej. el proyecto [shortcut-sign](https://github.com/0xilis/shortcut-sign) (sigue su README para instalar y firmar el archivo de `/tmp/…-unsigned.shortcut` hacia `public/shortcuts/Orvita-Importar-Salud-Hoy.shortcut`).
+  3) **Enlace de iCloud en la web** (recomendado mientras falle `shortcuts sign` en tu Mac):
+     - En el **iPhone o iPad** (o en el Mac con Atajos, si ya tienes el atajo en la biblioteca), abre la app **Atajos**.
+     - Toca el atajo **«Órvita – Importar Salud Hoy»** (o el que hayas creado/importado con el mismo flujo).
+     - Toca el botón **Compartir** (flecha/cuadro) o el menú **⋯** en la esquina.
+     - Elige **Copiar enlace** / **Compartir enlace** / **Enlace** (el texto varía; debe generar un URL `https://www.icloud.com/shortcuts/…` o similar de Apple). No es un enlace a orvita.app; es alojado por iCloud.
+     - Pega esa URL en un sitio seguro. En el panel de despliegue (p. ej. Vercel → Environment variables) añade:
+       `NEXT_PUBLIC_ORVITA_HEALTH_SHORTCUT_ICLOUD_URL=https://www.icloud.com/shortcuts/…`
+       (sin comillas, sin espacio; HTTPS obligatorio). Redeploy. La web de Órvita mostrará **Instalar desde iCloud** y seguirá ofreciendo el .shortcut de orvita.app como alternativa.
+     - Si **actualizas** el flujo del atajo en el futuro, vuelve a **Compartir → Copiar enlace** y sustituye la variable: los enlaces viejos pueden dejar de apuntar a la versión nueva según la política de iCloud.
+- No intentes abrir en Atajos el binario **sin** firmar: la app lo bloquea a propósito en sistemas recientes.
+
 Qué hace
 - Lee en el iPhone las muestras que elijas en el atajo (pasos, sueño, energía activa, entrenos, variación del latido, ritmo en reposo, etc.) y las envía a Órvita para guardarlas en tu cuenta.
 
@@ -56,7 +94,8 @@ Diagnóstico rápido (tres fallos que a veces aparecen juntos)
    - No intentes «reparar» la misma tarjeta gris: bórrala e importa de nuevo el .shortcut oficial desde Órvita, o reconstruye ese bloque con acciones nativas de Salud.
 
 2) «No hay más muestras de (null)…» en «Buscar muestras de Salud»
-   - Falta el tipo concreto de dato. Toca el chip azul «Muestras de Salud» y elige un tipo real (p. ej. Pasos, Energía activa, Variabilidad de la frecuencia cardiaca).
+   - Si el tipo de muestra aparece (null) **aunque** la acción se reconoce, suele ser **serialización** del .shortcut, no un fallo tuyo: el generador en el repo ofrece `--quantity-type plain` y un modo `minimal` para aislar; ver sección «Generador en el repositorio (dev)».
+   - Si en cambio el editor deja rellenar el chip a mano, toca el chip azul y elige un tipo real (p. ej. Pasos, Energía activa, HRV).
    - No uses una sola búsqueda genérica para todo: el atajo oficial hace una búsqueda por métrica (pasos, energía, HRV, FC en reposo, análisis del sueño, entrenamientos) y luego agrega o promedia según corresponda.
 
 3) «El archivo no existe» / «No se encontró el atajo «Órvita – Importar Salud Hoy»»
