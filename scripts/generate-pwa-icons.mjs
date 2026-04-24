@@ -1,5 +1,6 @@
 /**
- * Genera iconos PWA 192 / 512 y variante maskable desde el logo oscuro.
+ * Genera iconos PWA 192 / 512 y variante maskable desde el logo en fondo claro
+ * (p. ej. «Agregar a inicio» en iOS muestra este recurso como apple-touch).
  * Uso: node scripts/generate-pwa-icons.mjs
  * Requiere: sharp (dependencia del proyecto).
  */
@@ -10,9 +11,11 @@ import sharp from "sharp"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, "..")
-const src = path.join(root, "public", "brand", "orvita-logo-on-dark-bg.png")
+const src = path.join(root, "public", "brand", "orvita-logo-on-light-bg.png")
 const outDir = path.join(root, "public", "pwa")
-const BG = { r: 10, g: 10, b: 10, alpha: 1 }
+const pushOut = path.join(root, "public", "brand", "orvita-push-icon-192.png")
+/** Fondo para letterboxing al hacer fit contain (#FAFAFA, coherente con marca clara). */
+const BG = { r: 250, g: 250, b: 250, alpha: 1 }
 
 if (!fs.existsSync(src)) {
   console.error("No se encontró la fuente:", src)
@@ -21,7 +24,7 @@ if (!fs.existsSync(src)) {
 
 fs.mkdirSync(outDir, { recursive: true })
 
-/** Logo contenido en caja NxN (fondo Arctic #0A0A0A). */
+/** Logo contenido en caja NxN (fondo claro). */
 async function iconContained(size, fileName) {
   await sharp(src)
     .resize(size, size, { fit: "contain", position: "center", background: BG })
@@ -50,3 +53,9 @@ async function iconMaskable(size, fileName) {
 await iconContained(192, "icon-192.png")
 await iconContained(512, "icon-512.png")
 await iconMaskable(512, "icon-maskable-512.png")
+
+await sharp(src)
+  .resize(192, 192, { fit: "contain", position: "center", background: BG })
+  .png()
+  .toFile(pushOut)
+console.log("OK", path.basename(pushOut), "(push)")
