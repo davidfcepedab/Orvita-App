@@ -128,6 +128,7 @@ describe("buildOperationalContext", () => {
       workout_minutes: null,
       resting_hr_bpm: null,
       sync_stale: false,
+      health_signals: null,
     }
     const context = buildOperationalContext({
       tasks: [],

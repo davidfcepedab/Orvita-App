@@ -44,6 +44,15 @@ function isAppleHealthContextPayload(value: unknown): value is AppleHealthContex
     const v = a[key]
     if (v != null && typeof v !== "number") return false
   }
+  if ("health_signals" in a) {
+    const hs = a.health_signals
+    if (hs != null) {
+      if (typeof hs !== "object" || Array.isArray(hs)) return false
+      for (const v of Object.values(hs as Record<string, unknown>)) {
+        if (typeof v !== "number" || !Number.isFinite(v)) return false
+      }
+    }
+  }
   return true
 }
 
@@ -152,7 +161,21 @@ export function useSaludContext() {
 
         const r = response as OperationalContextData
         const apple_health: AppleHealthContextSignals | null =
-          r.apple_health != null && isAppleHealthContextPayload(r.apple_health) ? r.apple_health : null
+          r.apple_health != null && isAppleHealthContextPayload(r.apple_health)
+            ? (() => {
+                const base = r.apple_health as AppleHealthContextSignals
+                const hsRaw = (base as { health_signals?: unknown }).health_signals
+                let health_signals: Record<string, number> | null = null
+                if (hsRaw != null && typeof hsRaw === "object" && !Array.isArray(hsRaw)) {
+                  const acc: Record<string, number> = {}
+                  for (const [k, v] of Object.entries(hsRaw as Record<string, unknown>)) {
+                    if (typeof v === "number" && Number.isFinite(v)) acc[k] = v
+                  }
+                  health_signals = Object.keys(acc).length ? acc : null
+                }
+                return { ...base, health_signals }
+              })()
+            : null
 
         setData({ ...r, apple_health })
         setError(null)

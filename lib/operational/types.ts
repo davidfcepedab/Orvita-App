@@ -83,6 +83,8 @@ export type AppleHealthContextSignals = {
   resting_hr_bpm: number | null
   /** true si la última muestra tiene más de ~36 h (convén reimportar). */
   sync_stale: boolean
+  /** Instantánea numérica canónica (`metadata.health_signals`) alineada con `appleHealthBundleContract`. */
+  health_signals: Record<string, number> | null
 }
 
 export interface OperationalContextData {

@@ -26,6 +26,12 @@ import {
 import type { SaludContextSnapshot } from "@/app/salud/_hooks/useSaludContext"
 import { useHealthAutoMetrics } from "@/app/hooks/useHealthAutoMetrics"
 import { appleDaySignalsFromHealthMetric } from "@/lib/health/appleHevyRelation"
+import {
+  HEALTH_SIGNAL_LABEL_ES,
+  HEALTH_SIGNAL_UNIT_ES,
+  HEALTH_SIGNALS_HIDDEN_WHEN_PRIMARY_SHOWN,
+  HEALTH_SIGNALS_STABLE_ORDER,
+} from "@/lib/integrations/appleHealthBundleContract"
 
 const metricTone = (value: number) => {
   if (value >= 80) return "#6ee7b7"
@@ -40,6 +46,15 @@ type Props = {
 export default function HealthOperationsV3({ salud: health }: Props) {
   const { latest: autoHealth } = useHealthAutoMetrics()
   const appleSignals = useMemo(() => appleDaySignalsFromHealthMetric(autoHealth), [autoHealth])
+  const extendedAppleSignals = useMemo(() => {
+    const hs = appleSignals?.health_signals
+    if (!hs) return []
+    const order = new Map<string, number>()
+    HEALTH_SIGNALS_STABLE_ORDER.forEach((k, i) => order.set(k, i))
+    return Object.entries(hs)
+      .filter(([k]) => !HEALTH_SIGNALS_HIDDEN_WHEN_PRIMARY_SHOWN.has(k))
+      .sort((a, b) => (order.get(a[0]) ?? 999) - (order.get(b[0]) ?? 999))
+  }, [appleSignals])
   const [completedSupplements, setCompletedSupplements] = useState<number[]>([])
 
   if (health.loading) return null
@@ -143,6 +158,43 @@ export default function HealthOperationsV3({ salud: health }: Props) {
           </p>
         )}
       </div>
+
+      {extendedAppleSignals.length > 0 ? (
+        <div>
+          <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/45">
+            Apple Health · señales extendidas
+          </p>
+          <p className="mb-4 text-xs leading-relaxed text-white/50">
+            Mismo import, claves canónicas en <span className="font-mono text-white/55">metadata.health_signals</span>{" "}
+            (distancia en metros; SpO₂ como % si el atajo envió saturación HK 0–1).
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {extendedAppleSignals.map(([key, value], index) => {
+              const label = HEALTH_SIGNAL_LABEL_ES[key] ?? key
+              const unit = HEALTH_SIGNAL_UNIT_ES[key] ?? ""
+              const display =
+                unit === "" && Number.isFinite(value)
+                  ? value.toLocaleString("es-LA")
+                  : `${Number.isFinite(value) ? value : "—"}`
+              return (
+                <motion.div
+                  key={key}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.03, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                  className="rounded-[18px] border border-white/10 bg-white/[0.03] p-4 backdrop-blur-xl"
+                >
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">{label}</span>
+                  <p className="mt-2 text-xl font-semibold tracking-tight text-white/90">
+                    {display}
+                    {unit ? <span className="ml-1 text-xs font-medium text-white/40">{unit}</span> : null}
+                  </p>
+                </motion.div>
+              )
+            })}
+          </div>
+        </div>
+      ) : null}
 
       <div>
         <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/45">Tu check-in (órbita interna)</p>

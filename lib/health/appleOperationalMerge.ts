@@ -40,6 +40,16 @@ export function mapHealthMetricsRowToAppleSignals(row: unknown): AppleHealthCont
   const mRest = num(meta.resting_hr_bpm)
   const resting_hr_bpm = rRest != null ? rRest : mRest
 
+  const hsRaw = meta.health_signals
+  let health_signals: Record<string, number> | null = null
+  if (hsRaw && typeof hsRaw === "object" && !Array.isArray(hsRaw)) {
+    const acc: Record<string, number> = {}
+    for (const [k, v] of Object.entries(hsRaw as Record<string, unknown>)) {
+      if (typeof v === "number" && Number.isFinite(v)) acc[k] = v
+    }
+    health_signals = Object.keys(acc).length ? acc : null
+  }
+
   return {
     observed_at,
     source: typeof r.source === "string" ? r.source : null,
@@ -53,6 +63,7 @@ export function mapHealthMetricsRowToAppleSignals(row: unknown): AppleHealthCont
     workout_minutes: workout_minutes_stacked,
     resting_hr_bpm,
     sync_stale,
+    health_signals,
   }
 }
 

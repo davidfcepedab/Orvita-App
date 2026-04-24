@@ -1,21 +1,6 @@
 import type { AppleHealthImportRow } from "@/lib/integrations/appleHealth"
+import { APPLE_BUNDLE_MAPPED_KEYS, APPLE_HEALTH_BUNDLE_SCHEMA_VERSION, sanitizeBundleToHealthSignals } from "@/lib/integrations/appleHealthBundleContract"
 import { deriveMetricsFromAppleBundle } from "@/lib/integrations/appleHealthBundle"
-
-/** Claves que ya mapeamos a columnas o cálculo; el resto numérico va a `metadata.shortcut_bundle_extras`. */
-const APPLE_BUNDLE_MAPPED_KEYS = new Set([
-  "observed_at",
-  "steps",
-  "exercise_minutes",
-  "active_energy_kcal",
-  "sleep_hours",
-  "sleep_duration_seconds",
-  "hrv_ms",
-  "resting_hr_bpm",
-  "workouts_count",
-  "workouts_minutes",
-  "workouts_duration_seconds",
-  "readiness_score",
-])
 
 function collectBundleExtras(bundle: Record<string, unknown>): Record<string, number> | undefined {
   const out: Record<string, number> = {}
@@ -69,6 +54,7 @@ export function rowsFromAppleBundlePayload(bundle: Record<string, unknown>): App
 
   const readiness_score = readNumber(bundle, "readiness_score")
   const bundleExtras = collectBundleExtras(bundle)
+  const health_signals = sanitizeBundleToHealthSignals(bundle)
 
   const derived = deriveMetricsFromAppleBundle({
     observed_at: observedAt.toISOString(),
@@ -97,7 +83,8 @@ export function rowsFromAppleBundlePayload(bundle: Record<string, unknown>): App
     workouts_minutes !== undefined ||
     typeof workouts_duration_seconds === "number" ||
     readiness_score !== undefined ||
-    (bundleExtras && Object.keys(bundleExtras).length > 0)
+    (bundleExtras && Object.keys(bundleExtras).length > 0) ||
+    Object.keys(health_signals).length > 0
 
   if (!hasSignal) return []
 
@@ -135,6 +122,9 @@ export function rowsFromAppleBundlePayload(bundle: Record<string, unknown>): App
         apple_workouts_count: workouts_count ?? null,
         resting_hr_bpm: restRounded ?? null,
         workouts_minutes: wMinInt ?? null,
+        ...(Object.keys(health_signals).length
+          ? { health_signals, health_bundle_schema_version: APPLE_HEALTH_BUNDLE_SCHEMA_VERSION }
+          : {}),
       },
     },
   ]

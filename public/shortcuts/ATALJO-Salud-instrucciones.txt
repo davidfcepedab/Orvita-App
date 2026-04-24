@@ -55,6 +55,16 @@ Si `shortcuts sign` muestra el error
 Qué hace
 - Lee en el iPhone las muestras que elijas en el atajo (pasos, sueño, energía activa, entrenos, variación del latido, ritmo en reposo, etc.) y las envía a Órvita para guardarlas en tu cuenta.
 
+Configuración paso a paso (atajo + Órvita)
+1) En la web de Órvita, entra en Configuración → integraciones de Salud y genera un token de importación (copia el valor; caduca en unas horas).
+2) En el iPhone, instala el atajo «Órvita – Importar Salud Hoy» (enlace HTTPS de orvita.app o enlace iCloud si la app muestra «Instalar desde iCloud»).
+3) Abre Atajos → toca el atajo → primera vez: pega el token cuando lo pida el paso «Preguntar» / «Solicitar entrada».
+4) iOS pedirá permisos: Acepta. Luego ve a Salud → Perfil → Apps (o Privacidad) → Atajos y activa lectura para los tipos que el atajo consulta (pasos, ejercicio, energía activa, HRV, FC en reposo, distancia, plantas, VO₂, saturación de oxígeno, frecuencia respiratoria, FC al caminar, velocidad al caminar, test de 6 minutos, peso corporal, entrenamientos). Si falta un tipo, el atajo puede devolver 0 o vacío en esa clave; no bloquea el resto.
+5) Ejecuta el atajo un día que tengas datos. El flujo oficial hace: fecha actual → formato ISO (`observed_at`) → para cada métrica de cantidad: «Buscar muestras de salud» (filtro hoy) → «Calcular estadísticas» (Suma o Media según el tipo) → «Buscar entrenamientos» → contar y (opcional) sumar duración → «Diccionario» con las claves del contrato (`steps`, `exercise_minutes`, `active_energy_kcal`, …, `workouts_count`, `workouts_duration_seconds`) → «Obtener contenido de URL» POST a `https://orvita.app/api/integrations/health/apple/import` con cabecera `x-orvita-import-token: <token>` y cuerpo JSON `{ "apple_bundle": <diccionario> }` (no pongas el token dentro del diccionario).
+6) Revisa el resultado que muestra el atajo (respuesta de la API). En Órvita, Salud / panel de Apple Health debería actualizarse; en base de datos la instantánea canónica numérica queda también en `metadata.health_signals` (misma nomenclatura que `lib/integrations/appleHealthBundleContract.ts`).
+7) Si una tarjeta sale «Acción desconocida» o el tipo de muestra (null): reinstala el .shortcut desde Órvita, prueba `python3 scripts/build-orvita-health-shortcut.py --mode minimal` en dev, o `--quantity-type plain` al regenerar el plist (ver sección «Generador en el repositorio»).
+8) Cuando cambies el flujo del atajo en el iPhone, vuelve a Compartir → copiar enlace iCloud y actualiza `NEXT_PUBLIC_ORVITA_HEALTH_SHORTCUT_ICLOUD_URL` si usas ese botón en la web.
+
 Instalar o reinstalar (desde la web de Órvita)
 - El botón «Instalar atajo» abre un enlace con esquema de iOS (import-shortcut). El .shortcut debe estar en **HTTPS** público, sin inicio de sesión.
 - Si sale «La importación falló / la URL no es válida»: (1) Abre orvita.app en **Safari** (no en el visor de Outlook, Instagram, etc.); (2) **Copiar enlace HTTPS** y pégalo en la barra de direcciones de Safari, descarga; (3) **Descargar archivo** y tócalo en Archivos. (4) Prueba en la app el enlace **Otra apertura (x-callback)**.
@@ -114,6 +124,8 @@ Estructura mínima lógica (alineada con el .shortcut de Órvita)
 - Diccionario JSON con claves del contrato (apple_bundle) y POST a la API; token desde la app
 
 Métricas de Apple Salud: cuáles usa Órvita hoy
-- Sí, columnas y gráficos (el atajo oficial las envía): Pasos, Minutos de ejercicio (anillo verde; mejora el «readiness» junto a pasos), Energía de actividad, Variabilidad de la FC (HRV), FC en reposo, Entrenamientos (conteo y duración). **Sueño en automático:** el atajo generado por Órvita ya no suma duración vía «análisis del sueño + estadísticas» (evita «Acción desconocida» en muchos iPhone). Puedes añadir tú al diccionario `sleep_hours` o `sleep_duration_seconds` si hace falta, u otra fuente.
-- No hay columna dedicada aún, pero si envías otras claves numéricas en el mismo JSON, Órvita las guarda en metadatos (p. ej. peso, SpO2, distancia) para análisis futuro; no sustituyen al bloque de pasos/energía o sueño que envíes explícitamente.
+- Contrato único en código: `lib/integrations/appleHealthBundleContract.ts` (claves del JSON del atajo + instantánea `metadata.health_signals`). El generador del plist (`scripts/build-orvita-health-shortcut.py`, lista `BUNDLE_QUANTITY_METRICS`) debe mantenerse alineado con ese archivo.
+- Columnas principales en `health_metrics`: sueño, HRV, readiness, pasos, calorías/energía activa, índice de energía, FC reposo, conteo y minutos de entreno Apple. El atajo «full» envía además distancia caminar/correr (m), plantas, VO₂, saturación (como `oxygen_saturation_avg`; el servidor deriva `spo2_pct`), frecuencia respiratoria, FC media al caminar, velocidad al caminar, test 6 min (m), peso (kg), minutos de ejercicio, etc.
+- **Sueño en automático:** el atajo generado por Órvita no suma duración vía «análisis del sueño + estadísticas» (evita «Acción desconocida» en muchos iPhone). Puedes añadir tú al diccionario `sleep_hours` o `sleep_duration_seconds` si hace falta.
+- Claves numéricas que no estén en el contrato siguen pudiendo guardarse en `metadata.shortcut_bundle_extras` hasta que las incorporemos al contrato.
 - Activar muchos interruptores en Salud → Atajos no basta: el atajo debe tener acciones que lean cada tipo. Si en el editor solo queda un «Diccionario» vacío o tarjetas grises «Acción desconocida», reinstala el .shortcut; no es un fallo de permisos sueltos.

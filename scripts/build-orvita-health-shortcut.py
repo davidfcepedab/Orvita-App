@@ -8,17 +8,19 @@ o tarjetas «Acción desconocida» en el medio, suele ser **serialización** del
 permisos ni caché: prueba `--mode minimal`, `--quantity-type plain` y/o
 `--omit-workout-duration-stat` (ver `--help`).
 
-Métricas en modo `full` (aportan columnas o `readiness` derivado en Órvita):
-- Pasos, minutos de ejercicio, energía activa, HRV, FC en reposo, entrenamientos (conteo + duración
-  salvo que uses `--omit-workout-duration-stat`).
+Métricas en modo `full` (lista `BUNDLE_QUANTITY_METRICS`, alineada con `lib/integrations/appleHealthBundleContract.ts`):
+- Pasos, minutos de ejercicio, energía activa, HRV, FC en reposo, distancia caminar/correr (m),
+  plantas, VO₂, saturación O₂ (media HK → `oxygen_saturation_avg`), frecuencia respiratoria,
+  FC media al caminar, velocidad al caminar, test 6 min (m), masa corporal; entrenamientos
+  (conteo + duración salvo `--omit-workout-duration-stat`).
 - **No** incluimos agregado de sueño por categoría + «Calcular estadísticas (duración)»;
-  el diccionario no manda `sleep_duration_seconds` desde el atajo generado.
+  el diccionario no manda `sleep_hours` / `sleep_duration_seconds` desde el atajo generado
+  (puedes añadirlos a mano en Atajos si lo necesitas).
 
 Modo `minimal`: token, fecha ISO, una sola búsqueda (pasos) + suma, diccionario mínimo, POST
 — para validar en un iPhone real que el flujo básico no se rompe antes de añadir métricas.
 
-No añadimos más tipos HealthKit aquí sin columna/UI en la app (peso, SpO2, presión, etc.):
-sí puedes mandarlos como números extra en el JSON y se guardan en `metadata.shortcut_bundle_extras`.
+Claves numéricas extra siguen guardándose en `metadata.shortcut_bundle_extras` si no están en el contrato.
 """
 from __future__ import annotations
 
@@ -27,6 +29,24 @@ import plistlib
 import sys
 import uuid
 from pathlib import Path
+
+# Alinear con `APPLE_SHORTCUT_BUNDLE_INPUT_KEYS` / atajo → merge (TypeScript).
+BUNDLE_QUANTITY_METRICS: list[tuple[str, str, str]] = [
+    ("steps", "HKQuantityTypeIdentifierStepCount", "Sum"),
+    ("exercise_minutes", "HKQuantityTypeIdentifierAppleExerciseTime", "Sum"),
+    ("active_energy_kcal", "HKQuantityTypeIdentifierActiveEnergyBurned", "Sum"),
+    ("hrv_ms", "HKQuantityTypeIdentifierHeartRateVariabilitySDNN", "Average"),
+    ("resting_hr_bpm", "HKQuantityTypeIdentifierRestingHeartRate", "Average"),
+    ("walking_running_m", "HKQuantityTypeIdentifierDistanceWalkingRunning", "Sum"),
+    ("floors_climbed", "HKQuantityTypeIdentifierFlightsClimbed", "Sum"),
+    ("vo2_max", "HKQuantityTypeIdentifierVO2Max", "Average"),
+    ("oxygen_saturation_avg", "HKQuantityTypeIdentifierOxygenSaturation", "Average"),
+    ("respiratory_rate", "HKQuantityTypeIdentifierRespiratoryRate", "Average"),
+    ("walking_hr_avg", "HKQuantityTypeIdentifierWalkingHeartRateAverage", "Average"),
+    ("walking_speed_m_s", "HKQuantityTypeIdentifierWalkingSpeed", "Average"),
+    ("six_minute_walk_m", "HKQuantityTypeIdentifierSixMinuteWalkTestDistance", "Average"),
+    ("body_mass_kg", "HKQuantityTypeIdentifierBodyMass", "Average"),
+]
 
 
 def uid() -> str:
@@ -212,15 +232,11 @@ def format_iso8601(*, u: str, u_date: str) -> dict:
     }
 
 
-def dictionary_bundle(
+def dictionary_bundle_dynamic(
     *,
     u_dict: str,
     u_iso: str,
-    u_steps: str,
-    u_exercise_min: str,
-    u_energy: str,
-    u_hrv: str,
-    u_rhr: str,
+    quantity_stat_pairs: list[tuple[str, str, str]],
     u_workout_count: str,
     u_workout_dur_sec: str,
     include_workout_duration_seconds: bool = True,
@@ -232,46 +248,19 @@ def dictionary_bundle(
             "WFKey": text_plain("observed_at"),
             "WFValue": text_token_string(u_iso, "Formatted Date"),
         },
-        {
-            "WFItemType": 1,
-            "WFKey": text_plain("steps"),
-            "WFValue": {
-                "Value": text_token_string(u_steps, "Calculation Result"),
-                "WFSerializationType": "WFTextTokenString",
-            },
-        },
-        {
-            "WFItemType": 1,
-            "WFKey": text_plain("exercise_minutes"),
-            "WFValue": {
-                "Value": text_token_string(u_exercise_min, "Calculation Result"),
-                "WFSerializationType": "WFTextTokenString",
-            },
-        },
-        {
-            "WFItemType": 1,
-            "WFKey": text_plain("active_energy_kcal"),
-            "WFValue": {
-                "Value": text_token_string(u_energy, "Calculation Result"),
-                "WFSerializationType": "WFTextTokenString",
-            },
-        },
-        {
-            "WFItemType": 1,
-            "WFKey": text_plain("hrv_ms"),
-            "WFValue": {
-                "Value": text_token_string(u_hrv, "Calculation Result"),
-                "WFSerializationType": "WFTextTokenString",
-            },
-        },
-        {
-            "WFItemType": 1,
-            "WFKey": text_plain("resting_hr_bpm"),
-            "WFValue": {
-                "Value": text_token_string(u_rhr, "Calculation Result"),
-                "WFSerializationType": "WFTextTokenString",
-            },
-        },
+    ]
+    for key, u_stat, output_name in quantity_stat_pairs:
+        items.append(
+            {
+                "WFItemType": 1,
+                "WFKey": text_plain(key),
+                "WFValue": {
+                    "Value": text_token_string(u_stat, output_name),
+                    "WFSerializationType": "WFTextTokenString",
+                },
+            }
+        )
+    items.append(
         {
             "WFItemType": 1,
             "WFKey": text_plain("workouts_count"),
@@ -279,8 +268,8 @@ def dictionary_bundle(
                 "Value": text_token_string(u_workout_count, "Count"),
                 "WFSerializationType": "WFTextTokenString",
             },
-        },
-    ]
+        }
+    )
     if include_workout_duration_seconds:
         items.append(
             {
@@ -451,17 +440,6 @@ def build_actions_full(
     u_date = uid()
     u_iso = uid()
 
-    u_find_steps = uid()
-    u_stat_steps = uid()
-    u_find_exercise = uid()
-    u_stat_exercise = uid()
-    u_find_energy = uid()
-    u_stat_energy = uid()
-    u_find_hrv = uid()
-    u_stat_hrv = uid()
-    u_find_rhr = uid()
-    u_stat_rhr = uid()
-
     u_find_workouts = uid()
     u_count_workouts = uid()
     u_stat_workout_dur = uid()
@@ -473,9 +451,9 @@ def build_actions_full(
 
     actions: list[dict] = [
         comment(
-            "Entrenos del día, pasos, minutos de ejercicio, energía activa, HRV y FC en reposo; envía todo a Órvita. "
-            "Sin agregado automático de sueño (categoría) para evitar «Acción desconocida» en Atajos. "
-            "Genera un token en la app (Salud) y pégalo cuando te lo pida el atajo."
+            "Métricas de cantidad del día (lista BUNDLE_QUANTITY_METRICS) + entrenos; POST a Órvita. "
+            "Sin sueño automático por categoría (evita «Acción desconocida» en muchos iPhone). "
+            "Token desde Órvita → Salud."
         ),
         ask_text(
             u=u_token,
@@ -483,39 +461,28 @@ def build_actions_full(
         ),
         current_date(u=u_date),
         format_iso8601(u=u_iso, u_date=u_date),
-        find_health_quantity(
-            u_find=u_find_steps,
-            identifier="HKQuantityTypeIdentifierStepCount",
-            quantity_type_style=quantity_type_style,
-        ),
-        statistics_on(u_find_steps, u_stat_steps, "Sum"),
-        find_health_quantity(
-            u_find=u_find_exercise,
-            identifier="HKQuantityTypeIdentifierAppleExerciseTime",
-            quantity_type_style=quantity_type_style,
-        ),
-        statistics_on(u_find_exercise, u_stat_exercise, "Sum"),
-        find_health_quantity(
-            u_find=u_find_energy,
-            identifier="HKQuantityTypeIdentifierActiveEnergyBurned",
-            quantity_type_style=quantity_type_style,
-        ),
-        statistics_on(u_find_energy, u_stat_energy, "Sum"),
-        find_health_quantity(
-            u_find=u_find_hrv,
-            identifier="HKQuantityTypeIdentifierHeartRateVariabilitySDNN",
-            quantity_type_style=quantity_type_style,
-        ),
-        statistics_on(u_find_hrv, u_stat_hrv, "Average"),
-        find_health_quantity(
-            u_find=u_find_rhr,
-            identifier="HKQuantityTypeIdentifierRestingHeartRate",
-            quantity_type_style=quantity_type_style,
-        ),
-        statistics_on(u_find_rhr, u_stat_rhr, "Average"),
-        find_workouts(u_find=u_find_workouts),
-        count_items(u_input=u_find_workouts, u_count=u_count_workouts, output_name="Workouts"),
     ]
+
+    quantity_stat_pairs: list[tuple[str, str, str]] = []
+    for key, hk_id, op in BUNDLE_QUANTITY_METRICS:
+        u_find = uid()
+        u_stat = uid()
+        actions.append(
+            find_health_quantity(
+                u_find=u_find,
+                identifier=hk_id,
+                quantity_type_style=quantity_type_style,
+            )
+        )
+        actions.append(statistics_on(u_find, u_stat, op))
+        quantity_stat_pairs.append((key, u_stat, "Calculation Result"))
+
+    actions.extend(
+        [
+            find_workouts(u_find=u_find_workouts),
+            count_items(u_input=u_find_workouts, u_count=u_count_workouts, output_name="Workouts"),
+        ]
+    )
 
     u_dur_for_dict: str
     include_dur: bool
@@ -546,14 +513,10 @@ def build_actions_full(
         dur_output_name = "Calculation Result"
 
     actions.append(
-        dictionary_bundle(
+        dictionary_bundle_dynamic(
             u_dict=u_dict,
             u_iso=u_iso,
-            u_steps=u_stat_steps,
-            u_exercise_min=u_stat_exercise,
-            u_energy=u_stat_energy,
-            u_hrv=u_stat_hrv,
-            u_rhr=u_stat_rhr,
+            quantity_stat_pairs=quantity_stat_pairs,
             u_workout_count=u_count_workouts,
             u_workout_dur_sec=u_dur_for_dict,
             include_workout_duration_seconds=include_dur,

@@ -12,20 +12,7 @@
  * sería un segundo atajo “escribir en Salud” disparado por el usuario.
  */
 
-/** Claves que el atajo puede enviar en el cuerpo (ver `mergeAppleHealthImportRows`). */
-export const ORVITA_APPLE_IMPORT_BUNDLE_KEYS = [
-  "observed_at",
-  "steps",
-  "active_energy_kcal",
-  "sleep_hours",
-  "sleep_duration_seconds",
-  "hrv_ms",
-  "resting_hr_bpm",
-  "workouts_count",
-  "workouts_minutes",
-  "workouts_duration_seconds",
-  "readiness_score",
-] as const
+export { APPLE_SHORTCUT_BUNDLE_INPUT_KEYS as ORVITA_APPLE_IMPORT_BUNDLE_KEYS } from "@/lib/integrations/appleHealthBundleContract"
 
 /** Columnas numéricas persistidas en `health_metrics` (además de user_id, observed_at, source, metadata). */
 export const ORVITA_HEALTH_METRICS_COLUMNS = [
