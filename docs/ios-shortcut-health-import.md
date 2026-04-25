@@ -71,6 +71,7 @@ También se acepta el **mismo diccionario en la raíz** (sin anidar) por compati
   - `Authorization: Bearer <access_token de sesión Supabase>`, o
   - `x-orvita-import-token: <token de importación>` (generado en la app, Salud)  
 - Alias soportado: `x-reset-token: <mismo token>` (mismo valor que el de importación)
+- **`x-orvita-observed-at: yyyy-MM-dd`** (recomendada en Atajos): si el cuerpo JSON serializa `observed_at` como `null`, el servidor toma la fecha de esta cabecera. El plist generado por `scripts/build-orvita-health-shortcut.py` la envía enlazada a la misma fecha que `apple_bundle.observed_at`. Alias: `x-observed-at`.
 
 **No** incluyas el token en el cuerpo JSON a menos que uses el campo `import_token` documentado; no se registra el JSON completo en producción en logs de servidor.
 

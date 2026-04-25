@@ -19,6 +19,8 @@ Métricas en modo `full` (lista `BUNDLE_QUANTITY_METRICS`, alineada con `lib/int
 
 Modo `minimal`: token, fecha ISO, una sola búsqueda (pasos) + suma, diccionario mínimo, POST
 — para validar en un iPhone real que el flujo básico no se rompe antes de añadir métricas.
+El POST incluye cabecera `x-orvita-observed-at` (misma fecha que `apple_bundle.observed_at`) para
+evitar fallos de Atajos cuando el JSON serializa `observed_at` como null (ver API `applyObservedAtFromRequestHeaders`).
 
 Claves numéricas extra siguen guardándose en `metadata.shortcut_bundle_extras` si no están en el contrato.
 """
@@ -325,7 +327,7 @@ def text_plain(s: str) -> dict:
     return {"Value": {"string": s}, "WFSerializationType": "WFTextTokenString"}
 
 
-def post_import(*, u_post: str, u_token: str, u_dict: str) -> dict:
+def post_import(*, u_post: str, u_token: str, u_dict: str, u_iso: str) -> dict:
     return {
         "WFWorkflowActionIdentifier": "is.workflow.actions.downloadurl",
         "WFWorkflowActionParameters": {
@@ -349,6 +351,14 @@ def post_import(*, u_post: str, u_token: str, u_dict: str) -> dict:
                             "WFKey": text_plain("x-orvita-import-token"),
                             "WFValue": {
                                 "Value": text_token_string(u_token, "Provided Input"),
+                                "WFSerializationType": "WFTextTokenString",
+                            },
+                        },
+                        {
+                            "WFItemType": 0,
+                            "WFKey": text_plain("x-orvita-observed-at"),
+                            "WFValue": {
+                                "Value": text_token_string(u_iso, "Formatted Date"),
                                 "WFSerializationType": "WFTextTokenString",
                             },
                         },
@@ -525,7 +535,7 @@ def build_actions_full(
     )
     actions.extend(
         [
-            post_import(u_post=u_post, u_token=u_token, u_dict=u_dict),
+            post_import(u_post=u_post, u_token=u_token, u_dict=u_dict, u_iso=u_iso),
             show_result(u=u_show, u_post=u_post),
         ]
     )
@@ -560,7 +570,7 @@ def build_actions_minimal(*, quantity_type_style: str) -> list[dict]:
         ),
         statistics_on(u_find_steps, u_stat_steps, "Sum"),
         dictionary_bundle_minimal(u_dict=u_dict, u_iso=u_iso, u_steps=u_stat_steps),
-        post_import(u_post=u_post, u_token=u_token, u_dict=u_dict),
+        post_import(u_post=u_post, u_token=u_token, u_dict=u_dict, u_iso=u_iso),
         show_result(u=u_show, u_post=u_post),
     ]
 

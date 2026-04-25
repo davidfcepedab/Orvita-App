@@ -69,11 +69,11 @@ Orden obligatorio de la FECHA (causa nº1 del error `observed_at` con `received_
 Flujo completo (de cero) y por qué «Mostrar diccionario» puede verse bien y el POST fallar
 - Secuencia lógica: (1) token (variable `token_importacion` o el nombre que uses) → (2) **Fecha** → (3) **Aplicar formato** a esa fecha (no a `observed_at_text`) → (4) **Establecer** `observed_at_text` → (5) búsquedas de Salud, variables numéricas → (6) **Diccionario** con claves `observed_at` → `observed_at_text` y el resto del contrato → (7) **Obtener contenido de URL** (POST, JSON) **a la misma** URL y el **mismo** token en cabecera.
 - A veces en el paso (7) reconfiguras el cuerpo JSON **campo a campo** otra vez; si la variable `observed_at` queda con un enlace roto, el servidor recibe `null` aunque el paso **Mostrar diccionario** (acción 6) mostrara datos de una **ejecución** anterior o de un cálculo intermedio. Comprueba: pega **inmediatamente antes** de «Obtener contenido de URL» una acción **Mostrar** `observed_at_text`; si al ejecutar hoy sale vacío, el enlace al POST es el que falla, no el de «Mostrar diccionario».
-- **Solución fiable (recomendada en Atajos):** en «Obtener contenido de URL» → **Encabezados**, añade además de `Content-Type` y `x-orvita-import-token`:
+- **Cabecera estándar `x-orvita-observed-at` (mantenerla):** en «Obtener contenido de URL» → **Encabezados**, además de `Content-Type` y `x-orvita-import-token`, incluye:
   - Nombre: `x-orvita-observed-at`
-  - Valor: la variable `observed_at_text` (el mismo texto `yyyy-MM-dd` que pones en el diccionario).
-  El API de Órvita usa esta cabecera si el cuerpo JSON manda `observed_at` vacío o null. Así el día llega aunque iOS falle al serializar el diccionario en el cuerpo.
-- Si aún recibes 400, el JSON de error puede incluir `orvita_fix` con el recordatorio de la cabecera (tras un despliegue reciente del servidor).
+  - Valor: la misma fecha en texto que usas en el diccionario (p. ej. variable `observed_at_text` o la salida de «Fecha con formato»).
+  El API usa esta cabecera si el JSON manda `observed_at` vacío o null (bug frecuente de serialización en Atajos). El **plist generado** en el repo (`python3 scripts/build-orvita-health-shortcut.py` → `scripts/shortcuts/orvita-importar-salud-hoy.shortcut.src.plist`) ya incluye esta cabecera enlazada a la misma fecha ISO que `apple_bundle.observed_at`; al republicar el `.shortcut` firmado, los usuarios la traen por defecto.
+- Si aún recibes 400, el JSON de error puede incluir `orvita_fix` con el recordatorio de la cabecera.
 
 Configuración paso a paso (atajo + Órvita)
 1) En la web de Órvita, entra en Configuración → integraciones de Salud y genera un token de importación (copia el valor; caduca en unas horas).
