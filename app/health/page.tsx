@@ -357,7 +357,7 @@ export default function HealthPage() {
               ? "Cargando métricas automáticas…"
               : autoHealth?.observed_at
                 ? `Última muestra: ${new Date(autoHealth.observed_at).toLocaleString("es-CO")} · fuente ${autoHealth.source ?? "—"}`
-                : "Sin muestras automáticas todavía. Pulsa importar o usa Configuración → Importar muestra Apple."}
+                : "Sin muestras automáticas todavía. Pulsa importar o usa Configuración → Probar import (web) / atajo iPhone."}
           </p>
           <div className="flex flex-wrap gap-2">
             <button

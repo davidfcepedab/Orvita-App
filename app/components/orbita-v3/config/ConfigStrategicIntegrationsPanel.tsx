@@ -400,6 +400,7 @@ export function ConfigStrategicIntegrationsPanel({
             disabled={busy === "apple-connect" || !settings.health_enabled}
             className={configConnectionActionClass}
             style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surfaceAlt }}
+            title="Marca Apple Health como conexión activa en el servidor (prioridad import / atajo)."
           >
             {busy === "apple-connect" ? "…" : "Conectar Apple"}
           </button>
@@ -409,8 +410,9 @@ export function ConfigStrategicIntegrationsPanel({
             disabled={busy === "apple-import" || !settings.health_enabled}
             className={configConnectionActionClass}
             style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surfaceAlt }}
+            title="No usa el atajo del iPhone: solo llama al endpoint de import con cuerpo vacío (diagnóstico). Datos reales: atajo + token arriba."
           >
-            {busy === "apple-import" ? "…" : "Importar muestra"}
+            {busy === "apple-import" ? "…" : "Probar import (web)"}
           </button>
           <button
             type="button"
@@ -418,6 +420,7 @@ export function ConfigStrategicIntegrationsPanel({
             disabled={busy === "health" || !settings.health_enabled}
             className={configConnectionActionClass}
             style={{ borderColor: theme.accent.health, backgroundColor: theme.accent.health, color: "#fff" }}
+            title="Si ya importaste desde el iPhone, refresca estado; si no hay Apple, intenta Google Fit o semilla de respaldo según tu cuenta."
           >
             <RefreshCw className="h-3.5 w-3.5" />
             {busy === "health" ? "…" : "Sync salud"}
@@ -460,7 +463,7 @@ export function ConfigStrategicIntegrationsPanel({
                 boxShadow: settings.health_enabled ? "none" : "0 1px 0 rgba(15,23,42,0.04)",
               }}
               aria-pressed={settings.health_enabled}
-              title="Salud automática: activa el módulo en el servidor para conectar e importar."
+              title="Activa o desactiva el módulo Salud en el servidor. Si está apagado, los tres botones de abajo quedan deshabilitados."
             >
               {settings.health_enabled ? "Activo" : "Activar"}
             </button>
@@ -472,6 +475,7 @@ export function ConfigStrategicIntegrationsPanel({
               disabled={busy === "apple-connect" || !settings.health_enabled}
               className={`${configConnectionActionClass} w-full min-h-10 justify-center text-[11px] font-medium`}
               style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surfaceAlt }}
+              title="Marca Apple Health como conexión activa en el servidor (prioridad import / atajo)."
             >
               {busy === "apple-connect" ? "…" : "Conectar Apple"}
             </button>
@@ -481,8 +485,9 @@ export function ConfigStrategicIntegrationsPanel({
               disabled={busy === "apple-import" || !settings.health_enabled}
               className={`${configConnectionActionClass} w-full min-h-10 justify-center text-[11px] font-medium`}
               style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surfaceAlt }}
+              title="No ejecuta el atajo del iPhone: solo llama al endpoint de import con cuerpo vacío. Para datos reales usa el atajo y «Obtener código» arriba."
             >
-              {busy === "apple-import" ? "…" : "Probar importación"}
+              {busy === "apple-import" ? "…" : "Probar import (web)"}
             </button>
             <button
               type="button"
@@ -490,10 +495,14 @@ export function ConfigStrategicIntegrationsPanel({
               disabled={busy === "health" || !settings.health_enabled}
               className={`${configConnectionActionClass} w-full min-h-10 justify-center text-[11px] font-medium`}
               style={{ borderColor: theme.accent.health, backgroundColor: theme.accent.health, color: "#fff" }}
+              title="Refresca estado: si ya hay filas Apple importadas, las reutiliza; si no, Google Fit u otra ruta según tu cuenta."
             >
               {busy === "health" ? "…" : "Sincronizar salud"}
             </button>
           </div>
+          <p className="mt-2 text-[10px] leading-relaxed" style={{ color: theme.textMuted }}>
+            El atajo del iPhone vive en el bloque superior («Descargar», «Obtener código»). «Probar import (web)» no lo sustituye.
+          </p>
           <p className="mt-2.5 text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
             {healthLastSync
               ? `Fuente: ${healthSourceLabel(healthSource)} · ${formatShortSampleAgo(healthLastSync)} (fecha de la muestra).`

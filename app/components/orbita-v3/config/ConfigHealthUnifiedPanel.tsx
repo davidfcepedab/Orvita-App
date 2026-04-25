@@ -250,6 +250,7 @@ export function ConfigHealthUnifiedPanel({
             disabled={busy === "apple-connect" || !settings.health_enabled}
             className={configConnectionActionClass}
             style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surfaceAlt }}
+            title="Marca Apple Health como conexión activa en el servidor."
           >
             {busy === "apple-connect" ? "…" : "Conectar Apple"}
           </button>
@@ -259,8 +260,9 @@ export function ConfigHealthUnifiedPanel({
             disabled={busy === "apple-import" || !settings.health_enabled}
             className={configConnectionActionClass}
             style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surfaceAlt }}
+            title="No ejecuta el atajo del iPhone: POST al import con cuerpo vacío (diagnóstico). Datos reales: atajo en Configuración."
           >
-            {busy === "apple-import" ? "…" : "Importar muestra"}
+            {busy === "apple-import" ? "…" : "Probar import (web)"}
           </button>
           <button
             type="button"
@@ -268,6 +270,7 @@ export function ConfigHealthUnifiedPanel({
             disabled={busy === "health" || !settings.health_enabled}
             className={configConnectionActionClass}
             style={{ borderColor: theme.accent.health, backgroundColor: theme.accent.health, color: "#fff" }}
+            title="Refresca estado según última importación Apple o Google Fit."
           >
             <RefreshCw className="h-3.5 w-3.5" />
             {busy === "health" ? "…" : "Sync salud"}
