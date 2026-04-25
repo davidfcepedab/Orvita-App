@@ -135,6 +135,9 @@ Diagnóstico rápido (tres fallos que a veces aparecen juntos)
    - Si lo renombraste (p. ej. «Orvita-Importar-Salud-Hoy 2»), o bien vuelve a ponerle el nombre canónico, o actualiza en automatizaciones y widgets el nombre que se ejecuta.
    - Vuelve a instalar el .shortcut desde la web para recuperar el nombre y el flujo completo.
 
+Widget en la pantalla de inicio
+- **No** hay un widget con marca Órvita descargable desde la web: Órvita vive en el navegador y el atajo en Atajos. Si quieres un acceso rápido, usa el **widget de Atajos de Apple** (sistema): pantalla de inicio → editar → + → Atajos → elige tamaño y asocia el atajo «Órvita – Importar Salud Hoy». Un **widget nativo** que muestre datos de tu cuenta (pasos, etc. sin abrir el atajo) corresponde a la **app móvil Órvita** (proyecto aparte; ver `native/ios/WIDGET_EXTENSION.md` en el repositorio).
+
 Permisos en el iPhone
 - Salud → Perfil (arriba a la derecha) → Apps o Privacidad → Atajos: permite lectura de **Pasos, Minutos de ejercicio, Energía activa, Variabilidad de FC (HRV), FC en reposo, Análisis del sueño y Entrenamientos**. No dejes solo “Pasos”.
 - Tras instalar, ejecuta el atajo una vez y acepta lo que pida iOS (Salud, red si aplica). Si ves «Acción desconocida», bórralo y reinstálalo desde Órvita en Safari.

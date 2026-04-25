@@ -32,7 +32,7 @@ function formatWhen(iso: string | null | undefined) {
 }
 
 /**
- * Instalación del atajo vía esquema de iOS, token de importación y guía para widget de Atajos.
+ * Instalación del atajo vía esquema de iOS, token y guía (permisos + widget **del sistema Atajos**, no app Órvita nativa).
  * La web no puede instalar nada en el sistema; solo ofrece enlaces y pasos.
  */
 const subtleCta = "min-h-10 w-full sm:w-auto items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition hover:opacity-90 sm:inline-flex"
@@ -239,7 +239,7 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
             className={`${subtleCta} flex border-dashed`}
             style={{ borderColor: theme.border, color: theme.textMuted, backgroundColor: "transparent" }}
           >
-            Guía (widget y permisos)
+            Guía (Atajos y permisos)
           </button>
         </div>
         {isIOS && isOrvitaShortcutImportFromHttpDev() ? (
@@ -351,7 +351,7 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
                   className="m-0 text-sm font-semibold sm:text-base"
                   style={{ color: theme.text }}
                 >
-                  Guía rápida: atajo y widget
+                  Guía: atajo en el iPhone
                 </h2>
               </div>
               <button
@@ -363,15 +363,34 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
                 Cerrar
               </button>
             </div>
-            <p className="m-0 text-xs leading-relaxed" style={{ color: theme.textMuted }}>
-              La web no puede instalar nada en tu iPhone. Tú añades el atajo a la pantalla de inicio, como el clima o el
-              reloj. Órvita queda en la nube: el atajo solo envía el día.
+            <p
+              className="m-0 rounded-lg border px-2.5 py-2 text-[11px] leading-relaxed"
+              style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt, color: theme.text }}
+            >
+              <strong className="font-medium" style={{ color: theme.text }}>
+                No hay widget propio de Órvita
+              </strong>{" "}
+              en la App Store ni en esta web: lo que puedes usar hoy es el{" "}
+              <strong className="font-medium" style={{ color: theme.text }}>
+                widget de Atajos de Apple
+              </strong>{" "}
+              (sistema) para lanzar el atajo con un toque. Un widget nativo con datos de tu cuenta iría en la{" "}
+              <strong className="font-medium" style={{ color: theme.text }}>
+                app móvil Órvita
+              </strong>{" "}
+              (en desarrollo; documentación en el repositorio: carpeta native/ios, archivo WIDGET_EXTENSION).
+            </p>
+            <p className="m-0 mt-2 text-xs leading-relaxed" style={{ color: theme.textMuted }}>
+              La web no puede instalar nada en tu iPhone. El atajo envía el día a Órvita en la nube cuando lo ejecutas
+              (o desde el widget de Atajos si lo añades tú a la pantalla de inicio).
             </p>
             <ol className="mt-3 list-decimal space-y-2 pl-4 text-xs leading-relaxed" style={{ color: theme.text }}>
               <li>Pantalla de inicio: modo edición, luego <strong className="font-medium text-inherit">+</strong> o Añadir widget.</li>
               <li>
-                Busca <strong className="font-medium text-inherit">Atajos</strong>, elige tamaño, y al configurar, el
-                atajo <strong className="font-medium text-inherit">{ORVITA_HEALTH_SHORTCUT_NAME}</strong>.
+                Busca el widget del sistema <strong className="font-medium text-inherit">Atajos</strong>, elige
+                tamaño y, al configurar, selecciona el atajo{" "}
+                <strong className="font-medium text-inherit">{ORVITA_HEALTH_SHORTCUT_NAME}</strong>. (Si no aparece,
+                instala antes el .shortcut desde esta página.)
               </li>
               <li>
                 Si en Salud ves <strong className="font-medium text-inherit">(null)</strong> o «Acción desconocida»:
@@ -382,7 +401,7 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
             </ol>
             <p className="mt-3 flex items-start gap-2 text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
               <Play className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-              El widget no inicia sesión: solo abre el atajo; tu cuenta sigue en Órvita.
+              El widget de Atajos no inicia sesión en Órvita: solo ejecuta el atajo; tu cuenta sigue en la web.
             </p>
             <a
               href={instructionsUrl}
