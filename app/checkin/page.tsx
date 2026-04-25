@@ -44,6 +44,7 @@ import { agendaTodayYmd } from "@/lib/agenda/localDateKey"
 import { addDaysIso } from "@/lib/habits/habitMetrics"
 import { buildOfflineSnapshotFromCheckinForm, saveOfflineCheckinSnapshot } from "@/lib/pwa/offlineSnapshot"
 import { markPushValueDeliveredForPrompt } from "@/lib/notifications/pushClient"
+import { useHealthAutoMetrics } from "@/app/hooks/useHealthAutoMetrics"
 
 async function buildJsonHeaders(): Promise<HeadersInit> {
   const base: HeadersInit = { "Content-Type": "application/json" }
@@ -231,6 +232,7 @@ export default function CheckinPage() {
   const [apiNotice, setApiNotice] = useState<string | null>(null)
   const [apiFlags, setApiFlags] = useState<CheckinApiFlags | null>(null)
   const [viewport, setViewport] = useState<CheckinViewport>("full")
+  const { latest: appleHealthSnap, loading: appleHealthLoading } = useHealthAutoMetrics()
 
   const supabaseOnFromEnv = isSupabaseEnabled()
   const mockOnFromEnv = isAppMockMode()
@@ -465,6 +467,31 @@ export default function CheckinPage() {
           </span>
         </div>
       </div>
+
+      {!mockOn && supabaseOn && (
+        <div className="rounded-xl border border-orbita-border/80 bg-orbita-surface-alt/40 px-3 py-2.5 text-xs leading-relaxed text-orbita-secondary">
+          <span className="font-medium text-orbita-primary">Salud (última importación)</span>
+          {appleHealthLoading ? (
+            <span className="ml-1">Cargando…</span>
+          ) : appleHealthSnap ? (
+            <span className="ml-1">
+              Día {appleHealthSnap.observed_at?.slice(0, 10) ?? "—"} · pasos{" "}
+              {appleHealthSnap.steps != null ? appleHealthSnap.steps.toLocaleString("es-ES") : "—"} ·{" "}
+              <Link href="/sistema" className="font-semibold text-[var(--color-accent-health)] underline-offset-2 hover:underline">
+                Vista Sistema
+              </Link>
+            </span>
+          ) : (
+            <span className="ml-1">
+              Aún no hay datos del atajo. Configura el atajo y vincula el token en{" "}
+              <Link href="/health" className="font-semibold text-[var(--color-accent-health)] underline-offset-2 hover:underline">
+                Salud
+              </Link>
+              .
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Cabecera página (referencia Figma) */}
       <header className="flex flex-col gap-4 rounded-2xl border border-orbita-border/90 bg-gradient-to-br from-orbita-surface-alt to-orbita-surface p-4 shadow-card sm:flex-row sm:items-start sm:justify-between sm:p-5">

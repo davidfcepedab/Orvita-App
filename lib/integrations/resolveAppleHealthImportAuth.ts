@@ -17,8 +17,10 @@ function extractBearerToken(req: NextRequest) {
 }
 
 function extractImportToken(req: NextRequest, body: Record<string, unknown>) {
-  const header = req.headers.get("x-orvita-import-token")?.trim()
-  if (header) return header
+  const a = req.headers.get("x-orvita-import-token")?.trim()
+  if (a) return a
+  const b = req.headers.get("x-reset-token")?.trim()
+  if (b) return b
   const fromBody = typeof body.import_token === "string" ? body.import_token.trim() : ""
   return fromBody || null
 }

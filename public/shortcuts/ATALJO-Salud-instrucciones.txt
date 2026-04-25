@@ -46,9 +46,9 @@ Si `shortcuts sign` muestra el error
      - Toca el atajo **«Órvita – Importar Salud Hoy»** (o el que hayas creado/importado con el mismo flujo).
      - Toca el botón **Compartir** (flecha/cuadro) o el menú **⋯** en la esquina.
      - Elige **Copiar enlace** / **Compartir enlace** / **Enlace** (el texto varía; debe generar un URL `https://www.icloud.com/shortcuts/…` o similar de Apple). No es un enlace a orvita.app; es alojado por iCloud.
-     - Pega esa URL en un sitio seguro. En el panel de despliegue (p. ej. Vercel → Environment variables) añade:
-       `NEXT_PUBLIC_ORVITA_HEALTH_SHORTCUT_ICLOUD_URL=https://www.icloud.com/shortcuts/…`
-       (sin comillas, sin espacio; HTTPS obligatorio). Redeploy. La web de Órvita mostrará **Instalar desde iCloud** y seguirá ofreciendo el .shortcut de orvita.app como alternativa.
+     - Pega esa URL en un sitio seguro. En el panel de despliegue (p. ej. Vercel → Environment variables) añade, por ejemplo:
+       `NEXT_PUBLIC_ORVITA_HEALTH_SHORTCUT_ICLOUD_URL=https://www.icloud.com/shortcuts/4a508d78d83f454090ceab97fd9f3c69`
+       (sustituye por la URL **Copiar enlace** que te dé el propio atajo; sin comillas, sin espacio; HTTPS obligatorio). Redeploy. La web de Órvita mostrará **Instalar desde iCloud** y seguirá ofreciendo el .shortcut de orvita.app como alternativa.
      - Si **actualizas** el flujo del atajo en el futuro, vuelve a **Compartir → Copiar enlace** y sustituye la variable: los enlaces viejos pueden dejar de apuntar a la versión nueva según la política de iCloud.
 - No intentes abrir en Atajos el binario **sin** firmar: la app lo bloquea a propósito en sistemas recientes.
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
+import { buildShortcutAnalyticsPayload, type HealthMetricRowLike } from "@/lib/health/shortcutHealthAnalytics"
 
 export const runtime = "nodejs"
 
@@ -20,11 +21,14 @@ export async function GET(req: NextRequest) {
 
     if (error) throw new Error(error.message)
     const latest = rows?.[0] ?? null
+    const timeline = (rows ?? []).reverse() as HealthMetricRowLike[]
+    const analytics = buildShortcutAnalyticsPayload(timeline, (latest as HealthMetricRowLike) ?? null)
 
     return NextResponse.json({
       success: true,
       latest,
-      timeline: (rows ?? []).reverse(),
+      timeline,
+      analytics,
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : "No se pudo leer métricas de salud"

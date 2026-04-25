@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
+import type { ShortcutHealthAnalyticsSnapshot } from "@/lib/health/shortcutHealthAnalytics"
 
 export type AutoHealthMetric = {
   observed_at: string
@@ -21,6 +22,7 @@ export type AutoHealthMetric = {
 export function useHealthAutoMetrics() {
   const [latest, setLatest] = useState<AutoHealthMetric | null>(null)
   const [timeline, setTimeline] = useState<AutoHealthMetric[]>([])
+  const [analytics, setAnalytics] = useState<ShortcutHealthAnalyticsSnapshot | null>(null)
   const [loading, setLoading] = useState(true)
 
   const refetch = useCallback(async () => {
@@ -32,10 +34,14 @@ export function useHealthAutoMetrics() {
         success?: boolean
         latest?: AutoHealthMetric | null
         timeline?: AutoHealthMetric[]
+        analytics?: ShortcutHealthAnalyticsSnapshot
       }
       if (res.ok && payload.success) {
         setLatest(payload.latest ?? null)
         setTimeline(Array.isArray(payload.timeline) ? payload.timeline : [])
+        setAnalytics(payload.analytics ?? null)
+      } else {
+        setAnalytics(null)
       }
     } finally {
       setLoading(false)
@@ -46,5 +52,5 @@ export function useHealthAutoMetrics() {
     void refetch()
   }, [refetch])
 
-  return { latest, timeline, loading, refetch }
+  return { latest, timeline, analytics, loading, refetch }
 }
