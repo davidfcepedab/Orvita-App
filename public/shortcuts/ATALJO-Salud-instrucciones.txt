@@ -55,6 +55,17 @@ Si `shortcuts sign` muestra el error
 Qué hace
 - Lee en el iPhone las muestras que elijas en el atajo (pasos, sueño, energía activa, entrenos, variación del latido, ritmo en reposo, etc.) y las envía a Órvita para guardarlas en tu cuenta.
 
+Orden obligatorio de la FECHA (causa nº1 del error `observed_at` con `received_keys` que incluyen esa clave)
+- En el editor se ve a veces esto (incorrecto): **«Aplicar formato a… [observed_at_text]»** y **después** «Establecer variable **observed_at_text** al texto formateado». Eso es una referencia circular: al ejecutar el primer paso, `observed_at_text` **aún no es una fecha** (está vacía o es un residuo viejo), así que el JSON termina con `"observed_at": null` y el servidor responde *required / valid date* aunque la clave exista.
+- Secuencia correcta (como en el generador `scripts/build-orvita-health-shortcut.py`):
+  1) **Fecha** → p. ej. «Fecha actual» o «Fecha actual» − 1 día (si quieres datos de “ayer”), de modo que la salida sea tipo **Fecha**.
+  2) **Aplicar formato a** → la entrada debe ser la **Fecha del paso 1** (no la variable `observed_at_text`). Formato: ISO 8601 con o sin hora, o personalizado `yyyy-MM-dd`.
+  3) **Establecer variable** `observed_at_text` = resultado de «Aplicar formato» (ya es **texto**).
+  4) Después: búsquedas de Salud, sumas, diccionario, «Obtener contenido de URL».
+- Comprueba en el iPhone: temporalmente añade **Mostrar** `observed_at_text` justo antes del POST; debe verse algo como `2026-04-26` o `2026-04-26T…`, nunca en blanco.
+- Claves del cuerpo JSON (alineadas con la API): `observed_at`, `steps`, `hrv_ms`, `resting_hr_bpm`, `active_energy_kcal`, `workouts_duration_seconds`, `sleep_duration_seconds` (duraciones en **segundos**). Evita nombres tipo `*_min` en la clave si el valor está en segundos: el backend espera esos nombres en snake_case del contrato.
+- «Reemplazar . con , en Valor» antes de enviar: innecesario para Órvita (el servidor acepta coma decimal en strings); si puedes, pasa **número** con «Obtener números» / «Calcular» sin ese reemplazo para menos sorpresas en el JSON.
+
 Configuración paso a paso (atajo + Órvita)
 1) En la web de Órvita, entra en Configuración → integraciones de Salud y genera un token de importación (copia el valor; caduca en unas horas).
 2) En el iPhone, instala el atajo «Órvita – Importar Salud Hoy» (enlace HTTPS de orvita.app o enlace iCloud si la app muestra «Instalar desde iCloud»).
