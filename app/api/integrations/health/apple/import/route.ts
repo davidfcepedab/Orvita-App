@@ -185,6 +185,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       observed_at: (norm.ok ? norm.observed_at : first?.observed_at?.slice(0, 10)) ?? null,
+      observed_at_inferred: norm.ok ? norm.observed_at_inferred : false,
       accepted_metrics: accepted,
       normalized: normalizedPayloadForResponse(norm, first),
       raw_payload_debug:

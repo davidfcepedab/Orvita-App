@@ -22,6 +22,7 @@ describe("normalizeAppleHealthPayload", () => {
     })
     expect(r.ok).toBe(true)
     if (!r.ok) return
+    expect(r.observed_at_inferred).toBe(false)
     expect(r.observed_at).toBe("2026-04-25")
     expect(r.normalized.steps).toBe(6413)
     expect(r.normalized.hrv_ms).toBeCloseTo(22.5, 1)
@@ -96,7 +97,26 @@ describe("normalizeAppleHealthPayload", () => {
     })
     expect(r.ok).toBe(true)
     if (!r.ok) return
+    expect(r.observed_at_inferred).toBe(false)
     expect(r.observed_at).toBe("2026-04-25")
+  })
+
+  test("Atajos: observed_at null pero hay métricas → día UTC hoy (inferido)", () => {
+    const r = normalizeAppleHealthPayload({
+      source: "x",
+      schema_version: "1",
+      hrv_ms: 30,
+      steps: 100,
+      resting_hr_bpm: 60,
+      active_energy_kcal: 200,
+      workouts_duration_seconds: 0,
+      sleep_duration_seconds: 8000,
+      observed_at: null,
+    } as Record<string, unknown>)
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.observed_at_inferred).toBe(true)
+    expect(r.observed_at).toMatch(/^\d{4}-\d{2}-\d{2}$/)
   })
 
   test("mantiene otras claves y observado_at; ignora basura de texto", () => {

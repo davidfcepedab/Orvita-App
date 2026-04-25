@@ -27,6 +27,8 @@ export type NormalizedAppleHealthMetrics = {
 type Ok = {
   ok: true
   observed_at: string
+  /** true si el día se infirió (Atajos envió fecha vacía/null aunque haya números) */
+  observed_at_inferred: boolean
   source_label: string | null
   /** ISO para DB / respuestas (derivado de observed_at) */
   observed_at_iso: string
@@ -85,6 +87,11 @@ export function coalesceNumericHealth(v: unknown): number | null {
 
 function parseObservedAtToIso(raw: unknown): { iso: string; ymd: string } | null {
   if (raw === null || raw === undefined) return null
+  if (typeof raw === "boolean") return null
+  if (Array.isArray(raw) && raw.length === 1) {
+    return parseObservedAtToIso(raw[0])
+  }
+  if (typeof raw === "string" && isEmptyishHealthValue(raw)) return null
   if (typeof raw === "number" && Number.isFinite(raw)) {
     const ms = raw > 0 && raw < 1_000_000_000_000 ? raw * 1000 : raw
     const dt = new Date(ms)
@@ -94,19 +101,39 @@ function parseObservedAtToIso(raw: unknown): { iso: string; ymd: string } | null
     const d2 = String(dt.getUTCDate()).padStart(2, "0")
     return { iso: dt.toISOString(), ymd: `${y2}-${m2}-${d2}` }
   }
-  const s0 = typeof raw === "string" ? raw.trim() : String(raw)
+  let s0 = typeof raw === "string" ? raw.trim() : String(raw)
+  if (s0 === "[object Object]") return null
+  if (s0.length === 0) return null
+  if (s0.length >= 2 && s0.startsWith("\"") && s0.endsWith("\"")) {
+    s0 = s0.slice(1, -1).trim()
+  }
   if (s0.length === 0) return null
   if (/^\d{10,16}$/.test(s0)) {
     return parseObservedAtToIso(Number(s0))
   }
-  const ymd = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s0)
-  if (ymd) {
-    const y = Number(ymd[1])
-    const m = Number(ymd[2]) - 1
-    const d = Number(ymd[3])
+  const ymdStrict = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s0)
+  if (ymdStrict) {
+    const y = Number(ymdStrict[1])
+    const m = Number(ymdStrict[2]) - 1
+    const d = Number(ymdStrict[3])
     const dt = new Date(Date.UTC(y, m, d, 12, 0, 0, 0))
     if (Number.isNaN(dt.getTime())) return null
     return { iso: dt.toISOString(), ymd: s0 }
+  }
+  const ymdLax = /^(\d{4})-(\d{1,2})-(\d{1,2})(?:$|[Tt\sZz+-])/.exec(s0)
+  if (ymdLax) {
+    const y = Number(ymdLax[1])
+    const m = Number(ymdLax[2]) - 1
+    const d = Number(ymdLax[3])
+    if (m >= 0 && m <= 11 && d >= 1 && d <= 31) {
+      const dt = new Date(Date.UTC(y, m, d, 12, 0, 0, 0))
+      if (Number.isNaN(dt.getTime())) return null
+      const y2 = String(dt.getUTCFullYear())
+      const m2 = String(dt.getUTCMonth() + 1).padStart(2, "0")
+      const d2 = String(dt.getUTCDate()).padStart(2, "0")
+      const ymd = `${y2}-${m2}-${d2}`
+      return { iso: dt.toISOString(), ymd }
+    }
   }
   const dt = new Date(s0)
   if (Number.isNaN(dt.getTime())) return null
@@ -117,15 +144,44 @@ function parseObservedAtToIso(raw: unknown): { iso: string; ymd: string } | null
 }
 
 /**
- * Atajos a veces pone `observed_at` en el JSON raíz y el `apple_bundle` (anidado o string) sin fecha.
- * También puede enviar la fecha como número (ms o s desde epoch).
+ * Cuerpo raíz y bundle: Atajos a veces pone `observed_at` en un sitio y no en el otro, o bajo "date"/"fecha".
  */
-function firstParsedObservedAt(...candidates: unknown[]): { iso: string; ymd: string } | null {
-  for (const c of candidates) {
+function firstParsedObservedFromBody(
+  body: Record<string, unknown>,
+  bundle: Record<string, unknown>,
+): { iso: string; ymd: string } | null {
+  const cands: unknown[] = [
+    bundle.observed_at,
+    body.observed_at,
+    body.date,
+    (body as Record<string, unknown>).fecha,
+    (body as Record<string, unknown>).observedAt,
+  ]
+  for (const c of cands) {
     const o = parseObservedAtToIso(c)
     if (o) return o
   }
   return null
+}
+
+function strictObservedAtEnv(): boolean {
+  const v = process.env.ORVITA_HEALTH_STRICT_OBSERVED_AT
+  return v === "1" || v === "true"
+}
+
+/** Números reales (métricas) aunque no haya `observed_at` útil. */
+function bundleHasPlausibleMetrics(bundle: Record<string, unknown>): boolean {
+  for (const [k, v] of Object.entries(bundle)) {
+    if (k === "source" || k === "schema_version" || k === "import_token" || k === "entries") continue
+    if (k === "observed_at") continue
+    if (coalesceNumericHealth(v) != null) return true
+  }
+  return false
+}
+
+function observedAtUtcToday(): { iso: string; ymd: string } {
+  const ymd = new Date().toISOString().slice(0, 10)
+  return parseObservedAtToIso(ymd) as { iso: string; ymd: string }
 }
 
 function takeMetric(
@@ -226,7 +282,12 @@ export function normalizeAppleHealthPayload(input: unknown): NormalizeAppleHealt
 
   const source_label = typeof body.source === "string" ? body.source.trim() || null : null
 
-  const o = firstParsedObservedAt(bundle.observed_at, body.observed_at)
+  let o = firstParsedObservedFromBody(body, bundle)
+  let observed_at_inferred = false
+  if (!o && !strictObservedAtEnv() && bundleHasPlausibleMetrics(bundle)) {
+    o = observedAtUtcToday()
+    observed_at_inferred = true
+  }
   if (!o) {
     field_errors.observed_at = "required (yyyy-MM-dd o ISO 8601)"
     return {
@@ -350,6 +411,7 @@ export function normalizeAppleHealthPayload(input: unknown): NormalizeAppleHealt
   return {
     ok: true,
     observed_at,
+    observed_at_inferred,
     source_label,
     observed_at_iso,
     accepted_metrics: accepted,
