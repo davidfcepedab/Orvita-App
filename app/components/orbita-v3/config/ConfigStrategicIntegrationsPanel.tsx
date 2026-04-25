@@ -1,12 +1,34 @@
 "use client"
 
-import { useCallback, useEffect, useState, type ReactNode } from "react"
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
 import { CheckCircle2, ChevronDown, HeartPulse, Landmark, RefreshCw } from "lucide-react"
 import { ConfigConnectionPill } from "@/app/components/orbita-v3/config/ConfigConnectionPill"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import type { OrbitaConfigTheme } from "@/app/components/orbita-v3/config/configThemeTypes"
 import { configConnectionActionClass, configSettingsSectionKickerClass } from "@/lib/config/configSettingsUi"
 import { formatRelativeSyncAgo } from "@/lib/time/formatRelativeSyncAgo"
+
+/** Relativo breve para una línea bajo el título "Salud" (muestra / import, no solo "sync" servidor). */
+function formatShortSampleAgo(iso: string | null | undefined): string {
+  if (!iso) return "sin fecha"
+  const t = new Date(iso).getTime()
+  if (Number.isNaN(t)) return "sin fecha"
+  const diff = Date.now() - t
+  if (diff < 0) return "reciente"
+  const min = Math.floor(diff / 60_000)
+  if (min < 1) return "hace un momento"
+  if (min < 60) return `hace ${min} min`
+  const hrs = Math.floor(min / 60)
+  if (hrs < 48) return `hace ${hrs} h`
+  const days = Math.floor(hrs / 24)
+  return `hace ${days} d`
+}
+
+function healthSourceLabel(source: string | null | undefined) {
+  if (source === "apple_health_export") return "Apple"
+  if (source === "google_fit") return "Google Fit"
+  return "—"
+}
 
 type IntegrationSettings = {
   health_enabled: boolean
@@ -70,9 +92,12 @@ export function ConfigStrategicIntegrationsPanel({
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [lastFailedAction, setLastFailedAction] = useState<"health" | "banking" | null>(null)
+  const [loadPending, setLoadPending] = useState(true)
   const toggleOptions = showHealth ? TOGGLE_OPTIONS : TOGGLE_OPTIONS.filter((item) => item.key !== "health_enabled")
 
   const load = useCallback(async () => {
+    setLoadPending(true)
+    try {
     const headers = await browserBearerHeaders()
     const [settingsRes, healthRes, bankingRes] = await Promise.all([
       fetch("/api/integrations/settings", { headers, cache: "no-store" }),
@@ -101,6 +126,9 @@ export function ConfigStrategicIntegrationsPanel({
     }
     setBankAccounts(bankingPayload.accounts ?? [])
     setBankLastSync(bankingPayload.lastSyncAt ?? null)
+    } finally {
+      setLoadPending(false)
+    }
   }, [])
 
   useEffect(() => {
@@ -395,8 +423,10 @@ export function ConfigStrategicIntegrationsPanel({
             {busy === "health" ? "…" : "Sync salud"}
           </button>
         </div>
-        <p className="mt-2.5 text-[11px]" style={{ color: theme.textMuted }}>
-          {formatRelativeSyncAgo(healthLastSync)} · {healthSource === "apple_health_export" ? "Apple" : healthSource === "google_fit" ? "Google Fit" : "Sin datos"}
+        <p className="mt-2.5 text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
+          {healthLastSync
+            ? `Fuente: ${healthSourceLabel(healthSource)} · ${formatShortSampleAgo(healthLastSync)} (muestra).`
+            : "Sin filas aún. Usa el atajo o los botones de arriba."}
         </p>
       </div>
     )
@@ -432,7 +462,7 @@ export function ConfigStrategicIntegrationsPanel({
               aria-pressed={settings.health_enabled}
               title="Salud automática: activa el módulo en el servidor para conectar e importar."
             >
-              {settings.health_enabled ? "Activa" : "Activar"}
+              {settings.health_enabled ? "Activo" : "Activar"}
             </button>
           </div>
           <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -464,13 +494,10 @@ export function ConfigStrategicIntegrationsPanel({
               {busy === "health" ? "…" : "Sincronizar salud"}
             </button>
           </div>
-          <p className="mt-2.5 text-[11px]" style={{ color: theme.textMuted }}>
-            {formatRelativeSyncAgo(healthLastSync)} ·{" "}
-            {healthSource === "apple_health_export"
-              ? "Apple"
-              : healthSource === "google_fit"
-                ? "Google Fit"
-                : "Sin datos aún"}
+          <p className="mt-2.5 text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
+            {healthLastSync
+              ? `Fuente: ${healthSourceLabel(healthSource)} · ${formatShortSampleAgo(healthLastSync)} (fecha de la muestra).`
+              : "Sin filas de métricas. Importa con el atajo o usa los botones de arriba."}
           </p>
         </div>
       )
@@ -540,10 +567,36 @@ export function ConfigStrategicIntegrationsPanel({
     <ConfigConnectionPill state="disconnected" disconnectedLabel="Conectar" />
   )
 
-  const saludPill = healthConnected ? (
-    <ConfigConnectionPill state="connected" connectedLabel="Sync listo" />
+  const healthAccordionMeta = useMemo(() => {
+    if (loadPending) {
+      return { subtitle: "Cargando estado de importación y sync…" }
+    }
+    if (!settings.health_enabled) {
+      return {
+        subtitle: "Atajo iOS, Apple Health y Google Fit. Activa el módulo abajo para conectar, importar o sincronizar.",
+      }
+    }
+    if (!healthConnected) {
+      return {
+        subtitle:
+          "Módulo activo. Aún no hay métricas en el servidor: usa el atajo en el iPhone, Conectar Apple o Sincronizar salud.",
+      }
+    }
+    const src = healthSourceLabel(healthSource)
+    const ago = formatShortSampleAgo(healthLastSync)
+    return {
+      subtitle: `Última muestra: ${src} · ${ago}. Puedes importar de nuevo o sincronizar abajo.`,
+    }
+  }, [loadPending, settings.health_enabled, healthConnected, healthSource, healthLastSync])
+
+  const saludPill = loadPending ? (
+    <ConfigConnectionPill state="checking" />
+  ) : !settings.health_enabled ? (
+    <ConfigConnectionPill state="disabled" disconnectedLabel="Módulo off" />
+  ) : healthConnected ? (
+    <ConfigConnectionPill state="connected" connectedLabel="Con muestras" />
   ) : (
-    <ConfigConnectionPill state="disconnected" disconnectedLabel="Sin datos" />
+    <ConfigConnectionPill state="disconnected" disconnectedLabel="Pendiente" />
   )
 
   if (unified && layout === "accordions") {
@@ -600,6 +653,7 @@ export function ConfigStrategicIntegrationsPanel({
         {showHealth ? (
           <details
             className="group open:shadow-sm"
+            id="acordeon-config-salud-integracion"
             style={{
               backgroundColor: theme.surface,
               borderRadius: "1rem",
@@ -622,8 +676,11 @@ export function ConfigStrategicIntegrationsPanel({
                   <p className="m-0 text-[0.9rem] font-medium tracking-tight" style={{ color: theme.text }}>
                     Salud
                   </p>
-                  <p className="m-0 mt-0.5 text-[12px] leading-snug" style={{ color: theme.textMuted }}>
-                    Atajos, Apple Health, Google Fit y sync.
+                  <p
+                    className="m-0 mt-0.5 text-[12px] leading-snug sm:max-w-[40rem]"
+                    style={{ color: theme.textMuted }}
+                  >
+                    {healthAccordionMeta.subtitle}
                   </p>
                 </div>
               </div>

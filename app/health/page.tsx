@@ -29,6 +29,7 @@ import { isAppMockMode, isSupabaseEnabled, UI_HEALTH_SUPPLEMENTS_LOCAL } from "@
 import { useHealthSummaryNarrative } from "@/app/health/useHealthSummaryNarrative"
 import { useAppleHevyCorrelationNarrative } from "@/app/health/useAppleHevyCorrelationNarrative"
 import { useHealthAutoMetrics } from "@/app/hooks/useHealthAutoMetrics"
+import { AppleShortcutAnalyticsSection } from "@/app/health/AppleShortcutAnalyticsSection"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import { appleDaySignalsFromHealthMetric, HEVY_INTEGRATION_LABEL } from "@/lib/health/appleHevyRelation"
 
@@ -85,6 +86,7 @@ export default function HealthPage() {
     timeline: autoHealthTimeline,
     loading: autoHealthLoading,
     refetch: refetchAutoHealth,
+    analytics: healthShortcutAnalytics,
   } = useHealthAutoMetrics()
   const [autoHealthBusy, setAutoHealthBusy] = useState(false)
   const [autoHealthNotice, setAutoHealthNotice] = useState<string | null>(null)
@@ -403,6 +405,12 @@ export default function HealthPage() {
           ) : null}
         </div>
       </Card>
+
+      <AppleShortcutAnalyticsSection
+        latest={autoHealth}
+        analytics={healthShortcutAnalytics}
+        loading={autoHealthLoading}
+      />
 
       <Card>
         <div className="grid gap-3 p-4 sm:gap-3.5 sm:p-6">

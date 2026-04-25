@@ -84,8 +84,9 @@ También se acepta el **mismo diccionario en la raíz** (sin anidar) por compati
 
 ## UI
 
-- **Sistema** (`/sistema`): cards operativas, estratégicas y de tendencia semanal alimentadas por el mismo endpoint
-- **Check-in**: franja informativa con enlace a Salud / Sistema cuando la nube está activa
+- **Operaciones de Salud** ([`/health`](https://orvita.app/health)): cards operativas, estratégicas y de tendencia semanal (import Atajo)
+- **Check-in**: franja informativa con enlace a `/health` cuando la nube está activa
+- `/sistema` redirige a `/health` (compatibilidad con enlaces antiguos)
 
 ## V2 (no implementado aún en este documento)
 

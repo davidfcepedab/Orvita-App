@@ -140,12 +140,33 @@ function collectNumericExtras(bundle: Record<string, unknown>, field_errors: Rec
  * - `{ apple_bundle: { ... } }` con o sin `source` / `schema_version`
  * - Payload plano con las mismas claves (sin anidar)
  */
+/**
+ * iOS Atajos a veces pasa `apple_bundle` como *texto* con JSON adentro (no como diccionario anidado).
+ * Sin esto, el cuerpo solo tiene la clave `apple_bundle` y el servidor no ve métricas.
+ */
+function coalesceAppleBundleValue(raw: unknown): Record<string, unknown> | null {
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    return raw as Record<string, unknown>
+  }
+  if (typeof raw === "string" && raw.trim().length > 0) {
+    try {
+      const parsed = JSON.parse(raw) as unknown
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        return parsed as Record<string, unknown>
+      }
+    } catch {
+      return null
+    }
+  }
+  return null
+}
+
 export function extractHealthBundleFromBody(body: unknown): { bundle: Record<string, unknown>; received_keys: string[] } | null {
   if (!body || typeof body !== "object" || Array.isArray(body)) return null
   const b = body as Record<string, unknown>
-  const ab = b.apple_bundle
-  if (ab && typeof ab === "object" && !Array.isArray(ab)) {
-    return { bundle: ab as Record<string, unknown>, received_keys: Object.keys(b) }
+  const ab = coalesceAppleBundleValue(b.apple_bundle)
+  if (ab) {
+    return { bundle: ab, received_keys: Object.keys(b) }
   }
   const out: Record<string, unknown> = {}
   for (const [k, v] of Object.entries(b)) {

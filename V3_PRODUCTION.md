@@ -15,17 +15,18 @@ This project runs on Next.js App Router and exposes canonical V3 modules with co
 - `/finanzas/transactions` -> Finance transactions
 - `/finanzas/insights` -> Finance insights
 - `/profesional` -> Professional module
-- `/sistema` -> System module
+- `/health` -> Operaciones de Salud (check-ins, Apple/Atajo, suplementos; **vista pública canónica** p. ej. orvita.app/health)
+- `/salud` -> Salud / dashboard v3
 - `/checkin` -> Daily check-in
 
 ## Compatibility aliases
 
 - `/config` -> redirects to `/configuracion`
-- `/health` -> redirects to `/salud`
+- `/sistema` -> redirects to `/health` (enlaces antiguos)
 - `/training` -> redirects to `/salud`
 - `/capital` -> redirects to `/finanzas/overview`
 - `/decision` -> redirects to `/profesional`
-- `/weekly` -> redirects to `/sistema`
+- `/weekly` -> redirects to `/health`
 - `/fisico` -> redirects to `/salud`
 - `/finanzas` -> redirects to `/finanzas/overview`
 

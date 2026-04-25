@@ -10,7 +10,7 @@ export default function Tabs() {
     { name: "Físico", href: "/salud" },
     { name: "Finanzas", href: "/finanzas/overview" },
     { name: "Profesional", href: "/profesional" },
-    { name: "Sistema", href: "/sistema" },
+    { name: "Sistema", href: "/health" },
   ]
 
   return (

@@ -18,7 +18,7 @@
 ./app/habitos
 ./app/salud
 ./app/salud/_hooks
-./app/sistema
+./app/sistema (redirect -> /health)
 ./app/configuracion
 ./app/components
 ./app/components/orbita-v3

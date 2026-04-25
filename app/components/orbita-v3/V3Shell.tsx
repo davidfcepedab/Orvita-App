@@ -36,7 +36,7 @@ export default function V3Shell({ children }: { children: React.ReactNode }) {
     { path: "/salud", icon: HeartPulse, label: "Salud" },
     { path: "/finanzas/overview", icon: Landmark, label: "Finanzas" },
     { path: "/profesional", icon: BriefcaseBusiness, label: "Coach" },
-    { path: "/sistema", icon: SlidersHorizontal, label: "Sistema" },
+    { path: "/health", icon: SlidersHorizontal, label: "Ops Salud" },
     { path: "/configuracion", icon: Settings, label: "Config" },
   ]
 

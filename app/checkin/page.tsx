@@ -477,8 +477,8 @@ export default function CheckinPage() {
             <span className="ml-1">
               Día {appleHealthSnap.observed_at?.slice(0, 10) ?? "—"} · pasos{" "}
               {appleHealthSnap.steps != null ? appleHealthSnap.steps.toLocaleString("es-ES") : "—"} ·{" "}
-              <Link href="/sistema" className="font-semibold text-[var(--color-accent-health)] underline-offset-2 hover:underline">
-                Vista Sistema
+              <Link href="/health" className="font-semibold text-[var(--color-accent-health)] underline-offset-2 hover:underline">
+                Ver en Salud
               </Link>
             </span>
           ) : (

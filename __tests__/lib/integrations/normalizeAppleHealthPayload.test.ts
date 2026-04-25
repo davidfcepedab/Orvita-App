@@ -110,6 +110,24 @@ describe("extractHealthBundleFromBody", () => {
     const ab = extractHealthBundleFromBody({ apple_bundle: { observed_at: "2026-04-25", steps: 2 } })
     expect(ab?.bundle.steps).toBe(2)
   })
+
+  test("apple_bundle como string JSON (Atajos iOS)", () => {
+    const inner = {
+      observed_at: "2026-04-25",
+      steps: 100,
+      hrv_ms: 30,
+      resting_hr_bpm: 60,
+      active_energy_kcal: 200,
+      workouts_duration_seconds: 0,
+      sleep_duration_seconds: 28800,
+    }
+    const ext = extractHealthBundleFromBody({
+      apple_bundle: JSON.stringify(inner),
+    })
+    expect(ext?.bundle.steps).toBe(100)
+    const n = normalizeAppleHealthPayload({ apple_bundle: JSON.stringify(inner) })
+    expect(n.ok).toBe(true)
+  })
 })
 
 describe("rowsFromAppleBundlePayload upsert-friendly row", () => {
