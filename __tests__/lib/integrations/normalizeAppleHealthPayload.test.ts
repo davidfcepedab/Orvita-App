@@ -63,6 +63,42 @@ describe("normalizeAppleHealthPayload", () => {
     expect(r.ok).toBe(false)
   })
 
+  test("observed_at solo en raíz cuando hay apple_bundle (Atajos)", () => {
+    const r = normalizeAppleHealthPayload({
+      source: "ios_shortcuts",
+      schema_version: "1",
+      observed_at: "2026-04-25",
+      apple_bundle: {
+        steps: 100,
+        hrv_ms: 30,
+        resting_hr_bpm: 60,
+        active_energy_kcal: 200,
+        workouts_duration_seconds: 0,
+        sleep_duration_seconds: 28800,
+      },
+    })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.observed_at).toBe("2026-04-25")
+  })
+
+  test("observed_at como timestamp ms (número)", () => {
+    const r = normalizeAppleHealthPayload({
+      apple_bundle: {
+        observed_at: Date.UTC(2026, 3, 25, 12, 0, 0, 0),
+        steps: 1,
+        hrv_ms: 30,
+        resting_hr_bpm: 60,
+        active_energy_kcal: 0,
+        workouts_duration_seconds: 0,
+        sleep_duration_seconds: 0,
+      },
+    })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.observed_at).toBe("2026-04-25")
+  })
+
   test("mantiene otras claves y observado_at; ignora basura de texto", () => {
     const r = normalizeAppleHealthPayload({
       apple_bundle: {
@@ -93,6 +129,23 @@ describe("normalizeAppleHealthPayload", () => {
     expect(r.ok).toBe(true)
     if (!r.ok) return
     expect(r.normalized.sleep_duration_seconds).toBe(34513)
+  })
+
+  test("sleep_duration_seconds agregada > 24h (Atajos) se acepta y capa a 1 día", () => {
+    const r = normalizeAppleHealthPayload({
+      apple_bundle: {
+        observed_at: "2026-04-25",
+        steps: 1,
+        hrv_ms: 30,
+        resting_hr_bpm: 50,
+        active_energy_kcal: 0,
+        workouts_duration_seconds: 0,
+        sleep_duration_seconds: 113_278,
+      },
+    })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.normalized.sleep_duration_seconds).toBe(86_400)
   })
 })
 

@@ -85,8 +85,20 @@ export function coalesceNumericHealth(v: unknown): number | null {
 
 function parseObservedAtToIso(raw: unknown): { iso: string; ymd: string } | null {
   if (raw === null || raw === undefined) return null
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    const ms = raw > 0 && raw < 1_000_000_000_000 ? raw * 1000 : raw
+    const dt = new Date(ms)
+    if (Number.isNaN(dt.getTime())) return null
+    const y2 = dt.getUTCFullYear()
+    const m2 = String(dt.getUTCMonth() + 1).padStart(2, "0")
+    const d2 = String(dt.getUTCDate()).padStart(2, "0")
+    return { iso: dt.toISOString(), ymd: `${y2}-${m2}-${d2}` }
+  }
   const s0 = typeof raw === "string" ? raw.trim() : String(raw)
   if (s0.length === 0) return null
+  if (/^\d{10,16}$/.test(s0)) {
+    return parseObservedAtToIso(Number(s0))
+  }
   const ymd = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s0)
   if (ymd) {
     const y = Number(ymd[1])
@@ -102,6 +114,18 @@ function parseObservedAtToIso(raw: unknown): { iso: string; ymd: string } | null
   const m2 = String(dt.getUTCMonth() + 1).padStart(2, "0")
   const d2 = String(dt.getUTCDate()).padStart(2, "0")
   return { iso: dt.toISOString(), ymd: `${y2}-${m2}-${d2}` }
+}
+
+/**
+ * Atajos a veces pone `observed_at` en el JSON raíz y el `apple_bundle` (anidado o string) sin fecha.
+ * También puede enviar la fecha como número (ms o s desde epoch).
+ */
+function firstParsedObservedAt(...candidates: unknown[]): { iso: string; ymd: string } | null {
+  for (const c of candidates) {
+    const o = parseObservedAtToIso(c)
+    if (o) return o
+  }
+  return null
 }
 
 function takeMetric(
@@ -202,7 +226,7 @@ export function normalizeAppleHealthPayload(input: unknown): NormalizeAppleHealt
 
   const source_label = typeof body.source === "string" ? body.source.trim() || null : null
 
-  const o = parseObservedAtToIso(bundle.observed_at)
+  const o = firstParsedObservedAt(bundle.observed_at, body.observed_at)
   if (!o) {
     field_errors.observed_at = "required (yyyy-MM-dd o ISO 8601)"
     return {
@@ -278,7 +302,10 @@ export function normalizeAppleHealthPayload(input: unknown): NormalizeAppleHealt
   let sleepSec = takeMetric(
     bundle,
     "sleep_duration_seconds",
-    (v) => (v >= 0 && v <= 86_400 ? { v: Math.round(v) } : { err: "must be 0–86400 (seconds per day)" }),
+    (v) =>
+      v >= 0 && v <= 200_000
+        ? { v: Math.min(Math.round(v), 86_400) }
+        : { err: "must be 0–200000s (capped to 1 day for storage)" },
     field_errors,
   )
   if (sleepSec !== undefined) {
