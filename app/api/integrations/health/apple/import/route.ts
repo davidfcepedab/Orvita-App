@@ -5,6 +5,7 @@ import { rowsFromAppleBundlePayload } from "@/lib/integrations/mergeAppleHealthI
 import { extractHealthBundleFromBody, normalizeAppleHealthPayload } from "@/lib/integrations/normalizeAppleHealthPayload"
 import { upsertAppleHealthImportRow } from "@/lib/integrations/upsertHealthMetricRow"
 import { resolveAppleHealthImportAuth } from "@/lib/integrations/resolveAppleHealthImportAuth"
+import { applyObservedAtFromRequestHeaders } from "@/lib/integrations/applyObservedAtFromRequestHeaders"
 
 export const runtime = "nodejs"
 
@@ -103,6 +104,7 @@ function acceptedListFromNorm(norm: ReturnType<typeof normalizeAppleHealthPayloa
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>
+    applyObservedAtFromRequestHeaders(req, body)
     const topKeys = Object.keys(body)
     logImport({ event: "hit", received_keys: topKeys })
 
@@ -127,6 +129,10 @@ export async function POST(req: NextRequest) {
             received_keys: topKeys,
             hint: norm.hint,
             field_errors: norm.field_errors,
+            orvita_fix:
+              norm.field_errors?.observed_at != null
+                ? "En Atajos: en «Obtener contenido de URL» añade encabezado x-orvita-observed-at = la misma fecha (texto yyyy-MM-dd) que usas en el diccionario; a veces el JSON manda null aunque «Mostrar diccionario» se vea bien."
+                : undefined,
           },
           { status: 400 },
         )

@@ -66,6 +66,15 @@ Orden obligatorio de la FECHA (causa nº1 del error `observed_at` con `received_
 - Claves del cuerpo JSON (alineadas con la API): `observed_at`, `steps`, `hrv_ms`, `resting_hr_bpm`, `active_energy_kcal`, `workouts_duration_seconds`, `sleep_duration_seconds` (duraciones en **segundos**). Evita nombres tipo `*_min` en la clave si el valor está en segundos: el backend espera esos nombres en snake_case del contrato.
 - «Reemplazar . con , en Valor» antes de enviar: innecesario para Órvita (el servidor acepta coma decimal en strings); si puedes, pasa **número** con «Obtener números» / «Calcular» sin ese reemplazo para menos sorpresas en el JSON.
 
+Flujo completo (de cero) y por qué «Mostrar diccionario» puede verse bien y el POST fallar
+- Secuencia lógica: (1) token (variable `token_importacion` o el nombre que uses) → (2) **Fecha** → (3) **Aplicar formato** a esa fecha (no a `observed_at_text`) → (4) **Establecer** `observed_at_text` → (5) búsquedas de Salud, variables numéricas → (6) **Diccionario** con claves `observed_at` → `observed_at_text` y el resto del contrato → (7) **Obtener contenido de URL** (POST, JSON) **a la misma** URL y el **mismo** token en cabecera.
+- A veces en el paso (7) reconfiguras el cuerpo JSON **campo a campo** otra vez; si la variable `observed_at` queda con un enlace roto, el servidor recibe `null` aunque el paso **Mostrar diccionario** (acción 6) mostrara datos de una **ejecución** anterior o de un cálculo intermedio. Comprueba: pega **inmediatamente antes** de «Obtener contenido de URL» una acción **Mostrar** `observed_at_text`; si al ejecutar hoy sale vacío, el enlace al POST es el que falla, no el de «Mostrar diccionario».
+- **Solución fiable (recomendada en Atajos):** en «Obtener contenido de URL» → **Encabezados**, añade además de `Content-Type` y `x-orvita-import-token`:
+  - Nombre: `x-orvita-observed-at`
+  - Valor: la variable `observed_at_text` (el mismo texto `yyyy-MM-dd` que pones en el diccionario).
+  El API de Órvita usa esta cabecera si el cuerpo JSON manda `observed_at` vacío o null. Así el día llega aunque iOS falle al serializar el diccionario en el cuerpo.
+- Si aún recibes 400, el JSON de error puede incluir `orvita_fix` con el recordatorio de la cabecera (tras un despliegue reciente del servidor).
+
 Configuración paso a paso (atajo + Órvita)
 1) En la web de Órvita, entra en Configuración → integraciones de Salud y genera un token de importación (copia el valor; caduca en unas horas).
 2) En el iPhone, instala el atajo «Órvita – Importar Salud Hoy» (enlace HTTPS de orvita.app o enlace iCloud si la app muestra «Instalar desde iCloud»).
