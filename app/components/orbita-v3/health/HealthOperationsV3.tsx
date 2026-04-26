@@ -197,7 +197,7 @@ export default function HealthOperationsV3({
 
   return (
     <section
-      className={compact ? "mt-0 space-y-6" : "mt-10 space-y-10 lg:space-y-12"}
+      className={compact ? "mt-0 space-y-6" : "mt-0 space-y-8 lg:space-y-10"}
       style={{ color: theme.text }}
     >
       {!compact ? (

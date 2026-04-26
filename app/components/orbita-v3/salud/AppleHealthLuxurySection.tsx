@@ -163,78 +163,38 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
             style={{ borderColor: saludHexToRgba(theme.border, 0.65) }}
           >
             <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-              {/* Cerrado: fila + acciones rápidas (se ocultan al expandir para no duplicar UI) */}
-              <div className="space-y-3 px-3 py-3 sm:px-4 group-open:hidden">
-                <div className="flex flex-wrap items-center justify-between gap-2 gap-y-2">
-                  <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
-                    <span
-                      className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.2em]"
-                      style={{ color: theme.textMuted }}
-                    >
-                      Apple Health
-                    </span>
-                    <span
-                      className="inline-flex max-w-full min-w-0 items-center gap-2 rounded-full px-2.5 py-1 text-[10px] font-semibold leading-snug sm:max-w-[min(100%,20rem)] sm:px-3 sm:text-[11px]"
-                      style={{
-                        backgroundColor: syncChip.bg,
-                        color: syncChip.fg,
-                      }}
-                    >
-                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-90" aria-hidden />
-                      {syncChip.label}
-                    </span>
-                  </div>
-                  <span
-                    className="inline-flex shrink-0 items-center gap-1 text-[10px] font-medium uppercase tracking-[0.14em]"
-                    style={{ color: theme.textMuted }}
-                  >
-                    Detalles
-                    <ChevronDown className="h-3.5 w-3.5 shrink-0" style={{ color: theme.textMuted }} aria-hidden />
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-2" role="group" aria-label="Acciones rápidas Apple Health">
-                  <a
-                    href={runShortcutHref}
-                    className="inline-flex min-h-9 shrink-0 items-center justify-center gap-2 rounded-lg px-3.5 text-xs font-semibold text-white no-underline transition active:scale-[0.99]"
-                    style={{ backgroundColor: SALUD_SEM.energy }}
-                    title="Abre el atajo en el iPhone para enviar el día"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Zap className="h-4 w-4 shrink-0 opacity-95" aria-hidden />
-                    Ejecutar atajo
-                  </a>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      void onRefresh()
-                    }}
-                    disabled={loading}
-                    className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-lg border px-3 text-xs font-medium transition active:scale-[0.99] disabled:opacity-50"
-                    style={{
-                      borderColor: saludHexToRgba(theme.border, 0.85),
-                      backgroundColor: "transparent",
-                      color: theme.text,
-                    }}
-                    title="Recarga desde Órvita lo último que envió el atajo"
-                  >
-                    {loading ? "Actualizando…" : "Actualizar lectura"}
-                  </button>
-                  <Link
-                    href="/configuracion#apple-health-import-token"
-                    className="inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border px-2.5 text-xs font-semibold no-underline transition active:scale-[0.99] sm:px-3"
-                    style={{
-                      borderColor: saludHexToRgba(theme.border, 0.85),
-                      backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.35),
-                      color: theme.text,
-                    }}
-                    title="Configurar token del Atajo en Configuración"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Settings className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
-                    Token en Configuración
-                  </Link>
-                </div>
+              {/* Cerrado: solo Apple Health + atajo + chip sync (resto al expandir) */}
+              <div className="flex flex-wrap items-center gap-2 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3 group-open:hidden">
+                <span
+                  className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.2em]"
+                  style={{ color: theme.textMuted }}
+                >
+                  Apple Health
+                </span>
+                <a
+                  href={runShortcutHref}
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white no-underline transition active:scale-[0.98]"
+                  style={{ backgroundColor: SALUD_SEM.energy }}
+                  aria-label="Traer datos de hoy (Atajo)"
+                  title="Traer hoy — abre el atajo en el iPhone"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Zap className="h-4 w-4 shrink-0" aria-hidden />
+                </a>
+                <span
+                  className="inline-flex min-w-0 max-w-full flex-1 items-center gap-2 rounded-full px-2.5 py-1 text-[10px] font-semibold leading-snug sm:max-w-[min(100%,22rem)] sm:px-3 sm:text-[11px]"
+                  style={{
+                    backgroundColor: syncChip.bg,
+                    color: syncChip.fg,
+                  }}
+                >
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-90" aria-hidden />
+                  <span className="min-w-0 truncate">{syncChip.label}</span>
+                </span>
+                <span className="ml-auto inline-flex shrink-0 items-center gap-1" style={{ color: theme.textMuted }}>
+                  <span className="sr-only">Abrir detalles de sincronización</span>
+                  <ChevronDown className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
+                </span>
               </div>
               {/* Abierto: solo barra para cerrar (sin duplicar atajo / token en la misma franja) */}
               <div
