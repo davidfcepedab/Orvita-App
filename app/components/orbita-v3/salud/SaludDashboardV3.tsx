@@ -3,17 +3,38 @@
 import HealthOperationsV3 from "@/app/components/orbita-v3/health/HealthOperationsV3"
 import TrainingOperationsV3 from "@/app/components/orbita-v3/training/TrainingOperationsV3"
 import AppleHealthLuxurySection from "@/app/components/orbita-v3/salud/AppleHealthLuxurySection"
+import { HealthCorrelationsPanel } from "@/app/components/orbita-v3/salud/HealthCorrelationsPanel"
 import { useSaludContext } from "@/app/salud/_hooks/useSaludContext"
+import { useHealthAutoMetrics } from "@/app/hooks/useHealthAutoMetrics"
+import { useOrbitaSkin } from "@/app/contexts/AppContext"
+import { saludPageBackdropStyle } from "@/lib/salud/saludThemeStyles"
 
 export default function SaludDashboardV3() {
   const salud = useSaludContext()
+  const autoHealth = useHealthAutoMetrics()
+  const theme = useOrbitaSkin()
 
   return (
-    <div className="relative isolate min-h-screen space-y-10 pb-32 pt-2">
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(120%_70%_at_50%_-10%,rgba(56,189,248,0.14),transparent_55%),radial-gradient(90%_60%_at_100%_0%,rgba(52,211,153,0.12),transparent_45%),linear-gradient(180deg,#020617_0%,#0b1224_45%,#020617_100%)]" />
+    <div
+      className="relative isolate min-h-screen space-y-10 pb-32 pt-2"
+      style={{ backgroundColor: theme.bg, color: theme.text }}
+    >
+      <div className="pointer-events-none absolute inset-0 -z-10" style={saludPageBackdropStyle(theme)} />
 
-      <AppleHealthLuxurySection salud={salud} />
-      <HealthOperationsV3 salud={salud} />
+      <AppleHealthLuxurySection
+        salud={salud}
+        latest={autoHealth.latest}
+        loading={autoHealth.loading}
+        onRefresh={autoHealth.refetch}
+      />
+      <HealthOperationsV3 salud={salud} latest={autoHealth.latest} />
+      <HealthCorrelationsPanel
+        salud={salud}
+        latest={autoHealth.latest}
+        timeline={autoHealth.timeline}
+        analytics={autoHealth.analytics}
+        loading={autoHealth.loading}
+      />
       <TrainingOperationsV3 salud={salud} />
     </div>
   )

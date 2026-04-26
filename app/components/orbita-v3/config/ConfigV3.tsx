@@ -16,13 +16,14 @@ import { ConfigStrategicIntegrationsPanel } from "@/app/components/orbita-v3/con
 import { ConfigNotificationPreferencesPanel } from "@/app/components/orbita-v3/config/ConfigNotificationPreferencesPanel"
 import { ConfigPwaInstallPanel } from "@/app/components/orbita-v3/config/ConfigPwaInstallPanel"
 import { ConfigPasskeyPanel } from "@/app/components/orbita-v3/config/ConfigPasskeyPanel"
+import { ConfigAccordion } from "@/app/components/orbita-v3/config/ConfigAccordion"
 import { ConfigConnectionPill } from "@/app/components/orbita-v3/config/ConfigConnectionPill"
 import { ConfigHealthUnifiedPanel } from "@/app/components/orbita-v3/config/ConfigHealthUnifiedPanel"
 import { designTokens } from "@/src/theme/design-tokens"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { createBrowserClient } from "@/lib/supabase/browser"
 import Link from "next/link"
-import { CalendarDays, ChevronDown, Dumbbell, KeyRound, Monitor, Palette, Smartphone, User } from "lucide-react"
+import { Bell, CalendarDays, Dumbbell, KeyRound, Monitor, Palette, Settings2, Smartphone, User } from "lucide-react"
 import { defaultCustomPalette, normalizeHex, type CustomPalette } from "@/lib/theme/customPalette"
 import type { HouseholdMemberDTO } from "@/lib/household/memberTypes"
 
@@ -531,6 +532,22 @@ export default function ConfigV3() {
     { id: "zen", label: "Modo foco (Zen)" },
   ]
 
+  const appearanceHint = useMemo(() => {
+    const themeShort: Record<ColorTheme, string> = {
+      arctic: "Claro",
+      carbon: "Oscuro",
+      sand: "Cálido",
+      midnight: "Profundo",
+      custom: "Personal",
+    }
+    const layoutShort: Record<LayoutMode, string> = {
+      balanced: "Equilibrado",
+      compact: "Compacto",
+      zen: "Foco",
+    }
+    return `${themeShort[colorTheme]} · ${layoutShort[layoutMode]}`
+  }, [colorTheme, layoutMode])
+
   const applyPaletteDraft = () => {
     const next: CustomPalette = {
       background: normalizeHex(paletteDraft.background) ?? customPalette.background,
@@ -715,157 +732,111 @@ export default function ConfigV3() {
           Conexiones
         </h2>
         <p className="m-0 mt-1 text-base font-light tracking-[-0.02em] sm:text-lg" style={{ color: theme.text }}>
-          Un gesto, un bloque
+          Cada conexión muestra su estado sin abrirla
         </p>
-        <div className="mt-4 space-y-1.5 sm:mt-5">
-          <details
-            className="group open:shadow-sm"
-            style={{
-              backgroundColor: theme.surface,
-              borderRadius: "1rem",
-              boxShadow: isAltCard
-                ? "0 1px 0 rgba(15, 23, 42, 0.05), 0 0 0 1px rgba(15, 23, 42, 0.06)"
-                : "0 1px 0 rgba(15, 23, 42, 0.04), 0 0 0 1px rgba(15, 23, 42, 0.04)",
-            }}
+        <div className="mt-4 space-y-2 sm:mt-5">
+          <ConfigAccordion
+            theme={theme}
+            cardVariant={isAltCard ? "alt" : "default"}
             data-orvita-subsection="google-calendar"
-          >
-            <summary
-              className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-3 sm:px-4 [&::-webkit-details-marker]:hidden"
-              style={{ color: theme.text }}
-            >
-              <div className="flex min-w-0 flex-1 items-start gap-2.5 sm:gap-3">
-                <span
-                  className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
-                  style={{ backgroundColor: theme.surfaceAlt }}
-                  aria-hidden
-                >
-                  <CalendarDays className="h-4 w-4" style={{ color: theme.accent.agenda }} />
-                </span>
-                <div className="min-w-0 text-left">
-                  <p className="m-0 text-sm font-medium tracking-tight" style={{ color: theme.text }}>
-                    Google
-                  </p>
-                  <p className="m-0 mt-0.5 text-[12px] leading-snug" style={{ color: theme.textMuted }}>
-                    Mantén tu calendario y tareas alineados.
-                  </p>
-                </div>
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <ConfigConnectionPill
-                  state={connecting ? "checking" : googleConnected ? "connected" : "disconnected"}
-                  connectedLabel="Conectado"
-                  disconnectedLabel="Conectar"
-                />
-                <ChevronDown
-                  className="h-4 w-4 shrink-0 transition-transform duration-200 group-open:rotate-180"
-                  style={{ color: theme.textMuted }}
-                  aria-hidden
-                />
-              </div>
-            </summary>
-            <div className="border-t" style={{ borderColor: theme.border }}>
-              <ConfigIntegrationsPanel
-                theme={theme}
-                accordionMode
-                only="google"
-                googleConnected={googleConnected}
-                googleError={googleError}
-                googleSync={googleSync}
-                connecting={connecting}
-                disconnectingGoogle={disconnectingGoogle}
-                syncingCalendar={syncingCalendar}
-                syncingTasks={syncingTasks}
-                onConnectGoogle={() => void handleConnectGoogle()}
-                onDisconnectGoogle={() => void handleDisconnectGoogle()}
-                onSyncCalendar={() => void handleSync("calendar")}
-                onSyncTasks={() => void handleSync("tasks")}
-                hevyConnected={hevyConnected}
-                hevyChecking={hevyChecking}
-                hevySyncing={hevySyncing}
-                hevyMessage={hevyMessage}
-                onHevySync={() => void handleHevySync()}
-                googleLastSyncAt={googleLastSyncAt}
-                hevyLastSyncAt={hevyLastSyncAt}
-                unified
+            leading={<CalendarDays className="h-4 w-4" style={{ color: theme.accent.agenda }} />}
+            title="Google"
+            description="Calendario y tareas con la misma cuenta"
+            trailing={
+              <ConfigConnectionPill
+                state={
+                  googleError
+                    ? "error"
+                    : connecting
+                      ? "checking"
+                      : googleConnected
+                        ? "connected"
+                        : "disconnected"
+                }
+                errorLabel="Revisar"
+                connectedLabel="Conectado"
+                disconnectedLabel="Sin conectar"
               />
-            </div>
-          </details>
+            }
+          >
+            <ConfigIntegrationsPanel
+              theme={theme}
+              accordionMode
+              only="google"
+              googleConnected={googleConnected}
+              googleError={googleError}
+              googleSync={googleSync}
+              connecting={connecting}
+              disconnectingGoogle={disconnectingGoogle}
+              syncingCalendar={syncingCalendar}
+              syncingTasks={syncingTasks}
+              onConnectGoogle={() => void handleConnectGoogle()}
+              onDisconnectGoogle={() => void handleDisconnectGoogle()}
+              onSyncCalendar={() => void handleSync("calendar")}
+              onSyncTasks={() => void handleSync("tasks")}
+              hevyConnected={hevyConnected}
+              hevyChecking={hevyChecking}
+              hevySyncing={hevySyncing}
+              hevyMessage={hevyMessage}
+              onHevySync={() => void handleHevySync()}
+              googleLastSyncAt={googleLastSyncAt}
+              hevyLastSyncAt={hevyLastSyncAt}
+              unified
+            />
+          </ConfigAccordion>
 
-          <details
-            className="group open:shadow-sm"
-            style={{
-              backgroundColor: theme.surface,
-              borderRadius: "1rem",
-              boxShadow: isAltCard
-                ? "0 1px 0 rgba(15, 23, 42, 0.05), 0 0 0 1px rgba(15, 23, 42, 0.06)"
-                : "0 1px 0 rgba(15, 23, 42, 0.04), 0 0 0 1px rgba(15, 23, 42, 0.04)",
-            }}
+          <ConfigAccordion
+            theme={theme}
+            cardVariant={isAltCard ? "alt" : "default"}
             data-orvita-subsection="hevy"
-          >
-            <summary
-              className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-3 sm:px-4 [&::-webkit-details-marker]:hidden"
-              style={{ color: theme.text }}
-            >
-              <div className="flex min-w-0 flex-1 items-start gap-2.5 sm:gap-3">
-                <span
-                  className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
-                  style={{ backgroundColor: theme.surfaceAlt }}
-                  aria-hidden
-                >
-                  <Dumbbell className="h-4 w-4" style={{ color: theme.textMuted }} />
-                </span>
-                <div className="min-w-0 text-left">
-                  <p className="m-0 text-sm font-medium tracking-tight" style={{ color: theme.text }}>
-                    Hevy
-                  </p>
-                  <p className="m-0 mt-0.5 text-[12px] leading-snug" style={{ color: theme.textMuted }}>
-                    Registra y revisa entrenamientos.
-                  </p>
-                </div>
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <ConfigConnectionPill
-                  state={hevyChecking ? "checking" : hevySyncing ? "checking" : hevyConnected ? "connected" : "disconnected"}
-                  connectedLabel="Conectado"
-                  disconnectedLabel="Conectar"
-                  onDisconnectedClick={
-                    hevyConnected || hevyChecking || hevySyncing ? undefined : () => void handleHevySync()
-                  }
-                />
-                <ChevronDown
-                  className="h-4 w-4 shrink-0 transition-transform duration-200 group-open:rotate-180"
-                  style={{ color: theme.textMuted }}
-                  aria-hidden
-                />
-              </div>
-            </summary>
-            <div className="border-t" style={{ borderColor: theme.border }}>
-              <ConfigIntegrationsPanel
-                theme={theme}
-                accordionMode
-                only="hevy"
-                googleConnected={googleConnected}
-                googleError={googleError}
-                googleSync={googleSync}
-                connecting={connecting}
-                disconnectingGoogle={disconnectingGoogle}
-                syncingCalendar={syncingCalendar}
-                syncingTasks={syncingTasks}
-                onConnectGoogle={() => void handleConnectGoogle()}
-                onDisconnectGoogle={() => void handleDisconnectGoogle()}
-                onSyncCalendar={() => void handleSync("calendar")}
-                onSyncTasks={() => void handleSync("tasks")}
-                hevyConnected={hevyConnected}
-                hevyChecking={hevyChecking}
-                hevySyncing={hevySyncing}
-                hevyMessage={hevyMessage}
-                onHevySync={() => void handleHevySync()}
-                googleLastSyncAt={googleLastSyncAt}
-                hevyLastSyncAt={hevyLastSyncAt}
-                unified
+            leading={<Dumbbell className="h-4 w-4" style={{ color: theme.textMuted }} />}
+            title="Hevy"
+            description="Rutina y entrenamientos en Órvita"
+            trailing={
+              <ConfigConnectionPill
+                state={
+                  hevyChecking || hevySyncing
+                    ? "checking"
+                    : hevyMessage && !hevyMessage.startsWith("Sincronizado:")
+                      ? "error"
+                      : hevyConnected
+                        ? "connected"
+                        : "disconnected"
+                }
+                errorLabel="Revisar"
+                connectedLabel="Conectado"
+                disconnectedLabel="Conectar"
+                onDisconnectedClick={
+                  hevyConnected || hevyChecking || hevySyncing ? undefined : () => void handleHevySync()
+                }
               />
-            </div>
-          </details>
+            }
+          >
+            <ConfigIntegrationsPanel
+              theme={theme}
+              accordionMode
+              only="hevy"
+              googleConnected={googleConnected}
+              googleError={googleError}
+              googleSync={googleSync}
+              connecting={connecting}
+              disconnectingGoogle={disconnectingGoogle}
+              syncingCalendar={syncingCalendar}
+              syncingTasks={syncingTasks}
+              onConnectGoogle={() => void handleConnectGoogle()}
+              onDisconnectGoogle={() => void handleDisconnectGoogle()}
+              onSyncCalendar={() => void handleSync("calendar")}
+              onSyncTasks={() => void handleSync("tasks")}
+              hevyConnected={hevyConnected}
+              hevyChecking={hevyChecking}
+              hevySyncing={hevySyncing}
+              hevyMessage={hevyMessage}
+              onHevySync={() => void handleHevySync()}
+              googleLastSyncAt={googleLastSyncAt}
+              hevyLastSyncAt={hevyLastSyncAt}
+              unified
+            />
+          </ConfigAccordion>
         </div>
 
         <div className="mt-1.5" id="conexion-salud" data-orvita-section="strategic-stack">
@@ -874,6 +845,7 @@ export default function ConfigV3() {
             unified
             layout="accordions"
             showHealth
+            cardVariant={isAltCard ? "alt" : "default"}
             beforeHealthServer={
               <div className="border-b" style={{ borderColor: theme.border }}>
                 <ConfigHealthUnifiedPanel theme={theme} embedInStrategic />
@@ -892,37 +864,18 @@ export default function ConfigV3() {
           Sistema
         </h2>
         <p className="m-0 mt-1 text-base font-light tracking-[-0.02em] sm:text-lg" style={{ color: theme.text }}>
-          App, aspecto y atajos
+          Cómo se siente y cómo se instala
         </p>
-        <details
-          className="group mt-4 sm:mt-5"
-          style={{
-            backgroundColor: theme.surface,
-            borderRadius: "1rem",
-            boxShadow: isAltCard
-              ? "0 1px 0 rgba(15, 23, 42, 0.05), 0 0 0 1px rgba(15, 23, 42, 0.06)"
-              : "0 1px 0 rgba(15, 23, 42, 0.04), 0 0 0 1px rgba(15, 23, 42, 0.04)",
-          }}
+        <div className="mt-3 space-y-2 sm:mt-4">
+        <ConfigAccordion
+          theme={theme}
+          cardVariant={isAltCard ? "alt" : "default"}
+          data-orvita-section="sistema-accordion"
+          leading={<Settings2 className="h-4 w-4" style={{ color: theme.textMuted }} />}
+          title="Instalación y acceso"
+          description="PWA, biometría y dónde está el atajo de salud"
         >
-          <summary
-            className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-3.5 sm:px-4 sm:py-4 [&::-webkit-details-marker]:hidden"
-            style={{ color: theme.text }}
-          >
-            <div className="min-w-0 text-left">
-              <p className="m-0 text-sm font-medium" style={{ color: theme.text }}>
-                Más ajustes
-              </p>
-              <p className="m-0 mt-0.5 text-[11px]" style={{ color: theme.textMuted }}>
-                Instalación, acceso con biometría, atajos
-              </p>
-            </div>
-            <ChevronDown
-              className="h-4 w-4 shrink-0 transition-transform duration-200 group-open:rotate-180"
-              style={{ color: theme.textMuted }}
-              aria-hidden
-            />
-          </summary>
-          <div className="space-y-0 border-t" style={{ borderColor: theme.border }}>
+          <div className="space-y-0">
             <div
               className="border-b px-3 py-3 sm:px-4"
               style={{ borderColor: theme.border }}
@@ -949,7 +902,7 @@ export default function ConfigV3() {
                   Atajos
                 </p>
                 <p className="m-0 mt-1.5 text-[12px] leading-relaxed" style={{ color: theme.textMuted }}>
-                  El atajo de salud está en{" "}
+                  El atajo de importación vive en{" "}
                   <a
                     href="#conexion-salud"
                     className="font-medium underline-offset-2 hover:underline"
@@ -962,230 +915,171 @@ export default function ConfigV3() {
               </div>
             </div>
           </div>
-        </details>
+        </ConfigAccordion>
 
-        <details
-          className="group mt-2"
+        <ConfigAccordion
+          className="mt-2"
+          theme={theme}
           data-orvita-section="appearance"
           id="config-appearance"
-          style={{
-            backgroundColor: theme.surface,
-            borderRadius: "9999px",
-            boxShadow: "0 0 0 1px rgba(15, 23, 42, 0.08)",
-          }}
+          leading={<Palette className="h-4 w-4" />}
+          title="Aspecto"
+          description={appearanceHint}
         >
-          <summary
-            className="flex cursor-pointer list-none items-center justify-between gap-2 px-3.5 py-2.5 sm:px-4 [&::-webkit-details-marker]:hidden"
-            style={{ color: theme.text }}
-          >
-            <div className="flex min-w-0 items-center gap-2.5">
-              <span
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full sm:h-8 sm:w-8"
-                style={{ backgroundColor: theme.surfaceAlt, color: theme.accent.health }}
-                aria-hidden
+          <div className="flex flex-col gap-4 sm:gap-5">
+            <div className="space-y-3">
+              <h3
+                className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.14em]"
+                style={{ color: theme.textMuted }}
               >
-                <Palette className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </span>
-              <div className="min-w-0 text-left">
-                <span className="text-[12px] font-medium sm:text-sm" style={{ color: theme.text }}>
-                  Aspecto
-                </span>
-                <p className="m-0 mt-0.5 text-[10px] sm:text-xs" style={{ color: theme.textMuted }}>
-                  Paleta y densidad
-                </p>
+                <Palette className="h-4 w-4 shrink-0" aria-hidden />
+                Paleta
+              </h3>
+              <div className="grid gap-2">
+                {themeOptions.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => setColorTheme(option.id)}
+                    className="flex items-center justify-between rounded-2xl border p-3 text-left transition-colors"
+                    style={{
+                      backgroundColor: colorTheme === option.id ? theme.surfaceAlt : theme.surface,
+                      borderColor: colorTheme === option.id ? theme.text : theme.border,
+                      boxShadow: colorTheme === option.id ? "0 1px 0 rgba(15, 23, 42, 0.06)" : undefined,
+                    }}
+                  >
+                    <span className="text-sm font-medium">{option.label}</span>
+                    <div className="flex gap-1">
+                      {option.colors.map((color) => (
+                        <div key={color} className="h-4 w-4 rounded-full border" style={{ backgroundColor: color }} />
+                      ))}
+                    </div>
+                  </button>
+                ))}
               </div>
-            </div>
-            <ChevronDown
-              className="h-3.5 w-3.5 shrink-0 transition-transform duration-200 group-open:rotate-180 sm:h-4 sm:w-4"
-              style={{ color: theme.textMuted }}
-              aria-hidden
-            />
-          </summary>
-          <div
-            className="mt-1 rounded-2xl border p-1.5 sm:p-2"
-            style={{ borderColor: theme.border, backgroundColor: theme.surface }}
-          >
-            <div className="flex flex-col gap-4 p-3 sm:gap-5 sm:p-4">
-          <div className="space-y-3">
-            <h3
-              className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.14em]"
-              style={{ color: theme.textMuted }}
-            >
-              <Palette className="h-4 w-4 shrink-0" aria-hidden />
-              Paleta
-            </h3>
-            <div className="grid gap-2">
-              {themeOptions.map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => setColorTheme(option.id)}
-                  className="flex items-center justify-between rounded-2xl border p-3 text-left transition-colors"
+
+              {colorTheme === "custom" ? (
+                <div
+                  className="mt-3 space-y-3 rounded-2xl border p-3 sm:p-4"
                   style={{
-                    backgroundColor: colorTheme === option.id ? theme.surfaceAlt : theme.surface,
-                    borderColor: colorTheme === option.id ? theme.text : theme.border,
-                    boxShadow: colorTheme === option.id ? "0 1px 0 rgba(15, 23, 42, 0.06)" : undefined,
+                    backgroundColor: theme.surfaceAlt,
+                    borderColor: theme.border,
                   }}
                 >
-                  <span className="text-sm font-medium">{option.label}</span>
-                  <div className="flex gap-1">
-                    {option.colors.map((color) => (
-                      <div key={color} className="h-4 w-4 rounded-full border" style={{ backgroundColor: color }} />
+                  <p className="text-xs font-medium" style={{ color: theme.text }}>
+                    Tus colores
+                  </p>
+                  <p className="text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
+                    Hex o selector; luego «Aplicar colores».
+                  </p>
+                  <div className="space-y-3">
+                    {paletteFields.map(({ key, label }) => (
+                      <div key={key} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+                        <label className="w-full min-w-[8rem] text-xs font-medium sm:w-44" style={{ color: theme.text }}>
+                          {label}
+                        </label>
+                        <div className="flex flex-1 flex-wrap items-center gap-2">
+                          <input
+                            type="color"
+                            className="h-10 w-14 cursor-pointer rounded border p-0"
+                            style={{ borderColor: theme.border }}
+                            value={normalizeHex(paletteDraft[key]) ?? "#888888"}
+                            onChange={(e) =>
+                              setPaletteDraft((prev) => ({
+                                ...prev,
+                                [key]: normalizeHex(e.target.value) ?? e.target.value,
+                              }))
+                            }
+                            aria-label={label}
+                          />
+                          <input
+                            type="text"
+                            spellCheck={false}
+                            className="min-w-[7rem] flex-1 rounded-lg border px-2 py-2 font-mono text-xs"
+                            style={{
+                              borderColor: theme.border,
+                              backgroundColor: theme.surface,
+                              color: theme.text,
+                            }}
+                            value={paletteDraft[key]}
+                            onChange={(e) => setPaletteDraft((prev) => ({ ...prev, [key]: e.target.value }))}
+                          />
+                        </div>
+                      </div>
                     ))}
                   </div>
-                </button>
-              ))}
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <button
+                      type="button"
+                      className="rounded-lg border px-3 py-2 text-xs font-medium transition-opacity hover:opacity-90"
+                      style={{ borderColor: theme.border, color: theme.text }}
+                      onClick={() => setPaletteDraft(defaultCustomPalette())}
+                    >
+                      Valores base
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg border px-3 py-2 text-xs font-semibold transition-opacity hover:opacity-90"
+                      style={{
+                        borderColor: theme.accent.health,
+                        backgroundColor: theme.accent.health,
+                        color: "#fff",
+                      }}
+                      onClick={() => applyPaletteDraft()}
+                    >
+                      Aplicar colores
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </div>
 
-            {colorTheme === "custom" ? (
-              <div
-                className="mt-3 space-y-3 rounded-2xl border p-3 sm:p-4"
-                style={{
-                  backgroundColor: theme.surfaceAlt,
-                  borderColor: theme.border,
-                }}
+            {/* 3. Densidad de datos */}
+            <div className="space-y-3">
+              <h3
+                className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.14em]"
+                style={{ color: theme.textMuted }}
               >
-                <p className="text-xs font-medium" style={{ color: theme.text }}>
-                  Tus colores
-                </p>
-                <p className="text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
-                  Hex o selector; luego «Aplicar colores».
-                </p>
-                <div className="space-y-3">
-                  {paletteFields.map(({ key, label }) => (
-                    <div key={key} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-                      <label className="w-full min-w-[8rem] text-xs font-medium sm:w-44" style={{ color: theme.text }}>
-                        {label}
-                      </label>
-                      <div className="flex flex-1 flex-wrap items-center gap-2">
-                        <input
-                          type="color"
-                          className="h-10 w-14 cursor-pointer rounded border p-0"
-                          style={{ borderColor: theme.border }}
-                          value={normalizeHex(paletteDraft[key]) ?? "#888888"}
-                          onChange={(e) =>
-                            setPaletteDraft((prev) => ({
-                              ...prev,
-                              [key]: normalizeHex(e.target.value) ?? e.target.value,
-                            }))
-                          }
-                          aria-label={label}
-                        />
-                        <input
-                          type="text"
-                          spellCheck={false}
-                          className="min-w-[7rem] flex-1 rounded-lg border px-2 py-2 font-mono text-xs"
-                          style={{
-                            borderColor: theme.border,
-                            backgroundColor: theme.surface,
-                            color: theme.text,
-                          }}
-                          value={paletteDraft[key]}
-                          onChange={(e) => setPaletteDraft((prev) => ({ ...prev, [key]: e.target.value }))}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex flex-wrap gap-2 pt-1">
+                <Monitor className="h-4 w-4 shrink-0" aria-hidden />
+                Densidad
+              </h3>
+              <div className="grid gap-2">
+                {layoutOptions.map((option) => (
                   <button
+                    key={option.id}
                     type="button"
-                    className="rounded-lg border px-3 py-2 text-xs font-medium transition-opacity hover:opacity-90"
-                    style={{ borderColor: theme.border, color: theme.text }}
-                    onClick={() => setPaletteDraft(defaultCustomPalette())}
-                  >
-                    Valores base
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-lg border px-3 py-2 text-xs font-semibold transition-opacity hover:opacity-90"
+                    onClick={() => setLayoutMode(option.id)}
+                    className="flex items-center justify-between rounded-2xl border p-3 text-left transition-colors"
                     style={{
-                      borderColor: theme.accent.health,
-                      backgroundColor: theme.accent.health,
-                      color: "#fff",
+                      backgroundColor: layoutMode === option.id ? theme.surfaceAlt : theme.surface,
+                      borderColor: layoutMode === option.id ? theme.text : theme.border,
+                      boxShadow: layoutMode === option.id ? "0 1px 0 rgba(15, 23, 42, 0.06)" : undefined,
                     }}
-                    onClick={() => applyPaletteDraft()}
                   >
-                    Aplicar colores
+                    <span className="text-sm font-medium">{option.label}</span>
+                    <div
+                      className="h-2 w-2 rounded-full"
+                      style={{ backgroundColor: layoutMode === option.id ? theme.accent.health : theme.border }}
+                    />
                   </button>
-                </div>
+                ))}
               </div>
-            ) : null}
-          </div>
-
-          {/* 3. Densidad de datos */}
-          <div className="space-y-3">
-            <h3
-              className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.14em]"
-              style={{ color: theme.textMuted }}
-            >
-              <Monitor className="h-4 w-4 shrink-0" aria-hidden />
-              Densidad
-            </h3>
-            <div className="grid gap-2">
-              {layoutOptions.map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => setLayoutMode(option.id)}
-                  className="flex items-center justify-between rounded-2xl border p-3 text-left transition-colors"
-                  style={{
-                    backgroundColor: layoutMode === option.id ? theme.surfaceAlt : theme.surface,
-                    borderColor: layoutMode === option.id ? theme.text : theme.border,
-                    boxShadow: layoutMode === option.id ? "0 1px 0 rgba(15, 23, 42, 0.06)" : undefined,
-                  }}
-                >
-                  <span className="text-sm font-medium">{option.label}</span>
-                  <div
-                    className="h-2 w-2 rounded-full"
-                    style={{ backgroundColor: layoutMode === option.id ? theme.accent.health : theme.border }}
-                  />
-                </button>
-              ))}
             </div>
           </div>
-            </div>
-          </div>
-        </details>
+        </ConfigAccordion>
 
-        <details
-          className="group mt-2"
+        <ConfigAccordion
+          className="mt-2"
+          theme={theme}
           data-orvita-section="notifications"
           id="config-notif-chip"
-          style={{
-            backgroundColor: theme.surface,
-            borderRadius: "9999px",
-            boxShadow: "0 0 0 1px rgba(15, 23, 42, 0.08)",
-          }}
+          leading={<Bell className="h-4 w-4" aria-hidden />}
+          title="Notificaciones"
+          description="Inbox, push y enfoque"
         >
-          <summary
-            className="flex cursor-pointer list-none items-center justify-between gap-2 px-3.5 py-2.5 sm:px-4 [&::-webkit-details-marker]:hidden"
-            style={{ color: theme.text }}
-          >
-            <span className="text-[12px] font-medium sm:text-sm" style={{ color: theme.text }}>
-              Notificaciones
-            </span>
-            <div className="flex items-center gap-2">
-              <span
-                className="hidden shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-medium sm:inline sm:text-xs"
-                style={{ backgroundColor: theme.surfaceAlt, color: theme.textMuted }}
-              >
-                Inbox + push
-              </span>
-              <ChevronDown
-                className="h-3.5 w-3.5 shrink-0 transition-transform duration-200 group-open:rotate-180"
-                style={{ color: theme.textMuted }}
-                aria-hidden
-              />
-            </div>
-          </summary>
-          <div
-            className="mt-1 rounded-2xl border p-1.5 sm:p-2"
-            style={{ borderColor: theme.border, backgroundColor: theme.surface }}
-          >
-            <ConfigNotificationPreferencesPanel theme={theme} />
-          </div>
-        </details>
+          <ConfigNotificationPreferencesPanel theme={theme} embedded />
+        </ConfigAccordion>
+        </div>
       </section>
 
       <OrbitaImageCropDialog

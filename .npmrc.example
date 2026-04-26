@@ -1,0 +1,6 @@
+# Registro privado de Figma (variables/tokens de equipo) — consola: Figma → Team → npm registry
+# 1) Copia este archivo como .npmrc en la raíz (no se sube: está en .gitignore)
+# 2) Sustituye _authToken por el que muestre Figma o usa env en CI
+#
+# @ORVITA-APP:registry=https://registry.figma.com/npm/<TEAM_ID>/registry/
+# //registry.figma.com/npm/<TEAM_ID>/registry/:_authToken=figp_...

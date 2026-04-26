@@ -1,13 +1,12 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useId, useState } from "react"
 import { motion } from "framer-motion"
 import {
   Activity,
   BatteryCharging,
   CheckCircle2,
   Circle,
-  Dumbbell,
   Droplets,
   HeartPulse,
   MoonStar,
@@ -23,39 +22,20 @@ import {
   XAxis,
   YAxis,
 } from "recharts"
+import { useOrbitaSkin } from "@/app/contexts/AppContext"
 import type { SaludContextSnapshot } from "@/app/salud/_hooks/useSaludContext"
-import { useHealthAutoMetrics } from "@/app/hooks/useHealthAutoMetrics"
-import { appleDaySignalsFromHealthMetric } from "@/lib/health/appleHevyRelation"
-import {
-  HEALTH_SIGNAL_LABEL_ES,
-  HEALTH_SIGNAL_UNIT_ES,
-  HEALTH_SIGNALS_HIDDEN_WHEN_PRIMARY_SHOWN,
-  HEALTH_SIGNALS_STABLE_ORDER,
-} from "@/lib/integrations/appleHealthBundleContract"
-
-const metricTone = (value: number) => {
-  if (value >= 80) return "#6ee7b7"
-  if (value >= 60) return "#fcd34d"
-  return "#fb7185"
-}
+import type { AutoHealthMetric } from "@/app/hooks/useHealthAutoMetrics"
+import { saludHexToRgba, saludMetricTone, saludPanelStyle } from "@/lib/salud/saludThemeStyles"
 
 type Props = {
   salud: SaludContextSnapshot
+  latest: AutoHealthMetric | null
 }
 
-export default function HealthOperationsV3({ salud: health }: Props) {
-  const { latest: autoHealth } = useHealthAutoMetrics()
-  const appleSignals = useMemo(() => appleDaySignalsFromHealthMetric(autoHealth), [autoHealth])
-  const extendedAppleSignals = useMemo(() => {
-    const hs = appleSignals?.health_signals
-    if (!hs) return []
-    const order = new Map<string, number>()
-    HEALTH_SIGNALS_STABLE_ORDER.forEach((k, i) => order.set(k, i))
-    return Object.entries(hs)
-      .filter(([k]) => !HEALTH_SIGNALS_HIDDEN_WHEN_PRIMARY_SHOWN.has(k))
-      .sort((a, b) => (order.get(a[0]) ?? 999) - (order.get(b[0]) ?? 999))
-  }, [appleSignals])
+export default function HealthOperationsV3({ salud: health, latest }: Props) {
+  const theme = useOrbitaSkin()
   const [completedSupplements, setCompletedSupplements] = useState<number[]>([])
+  const energyChartGradientId = useId().replace(/:/g, "")
 
   if (health.loading) return null
   if (health.error) return null
@@ -64,32 +44,47 @@ export default function HealthOperationsV3({ salud: health }: Props) {
     (item, index) => item.taken || completedSupplements.includes(index),
   ).length
 
-  const appleSleep =
-    autoHealth?.sleep_hours != null ? Math.round(autoHealth.sleep_hours * 10) / 10 : null
-  const appleSteps = autoHealth?.steps ?? null
-  const appleHrv = autoHealth?.hrv_ms ?? null
-  const appleReadiness = autoHealth?.readiness_score ?? null
-  const appleEnergy = autoHealth?.energy_index ?? null
+  const appleReadiness = latest?.readiness_score ?? null
+  const hydrationTarget = Math.max(health.hydrationTarget, 0.1)
+  const hydrationProgress = Math.min(100, (health.hydrationCurrent / hydrationTarget) * 100)
+
+  const gridStroke = saludHexToRgba(theme.border, 0.85)
+  const chartTooltip = {
+    backgroundColor: saludHexToRgba(theme.surface, 0.96),
+    border: `1px solid ${theme.border}`,
+    borderRadius: "16px",
+    color: theme.text,
+  }
 
   return (
-    <section className="space-y-8">
+    <section className="space-y-8" style={{ color: theme.text }}>
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="rounded-[28px] border border-white/10 bg-white/[0.04] p-7 shadow-[0_18px_60px_rgba(0,0,0,0.35)] backdrop-blur-2xl sm:p-9"
+        className="rounded-[28px] border p-7 backdrop-blur-2xl sm:p-9"
+        style={saludPanelStyle(theme, 0.88)}
       >
-        <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-white/45">Tu espacio de recuperación</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.26em]" style={{ color: theme.textMuted }}>
+          Estratégico
+        </p>
         <div className="mt-4 flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-4">
-            <div className="rounded-3xl bg-emerald-400/15 p-4 text-emerald-100 ring-1 ring-emerald-300/25">
+            <div
+              className="rounded-3xl p-4 ring-1"
+              style={{
+                backgroundColor: saludHexToRgba(theme.accent.health, 0.12),
+                color: theme.accent.health,
+                boxShadow: `0 0 0 1px ${saludHexToRgba(theme.accent.health, 0.25)}`,
+              }}
+            >
               <HeartPulse className="h-7 w-7" />
             </div>
             <div>
-              <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">Cuerpo, energía y hábitos</h2>
-              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/65">
-                Aquí conviven tus check-ins (lo que sientes y registras) con lo que Apple Health mide por ti. Nada de
-                jerga: solo señales claras para decidir con más calma.
+              <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Cuerpo, energía y hábitos</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed" style={{ color: theme.textMuted }}>
+                Aquí se interpreta tu check-in del día y se traduce en decisiones simples. Si Apple sugiere otra cosa,
+                mostramos la diferencia para evitar autoengaños.
               </p>
             </div>
           </div>
@@ -97,113 +92,15 @@ export default function HealthOperationsV3({ salud: health }: Props) {
       </motion.div>
 
       <div>
-        <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/45">Apple Health (importado)</p>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
-          {[
-            { label: "HRV", value: appleHrv, meta: "ms", icon: Activity },
-            { label: "Recuperación (proxy)", value: appleReadiness, meta: "/100", icon: HeartPulse },
-            { label: "Sueño", value: appleSleep, meta: "h", icon: MoonStar },
-            { label: "Pasos", value: appleSteps, meta: "", icon: Sparkles },
-            { label: "Energía activa (kcal)", value: autoHealth?.calories ?? null, meta: "kcal", icon: BatteryCharging },
-            { label: "Entrenos (Apple)", value: appleSignals?.workouts_count ?? null, meta: "", icon: Dumbbell },
-            { label: "Min entreno (Apple)", value: appleSignals?.workout_minutes ?? null, meta: "min", icon: Dumbbell },
-          ].map((metric, index) => {
-            const Icon = metric.icon
-            const hasValue = typeof metric.value === "number"
-            const numericForTone = typeof metric.value === "number" ? metric.value : 0
-            const display =
-              !hasValue
-                ? "—"
-                : metric.meta === "" && typeof metric.value === "number"
-                  ? metric.value.toLocaleString("es-LA")
-                  : `${metric.value}`
-
-            return (
-              <motion.div
-                key={metric.label}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.04, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                className="rounded-[22px] border border-white/10 bg-black/25 p-5 shadow-inner shadow-black/25"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/45">
-                    {metric.label}
-                  </span>
-                  <Icon className="h-4 w-4 text-white/35" aria-hidden />
-                </div>
-                <p
-                  className="mt-4 text-3xl font-semibold tracking-tight text-white"
-                  style={{
-                    color: hasValue ? metricTone(numericForTone) : "rgba(255,255,255,0.85)",
-                  }}
-                >
-                  {display}
-                  {metric.meta ? (
-                    <span className="ml-1 text-sm font-medium text-white/45">{metric.meta}</span>
-                  ) : null}
-                </p>
-              </motion.div>
-            )
-          })}
-        </div>
-        {autoHealth?.observed_at ? (
-          <p className="mt-3 text-xs text-white/45">
-            Fuente: {autoHealth.source ?? "apple_health_export"} · Última lectura{" "}
-            {new Date(autoHealth.observed_at).toLocaleString("es-LA")}
-          </p>
-        ) : (
-          <p className="mt-3 text-xs text-white/45">
-            Aún no hay importación reciente. Usa el botón “Traer datos de hoy desde Apple Health” arriba.
-          </p>
-        )}
-      </div>
-
-      {extendedAppleSignals.length > 0 ? (
-        <div>
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/45">
-            Apple Health · señales extendidas
-          </p>
-          <p className="mb-4 text-xs leading-relaxed text-white/50">
-            Mismo import, claves canónicas en <span className="font-mono text-white/55">metadata.health_signals</span>{" "}
-            (distancia en metros; SpO₂ como % si el atajo envió saturación HK 0–1).
-          </p>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {extendedAppleSignals.map(([key, value], index) => {
-              const label = HEALTH_SIGNAL_LABEL_ES[key] ?? key
-              const unit = HEALTH_SIGNAL_UNIT_ES[key] ?? ""
-              const display =
-                unit === "" && Number.isFinite(value)
-                  ? value.toLocaleString("es-LA")
-                  : `${Number.isFinite(value) ? value : "—"}`
-              return (
-                <motion.div
-                  key={key}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.03, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                  className="rounded-[18px] border border-white/10 bg-white/[0.03] p-4 backdrop-blur-xl"
-                >
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">{label}</span>
-                  <p className="mt-2 text-xl font-semibold tracking-tight text-white/90">
-                    {display}
-                    {unit ? <span className="ml-1 text-xs font-medium text-white/40">{unit}</span> : null}
-                  </p>
-                </motion.div>
-              )
-            })}
-          </div>
-        </div>
-      ) : null}
-
-      <div>
-        <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/45">Tu check-in (órbita interna)</p>
+        <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em]" style={{ color: theme.textMuted }}>
+          Tu check-in (órbita interna)
+        </p>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {[
             { label: "Salud emocional", value: health.scoreSalud, meta: "/100", icon: Sparkles },
             { label: "Energía física", value: health.scoreFisico, meta: "/100", icon: Activity },
             { label: "Recuperación percibida", value: health.scoreRecuperacion, meta: "/100", icon: MoonStar },
-            { label: "Índice de energía (narrativa)", value: health.bodyBattery, meta: "/100", icon: BatteryCharging },
+            { label: "Índice de energía", value: health.bodyBattery, meta: "/100", icon: BatteryCharging },
           ].map((metric, index) => {
             const Icon = metric.icon
             return (
@@ -212,42 +109,62 @@ export default function HealthOperationsV3({ salud: health }: Props) {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 + index * 0.04, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                className="rounded-[22px] border border-white/10 bg-white/[0.03] p-5 backdrop-blur-xl"
+                className="rounded-[22px] border p-5 backdrop-blur-xl"
+                style={{
+                  borderColor: theme.border,
+                  backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.65),
+                }}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/45">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ color: theme.textMuted }}>
                     {metric.label}
                   </span>
-                  <Icon className="h-4 w-4 text-white/35" aria-hidden />
+                  <Icon className="h-4 w-4 shrink-0" style={{ color: theme.textMuted }} aria-hidden />
                 </div>
-                <p className="mt-4 text-3xl font-semibold tracking-tight" style={{ color: metricTone(metric.value) }}>
+                <p className="mt-4 text-3xl font-semibold tracking-tight" style={{ color: saludMetricTone(theme, metric.value) }}>
                   {metric.value}
-                  <span className="ml-1 text-sm font-medium text-white/45">{metric.meta}</span>
+                  <span className="ml-1 text-sm font-medium" style={{ color: theme.textMuted }}>
+                    {metric.meta}
+                  </span>
                 </p>
               </motion.div>
             )
           })}
         </div>
-        <p className="mt-4 rounded-2xl border border-white/10 bg-black/25 p-4 text-sm leading-relaxed text-white/70">
+        <p
+          className="mt-4 rounded-2xl border p-4 text-sm leading-relaxed"
+          style={{
+            borderColor: theme.border,
+            backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.75),
+            color: theme.textMuted,
+          }}
+        >
           {appleReadiness != null && health.scoreSalud > 0
-            ? `Apple sugiere una recuperación de ${appleReadiness}, mientras tu check-in de salud va en ${health.scoreSalud}. Si hay distancia, no es “fallar”: suele ser estrés acumulado, sueño irregular o un día intenso.`
-            : "Cuando llegue tu importación de Apple, cruzaremos esas señales con tu check-in para que tengas una lectura más humana del día."}
-          {appleEnergy != null ? ` Energía modelada desde Apple: ${appleEnergy}/100.` : ""}
+            ? `Apple sugiere ${appleReadiness}/100 de disposición y tú reportas ${health.scoreSalud}/100 en salud. Si divergen, toma el día con más descanso y menos intensidad.`
+            : "Cuando llegue tu importación de Apple, cruzaremos esas señales con tu check-in para darte una lectura más accionable."}
         </p>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-        <div className="rounded-[26px] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-2xl">
+        <div className="rounded-[26px] border p-6 backdrop-blur-2xl" style={saludPanelStyle(theme, 0.82)}>
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/45">Bio-stack</p>
-              <h3 className="mt-2 text-xl font-semibold text-white">Protocolos del día</h3>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em]" style={{ color: theme.textMuted }}>
+                Operativo
+              </p>
+              <h3 className="mt-2 text-xl font-semibold">Protocolos del día</h3>
             </div>
-            <div className="rounded-full border border-white/10 bg-black/30 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/60">
+            <div
+              className="rounded-full border px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em]"
+              style={{
+                borderColor: theme.border,
+                backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.9),
+                color: theme.textMuted,
+              }}
+            >
               {completedCount}/{health.supplementStack.length} listos
             </div>
           </div>
-
           <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
             {health.supplementStack.map((item, index) => {
               const isDone = item.taken || completedSupplements.includes(index)
@@ -261,42 +178,62 @@ export default function HealthOperationsV3({ salud: health }: Props) {
                       current.includes(index) ? current.filter((value) => value !== index) : [...current, index],
                     )
                   }
-                  className="min-h-[120px] rounded-2xl border border-white/10 bg-black/25 p-3 text-left text-white shadow-inner shadow-black/30 transition hover:-translate-y-0.5 hover:border-white/20 active:scale-[0.99]"
+                  className="min-h-[120px] rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 active:scale-[0.99]"
+                  style={{
+                    borderColor: theme.border,
+                    backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.85),
+                    color: theme.text,
+                    boxShadow: `inset 0 1px 0 ${saludHexToRgba(theme.border, 0.35)}`,
+                  }}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="rounded-full bg-white/10 p-2">
+                    <span className="rounded-full p-2" style={{ backgroundColor: saludHexToRgba(theme.border, 0.35) }}>
                       {isDone ? (
-                        <CheckCircle2 className="h-4 w-4 text-emerald-300" />
+                        <CheckCircle2 className="h-4 w-4" style={{ color: theme.accent.health }} />
                       ) : (
-                        <Circle className="h-4 w-4 text-white/35" />
+                        <Circle className="h-4 w-4" style={{ color: theme.textMuted }} />
                       )}
                     </span>
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/40">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: theme.textMuted }}>
                       {item.time}
                     </span>
                   </div>
                   <p className="mt-4 text-sm font-semibold leading-snug">{item.name}</p>
-                  <p className="text-xs text-white/55">{item.dose}</p>
+                  <p className="text-xs" style={{ color: theme.textMuted }}>
+                    {item.dose}
+                  </p>
                 </button>
               )
             })}
           </div>
         </div>
-
-        <div className="rounded-[26px] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-2xl">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/45">Combustible</p>
-          <div className="mt-5 flex items-start gap-3 rounded-2xl border border-sky-300/25 bg-sky-400/10 p-4">
-            <Droplets className="mt-1 h-5 w-5 text-sky-200" />
+        <div className="rounded-[26px] border p-6 backdrop-blur-2xl" style={saludPanelStyle(theme, 0.82)}>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em]" style={{ color: theme.textMuted }}>
+            Combustible
+          </p>
+          <div
+            className="mt-5 flex items-start gap-3 rounded-2xl border p-4"
+            style={{
+              borderColor: saludHexToRgba(theme.accent.agenda, 0.35),
+              backgroundColor: saludHexToRgba(theme.accent.agenda, 0.1),
+            }}
+          >
+            <Droplets className="mt-1 h-5 w-5 shrink-0" style={{ color: theme.accent.agenda }} />
             <div>
-              <p className="text-sm font-semibold text-white">Hidratación</p>
-              <p className="mt-2 text-3xl font-semibold tracking-tight text-white">
+              <p className="text-sm font-semibold">Hidratación</p>
+              <p className="mt-2 text-3xl font-semibold tracking-tight">
                 {health.hydrationCurrent}
-                <span className="ml-2 text-sm font-medium text-white/45">/ {health.hydrationTarget} L</span>
+                <span className="ml-2 text-sm font-medium" style={{ color: theme.textMuted }}>
+                  / {health.hydrationTarget} L
+                </span>
               </p>
-              <div className="mt-4 h-2 rounded-full bg-white/10">
+              <div className="mt-4 h-2 rounded-full" style={{ backgroundColor: saludHexToRgba(theme.border, 0.45) }}>
                 <div
-                  className="h-full rounded-full bg-sky-300"
-                  style={{ width: `${Math.min(100, (health.hydrationCurrent / health.hydrationTarget) * 100)}%` }}
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${hydrationProgress}%`,
+                    backgroundColor: theme.accent.agenda,
+                  }}
                 />
               </div>
             </div>
@@ -308,19 +245,19 @@ export default function HealthOperationsV3({ salud: health }: Props) {
 
               return (
                 <div key={macro.label}>
-                  <div className="mb-1 flex items-center justify-between text-xs text-white/60">
+                  <div className="mb-1 flex items-center justify-between text-xs" style={{ color: theme.textMuted }}>
                     <span>{macro.label}</span>
-                    <span className="font-medium text-white">
+                    <span className="font-medium" style={{ color: theme.text }}>
                       {macro.current} / {macro.target}
                       {macro.unit}
                     </span>
                   </div>
-                  <div className="h-1.5 rounded-full bg-white/10">
+                  <div className="h-1.5 rounded-full" style={{ backgroundColor: saludHexToRgba(theme.border, 0.45) }}>
                     <div
                       className="h-full rounded-full"
                       style={{
                         width: `${progress}%`,
-                        backgroundColor: progress >= 90 ? "#6ee7b7" : progress >= 70 ? "#fcd34d" : "#fb7185",
+                        backgroundColor: saludMetricTone(theme, progress),
                       }}
                     />
                   </div>
@@ -331,10 +268,12 @@ export default function HealthOperationsV3({ salud: health }: Props) {
         </div>
       </div>
 
-      <div className="rounded-[26px] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-2xl">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/45">Correlación suave</p>
-        <h3 className="mt-2 text-xl font-semibold text-white">Energía vs fatiga (modelo del día)</h3>
-        <p className="mt-2 text-sm text-white/55">
+      <div className="rounded-[26px] border p-6 backdrop-blur-2xl" style={saludPanelStyle(theme, 0.82)}>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.2em]" style={{ color: theme.textMuted }}>
+          Predictivo
+        </p>
+        <h3 className="mt-2 text-xl font-semibold">Energía vs fatiga (modelo del día)</h3>
+        <p className="mt-2 text-sm" style={{ color: theme.textMuted }}>
           No es un diagnóstico: es una visualización amable para ver cómo podría sentirse tu día si alineas sueño,
           carga y descanso.
         </p>
@@ -342,37 +281,30 @@ export default function HealthOperationsV3({ salud: health }: Props) {
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={health.energyAudit}>
               <defs>
-                <linearGradient id="saludEnergyFade" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.18} />
-                  <stop offset="95%" stopColor="#38bdf8" stopOpacity={0} />
+                <linearGradient id={energyChartGradientId} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={theme.accent.agenda} stopOpacity={0.22} />
+                  <stop offset="95%" stopColor={theme.accent.agenda} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" vertical={false} />
-              <XAxis dataKey="hour" stroke="rgba(255,255,255,0.45)" style={{ fontSize: "11px" }} />
+              <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} vertical={false} />
+              <XAxis dataKey="hour" stroke={theme.textMuted} style={{ fontSize: "11px" }} />
               <YAxis yAxisId="left" hide />
               <YAxis
                 yAxisId="right"
                 orientation="right"
                 domain={[0, 100]}
-                stroke="rgba(255,255,255,0.45)"
+                stroke={theme.textMuted}
                 style={{ fontSize: "11px" }}
               />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "rgba(2,6,23,0.92)",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  borderRadius: "16px",
-                  color: "#e2e8f0",
-                }}
-              />
-              <Area yAxisId="left" type="monotone" dataKey="fatigue" fill="url(#saludEnergyFade)" stroke="none" />
+              <Tooltip contentStyle={chartTooltip} />
+              <Area yAxisId="left" type="monotone" dataKey="fatigue" fill={`url(#${energyChartGradientId})`} stroke="none" />
               <Line
                 yAxisId="right"
                 type="monotone"
                 dataKey="energy"
-                stroke="#6ee7b7"
+                stroke={theme.accent.health}
                 strokeWidth={2}
-                dot={{ r: 3, fill: "#0f172a", strokeWidth: 2 }}
+                dot={{ r: 3, fill: theme.surface, stroke: theme.accent.health, strokeWidth: 2 }}
               />
             </ComposedChart>
           </ResponsiveContainer>

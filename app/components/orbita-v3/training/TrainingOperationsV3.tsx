@@ -2,32 +2,50 @@
 
 import { Activity, ArrowDown, ArrowUp, Dumbbell, Flame, Target, Trophy, Utensils } from "lucide-react"
 import { Bar, CartesianGrid, ComposedChart, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
+import { useOrbitaSkin } from "@/app/contexts/AppContext"
 import type { SaludContextSnapshot } from "@/app/salud/_hooks/useSaludContext"
+import { saludHexToRgba, saludPanelStyle } from "@/lib/salud/saludThemeStyles"
 
 type Props = {
   salud: SaludContextSnapshot
 }
 
-const panel =
-  "rounded-[26px] border border-white/10 bg-white/[0.04] p-6 text-white shadow-[0_18px_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl"
-
 export default function TrainingOperationsV3({ salud: health }: Props) {
+  const theme = useOrbitaSkin()
+
   if (health.loading) return null
   if (health.error) return null
 
   const isOverreaching = health.strain > health.scoreRecuperacion + 10
+  const gridStroke = saludHexToRgba(theme.border, 0.85)
+  const chartTooltip = {
+    backgroundColor: saludHexToRgba(theme.surface, 0.96),
+    border: `1px solid ${theme.border}`,
+    borderRadius: "16px",
+    color: theme.text,
+  }
+  const ringTrack = saludHexToRgba(theme.border, 0.55)
 
   return (
-    <section className="space-y-8">
-      <div className={panel}>
+    <section className="space-y-8" style={{ color: theme.text }}>
+      <div className="rounded-[26px] border p-6 backdrop-blur-2xl" style={saludPanelStyle(theme, 0.82)}>
         <div className="flex items-center gap-3">
-          <div className="rounded-3xl bg-amber-300/15 p-3 text-amber-100 ring-1 ring-amber-200/25">
+          <div
+            className="rounded-3xl p-3 ring-1"
+            style={{
+              backgroundColor: saludHexToRgba(theme.accent.agenda, 0.14),
+              color: theme.accent.agenda,
+              boxShadow: `0 0 0 1px ${saludHexToRgba(theme.accent.agenda, 0.28)}`,
+            }}
+          >
             <Dumbbell className="h-6 w-6" />
           </div>
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/45">Entrenamiento</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em]" style={{ color: theme.textMuted }}>
+              Entrenamiento
+            </p>
             <h2 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">Ritmo, volumen y metas</h2>
-            <p className="mt-2 text-sm leading-relaxed text-white/65">
+            <p className="mt-2 text-sm leading-relaxed" style={{ color: theme.textMuted }}>
               Una lectura sobria de tu semana: intensidad, recuperación y combustible. Piensa en esto como tablero de
               apoyo, no como exigencia.
             </p>
@@ -35,14 +53,16 @@ export default function TrainingOperationsV3({ salud: health }: Props) {
         </div>
       </div>
 
-      <div className={panel}>
+      <div className="rounded-[26px] border p-6 backdrop-blur-2xl" style={saludPanelStyle(theme, 0.82)}>
         <div className="flex flex-col gap-8 md:flex-row md:items-center">
           <div className="flex-1">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/45">Capacidad del día</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em]" style={{ color: theme.textMuted }}>
+              Capacidad del día
+            </p>
             <h3 className="mt-3 text-2xl font-semibold">
               {isOverreaching ? "Carga alta vs recuperación" : "Zona de entrenamiento equilibrada"}
             </h3>
-            <p className="mt-3 text-sm leading-relaxed text-white/65">
+            <p className="mt-3 text-sm leading-relaxed" style={{ color: theme.textMuted }}>
               {isOverreaching
                 ? `Tu esfuerzo percibido (${health.strain}) está por encima de tu recuperación (${health.scoreRecuperacion}). Hoy conviene bajar volumen o priorizar sueño.`
                 : `Tu recuperación va en ${health.scoreRecuperacion}%. Hay margen para exigirte con cabeza, sin castigar el cuerpo.`}
@@ -51,13 +71,13 @@ export default function TrainingOperationsV3({ salud: health }: Props) {
 
           <div className="relative flex h-48 w-48 items-center justify-center self-center">
             <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 192 192">
-              <circle cx="96" cy="96" r="80" stroke="rgba(255,255,255,0.12)" strokeWidth="6" fill="none" />
-              <circle cx="96" cy="96" r="60" stroke="rgba(255,255,255,0.12)" strokeWidth="6" fill="none" />
+              <circle cx="96" cy="96" r="80" stroke={ringTrack} strokeWidth="6" fill="none" />
+              <circle cx="96" cy="96" r="60" stroke={ringTrack} strokeWidth="6" fill="none" />
               <circle
                 cx="96"
                 cy="96"
                 r="60"
-                stroke="#6ee7b7"
+                stroke={theme.accent.health}
                 strokeWidth="6"
                 fill="none"
                 strokeDasharray={String(2 * Math.PI * 60)}
@@ -68,7 +88,7 @@ export default function TrainingOperationsV3({ salud: health }: Props) {
                 cx="96"
                 cy="96"
                 r="80"
-                stroke="#fcd34d"
+                stroke={theme.accent.agenda}
                 strokeWidth="6"
                 fill="none"
                 strokeDasharray={String(2 * Math.PI * 80)}
@@ -78,50 +98,64 @@ export default function TrainingOperationsV3({ salud: health }: Props) {
             </svg>
 
             <div className="text-center">
-              <p className="text-3xl font-semibold leading-none text-amber-200">{health.strain}</p>
-              <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45">Esfuerzo</p>
+              <p className="text-3xl font-semibold leading-none" style={{ color: theme.accent.agenda }}>
+                {health.strain}
+              </p>
+              <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: theme.textMuted }}>
+                Esfuerzo
+              </p>
             </div>
           </div>
         </div>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <div className={panel}>
+        <div className="rounded-[26px] border p-6 backdrop-blur-2xl" style={saludPanelStyle(theme, 0.82)}>
           <div className="flex items-center gap-2">
-            <Activity className="h-4 w-4 text-sky-200" />
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/45">Volumen e intensidad</p>
+            <Activity className="h-4 w-4 shrink-0" style={{ color: theme.accent.agenda }} />
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em]" style={{ color: theme.textMuted }}>
+              Volumen e intensidad
+            </p>
           </div>
           <div className="mt-5 h-[220px]">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={health.weeklyVolume}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" vertical={false} />
-                <XAxis dataKey="day" stroke="rgba(255,255,255,0.45)" style={{ fontSize: "11px" }} />
+                <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} vertical={false} />
+                <XAxis dataKey="day" stroke={theme.textMuted} style={{ fontSize: "11px" }} />
                 <YAxis
                   yAxisId="left"
-                  stroke="rgba(255,255,255,0.45)"
+                  stroke={theme.textMuted}
                   style={{ fontSize: "11px" }}
                   tickFormatter={(value: number) => `${Math.round(value / 1000)}k`}
                 />
                 <YAxis yAxisId="right" orientation="right" hide domain={[0, 100]} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "rgba(2,6,23,0.92)",
-                    border: "1px solid rgba(255,255,255,0.12)",
-                    borderRadius: "16px",
-                    color: "#e2e8f0",
-                  }}
+                <Tooltip contentStyle={chartTooltip} />
+                <Bar
+                  yAxisId="left"
+                  dataKey="volume"
+                  fill={theme.accent.agenda}
+                  radius={[4, 4, 0, 0]}
+                  barSize={24}
                 />
-                <Bar yAxisId="left" dataKey="volume" fill="#38bdf8" radius={[4, 4, 0, 0]} barSize={24} />
-                <Line yAxisId="right" type="monotone" dataKey="intensity" stroke="#e2e8f0" strokeWidth={2} dot={{ r: 3 }} />
+                <Line
+                  yAxisId="right"
+                  type="monotone"
+                  dataKey="intensity"
+                  stroke={theme.text}
+                  strokeWidth={2}
+                  dot={{ r: 3, fill: theme.surface, stroke: theme.text, strokeWidth: 1.5 }}
+                />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        <div className={panel}>
+        <div className="rounded-[26px] border p-6 backdrop-blur-2xl" style={saludPanelStyle(theme, 0.82)}>
           <div className="flex items-center gap-2">
-            <Trophy className="h-4 w-4 text-emerald-200" />
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/45">Hitos estratégicos</p>
+            <Trophy className="h-4 w-4 shrink-0" style={{ color: theme.accent.health }} />
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em]" style={{ color: theme.textMuted }}>
+              Hitos estratégicos
+            </p>
           </div>
 
           <div className="mt-5 space-y-4">
@@ -131,11 +165,18 @@ export default function TrainingOperationsV3({ salud: health }: Props) {
                 : Math.min(100, (milestone.current / milestone.target) * 100)
 
               return (
-                <div key={milestone.id} className="rounded-2xl border border-white/10 bg-black/25 p-4">
+                <div
+                  key={milestone.id}
+                  className="rounded-2xl border p-4"
+                  style={{
+                    borderColor: theme.border,
+                    backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.85),
+                  }}
+                >
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="text-sm font-semibold">{milestone.title}</p>
-                      <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/45">
+                      <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: theme.textMuted }}>
                         {milestone.current} / {milestone.target} {milestone.unit}
                       </p>
                     </div>
@@ -145,7 +186,7 @@ export default function TrainingOperationsV3({ salud: health }: Props) {
                           <Line
                             type="monotone"
                             dataKey="value"
-                            stroke="#cbd5f5"
+                            stroke={theme.accent.finance}
                             strokeWidth={1.5}
                             dot={false}
                             isAnimationActive={false}
@@ -154,12 +195,12 @@ export default function TrainingOperationsV3({ salud: health }: Props) {
                       </ResponsiveContainer>
                     </div>
                   </div>
-                  <div className="mt-4 h-1.5 rounded-full bg-white/10">
+                  <div className="mt-4 h-1.5 rounded-full" style={{ backgroundColor: saludHexToRgba(theme.border, 0.45) }}>
                     <div
                       className="h-full rounded-full"
                       style={{
                         width: `${progress}%`,
-                        backgroundColor: progress >= 100 ? "#6ee7b7" : "#e2e8f0",
+                        backgroundColor: progress >= 100 ? theme.accent.health : theme.textMuted,
                       }}
                     />
                   </div>
@@ -171,30 +212,44 @@ export default function TrainingOperationsV3({ salud: health }: Props) {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <div className={panel}>
+        <div className="rounded-[26px] border p-6 backdrop-blur-2xl" style={saludPanelStyle(theme, 0.82)}>
           <div className="flex items-center gap-2">
-            <Target className="h-4 w-4 text-indigo-200" />
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/45">Seguimiento corporal</p>
+            <Target className="h-4 w-4 shrink-0" style={{ color: theme.accent.finance }} />
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em]" style={{ color: theme.textMuted }}>
+              Seguimiento corporal
+            </p>
           </div>
           <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {health.bodyMetrics.map((metric) => {
               const TrendIcon = metric.trend === "up" ? ArrowUp : ArrowDown
 
               return (
-                <div key={metric.label} className="rounded-2xl border border-white/10 bg-black/25 p-4">
+                <div
+                  key={metric.label}
+                  className="rounded-2xl border p-4"
+                  style={{
+                    borderColor: theme.border,
+                    backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.85),
+                  }}
+                >
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-semibold">{metric.label}</p>
-                    <TrendIcon className="h-4 w-4 text-indigo-200" />
+                    <TrendIcon className="h-4 w-4 shrink-0" style={{ color: theme.accent.finance }} />
                   </div>
                   <p className="mt-3 text-2xl font-semibold tracking-tight">
                     {metric.current}
-                    <span className="ml-1 text-sm font-medium text-white/45">{metric.unit}</span>
+                    <span className="ml-1 text-sm font-medium" style={{ color: theme.textMuted }}>
+                      {metric.unit}
+                    </span>
                   </p>
-                  <p className="mt-1 text-xs text-white/55">
+                  <p className="mt-1 text-xs" style={{ color: theme.textMuted }}>
                     Objetivo {metric.target} {metric.unit}
                   </p>
-                  <div className="mt-4 h-1.5 rounded-full bg-white/10">
-                    <div className="h-full rounded-full bg-indigo-300" style={{ width: `${metric.progress}%` }} />
+                  <div className="mt-4 h-1.5 rounded-full" style={{ backgroundColor: saludHexToRgba(theme.border, 0.45) }}>
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: `${metric.progress}%`, backgroundColor: theme.accent.finance }}
+                    />
                   </div>
                 </div>
               )
@@ -202,35 +257,53 @@ export default function TrainingOperationsV3({ salud: health }: Props) {
           </div>
         </div>
 
-        <div className={panel}>
+        <div className="rounded-[26px] border p-6 backdrop-blur-2xl" style={saludPanelStyle(theme, 0.82)}>
           <div className="flex items-center gap-2">
-            <Utensils className="h-4 w-4 text-amber-200" />
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/45">Plan semanal de comida</p>
+            <Utensils className="h-4 w-4 shrink-0" style={{ color: theme.accent.agenda }} />
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em]" style={{ color: theme.textMuted }}>
+              Plan semanal de comida
+            </p>
           </div>
           <div className="mt-5 space-y-3">
             {health.weeklyMealPlan.map((day) => (
-              <div key={day.day} className="rounded-2xl border border-white/10 bg-black/25 p-4">
+              <div
+                key={day.day}
+                className="rounded-2xl border p-4"
+                style={{
+                  borderColor: theme.border,
+                  backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.85),
+                }}
+              >
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-semibold">{day.day}</p>
-                    <p className="text-xs text-white/55">{day.cals} kcal</p>
+                    <p className="text-xs" style={{ color: theme.textMuted }}>
+                      {day.cals} kcal
+                    </p>
                   </div>
-                  <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/55">
-                    <Flame className="h-3.5 w-3.5 text-amber-200" />
+                  <div
+                    className="flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em]"
+                    style={{
+                      borderColor: theme.border,
+                      backgroundColor: saludHexToRgba(theme.surface, 0.6),
+                      color: theme.textMuted,
+                    }}
+                  >
+                    <Flame className="h-3.5 w-3.5 shrink-0" style={{ color: theme.accent.agenda }} />
                     energía
                   </div>
                 </div>
                 <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
                   <div>
-                    <p className="text-white/45">P</p>
+                    <p style={{ color: theme.textMuted }}>P</p>
                     <p className="font-semibold">{day.protein} g</p>
                   </div>
                   <div>
-                    <p className="text-white/45">C</p>
+                    <p style={{ color: theme.textMuted }}>C</p>
                     <p className="font-semibold">{day.carbs} g</p>
                   </div>
                   <div>
-                    <p className="text-white/45">F</p>
+                    <p style={{ color: theme.textMuted }}>F</p>
                     <p className="font-semibold">{day.fats} g</p>
                   </div>
                 </div>

@@ -45,6 +45,9 @@ yarn-error.log*
 .env*
 !.env.example
 
+# Figma private npm: el token nunca en git (p. ej. team npm registry)
+.npmrc
+
 # vercel
 .vercel
 

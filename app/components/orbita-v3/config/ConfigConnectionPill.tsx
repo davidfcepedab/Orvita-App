@@ -1,12 +1,14 @@
 "use client"
 
-import { Check, Loader2 } from "lucide-react"
+import { AlertCircle, Check, Loader2 } from "lucide-react"
 
 type Props = {
-  state: "connected" | "disconnected" | "checking" | "disabled"
+  state: "connected" | "disconnected" | "checking" | "disabled" | "error"
   /** Etiqueta cuando conectado (p. ej. "Conectado", "Cuentas listas") */
   connectedLabel?: string
   disconnectedLabel?: string
+  /** Cuando `state="error"`: texto en la píldora (p. ej. "Revisar", "Error"). */
+  errorLabel?: string
   className?: string
   /**
    * Convierte la pill "desconectado" en botón (p. ej. sincronizar al tocar "Conectar").
@@ -23,10 +25,23 @@ export function ConfigConnectionPill({
   state,
   connectedLabel = "Conectado",
   disconnectedLabel = "Conectar",
+  errorLabel = "Atención",
   className = "",
   onDisconnectedClick,
   stopEventOnDisconnectedClick = true,
 }: Props) {
+  if (state === "error") {
+    return (
+      <span
+        className={`inline-flex max-w-[11rem] items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold sm:max-w-xs ${className}`.trim()}
+        style={{ backgroundColor: "rgba(239, 68, 68, 0.1)", color: "rgb(185, 28, 28)" }}
+        title={errorLabel}
+      >
+        <AlertCircle className="h-3 w-3 shrink-0" strokeWidth={2.2} aria-hidden />
+        <span className="min-w-0 truncate">{errorLabel}</span>
+      </span>
+    )
+  }
   if (state === "checking") {
     return (
       <span

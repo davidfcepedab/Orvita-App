@@ -1,7 +1,8 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
-import { CheckCircle2, ChevronDown, HeartPulse, Landmark, RefreshCw } from "lucide-react"
+import { CheckCircle2, HeartPulse, Landmark, RefreshCw } from "lucide-react"
+import { ConfigAccordion, type ConfigAccordionCardVariant } from "@/app/components/orbita-v3/config/ConfigAccordion"
 import { ConfigConnectionPill } from "@/app/components/orbita-v3/config/ConfigConnectionPill"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import type { OrbitaConfigTheme } from "@/app/components/orbita-v3/config/configThemeTypes"
@@ -73,6 +74,7 @@ export function ConfigStrategicIntegrationsPanel({
    * (p. ej. atajo iOS y sync del panel unificado).
    */
   beforeHealthServer = null as ReactNode,
+  cardVariant = "default" as ConfigAccordionCardVariant,
 }: {
   theme: OrbitaConfigTheme
   /** Misma columna que Google/Hevy, separada por líneas. */
@@ -81,6 +83,8 @@ export function ConfigStrategicIntegrationsPanel({
   showHealth?: boolean
   layout?: "default" | "accordions"
   beforeHealthServer?: ReactNode
+  /** Alinea sombras con otras conexiones (`?v=1` en configuración). */
+  cardVariant?: ConfigAccordionCardVariant
 }) {
   const [settings, setSettings] = useState<IntegrationSettings>(defaultSettings)
   const [healthConnected, setHealthConnected] = useState(false)
@@ -568,88 +572,51 @@ export function ConfigStrategicIntegrationsPanel({
     </>
   )
 
-  const finanzasPill = !settings.banking_enabled ? (
-    <ConfigConnectionPill state="disabled" disconnectedLabel="Banca inactiva" />
-  ) : bankAccounts.length > 0 ? (
-    <ConfigConnectionPill state="connected" connectedLabel="Banca lista" />
-  ) : (
-    <ConfigConnectionPill state="disconnected" disconnectedLabel="Conectar" />
-  )
+  const showStrategicLoadError = Boolean(error && lastFailedAction === null && !loadPending)
 
-  const healthAccordionMeta = useMemo(() => {
-    if (loadPending) {
-      return { subtitle: "Cargando estado de importación y sync…" }
-    }
-    if (!settings.health_enabled) {
-      return {
-        subtitle: "Atajo iOS, Apple Health y Google Fit. Activa el módulo abajo para conectar, importar o sincronizar.",
-      }
-    }
-    if (!healthConnected) {
-      return {
-        subtitle:
-          "Módulo activo. Aún no hay métricas en el servidor: usa el atajo en el iPhone, Conectar Apple o Sincronizar salud.",
-      }
-    }
-    const src = healthSourceLabel(healthSource)
-    const ago = formatShortSampleAgo(healthLastSync)
-    return {
-      subtitle: `Última muestra: ${src} · ${ago}. Puedes importar de nuevo o sincronizar abajo.`,
-    }
+  const healthClosedLine = useMemo(() => {
+    if (loadPending) return "Comprobando estado…"
+    if (!settings.health_enabled) return "Módulo apagado en el servidor"
+    if (!healthConnected) return "Sin muestras en el servidor aún"
+    return `${healthSourceLabel(healthSource)} · ${formatShortSampleAgo(healthLastSync)}`
   }, [loadPending, settings.health_enabled, healthConnected, healthSource, healthLastSync])
 
-  const saludPill = loadPending ? (
-    <ConfigConnectionPill state="checking" />
-  ) : !settings.health_enabled ? (
-    <ConfigConnectionPill state="disabled" disconnectedLabel="Módulo off" />
-  ) : healthConnected ? (
-    <ConfigConnectionPill state="connected" connectedLabel="Con muestras" />
-  ) : (
-    <ConfigConnectionPill state="disconnected" disconnectedLabel="Pendiente" />
-  )
+  const finanzasPill =
+    error && (lastFailedAction === "banking" || showStrategicLoadError) ? (
+      <ConfigConnectionPill state="error" errorLabel="Revisar" />
+    ) : !settings.banking_enabled ? (
+      <ConfigConnectionPill state="disabled" disconnectedLabel="Banca inactiva" />
+    ) : bankAccounts.length > 0 ? (
+      <ConfigConnectionPill state="connected" connectedLabel="Banca lista" />
+    ) : (
+      <ConfigConnectionPill state="disconnected" disconnectedLabel="Conectar" />
+    )
+
+  const saludPill =
+    error && lastFailedAction === "health" ? (
+      <ConfigConnectionPill state="error" errorLabel="Revisar" />
+    ) : loadPending ? (
+      <ConfigConnectionPill state="checking" />
+    ) : !settings.health_enabled ? (
+      <ConfigConnectionPill state="disabled" disconnectedLabel="Módulo off" />
+    ) : healthConnected ? (
+      <ConfigConnectionPill state="connected" connectedLabel="Con muestras" />
+    ) : (
+      <ConfigConnectionPill state="disconnected" disconnectedLabel="Pendiente" />
+    )
 
   if (unified && layout === "accordions") {
     return (
       <div className="min-w-0 space-y-2" data-orvita-section="strategic-integrations-accordion" aria-label="Módulos y banca">
-        <details
-          className="group open:shadow-sm"
-          style={{
-            backgroundColor: theme.surface,
-            borderRadius: "1rem",
-            boxShadow: "0 1px 0 rgba(15, 23, 42, 0.04), 0 0 0 1px rgba(15, 23, 42, 0.04)",
-          }}
+        <ConfigAccordion
+          theme={theme}
+          cardVariant={cardVariant}
+          leading={<Landmark className="h-4 w-4" style={{ color: theme.accent.finance }} />}
+          title="Finanzas"
+          description="Banca en Colombia, Nequi, avisos"
+          trailing={finanzasPill}
         >
-          <summary
-            className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3.5 sm:px-5 [&::-webkit-details-marker]:hidden"
-            style={{ color: theme.text }}
-          >
-            <div className="flex min-w-0 flex-1 items-start gap-3">
-              <span
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
-                style={{ backgroundColor: theme.surfaceAlt, color: theme.accent.finance }}
-                aria-hidden
-              >
-                <Landmark className="h-4 w-4" />
-              </span>
-              <div className="min-w-0 text-left">
-                <p className="m-0 text-[0.9rem] font-medium tracking-tight" style={{ color: theme.text }}>
-                  Finanzas
-                </p>
-                <p className="m-0 mt-0.5 text-[12px] leading-snug" style={{ color: theme.textMuted }}>
-                  Bancos en Colombia, Nequi, avisos.
-                </p>
-              </div>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              {finanzasPill}
-              <ChevronDown
-                className="h-4 w-4 shrink-0 transition-transform duration-200 group-open:rotate-180"
-                style={{ color: theme.textMuted }}
-                aria-hidden
-              />
-            </div>
-          </summary>
-          <div className="flex flex-col gap-0 border-t" style={{ borderColor: theme.border }}>
+          <div className="flex flex-col gap-0">
             {makeTogglesBlock(
               ["banking_enabled", "push_enhanced_enabled"],
               "Activa banca y notificaciones en el servidor para conectar cuentas y avisos.",
@@ -657,62 +624,25 @@ export function ConfigStrategicIntegrationsPanel({
             )}
             {bankBlock}
           </div>
-        </details>
+        </ConfigAccordion>
 
         {showHealth ? (
-          <details
-            className="group open:shadow-sm"
+          <ConfigAccordion
             id="acordeon-config-salud-integracion"
-            style={{
-              backgroundColor: theme.surface,
-              borderRadius: "1rem",
-              boxShadow: "0 1px 0 rgba(15, 23, 42, 0.04), 0 0 0 1px rgba(15, 23, 42, 0.04)",
-            }}
+            theme={theme}
+            cardVariant={cardVariant}
+            leading={<HeartPulse className="h-4 w-4" style={{ color: theme.accent.health }} />}
+            title="Salud"
+            description={healthClosedLine}
+            trailing={saludPill}
           >
-            <summary
-              className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3.5 sm:px-5 [&::-webkit-details-marker]:hidden"
-              style={{ color: theme.text }}
-            >
-              <div className="flex min-w-0 flex-1 items-start gap-3">
-                <span
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
-                  style={{ backgroundColor: theme.surfaceAlt, color: theme.accent.health }}
-                  aria-hidden
-                >
-                  <HeartPulse className="h-4 w-4" />
-                </span>
-                <div className="min-w-0 text-left">
-                  <p className="m-0 text-[0.9rem] font-medium tracking-tight" style={{ color: theme.text }}>
-                    Salud
-                  </p>
-                  <p
-                    className="m-0 mt-0.5 text-[12px] leading-snug sm:max-w-[40rem]"
-                    style={{ color: theme.textMuted }}
-                  >
-                    {healthAccordionMeta.subtitle}
-                  </p>
-                </div>
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                {saludPill}
-                <ChevronDown
-                  className="h-4 w-4 shrink-0 transition-transform duration-200 group-open:rotate-180"
-                  style={{ color: theme.textMuted }}
-                  aria-hidden
-                />
-              </div>
-            </summary>
-            <div
-              className="flex flex-col gap-0 border-t"
-              style={{ borderColor: theme.border }}
-              data-orvita-subsection="health-unified-wrap"
-            >
+            <div className="flex flex-col gap-0" data-orvita-subsection="health-unified-wrap">
               {beforeHealthServer ? (
                 <div className="px-0 pb-0 pt-0">{beforeHealthServer}</div>
               ) : null}
               {healthBlockAccordion}
             </div>
-          </details>
+          </ConfigAccordion>
         ) : beforeHealthServer ? (
             <div
               className="overflow-hidden rounded-2xl"

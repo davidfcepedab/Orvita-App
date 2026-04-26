@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Órvita · Salud — propuesta (Figma capture)</title>
+    <script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
+    <style>
+      :root {
+        --bg: #0c1117;
+        --surface: #151c24;
+        --border: rgba(255, 255, 255, 0.08);
+        --text: #f1f5f9;
+        --muted: #94a3b8;
+        --health: #34d399;
+        --health-dim: rgba(52, 211, 153, 0.15);
+        --warn: #fbbf24;
+        --entreno: #38bdf8;
+        --font: "Inter", system-ui, -apple-system, sans-serif;
+        --r: 16px;
+        --r-sm: 12px;
+        --space: 12px;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: var(--font);
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100dvh;
+        -webkit-font-smoothing: antialiased;
+      }
+      /* === Frame: Screen / Salud / Mobile 390 === */
+      .figma-Frame_Screen_Salud {
+        max-width: 390px;
+        margin: 0 auto;
+        min-height: 100dvh;
+        padding: 12px 14px 28px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .figma-Section_Label {
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin: 4px 0 0;
+      }
+      .figma-Header_Salud {
+        padding: 4px 0 8px;
+      }
+      .figma-Header_Salud h1 {
+        font-size: 1.5rem;
+        font-weight: 500;
+        letter-spacing: -0.03em;
+        margin: 0;
+      }
+      .figma-Header_Salud p {
+        margin: 4px 0 0;
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+      .figma-Row_LinksNavegacion {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 8px;
+      }
+      .figma-Chip_Ruta {
+        font-size: 0.65rem;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        color: var(--muted);
+        text-decoration: none;
+      }
+      .figma-Card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        padding: 14px;
+      }
+      .figma-Card_Titulo {
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        margin: 0 0 10px;
+      }
+      .figma-Row_MetricasDia {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+      }
+      .figma-Comp_MetricMini {
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: var(--r-sm);
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+      }
+      .figma-Comp_MetricMini .k {
+        font-size: 0.65rem;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .figma-Comp_MetricMini .v {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-top: 2px;
+        letter-spacing: -0.02em;
+      }
+      .figma-Comp_MetricMini .trend {
+        font-size: 0.65rem;
+        color: var(--health);
+        margin-top: 2px;
+      }
+      .figma-Banner_Condicional {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        font-size: 0.75rem;
+      }
+      .figma-Badge_Estado {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.65rem;
+        font-weight: 600;
+        padding: 3px 8px;
+        border-radius: 999px;
+        background: var(--health-dim);
+        color: var(--health);
+      }
+      .figma-Badge_Estado.off {
+        background: rgba(148, 163, 184, 0.15);
+        color: var(--muted);
+      }
+      .figma-Insight_Principal {
+        border-left: 3px solid var(--health);
+        padding-left: 12px;
+      }
+      .figma-Insight_Principal p {
+        margin: 0;
+        font-size: 0.9rem;
+        line-height: 1.4;
+        font-weight: 500;
+      }
+      .figma-Insight_CTA {
+        margin-top: 10px;
+        font-size: 0.75rem;
+        color: var(--health);
+        font-weight: 600;
+      }
+      .figma-Grupo_Chart {
+        height: 88px;
+        border-radius: var(--r-sm);
+        background: linear-gradient(180deg, rgba(52, 211, 153, 0.12) 0%, transparent 100%);
+        border: 1px dashed rgba(255, 255, 255, 0.12);
+        position: relative;
+        overflow: hidden;
+      }
+      .figma-Grupo_Chart::after {
+        content: "";
+        position: absolute;
+        bottom: 8px;
+        left: 8px;
+        right: 8px;
+        height: 40px;
+        background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 40'%3E%3Cpath d='M0 32 L20 18 L40 25 L60 8 L80 20 L100 12 L120 4' fill='none' stroke='%2334d399' stroke-width='1.5'/%3E%3C/svg%3E")
+          no-repeat;
+        background-size: 100% 100%;
+        opacity: 0.8;
+      }
+      .figma-Grid_Correlacion {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        min-height: 100px;
+      }
+      .figma-Cell_Correl {
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: var(--r-sm);
+        border: 1px solid var(--border);
+        padding: 8px;
+        position: relative;
+      }
+      .figma-Cell_Correl .axis {
+        font-size: 0.6rem;
+        color: var(--muted);
+      }
+      .figma-Scatter_Placeholder {
+        height: 64px;
+        margin-top: 4px;
+        background: radial-gradient(circle at 30% 70%, var(--health) 2px, transparent 2px),
+          radial-gradient(circle at 60% 40%, var(--health) 2px, transparent 2px),
+          radial-gradient(circle at 75% 55%, var(--warn) 2px, transparent 2px);
+        background-size: 100% 100%;
+        opacity: 0.6;
+      }
+      .figma-Row_Gamificacion {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .figma-Comp_ScoreRing {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        background: conic-gradient(var(--health) 0 78%, var(--border) 78% 100%);
+        display: grid;
+        place-items: center;
+        font-size: 0.9rem;
+        font-weight: 700;
+        flex-shrink: 0;
+      }
+      .figma-Comp_ScoreRing span {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: var(--surface);
+        display: grid;
+        place-items: center;
+      }
+      .figma-Texto_CheckinNota {
+        font-size: 0.7rem;
+        color: var(--muted);
+        line-height: 1.45;
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Figma: nombre de capa sugerida = class principal -->
+    <div class="figma-Frame_Screen_Salud" data-figma-name="Frame / Screen / Salud / 390">
+      <header class="figma-Header_Salud" data-figma-name="Header / Salud">
+        <h1>Salud</h1>
+        <p>Hoy alineada con <strong>Hoy</strong> e <strong>Inicio</strong> — entreno en <strong>Entrenamiento</strong></p>
+        <nav class="figma-Row_LinksNavegacion" data-figma-name="Chips / Rutas vinculadas" aria-label="Rutas">
+          <span class="figma-Chip_Ruta">/inicio resumen</span>
+          <span class="figma-Chip_Ruta">/hoy operativo</span>
+          <span class="figma-Chip_Ruta">/entrenamiento carga</span>
+        </nav>
+      </header>
+
+      <p class="figma-Section_Label" data-figma-name="Label / Zona">Operativo · hoy</p>
+
+      <section class="figma-Card" data-figma-name="Card / Resumen del día" id="card-resumen-dia">
+        <h2 class="figma-Card_Titulo">Datos del día (Apple Health)</h2>
+        <div class="figma-Row_MetricasDia" data-figma-name="Grupo / Métricas compactas">
+          <div class="figma-Comp_MetricMini" data-figma-name="Metric / Pasos">
+            <div class="k">Pasos</div>
+            <div class="v">8.420</div>
+            <div class="trend">+6% vs media</div>
+          </div>
+          <div class="figma-Comp_MetricMini" data-figma-name="Metric / Sueño">
+            <div class="k">Sueño</div>
+            <div class="v">6h 50</div>
+            <div class="trend" style="color: var(--warn)">Leve baja</div>
+          </div>
+          <div class="figma-Comp_MetricMini" data-figma-name="Metric / HRV">
+            <div class="k">HRV</div>
+            <div class="v">48 ms</div>
+            <div class="trend">Estable</div>
+          </div>
+          <div class="figma-Comp_MetricMini" data-figma-name="Metric / FC reposo">
+            <div class="k">FC reposo</div>
+            <div class="v">54</div>
+            <div class="trend">Óptimo</div>
+          </div>
+        </div>
+        <p class="figma-Texto_CheckinNota" style="margin-top: 12px" data-figma-name="Nota / Check-in condicional">
+          Si no hay integración, aquí se muestran <strong>check-ins manuales</strong> (sin duplicar lo que ya viene de
+          salud). Con integración, el check-in pasa a segundo plano.
+        </p>
+      </section>
+
+      <div class="figma-Card" data-figma-name="Card / Estado integración" style="padding: 10px 14px">
+        <div class="figma-Banner_Condicional">
+          <span class="figma-Badge_Estado" data-figma-name="Badge / Apple Health"> Apple Health conectado </span>
+          <span style="color: var(--muted); font-size: 0.7rem">Última sync · hace 12 min</span>
+        </div>
+        <!-- variant: <span class="figma-Badge_Estado off">Sin integración</span> -->
+      </div>
+
+      <p class="figma-Section_Label" data-figma-name="Label / Zona">Interpretación</p>
+
+      <section class="figma-Card" data-figma-name="Card / Insight accionable">
+        <h2 class="figma-Card_Titulo">Una frase, una acción</h2>
+        <div class="figma-Insight_Principal" data-figma-name="Bloque / Copy insight">
+          <p>Tu HRV baja en días con sueño &lt; 7 h. Prioriza cama una noche y revisa el martes.</p>
+          <div class="figma-Insight_CTA" data-figma-name="CTA / Ver contexto">Ajustar recordatorio · 30 s</div>
+        </div>
+      </section>
+
+      <p class="figma-Section_Label" data-figma-name="Label / Zona">Tendencias</p>
+      <section class="figma-Card" data-figma-name="Card / Tendencia semanal">
+        <h2 class="figma-Card_Titulo">Ritmo (14 días)</h2>
+        <div class="figma-Grupo_Chart" data-figma-name="Chart / Línea tendencia" aria-hidden="true"></div>
+        <p style="margin: 8px 0 0; font-size: 0.7rem; color: var(--muted)">Toque: expandir rango o comparar semanas</p>
+      </section>
+
+      <p class="figma-Section_Label" data-figma-name="Label / Zona">Correlaciones</p>
+      <section class="figma-Card" data-figma-name="Card / Sueño vs energía">
+        <h2 class="figma-Card_Titulo">Sueño × sensación de energía</h2>
+        <div class="figma-Grid_Correlacion" data-figma-name="Gráfico / Dispersión dual">
+          <div class="figma-Cell_Correl" data-figma-name="Plot / Sueño">
+            <div class="axis">Sueño (h)</div>
+            <div class="figma-Scatter_Placeholder"></div>
+          </div>
+          <div class="figma-Cell_Correl" data-figma-name="Plot / Energía">
+            <div class="axis">Energía (1–5)</div>
+            <div class="figma-Scatter_Placeholder" style="opacity: 0.45"></div>
+          </div>
+        </div>
+      </section>
+      <section class="figma-Card" data-figma-name="Card / HRV vs carga entreno">
+        <h2 class="figma-Card_Titulo">HRV × carga de entreno</h2>
+        <div class="figma-Grid_Correlacion" data-figma-name="Gráfico / Dual axis">
+          <div class="figma-Cell_Correl" data-figma-name="Plot / HRV">
+            <div class="axis" style="color: var(--health)">HRV</div>
+            <div class="figma-Scatter_Placeholder"></div>
+          </div>
+          <div class="figma-Cell_Correl" data-figma-name="Plot / Carga">
+            <div class="axis" style="color: var(--entreno)">Carga</div>
+            <div class="figma-Scatter_Placeholder" style="background: radial-gradient(circle at 50% 50%, var(--entreno) 2px, transparent 2px)"></div>
+          </div>
+        </div>
+      </section>
+
+      <p class="figma-Section_Label" data-figma-name="Label / Zona">Hábito · ligero</p>
+      <section class="figma-Card" data-figma-name="Card / Score consistencia">
+        <h2 class="figma-Card_Titulo">Consistencia (no competitivo)</h2>
+        <div class="figma-Row_Gamificacion" data-figma-name="Grupo / Score + copy">
+          <div class="figma-Comp_ScoreRing" data-figma-name="Widget / Aro score" aria-label="Puntuación 78">
+            <span>78</span>
+          </div>
+          <div>
+            <p style="margin: 0; font-size: 0.85rem; font-weight: 500">4 de 5 días con señal útil</p>
+            <p style="margin: 4px 0 0; font-size: 0.75rem; color: var(--muted)">Baja sutil si solo miras un número</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </body>
+</html>

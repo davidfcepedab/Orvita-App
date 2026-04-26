@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
-import { Bell, ChevronDown, Loader2, Sparkles } from "lucide-react"
+import { Loader2, Sparkles } from "lucide-react"
 import type { OrbitaConfigTheme } from "@/app/components/orbita-v3/config/configThemeTypes"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
@@ -150,14 +150,18 @@ function FieldLabel({ theme, children }: { theme: OrbitaConfigTheme; children: R
   )
 }
 
-export function ConfigNotificationPreferencesPanel({ theme }: { theme: OrbitaConfigTheme }) {
+export function ConfigNotificationPreferencesPanel({
+  theme,
+  embedded = false,
+}: {
+  theme: OrbitaConfigTheme
+  embedded?: boolean
+}) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [draft, setDraft] = useState<OrbitaNotificationPreferences | null>(null)
-  /** Panel plegado por defecto */
-  const [panelOpen, setPanelOpen] = useState(false)
   /** Bonus +5 pts por haber guardado al menos una vez (persistente) */
   const [hasSavedBonus, setHasSavedBonus] = useState(false)
 
@@ -170,10 +174,6 @@ export function ConfigNotificationPreferencesPanel({ theme }: { theme: OrbitaCon
       /* ignore */
     }
   }, [])
-
-  useEffect(() => {
-    if (error && draft) setPanelOpen(true)
-  }, [error, draft])
 
   const gamification = useMemo(() => {
     if (!draft) return { current: 0, max: 36 }
@@ -278,485 +278,433 @@ export function ConfigNotificationPreferencesPanel({ theme }: { theme: OrbitaCon
 
   const disabled = loading || !draft || saving
 
+  const content = (
+    <div className="space-y-4">
+      {error ? (
+        <p className="text-sm" style={{ color: "#b91c1c" }}>
+          {error}
+        </p>
+      ) : null}
+      {success ? (
+        <p className="text-sm font-medium" style={{ color: theme.accent.health }}>
+          {success}
+        </p>
+      ) : null}
+
+      <ToggleRow
+        theme={theme}
+        label="Avisos en este dispositivo"
+        description="Si lo desactivas, no te enviamos alertas automáticas al teléfono o al navegador. Lo que pase dentro de la app lo sigues viendo en la campana cuando haya novedades."
+        checked={draft.push_enabled_global}
+        disabled={disabled}
+        onChange={(v) => update({ push_enabled_global: v })}
+      />
+
+      <p className="text-[10px] leading-snug sm:text-[11px]" style={{ color: theme.textMuted }}>
+        <span className="font-semibold" style={{ color: theme.text }}>
+          Categorías en el sistema:
+        </span>{" "}
+        Palanca #1 (cerrar el día), presión crítica (meta de ahorro), energía / agenda-entreno y recordatorios de hábitos se
+        traducen en los interruptores de abajo y en los botones de la notificación nativa.
+      </p>
+
+      <div className="space-y-1.5">
+        <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: theme.textMuted }}>
+          Qué te avisamos
+        </p>
+        <div className="space-y-1">
+          <ToggleRow
+            theme={theme}
+            label="Recordar cerrar el día"
+            description="Si aún no dejaste tu registro del día, te escribimos a la hora que elijas abajo."
+            checked={draft.push_checkin_reminder}
+            disabled={disabled || !draft.push_enabled_global}
+            onChange={(v) => update({ push_checkin_reminder: v })}
+          />
+          <ToggleRow
+            theme={theme}
+            label="Hábitos pendientes"
+            description="Por la mañana, si te faltan hábitos previstos para hoy."
+            checked={draft.push_habit_reminder}
+            disabled={disabled || !draft.push_enabled_global}
+            onChange={(v) => update({ push_habit_reminder: v })}
+          />
+          <ToggleRow
+            theme={theme}
+            label="Compromisos en casa"
+            description="Cuando un compromiso del hogar está a punto de vencer."
+            checked={draft.push_commitment_reminder}
+            disabled={disabled || !draft.push_enabled_global}
+            onChange={(v) => update({ push_commitment_reminder: v })}
+          />
+          <ToggleRow
+            theme={theme}
+            label="Si el ahorro baja de tu meta"
+            description="Usa el porcentaje más abajo. Te avisamos si el mes se queda corto respecto a esa meta."
+            checked={draft.push_finance_threshold}
+            disabled={disabled || !draft.push_enabled_global}
+            onChange={(v) => update({ push_finance_threshold: v })}
+          />
+          <ToggleRow
+            theme={theme}
+            label="Próximos en tu agenda"
+            description="Próximamente, cuando conectemos mejor con tu calendario."
+            upcoming
+            checked={draft.push_agenda_upcoming}
+            disabled={disabled || !draft.push_enabled_global}
+            onChange={(v) => update({ push_agenda_upcoming: v })}
+          />
+          <ToggleRow
+            theme={theme}
+            label="Entrenamiento"
+            description="Próximamente."
+            upcoming
+            checked={draft.push_training_reminder}
+            disabled={disabled || !draft.push_enabled_global}
+            onChange={(v) => update({ push_training_reminder: v })}
+          />
+          <ToggleRow
+            theme={theme}
+            label="Digest diario (resumen compacto)"
+            description="Opcional: una sola pieza diaria para reducir ruido."
+            checked={draft.push_digest_daily}
+            disabled={disabled || !draft.push_enabled_global}
+            onChange={(v) => update({ push_digest_daily: v })}
+          />
+          <ToggleRow
+            theme={theme}
+            label="Resumen de la mañana"
+            description="Vistazo al despertar. La hora la eliges un poco más abajo."
+            checked={draft.push_digest_morning}
+            disabled={disabled || !draft.push_enabled_global}
+            onChange={(v) => update({ push_digest_morning: v })}
+          />
+          <ToggleRow
+            theme={theme}
+            label="Resumen de la semana"
+            description="Cierre de la semana el día que marques abajo, a la hora del resumen."
+            checked={draft.push_weekly_summary}
+            disabled={disabled || !draft.push_enabled_global}
+            onChange={(v) => update({ push_weekly_summary: v })}
+          />
+          <ToggleRow
+            theme={theme}
+            label="Novedades con tu pareja"
+            description="Próximamente, cuando activemos el hogar compartido."
+            upcoming
+            checked={draft.push_partner_activity}
+            disabled={disabled || !draft.push_enabled_global}
+            onChange={(v) => update({ push_partner_activity: v })}
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-2 sm:grid-cols-2">
+        <div>
+          <FieldLabel theme={theme}>Hora del recordatorio del día</FieldLabel>
+          <select
+            className="mt-1 w-full rounded-lg border px-2 py-1.5 text-[13px]"
+            style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt, color: theme.text }}
+            disabled={disabled}
+            value={draft.reminder_hour_local}
+            onChange={(e) => update({ reminder_hour_local: Number(e.target.value) })}
+          >
+            {HOUR_OPTS.map((h) => (
+              <option key={h} value={h}>
+                {String(h).padStart(2, "0")}:00
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <FieldLabel theme={theme}>Hora del resumen de la mañana y hábitos</FieldLabel>
+          <select
+            className="mt-1 w-full rounded-lg border px-2 py-1.5 text-[13px]"
+            style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt, color: theme.text }}
+            disabled={disabled}
+            value={draft.digest_hour_local}
+            onChange={(e) => update({ digest_hour_local: Number(e.target.value) })}
+          >
+            {HOUR_OPTS.map((h) => (
+              <option key={h} value={h}>
+                {String(h).padStart(2, "0")}:00
+              </option>
+            ))}
+          </select>
+          <p className="mt-0.5 text-[10px] leading-snug sm:text-[11px]" style={{ color: theme.textMuted }}>
+            En tu zona horaria (arriba): a esa hora van el resumen de la mañana y los hábitos pendientes.
+          </p>
+        </div>
+        <div className="sm:col-span-2">
+          <FieldLabel theme={theme}>Día del resumen semanal</FieldLabel>
+          <select
+            className="mt-1 w-full rounded-lg border px-2 py-1.5 text-[13px]"
+            style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt, color: theme.text }}
+            disabled={disabled}
+            value={draft.weekly_digest_dow}
+            onChange={(e) => update({ weekly_digest_dow: Number(e.target.value) })}
+          >
+            {DOW_OPTS.map((d) => (
+              <option key={d.v} value={d.v}>
+                {d.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="sm:col-span-2">
+          <FieldLabel theme={theme}>Tu zona horaria</FieldLabel>
+          <input
+            type="text"
+            spellCheck={false}
+            className="mt-1 w-full rounded-lg border px-2 py-1.5 font-mono text-[13px]"
+            style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt, color: theme.text }}
+            disabled={disabled}
+            value={draft.timezone}
+            onChange={(e) => update({ timezone: e.target.value })}
+            placeholder="p. ej. America/Bogota"
+            autoComplete="off"
+          />
+          <p className="mt-0.5 text-[10px] leading-snug sm:text-[11px]" style={{ color: theme.textMuted }}>
+            Así calculamos qué día es «hoy» y a qué hora corresponde cada aviso.
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: theme.textMuted }}>
+          No molestar
+        </p>
+        <p className="text-[10px] leading-snug sm:text-[11px]" style={{ color: theme.textMuted }}>
+          En ese tramo no te enviamos avisos al dispositivo. Elige «No» en ambos si no quieres silenciar.
+        </p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <div>
+            <FieldLabel theme={theme}>Desde</FieldLabel>
+            <select
+              className="mt-1 w-full rounded-lg border px-2 py-1.5 text-[13px]"
+              style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt, color: theme.text }}
+              disabled={disabled}
+              value={draft.quiet_hours_start === null ? "" : String(draft.quiet_hours_start)}
+              onChange={(e) => {
+                const v = e.target.value
+                update({ quiet_hours_start: v === "" ? null : Number(v) })
+              }}
+            >
+              <option value="">No</option>
+              {HOUR_OPTS.map((h) => (
+                <option key={h} value={h}>
+                  {String(h).padStart(2, "0")}:00
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <FieldLabel theme={theme}>Hasta</FieldLabel>
+            <select
+              className="mt-1 w-full rounded-lg border px-2 py-1.5 text-[13px]"
+              style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt, color: theme.text }}
+              disabled={disabled}
+              value={draft.quiet_hours_end === null ? "" : String(draft.quiet_hours_end)}
+              onChange={(e) => {
+                const v = e.target.value
+                update({ quiet_hours_end: v === "" ? null : Number(v) })
+              }}
+            >
+              <option value="">No</option>
+              {HOUR_OPTS.map((h) => (
+                <option key={h} value={h}>
+                  {String(h).padStart(2, "0")}:00
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: theme.textMuted }}>
+          Tu meta de ahorro
+        </p>
+        <div>
+          <FieldLabel theme={theme}>Porcentaje mínimo que quieres ahorrar cada mes</FieldLabel>
+          <input
+            type="text"
+            inputMode="decimal"
+            className="mt-1 w-full max-w-[11rem] rounded-lg border px-2 py-1.5 text-[13px]"
+            style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt, color: theme.text }}
+            disabled={disabled}
+            value={draft.finance_savings_threshold_pct === null ? "" : String(draft.finance_savings_threshold_pct)}
+            onChange={(e) => {
+              const raw = e.target.value.trim()
+              if (raw === "") {
+                update({ finance_savings_threshold_pct: null })
+                return
+              }
+              const n = Number(raw.replace(",", "."))
+              if (Number.isFinite(n)) update({ finance_savings_threshold_pct: n })
+            }}
+            placeholder="Opcional"
+          />
+          <p className="mt-0.5 text-[10px] leading-snug" style={{ color: theme.textMuted }}>
+            Solo cuenta si activaste el aviso «Si el ahorro baja de tu meta». Déjalo vacío si no quieres usar este aviso.
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-1">
+        <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: theme.textMuted }}>
+          Mute temporal por categoría
+        </p>
+        <p className="text-[10px] leading-snug sm:text-[11px]" style={{ color: theme.textMuted }}>
+          Silencia categoría completa por un periodo. No cambia tus toggles base.
+        </p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <div>
+            <FieldLabel theme={theme}>Palanca #1</FieldLabel>
+            <select
+              className="mt-1 w-full rounded-lg border px-2 py-1.5 text-[13px]"
+              style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt, color: theme.text }}
+              disabled={disabled}
+              onChange={(e) => update({ mute_until_palanca: nextMuteIso(e.target.value as "none" | "1h" | "4h" | "24h") })}
+              value={muteOptionFromIso(draft.mute_until_palanca)}
+            >
+              {MUTE_OPTS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <FieldLabel theme={theme}>Presión crítica</FieldLabel>
+            <select
+              className="mt-1 w-full rounded-lg border px-2 py-1.5 text-[13px]"
+              style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt, color: theme.text }}
+              disabled={disabled}
+              onChange={(e) =>
+                update({ mute_until_presion_critica: nextMuteIso(e.target.value as "none" | "1h" | "4h" | "24h") })
+              }
+              value={muteOptionFromIso(draft.mute_until_presion_critica)}
+            >
+              {MUTE_OPTS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <FieldLabel theme={theme}>Energía / Agenda</FieldLabel>
+            <select
+              className="mt-1 w-full rounded-lg border px-2 py-1.5 text-[13px]"
+              style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt, color: theme.text }}
+              disabled={disabled}
+              onChange={(e) => update({ mute_until_energia: nextMuteIso(e.target.value as "none" | "1h" | "4h" | "24h") })}
+              value={muteOptionFromIso(draft.mute_until_energia)}
+            >
+              {MUTE_OPTS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <FieldLabel theme={theme}>Hábitos</FieldLabel>
+            <select
+              className="mt-1 w-full rounded-lg border px-2 py-1.5 text-[13px]"
+              style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt, color: theme.text }}
+              disabled={disabled}
+              onChange={(e) => update({ mute_until_habitos: nextMuteIso(e.target.value as "none" | "1h" | "4h" | "24h") })}
+              value={muteOptionFromIso(draft.mute_until_habitos)}
+            >
+              {MUTE_OPTS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-1">
+        <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: theme.textMuted }}>
+          También por correo
+        </p>
+        <p className="text-[10px] leading-snug sm:text-[11px]" style={{ color: theme.textMuted }}>
+          Al correo de tu cuenta, si tu equipo tiene activado el envío.
+        </p>
+        <ToggleRow
+          theme={theme}
+          label="Enviarme el resumen de la mañana"
+          checked={draft.email_digest_enabled}
+          disabled={disabled}
+          onChange={(v) => update({ email_digest_enabled: v })}
+        />
+        <ToggleRow
+          theme={theme}
+          label="Enviarme el resumen de la semana"
+          checked={draft.email_weekly_enabled}
+          disabled={disabled}
+          onChange={(v) => update({ email_weekly_enabled: v })}
+        />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 pt-0.5">
+        <button
+          type="button"
+          className={subtleBtn}
+          style={{
+            borderColor: theme.accent.health,
+            backgroundColor: theme.accent.health,
+            color: "#fff",
+          }}
+          disabled={disabled}
+          onClick={() => void save()}
+        >
+          {saving ? "Guardando…" : "Guardar cambios"}
+        </button>
+        <p className="text-[10px] leading-snug" style={{ color: theme.textMuted }}>
+          Más opciones activas y guardar = más puntos (hasta {gamification.max}).
+        </p>
+      </div>
+    </div>
+  )
+
   return (
-    <section className="space-y-2" aria-labelledby="config-notifications-heading">
+    <section className="space-y-2" aria-label="Preferencias de notificaciones">
       {isAppMockMode() ? (
         <p className="text-[10px] leading-snug sm:text-[11px]" style={{ color: theme.accent.agenda }}>
           Vista de prueba: ves valores de ejemplo; al salir del modo demo podrás guardar de verdad.
         </p>
       ) : null}
 
-      <div
-        className="rounded-2xl border"
-        style={{
-          backgroundColor: theme.surface,
-          borderColor: theme.border,
-          boxShadow: "0 1px 0 rgba(15, 23, 42, 0.04)",
-        }}
-      >
-        {loading ? (
-          <div className="flex items-center gap-2 px-4 py-3 text-sm" style={{ color: theme.textMuted }}>
-            <Loader2 className="h-4 w-4 animate-spin shrink-0" aria-hidden />
-            Cargando avisos…
-          </div>
-        ) : error && !draft ? (
-          <div className="space-y-3 px-4 py-3">
-            <p className="text-sm" style={{ color: theme.text }}>
-              {error}
+      {loading ? (
+        <div className="flex items-center gap-2 px-1 py-1 text-sm" style={{ color: theme.textMuted }}>
+          <Loader2 className="h-4 w-4 animate-spin shrink-0" aria-hidden />
+          Cargando avisos…
+        </div>
+      ) : error && !draft ? (
+        <div className="space-y-3 px-1 py-1">
+          <p className="text-sm" style={{ color: theme.text }}>
+            {error}
+          </p>
+          <button type="button" className={subtleBtn} style={{ borderColor: theme.border, color: theme.text }} onClick={() => void load()}>
+            Reintentar
+          </button>
+        </div>
+      ) : draft ? (
+        <div className={embedded ? "space-y-3" : "space-y-3 rounded-2xl border p-3 sm:p-4"} style={embedded ? undefined : { backgroundColor: theme.surface, borderColor: theme.border }}>
+          {!embedded ? (
+            <p className="m-0 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold tabular-nums" style={{ borderColor: theme.border, color: theme.text }}>
+              <Sparkles className="h-3 w-3 shrink-0" style={{ color: theme.accent.finance }} aria-hidden />
+              {gamification.current}/{gamification.max} pts
             </p>
-            <button type="button" className={subtleBtn} style={{ borderColor: theme.border, color: theme.text }} onClick={() => void load()}>
-              Reintentar
-            </button>
-          </div>
-        ) : draft ? (
-          <div>
-            <button
-              type="button"
-              id="config-notifications-heading"
-              className="orbita-focus-ring flex w-full items-start gap-3 px-4 py-3 text-left sm:items-center"
-              aria-expanded={panelOpen}
-              onClick={() => setPanelOpen((v) => !v)}
-            >
-              <span
-                className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl sm:mt-0"
-                style={{ backgroundColor: theme.surfaceAlt, color: theme.accent.health }}
-                aria-hidden
-              >
-                <Bell className="h-4 w-4" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-semibold tracking-tight" style={{ color: theme.text }}>
-                    Notificaciones
-                  </span>
-                  <span
-                    className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold tabular-nums"
-                    style={{
-                      backgroundColor: theme.surfaceAlt,
-                      border: `1px solid ${theme.border}`,
-                      color: theme.text,
-                    }}
-                  >
-                    <Sparkles className="h-3 w-3 shrink-0" style={{ color: theme.accent.finance }} aria-hidden />
-                    {gamification.current}/{gamification.max} pts
-                  </span>
-                </span>
-                <span className="mt-0.5 block text-[11px] leading-snug" style={{ color: theme.textMuted }}>
-                  {panelOpen
-                    ? "Ocultar opciones"
-                    : "Avisos en el teléfono o navegador, horarios y correo — pulsa para configurar"}
-                </span>
-              </span>
-              <ChevronDown
-                className={`mt-1 h-5 w-5 shrink-0 transition-transform duration-200 sm:mt-0 ${panelOpen ? "rotate-180" : ""}`}
-                style={{ color: theme.textMuted }}
-                aria-hidden
-              />
-            </button>
-
-            {panelOpen ? (
-              <div
-                className="space-y-4 border-t px-4 pb-4 pt-3"
-                style={{ borderColor: theme.border }}
-                role="region"
-                aria-labelledby="config-notifications-heading"
-              >
-                <div className="space-y-4">
-            {error ? (
-              <p className="text-sm" style={{ color: "#b91c1c" }}>
-                {error}
-              </p>
-            ) : null}
-            {success ? (
-              <p className="text-sm font-medium" style={{ color: theme.accent.health }}>
-                {success}
-              </p>
-            ) : null}
-
-            <ToggleRow
-              theme={theme}
-              label="Avisos en este dispositivo"
-              description="Si lo desactivas, no te enviamos alertas automáticas al teléfono o al navegador. Lo que pase dentro de la app lo sigues viendo en la campana cuando haya novedades."
-              checked={draft.push_enabled_global}
-              disabled={disabled}
-              onChange={(v) => update({ push_enabled_global: v })}
-            />
-
-            <p className="text-[10px] leading-snug sm:text-[11px]" style={{ color: theme.textMuted }}>
-              <span className="font-semibold" style={{ color: theme.text }}>
-                Categorías en el sistema:
-              </span>{" "}
-              Palanca #1 (cerrar el día), presión crítica (meta de ahorro), energía / agenda-entreno y recordatorios
-              de hábitos se traducen en los interruptores de abajo y en los botones de la notificación nativa.
-            </p>
-
-            <div className="space-y-1.5">
-              <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: theme.textMuted }}>
-                Qué te avisamos
-              </p>
-              <div className="space-y-1">
-                <ToggleRow
-                  theme={theme}
-                  label="Recordar cerrar el día"
-                  description="Si aún no dejaste tu registro del día, te escribimos a la hora que elijas abajo."
-                  checked={draft.push_checkin_reminder}
-                  disabled={disabled || !draft.push_enabled_global}
-                  onChange={(v) => update({ push_checkin_reminder: v })}
-                />
-                <ToggleRow
-                  theme={theme}
-                  label="Hábitos pendientes"
-                  description="Por la mañana, si te faltan hábitos previstos para hoy."
-                  checked={draft.push_habit_reminder}
-                  disabled={disabled || !draft.push_enabled_global}
-                  onChange={(v) => update({ push_habit_reminder: v })}
-                />
-                <ToggleRow
-                  theme={theme}
-                  label="Compromisos en casa"
-                  description="Cuando un compromiso del hogar está a punto de vencer."
-                  checked={draft.push_commitment_reminder}
-                  disabled={disabled || !draft.push_enabled_global}
-                  onChange={(v) => update({ push_commitment_reminder: v })}
-                />
-                <ToggleRow
-                  theme={theme}
-                  label="Si el ahorro baja de tu meta"
-                  description="Usa el porcentaje más abajo. Te avisamos si el mes se queda corto respecto a esa meta."
-                  checked={draft.push_finance_threshold}
-                  disabled={disabled || !draft.push_enabled_global}
-                  onChange={(v) => update({ push_finance_threshold: v })}
-                />
-                <ToggleRow
-                  theme={theme}
-                  label="Próximos en tu agenda"
-                  description="Próximamente, cuando conectemos mejor con tu calendario."
-                  upcoming
-                  checked={draft.push_agenda_upcoming}
-                  disabled={disabled || !draft.push_enabled_global}
-                  onChange={(v) => update({ push_agenda_upcoming: v })}
-                />
-                <ToggleRow
-                  theme={theme}
-                  label="Entrenamiento"
-                  description="Próximamente."
-                  upcoming
-                  checked={draft.push_training_reminder}
-                  disabled={disabled || !draft.push_enabled_global}
-                  onChange={(v) => update({ push_training_reminder: v })}
-                />
-                <ToggleRow
-                  theme={theme}
-                  label="Digest diario (resumen compacto)"
-                  description="Opcional: una sola pieza diaria para reducir ruido."
-                  checked={draft.push_digest_daily}
-                  disabled={disabled || !draft.push_enabled_global}
-                  onChange={(v) => update({ push_digest_daily: v })}
-                />
-                <ToggleRow
-                  theme={theme}
-                  label="Resumen de la mañana"
-                  description="Vistazo al despertar. La hora la eliges un poco más abajo."
-                  checked={draft.push_digest_morning}
-                  disabled={disabled || !draft.push_enabled_global}
-                  onChange={(v) => update({ push_digest_morning: v })}
-                />
-                <ToggleRow
-                  theme={theme}
-                  label="Resumen de la semana"
-                  description="Cierre de la semana el día que marques abajo, a la hora del resumen."
-                  checked={draft.push_weekly_summary}
-                  disabled={disabled || !draft.push_enabled_global}
-                  onChange={(v) => update({ push_weekly_summary: v })}
-                />
-                <ToggleRow
-                  theme={theme}
-                  label="Novedades con tu pareja"
-                  description="Próximamente, cuando activemos el hogar compartido."
-                  upcoming
-                  checked={draft.push_partner_activity}
-                  disabled={disabled || !draft.push_enabled_global}
-                  onChange={(v) => update({ push_partner_activity: v })}
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-2 sm:grid-cols-2">
-              <div>
-                <FieldLabel theme={theme}>Hora del recordatorio del día</FieldLabel>
-                <select
-                  className="mt-1 w-full rounded-lg border px-2 py-1.5 text-[13px]"
-                  style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt, color: theme.text }}
-                  disabled={disabled}
-                  value={draft.reminder_hour_local}
-                  onChange={(e) => update({ reminder_hour_local: Number(e.target.value) })}
-                >
-                  {HOUR_OPTS.map((h) => (
-                    <option key={h} value={h}>
-                      {String(h).padStart(2, "0")}:00
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <FieldLabel theme={theme}>Hora del resumen de la mañana y hábitos</FieldLabel>
-                <select
-                  className="mt-1 w-full rounded-lg border px-2 py-1.5 text-[13px]"
-                  style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt, color: theme.text }}
-                  disabled={disabled}
-                  value={draft.digest_hour_local}
-                  onChange={(e) => update({ digest_hour_local: Number(e.target.value) })}
-                >
-                  {HOUR_OPTS.map((h) => (
-                    <option key={h} value={h}>
-                      {String(h).padStart(2, "0")}:00
-                    </option>
-                  ))}
-                </select>
-                <p className="mt-0.5 text-[10px] leading-snug sm:text-[11px]" style={{ color: theme.textMuted }}>
-                  En tu zona horaria (arriba): a esa hora van el resumen de la mañana y los hábitos pendientes.
-                </p>
-              </div>
-              <div className="sm:col-span-2">
-                <FieldLabel theme={theme}>Día del resumen semanal</FieldLabel>
-                <select
-                  className="mt-1 w-full rounded-lg border px-2 py-1.5 text-[13px]"
-                  style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt, color: theme.text }}
-                  disabled={disabled}
-                  value={draft.weekly_digest_dow}
-                  onChange={(e) => update({ weekly_digest_dow: Number(e.target.value) })}
-                >
-                  {DOW_OPTS.map((d) => (
-                    <option key={d.v} value={d.v}>
-                      {d.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="sm:col-span-2">
-                <FieldLabel theme={theme}>Tu zona horaria</FieldLabel>
-                <input
-                  type="text"
-                  spellCheck={false}
-                  className="mt-1 w-full rounded-lg border px-2 py-1.5 font-mono text-[13px]"
-                  style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt, color: theme.text }}
-                  disabled={disabled}
-                  value={draft.timezone}
-                  onChange={(e) => update({ timezone: e.target.value })}
-                  placeholder="p. ej. America/Bogota"
-                  autoComplete="off"
-                />
-                <p className="mt-0.5 text-[10px] leading-snug sm:text-[11px]" style={{ color: theme.textMuted }}>
-                  Así calculamos qué día es «hoy» y a qué hora corresponde cada aviso.
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: theme.textMuted }}>
-                No molestar
-              </p>
-              <p className="text-[10px] leading-snug sm:text-[11px]" style={{ color: theme.textMuted }}>
-                En ese tramo no te enviamos avisos al dispositivo. Elige «No» en ambos si no quieres silenciar.
-              </p>
-              <div className="grid gap-2 sm:grid-cols-2">
-                <div>
-                  <FieldLabel theme={theme}>Desde</FieldLabel>
-                  <select
-                    className="mt-1 w-full rounded-lg border px-2 py-1.5 text-[13px]"
-                    style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt, color: theme.text }}
-                    disabled={disabled}
-                    value={draft.quiet_hours_start === null ? "" : String(draft.quiet_hours_start)}
-                    onChange={(e) => {
-                      const v = e.target.value
-                      update({ quiet_hours_start: v === "" ? null : Number(v) })
-                    }}
-                  >
-                    <option value="">No</option>
-                    {HOUR_OPTS.map((h) => (
-                      <option key={h} value={h}>
-                        {String(h).padStart(2, "0")}:00
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <FieldLabel theme={theme}>Hasta</FieldLabel>
-                  <select
-                    className="mt-1 w-full rounded-lg border px-2 py-1.5 text-[13px]"
-                    style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt, color: theme.text }}
-                    disabled={disabled}
-                    value={draft.quiet_hours_end === null ? "" : String(draft.quiet_hours_end)}
-                    onChange={(e) => {
-                      const v = e.target.value
-                      update({ quiet_hours_end: v === "" ? null : Number(v) })
-                    }}
-                  >
-                    <option value="">No</option>
-                    {HOUR_OPTS.map((h) => (
-                      <option key={h} value={h}>
-                        {String(h).padStart(2, "0")}:00
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: theme.textMuted }}>
-                Tu meta de ahorro
-              </p>
-              <div>
-                <FieldLabel theme={theme}>Porcentaje mínimo que quieres ahorrar cada mes</FieldLabel>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  className="mt-1 w-full max-w-[11rem] rounded-lg border px-2 py-1.5 text-[13px]"
-                  style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt, color: theme.text }}
-                  disabled={disabled}
-                  value={draft.finance_savings_threshold_pct === null ? "" : String(draft.finance_savings_threshold_pct)}
-                  onChange={(e) => {
-                    const raw = e.target.value.trim()
-                    if (raw === "") {
-                      update({ finance_savings_threshold_pct: null })
-                      return
-                    }
-                    const n = Number(raw.replace(",", "."))
-                    if (Number.isFinite(n)) update({ finance_savings_threshold_pct: n })
-                  }}
-                  placeholder="Opcional"
-                />
-                <p className="mt-0.5 text-[10px] leading-snug" style={{ color: theme.textMuted }}>
-                  Solo cuenta si activaste el aviso «Si el ahorro baja de tu meta». Déjalo vacío si no quieres usar este aviso.
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: theme.textMuted }}>
-                Mute temporal por categoría
-              </p>
-              <p className="text-[10px] leading-snug sm:text-[11px]" style={{ color: theme.textMuted }}>
-                Silencia categoría completa por un periodo. No cambia tus toggles base.
-              </p>
-              <div className="grid gap-2 sm:grid-cols-2">
-                <div>
-                  <FieldLabel theme={theme}>Palanca #1</FieldLabel>
-                  <select
-                    className="mt-1 w-full rounded-lg border px-2 py-1.5 text-[13px]"
-                    style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt, color: theme.text }}
-                    disabled={disabled}
-                    onChange={(e) => update({ mute_until_palanca: nextMuteIso(e.target.value as "none" | "1h" | "4h" | "24h") })}
-                    value={muteOptionFromIso(draft.mute_until_palanca)}
-                  >
-                    {MUTE_OPTS.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <FieldLabel theme={theme}>Presión crítica</FieldLabel>
-                  <select
-                    className="mt-1 w-full rounded-lg border px-2 py-1.5 text-[13px]"
-                    style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt, color: theme.text }}
-                    disabled={disabled}
-                    onChange={(e) =>
-                      update({ mute_until_presion_critica: nextMuteIso(e.target.value as "none" | "1h" | "4h" | "24h") })
-                    }
-                    value={muteOptionFromIso(draft.mute_until_presion_critica)}
-                  >
-                    {MUTE_OPTS.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <FieldLabel theme={theme}>Energía / Agenda</FieldLabel>
-                  <select
-                    className="mt-1 w-full rounded-lg border px-2 py-1.5 text-[13px]"
-                    style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt, color: theme.text }}
-                    disabled={disabled}
-                    onChange={(e) => update({ mute_until_energia: nextMuteIso(e.target.value as "none" | "1h" | "4h" | "24h") })}
-                    value={muteOptionFromIso(draft.mute_until_energia)}
-                  >
-                    {MUTE_OPTS.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <FieldLabel theme={theme}>Hábitos</FieldLabel>
-                  <select
-                    className="mt-1 w-full rounded-lg border px-2 py-1.5 text-[13px]"
-                    style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt, color: theme.text }}
-                    disabled={disabled}
-                    onChange={(e) => update({ mute_until_habitos: nextMuteIso(e.target.value as "none" | "1h" | "4h" | "24h") })}
-                    value={muteOptionFromIso(draft.mute_until_habitos)}
-                  >
-                    {MUTE_OPTS.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: theme.textMuted }}>
-                También por correo
-              </p>
-              <p className="text-[10px] leading-snug sm:text-[11px]" style={{ color: theme.textMuted }}>
-                Al correo de tu cuenta, si tu equipo tiene activado el envío.
-              </p>
-              <ToggleRow
-                theme={theme}
-                label="Enviarme el resumen de la mañana"
-                checked={draft.email_digest_enabled}
-                disabled={disabled}
-                onChange={(v) => update({ email_digest_enabled: v })}
-              />
-              <ToggleRow
-                theme={theme}
-                label="Enviarme el resumen de la semana"
-                checked={draft.email_weekly_enabled}
-                disabled={disabled}
-                onChange={(v) => update({ email_weekly_enabled: v })}
-              />
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 pt-0.5">
-              <button
-                type="button"
-                className={subtleBtn}
-                style={{
-                  borderColor: theme.accent.health,
-                  backgroundColor: theme.accent.health,
-                  color: "#fff",
-                }}
-                disabled={disabled}
-                onClick={() => void save()}
-              >
-                {saving ? "Guardando…" : "Guardar cambios"}
-              </button>
-              <p className="text-[10px] leading-snug" style={{ color: theme.textMuted }}>
-                Más opciones activas y guardar = más puntos (hasta {gamification.max}).
-              </p>
-            </div>
-                </div>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
+          ) : null}
+          {content}
+        </div>
+      ) : null}
     </section>
   )
 }

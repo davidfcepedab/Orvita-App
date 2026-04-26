@@ -3,17 +3,22 @@
 import { useCallback, useMemo, useState } from "react"
 import { motion } from "framer-motion"
 import { Activity, Apple, ClipboardCopy, Download, MoonStar, Sparkles, Zap } from "lucide-react"
+import { useOrbitaSkin } from "@/app/contexts/AppContext"
 import type { SaludContextSnapshot } from "@/app/salud/_hooks/useSaludContext"
-import { useHealthAutoMetrics } from "@/app/hooks/useHealthAutoMetrics"
+import type { AutoHealthMetric } from "@/app/hooks/useHealthAutoMetrics"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import {
   buildOrvitaRunShortcutHref,
   buildOrvitaShortcutImportHref,
   getOrvitaHealthShortcutIcloudUrl,
 } from "@/lib/shortcuts/orvitaHealthShortcut"
+import { saludHexToRgba, saludPanelStyle } from "@/lib/salud/saludThemeStyles"
 
 type Props = {
   salud: SaludContextSnapshot
+  latest: AutoHealthMetric | null
+  loading: boolean
+  onRefresh: () => Promise<void>
 }
 
 function formatWhen(iso: string | null | undefined) {
@@ -42,12 +47,20 @@ function recoveryNarrative(readiness: number | null | undefined, weekAvg: number
   return `Tu recuperación está en ${readiness}, en línea con tu promedio semanal (${Math.round(weekAvg)}). Mantén hábitos simples: sueño constante, hidratación y movimiento amable.`
 }
 
-export default function AppleHealthLuxurySection({ salud }: Props) {
-  const { latest, loading, refetch } = useHealthAutoMetrics()
+export default function AppleHealthLuxurySection({ salud, latest, loading, onRefresh }: Props) {
+  const theme = useOrbitaSkin()
   const [minting, setMinting] = useState(false)
   const [token, setToken] = useState<string | null>(null)
   const [tokenUntil, setTokenUntil] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
+
+  const panel = useMemo(() => saludPanelStyle(theme, 0.9), [theme])
+  const innerGlow = useMemo(
+    () => ({
+      background: `radial-gradient(120% 80% at 20% 0%, ${saludHexToRgba(theme.accent.agenda, 0.14)}, transparent 55%), radial-gradient(90% 70% at 100% 20%, ${saludHexToRgba(theme.accent.health, 0.12)}, transparent 50%)`,
+    }),
+    [theme],
+  )
 
   const weekAvg = useMemo(() => {
     const r = salud.trendAverage || salud.scoreSalud
@@ -58,6 +71,11 @@ export default function AppleHealthLuxurySection({ salud }: Props) {
   const shortcutIcloudUrl = useMemo(() => getOrvitaHealthShortcutIcloudUrl(), [])
 
   const runShortcutHref = useMemo(() => buildOrvitaRunShortcutHref(), [])
+  const staleSync = useMemo(() => {
+    if (!latest?.observed_at) return false
+    const ageMs = Date.now() - new Date(latest.observed_at).getTime()
+    return Number.isFinite(ageMs) && ageMs > 36 * 60 * 60 * 1000
+  }, [latest?.observed_at])
 
   const mintToken = useCallback(async () => {
     setMinting(true)
@@ -100,7 +118,10 @@ export default function AppleHealthLuxurySection({ salud }: Props) {
 
   if (salud.loading) {
     return (
-      <div className="rounded-[32px] border border-white/10 bg-white/5 p-8 text-sm text-white/70 backdrop-blur-2xl">
+      <div
+        className="rounded-[32px] border p-8 text-sm backdrop-blur-2xl"
+        style={{ ...panel, color: theme.textMuted }}
+      >
         Estamos preparando tu panel de salud…
       </div>
     )
@@ -108,7 +129,7 @@ export default function AppleHealthLuxurySection({ salud }: Props) {
 
   if (salud.error) {
     return (
-      <div className="rounded-[32px] border border-red-400/30 bg-red-500/10 p-8 text-sm text-red-100 backdrop-blur-2xl">
+      <div className="rounded-[32px] border border-red-400/40 bg-red-500/10 p-8 text-sm text-red-700 backdrop-blur-2xl dark:text-red-100">
         {salud.error}
       </div>
     )
@@ -119,30 +140,57 @@ export default function AppleHealthLuxurySection({ salud }: Props) {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-      className="relative overflow-hidden rounded-[32px] border border-white/12 bg-white/[0.06] p-7 shadow-[0_24px_80px_rgba(0,0,0,0.35)] backdrop-blur-2xl sm:p-10"
+      className="relative overflow-hidden rounded-[32px] border p-7 backdrop-blur-2xl sm:p-10"
+      style={panel}
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_80%_at_20%_0%,rgba(125,211,252,0.18),transparent_55%),radial-gradient(90%_70%_at_100%_20%,rgba(167,243,208,0.14),transparent_50%)]" />
+      <div className="pointer-events-none absolute inset-0" style={innerGlow} />
 
-      <div className="relative flex flex-col gap-8">
+      <div className="relative flex flex-col gap-8" style={{ color: theme.text }}>
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-xl space-y-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/45">Apple Health</p>
-            <h1 className="text-[1.65rem] font-semibold leading-tight tracking-tight text-white sm:text-4xl">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.28em]" style={{ color: theme.textMuted }}>
+              Apple Health
+            </p>
+            <h1 className="text-[1.65rem] font-semibold leading-tight tracking-tight sm:text-4xl">
               Datos automáticos, con calma y precisión
             </h1>
-            <p className="text-[15px] leading-relaxed text-white/72 sm:text-base">
-              Apple no muestra Órvita dentro de Salud → Apps en iPhone: es normal. Lo que sí puedes hacer es traer tu día
-              con un Atajo profesional que lee HealthKit y lo envía a Órvita en un solo gesto.
+            <p className="text-[15px] leading-relaxed sm:text-base" style={{ color: theme.textMuted }}>
+              Apple no muestra Órvita dentro de Salud -&gt; Apps en iPhone: es normal. Trae tu día con el Atajo y aquí lo
+              convertimos en lectura y acciones.
             </p>
-            <div className="flex flex-wrap items-center gap-3 text-xs text-white/55">
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-1.5">
-                <Apple className="h-3.5 w-3.5" aria-hidden />
+            <div className="flex flex-wrap items-center gap-3 text-xs" style={{ color: theme.textMuted }}>
+              <span
+                className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5"
+                style={{
+                  borderColor: theme.border,
+                  backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.85),
+                }}
+              >
+                <Apple className="h-3.5 w-3.5 shrink-0" aria-hidden />
                 Fuente: Apple Health (HealthKit)
               </span>
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-1.5">
-                <Sparkles className="h-3.5 w-3.5" aria-hidden />
+              <span
+                className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5"
+                style={{
+                  borderColor: theme.border,
+                  backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.85),
+                }}
+              >
+                <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden />
                 Última sync: {formatWhen(latest?.observed_at)}
               </span>
+              {staleSync ? (
+                <span
+                  className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5"
+                  style={{
+                    borderColor: saludHexToRgba(theme.accent.agenda, 0.45),
+                    backgroundColor: saludHexToRgba(theme.accent.agenda, 0.15),
+                    color: theme.accent.agenda,
+                  }}
+                >
+                  Desactualizado (+36h)
+                </span>
+              ) : null}
             </div>
           </div>
 
@@ -151,14 +199,20 @@ export default function AppleHealthLuxurySection({ salud }: Props) {
               type="button"
               onClick={mintToken}
               disabled={minting}
-              className="inline-flex min-h-[52px] items-center justify-center rounded-2xl bg-white px-5 text-[15px] font-semibold text-slate-900 shadow-lg transition active:scale-[0.99] disabled:opacity-60"
+              className="inline-flex min-h-[52px] items-center justify-center rounded-2xl px-5 text-[15px] font-semibold shadow-lg transition active:scale-[0.99] disabled:opacity-60"
+              style={{ backgroundColor: theme.text, color: theme.bg }}
             >
               {minting ? "Generando enlace seguro…" : "Preparar token para el Atajo"}
             </button>
             {shortcutIcloudUrl ? (
               <a
                 href={shortcutIcloudUrl}
-                className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white px-5 text-[15px] font-semibold text-slate-900 no-underline shadow-lg transition hover:bg-white/95 active:scale-[0.99]"
+                className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-2xl border px-5 text-[15px] font-semibold no-underline shadow-lg transition active:scale-[0.99]"
+                style={{
+                  borderColor: theme.border,
+                  backgroundColor: theme.text,
+                  color: theme.bg,
+                }}
               >
                 <Download className="h-4 w-4" aria-hidden />
                 Instalar atajo (iCloud)
@@ -166,47 +220,81 @@ export default function AppleHealthLuxurySection({ salud }: Props) {
             ) : null}
             <a
               href={shortcutInstallHref}
-              className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/5 px-5 text-[15px] font-semibold text-white no-underline backdrop-blur-xl transition hover:bg-white/10 active:scale-[0.99]"
+              className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-2xl border px-5 text-[15px] font-semibold no-underline backdrop-blur-xl transition active:scale-[0.99]"
+              style={{
+                borderColor: theme.border,
+                backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.6),
+                color: theme.text,
+              }}
             >
               <Download className="h-4 w-4" aria-hidden />
               {shortcutIcloudUrl ? "Instalar (.shortcut en Órvita)" : "Instalar Atajo (archivo .shortcut)"}
             </a>
             <a
               href={runShortcutHref}
-              className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-2xl border border-emerald-300/40 bg-emerald-400/15 px-5 text-[15px] font-semibold text-emerald-50 no-underline transition hover:bg-emerald-400/25 active:scale-[0.99]"
+              className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-2xl border px-5 text-[15px] font-semibold no-underline transition active:scale-[0.99]"
+              style={{
+                borderColor: saludHexToRgba(theme.accent.health, 0.45),
+                backgroundColor: saludHexToRgba(theme.accent.health, 0.12),
+                color: theme.accent.health,
+              }}
             >
-              <Zap className="h-4 w-4" aria-hidden />
+              <Zap className="h-4 w-4 shrink-0" aria-hidden />
               Traer datos de hoy desde Apple Health
             </a>
-            <p className="text-[12px] leading-relaxed text-white/50">
-              1) Instala el Atajo una vez. 2) Genera token aquí y cópialo. 3) Ejecuta el Atajo: pedirá el token y enviará
-              sueño (análisis), entrenos del día, pasos, energía activa, HRV y FC en reposo.
+            <p className="text-[12px] leading-relaxed" style={{ color: theme.textMuted }}>
+              1) Instala el Atajo. 2) Genera y copia token. 3) Ejecuta “Traer datos de hoy”. Datos reales: sueño,
+              entreno, pasos, energía, HRV y FC en reposo.
             </p>
           </div>
         </div>
 
         {toast ? (
-          <p className="relative rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white/80">
+          <p
+            className="relative rounded-2xl border px-4 py-3 text-sm"
+            style={{
+              borderColor: theme.border,
+              backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.9),
+              color: theme.text,
+            }}
+          >
             {toast}
           </p>
         ) : null}
 
         {token ? (
-          <div className="relative space-y-2 rounded-2xl border border-white/10 bg-black/35 p-4">
+          <div
+            className="relative space-y-2 rounded-2xl border p-4"
+            style={{
+              borderColor: theme.border,
+              backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.95),
+            }}
+          >
             <div className="flex items-center justify-between gap-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">Token (no lo compartas)</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: theme.textMuted }}>
+                Token (no lo compartas)
+              </p>
               <button
                 type="button"
                 onClick={copyToken}
-                className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/15"
+                className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition"
+                style={{
+                  borderColor: theme.border,
+                  backgroundColor: saludHexToRgba(theme.surface, 0.9),
+                  color: theme.text,
+                }}
               >
                 <ClipboardCopy className="h-3.5 w-3.5" aria-hidden />
                 Copiar
               </button>
             </div>
-            <p className="break-all font-mono text-[13px] leading-relaxed text-emerald-100/90">{token}</p>
+            <p className="break-all font-mono text-[13px] leading-relaxed" style={{ color: theme.accent.health }}>
+              {token}
+            </p>
             {tokenUntil ? (
-              <p className="text-[11px] text-white/45">Válido hasta {formatWhen(tokenUntil)}</p>
+              <p className="text-[11px]" style={{ color: theme.textMuted }}>
+                Válido hasta {formatWhen(tokenUntil)}
+              </p>
             ) : null}
           </div>
         ) : null}
@@ -242,22 +330,39 @@ export default function AppleHealthLuxurySection({ salud }: Props) {
             return (
               <div
                 key={card.label}
-                className="rounded-[22px] border border-white/10 bg-black/25 p-5 shadow-inner shadow-black/20"
+                className="rounded-[22px] border p-5 shadow-inner"
+                style={{
+                  borderColor: theme.border,
+                  backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.75),
+                  boxShadow: `inset 0 1px 0 ${saludHexToRgba(theme.border, 0.35)}`,
+                }}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/45">{card.label}</p>
-                  <Icon className="h-4 w-4 text-white/35" aria-hidden />
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ color: theme.textMuted }}>
+                    {card.label}
+                  </p>
+                  <Icon className="h-4 w-4 shrink-0" style={{ color: theme.textMuted }} aria-hidden />
                 </div>
-                <p className="mt-4 text-3xl font-semibold tracking-tight text-white">{loading ? "…" : card.value}</p>
-                <p className="mt-2 text-[12px] leading-relaxed text-white/50">{card.hint}</p>
+                <p className="mt-4 text-3xl font-semibold tracking-tight">{loading ? "…" : card.value}</p>
+                <p className="mt-2 text-[12px] leading-relaxed" style={{ color: theme.textMuted }}>
+                  {card.hint}
+                </p>
               </div>
             )
           })}
         </div>
 
-        <div className="relative rounded-[22px] border border-white/10 bg-gradient-to-br from-white/[0.07] to-white/[0.02] p-6">
-          <p className="text-[13px] leading-relaxed text-white/78">{recoveryNarrative(latest?.readiness_score, weekAvg)}</p>
-          <p className="mt-4 text-[13px] leading-relaxed text-white/60">
+        <div
+          className="relative rounded-[22px] border p-6"
+          style={{
+            borderColor: theme.border,
+            background: `linear-gradient(135deg, ${saludHexToRgba(theme.surfaceAlt, 0.95)} 0%, ${saludHexToRgba(theme.surface, 0.85)} 100%)`,
+          }}
+        >
+          <p className="text-[13px] leading-relaxed" style={{ color: theme.text }}>
+            {recoveryNarrative(latest?.readiness_score, weekAvg)}
+          </p>
+          <p className="mt-4 text-[13px] leading-relaxed" style={{ color: theme.textMuted }}>
             Tu check-in de salud hoy está en {salud.scoreSalud}: lo usamos como brújula emocional y de hábitos, no como
             reemplazo clínico. Si tus pasos de Apple suben pero tu energía interna baja, suele ser señal de acumulación
             de estrés o sueño irregular.
@@ -267,8 +372,13 @@ export default function AppleHealthLuxurySection({ salud }: Props) {
         <div className="relative flex flex-wrap gap-3">
           <button
             type="button"
-            onClick={() => void refetch()}
-            className="inline-flex min-h-[48px] items-center justify-center rounded-2xl border border-white/15 bg-white/5 px-5 text-sm font-semibold text-white/85 transition hover:bg-white/10"
+            onClick={() => void onRefresh()}
+            className="inline-flex min-h-[48px] items-center justify-center rounded-2xl border px-5 text-sm font-semibold transition"
+            style={{
+              borderColor: theme.border,
+              backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.7),
+              color: theme.text,
+            }}
           >
             Actualizar lectura
           </button>
