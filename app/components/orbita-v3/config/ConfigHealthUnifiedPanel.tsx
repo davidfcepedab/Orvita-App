@@ -150,23 +150,6 @@ export function ConfigHealthUnifiedPanel({
         data-orvita-section="health-iphone-shortcut-embed"
         style={{ color: theme.text }}
       >
-        <div className="mb-3 flex min-w-0 items-start gap-2.5">
-          <span
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-            style={{ backgroundColor: theme.surfaceAlt, color: theme.accent.health }}
-            aria-hidden
-          >
-            <HeartPulse className="h-3.5 w-3.5" />
-          </span>
-          <div className="min-w-0">
-            <p className="m-0 text-sm font-medium leading-snug" style={{ color: theme.text }}>
-              Atajo en el iPhone
-            </p>
-            <p className="m-0 mt-0.5 text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
-              Instala y ejecuta. Luego sincroniza abajo.
-            </p>
-          </div>
-        </div>
         <div className="min-w-0">
           <ConfigAppleShortcutPanel theme={theme} moduleCard />
         </div>

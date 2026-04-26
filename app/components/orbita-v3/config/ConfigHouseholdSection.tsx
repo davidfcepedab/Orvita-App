@@ -106,7 +106,7 @@ export function ConfigHouseholdSection({
 
           {familyPhotoUrl ? (
             <div
-              className={`overflow-hidden rounded-2xl ${compact ? "h-48 sm:h-52" : "h-32 sm:h-36"}`}
+              className={`overflow-hidden rounded-2xl ${compact ? "h-56 sm:h-64" : "h-40 sm:h-48"}`}
               style={{ backgroundColor: theme.surfaceAlt }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}

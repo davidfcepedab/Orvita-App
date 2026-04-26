@@ -261,18 +261,14 @@ export function ConfigIntegrationsPanel({
     >
       {accordionMode && only === "hevy" ? (
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             <Link
               href="/training"
-              className={`${linkText} no-underline underline-offset-2 hover:underline`}
-              style={{ color: theme.text }}
+              className="inline-flex min-h-9 items-center justify-center rounded-lg border px-3 py-1.5 text-xs font-medium no-underline transition hover:opacity-90"
+              style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surfaceAlt }}
             >
               Ver entrenamiento
             </Link>
-            <p className="m-0 text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
-              El botón <strong className="font-medium text-inherit">Conectar</strong> en la fila de arriba vuelve a
-              comprobar Hevy.
-            </p>
           </div>
           {hevyMessage ? (
             <p className="mt-2 text-xs leading-relaxed" style={{ color: theme.textMuted }}>

@@ -288,11 +288,11 @@ export function ConfigStrategicIntegrationsPanel({
       return (
         <div className="border-b px-4 py-3 sm:px-5 sm:py-3.5" style={{ borderColor: theme.border }}>
           {compactCopy ? (
-            <p className="m-0 mb-2.5 text-[11px] leading-relaxed sm:text-xs" style={{ color: theme.textMuted }}>
+            <p className="m-0 mb-2 text-[11px] leading-relaxed sm:text-xs" style={{ color: theme.textMuted }}>
               {compactCopy}
             </p>
           ) : null}
-          <div className={`grid gap-2 ${n > 1 ? "sm:grid-cols-2" : "grid-cols-1"} max-w-xl`}>
+          <div className={`grid gap-1.5 ${n > 1 ? "sm:grid-cols-2" : "grid-cols-1"} max-w-xl`}>
             {toggleOptions
               .filter((item) => keys.includes(item.key))
               .map((item) => (
@@ -305,7 +305,7 @@ export function ConfigStrategicIntegrationsPanel({
                       [item.key]: !settings[item.key],
                     } as Partial<IntegrationSettings>)
                   }
-                  className={`${configConnectionActionClass} w-full min-h-10 justify-center text-[11px] font-medium`}
+                  className={`${configConnectionActionClass} w-full min-h-9 justify-center px-3 py-1.5 text-xs font-medium`}
                   style={{
                     borderColor: settings[item.key] ? theme.accent.health : theme.border,
                     color: settings[item.key] ? "#fff" : theme.text,
@@ -472,12 +472,12 @@ export function ConfigStrategicIntegrationsPanel({
               {settings.health_enabled ? "Activo" : "Activar"}
             </button>
           </div>
-          <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+          <div className="mt-2.5 flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => void syncHealth()}
               disabled={busy === "health" || !settings.health_enabled}
-              className="inline-flex min-h-8 items-center justify-center rounded-full border px-3 py-1 text-[11px] font-semibold transition hover:opacity-90 disabled:pointer-events-none disabled:opacity-40"
+              className="inline-flex min-h-9 items-center justify-center rounded-lg border px-3 py-1.5 text-xs font-semibold transition hover:opacity-90 disabled:pointer-events-none disabled:opacity-40"
               style={{ borderColor: theme.accent.health, backgroundColor: theme.accent.health, color: "#fff" }}
               title="Refresca estado con la fuente disponible."
             >
@@ -487,7 +487,7 @@ export function ConfigStrategicIntegrationsPanel({
               type="button"
               onClick={() => void connectAppleHealth()}
               disabled={busy === "apple-connect" || !settings.health_enabled}
-              className="inline-flex min-h-8 items-center justify-center rounded-full border px-3 py-1 text-[11px] font-medium transition hover:opacity-90 disabled:pointer-events-none disabled:opacity-40"
+              className="inline-flex min-h-9 items-center justify-center rounded-lg border px-3 py-1.5 text-xs font-medium transition hover:opacity-90 disabled:pointer-events-none disabled:opacity-40"
               style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surfaceAlt }}
               title="Marca Apple Health como fuente preferida."
             >
@@ -513,14 +513,14 @@ export function ConfigStrategicIntegrationsPanel({
       <p className="m-0 mt-1 text-[11px] leading-relaxed sm:text-xs" style={{ color: theme.textMuted }}>
         Bancolombia, Davivienda o Nequi (Open Finance, cuando apliquen).
       </p>
-      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+      <div className="mt-2.5 flex flex-wrap gap-1.5">
         {(["bancolombia", "davivienda", "nequi"] as const).map((provider) => (
           <button
             key={provider}
             type="button"
             onClick={() => void connectBank(provider)}
             disabled={busy === `bank-${provider}` || !settings.banking_enabled}
-            className={`${configConnectionActionClass} w-full min-h-11 justify-center text-[11px] font-medium`}
+            className="inline-flex min-h-9 items-center justify-center rounded-lg border px-3 py-1.5 text-xs font-medium transition hover:opacity-90 disabled:pointer-events-none disabled:opacity-40"
             style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surfaceAlt }}
             title={`Conectar ${provider}`}
           >
@@ -606,7 +606,7 @@ export function ConfigStrategicIntegrationsPanel({
           <div className="flex flex-col gap-0">
             {makeTogglesBlock(
               ["banking_enabled", "push_enhanced_enabled"],
-              "Activa banca y notificaciones en el servidor para conectar cuentas y avisos.",
+              "Banca y avisos del sistema.",
               "accordion",
             )}
             {bankBlock}

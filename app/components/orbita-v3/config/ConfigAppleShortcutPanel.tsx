@@ -35,8 +35,10 @@ function formatWhen(iso: string | null | undefined) {
  * Instalación del atajo vía esquema de iOS, token y guía (permisos + widget **del sistema Atajos**, no app Órvita nativa).
  * La web no puede instalar nada en el sistema; solo ofrece enlaces y pasos.
  */
-const subtleCta = "min-h-10 w-full sm:w-auto items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition hover:opacity-90 sm:inline-flex"
-const strongCta = "min-h-10 w-full sm:w-auto items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition hover:opacity-95 sm:inline-flex"
+const subtleCta =
+  "min-h-9 w-full sm:w-auto items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition hover:opacity-90 sm:inline-flex"
+const strongCta =
+  "min-h-9 w-full sm:w-auto items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition hover:opacity-95 sm:inline-flex"
 
 export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
   const [minting, setMinting] = useState(false)
@@ -128,7 +130,7 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
       style={moduleCard ? { borderColor: theme.border } : undefined}
     >
       <div
-        className={moduleCard ? "pb-4 pt-0" : "rounded-2xl border p-4 sm:p-5"}
+        className={moduleCard ? "pb-3 pt-0" : "rounded-2xl border p-4 sm:p-5"}
         style={moduleCard ? undefined : { borderColor: theme.border, backgroundColor: theme.surfaceAlt }}
       >
         <div className="flex items-start gap-2.5 sm:gap-3">
@@ -138,9 +140,9 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
           >
             <Apple className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden />
           </div>
-          <div className="min-w-0 flex-1 space-y-1.5">
+          <div className="min-w-0 flex-1 space-y-1">
             <p className="text-sm font-semibold" style={{ color: theme.text }}>
-              Un toque: del iPhone a Órvita
+              Atajo en iPhone
             </p>
             <p className="text-xs leading-relaxed" style={{ color: theme.textMuted }}>
               Instálalo una vez desde <strong className="font-medium text-inherit">Safari</strong>. Si falla, vuelve a descargarlo.
@@ -148,7 +150,7 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
           </div>
         </div>
 
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="mt-2.5 flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-center">
           {isIOS ? (
             <>
               {icloudUrl ? (
@@ -256,7 +258,7 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
       </div>
 
       <div
-        className={moduleCard ? "pt-4" : "rounded-2xl border p-4 sm:p-5"}
+        className={moduleCard ? "pt-3" : "rounded-2xl border p-4 sm:p-5"}
         style={moduleCard ? undefined : { borderColor: theme.border, backgroundColor: theme.surface }}
       >
         <p className="text-xs font-semibold uppercase tracking-[0.14em]" style={{ color: theme.textMuted }}>
@@ -265,7 +267,7 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
         <p className="mt-1.5 text-xs leading-relaxed" style={{ color: theme.textMuted }}>
           Código que pide iOS al enviar. Válido unas horas: genera, copia y pega cuando aparezca el diálogo.
         </p>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
           <button
             type="button"
             onClick={() => void mintToken()}

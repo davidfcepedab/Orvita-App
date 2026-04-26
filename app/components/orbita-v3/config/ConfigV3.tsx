@@ -577,7 +577,7 @@ export default function ConfigV3() {
   const pageVariant = searchParams.get("v") || "0"
   const isAltCard = pageVariant === "1"
   const isDense = pageVariant === "2"
-  const sectionGap = isDense ? "space-y-8 sm:space-y-10" : "space-y-10 sm:space-y-12"
+  const sectionGap = isDense ? "space-y-7 sm:space-y-8" : "space-y-8 sm:space-y-10"
   const maxW = isDense ? "max-w-xl" : "max-w-2xl"
   const cardShell = isAltCard
     ? "shadow-[0_1px_0_rgba(15,23,42,0.05)] ring-1 ring-black/[0.05]"
@@ -601,7 +601,7 @@ export default function ConfigV3() {
         data-orvita-section="profile-hero"
         aria-label="Ajustes y tu perfil"
       >
-        <div className="mb-3 max-w-2xl sm:mb-2">
+        <div className="mb-1.5 max-w-2xl sm:mb-1">
           <p
             className="m-0 text-[0.65rem] font-medium uppercase tracking-[0.2em] sm:text-[0.7rem]"
             style={{ color: theme.textMuted }}
@@ -609,20 +609,20 @@ export default function ConfigV3() {
             Centro de mando
           </p>
           <h1
-            className="m-0 mt-1.5 text-2xl font-light tracking-[-0.03em] sm:mt-2 sm:text-3xl"
+            className="m-0 mt-1 text-2xl font-light tracking-[-0.03em] sm:mt-1.5 sm:text-3xl"
             style={{ color: theme.text }}
           >
             Ajustes
           </h1>
           <p
-            className="m-0 mt-1.5 text-sm font-normal leading-snug sm:max-w-md"
+            className="m-0 mt-1 text-sm font-normal leading-snug sm:max-w-md"
             style={{ color: theme.textMuted }}
           >
             Tiempo, energía y dinero, sin ruido.
           </p>
         </div>
         <div
-          className={`mt-3 flex min-w-0 flex-wrap items-center gap-3 sm:mt-4 sm:gap-4 ${
+          className={`mt-2 flex min-w-0 flex-wrap items-center gap-2 sm:mt-2.5 sm:gap-3 ${
             profileLoading || profileSubtitle ? "sm:justify-between" : "sm:justify-end"
           }`}
         >
@@ -677,7 +677,7 @@ export default function ConfigV3() {
       </section>
 
       {/* 2. Hogar */}
-      <section className="scroll-mt-6" data-orvita-section="household">
+      <section className="scroll-mt-6 pt-1 sm:pt-1.5" data-orvita-section="household">
         <div
           className={`mt-1 overflow-hidden rounded-2xl p-5 sm:p-6 ${cardShell}`}
           style={{ backgroundColor: theme.surface }}
@@ -877,12 +877,12 @@ export default function ConfigV3() {
         >
           <div className="space-y-0">
             <div
-              className="border-b px-3 py-3 sm:px-4"
+              className="border-b px-3 py-2.5 sm:px-4 sm:py-3"
               style={{ borderColor: theme.border }}
               data-orvita-section="install-and-profile"
               id="config-sistema-app"
             >
-              <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-3">
+              <div className="grid min-w-0 gap-2 sm:grid-cols-2 sm:gap-2.5">
                 <div id="config-pwa" className="min-w-0 flex-1 scroll-mt-24">
                   <ConfigPwaInstallPanel theme={theme} moduleCard compact showHeader={false} />
                 </div>
@@ -892,16 +892,12 @@ export default function ConfigV3() {
               </div>
             </div>
 
-            <div
-              className="border-b"
-              style={{ borderColor: theme.border }}
-              data-orvita-section="shortcuts-hint"
-            >
-              <div className="px-3 py-3 sm:px-4">
+            <div className="px-3 py-2.5 sm:px-4 sm:py-3" data-orvita-section="shortcuts-hint">
+              <div className="rounded-xl border px-3 py-2.5 sm:px-3.5 sm:py-3" style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt }}>
                 <p className="m-0 text-xs font-medium" style={{ color: theme.text }}>
                   Atajos
                 </p>
-                <p className="m-0 mt-1.5 text-[12px] leading-relaxed" style={{ color: theme.textMuted }}>
+                <p className="m-0 mt-1 text-[12px] leading-relaxed" style={{ color: theme.textMuted }}>
                   El atajo de importación vive en{" "}
                   <a
                     href="#conexion-salud"
