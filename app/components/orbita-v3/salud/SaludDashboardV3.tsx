@@ -16,7 +16,7 @@ export default function SaludDashboardV3() {
 
   return (
     <div
-      className="relative isolate min-h-screen space-y-10 pb-32 pt-2"
+      className="relative isolate min-h-screen space-y-8 pb-28 pt-6 sm:pt-8"
       style={{ backgroundColor: theme.bg, color: theme.text }}
     >
       <div className="pointer-events-none absolute inset-0 -z-10" style={saludPageBackdropStyle(theme)} />
