@@ -278,7 +278,7 @@ export function ConfigNotificationPreferencesPanel({
 
   const disabled = loading || !draft || saving
 
-  const content = (
+  const content = draft ? (
     <div className="space-y-4">
       {error ? (
         <p className="text-sm" style={{ color: "#b91c1c" }}>
@@ -670,7 +670,7 @@ export function ConfigNotificationPreferencesPanel({
         </p>
       </div>
     </div>
-  )
+  ) : null
 
   return (
     <section className="space-y-2" aria-label="Preferencias de notificaciones">
