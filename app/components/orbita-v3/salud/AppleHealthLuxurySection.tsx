@@ -3,11 +3,11 @@
 import { useMemo } from "react"
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { BedDouble, ChevronDown, Dumbbell, Lightbulb, MoonStar, Sparkles, Zap } from "lucide-react"
+import { BedDouble, ChevronDown, Dumbbell, Lightbulb, MoonStar, Settings, Sparkles, Zap } from "lucide-react"
 import { useOrbitaSkin } from "@/app/contexts/AppContext"
 import type { SaludContextSnapshot } from "@/app/salud/_hooks/useSaludContext"
 import type { AutoHealthMetric } from "@/app/hooks/useHealthAutoMetrics"
-import { buildOrvitaRunShortcutHref } from "@/lib/shortcuts/orvitaHealthShortcut"
+import { buildOrvitaRunShortcutHref, ORVITA_HEALTH_SHORTCUT_NAME } from "@/lib/shortcuts/orvitaHealthShortcut"
 import { appleHealthSyncStale, buildAppleHealthSyncChip } from "@/lib/salud/appleHealthSyncToolbar"
 import { saludHexToRgba, saludPanelStyle } from "@/lib/salud/saludThemeStyles"
 import { SALUD_SEM } from "@/lib/salud/saludSemanticPalette"
@@ -153,95 +153,115 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
               Datos automáticos, con calma y precisión
             </h1>
             <p className="m-0 text-sm leading-relaxed sm:text-[15px]" style={{ color: theme.textMuted }}>
-              Apple no lista Órvita en “Apps”: es normal. Usa el Atajo y aquí verás lectura + acción.
+              Los datos llegan cuando ejecutas el atajo en el iPhone (Salud no lista Órvita como app). El token lo
+              configuras en Configuración; en Salud solo ves lo que ya guardó tu cuenta.
             </p>
           </div>
 
-          <details className="group">
-            <summary className="flex cursor-pointer list-none items-center gap-3 py-1 [&::-webkit-details-marker]:hidden">
-              <span className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.2em]" style={{ color: theme.textMuted }}>
-                Apple Health
-              </span>
-              <a
-                href={runShortcutHref}
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white no-underline transition active:scale-[0.98]"
-                style={{ backgroundColor: SALUD_SEM.energy }}
-                aria-label="Traer datos de hoy (Atajo)"
-                title="Traer hoy"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Zap className="h-4 w-4 shrink-0" aria-hidden />
-              </a>
-              <Link
-                href="/configuracion#apple-health-import-token"
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold no-underline transition active:scale-[0.99] sm:px-3 sm:text-xs"
-                style={{
-                  borderColor: saludHexToRgba(theme.border, 0.85),
-                  backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.35),
-                  color: theme.text,
-                }}
-                title="Configurar token del Atajo en Configuración"
-                onClick={(e) => e.stopPropagation()}
-              >
-                Token en Configuración
-              </Link>
-              <span className="ml-auto inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-[0.14em]" style={{ color: theme.textMuted }}>
-                Detalles
-                <ChevronDown
-                  className="h-3.5 w-3.5 shrink-0 transition group-open:rotate-180"
-                  style={{ color: theme.textMuted }}
-                  aria-hidden
-                />
-              </span>
-            </summary>
-            <div className="mt-3 space-y-3 border-t pt-3" style={{ borderColor: saludHexToRgba(theme.border, 0.5) }}>
-              <div className="flex flex-wrap items-center gap-2" role="toolbar" aria-label="Sincronización y atajo">
-                <Link
-                  href="/configuracion#apple-health-import-token"
-                  className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-lg border px-3 text-xs font-medium no-underline transition active:scale-[0.99]"
+          <details
+            className="group rounded-xl border"
+            style={{ borderColor: saludHexToRgba(theme.border, 0.65) }}
+          >
+            <summary className="cursor-pointer list-none px-3 py-3 sm:px-4 [&::-webkit-details-marker]:hidden">
+              <div className="flex flex-wrap items-center justify-between gap-2 gap-y-2">
+                <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
+                  <span
+                    className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.2em]"
+                    style={{ color: theme.textMuted }}
+                  >
+                    Apple Health
+                  </span>
+                  <span
+                    className="inline-flex max-w-full min-w-0 items-center gap-2 rounded-full px-2.5 py-1 text-[10px] font-semibold leading-snug sm:max-w-[min(100%,20rem)] sm:px-3 sm:text-[11px]"
+                    style={{
+                      backgroundColor: syncChip.bg,
+                      color: syncChip.fg,
+                    }}
+                  >
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-90" aria-hidden />
+                    {syncChip.label}
+                  </span>
+                </div>
+                <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-medium uppercase tracking-[0.14em]" style={{ color: theme.textMuted }}>
+                  Pasos
+                  <ChevronDown
+                    className="h-3.5 w-3.5 shrink-0 transition group-open:rotate-180"
+                    style={{ color: theme.textMuted }}
+                    aria-hidden
+                  />
+                </span>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Acciones rápidas Apple Health">
+                <a
+                  href={runShortcutHref}
+                  className="inline-flex min-h-9 shrink-0 items-center justify-center gap-2 rounded-lg px-3.5 text-xs font-semibold text-white no-underline transition active:scale-[0.99]"
+                  style={{ backgroundColor: SALUD_SEM.energy }}
+                  title="Abre el atajo en el iPhone para enviar el día"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Zap className="h-4 w-4 shrink-0 opacity-95" aria-hidden />
+                  Ejecutar atajo
+                </a>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    void onRefresh()
+                  }}
+                  disabled={loading}
+                  className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-lg border px-3 text-xs font-medium transition active:scale-[0.99] disabled:opacity-50"
                   style={{
                     borderColor: saludHexToRgba(theme.border, 0.85),
                     backgroundColor: "transparent",
                     color: theme.text,
                   }}
+                  title="Recarga desde Órvita lo último que envió el atajo"
                 >
-                  Token en Configuración
-                </Link>
-                <a
-                  href={runShortcutHref}
-                  className="inline-flex min-h-9 shrink-0 items-center justify-center gap-2 rounded-lg px-3.5 text-xs font-semibold text-white no-underline transition active:scale-[0.99]"
-                  style={{ backgroundColor: SALUD_SEM.energy }}
-                >
-                  <Zap className="h-4 w-4 shrink-0 opacity-95" aria-hidden />
-                  Traer hoy
-                </a>
-                <button
-                  type="button"
-                  onClick={() => void onRefresh()}
-                  disabled={loading}
-                  className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-lg px-3 text-xs font-medium transition active:scale-[0.99] disabled:opacity-50"
-                  style={{
-                    border: `1px solid ${saludHexToRgba(theme.border, 0.75)}`,
-                    backgroundColor: "transparent",
-                    color: theme.textMuted,
-                  }}
-                >
-                  Actualizar
+                  {loading ? "Actualizando…" : "Actualizar lectura"}
                 </button>
-                <span
-                  className="inline-flex max-w-full min-w-0 items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-semibold leading-snug sm:max-w-[min(100%,22rem)]"
-                  style={{
-                    backgroundColor: syncChip.bg,
-                    color: syncChip.fg,
-                  }}
-                >
-                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-90" aria-hidden />
-                  {syncChip.label}
-                </span>
               </div>
-              <p className="m-0 text-[10px] leading-snug" style={{ color: theme.textMuted }}>
-                Configura el token persistente en Configuración; el Atajo usa la cabecera <span className="font-mono">x-orvita-import-token</span>.
+            </summary>
+            <div className="space-y-3 border-t px-3 pb-3 pt-3 sm:px-4" style={{ borderColor: saludHexToRgba(theme.border, 0.5) }}>
+              <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: theme.textMuted }}>
+                Cómo se sincroniza (orden)
               </p>
+              <ol className="m-0 list-decimal space-y-2.5 pl-4 text-xs leading-relaxed sm:text-[13px]" style={{ color: theme.text }}>
+                <li>
+                  <strong className="font-medium text-inherit">Una vez en la web:</strong> en{" "}
+                  <Link
+                    href="/configuracion#apple-health-import-token"
+                    className="font-medium underline underline-offset-2"
+                    style={{ color: SALUD_SEM.energy }}
+                  >
+                    Configuración → token de importación
+                  </Link>
+                  , genera el token y configúralo en el atajo (cabecera{" "}
+                  <span className="rounded bg-black/[0.06] px-1 font-mono text-[11px] dark:bg-white/[0.08]">x-orvita-import-token</span>
+                  ). No caduca por tiempo; solo cambia si lo regeneras o revocas.
+                </li>
+                <li>
+                  <strong className="font-medium text-inherit">Cuando quieras datos del día:</strong> en el iPhone, ejecuta el
+                  atajo <span className="font-medium text-inherit">{ORVITA_HEALTH_SHORTCUT_NAME}</span> (o el que instalaste con el mismo flujo).
+                  Eso envía el resumen a Órvita.
+                </li>
+                <li>
+                  <strong className="font-medium text-inherit">Aquí en Salud:</strong> toca{" "}
+                  <strong className="font-medium text-inherit">Actualizar lectura</strong> para traer a la pantalla lo que el servidor ya guardó.
+                  Si el chip muestra fecha vieja, suele faltar ejecutar el atajo o refrescar.
+                </li>
+              </ol>
+              <Link
+                href="/configuracion#apple-health-import-token"
+                className="inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-lg border px-3 text-xs font-semibold no-underline transition active:scale-[0.99] sm:w-auto"
+                style={{
+                  borderColor: saludHexToRgba(theme.border, 0.85),
+                  backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.5),
+                  color: theme.text,
+                }}
+              >
+                <Settings className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
+                Abrir Configuración (token y guía del atajo)
+              </Link>
             </div>
           </details>
         </div>
