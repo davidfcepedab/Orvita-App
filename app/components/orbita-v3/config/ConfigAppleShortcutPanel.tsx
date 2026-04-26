@@ -39,6 +39,10 @@ const subtleCta =
   "min-h-9 w-full sm:w-auto items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition hover:opacity-90 sm:inline-flex"
 const strongCta =
   "min-h-9 w-full sm:w-auto items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition hover:opacity-95 sm:inline-flex"
+const chipCta =
+  "inline-flex min-h-8 w-full sm:w-auto items-center justify-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-medium transition hover:opacity-90"
+const chipStrongCta =
+  "inline-flex min-h-8 w-full sm:w-auto items-center justify-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-semibold transition hover:opacity-95"
 
 export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
   const [minting, setMinting] = useState(false)
@@ -156,7 +160,7 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
               {icloudUrl ? (
                 <a
                   href={icloudUrl}
-                  className={`${strongCta} no-underline flex`}
+                  className={`${moduleCard ? chipStrongCta : strongCta} no-underline flex`}
                   style={{
                     borderColor: theme.accent.health,
                     backgroundColor: theme.accent.health,
@@ -170,7 +174,7 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
               ) : null}
               <a
                 href={shortcutInstallHref}
-                className={`${icloudUrl ? subtleCta : strongCta} no-underline flex`}
+                className={`${moduleCard ? (icloudUrl ? chipCta : chipStrongCta) : icloudUrl ? subtleCta : strongCta} no-underline flex`}
                 style={
                   icloudUrl
                     ? { borderColor: theme.border, color: theme.text, backgroundColor: theme.surface }
@@ -220,7 +224,7 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
           <a
             href={fileUrl}
             download
-            className={`${subtleCta} no-underline flex`}
+            className={`${moduleCard ? chipCta : subtleCta} no-underline flex`}
             style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surface }}
           >
             <Download className="h-3.5 w-3.5" aria-hidden />
@@ -272,7 +276,7 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
             type="button"
             onClick={() => void mintToken()}
             disabled={minting}
-            className={`${subtleCta} flex disabled:opacity-50`}
+              className={`${moduleCard ? chipCta : subtleCta} flex disabled:opacity-50`}
             style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surfaceAlt }}
           >
             <Sparkles className="h-3.5 w-3.5" aria-hidden />

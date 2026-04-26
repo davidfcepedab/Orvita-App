@@ -875,10 +875,10 @@ export default function ConfigV3() {
           title="Instalación y acceso"
           description="PWA, biometría y dónde está el atajo de salud"
         >
-          <div className="space-y-0">
+          <div className="space-y-2">
             <div
-              className="border-b px-3 py-2.5 sm:px-4 sm:py-3"
-              style={{ borderColor: theme.border }}
+              className="rounded-xl border px-3 py-2.5 sm:px-4 sm:py-3"
+              style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt }}
               data-orvita-section="install-and-profile"
               id="config-sistema-app"
             >
@@ -892,7 +892,7 @@ export default function ConfigV3() {
               </div>
             </div>
 
-            <div className="px-3 py-2.5 sm:px-4 sm:py-3" data-orvita-section="shortcuts-hint">
+            <div className="px-0 py-0" data-orvita-section="shortcuts-hint">
               <div className="rounded-xl border px-3 py-2.5 sm:px-3.5 sm:py-3" style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt }}>
                 <p className="m-0 text-xs font-medium" style={{ color: theme.text }}>
                   Atajos

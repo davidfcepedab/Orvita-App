@@ -284,7 +284,6 @@ export function ConfigStrategicIntegrationsPanel({
     layout: "default" | "accordion",
   ) => {
     if (layout === "accordion") {
-      const n = toggleOptions.filter((item) => keys.includes(item.key)).length
       return (
         <div className="border-b px-4 py-3 sm:px-5 sm:py-3.5" style={{ borderColor: theme.border }}>
           {compactCopy ? (
@@ -292,7 +291,7 @@ export function ConfigStrategicIntegrationsPanel({
               {compactCopy}
             </p>
           ) : null}
-          <div className={`grid gap-1.5 ${n > 1 ? "sm:grid-cols-2" : "grid-cols-1"} max-w-xl`}>
+          <div className="flex flex-wrap items-center gap-1.5">
             {toggleOptions
               .filter((item) => keys.includes(item.key))
               .map((item) => (
@@ -305,7 +304,7 @@ export function ConfigStrategicIntegrationsPanel({
                       [item.key]: !settings[item.key],
                     } as Partial<IntegrationSettings>)
                   }
-                  className={`${configConnectionActionClass} w-full min-h-9 justify-center px-3 py-1.5 text-xs font-medium`}
+                  className="inline-flex min-h-8 items-center justify-center rounded-full border px-3 py-1 text-[11px] font-medium transition hover:opacity-90 disabled:pointer-events-none disabled:opacity-40"
                   style={{
                     borderColor: settings[item.key] ? theme.accent.health : theme.border,
                     color: settings[item.key] ? "#fff" : theme.text,
@@ -520,7 +519,7 @@ export function ConfigStrategicIntegrationsPanel({
             type="button"
             onClick={() => void connectBank(provider)}
             disabled={busy === `bank-${provider}` || !settings.banking_enabled}
-            className="inline-flex min-h-9 items-center justify-center rounded-lg border px-3 py-1.5 text-xs font-medium transition hover:opacity-90 disabled:pointer-events-none disabled:opacity-40"
+            className="inline-flex min-h-8 items-center justify-center rounded-full border px-3 py-1 text-[11px] font-medium transition hover:opacity-90 disabled:pointer-events-none disabled:opacity-40"
             style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surfaceAlt }}
             title={`Conectar ${provider}`}
           >

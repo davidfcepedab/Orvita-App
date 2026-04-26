@@ -264,14 +264,14 @@ export function ConfigIntegrationsPanel({
           <div className="flex flex-wrap items-center gap-2">
             <Link
               href="/training"
-              className="inline-flex min-h-9 items-center justify-center rounded-lg border px-3 py-1.5 text-xs font-medium no-underline transition hover:opacity-90"
+              className="inline-flex min-h-8 items-center justify-center rounded-full border px-3 py-1 text-[11px] font-medium no-underline transition hover:opacity-90"
               style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surfaceAlt }}
             >
               Ver entrenamiento
             </Link>
           </div>
           {hevyMessage ? (
-            <p className="mt-2 text-xs leading-relaxed" style={{ color: theme.textMuted }}>
+            <p className="mt-2 rounded-xl border px-2.5 py-2 text-[11px] leading-relaxed" style={{ color: theme.textMuted, borderColor: theme.border, backgroundColor: theme.surfaceAlt }}>
               {hevyMessage}
             </p>
           ) : null}
