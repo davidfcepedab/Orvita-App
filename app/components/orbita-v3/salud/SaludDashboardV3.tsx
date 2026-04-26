@@ -10,9 +10,7 @@ import { agendaTodayYmd } from "@/lib/agenda/localDateKey"
 import { buildPlanVsExecution, buildTrainingReadiness } from "@/lib/training/trainingOperationalDerivations"
 import { buildSaludDecisionBrief } from "@/lib/salud/saludDecisionBrief"
 import { HeroDecisionCard } from "@/app/components/orbita-v3/salud/HeroDecisionCard"
-import { SignalsStrip } from "@/app/components/orbita-v3/salud/SignalsStrip"
-import { InsightActionBlock } from "@/app/components/orbita-v3/salud/InsightActionBlock"
-import { TrainingBridgeCard } from "@/app/components/orbita-v3/salud/TrainingBridgeCard"
+import { SaludInsightSection } from "@/app/components/orbita-v3/salud/SaludInsightSection"
 import AppleHealthLuxurySection from "@/app/components/orbita-v3/salud/AppleHealthLuxurySection"
 
 function formatSyncSummary(latestObservedAt: string | null | undefined, stale: boolean): string {
@@ -54,8 +52,6 @@ export default function SaludDashboardV3() {
     [autoHealth.latest?.observed_at, staleSync],
   )
 
-  const hasHevy = days.some((d) => d.source === "hevy")
-
   if (salud.loading) {
     return (
       <main className="mx-auto max-w-[min(72rem,calc(100vw-1.5rem))] px-1 py-2 text-sm text-[var(--color-text-secondary)]">
@@ -77,15 +73,8 @@ export default function SaludDashboardV3() {
       className="orbita-page-stack mx-auto w-full max-w-[min(72rem,calc(100vw-1.5rem))] space-y-4"
       aria-label="Salud — decisión, Apple Health y operativo"
     >
-      <HeroDecisionCard
-        brief={brief}
-        syncSummary={syncSummary}
-        onRefreshApple={autoHealth.refetch}
-        latest={autoHealth.latest}
-      />
-      <SignalsStrip latest={autoHealth.latest} loading={autoHealth.loading} />
-      <InsightActionBlock brief={brief} />
-      <TrainingBridgeCard brief={brief} plan={planVsExecution} hasHevy={hasHevy} />
+      <HeroDecisionCard brief={brief} syncSummary={syncSummary} />
+      <SaludInsightSection brief={brief} />
 
       <AppleHealthLuxurySection
         salud={salud}
@@ -94,13 +83,7 @@ export default function SaludDashboardV3() {
         onRefresh={autoHealth.refetch}
       />
 
-      <section className="space-y-3 px-0.5 sm:px-0" aria-labelledby="salud-operativo-heading">
-        <h2
-          id="salud-operativo-heading"
-          className="m-0 text-sm font-semibold tracking-tight text-[var(--color-text-primary)]"
-        >
-          Operativo: combustible, suplementos y lectura semanal
-        </h2>
+      <section className="space-y-3 px-0.5 sm:px-0">
         <HealthOperationsV3
           salud={salud}
           latest={autoHealth.latest}

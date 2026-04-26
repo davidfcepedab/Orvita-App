@@ -238,7 +238,7 @@ export default function HealthOperationsV3({
           <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em]" style={{ color: theme.textMuted }}>
             Tu check-in (Órvita interna)
           </p>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 min-[480px]:grid-cols-2 xl:grid-cols-4">
             {[
               { label: "Salud emocional", value: health.scoreSalud, meta: "/100", icon: Sparkles },
               { label: "Energía física", value: health.scoreFisico, meta: "/100", icon: Activity },
@@ -249,22 +249,21 @@ export default function HealthOperationsV3({
               const status = metric.value >= 70 ? "OK" : metric.value >= 45 ? "Atención" : "Desbalance"
               const statusColor =
                 metric.value >= 70 ? SALUD_SEM.ok : metric.value >= 45 ? SALUD_SEM.warn : SALUD_SEM.risk
-              const cardTint = statusColor
               return (
                 <motion.div
                   key={metric.label}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 + index * 0.04, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                  className="rounded-2xl p-5"
+                  className="min-w-0 rounded-2xl p-5"
                   style={{
-                    backgroundColor: saludHexToRgba(cardTint, 0.1),
+                    backgroundColor: saludHexToRgba(SALUD_SEM.neutral, 0.08),
                   }}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex min-w-0 flex-1 items-center gap-2.5">
                       <motion.div
-                        style={{ color: statusColor }}
+                        style={{ color: theme.textMuted }}
                         animate={{ y: [0, -4, 0] }}
                         transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut", delay: index * 0.18 }}
                         aria-hidden
@@ -272,7 +271,7 @@ export default function HealthOperationsV3({
                         <Icon className="h-7 w-7 shrink-0" strokeWidth={1.65} />
                       </motion.div>
                       <span
-                        className="text-[10px] font-semibold uppercase leading-tight tracking-[0.14em] sm:text-[11px]"
+                        className="min-w-0 text-[10px] font-semibold uppercase leading-tight tracking-[0.14em] sm:text-[11px]"
                         style={{ color: theme.textMuted }}
                       >
                         {metric.label}
@@ -289,11 +288,11 @@ export default function HealthOperationsV3({
                     </span>
                   </div>
                   <p
-                    className="mt-4 text-5xl font-extrabold tracking-tight tabular-nums sm:text-6xl"
-                    style={{ color: saludMetricTone(theme, metric.value) }}
+                    className="mt-4 text-xl font-bold tracking-tight tabular-nums sm:text-2xl"
+                    style={{ color: theme.text }}
                   >
                     {metric.value}
-                    <span className="ml-1.5 text-base font-semibold sm:text-lg" style={{ color: theme.textMuted }}>
+                    <span className="ml-1.5 text-sm font-semibold sm:text-base" style={{ color: theme.textMuted }}>
                       {metric.meta}
                     </span>
                   </p>
@@ -331,21 +330,27 @@ export default function HealthOperationsV3({
               </div>
             </div>
             <ul className="mt-5 list-none space-y-4 p-0">
-              <li className="flex gap-3">
+              <li className="flex items-start gap-3">
+                <span
+                  className="mt-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+                  style={{ backgroundColor: SALUD_SEM.energy }}
+                >
+                  1
+                </span>
                 <Target className="mt-1 h-6 w-6 shrink-0" strokeWidth={1.65} style={{ color: SALUD_SEM.energy }} aria-hidden />
-                <p className="m-0 min-w-0 text-base font-bold leading-snug sm:text-lg">
-                  <span className="mr-2 inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold text-white" style={{ backgroundColor: SALUD_SEM.energy }}>
-                    1
-                  </span>
+                <p className="m-0 min-w-0 flex-1 text-base font-bold leading-snug sm:text-lg">
                   Ajusta carga del día antes de entrenar.
                 </p>
               </li>
-              <li className="flex gap-3">
+              <li className="flex items-start gap-3">
+                <span
+                  className="mt-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+                  style={{ backgroundColor: SALUD_SEM.recovery }}
+                >
+                  2
+                </span>
                 <Droplets className="mt-1 h-6 w-6 shrink-0" strokeWidth={1.65} style={{ color: SALUD_SEM.recovery }} aria-hidden />
-                <p className="m-0 min-w-0 text-base font-bold leading-snug sm:text-lg">
-                  <span className="mr-2 inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold text-white" style={{ backgroundColor: SALUD_SEM.recovery }}>
-                    2
-                  </span>
+                <p className="m-0 min-w-0 flex-1 text-base font-bold leading-snug sm:text-lg">
                   Cierra sueño e hidratación con intención hoy.
                 </p>
               </li>
@@ -374,8 +379,8 @@ export default function HealthOperationsV3({
 
         <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[1.2fr_0.8fr]">
           <div
-            className="rounded-2xl p-3 sm:p-4"
-            style={{ backgroundColor: saludHexToRgba(SALUD_SEM.ok, 0.06) }}
+            className="min-w-0 rounded-2xl p-2 sm:p-3"
+            style={{ backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.55) }}
           >
             <SupplementStackSection
               supplements={supplements}
