@@ -143,9 +143,7 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
               Un toque: del iPhone a Órvita
             </p>
             <p className="text-xs leading-relaxed" style={{ color: theme.textMuted }}>
-              Instala el atajo una vez. Usa <strong className="font-medium text-inherit">Safari</strong> en el iPhone (no
-              otras apps).{icloudUrl ? " Si hay enlace de iCloud, suele ser la vía más fiable; si no, el archivo en Órvita. " : " "}
-              Si no responde, baja de nuevo el archivo o copia el enlace.
+              Instálalo una vez desde <strong className="font-medium text-inherit">Safari</strong>. Si falla, vuelve a descargarlo.
             </p>
           </div>
         </div>
@@ -185,13 +183,15 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
                 <Download className="h-3.5 w-3.5 shrink-0" aria-hidden />
                 {icloudUrl ? "Instalar (archivo en Órvita)" : "Instalar atajo"}
               </a>
-              <a
-                href={shortcutInstallHrefAlt}
-                className={`${subtleCta} no-underline text-center sm:text-left flex`}
-                style={{ borderColor: theme.border, color: theme.textMuted, backgroundColor: theme.surface }}
-              >
-                Apertura alternativa
-              </a>
+              {moduleCard ? null : (
+                <a
+                  href={shortcutInstallHrefAlt}
+                  className={`${subtleCta} no-underline text-center sm:text-left flex`}
+                  style={{ borderColor: theme.border, color: theme.textMuted, backgroundColor: theme.surface }}
+                >
+                  Apertura alternativa
+                </a>
+              )}
             </>
           ) : null}
           {isIOS ? null : (
@@ -224,23 +224,27 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
             <Download className="h-3.5 w-3.5" aria-hidden />
             Descargar .shortcut
           </a>
-          <button
-            type="button"
-            onClick={() => void copyDirectShortcutUrl()}
-            className={`${subtleCta} flex`}
-            style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surface }}
-          >
-            <ClipboardCopy className="h-3.5 w-3.5" aria-hidden />
-            Copiar enlace
-          </button>
-          <button
-            type="button"
-            onClick={() => setGuideOpen(true)}
-            className={`${subtleCta} flex border-dashed`}
-            style={{ borderColor: theme.border, color: theme.textMuted, backgroundColor: "transparent" }}
-          >
-            Guía (Atajos y permisos)
-          </button>
+          {moduleCard ? null : (
+            <button
+              type="button"
+              onClick={() => void copyDirectShortcutUrl()}
+              className={`${subtleCta} flex`}
+              style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surface }}
+            >
+              <ClipboardCopy className="h-3.5 w-3.5" aria-hidden />
+              Copiar enlace
+            </button>
+          )}
+          {moduleCard ? null : (
+            <button
+              type="button"
+              onClick={() => setGuideOpen(true)}
+              className={`${subtleCta} flex border-dashed`}
+              style={{ borderColor: theme.border, color: theme.textMuted, backgroundColor: "transparent" }}
+            >
+              Guía (Atajos y permisos)
+            </button>
+          )}
         </div>
         {isIOS && isOrvitaShortcutImportFromHttpDev() ? (
           <p className="mt-3 text-xs leading-relaxed" style={{ color: theme.textMuted }}>

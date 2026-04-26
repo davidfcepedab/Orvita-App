@@ -163,17 +163,13 @@ export function ConfigHealthUnifiedPanel({
               Atajo en el iPhone
             </p>
             <p className="m-0 mt-0.5 text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
-              Descarga, permisos y un toque. El sync con servidor va abajo.
+              Instala y ejecuta. Luego sincroniza abajo.
             </p>
           </div>
         </div>
         <div className="min-w-0">
           <ConfigAppleShortcutPanel theme={theme} moduleCard />
         </div>
-        <p className="m-0 mt-3 text-[10px] leading-relaxed" style={{ color: theme.textMuted }}>
-          <strong className="font-medium" style={{ color: theme.text }}>Atajos:</strong> pasos, ejercicio, energía, HRV, FC, entrenamientos. Sueño omitido en
-          el flujo (evita «Acción desconocida»). Si eso o «0 elementos», reinstala el .shortcut desde Órvita.
-        </p>
       </div>
     )
   }
