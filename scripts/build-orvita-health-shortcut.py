@@ -2,7 +2,7 @@
 """Genera el plist del atajo iOS, listo para `plutil` + `shortcuts sign` (en macOS).
 
 Compatibilidad: las acciones usan identificadores estándar de Shortcuts
-(`is.workflow.actions.filter.health.quantity`, `calculatestatistics`, `filter.workouts`, etc.),
+(`is.workflow.actions.filter.health.quantity`, `statistics` + `detect.number`, `filter.workouts`, etc.),
 no dependen de un iOS "futuro". Si al importar ves «Buscar muestras de Salud» con tipo (null)
 o tarjetas «Acción desconocida» en el medio, suele ser **serialización** del .shortcut, no
 permisos ni caché: prueba `--mode minimal`, `--quantity-type plain` y/o
@@ -167,8 +167,16 @@ def statistics_on(
         else:
             raise ValueError(f"Unknown aggregate property serialization: {aggregate_property_serialization!r}")
     return {
-        "WFWorkflowActionIdentifier": "is.workflow.actions.calculatestatistics",
+        "WFWorkflowActionIdentifier": "is.workflow.actions.statistics",
         "WFWorkflowActionParameters": params,
+    }
+
+
+def detect_numbers_from_input(*, u: str) -> dict:
+    """Coerción «Obtener números»; entrada = salida de la acción anterior (p. ej. Suma/Media)."""
+    return {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.detect.number",
+        "WFWorkflowActionParameters": {"UUID": u},
     }
 
 
@@ -412,7 +420,7 @@ def dictionary_bundle_dynamic(
     u_workout_count: str,
     u_workout_dur_sec: str,
     include_workout_duration_seconds: bool = True,
-    workout_duration_output_name: str = "Calculation Result",
+    workout_duration_output_name: str = "Numbers",
 ) -> dict:
     items: list[dict] = [
         {
@@ -476,7 +484,7 @@ def dictionary_bundle_minimal(*, u_dict: str, u_iso: str, u_steps: str) -> dict:
             "WFItemType": 1,
             "WFKey": text_plain("steps"),
             "WFValue": {
-                "Value": text_token_string(u_steps, "Calculation Result"),
+                "Value": text_token_string(u_steps, "Numbers"),
                 "WFSerializationType": "WFTextTokenString",
             },
         },
@@ -659,6 +667,7 @@ def build_actions_full(
     for key, hk_id, op in BUNDLE_QUANTITY_METRICS:
         u_find = uid()
         u_stat = uid()
+        u_detect = uid()
         actions.append(
             find_health_quantity(
                 u_find=u_find,
@@ -667,7 +676,8 @@ def build_actions_full(
             )
         )
         actions.append(statistics_on(u_find, u_stat, op))
-        quantity_stat_pairs.append((key, u_stat, "Calculation Result"))
+        actions.append(detect_numbers_from_input(u=u_detect))
+        quantity_stat_pairs.append((key, u_detect, "Numbers"))
 
     actions.extend(
         [
@@ -690,6 +700,7 @@ def build_actions_full(
             include_dur = False
             dur_output_name = "Calculation Result"
     else:
+        u_detect_workout_dur = uid()
         actions.append(
             statistics_on(
                 u_find_workouts,
@@ -700,9 +711,10 @@ def build_actions_full(
                 aggregate_property_serialization=workout_stat_prop_ser,
             )
         )
-        u_dur_for_dict = u_stat_workout_dur
+        actions.append(detect_numbers_from_input(u=u_detect_workout_dur))
+        u_dur_for_dict = u_detect_workout_dur
         include_dur = True
-        dur_output_name = "Calculation Result"
+        dur_output_name = "Numbers"
 
     actions.append(
         dictionary_bundle_dynamic(
@@ -729,6 +741,7 @@ def build_actions_minimal(*, quantity_type_style: str, legacy_token_prompt: bool
     u_iso = uid()
     u_find_steps = uid()
     u_stat_steps = uid()
+    u_detect_steps = uid()
     u_dict = uid()
     u_post = uid()
     u_show = uid()
@@ -762,7 +775,8 @@ def build_actions_minimal(*, quantity_type_style: str, legacy_token_prompt: bool
             quantity_type_style=quantity_type_style,
         ),
         statistics_on(u_find_steps, u_stat_steps, "Sum"),
-        dictionary_bundle_minimal(u_dict=u_dict, u_iso=u_iso, u_steps=u_stat_steps),
+        detect_numbers_from_input(u=u_detect_steps),
+        dictionary_bundle_minimal(u_dict=u_dict, u_iso=u_iso, u_steps=u_detect_steps),
         post_import(u_post=u_post, u_token=u_header, u_dict=u_dict, u_iso=u_iso),
         show_result(u=u_show, u_post=u_post),
     ]
@@ -795,7 +809,7 @@ def main() -> int:
     p.add_argument(
         "--omit-workout-duration-stat",
         action="store_true",
-        help="No añade «Calcular estadísticas» sumando Duration sobre entrenamientos; evita un bloque a menudo gris.",
+        help="No añade suma de Duration sobre entrenamientos (estadística + números); evita un bloque a menudo gris.",
     )
     p.add_argument(
         "--workout-duration-placeholder",
@@ -809,7 +823,7 @@ def main() -> int:
         dest="workout_agg_ser",
         choices=("string", "texttoken"),
         default="string",
-        help="Solo si NO omites el estadístico de duración: cómo se serializa 'Duration' en Calcular estadísticas.",
+        help="Solo si NO omites la suma de duración: cómo se serializa 'Duration' en la acción de estadística.",
     )
     p.add_argument(
         "--legacy-token-prompt",
