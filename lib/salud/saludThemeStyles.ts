@@ -32,9 +32,9 @@ export function saludPanelStyle(theme: OrbitaThemeSkin, surfaceAlpha = 0.92): CS
   }
 }
 
-/** Semáforo suave para métricas 0–100 (usa acento salud del tema). */
-export function saludMetricTone(theme: OrbitaThemeSkin, value: number): string {
-  if (value >= 80) return theme.accent.health
-  if (value >= 60) return "#f59e0b"
-  return "#fb7185"
+/** Semáforo 0–100: verde / ámbar / rojo (sin azul como estado). */
+export function saludMetricTone(_theme: OrbitaThemeSkin, value: number): string {
+  if (value >= 80) return "#22c55e"
+  if (value >= 60) return "#eab308"
+  return "#ef4444"
 }

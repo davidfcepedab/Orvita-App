@@ -7,6 +7,7 @@ import type { AutoHealthMetric } from "@/app/hooks/useHealthAutoMetrics"
 import type { SaludContextSnapshot } from "@/app/salud/_hooks/useSaludContext"
 import type { ShortcutHealthAnalyticsSnapshot } from "@/lib/health/shortcutHealthAnalytics"
 import { dedupeMetricsByLocalDay, vitalityScoreFromAppleRow } from "@/lib/health/appleTimelineDerived"
+import { SALUD_SEM } from "@/lib/salud/saludSemanticPalette"
 import { saludHexToRgba, saludPanelStyle } from "@/lib/salud/saludThemeStyles"
 
 type Props = {
@@ -22,9 +23,9 @@ type Props = {
 export function HealthCorrelationsPanel({ salud, latest, timeline, analytics, loading, variant = "standalone" }: Props) {
   const theme = useOrbitaSkin()
   const statusTone = (value: "ok" | "warn" | "risk") => {
-    if (value === "ok") return { label: "En línea", color: theme.accent.health }
-    if (value === "warn") return { label: "Atención", color: theme.accent.agenda }
-    return { label: "Desbalance", color: theme.accent.finance }
+    if (value === "ok") return { label: "OK", color: SALUD_SEM.ok }
+    if (value === "warn") return { label: "Atención", color: SALUD_SEM.warn }
+    return { label: "Desbalance", color: SALUD_SEM.risk }
   }
 
   const sleepVsEnergySeries = useMemo(() => {
@@ -112,8 +113,8 @@ export function HealthCorrelationsPanel({ salud, latest, timeline, analytics, lo
                   color: theme.text,
                 }}
               />
-              <Area yAxisId="left" type="monotone" dataKey="sleep" fill={saludHexToRgba(theme.accent.agenda, 0.22)} stroke="none" />
-              <Line yAxisId="right" type="monotone" dataKey="vitality" stroke={theme.accent.health} strokeWidth={2} dot={false} />
+              <Area yAxisId="left" type="monotone" dataKey="sleep" fill={saludHexToRgba(SALUD_SEM.recovery, 0.22)} stroke="none" />
+              <Line yAxisId="right" type="monotone" dataKey="vitality" stroke={SALUD_SEM.energy} strokeWidth={2} dot={false} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -139,8 +140,8 @@ export function HealthCorrelationsPanel({ salud, latest, timeline, analytics, lo
                   color: theme.text,
                 }}
               />
-              <Area yAxisId="left" type="monotone" dataKey="load" fill={saludHexToRgba(theme.accent.agenda, 0.2)} stroke="none" />
-              <Line yAxisId="right" type="monotone" dataKey="hrv" stroke={theme.accent.health} strokeWidth={2} dot={false} />
+              <Area yAxisId="left" type="monotone" dataKey="load" fill={saludHexToRgba(SALUD_SEM.energy, 0.18)} stroke="none" />
+              <Line yAxisId="right" type="monotone" dataKey="hrv" stroke={SALUD_SEM.recovery} strokeWidth={2} dot={false} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>

@@ -1,31 +1,115 @@
 "use client"
 
+import { useMemo } from "react"
 import HealthOperationsV3 from "@/app/components/orbita-v3/health/HealthOperationsV3"
-import TrainingOperationsV3 from "@/app/components/orbita-v3/training/TrainingOperationsV3"
-import AppleHealthLuxurySection from "@/app/components/orbita-v3/salud/AppleHealthLuxurySection"
 import { useSaludContext } from "@/app/salud/_hooks/useSaludContext"
 import { useHealthAutoMetrics } from "@/app/hooks/useHealthAutoMetrics"
+import { useTraining } from "@/src/modules/training/useTraining"
+import { appleDaySignalsFromHealthMetric } from "@/lib/health/appleHevyRelation"
+import { agendaTodayYmd } from "@/lib/agenda/localDateKey"
+import { buildPlanVsExecution, buildTrainingReadiness } from "@/lib/training/trainingOperationalDerivations"
+import { buildSaludDecisionBrief } from "@/lib/salud/saludDecisionBrief"
+import { HeroDecisionCard } from "@/app/components/orbita-v3/salud/HeroDecisionCard"
+import { SignalsStrip } from "@/app/components/orbita-v3/salud/SignalsStrip"
+import { InsightActionBlock } from "@/app/components/orbita-v3/salud/InsightActionBlock"
+import { TrainingBridgeCard } from "@/app/components/orbita-v3/salud/TrainingBridgeCard"
+import AppleHealthLuxurySection from "@/app/components/orbita-v3/salud/AppleHealthLuxurySection"
+
+function formatSyncSummary(latestObservedAt: string | null | undefined, stale: boolean): string {
+  if (!latestObservedAt) return "Apple Health: sin lectura reciente."
+  if (stale) return `Apple Health: sync desactualizado · ${new Intl.DateTimeFormat("es-LA", { dateStyle: "short", timeStyle: "short" }).format(new Date(latestObservedAt))}`
+  return `Apple Health: al día · ${new Intl.DateTimeFormat("es-LA", { dateStyle: "short", timeStyle: "short" }).format(new Date(latestObservedAt))}`
+}
 
 export default function SaludDashboardV3() {
   const salud = useSaludContext()
   const autoHealth = useHealthAutoMetrics()
+  const { days, todayState } = useTraining()
+  const todayIso = agendaTodayYmd()
+
+  const staleSync = useMemo(() => {
+    if (!autoHealth.latest?.observed_at) return false
+    const ageMs = Date.now() - new Date(autoHealth.latest.observed_at).getTime()
+    return Number.isFinite(ageMs) && ageMs > 36 * 60 * 60 * 1000
+  }, [autoHealth.latest?.observed_at])
+
+  const appleSignals = useMemo(() => appleDaySignalsFromHealthMetric(autoHealth.latest), [autoHealth.latest])
+  const readiness = useMemo(() => buildTrainingReadiness(appleSignals, days), [appleSignals, days])
+  const planVsExecution = useMemo(() => buildPlanVsExecution(days, todayState, todayIso), [days, todayState, todayIso])
+  const brief = useMemo(
+    () =>
+      buildSaludDecisionBrief({
+        salud,
+        latest: autoHealth.latest,
+        readiness,
+        plan: planVsExecution,
+        todayState,
+        staleSync,
+      }),
+    [salud, autoHealth.latest, readiness, planVsExecution, todayState, staleSync],
+  )
+
+  const syncSummary = useMemo(
+    () => formatSyncSummary(autoHealth.latest?.observed_at ?? null, staleSync),
+    [autoHealth.latest?.observed_at, staleSync],
+  )
+
+  const hasHevy = days.some((d) => d.source === "hevy")
+
+  if (salud.loading) {
+    return (
+      <main className="mx-auto max-w-[min(72rem,calc(100vw-1.5rem))] px-1 py-2 text-sm text-[var(--color-text-secondary)]">
+        Cargando brief de salud…
+      </main>
+    )
+  }
+
+  if (salud.error) {
+    return (
+      <main className="mx-auto max-w-[min(72rem,calc(100vw-1.5rem))] px-1 py-2 text-sm text-[var(--color-accent-finance)]">
+        {salud.error}
+      </main>
+    )
+  }
 
   return (
-    <>
+    <main
+      className="orbita-page-stack mx-auto w-full max-w-[min(72rem,calc(100vw-1.5rem))] space-y-4"
+      aria-label="Salud — decisión, Apple Health y operativo"
+    >
+      <HeroDecisionCard
+        brief={brief}
+        syncSummary={syncSummary}
+        onRefreshApple={autoHealth.refetch}
+        latest={autoHealth.latest}
+      />
+      <SignalsStrip latest={autoHealth.latest} loading={autoHealth.loading} />
+      <InsightActionBlock brief={brief} />
+      <TrainingBridgeCard brief={brief} plan={planVsExecution} hasHevy={hasHevy} />
+
       <AppleHealthLuxurySection
         salud={salud}
         latest={autoHealth.latest}
         loading={autoHealth.loading}
         onRefresh={autoHealth.refetch}
       />
-      <HealthOperationsV3
-        salud={salud}
-        latest={autoHealth.latest}
-        timeline={autoHealth.timeline}
-        analytics={autoHealth.analytics}
-        healthMetricsLoading={autoHealth.loading}
-      />
-      <TrainingOperationsV3 salud={salud} />
-    </>
+
+      <section className="space-y-3 px-0.5 sm:px-0" aria-labelledby="salud-operativo-heading">
+        <h2
+          id="salud-operativo-heading"
+          className="m-0 text-sm font-semibold tracking-tight text-[var(--color-text-primary)]"
+        >
+          Operativo: combustible, suplementos y lectura semanal
+        </h2>
+        <HealthOperationsV3
+          salud={salud}
+          latest={autoHealth.latest}
+          timeline={autoHealth.timeline}
+          analytics={autoHealth.analytics}
+          healthMetricsLoading={autoHealth.loading}
+          layout="full"
+        />
+      </section>
+    </main>
   )
 }

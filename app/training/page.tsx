@@ -22,6 +22,7 @@ import {
 import { agendaTodayYmd } from "@/lib/agenda/localDateKey"
 import { useTrainingPreferences } from "@/app/hooks/useTrainingPreferences"
 import { buildAdjustmentHints } from "@/lib/training/adjustmentHints"
+import { TrainingActionQuerySync } from "@/app/training/TrainingActionQuerySync"
 import { Card } from "@/src/components/ui/Card"
 
 type AgendaApiTask = {
@@ -162,6 +163,7 @@ export default function TrainingPage() {
 
   return (
     <main className="orbita-page-stack mx-auto w-full max-w-[min(72rem,calc(100vw-1.5rem))]" aria-label="Entrenamiento operativo">
+      <TrainingActionQuerySync setManualStatus={setManualStatus} />
       <div className="min-w-0 px-1 py-1 sm:px-2">
         <h1 className="m-0 text-2xl font-semibold tracking-tight text-[var(--color-text-primary)] sm:text-[2rem]">Entrenamiento operativo</h1>
         <p className="m-0 mt-1.5 max-w-[48rem] text-[13px] leading-relaxed text-[var(--color-text-secondary)]">
