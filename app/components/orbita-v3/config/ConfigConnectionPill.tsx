@@ -16,6 +16,9 @@ type Props = {
    */
   onDisconnectedClick?: () => void
   stopEventOnDisconnectedClick?: boolean
+  /** Permite reintentar desde el estado de error (pill roja). */
+  onErrorClick?: () => void
+  stopEventOnErrorClick?: boolean
 }
 
 /**
@@ -29,10 +32,32 @@ export function ConfigConnectionPill({
   className = "",
   onDisconnectedClick,
   stopEventOnDisconnectedClick = true,
+  onErrorClick,
+  stopEventOnErrorClick = true,
 }: Props) {
   const baseClass =
     "inline-flex min-w-[6.75rem] justify-center text-center"
   if (state === "error") {
+    if (onErrorClick) {
+      return (
+        <button
+          type="button"
+          className={`${baseClass} items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-opacity hover:opacity-90 ${className}`.trim()}
+          style={{ backgroundColor: "rgba(239, 68, 68, 0.1)", color: "rgb(185, 28, 28)" }}
+          title={errorLabel}
+          onClick={(e) => {
+            if (stopEventOnErrorClick) {
+              e.preventDefault()
+              e.stopPropagation()
+            }
+            onErrorClick()
+          }}
+        >
+          <AlertCircle className="h-3 w-3 shrink-0" strokeWidth={2.2} aria-hidden />
+          <span className="min-w-0 truncate">{errorLabel}</span>
+        </button>
+      )
+    }
     return (
       <span
         className={`${baseClass} items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${className}`.trim()}

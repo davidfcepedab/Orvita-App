@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
         success: false,
         code: "hevy_fetch_failed" as const,
         error: isAuth
-          ? "Hevy no aceptó la clave. Revisa HEVY_API_KEY en el servidor o la URL de la API (Hevy/legacy)."
+          ? "Hevy no aceptó la clave. Revisa HEVY_API_KEY (Hevy Pro) y vuelve a guardar variables en Vercel."
           : isPathOrEnvMismatch
             ? "No pudimos leer workouts de Hevy. Verifica HEVY_BASE_URL (recomendado: https://api.hevyapp.com)."
           : "No pudimos obtener tus entrenos de Hevy. Revisa tu conexión a internet o vuelve a intentar en un rato.",

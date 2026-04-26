@@ -12,7 +12,8 @@ export function isHevyEnvConfigured(): boolean {
 }
 
 function buildHevyWorkoutsUrl(baseUrl: string, page: number) {
-  const normalizedBase = baseUrl.replace(/\/+$/, "")
+  // Allow accidental values like ".../docs" or ".../docs/" from Swagger copy-paste.
+  const normalizedBase = baseUrl.replace(/\/docs\/?$/i, "").replace(/\/+$/, "")
   const baseWithVersion = /\/v\d+$/i.test(normalizedBase) ? normalizedBase : `${normalizedBase}/v1`
   return `${baseWithVersion}/workouts?page=${page}`
 }
@@ -20,19 +21,25 @@ function buildHevyWorkoutsUrl(baseUrl: string, page: number) {
 export async function fetchHevyWorkouts(page = 1) {
   const { baseUrl, apiKey } = requireHevyEnv()
   const url = buildHevyWorkoutsUrl(baseUrl, page)
-  const res = await fetch(url, {
-    headers: {
-      Accept: "application/json",
-      "api-key": apiKey,
-      Authorization: `Bearer ${apiKey}`,
-    },
-    cache: "no-store",
-  })
+  const authVariants: Array<Record<string, string>> = [
+    { Accept: "application/json", "api-key": apiKey },
+    { Accept: "application/json", "x-api-key": apiKey },
+    { Accept: "application/json", Authorization: `Bearer ${apiKey}` },
+    { Accept: "application/json", "api-key": apiKey, Authorization: `Bearer ${apiKey}` },
+  ]
 
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(`Hevy error (${res.status}) at ${url}: ${text}`)
+  let lastStatus = 0
+  let lastBody = ""
+
+  for (const headers of authVariants) {
+    const res = await fetch(url, { headers, cache: "no-store" })
+    if (res.ok) return res.json()
+    lastStatus = res.status
+    lastBody = await res.text()
+    if (res.status !== 401 && res.status !== 403) {
+      break
+    }
   }
 
-  return res.json()
+  throw new Error(`Hevy error (${lastStatus}) at ${url}: ${lastBody}`)
 }

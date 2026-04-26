@@ -811,6 +811,7 @@ export default function ConfigV3() {
                 onDisconnectedClick={
                   hevyConnected || hevyChecking || hevySyncing ? undefined : () => void handleHevySync()
                 }
+                onErrorClick={hevyChecking || hevySyncing ? undefined : () => void handleHevySync()}
               />
             }
           >

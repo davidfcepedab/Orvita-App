@@ -262,6 +262,21 @@ export function ConfigIntegrationsPanel({
       {accordionMode && only === "hevy" ? (
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={onHevySync}
+              disabled={hevySyncing || hevyChecking}
+              className={btn()}
+              style={{ borderColor: theme.accent.health, backgroundColor: theme.accent.health, color: "#fff" }}
+            >
+              {hevySyncing
+                ? "Activando…"
+                : hevyConnected
+                  ? "Sincronizar Hevy"
+                  : hevyMessage
+                    ? "Reintentar Hevy"
+                    : "Activar Hevy"}
+            </button>
             <Link
               href="/training"
               className="inline-flex min-h-8 items-center justify-center rounded-full border px-3 py-1 text-[11px] font-medium no-underline transition hover:opacity-90"
