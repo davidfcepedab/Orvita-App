@@ -140,7 +140,7 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-      className="relative mx-auto w-full max-w-[860px] overflow-hidden rounded-[32px] border p-7 backdrop-blur-2xl sm:p-10"
+      className="relative w-full overflow-hidden rounded-[32px] border p-7 backdrop-blur-2xl sm:p-10"
       style={panel}
     >
       <div className="pointer-events-none absolute inset-0" style={innerGlow} />
