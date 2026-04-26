@@ -347,10 +347,6 @@ def build_token_storage_prelude(*, ask_prompt: str) -> tuple[list[dict], str]:
     u_get = uid()
 
     actions: list[dict] = [
-        comment(
-            "Token: lee iCloud Drive/Shortcuts/orvita_import_token.txt; si está vacío o no existe, "
-            "pide el token una vez, lo guarda y reutiliza. Borra el archivo en iCloud si regeneras/revocas en Órvita."
-        ),
         get_file_from_icloud_path(u=u_file, path=ORVITA_TOKEN_ICLOUD_PATH, error_if_not_found=False),
         detect_text_from_input(u=u_text),
         count_characters(u=u_count),
@@ -619,8 +615,8 @@ def build_actions_full(
     omit_workout_duration_stat: bool,
     duration_placeholders: str,
     workout_stat_prop_ser: str,
+    legacy_token_prompt: bool,
 ) -> list[dict]:
-    u_token = uid()
     u_date = uid()
     u_iso = uid()
 
@@ -633,16 +629,28 @@ def build_actions_full(
     u_post = uid()
     u_show = uid()
 
+    if legacy_token_prompt:
+        u_token = uid()
+        token_actions: list[dict] = [
+            ask_text(
+                u=u_token,
+                prompt="Pega el token de importación que generaste en Órvita (Configuración).",
+            ),
+        ]
+        u_header = u_token
+    else:
+        token_actions, u_header = build_token_storage_prelude(
+            ask_prompt="Pega tu token de Órvita",
+        )
+
     actions: list[dict] = [
         comment(
-            "Métricas de cantidad del día (lista BUNDLE_QUANTITY_METRICS) + entrenos; POST a Órvita. "
-            "Sin sueño automático por categoría (evita «Acción desconocida» en muchos iPhone). "
-            "Token desde Órvita → Salud."
+            "Token: iCloud Drive/Shortcuts/orvita_import_token.txt (léelo primero; si falta o está vacío, "
+            "pide token, guárdalo y reutiliza). Regenerar/revocar en Órvita → borrar ese archivo. "
+            "Métricas BUNDLE_QUANTITY_METRICS + entrenos; sin sueño automático por categoría. "
+            "Modo solo-pregunta: generar con --legacy-token-prompt."
         ),
-        ask_text(
-            u=u_token,
-            prompt="Pega el token de importación que generaste en Órvita (Salud).",
-        ),
+        *token_actions,
         current_date(u=u_date),
         format_iso8601(u=u_iso, u_date=u_date),
     ]
@@ -709,15 +717,14 @@ def build_actions_full(
     )
     actions.extend(
         [
-            post_import(u_post=u_post, u_token=u_token, u_dict=u_dict, u_iso=u_iso),
+            post_import(u_post=u_post, u_token=u_header, u_dict=u_dict, u_iso=u_iso),
             show_result(u=u_show, u_post=u_post),
         ]
     )
     return actions
 
 
-def build_actions_minimal(*, quantity_type_style: str) -> list[dict]:
-    u_token = uid()
+def build_actions_minimal(*, quantity_type_style: str, legacy_token_prompt: bool) -> list[dict]:
     u_date = uid()
     u_iso = uid()
     u_find_steps = uid()
@@ -725,16 +732,28 @@ def build_actions_minimal(*, quantity_type_style: str) -> list[dict]:
     u_dict = uid()
     u_post = uid()
     u_show = uid()
+
+    if legacy_token_prompt:
+        u_token = uid()
+        token_actions = [
+            ask_text(
+                u=u_token,
+                prompt="Pega el token de importación que generaste en Órvita (Configuración).",
+            ),
+        ]
+        u_header = u_token
+    else:
+        token_actions, u_header = build_token_storage_prelude(
+            ask_prompt="Pega tu token de Órvita",
+        )
+
     return [
         comment(
             "Mínimo de validación: solo pasos (suma) + token + ISO + POST. "
             "Si esto abre sin (null) ni tarjetas grises, el fallo estaba en otra acción/serialización; "
             "vuelve al modo completo o añade métricas de una en una."
         ),
-        ask_text(
-            u=u_token,
-            prompt="Pega el token de importación que generaste en Órvita (Salud).",
-        ),
+        *token_actions,
         current_date(u=u_date),
         format_iso8601(u=u_iso, u_date=u_date),
         find_health_quantity(
@@ -744,7 +763,7 @@ def build_actions_minimal(*, quantity_type_style: str) -> list[dict]:
         ),
         statistics_on(u_find_steps, u_stat_steps, "Sum"),
         dictionary_bundle_minimal(u_dict=u_dict, u_iso=u_iso, u_steps=u_stat_steps),
-        post_import(u_post=u_post, u_token=u_token, u_dict=u_dict, u_iso=u_iso),
+        post_import(u_post=u_post, u_token=u_header, u_dict=u_dict, u_iso=u_iso),
         show_result(u=u_show, u_post=u_post),
     ]
 
@@ -792,6 +811,11 @@ def main() -> int:
         default="string",
         help="Solo si NO omites el estadístico de duración: cómo se serializa 'Duration' en Calcular estadísticas.",
     )
+    p.add_argument(
+        "--legacy-token-prompt",
+        action="store_true",
+        help="Solo «Solicitar entrada» del token en cada ejecución (sin leer/guardar archivo en iCloud).",
+    )
     args = p.parse_args()
     if args.wplace == "omit" and not args.omit_workout_duration_stat:
         p.error("--workout-duration-placeholder=omit requiere --omit-workout-duration-stat")
@@ -801,13 +825,17 @@ def main() -> int:
         else "Órvita – Importar Salud Hoy"
     )
     if args.mode == "minimal":
-        actions = build_actions_minimal(quantity_type_style=args.quantity_type)
+        actions = build_actions_minimal(
+            quantity_type_style=args.quantity_type,
+            legacy_token_prompt=args.legacy_token_prompt,
+        )
     else:
         actions = build_actions_full(
             quantity_type_style=args.quantity_type,
             omit_workout_duration_stat=args.omit_workout_duration_stat,
             duration_placeholders=args.wplace,
             workout_stat_prop_ser=args.workout_agg_ser,
+            legacy_token_prompt=args.legacy_token_prompt,
         )
     out: Path = args.output
     with out.open("wb") as f:
