@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
     const workouts = extractWorkouts(payload)
     const enrichedWorkouts = await enrichLatestWorkouts(workouts, 3)
     const trainingDays = workouts.map((workout) => normalizeHevyWorkout(workout))
-    const normalizedDetailed = enrichedWorkouts.map((workout) => normalizeHevyWorkout(workout))
+    const normalizedDetailed = enrichedWorkouts.map((workout) => normalizeHevyWorkout(extractWorkoutEntity(workout)))
     const mergedTrainingDays = mergePreferDetailed(trainingDays, normalizedDetailed)
 
     return NextResponse.json({
@@ -94,6 +94,13 @@ async function enrichLatestWorkouts(workouts: unknown[], maxDetails: number): Pr
     }),
   )
   return detailed
+}
+
+function extractWorkoutEntity(payload: unknown): unknown {
+  if (!payload || typeof payload !== "object") return payload
+  const maybeWorkout = (payload as { workout?: unknown }).workout
+  if (maybeWorkout && typeof maybeWorkout === "object") return maybeWorkout
+  return payload
 }
 
 function readWorkoutId(workout: unknown): string | null {
