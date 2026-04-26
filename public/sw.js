@@ -12,7 +12,7 @@
  * - Background Sync: etiqueta `orvita-habits` — avisa a clientes para reintentar cuando vuelva la red.
  */
 /** @type {string} Bump al cambiar lógica de caché */
-const CACHE_VERSION = "orvita-v3-2026-04-20"
+const CACHE_VERSION = "orvita-v3-2026-04-25-config-accordions"
 const CACHE_ASSETS = `${CACHE_VERSION}-assets`
 const CACHE_SHELL = `${CACHE_VERSION}-shell`
 
