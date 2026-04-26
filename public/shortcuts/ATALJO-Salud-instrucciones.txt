@@ -76,7 +76,7 @@ Flujo completo (de cero) y por qué «Mostrar diccionario» puede verse bien y e
 - Si aún recibes 400, el JSON de error puede incluir `orvita_fix` con el recordatorio de la cabecera.
 
 Configuración paso a paso (atajo + Órvita)
-1) En la web de Órvita, entra en Configuración → integraciones de Salud y genera un token de importación (copia el valor; caduca en unas horas).
+1) En la web de Órvita, entra en Configuración → bloque del atajo / token de importación: genera el token **una vez** y cópialo en Atajos (cabecera `x-orvita-import-token`). Es persistente hasta que lo regeneres o revoques en la misma pantalla.
 2) En el iPhone, instala el atajo «Órvita – Importar Salud Hoy» (enlace HTTPS de orvita.app o enlace iCloud si la app muestra «Instalar desde iCloud»).
 3) Abre Atajos → toca el atajo → primera vez: pega el token cuando lo pida el paso «Preguntar» / «Solicitar entrada».
 4) iOS pedirá permisos: Acepta. Luego ve a Salud → Perfil → Apps (o Privacidad) → Atajos y activa lectura para los tipos que el atajo consulta (pasos, ejercicio, energía activa, HRV, FC en reposo, distancia, plantas, VO₂, saturación de oxígeno, frecuencia respiratoria, FC al caminar, velocidad al caminar, test de 6 minutos, peso corporal, entrenamientos). Si falta un tipo, el atajo puede devolver 0 o vacío en esa clave; no bloquea el resto.

@@ -188,6 +188,16 @@ export async function POST(req: NextRequest) {
       persistence: lastPersistence,
     })
 
+    if (auth.kind === "import_token") {
+      const { error: touchErr } = await auth.supabase
+        .from("orvita_health_import_tokens")
+        .update({ used_at: nowIso })
+        .eq("id", auth.tokenRowId)
+      if (touchErr) {
+        console.warn("[apple-import] used_at touch failed", touchErr.message)
+      }
+    }
+
     return NextResponse.json({
       success: true,
       observed_at: (norm.ok ? norm.observed_at : first?.observed_at?.slice(0, 10)) ?? null,

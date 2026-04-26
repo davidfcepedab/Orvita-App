@@ -1,4 +1,6 @@
-# Importación diaria de Apple Health desde Atajos (iOS) → RESET OS / Órvita
+# Importación de Apple Health desde Atajos (iOS) → RESET OS / Órvita
+
+El envío puede automatizarse cada día; el **token de importación** en cabecera `x-orvita-import-token` es **persistente** (no se rota por calendario): se configura una vez en Atajos y solo cambia si lo regeneras o revocas en Configuración.
 
 ## Enlace de instalación en iCloud (Atajos / Apple)
 
@@ -69,8 +71,8 @@ También se acepta el **mismo diccionario en la raíz** (sin anidar) por compati
 - `Content-Type: application/json` (obligatoria)
 - **Autenticación** (una de las dos):
   - `Authorization: Bearer <access_token de sesión Supabase>`, o
-  - `x-orvita-import-token: <token de importación>` (generado en la app, Salud)  
-- Alias soportado: `x-reset-token: <mismo token>` (mismo valor que el de importación)
+  - **`x-orvita-import-token: <token persistente>`** — se genera **una vez** en **Configuración** (bloque Atajo / token de importación); el servidor guarda solo el hash (SHA-256). No caduca por tiempo; si **regeneras** o **revocas** en la web, deja de valer y debes pegar el nuevo valor en Atajos.
+- Alias soportado (compatibilidad): `x-reset-token: <mismo token>` que enviarías en `x-orvita-import-token`.
 - **`x-orvita-observed-at: yyyy-MM-dd`** (recomendada en Atajos): si el cuerpo JSON serializa `observed_at` como `null`, el servidor toma la fecha de esta cabecera. El plist generado por `scripts/build-orvita-health-shortcut.py` la envía enlazada a la misma fecha que `apple_bundle.observed_at`. Alias: `x-observed-at`.
 
 **No** incluyas el token en el cuerpo JSON a menos que uses el campo `import_token` documentado; no se registra el JSON completo en producción en logs de servidor.
@@ -85,7 +87,8 @@ También se acepta el **mismo diccionario en la raíz** (sin anidar) por compati
 
 ## UI
 
-- **Operaciones de Salud** ([`/health`](https://orvita.app/health)): cards operativas, estratégicas y de tendencia semanal (import Atajo)
+- **Configuración** ([`/configuracion`](https://orvita.app/configuracion)): generar, regenerar, copiar (solo al crear) y revocar el token de importación para Atajos.
+- **Operaciones de Salud** ([`/health`](https://orvita.app/health)): lectura y atajo; la administración del token vive en Configuración.
 - **Check-in**: franja informativa con enlace a `/health` cuando la nube está activa
 - `/sistema` redirige a `/health` (compatibilidad con enlaces antiguos)
 

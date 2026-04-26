@@ -1,16 +1,12 @@
 "use client"
 
-import { useCallback, useMemo, useState } from "react"
-import { ClipboardCopy, Zap } from "lucide-react"
+import { useMemo } from "react"
+import Link from "next/link"
+import { Zap } from "lucide-react"
 import { useOrbitaSkin } from "@/app/contexts/AppContext"
 import type { AutoHealthMetric } from "@/app/hooks/useHealthAutoMetrics"
-import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import { buildOrvitaRunShortcutHref } from "@/lib/shortcuts/orvitaHealthShortcut"
-import {
-  buildAppleHealthSyncChip,
-  formatAppleHealthSyncWhen,
-  formatAppleHealthSyncWhenShort,
-} from "@/lib/salud/appleHealthSyncToolbar"
+import { buildAppleHealthSyncChip, formatAppleHealthSyncWhenShort } from "@/lib/salud/appleHealthSyncToolbar"
 import { SALUD_SEM } from "@/lib/salud/saludSemanticPalette"
 import { saludHexToRgba, saludPanelStyle } from "@/lib/salud/saludThemeStyles"
 
@@ -23,52 +19,9 @@ type Props = {
 export function AppleHealthSyncCollapsible({ onRefresh, latest = null }: Props) {
   const theme = useOrbitaSkin()
   const panel = useMemo(() => saludPanelStyle(theme, 0.92), [theme])
-  const [minting, setMinting] = useState(false)
-  const [token, setToken] = useState<string | null>(null)
-  const [tokenUntil, setTokenUntil] = useState<string | null>(null)
-  const [toast, setToast] = useState<string | null>(null)
   const runShortcutHref = useMemo(() => buildOrvitaRunShortcutHref(), [])
   const syncChip = useMemo(() => buildAppleHealthSyncChip(latest), [latest])
   const summarySyncShort = useMemo(() => formatAppleHealthSyncWhenShort(latest?.observed_at), [latest?.observed_at])
-
-  const mintToken = useCallback(async () => {
-    setMinting(true)
-    setToast(null)
-    try {
-      const headers = await browserBearerHeaders()
-      const res = await fetch("/api/integrations/health/apple/import-token", {
-        method: "POST",
-        headers: { ...headers, "Content-Type": "application/json" },
-        body: JSON.stringify({ ttlMinutes: 60 * 24 }),
-      })
-      const payload = (await res.json()) as {
-        success?: boolean
-        import_token?: string
-        expires_at?: string
-        error?: string
-      }
-      if (!res.ok || !payload.success || !payload.import_token) {
-        throw new Error(payload.error ?? "No se pudo generar el token")
-      }
-      setToken(payload.import_token)
-      setTokenUntil(payload.expires_at ?? null)
-      setToast("Token listo: cópialo y pégalo en el Atajo cuando te lo pida.")
-    } catch (e) {
-      setToast(e instanceof Error ? e.message : "No se pudo generar el token")
-    } finally {
-      setMinting(false)
-    }
-  }, [])
-
-  const copyToken = useCallback(async () => {
-    if (!token) return
-    try {
-      await navigator.clipboard.writeText(token)
-      setToast("Token copiado al portapapeles.")
-    } catch {
-      setToast("No se pudo copiar automáticamente; selecciona el token a mano.")
-    }
-  }, [token])
 
   return (
     <details
@@ -95,19 +48,17 @@ export function AppleHealthSyncCollapsible({ onRefresh, latest = null }: Props) 
             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-90" aria-hidden />
             {syncChip.label}
           </span>
-          <button
-            type="button"
-            onClick={mintToken}
-            disabled={minting}
-            className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-lg border px-2.5 text-[11px] font-medium transition active:scale-[0.99] disabled:opacity-50 sm:px-3 sm:text-xs"
+          <Link
+            href="/configuracion#apple-health-import-token"
+            className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-lg border px-2.5 text-[11px] font-medium no-underline transition active:scale-[0.99] sm:px-3 sm:text-xs"
             style={{
               borderColor: saludHexToRgba(theme.border, 0.85),
               backgroundColor: "transparent",
               color: theme.text,
             }}
           >
-            {minting ? "Token…" : "Token atajo"}
-          </button>
+            Token en Configuración
+          </Link>
           <a
             href={runShortcutHref}
             className="inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg px-3 text-[11px] font-semibold text-white no-underline transition active:scale-[0.99] sm:gap-2 sm:text-xs"
@@ -129,42 +80,9 @@ export function AppleHealthSyncCollapsible({ onRefresh, latest = null }: Props) 
             Actualizar
           </button>
         </div>
-
-        {toast ? (
-          <p
-            className="border-l-[3px] py-1.5 pl-2.5 text-[11px] leading-snug sm:text-xs"
-            style={{ borderLeftColor: SALUD_SEM.warn, color: theme.text }}
-          >
-            {toast}
-          </p>
-        ) : null}
-
-        {token ? (
-          <div className="space-y-2 rounded-xl p-3" style={{ backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.75) }}>
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: theme.textMuted }}>
-                Token (no lo compartas)
-              </span>
-              <button
-                type="button"
-                onClick={copyToken}
-                className="inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-semibold"
-                style={{ borderColor: theme.border, color: theme.text }}
-              >
-                <ClipboardCopy className="h-3 w-3" aria-hidden />
-                Copiar
-              </button>
-            </div>
-            <p className="m-0 break-all font-mono text-[11px] leading-relaxed" style={{ color: SALUD_SEM.ok }}>
-              {token}
-            </p>
-            {tokenUntil ? (
-              <p className="m-0 text-[10px]" style={{ color: theme.textMuted }}>
-                Válido hasta {formatAppleHealthSyncWhen(tokenUntil)}
-              </p>
-            ) : null}
-          </div>
-        ) : null}
+        <p className="m-0 text-[10px] leading-snug" style={{ color: theme.textMuted }}>
+          El token se gestiona en Configuración; aquí solo lanzas el atajo o refrescas la lectura.
+        </p>
       </div>
     </details>
   )

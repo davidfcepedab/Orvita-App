@@ -6,7 +6,7 @@ import { hashImportToken } from "@/lib/integrations/appleHealthImportToken"
 
 export type AppleImportAuth =
   | { kind: "session"; userId: string; supabase: SupabaseClient }
-  | { kind: "import_token"; userId: string; supabase: SupabaseClient }
+  | { kind: "import_token"; userId: string; supabase: SupabaseClient; tokenRowId: string }
 
 function extractBearerToken(req: NextRequest) {
   const header = req.headers.get("authorization")
@@ -65,18 +65,32 @@ export async function resolveAppleHealthImportAuth(
   const digest = hashImportToken(plain)
   const { data: row, error } = await svc
     .from("orvita_health_import_tokens")
-    .select("id,user_id,expires_at")
+    .select("id,user_id,expires_at,revoked_at")
     .eq("token_hash", digest)
     .maybeSingle()
 
   if (error || !row) {
-    return NextResponse.json({ success: false, error: "Token inválido o expirado." }, { status: 401 })
+    return NextResponse.json({ success: false, error: "Token inválido o revocado." }, { status: 401 })
   }
 
-  const expiresAt = new Date(row.expires_at as string)
-  if (Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() < Date.now()) {
-    return NextResponse.json({ success: false, error: "Token expirado. Genera uno nuevo en Salud." }, { status: 401 })
+  if (row.revoked_at != null) {
+    return NextResponse.json({ success: false, error: "Token revocado. Genera uno nuevo en Configuración." }, { status: 401 })
   }
 
-  return { kind: "import_token", userId: row.user_id as string, supabase: svc }
+  if (row.expires_at != null) {
+    const expiresAt = new Date(row.expires_at as string)
+    if (!Number.isNaN(expiresAt.getTime()) && expiresAt.getTime() < Date.now()) {
+      return NextResponse.json(
+        { success: false, error: "Token expirado. Genera uno nuevo en Configuración." },
+        { status: 401 },
+      )
+    }
+  }
+
+  return {
+    kind: "import_token",
+    userId: row.user_id as string,
+    supabase: svc,
+    tokenRowId: row.id as string,
+  }
 }

@@ -22,6 +22,8 @@ type Props = {
   moduleCard?: boolean
 }
 
+type TokenStatus = "none" | "active" | "revoked"
+
 function formatWhen(iso: string | null | undefined) {
   if (!iso) return "—"
   try {
@@ -31,10 +33,6 @@ function formatWhen(iso: string | null | undefined) {
   }
 }
 
-/**
- * Instalación del atajo vía esquema de iOS, token y guía (permisos + widget **del sistema Atajos**, no app Órvita nativa).
- * La web no puede instalar nada en el sistema; solo ofrece enlaces y pasos.
- */
 const subtleCta =
   "min-h-9 w-full sm:w-auto items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition hover:opacity-90 sm:inline-flex"
 const strongCta =
@@ -46,10 +44,42 @@ const chipStrongCta =
 
 export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
   const [minting, setMinting] = useState(false)
-  const [token, setToken] = useState<string | null>(null)
-  const [tokenUntil, setTokenUntil] = useState<string | null>(null)
+  const [revoking, setRevoking] = useState(false)
+  const [loadingStatus, setLoadingStatus] = useState(true)
+  const [status, setStatus] = useState<TokenStatus>("none")
+  const [createdAt, setCreatedAt] = useState<string | null>(null)
+  const [usedAt, setUsedAt] = useState<string | null>(null)
+  const [plainOnce, setPlainOnce] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [guideOpen, setGuideOpen] = useState(false)
+
+  const loadStatus = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoadingStatus(true)
+    if (!opts?.silent) setToast(null)
+    try {
+      const headers = await browserBearerHeaders()
+      const res = await fetch("/api/integrations/health/apple/import-token", { headers })
+      const payload = (await res.json()) as {
+        success?: boolean
+        status?: TokenStatus
+        created_at?: string
+        used_at?: string | null
+        error?: string
+      }
+      if (!res.ok || !payload.success) throw new Error(payload.error ?? "No se pudo cargar el estado")
+      setStatus(payload.status ?? "none")
+      setCreatedAt(payload.created_at ?? null)
+      setUsedAt(payload.used_at ?? null)
+    } catch (e) {
+      if (!opts?.silent) setToast(e instanceof Error ? e.message : "Error al cargar el token")
+    } finally {
+      if (!opts?.silent) setLoadingStatus(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void loadStatus()
+  }, [loadStatus])
 
   useEffect(() => {
     if (typeof document === "undefined") return
@@ -71,7 +101,6 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
     useMemo(() => {
       return {
         fileUrl: getOrvitaHealthShortcutDownloadFileUrl(),
-        /** Ruta relativa: evita orígenes distintos en SSR y cliente. */
         instructionsUrl: INSTRUCCIONES,
         icloudUrl: getOrvitaHealthShortcutIcloudUrl(),
         shortcutInstallHref: buildOrvitaShortcutImportHref(),
@@ -80,7 +109,7 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
       }
     }, [])
 
-  const mintToken = useCallback(async () => {
+  const mintOrRegenerate = useCallback(async () => {
     setMinting(true)
     setToast(null)
     try {
@@ -88,36 +117,60 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
       const res = await fetch("/api/integrations/health/apple/import-token", {
         method: "POST",
         headers: { ...headers, "Content-Type": "application/json" },
-        body: JSON.stringify({ ttlMinutes: 60 * 24 }),
+        body: JSON.stringify({}),
       })
       const payload = (await res.json()) as {
         success?: boolean
         import_token?: string
-        expires_at?: string
+        created_at?: string
         error?: string
       }
       if (!res.ok || !payload.success || !payload.import_token) {
-        throw new Error(payload.error ?? "No se pudo generar el código")
+        throw new Error(payload.error ?? "No se pudo generar el token")
       }
-      setToken(payload.import_token)
-      setTokenUntil(payload.expires_at ?? null)
-      setToast("Código listo. Cuando el atajo te lo pida, pégalo aquí. No lo compartas con nadie.")
+      setPlainOnce(payload.import_token)
+      setStatus("active")
+      setCreatedAt(payload.created_at ?? null)
+      setUsedAt(null)
+      setToast("Copia el token ahora; no volverá a mostrarse completo.")
+      await loadStatus({ silent: true })
     } catch (e) {
-      setToast(e instanceof Error ? e.message : "No se pudo generar el código")
+      setToast(e instanceof Error ? e.message : "No se pudo generar el token")
     } finally {
       setMinting(false)
     }
-  }, [])
+  }, [loadStatus])
+
+  const revoke = useCallback(async () => {
+    setRevoking(true)
+    setToast(null)
+    try {
+      const headers = await browserBearerHeaders()
+      const res = await fetch("/api/integrations/health/apple/import-token", {
+        method: "DELETE",
+        headers,
+      })
+      const payload = (await res.json()) as { success?: boolean; error?: string }
+      if (!res.ok || !payload.success) throw new Error(payload.error ?? "No se pudo revocar")
+      setPlainOnce(null)
+      setToast("Token revocado.")
+      await loadStatus({ silent: true })
+    } catch (e) {
+      setToast(e instanceof Error ? e.message : "No se pudo revocar")
+    } finally {
+      setRevoking(false)
+    }
+  }, [loadStatus])
 
   const copyToken = useCallback(async () => {
-    if (!token) return
+    if (!plainOnce) return
     try {
-      await navigator.clipboard.writeText(token)
-      setToast("Código copiado.")
+      await navigator.clipboard.writeText(plainOnce)
+      setToast("Token copiado.")
     } catch {
       setToast("Cópialo seleccionando el texto a mano.")
     }
-  }, [token])
+  }, [plainOnce])
 
   const copyDirectShortcutUrl = useCallback(async () => {
     try {
@@ -127,6 +180,13 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
       setToast("No se pudo copiar. Usa «Descargar archivo del atajo» o copia la URL a mano desde la guía.")
     }
   }, [])
+
+  const statusLabel =
+    status === "active"
+      ? "Token configurado"
+      : status === "revoked"
+        ? "Revocado"
+        : "No configurado"
 
   return (
     <div
@@ -262,26 +322,59 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
       </div>
 
       <div
+        id="apple-health-import-token"
         className={moduleCard ? "pt-3" : "rounded-2xl border p-4 sm:p-5"}
         style={moduleCard ? undefined : { borderColor: theme.border, backgroundColor: theme.surface }}
       >
         <p className="text-xs font-semibold uppercase tracking-[0.14em]" style={{ color: theme.textMuted }}>
-          Código de un solo uso
+          Token de importación (Atajos)
         </p>
         <p className="mt-1.5 text-xs leading-relaxed" style={{ color: theme.textMuted }}>
-          Código que pide iOS al enviar. Válido unas horas: genera, copia y pega cuando aparezca el diálogo.
+          Configura este token una sola vez en Atajos. Solo tendrás que cambiarlo si lo regeneras o revocas. El token completo solo se muestra una vez.
         </p>
+        <p className="mt-2 text-sm font-medium" style={{ color: theme.text }}>
+          {loadingStatus ? "Cargando…" : statusLabel}
+        </p>
+        {!loadingStatus && status === "active" && createdAt ? (
+          <p className="mt-1 text-[11px]" style={{ color: theme.textMuted }}>
+            Creado {formatWhen(createdAt)}
+            {usedAt ? ` · Último uso ${formatWhen(usedAt)}` : ""}
+          </p>
+        ) : null}
+
         <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
           <button
             type="button"
-            onClick={() => void mintToken()}
-            disabled={minting}
-              className={`${moduleCard ? chipCta : subtleCta} flex disabled:opacity-50`}
+            onClick={() => void mintOrRegenerate()}
+            disabled={minting || loadingStatus}
+            className={`${moduleCard ? chipCta : subtleCta} flex disabled:opacity-50`}
             style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surfaceAlt }}
           >
             <Sparkles className="h-3.5 w-3.5" aria-hidden />
-            {minting ? "Generando…" : "Obtener código"}
+            {minting ? "Generando…" : status === "active" ? "Regenerar" : "Generar"}
           </button>
+          {status === "active" ? (
+            <button
+              type="button"
+              onClick={() => void revoke()}
+              disabled={revoking || loadingStatus}
+              className={`${moduleCard ? chipCta : subtleCta} flex disabled:opacity-50`}
+              style={{ borderColor: theme.border, color: theme.textMuted, backgroundColor: theme.surface }}
+            >
+              {revoking ? "Revocando…" : "Revocar"}
+            </button>
+          ) : null}
+          {plainOnce ? (
+            <button
+              type="button"
+              onClick={() => void copyToken()}
+              className={`${moduleCard ? chipCta : subtleCta} flex`}
+              style={{ borderColor: theme.accent.health, color: theme.accent.health, backgroundColor: "transparent" }}
+            >
+              <ClipboardCopy className="h-3.5 w-3.5" aria-hidden />
+              Copiar token
+            </button>
+          ) : null}
           {isIOS ? (
             <a
               href={runShortcutHref}
@@ -293,6 +386,7 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
             </a>
           ) : null}
         </div>
+
         {isIOS ? (
           <p className="mt-2 text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
             Si al tocar «Abrir atajo» aparece que el archivo no existe, el atajo en Atajos no se llama exactamente{" "}
@@ -307,30 +401,11 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
             {toast}
           </p>
         ) : null}
-        {token ? (
+        {plainOnce ? (
           <div className="mt-3 space-y-2 rounded-xl border p-3" style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt }}>
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: theme.textMuted }}>
-                Código (privado)
-              </span>
-              <button
-                type="button"
-                onClick={() => void copyToken()}
-                className="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium"
-                style={{ borderColor: theme.border, color: theme.text }}
-              >
-                <ClipboardCopy className="h-3.5 w-3.5" aria-hidden />
-                Copiar
-              </button>
-            </div>
             <p className="break-all font-mono text-[12px] leading-relaxed" style={{ color: theme.text }}>
-              {token}
+              {plainOnce}
             </p>
-            {tokenUntil ? (
-              <p className="text-[11px]" style={{ color: theme.textMuted }}>
-                Válido hasta {formatWhen(tokenUntil)}
-              </p>
-            ) : null}
           </div>
         ) : null}
       </div>

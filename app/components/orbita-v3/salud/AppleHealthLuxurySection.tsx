@@ -1,18 +1,14 @@
 "use client"
 
-import { useCallback, useMemo, useState } from "react"
+import { useMemo } from "react"
+import Link from "next/link"
 import { motion } from "framer-motion"
-import { BedDouble, ChevronDown, ClipboardCopy, Dumbbell, KeyRound, Lightbulb, MoonStar, Sparkles, Zap } from "lucide-react"
+import { BedDouble, ChevronDown, Dumbbell, Lightbulb, MoonStar, Sparkles, Zap } from "lucide-react"
 import { useOrbitaSkin } from "@/app/contexts/AppContext"
 import type { SaludContextSnapshot } from "@/app/salud/_hooks/useSaludContext"
 import type { AutoHealthMetric } from "@/app/hooks/useHealthAutoMetrics"
-import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import { buildOrvitaRunShortcutHref } from "@/lib/shortcuts/orvitaHealthShortcut"
-import {
-  appleHealthSyncStale,
-  buildAppleHealthSyncChip,
-  formatAppleHealthSyncWhen,
-} from "@/lib/salud/appleHealthSyncToolbar"
+import { appleHealthSyncStale, buildAppleHealthSyncChip } from "@/lib/salud/appleHealthSyncToolbar"
 import { saludHexToRgba, saludPanelStyle } from "@/lib/salud/saludThemeStyles"
 import { SALUD_SEM } from "@/lib/salud/saludSemanticPalette"
 
@@ -64,10 +60,6 @@ function formatWorkoutDuration(latest: AutoHealthMetric | null): string {
 
 export default function AppleHealthLuxurySection({ salud, latest, loading, onRefresh }: Props) {
   const theme = useOrbitaSkin()
-  const [minting, setMinting] = useState(false)
-  const [token, setToken] = useState<string | null>(null)
-  const [tokenUntil, setTokenUntil] = useState<string | null>(null)
-  const [toast, setToast] = useState<string | null>(null)
 
   const panel = useMemo(() => saludPanelStyle(theme, 0.9), [theme])
   const weekAvg = useMemo(() => {
@@ -78,45 +70,6 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
   const runShortcutHref = useMemo(() => buildOrvitaRunShortcutHref(), [])
   const staleSync = appleHealthSyncStale(latest?.observed_at)
   const syncChip = useMemo(() => buildAppleHealthSyncChip(latest), [latest])
-
-  const mintToken = useCallback(async () => {
-    setMinting(true)
-    setToast(null)
-    try {
-      const headers = await browserBearerHeaders()
-      const res = await fetch("/api/integrations/health/apple/import-token", {
-        method: "POST",
-        headers: { ...headers, "Content-Type": "application/json" },
-        body: JSON.stringify({ ttlMinutes: 60 * 24 }),
-      })
-      const payload = (await res.json()) as {
-        success?: boolean
-        import_token?: string
-        expires_at?: string
-        error?: string
-      }
-      if (!res.ok || !payload.success || !payload.import_token) {
-        throw new Error(payload.error ?? "No se pudo generar el token")
-      }
-      setToken(payload.import_token)
-      setTokenUntil(payload.expires_at ?? null)
-      setToast("Token listo: cópialo y pégalo en el Atajo cuando te lo pida.")
-    } catch (e) {
-      setToast(e instanceof Error ? e.message : "No se pudo generar el token")
-    } finally {
-      setMinting(false)
-    }
-  }, [])
-
-  const copyToken = useCallback(async () => {
-    if (!token) return
-    try {
-      await navigator.clipboard.writeText(token)
-      setToast("Token copiado al portapapeles.")
-    } catch {
-      setToast("No se pudo copiar automáticamente; selecciona el token a mano.")
-    }
-  }, [token])
 
   const dayState = useMemo(() => {
     const readiness = latest?.readiness_score
@@ -219,25 +172,19 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
               >
                 <Zap className="h-4 w-4 shrink-0" aria-hidden />
               </a>
-              <button
-                type="button"
-                disabled={minting}
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition active:scale-[0.99] disabled:opacity-50 sm:px-3 sm:text-xs"
+              <Link
+                href="/configuracion#apple-health-import-token"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold no-underline transition active:scale-[0.99] sm:px-3 sm:text-xs"
                 style={{
                   borderColor: saludHexToRgba(theme.border, 0.85),
                   backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.35),
                   color: theme.text,
                 }}
-                title="Genera token para el Atajo"
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  void mintToken()
-                }}
+                title="Configurar token del Atajo en Configuración"
+                onClick={(e) => e.stopPropagation()}
               >
-                <KeyRound className="h-3.5 w-3.5 shrink-0 opacity-85" aria-hidden />
-                {minting ? "Generando…" : "Generar token"}
-              </button>
+                Token en Configuración
+              </Link>
               <span className="ml-auto inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-[0.14em]" style={{ color: theme.textMuted }}>
                 Detalles
                 <ChevronDown
@@ -248,20 +195,18 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
               </span>
             </summary>
             <div className="mt-3 space-y-3 border-t pt-3" style={{ borderColor: saludHexToRgba(theme.border, 0.5) }}>
-              <div className="flex flex-wrap items-center gap-2" role="toolbar" aria-label="Sincronización y token">
-                <button
-                  type="button"
-                  onClick={mintToken}
-                  disabled={minting}
-                  className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-lg border px-3 text-xs font-medium transition active:scale-[0.99] disabled:opacity-50"
+              <div className="flex flex-wrap items-center gap-2" role="toolbar" aria-label="Sincronización y atajo">
+                <Link
+                  href="/configuracion#apple-health-import-token"
+                  className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-lg border px-3 text-xs font-medium no-underline transition active:scale-[0.99]"
                   style={{
                     borderColor: saludHexToRgba(theme.border, 0.85),
                     backgroundColor: "transparent",
                     color: theme.text,
                   }}
                 >
-                  {minting ? "Token…" : "Token atajo"}
-                </button>
+                  Token en Configuración
+                </Link>
                 <a
                   href={runShortcutHref}
                   className="inline-flex min-h-9 shrink-0 items-center justify-center gap-2 rounded-lg px-3.5 text-xs font-semibold text-white no-underline transition active:scale-[0.99]"
@@ -295,55 +240,8 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
                 </span>
               </div>
               <p className="m-0 text-[10px] leading-snug" style={{ color: theme.textMuted }}>
-                Token una vez por sesión; luego “Traer hoy” sincroniza el día.
+                Configura el token persistente en Configuración; el Atajo usa la cabecera <span className="font-mono">x-orvita-import-token</span>.
               </p>
-              {toast ? (
-                <p
-                  className="m-0 border-l-[3px] py-2 pl-3 text-sm leading-snug"
-                  style={{
-                    borderLeftColor: SALUD_SEM.warn,
-                    color: theme.text,
-                  }}
-                >
-                  {toast}
-                </p>
-              ) : null}
-              {token ? (
-                <div
-                  className="relative space-y-2 rounded-xl border p-3 sm:p-4"
-                  style={{
-                    borderColor: theme.border,
-                    backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.95),
-                  }}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: theme.textMuted }}>
-                      Token (no lo compartas)
-                    </p>
-                    <button
-                      type="button"
-                      onClick={copyToken}
-                      className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition"
-                      style={{
-                        borderColor: theme.border,
-                        backgroundColor: saludHexToRgba(theme.surface, 0.9),
-                        color: theme.text,
-                      }}
-                    >
-                      <ClipboardCopy className="h-3.5 w-3.5" aria-hidden />
-                      Copiar
-                    </button>
-                  </div>
-                  <p className="break-all font-mono text-[13px] leading-relaxed" style={{ color: SALUD_SEM.ok }}>
-                    {token}
-                  </p>
-                  {tokenUntil ? (
-                    <p className="text-[11px]" style={{ color: theme.textMuted }}>
-                      Válido hasta {formatAppleHealthSyncWhen(tokenUntil)}
-                    </p>
-                  ) : null}
-                </div>
-              ) : null}
             </div>
           </details>
         </div>
