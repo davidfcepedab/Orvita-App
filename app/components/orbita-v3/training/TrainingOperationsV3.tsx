@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { Activity, ArrowDown, ArrowUp, Dumbbell, Flame, Target, Trophy, Utensils } from "lucide-react"
 import { Bar, CartesianGrid, ComposedChart, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { useOrbitaSkin } from "@/app/contexts/AppContext"
@@ -12,6 +13,9 @@ type Props = {
 
 export default function TrainingOperationsV3({ salud: health }: Props) {
   const theme = useOrbitaSkin()
+  const [showAllBody, setShowAllBody] = useState(false)
+  const [showAllMeals, setShowAllMeals] = useState(false)
+  const [showAllMilestones, setShowAllMilestones] = useState(false)
 
   if (health.loading) return null
   if (health.error) return null
@@ -46,8 +50,10 @@ export default function TrainingOperationsV3({ salud: health }: Props) {
             </p>
             <h2 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">Ritmo, volumen y metas</h2>
             <p className="mt-2 text-sm leading-relaxed" style={{ color: theme.textMuted }}>
-              Una lectura sobria de tu semana: intensidad, recuperación y combustible. Piensa en esto como tablero de
-              apoyo, no como exigencia.
+              Señales de entreno para decidir carga semanal. Donde no hay integración activa, mostramos referencia base.
+            </p>
+            <p className="mt-1 text-xs" style={{ color: theme.textMuted }}>
+              Fuente actual: indicadores de referencia (seed) + tu check-in.
             </p>
           </div>
         </div>
@@ -159,7 +165,7 @@ export default function TrainingOperationsV3({ salud: health }: Props) {
           </div>
 
           <div className="mt-5 space-y-4">
-            {health.milestones.map((milestone) => {
+            {(showAllMilestones ? health.milestones : health.milestones.slice(0, 2)).map((milestone) => {
               const progress = milestone.reverse
                 ? Math.max(0, 100 - ((milestone.current - milestone.target) / milestone.target) * 100)
                 : Math.min(100, (milestone.current / milestone.target) * 100)
@@ -207,6 +213,16 @@ export default function TrainingOperationsV3({ salud: health }: Props) {
                 </div>
               )
             })}
+            {health.milestones.length > 2 ? (
+              <button
+                type="button"
+                onClick={() => setShowAllMilestones((v) => !v)}
+                className="rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]"
+                style={{ borderColor: theme.border, color: theme.textMuted }}
+              >
+                {showAllMilestones ? "Ver menos" : "Ver todos"}
+              </button>
+            ) : null}
           </div>
         </div>
       </div>
@@ -220,7 +236,7 @@ export default function TrainingOperationsV3({ salud: health }: Props) {
             </p>
           </div>
           <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {health.bodyMetrics.map((metric) => {
+            {(showAllBody ? health.bodyMetrics : health.bodyMetrics.slice(0, 3)).map((metric) => {
               const TrendIcon = metric.trend === "up" ? ArrowUp : ArrowDown
 
               return (
@@ -255,6 +271,16 @@ export default function TrainingOperationsV3({ salud: health }: Props) {
               )
             })}
           </div>
+          {health.bodyMetrics.length > 3 ? (
+            <button
+              type="button"
+              onClick={() => setShowAllBody((v) => !v)}
+              className="mt-4 rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]"
+              style={{ borderColor: theme.border, color: theme.textMuted }}
+            >
+              {showAllBody ? "Ver menos" : "Ver más métricas"}
+            </button>
+          ) : null}
         </div>
 
         <div className="rounded-[26px] border p-6 backdrop-blur-2xl" style={saludPanelStyle(theme, 0.82)}>
@@ -265,7 +291,7 @@ export default function TrainingOperationsV3({ salud: health }: Props) {
             </p>
           </div>
           <div className="mt-5 space-y-3">
-            {health.weeklyMealPlan.map((day) => (
+            {(showAllMeals ? health.weeklyMealPlan : health.weeklyMealPlan.slice(0, 3)).map((day) => (
               <div
                 key={day.day}
                 className="rounded-2xl border p-4"
@@ -310,6 +336,16 @@ export default function TrainingOperationsV3({ salud: health }: Props) {
               </div>
             ))}
           </div>
+          {health.weeklyMealPlan.length > 3 ? (
+            <button
+              type="button"
+              onClick={() => setShowAllMeals((v) => !v)}
+              className="mt-4 rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]"
+              style={{ borderColor: theme.border, color: theme.textMuted }}
+            >
+              {showAllMeals ? "Ver menos" : "Ver semana completa"}
+            </button>
+          ) : null}
         </div>
       </div>
     </section>

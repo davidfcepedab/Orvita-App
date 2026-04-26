@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
 import { isAppMockMode } from "@/lib/checkins/flags"
 import { buildMockTrainingDays } from "@/lib/training/mockTrainingDays"
-import { fetchHevyWorkouts, isHevyEnvConfigured } from "@/src/lib/integrations/hevy"
+import { fetchHevyWorkoutById, fetchHevyWorkouts, isHevyEnvConfigured } from "@/src/lib/integrations/hevy"
 import { normalizeHevyWorkout } from "@/src/modules/training/hevyNormalizer"
 
 export const runtime = "nodejs"
@@ -25,7 +25,13 @@ export async function GET(req: NextRequest) {
   if (auth instanceof NextResponse) return auth
 
   if (isAppMockMode()) {
-    return NextResponse.json({ success: true, trainingDays: buildMockTrainingDays() })
+    return NextResponse.json({
+      success: true,
+      trainingDays: buildMockTrainingDays(),
+      lastSyncAt: new Date().toISOString(),
+      sourceLabel: "Hevy (mock)",
+      fetchedWorkouts: 0,
+    })
   }
 
   if (!isHevyEnvConfigured()) {
@@ -42,9 +48,18 @@ export async function GET(req: NextRequest) {
   try {
     const payload = (await fetchHevyWorkouts()) as HevyResponse
     const workouts = extractWorkouts(payload)
+    const enrichedWorkouts = await enrichLatestWorkouts(workouts, 3)
     const trainingDays = workouts.map((workout) => normalizeHevyWorkout(workout))
+    const normalizedDetailed = enrichedWorkouts.map((workout) => normalizeHevyWorkout(workout))
+    const mergedTrainingDays = mergePreferDetailed(trainingDays, normalizedDetailed)
 
-    return NextResponse.json({ success: true, trainingDays })
+    return NextResponse.json({
+      success: true,
+      trainingDays: mergedTrainingDays,
+      lastSyncAt: new Date().toISOString(),
+      sourceLabel: "Hevy",
+      fetchedWorkouts: workouts.length,
+    })
   } catch (error: unknown) {
     const detail = error instanceof Error ? error.message : "Unknown error"
     console.error("HEVY WORKOUTS ERROR:", detail)
@@ -63,4 +78,47 @@ export async function GET(req: NextRequest) {
       { status: 500 },
     )
   }
+}
+
+async function enrichLatestWorkouts(workouts: unknown[], maxDetails: number): Promise<unknown[]> {
+  const candidates = workouts.slice(0, maxDetails)
+  const detailed = await Promise.all(
+    candidates.map(async (workout) => {
+      const id = readWorkoutId(workout)
+      if (!id) return workout
+      try {
+        return await fetchHevyWorkoutById(id)
+      } catch {
+        return workout
+      }
+    }),
+  )
+  return detailed
+}
+
+function readWorkoutId(workout: unknown): string | null {
+  if (!workout || typeof workout !== "object") return null
+  const id = (workout as { id?: unknown }).id
+  return typeof id === "string" && id.trim() ? id : null
+}
+
+function mergePreferDetailed(base: ReturnType<typeof normalizeHevyWorkout>[], detailed: ReturnType<typeof normalizeHevyWorkout>[]) {
+  const byDateName = new Map<string, ReturnType<typeof normalizeHevyWorkout>>()
+  for (const item of base) {
+    byDateName.set(`${item.date}::${item.workoutName ?? ""}`, item)
+  }
+  for (const item of detailed) {
+    const key = `${item.date}::${item.workoutName ?? ""}`
+    const current = byDateName.get(key)
+    if (!current) {
+      byDateName.set(key, item)
+      continue
+    }
+    const currentSets = current.totalSets ?? 0
+    const nextSets = item.totalSets ?? 0
+    if (nextSets >= currentSets) {
+      byDateName.set(key, item)
+    }
+  }
+  return [...byDateName.values()].sort((a, b) => (a.date < b.date ? 1 : -1))
 }

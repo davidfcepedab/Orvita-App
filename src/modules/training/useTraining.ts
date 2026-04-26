@@ -5,7 +5,7 @@ import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { isAppMockMode } from "@/lib/checkins/flags"
 import { buildMockTrainingDays } from "@/lib/training/mockTrainingDays"
 import { createBrowserClient } from "@/lib/supabase/browser"
-import type { TrainingDay, TrainingStatus } from "@/src/modules/training/types"
+import type { TrainingDataMeta, TrainingDay, TrainingStatus, TrainingTodayState } from "@/src/modules/training/types"
 
 import { agendaTodayYmd } from "@/lib/agenda/localDateKey"
 
@@ -27,6 +27,8 @@ type TrainingState = {
   error: string | null
   manualStatus: TrainingStatus | null
   setManualStatus: (status: TrainingStatus) => void
+  todayState: TrainingTodayState
+  dataMeta: TrainingDataMeta
 }
 
 export function useTraining(): TrainingState {
@@ -34,6 +36,11 @@ export function useTraining(): TrainingState {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [manualStatus, setManualStatus] = useState<TrainingStatus | null>(null)
+  const [dataMeta, setDataMeta] = useState<TrainingDataMeta>({
+    lastSyncAt: null,
+    sourceLabel: "Hevy",
+    fetchedWorkouts: 0,
+  })
 
   useEffect(() => {
     let active = true
@@ -55,6 +62,9 @@ export function useTraining(): TrainingState {
           success?: boolean
           trainingDays?: TrainingDay[]
           error?: string
+          lastSyncAt?: string | null
+          sourceLabel?: string
+          fetchedWorkouts?: number
         }
 
         if (!response.ok || !payload.success) {
@@ -63,11 +73,17 @@ export function useTraining(): TrainingState {
 
         if (active) {
           setDays(payload.trainingDays ?? [])
+          setDataMeta({
+            lastSyncAt: payload.lastSyncAt ?? null,
+            sourceLabel: payload.sourceLabel ?? "Hevy",
+            fetchedWorkouts: payload.fetchedWorkouts ?? 0,
+          })
         }
       } catch (err) {
         if (active) {
           const message = err instanceof Error ? err.message : "Error cargando entrenos"
           setError(message)
+          setDataMeta((prev) => ({ ...prev, lastSyncAt: null }))
         }
       } finally {
         if (active) {
@@ -100,6 +116,15 @@ export function useTraining(): TrainingState {
     setManualStatus(status)
   }, [])
 
+  const todayState: TrainingTodayState = useMemo(() => {
+    if (today?.status === "trained" || today?.status === "swim") return "completed"
+    if (today?.status === "skip") return "moved"
+    if (today?.status === "rest") return "rest"
+    if (manualStatus === "skip") return "moved"
+    if (manualStatus === "rest") return "rest"
+    return "pending"
+  }, [today, manualStatus])
+
   return {
     days,
     today,
@@ -107,5 +132,7 @@ export function useTraining(): TrainingState {
     error,
     manualStatus,
     setManualStatus: setManualStatusSafe,
+    todayState,
+    dataMeta,
   }
 }

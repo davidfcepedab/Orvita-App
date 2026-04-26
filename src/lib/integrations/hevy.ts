@@ -18,9 +18,13 @@ function buildHevyWorkoutsUrl(baseUrl: string, page: number) {
   return `${baseWithVersion}/workouts?page=${page}`
 }
 
-export async function fetchHevyWorkouts(page = 1) {
-  const { baseUrl, apiKey } = requireHevyEnv()
-  const url = buildHevyWorkoutsUrl(baseUrl, page)
+function buildHevyWorkoutByIdUrl(baseUrl: string, workoutId: string) {
+  const normalizedBase = baseUrl.replace(/\/docs\/?$/i, "").replace(/\/+$/, "")
+  const baseWithVersion = /\/v\d+$/i.test(normalizedBase) ? normalizedBase : `${normalizedBase}/v1`
+  return `${baseWithVersion}/workouts/${encodeURIComponent(workoutId)}`
+}
+
+async function fetchHevyJson(url: string, apiKey: string) {
   const authVariants: Array<Record<string, string>> = [
     { Accept: "application/json", "api-key": apiKey },
     { Accept: "application/json", "x-api-key": apiKey },
@@ -42,4 +46,16 @@ export async function fetchHevyWorkouts(page = 1) {
   }
 
   throw new Error(`Hevy error (${lastStatus}) at ${url}: ${lastBody}`)
+}
+
+export async function fetchHevyWorkouts(page = 1) {
+  const { baseUrl, apiKey } = requireHevyEnv()
+  const url = buildHevyWorkoutsUrl(baseUrl, page)
+  return fetchHevyJson(url, apiKey)
+}
+
+export async function fetchHevyWorkoutById(workoutId: string) {
+  const { baseUrl, apiKey } = requireHevyEnv()
+  const url = buildHevyWorkoutByIdUrl(baseUrl, workoutId)
+  return fetchHevyJson(url, apiKey)
 }

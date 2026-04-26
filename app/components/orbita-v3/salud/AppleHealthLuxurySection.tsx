@@ -2,16 +2,12 @@
 
 import { useCallback, useMemo, useState } from "react"
 import { motion } from "framer-motion"
-import { Activity, Apple, ClipboardCopy, Download, MoonStar, Sparkles, Zap } from "lucide-react"
+import { Activity, Apple, ClipboardCopy, MoonStar, Sparkles, Zap } from "lucide-react"
 import { useOrbitaSkin } from "@/app/contexts/AppContext"
 import type { SaludContextSnapshot } from "@/app/salud/_hooks/useSaludContext"
 import type { AutoHealthMetric } from "@/app/hooks/useHealthAutoMetrics"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
-import {
-  buildOrvitaRunShortcutHref,
-  buildOrvitaShortcutImportHref,
-  getOrvitaHealthShortcutIcloudUrl,
-} from "@/lib/shortcuts/orvitaHealthShortcut"
+import { buildOrvitaRunShortcutHref } from "@/lib/shortcuts/orvitaHealthShortcut"
 import { saludHexToRgba, saludPanelStyle } from "@/lib/salud/saludThemeStyles"
 
 type Props = {
@@ -67,9 +63,6 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
     return typeof r === "number" && r > 0 ? r : salud.scoreSalud || 60
   }, [salud.scoreSalud, salud.trendAverage])
 
-  const shortcutInstallHref = useMemo(() => buildOrvitaShortcutImportHref(), [])
-  const shortcutIcloudUrl = useMemo(() => getOrvitaHealthShortcutIcloudUrl(), [])
-
   const runShortcutHref = useMemo(() => buildOrvitaRunShortcutHref(), [])
   const staleSync = useMemo(() => {
     if (!latest?.observed_at) return false
@@ -116,6 +109,31 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
     }
   }, [token])
 
+  const syncChip = useMemo(() => {
+    if (!latest?.observed_at) {
+      return {
+        label: "Apple Health · sin sync",
+        border: theme.border,
+        bg: saludHexToRgba(theme.surfaceAlt, 0.85),
+        color: theme.textMuted,
+      }
+    }
+    if (staleSync) {
+      return {
+        label: `Apple Health · ${formatWhen(latest.observed_at)} · desactualizado`,
+        border: saludHexToRgba(theme.accent.agenda, 0.45),
+        bg: saludHexToRgba(theme.accent.agenda, 0.12),
+        color: theme.accent.agenda,
+      }
+    }
+    return {
+      label: `Apple Health · ${formatWhen(latest.observed_at)} · al día`,
+      border: saludHexToRgba(theme.accent.health, 0.45),
+      bg: saludHexToRgba(theme.accent.health, 0.12),
+      color: theme.accent.health,
+    }
+  }, [latest?.observed_at, staleSync, theme])
+
   if (salud.loading) {
     return (
       <div
@@ -155,84 +173,36 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
               Datos automáticos, con calma y precisión
             </h1>
             <p className="text-[15px] leading-relaxed sm:text-base" style={{ color: theme.textMuted }}>
-              Apple no muestra Órvita dentro de Salud -&gt; Apps en iPhone: es normal. Trae tu día con el Atajo y aquí lo
-              convertimos en lectura y acciones.
+              Apple no lista Órvita en “Apps”: es normal. Usa el Atajo y aquí verás lectura + acción.
             </p>
             <div className="flex flex-wrap items-center gap-3 text-xs" style={{ color: theme.textMuted }}>
               <span
                 className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5"
                 style={{
-                  borderColor: theme.border,
-                  backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.85),
+                  borderColor: syncChip.border,
+                  backgroundColor: syncChip.bg,
+                  color: syncChip.color,
                 }}
               >
                 <Apple className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                Fuente: Apple Health (HealthKit)
+                {syncChip.label}
               </span>
-              <span
-                className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5"
-                style={{
-                  borderColor: theme.border,
-                  backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.85),
-                }}
-              >
-                <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                Última sync: {formatWhen(latest?.observed_at)}
-              </span>
-              {staleSync ? (
-                <span
-                  className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5"
-                  style={{
-                    borderColor: saludHexToRgba(theme.accent.agenda, 0.45),
-                    backgroundColor: saludHexToRgba(theme.accent.agenda, 0.15),
-                    color: theme.accent.agenda,
-                  }}
-                >
-                  Desactualizado (+36h)
-                </span>
-              ) : null}
             </div>
           </div>
 
-          <div className="flex w-full flex-col gap-3 sm:max-w-sm">
+          <div className="flex w-full flex-col gap-2.5 sm:max-w-sm">
             <button
               type="button"
               onClick={mintToken}
               disabled={minting}
-              className="inline-flex min-h-[52px] items-center justify-center rounded-2xl px-5 text-[15px] font-semibold shadow-lg transition active:scale-[0.99] disabled:opacity-60"
+              className="inline-flex min-h-[46px] items-center justify-center rounded-xl px-4 text-[13px] font-semibold transition active:scale-[0.99] disabled:opacity-60"
               style={{ backgroundColor: theme.text, color: theme.bg }}
             >
               {minting ? "Generando enlace seguro…" : "Preparar token para el Atajo"}
             </button>
-            {shortcutIcloudUrl ? (
-              <a
-                href={shortcutIcloudUrl}
-                className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-2xl border px-5 text-[15px] font-semibold no-underline shadow-lg transition active:scale-[0.99]"
-                style={{
-                  borderColor: theme.border,
-                  backgroundColor: theme.text,
-                  color: theme.bg,
-                }}
-              >
-                <Download className="h-4 w-4" aria-hidden />
-                Instalar atajo (iCloud)
-              </a>
-            ) : null}
-            <a
-              href={shortcutInstallHref}
-              className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-2xl border px-5 text-[15px] font-semibold no-underline backdrop-blur-xl transition active:scale-[0.99]"
-              style={{
-                borderColor: theme.border,
-                backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.6),
-                color: theme.text,
-              }}
-            >
-              <Download className="h-4 w-4" aria-hidden />
-              {shortcutIcloudUrl ? "Instalar (.shortcut en Órvita)" : "Instalar Atajo (archivo .shortcut)"}
-            </a>
             <a
               href={runShortcutHref}
-              className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-2xl border px-5 text-[15px] font-semibold no-underline transition active:scale-[0.99]"
+              className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-xl border px-4 text-[13px] font-semibold no-underline transition active:scale-[0.99]"
               style={{
                 borderColor: saludHexToRgba(theme.accent.health, 0.45),
                 backgroundColor: saludHexToRgba(theme.accent.health, 0.12),
@@ -242,9 +212,20 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
               <Zap className="h-4 w-4 shrink-0" aria-hidden />
               Traer datos de hoy desde Apple Health
             </a>
-            <p className="text-[12px] leading-relaxed" style={{ color: theme.textMuted }}>
-              1) Instala el Atajo. 2) Genera y copia token. 3) Ejecuta “Traer datos de hoy”. Datos reales: sueño,
-              entreno, pasos, energía, HRV y FC en reposo.
+            <button
+              type="button"
+              onClick={() => void onRefresh()}
+              className="inline-flex min-h-[42px] items-center justify-center rounded-xl border px-4 text-[12px] font-semibold transition"
+              style={{
+                borderColor: theme.border,
+                backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.7),
+                color: theme.textMuted,
+              }}
+            >
+              Actualizar lectura
+            </button>
+            <p className="text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
+              Token una vez por sesión. Luego: “Traer datos de hoy”.
             </p>
           </div>
         </div>
@@ -303,30 +284,66 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
           {[
             {
               label: "Sueño",
-              value: latest?.sleep_hours != null ? `${Math.round(latest.sleep_hours * 10) / 10} h` : "—",
-              hint: "Desde Apple Health cuando lo importes",
+              value: latest?.sleep_hours != null ? Math.round(latest.sleep_hours * 10) / 10 : null,
+              unit: "h",
+              hint: "Ideal 7-9 h",
               icon: MoonStar,
             },
             {
               label: "HRV",
-              value: latest?.hrv_ms != null ? `${latest.hrv_ms} ms` : "—",
-              hint: "Variabilidad del ritmo cardíaco",
+              value: latest?.hrv_ms ?? null,
+              unit: "ms",
+              hint: "Tu margen de recuperación",
               icon: Activity,
             },
             {
               label: "Recuperación (proxy)",
-              value: latest?.readiness_score != null ? `${latest.readiness_score}` : "—",
-              hint: "Modelo suave a partir de tus señales del día",
+              value: latest?.readiness_score ?? null,
+              unit: "",
+              hint: "Estado diario",
               icon: Sparkles,
             },
             {
               label: "Pasos",
-              value: latest?.steps != null ? `${latest.steps.toLocaleString("es-LA")}` : "—",
-              hint: "Suma del día importada",
+              value: latest?.steps ?? null,
+              unit: "",
+              hint: "Objetivo base 7k",
               icon: Zap,
             },
           ].map((card) => {
             const Icon = card.icon
+            const status =
+              card.label === "Sueño"
+                ? card.value == null
+                  ? "Sin dato"
+                  : card.value >= 7
+                    ? "En rango"
+                    : "Bajo"
+                : card.label === "HRV"
+                  ? card.value == null
+                    ? "Sin dato"
+                    : card.value >= 35
+                      ? "Bien"
+                      : "Bajo"
+                  : card.label === "Recuperación (proxy)"
+                    ? card.value == null
+                      ? "Sin dato"
+                      : card.value >= 65
+                        ? "Listo"
+                        : card.value >= 45
+                          ? "Neutro"
+                          : "Cuidar"
+                    : card.value == null
+                      ? "Sin dato"
+                      : card.value >= 7000
+                        ? "Meta"
+                        : "Subir"
+            const statusColor =
+              status === "En rango" || status === "Bien" || status === "Listo" || status === "Meta"
+                ? theme.accent.health
+                : status === "Neutro" || status === "Subir"
+                  ? theme.accent.agenda
+                  : theme.textMuted
             return (
               <div
                 key={card.label}
@@ -341,12 +358,25 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
                   <p className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ color: theme.textMuted }}>
                     {card.label}
                   </p>
-                  <Icon className="h-4 w-4 shrink-0" style={{ color: theme.textMuted }} aria-hidden />
+                  <span
+                    className="rounded-full border px-2 py-0.5 text-[10px] font-semibold"
+                    style={{
+                      borderColor: saludHexToRgba(statusColor, 0.4),
+                      backgroundColor: saludHexToRgba(statusColor, 0.12),
+                      color: statusColor,
+                    }}
+                  >
+                    {status}
+                  </span>
                 </div>
-                <p className="mt-4 text-3xl font-semibold tracking-tight">{loading ? "…" : card.value}</p>
+                <p className="mt-4 text-3xl font-semibold tracking-tight">
+                  {loading ? "…" : card.value == null ? "—" : card.value.toLocaleString("es-LA")}
+                  {card.unit ? <span className="ml-1 text-sm font-medium">{card.unit}</span> : null}
+                </p>
                 <p className="mt-2 text-[12px] leading-relaxed" style={{ color: theme.textMuted }}>
                   {card.hint}
                 </p>
+                <Icon className="mt-2 h-4 w-4 shrink-0" style={{ color: theme.textMuted }} aria-hidden />
               </div>
             )
           })}
@@ -363,25 +393,8 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
             {recoveryNarrative(latest?.readiness_score, weekAvg)}
           </p>
           <p className="mt-4 text-[13px] leading-relaxed" style={{ color: theme.textMuted }}>
-            Tu check-in de salud hoy está en {salud.scoreSalud}: lo usamos como brújula emocional y de hábitos, no como
-            reemplazo clínico. Si tus pasos de Apple suben pero tu energía interna baja, suele ser señal de acumulación
-            de estrés o sueño irregular.
+            Check-in: {salud.scoreSalud}/100. Si Apple sube y tú te sientes bajo, prioriza descanso y baja carga.
           </p>
-        </div>
-
-        <div className="relative flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={() => void onRefresh()}
-            className="inline-flex min-h-[48px] items-center justify-center rounded-2xl border px-5 text-sm font-semibold transition"
-            style={{
-              borderColor: theme.border,
-              backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.7),
-              color: theme.text,
-            }}
-          >
-            Actualizar lectura
-          </button>
         </div>
       </div>
     </motion.section>

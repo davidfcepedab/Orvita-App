@@ -16,14 +16,13 @@ type Props = {
   loading: boolean
 }
 
-function statusTone(value: "ok" | "warn" | "risk") {
-  if (value === "ok") return { label: "En línea", color: "var(--color-accent-health)" }
-  if (value === "warn") return { label: "Atención", color: "var(--color-accent-warning)" }
-  return { label: "Desbalance", color: "var(--color-accent-danger)" }
-}
-
 export function HealthCorrelationsPanel({ salud, latest, timeline, analytics, loading }: Props) {
   const theme = useOrbitaSkin()
+  const statusTone = (value: "ok" | "warn" | "risk") => {
+    if (value === "ok") return { label: "En línea", color: theme.accent.health }
+    if (value === "warn") return { label: "Atención", color: theme.accent.agenda }
+    return { label: "Desbalance", color: theme.accent.finance }
+  }
 
   const sleepVsEnergySeries = useMemo(
     () =>
@@ -171,6 +170,9 @@ export function HealthCorrelationsPanel({ salud, latest, timeline, analytics, lo
         <h3 className="mt-2 text-xl font-semibold">Datos -&gt; interpretación -&gt; acción</h3>
         <p className="mt-2 text-sm" style={{ color: theme.textMuted }}>
           Cuatro cruces simples para decidir el día sin saturarte con métricas.
+        </p>
+        <p className="mt-1 text-xs" style={{ color: theme.textMuted }}>
+          En línea = señal estable · Atención = revisar hoy · Desbalance = ajustar carga/descanso.
         </p>
 
         {loading ? (

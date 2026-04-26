@@ -5,8 +5,6 @@ import { motion } from "framer-motion"
 import {
   Activity,
   BatteryCharging,
-  CheckCircle2,
-  Circle,
   Droplets,
   HeartPulse,
   MoonStar,
@@ -25,30 +23,50 @@ import {
 import { useOrbitaSkin } from "@/app/contexts/AppContext"
 import type { SaludContextSnapshot } from "@/app/salud/_hooks/useSaludContext"
 import type { AutoHealthMetric } from "@/app/hooks/useHealthAutoMetrics"
+import { useHealthSupplements } from "@/app/hooks/useHealthSupplements"
+import { SupplementStackSection } from "@/app/health/SupplementStackSection"
 import { saludHexToRgba, saludMetricTone, saludPanelStyle } from "@/lib/salud/saludThemeStyles"
 
 type Props = {
   salud: SaludContextSnapshot
   latest: AutoHealthMetric | null
+  timeline: AutoHealthMetric[]
 }
 
-export default function HealthOperationsV3({ salud: health, latest }: Props) {
+export default function HealthOperationsV3({ salud: health, latest, timeline }: Props) {
   const theme = useOrbitaSkin()
-  const [completedSupplements, setCompletedSupplements] = useState<number[]>([])
+  const [showNutrition, setShowNutrition] = useState(true)
   const energyChartGradientId = useId().replace(/:/g, "")
+  const {
+    supplements,
+    activeCount,
+    editMode,
+    setEditMode,
+    updateSupplement,
+    addSupplement,
+    removeSupplement,
+    takenToday,
+    toggleComplianceToday,
+    loading: suppLoading,
+    error: suppError,
+  } = useHealthSupplements()
 
   if (health.loading) return null
   if (health.error) return null
-
-  const completedCount = health.supplementStack.filter(
-    (item, index) => item.taken || completedSupplements.includes(index),
-  ).length
 
   const appleReadiness = latest?.readiness_score ?? null
   const hydrationTarget = Math.max(health.hydrationTarget, 0.1)
   const hydrationProgress = Math.min(100, (health.hydrationCurrent / hydrationTarget) * 100)
 
   const gridStroke = saludHexToRgba(theme.border, 0.85)
+  const predictiveSeries: Array<{ hour: string; energy: number; fatigue: number }> = timeline
+    .filter((row) => row.energy_index != null || row.readiness_score != null)
+    .slice(-7)
+    .map((row) => ({
+      hour: new Date(row.observed_at).toLocaleDateString("es-LA", { weekday: "short" }),
+      energy: Math.max(0, Math.min(100, Math.round(row.energy_index ?? 0))),
+      fatigue: Math.max(0, Math.min(100, Math.round(row.readiness_score ?? 0))),
+    }))
   const chartTooltip = {
     backgroundColor: saludHexToRgba(theme.surface, 0.96),
     border: `1px solid ${theme.border}`,
@@ -103,6 +121,9 @@ export default function HealthOperationsV3({ salud: health, latest }: Props) {
             { label: "Índice de energía", value: health.bodyBattery, meta: "/100", icon: BatteryCharging },
           ].map((metric, index) => {
             const Icon = metric.icon
+            const status = metric.value >= 70 ? "Bien" : metric.value >= 45 ? "En rango" : "Bajo"
+            const statusColor =
+              metric.value >= 70 ? theme.accent.health : metric.value >= 45 ? theme.accent.agenda : theme.accent.finance
             return (
               <motion.div
                 key={metric.label}
@@ -119,7 +140,16 @@ export default function HealthOperationsV3({ salud: health, latest }: Props) {
                   <span className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ color: theme.textMuted }}>
                     {metric.label}
                   </span>
-                  <Icon className="h-4 w-4 shrink-0" style={{ color: theme.textMuted }} aria-hidden />
+                  <span
+                    className="rounded-full border px-2 py-0.5 text-[10px] font-semibold"
+                    style={{
+                      borderColor: saludHexToRgba(statusColor, 0.4),
+                      backgroundColor: saludHexToRgba(statusColor, 0.12),
+                      color: statusColor,
+                    }}
+                  >
+                    {status}
+                  </span>
                 </div>
                 <p className="mt-4 text-3xl font-semibold tracking-tight" style={{ color: saludMetricTone(theme, metric.value) }}>
                   {metric.value}
@@ -127,6 +157,7 @@ export default function HealthOperationsV3({ salud: health, latest }: Props) {
                     {metric.meta}
                   </span>
                 </p>
+                <Icon className="mt-2 h-4 w-4 shrink-0" style={{ color: theme.textMuted }} aria-hidden />
               </motion.div>
             )
           })}
@@ -146,71 +177,33 @@ export default function HealthOperationsV3({ salud: health, latest }: Props) {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <SupplementStackSection
+          supplements={supplements}
+          activeCount={activeCount}
+          suppLoading={suppLoading}
+          suppError={suppError}
+          editMode={editMode}
+          setEditMode={setEditMode}
+          updateSupplement={updateSupplement}
+          addSupplement={addSupplement}
+          removeSupplement={removeSupplement}
+          takenToday={takenToday}
+          toggleComplianceToday={toggleComplianceToday}
+        />
         <div className="rounded-[26px] border p-6 backdrop-blur-2xl" style={saludPanelStyle(theme, 0.82)}>
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em]" style={{ color: theme.textMuted }}>
-                Operativo
-              </p>
-              <h3 className="mt-2 text-xl font-semibold">Protocolos del día</h3>
-            </div>
-            <div
-              className="rounded-full border px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em]"
-              style={{
-                borderColor: theme.border,
-                backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.9),
-                color: theme.textMuted,
-              }}
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em]" style={{ color: theme.textMuted }}>
+              Combustible
+            </p>
+            <button
+              type="button"
+              className="rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]"
+              style={{ borderColor: theme.border, color: theme.textMuted }}
+              onClick={() => setShowNutrition((v) => !v)}
             >
-              {completedCount}/{health.supplementStack.length} listos
-            </div>
+              {showNutrition ? "Ocultar" : "Mostrar"}
+            </button>
           </div>
-          <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-            {health.supplementStack.map((item, index) => {
-              const isDone = item.taken || completedSupplements.includes(index)
-
-              return (
-                <button
-                  key={item.name}
-                  type="button"
-                  onClick={() =>
-                    setCompletedSupplements((current) =>
-                      current.includes(index) ? current.filter((value) => value !== index) : [...current, index],
-                    )
-                  }
-                  className="min-h-[120px] rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 active:scale-[0.99]"
-                  style={{
-                    borderColor: theme.border,
-                    backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.85),
-                    color: theme.text,
-                    boxShadow: `inset 0 1px 0 ${saludHexToRgba(theme.border, 0.35)}`,
-                  }}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="rounded-full p-2" style={{ backgroundColor: saludHexToRgba(theme.border, 0.35) }}>
-                      {isDone ? (
-                        <CheckCircle2 className="h-4 w-4" style={{ color: theme.accent.health }} />
-                      ) : (
-                        <Circle className="h-4 w-4" style={{ color: theme.textMuted }} />
-                      )}
-                    </span>
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: theme.textMuted }}>
-                      {item.time}
-                    </span>
-                  </div>
-                  <p className="mt-4 text-sm font-semibold leading-snug">{item.name}</p>
-                  <p className="text-xs" style={{ color: theme.textMuted }}>
-                    {item.dose}
-                  </p>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-        <div className="rounded-[26px] border p-6 backdrop-blur-2xl" style={saludPanelStyle(theme, 0.82)}>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em]" style={{ color: theme.textMuted }}>
-            Combustible
-          </p>
           <div
             className="mt-5 flex items-start gap-3 rounded-2xl border p-4"
             style={{
@@ -239,7 +232,7 @@ export default function HealthOperationsV3({ salud: health, latest }: Props) {
             </div>
           </div>
 
-          <div className="mt-5 space-y-4">
+          <div className={`${showNutrition ? "mt-5 space-y-4" : "hidden"}`}>
             {health.macros.map((macro) => {
               const progress = Math.min(100, (macro.current / macro.target) * 100)
 
@@ -274,12 +267,11 @@ export default function HealthOperationsV3({ salud: health, latest }: Props) {
         </p>
         <h3 className="mt-2 text-xl font-semibold">Energía vs fatiga (modelo del día)</h3>
         <p className="mt-2 text-sm" style={{ color: theme.textMuted }}>
-          No es un diagnóstico: es una visualización amable para ver cómo podría sentirse tu día si alineas sueño,
-          carga y descanso.
+          Lectura semanal (Apple): energía percibida vs recuperación. Si divergen, baja intensidad y mejora sueño.
         </p>
         <div className="mt-6 h-[260px]">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={health.energyAudit}>
+            <ComposedChart data={predictiveSeries.length > 0 ? predictiveSeries : health.energyAudit}>
               <defs>
                 <linearGradient id={energyChartGradientId} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor={theme.accent.agenda} stopOpacity={0.22} />

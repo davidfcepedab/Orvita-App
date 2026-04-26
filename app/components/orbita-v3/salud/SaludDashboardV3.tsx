@@ -6,28 +6,20 @@ import AppleHealthLuxurySection from "@/app/components/orbita-v3/salud/AppleHeal
 import { HealthCorrelationsPanel } from "@/app/components/orbita-v3/salud/HealthCorrelationsPanel"
 import { useSaludContext } from "@/app/salud/_hooks/useSaludContext"
 import { useHealthAutoMetrics } from "@/app/hooks/useHealthAutoMetrics"
-import { useOrbitaSkin } from "@/app/contexts/AppContext"
-import { saludPageBackdropStyle } from "@/lib/salud/saludThemeStyles"
 
 export default function SaludDashboardV3() {
   const salud = useSaludContext()
   const autoHealth = useHealthAutoMetrics()
-  const theme = useOrbitaSkin()
 
   return (
-    <div
-      className="relative isolate min-h-screen space-y-8 pb-28 pt-6 sm:pt-8"
-      style={{ backgroundColor: theme.bg, color: theme.text }}
-    >
-      <div className="pointer-events-none absolute inset-0 -z-10" style={saludPageBackdropStyle(theme)} />
-
+    <>
       <AppleHealthLuxurySection
         salud={salud}
         latest={autoHealth.latest}
         loading={autoHealth.loading}
         onRefresh={autoHealth.refetch}
       />
-      <HealthOperationsV3 salud={salud} latest={autoHealth.latest} />
+      <HealthOperationsV3 salud={salud} latest={autoHealth.latest} timeline={autoHealth.timeline} />
       <HealthCorrelationsPanel
         salud={salud}
         latest={autoHealth.latest}
@@ -36,6 +28,6 @@ export default function SaludDashboardV3() {
         loading={autoHealth.loading}
       />
       <TrainingOperationsV3 salud={salud} />
-    </div>
+    </>
   )
 }
