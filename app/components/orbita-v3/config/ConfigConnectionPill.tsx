@@ -30,10 +30,12 @@ export function ConfigConnectionPill({
   onDisconnectedClick,
   stopEventOnDisconnectedClick = true,
 }: Props) {
+  const baseClass =
+    "inline-flex min-w-[6.75rem] justify-center text-center"
   if (state === "error") {
     return (
       <span
-        className={`inline-flex max-w-[11rem] items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold sm:max-w-xs ${className}`.trim()}
+        className={`${baseClass} items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${className}`.trim()}
         style={{ backgroundColor: "rgba(239, 68, 68, 0.1)", color: "rgb(185, 28, 28)" }}
         title={errorLabel}
       >
@@ -45,7 +47,7 @@ export function ConfigConnectionPill({
   if (state === "checking") {
     return (
       <span
-        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${className}`.trim()}
+        className={`${baseClass} items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${className}`.trim()}
         style={{ backgroundColor: "rgba(148, 163, 184, 0.2)", color: "#64748b" }}
       >
         <Loader2 className="h-3 w-3 shrink-0 animate-spin" aria-hidden />
@@ -56,7 +58,7 @@ export function ConfigConnectionPill({
   if (state === "connected") {
     return (
       <span
-        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${className}`.trim()}
+        className={`${baseClass} items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${className}`.trim()}
         style={{ backgroundColor: "rgba(16, 185, 129, 0.12)", color: "rgb(4, 120, 87)" }}
       >
         <Check className="h-3 w-3 shrink-0" strokeWidth={2.5} aria-hidden />
@@ -67,7 +69,7 @@ export function ConfigConnectionPill({
   if (state === "disabled") {
     return (
       <span
-        className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium ${className}`.trim()}
+        className={`${baseClass} items-center rounded-full px-2.5 py-1 text-[11px] font-medium ${className}`.trim()}
         style={{ backgroundColor: "rgba(148, 163, 184, 0.15)", color: "#94a3b8" }}
       >
         {disconnectedLabel}
@@ -78,7 +80,7 @@ export function ConfigConnectionPill({
     return (
       <button
         type="button"
-        className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium transition-opacity hover:opacity-90 ${className}`.trim()}
+        className={`${baseClass} items-center rounded-full px-2.5 py-1 text-[11px] font-medium transition-opacity hover:opacity-90 ${className}`.trim()}
         style={{ backgroundColor: "rgba(251, 191, 36, 0.2)", color: "rgb(180, 83, 9)" }}
         onClick={(e) => {
           if (stopEventOnDisconnectedClick) {
@@ -94,7 +96,7 @@ export function ConfigConnectionPill({
   }
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium ${className}`.trim()}
+      className={`${baseClass} items-center rounded-full px-2.5 py-1 text-[11px] font-medium ${className}`.trim()}
       style={{ backgroundColor: "rgba(251, 191, 36, 0.2)", color: "rgb(180, 83, 9)" }}
     >
       {disconnectedLabel}

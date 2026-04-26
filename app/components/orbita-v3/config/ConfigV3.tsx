@@ -739,6 +739,7 @@ export default function ConfigV3() {
             theme={theme}
             cardVariant={isAltCard ? "alt" : "default"}
             data-orvita-subsection="google-calendar"
+            leadingContainerStyle={{ backgroundColor: "rgba(59, 130, 246, 0.1)" }}
             leading={<CalendarDays className="h-4 w-4" style={{ color: theme.accent.agenda }} />}
             title="Google"
             description="Calendario y tareas con la misma cuenta"
@@ -789,6 +790,7 @@ export default function ConfigV3() {
             theme={theme}
             cardVariant={isAltCard ? "alt" : "default"}
             data-orvita-subsection="hevy"
+            leadingContainerStyle={{ backgroundColor: "rgba(148, 163, 184, 0.18)" }}
             leading={<Dumbbell className="h-4 w-4" style={{ color: theme.textMuted }} />}
             title="Hevy"
             description="Rutina y entrenamientos en Órvita"
@@ -871,6 +873,7 @@ export default function ConfigV3() {
           theme={theme}
           cardVariant={isAltCard ? "alt" : "default"}
           data-orvita-section="sistema-accordion"
+          leadingContainerStyle={{ backgroundColor: "rgba(148, 163, 184, 0.18)" }}
           leading={<Settings2 className="h-4 w-4" style={{ color: theme.textMuted }} />}
           title="Instalación y acceso"
           description="PWA, biometría y dónde está el atajo de salud"
@@ -918,6 +921,7 @@ export default function ConfigV3() {
           theme={theme}
           data-orvita-section="appearance"
           id="config-appearance"
+          leadingContainerStyle={{ backgroundColor: "rgba(16, 185, 129, 0.12)" }}
           leading={<Palette className="h-4 w-4" />}
           title="Aspecto"
           description={appearanceHint}
@@ -1069,6 +1073,7 @@ export default function ConfigV3() {
           theme={theme}
           data-orvita-section="notifications"
           id="config-notif-chip"
+          leadingContainerStyle={{ backgroundColor: "rgba(14, 165, 233, 0.12)" }}
           leading={<Bell className="h-4 w-4" aria-hidden />}
           title="Notificaciones"
           description="Inbox, push y enfoque"

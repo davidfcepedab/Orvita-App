@@ -519,11 +519,12 @@ export function ConfigStrategicIntegrationsPanel({
             type="button"
             onClick={() => void connectBank(provider)}
             disabled={busy === `bank-${provider}` || !settings.banking_enabled}
-            className="inline-flex min-h-8 items-center justify-center rounded-full border px-3 py-1 text-[11px] font-medium transition hover:opacity-90 disabled:pointer-events-none disabled:opacity-40"
+            className="inline-flex min-h-8 min-w-[8.25rem] items-center justify-between gap-1.5 rounded-full border px-3 py-1 text-[11px] font-medium transition hover:-translate-y-[1px] hover:shadow-sm disabled:pointer-events-none disabled:opacity-40"
             style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surfaceAlt }}
             title={`Conectar ${provider}`}
           >
-            {busy === `bank-${provider}` ? "…" : provider[0].toUpperCase() + provider.slice(1)}
+            <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: theme.accent.finance }} />
+            <span>{busy === `bank-${provider}` ? "…" : provider[0].toUpperCase() + provider.slice(1)}</span>
           </button>
         ))}
       </div>
@@ -597,6 +598,7 @@ export function ConfigStrategicIntegrationsPanel({
         <ConfigAccordion
           theme={theme}
           cardVariant={cardVariant}
+          leadingContainerStyle={{ backgroundColor: "rgba(56, 189, 248, 0.14)" }}
           leading={<Landmark className="h-4 w-4" style={{ color: theme.accent.finance }} />}
           title="Finanzas"
           description="Banca en Colombia, Nequi, avisos"
@@ -617,6 +619,7 @@ export function ConfigStrategicIntegrationsPanel({
             id="acordeon-config-salud-integracion"
             theme={theme}
             cardVariant={cardVariant}
+            leadingContainerStyle={{ backgroundColor: "rgba(16, 185, 129, 0.14)" }}
             leading={<HeartPulse className="h-4 w-4" style={{ color: theme.accent.health }} />}
             title="Salud"
             description={healthClosedLine}

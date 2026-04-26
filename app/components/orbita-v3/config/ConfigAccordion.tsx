@@ -1,6 +1,6 @@
 "use client"
 
-import { useId, useState, type KeyboardEvent, type ReactNode } from "react"
+import { useId, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react"
 import { ChevronDown } from "lucide-react"
 import type { OrbitaConfigTheme } from "@/app/components/orbita-v3/config/configThemeTypes"
 
@@ -19,6 +19,8 @@ type Props = {
   summaryClassName?: string
   /** Icono a la izquierda (sólo `card` lo espacia automáticamente). */
   leading?: ReactNode
+  /** Permite color sutil por sección para el contenedor del icono. */
+  leadingContainerStyle?: CSSProperties
   title: string
   description?: ReactNode
   trailing?: ReactNode
@@ -51,6 +53,7 @@ export function ConfigAccordion({
   className = "",
   summaryClassName = "",
   leading,
+  leadingContainerStyle,
   title,
   description,
   trailing,
@@ -98,7 +101,7 @@ export function ConfigAccordion({
           {leading != null && (
             <span
               className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
-              style={{ backgroundColor: theme.surfaceAlt }}
+              style={{ backgroundColor: theme.surfaceAlt, ...leadingContainerStyle }}
               aria-hidden
             >
               {leading}
