@@ -22,6 +22,11 @@ Modo `minimal`: token, fecha ISO, una sola búsqueda (pasos) + suma, diccionario
 El POST incluye cabecera `x-orvita-observed-at` (misma fecha que `apple_bundle.observed_at`) para
 evitar fallos de Atajos cuando el JSON serializa `observed_at` como null (ver API `applyObservedAtFromRequestHeaders`).
 
+**Token en el iPhone (por defecto):** el plist generado intenta leer `Shortcuts/orvita_import_token.txt` en **iCloud Drive**
+(sin selector de archivo). Si el archivo tiene texto (recuento de caracteres > 0), se usa como cabecera
+`x-orvita-import-token`. Si no, se pide una vez con «Solicitar entrada», se guarda en esa ruta y se reutiliza en
+siguientes ejecuciones. Con `--legacy-token-prompt` se omite archivo y solo se pregunta siempre (modo antiguo).
+
 Claves numéricas extra siguen guardándose en `metadata.shortcut_bundle_extras` si no están en el contrato.
 """
 from __future__ import annotations
@@ -203,6 +208,175 @@ def ask_text(*, u: str, prompt: str) -> dict:
             "WFInputType": "Text",
         },
     }
+
+
+# Ruta en iCloud Drive (sin «Mostrar selector») donde el atajo guarda el token persistente.
+ORVITA_TOKEN_ICLOUD_PATH = "Shortcuts/orvita_import_token.txt"
+
+
+def action_output_ref(output_uuid: str, output_name: str) -> dict:
+    return {
+        "Value": {
+            "OutputUUID": output_uuid,
+            "OutputName": output_name,
+            "Type": "ActionOutput",
+        },
+        "WFSerializationType": "WFTextTokenAttachment",
+    }
+
+
+def get_file_from_icloud_path(*, u: str, path: str, error_if_not_found: bool) -> dict:
+    return {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.documentpicker.open",
+        "WFWorkflowActionParameters": {
+            "UUID": u,
+            "WFFileStorageService": "iCloud Drive",
+            "WFShowFilePicker": False,
+            "SelectMultiple": False,
+            "WFGetFilePath": path,
+            "WFFileErrorIfNotFound": error_if_not_found,
+        },
+    }
+
+
+def detect_text_from_input(*, u: str) -> dict:
+    return {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.detect.text",
+        "WFWorkflowActionParameters": {"UUID": u},
+    }
+
+
+def count_characters(*, u: str) -> dict:
+    return {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.count",
+        "WFWorkflowActionParameters": {
+            "UUID": u,
+            "WFCountType": "Characters",
+        },
+    }
+
+
+def conditional_if_count_gt_zero(*, u: str, grouping: str, u_count: str) -> dict:
+    return {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.conditional",
+        "WFWorkflowActionParameters": {
+            "UUID": u,
+            "GroupingIdentifier": grouping,
+            "WFControlFlowMode": 0,
+            "WFCondition": "Is Greater Than",
+            "WFNumberValue": 0,
+            "WFInput": action_output_ref(u_count, "Count"),
+        },
+    }
+
+
+def conditional_otherwise(*, u: str, grouping: str) -> dict:
+    return {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.conditional",
+        "WFWorkflowActionParameters": {
+            "UUID": u,
+            "GroupingIdentifier": grouping,
+            "WFControlFlowMode": 1,
+        },
+    }
+
+
+def conditional_end_if(*, u: str, grouping: str) -> dict:
+    return {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.conditional",
+        "WFWorkflowActionParameters": {
+            "UUID": u,
+            "GroupingIdentifier": grouping,
+            "WFControlFlowMode": 2,
+        },
+    }
+
+
+def set_variable_from_output(*, u: str, variable_name: str, source_uuid: str, source_output_name: str) -> dict:
+    return {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.setvariable",
+        "WFWorkflowActionParameters": {
+            "UUID": u,
+            "WFVariableName": variable_name,
+            "WFInput": action_output_ref(source_uuid, source_output_name),
+        },
+    }
+
+
+def save_file_to_icloud_path(*, u: str, path: str) -> dict:
+    """Guarda la entrada (texto del paso anterior, p. ej. Solicitar entrada) en iCloud Drive."""
+    return {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.documentpicker.save",
+        "WFWorkflowActionParameters": {
+            "UUID": u,
+            "WFFileStorageService": "iCloud Drive",
+            "WFAskWhereToSave": False,
+            "WFFileDestinationPath": path,
+            "WFSaveFileOverwrite": True,
+        },
+    }
+
+
+def get_named_variable(*, u: str, variable_name: str, custom_output_name: str) -> dict:
+    return {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.getvariable",
+        "WFWorkflowActionParameters": {
+            "UUID": u,
+            "CustomOutputName": custom_output_name,
+            "WFVariable": {
+                "Value": {"Type": "Variable", "VariableName": variable_name},
+                "WFSerializationType": "WFTextTokenAttachment",
+            },
+        },
+    }
+
+
+def build_token_storage_prelude(*, ask_prompt: str) -> tuple[list[dict], str]:
+    """Devuelve (acciones, uuid_cabecera) donde uuid_cabecera alimenta x-orvita-import-token en el POST."""
+    u_file = uid()
+    u_text = uid()
+    u_count = uid()
+    u_if = uid()
+    u_other = uid()
+    u_end = uid()
+    group = uid()
+    u_set_ok = uid()
+    u_ask = uid()
+    u_save = uid()
+    u_set_ask = uid()
+    u_get = uid()
+
+    actions: list[dict] = [
+        comment(
+            "Token: lee iCloud Drive/Shortcuts/orvita_import_token.txt; si está vacío o no existe, "
+            "pide el token una vez, lo guarda y reutiliza. Borra el archivo en iCloud si regeneras/revocas en Órvita."
+        ),
+        get_file_from_icloud_path(u=u_file, path=ORVITA_TOKEN_ICLOUD_PATH, error_if_not_found=False),
+        detect_text_from_input(u=u_text),
+        count_characters(u=u_count),
+        conditional_if_count_gt_zero(u=u_if, grouping=group, u_count=u_count),
+        set_variable_from_output(
+            u=u_set_ok,
+            variable_name="import_token",
+            source_uuid=u_text,
+            source_output_name="Text",
+        ),
+        conditional_otherwise(u=u_other, grouping=group),
+        ask_text(
+            u=u_ask,
+            prompt=ask_prompt,
+        ),
+        save_file_to_icloud_path(u=u_save, path=ORVITA_TOKEN_ICLOUD_PATH),
+        set_variable_from_output(
+            u=u_set_ask,
+            variable_name="import_token",
+            source_uuid=u_ask,
+            source_output_name="Provided Input",
+        ),
+        conditional_end_if(u=u_end, grouping=group),
+        get_named_variable(u=u_get, variable_name="import_token", custom_output_name="Provided Input"),
+    ]
+    return actions, u_get
 
 
 def current_date(*, u: str) -> dict:

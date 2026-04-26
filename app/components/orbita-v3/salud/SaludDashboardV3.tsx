@@ -55,7 +55,7 @@ export default function SaludDashboardV3() {
   if (salud.loading) {
     return (
       <section
-        className="orbita-page-stack mx-auto w-full max-w-[min(72rem,calc(100vw-1.5rem))] space-y-4 px-1 py-2 text-sm text-[var(--color-text-secondary)]"
+        className="orbita-page-stack mx-auto w-full max-w-[min(72rem,calc(100vw-1.5rem))] space-y-6 px-1 py-2 text-sm text-[var(--color-text-secondary)]"
         aria-label="Salud — decisión, Apple Health, insight y operativo"
         aria-busy="true"
       >
@@ -67,7 +67,7 @@ export default function SaludDashboardV3() {
   if (salud.error) {
     return (
       <section
-        className="orbita-page-stack mx-auto w-full max-w-[min(72rem,calc(100vw-1.5rem))] space-y-4 px-1 py-2 text-sm text-[var(--color-accent-finance)]"
+        className="orbita-page-stack mx-auto w-full max-w-[min(72rem,calc(100vw-1.5rem))] space-y-6 px-1 py-2 text-sm text-[var(--color-accent-finance)]"
         aria-label="Salud — decisión, Apple Health, insight y operativo"
       >
         {salud.error}
@@ -77,7 +77,7 @@ export default function SaludDashboardV3() {
 
   return (
     <section
-      className="orbita-page-stack mx-auto w-full max-w-[min(72rem,calc(100vw-1.5rem))] space-y-4"
+      className="orbita-page-stack mx-auto w-full max-w-[min(72rem,calc(100vw-1.5rem))] space-y-6"
       aria-label="Salud — decisión, Apple Health, insight y operativo"
     >
       <HeroDecisionCard brief={brief} syncSummary={syncSummary} />
@@ -91,7 +91,7 @@ export default function SaludDashboardV3() {
 
       <SaludInsightSection brief={brief} />
 
-      <section className="space-y-3 px-0.5 sm:px-0">
+      <section className="space-y-4 px-0.5 pt-1 sm:px-0">
         <HealthOperationsV3
           salud={salud}
           latest={autoHealth.latest}
