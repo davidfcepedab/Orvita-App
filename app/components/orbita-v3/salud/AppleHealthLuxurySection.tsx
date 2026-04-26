@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react"
 import { motion } from "framer-motion"
-import { BedDouble, ChevronUp, ClipboardCopy, Dumbbell, KeyRound, Lightbulb, MoonStar, Sparkles, Zap } from "lucide-react"
+import { BedDouble, ClipboardCopy, Dumbbell, KeyRound, Lightbulb, MoonStar, Sparkles, Zap } from "lucide-react"
 import { useOrbitaSkin } from "@/app/contexts/AppContext"
 import type { SaludContextSnapshot } from "@/app/salud/_hooks/useSaludContext"
 import type { AutoHealthMetric } from "@/app/hooks/useHealthAutoMetrics"
@@ -52,9 +52,18 @@ function recoveryNarrative(readiness: number | null | undefined, weekAvg: number
   return `Tu recuperación está en ${readiness}, en línea con tu promedio semanal (${Math.round(weekAvg)}). Mantén hábitos simples: sueño constante, hidratación y movimiento amable.`
 }
 
+/** Solo campos que entran por el pipeline Apple → Órvita (shortcut / métricas). */
+function formatWorkoutDuration(latest: AutoHealthMetric | null): string {
+  if (!latest) return "Sin dato"
+  const min = latest.apple_workout_minutes
+  if (min != null && min > 0) return `${Math.round(min)} min`
+  const count = latest.apple_workouts_count
+  if (count != null && count > 0) return `${count} sesión${count === 1 ? "" : "es"}`
+  return "Sin dato"
+}
+
 export default function AppleHealthLuxurySection({ salud, latest, loading, onRefresh }: Props) {
   const theme = useOrbitaSkin()
-  const [appleOpen, setAppleOpen] = useState(false)
   const [minting, setMinting] = useState(false)
   const [token, setToken] = useState<string | null>(null)
   const [tokenUntil, setTokenUntil] = useState<string | null>(null)
@@ -118,9 +127,6 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
         label: "Info",
         title: "Falta lectura Apple para cerrar estado del día",
         score: systemScore,
-        color: theme.accent.agenda,
-        bg: "transparent",
-        insight: `Tu check-in marca ${checkin}/100. Usa “Traer datos de hoy” para completar la recomendación automática.`,
         actions: ["Ejecuta Atajo y refresca lectura", "Mantén carga moderada hasta validar Apple"],
       }
     }
@@ -130,9 +136,6 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
         label: "Listo",
         title: "Tu sistema está listo para una carga útil",
         score: systemScore,
-        color: theme.accent.health,
-        bg: "transparent",
-        insight: "Apple y check-in están alineados: energía y recuperación permiten avanzar.",
         actions: ["Mantén sesión planificada", "Protege hidratación y cierre de sueño"],
       }
     }
@@ -141,9 +144,6 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
         label: "Recuperar",
         title: "Hoy conviene priorizar recuperación",
         score: systemScore,
-        color: theme.accent.finance,
-        bg: "transparent",
-        insight: `Divergencia relevante (Apple ${readiness}/100 vs check-in ${checkin}/100): evita sobrecarga.`,
         actions: ["Reduce intensidad y volumen", "Prioriza descanso + movilidad"],
       }
     }
@@ -151,12 +151,9 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
       label: "Moderar",
       title: "Estado intermedio: avanza con control",
       score: systemScore,
-      color: theme.accent.agenda,
-      bg: "transparent",
-      insight: `Apple ${readiness}/100 y check-in ${checkin}/100: hay margen, pero sin excederte.`,
       actions: ["Entrena en zona técnica", "Evalúa sensación al terminar"],
     }
-  }, [latest?.readiness_score, salud.scoreSalud, staleSync, theme])
+  }, [latest?.readiness_score, salud.scoreSalud, staleSync])
 
   if (salud.loading) {
     return (
@@ -178,6 +175,12 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
   }
 
   const chipSem = estadoChipColors(dayState.label)
+  const sleepLabel =
+    latest?.sleep_hours != null ? `${Math.round(latest.sleep_hours * 10) / 10} h` : "Sin dato"
+  const hrvLabel = latest?.hrv_ms != null ? `${latest.hrv_ms} ms` : "Sin dato"
+  const stepsLabel = latest?.steps != null ? latest.steps.toLocaleString("es-LA") : "Sin dato"
+  const kcalLabel =
+    latest?.calories != null ? `${Math.round(latest.calories).toLocaleString("es-LA")} kcal` : "Sin dato"
 
   return (
     <motion.section
@@ -189,313 +192,273 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
       style={{ ...panel, boxShadow: "none" }}
       aria-label="Apple Health"
     >
-      {!appleOpen ? (
-        <div
-          className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5"
-          style={{ color: theme.text }}
-        >
-          <span className="text-[11px] font-semibold uppercase tracking-[0.22em]" style={{ color: theme.textMuted }}>
+      <div className="relative flex flex-col gap-6 p-5 sm:p-7" style={{ color: theme.text }}>
+        <div className="flex flex-col gap-3 border-b pb-5" style={{ borderColor: saludHexToRgba(theme.border, 0.65) }}>
+          <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.22em]" style={{ color: theme.textMuted }}>
             Apple Health
-          </span>
-          <div className="flex shrink-0 items-center gap-2">
-            <a
-              href={runShortcutHref}
-              aria-label="Traer datos de hoy (Apple)"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-white no-underline transition active:scale-[0.98]"
-              style={{ backgroundColor: SALUD_SEM.energy }}
-            >
-              <Zap className="h-5 w-5 shrink-0" aria-hidden />
-            </a>
-            <button
-              type="button"
-              aria-label="Abrir panel de token y sincronización"
-              aria-expanded={false}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border transition active:scale-[0.98]"
-              style={{
-                borderColor: saludHexToRgba(theme.border, 0.85),
-                backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.5),
-                color: theme.text,
-              }}
-              onClick={() => setAppleOpen(true)}
-            >
-              <KeyRound className="h-5 w-5 shrink-0" aria-hidden />
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="relative flex flex-col gap-8 p-5 sm:p-7" style={{ color: theme.text }}>
-          <div className="flex items-start justify-between gap-3 border-b pb-3" style={{ borderColor: saludHexToRgba(theme.border, 0.65) }}>
-            <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.28em]" style={{ color: theme.textMuted }}>
-              Apple Health
+          </p>
+          <div className="max-w-3xl space-y-2">
+            <h1 className="m-0 text-[1.55rem] font-semibold leading-tight tracking-tight sm:text-3xl">
+              Datos automáticos, con calma y precisión
+            </h1>
+            <p className="m-0 text-sm leading-relaxed sm:text-[15px]" style={{ color: theme.textMuted }}>
+              Apple no lista Órvita en “Apps”: es normal. Usa el Atajo y aquí verás lectura + acción.
             </p>
-            <button
-              type="button"
-              aria-label="Cerrar panel Apple Health"
-              aria-expanded
-              className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-semibold"
-              style={{ border: `1px solid ${saludHexToRgba(theme.border, 0.75)}`, color: theme.textMuted }}
-              onClick={() => setAppleOpen(false)}
-            >
-              <ChevronUp className="h-4 w-4" aria-hidden />
-              Cerrar
-            </button>
           </div>
 
-          <div className="flex flex-col gap-4">
-            <div className="max-w-3xl space-y-2">
-              <h1 className="text-[1.65rem] font-semibold leading-tight tracking-tight sm:text-4xl">
-                Datos automáticos, con calma y precisión
-              </h1>
-              <p className="text-[15px] leading-relaxed sm:text-base" style={{ color: theme.textMuted }}>
-                Apple no lista Órvita en “Apps”: es normal. Usa el Atajo y aquí verás lectura + acción.
+          <section
+            className="rounded-xl border px-3 py-3 sm:px-4 sm:py-3.5"
+            style={{ borderColor: saludHexToRgba(theme.border, 0.7) }}
+            aria-labelledby="apple-health-connect-label"
+          >
+            <div className="mb-2.5 flex items-center gap-2" id="apple-health-connect-label">
+              <KeyRound className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+              <p className="m-0 text-xs font-semibold sm:text-[13px]" style={{ color: theme.text }}>
+                Token, atajo y sync
               </p>
             </div>
-
             <div
-              className="flex flex-wrap items-center gap-2 border-t pt-4 sm:gap-2"
-              style={{ borderColor: saludHexToRgba(theme.border, 0.65) }}
+              className="flex flex-wrap items-center gap-2 sm:gap-2"
               role="toolbar"
               aria-label="Acciones Apple Health"
             >
-              <button
-                type="button"
-                onClick={mintToken}
-                disabled={minting}
-                className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-lg border px-3 text-xs font-medium transition active:scale-[0.99] disabled:opacity-50"
-                style={{
-                  borderColor: saludHexToRgba(theme.border, 0.85),
-                  backgroundColor: "transparent",
-                  color: theme.text,
-                }}
-              >
-                {minting ? "Token…" : "Token atajo"}
-              </button>
-              <a
-                href={runShortcutHref}
-                className="inline-flex min-h-9 shrink-0 items-center justify-center gap-2 rounded-lg px-3.5 text-xs font-semibold text-white no-underline transition active:scale-[0.99]"
-                style={{ backgroundColor: SALUD_SEM.energy }}
-              >
-                <Zap className="h-4 w-4 shrink-0 opacity-95" aria-hidden />
-                Traer hoy
-              </a>
-              <button
-                type="button"
-                onClick={() => void onRefresh()}
-                className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-lg px-3 text-xs font-medium transition active:scale-[0.99]"
-                style={{
-                  border: `1px solid ${saludHexToRgba(theme.border, 0.75)}`,
-                  backgroundColor: "transparent",
-                  color: theme.textMuted,
-                }}
-              >
-                Actualizar
-              </button>
-              <span
-                className="inline-flex max-w-full min-w-0 items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-semibold leading-snug sm:max-w-[min(100%,22rem)]"
-                style={{
-                  backgroundColor: syncChip.bg,
-                  color: syncChip.fg,
-                }}
-              >
-                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-90" aria-hidden />
-                {syncChip.label}
-              </span>
-            </div>
-            <p className="text-[10px] leading-snug" style={{ color: theme.textMuted }}>
-              Token una vez por sesión; luego “Traer hoy” sincroniza el día.
-            </p>
-          </div>
-
-          {toast ? (
-            <p
-              className="border-l-[3px] py-2 pl-3 text-sm leading-snug"
-              style={{
-                borderLeftColor: SALUD_SEM.warn,
-                color: theme.text,
-              }}
-            >
-              {toast}
-            </p>
-          ) : null}
-
-          {token ? (
-            <div
-              className="relative space-y-2 rounded-2xl border p-4"
-              style={{
-                borderColor: theme.border,
-                backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.95),
-              }}
-            >
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: theme.textMuted }}>
-                  Token (no lo compartas)
-                </p>
                 <button
                   type="button"
-                  onClick={copyToken}
-                  className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition"
+                  onClick={mintToken}
+                  disabled={minting}
+                  className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-lg border px-3 text-xs font-medium transition active:scale-[0.99] disabled:opacity-50"
                   style={{
-                    borderColor: theme.border,
-                    backgroundColor: saludHexToRgba(theme.surface, 0.9),
+                    borderColor: saludHexToRgba(theme.border, 0.85),
+                    backgroundColor: "transparent",
                     color: theme.text,
                   }}
                 >
-                  <ClipboardCopy className="h-3.5 w-3.5" aria-hidden />
-                  Copiar
+                  {minting ? "Token…" : "Token atajo"}
                 </button>
+                <a
+                  href={runShortcutHref}
+                  className="inline-flex min-h-9 shrink-0 items-center justify-center gap-2 rounded-lg px-3.5 text-xs font-semibold text-white no-underline transition active:scale-[0.99]"
+                  style={{ backgroundColor: SALUD_SEM.energy }}
+                >
+                  <Zap className="h-4 w-4 shrink-0 opacity-95" aria-hidden />
+                  Traer hoy
+                </a>
+                <button
+                  type="button"
+                  onClick={() => void onRefresh()}
+                  disabled={loading}
+                  className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-lg px-3 text-xs font-medium transition active:scale-[0.99] disabled:opacity-50"
+                  style={{
+                    border: `1px solid ${saludHexToRgba(theme.border, 0.75)}`,
+                    backgroundColor: "transparent",
+                    color: theme.textMuted,
+                  }}
+                >
+                  Actualizar
+                </button>
+                <span
+                  className="inline-flex max-w-full min-w-0 items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-semibold leading-snug sm:max-w-[min(100%,22rem)]"
+                  style={{
+                    backgroundColor: syncChip.bg,
+                    color: syncChip.fg,
+                  }}
+                >
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-90" aria-hidden />
+                  {syncChip.label}
+                </span>
               </div>
-              <p className="break-all font-mono text-[13px] leading-relaxed" style={{ color: SALUD_SEM.ok }}>
-                {token}
+              <p className="m-0 mt-2 text-[10px] leading-snug" style={{ color: theme.textMuted }}>
+                Token una vez por sesión; luego “Traer hoy” sincroniza el día.
               </p>
-              {tokenUntil ? (
-                <p className="text-[11px]" style={{ color: theme.textMuted }}>
-                  Válido hasta {formatAppleHealthSyncWhen(tokenUntil)}
+              {toast ? (
+                <p
+                  className="m-0 mt-3 border-l-[3px] py-2 pl-3 text-sm leading-snug"
+                  style={{
+                    borderLeftColor: SALUD_SEM.warn,
+                    color: theme.text,
+                  }}
+                >
+                  {toast}
                 </p>
               ) : null}
-            </div>
-          ) : null}
+              {token ? (
+                <div
+                  className="relative mt-3 space-y-2 rounded-xl border p-3 sm:p-4"
+                  style={{
+                    borderColor: theme.border,
+                    backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.95),
+                  }}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: theme.textMuted }}>
+                      Token (no lo compartas)
+                    </p>
+                    <button
+                      type="button"
+                      onClick={copyToken}
+                      className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition"
+                      style={{
+                        borderColor: theme.border,
+                        backgroundColor: saludHexToRgba(theme.surface, 0.9),
+                        color: theme.text,
+                      }}
+                    >
+                      <ClipboardCopy className="h-3.5 w-3.5" aria-hidden />
+                      Copiar
+                    </button>
+                  </div>
+                  <p className="break-all font-mono text-[13px] leading-relaxed" style={{ color: SALUD_SEM.ok }}>
+                    {token}
+                  </p>
+                  {tokenUntil ? (
+                    <p className="text-[11px]" style={{ color: theme.textMuted }}>
+                      Válido hasta {formatAppleHealthSyncWhen(tokenUntil)}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+          </section>
+        </div>
 
-          <div className="relative border-t pt-6" style={{ borderColor: saludHexToRgba(theme.border, 0.65) }}>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em]" style={{ color: theme.textMuted }}>
-              Estado del día
-            </p>
-            <div className="mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-              <h2 className="m-0 text-xl font-semibold tracking-tight sm:text-2xl" style={{ color: theme.text }}>
+        <div className="relative border-t pt-5" style={{ borderColor: saludHexToRgba(theme.border, 0.65) }}>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+            <div className="min-w-0 flex-1">
+              <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.22em]" style={{ color: theme.textMuted }}>
+                Estado del día
+              </p>
+              <h2 className="m-0 mt-2 text-lg font-semibold tracking-tight sm:text-xl" style={{ color: theme.text }}>
                 {dayState.title}
               </h2>
-              <span className="text-lg font-light tabular-nums opacity-50" aria-hidden>
-                ·
-              </span>
-              <span className="text-2xl font-extrabold tabular-nums sm:text-3xl" style={{ color: chipSem.fg }}>
+              <ol className="m-0 mt-3 list-none space-y-2.5 p-0 sm:mt-4 sm:space-y-3">
+                {dayState.actions.map((action, idx) => {
+                  const Icon = idx === 0 ? Dumbbell : BedDouble
+                  return (
+                    <li key={action} className="flex items-start gap-2.5 sm:gap-3">
+                      <span
+                        className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold tabular-nums sm:h-7 sm:w-7 sm:text-xs"
+                        style={{
+                          backgroundColor: chipSem.bg,
+                          color: chipSem.fg,
+                        }}
+                      >
+                        {idx + 1}
+                      </span>
+                      <motion.span
+                        className="mt-0.5 inline-flex shrink-0"
+                        animate={{ y: [0, -2, 0] }}
+                        transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut", delay: idx * 0.15 }}
+                        aria-hidden
+                      >
+                        <Icon className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={1.65} style={{ color: chipSem.fg }} />
+                      </motion.span>
+                      <p className="m-0 min-w-0 flex-1 text-sm font-semibold leading-snug sm:text-[15px]">{action}</p>
+                    </li>
+                  )
+                })}
+              </ol>
+            </div>
+            <div className="flex shrink-0 flex-col items-end gap-2 sm:pt-1">
+              <span className="text-4xl font-extrabold tabular-nums leading-none sm:text-5xl" style={{ color: chipSem.fg }}>
                 {dayState.score}
               </span>
               <span
-                className="ml-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em]"
+                className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.1em] sm:px-3.5 sm:py-1.5 sm:text-xs"
                 style={{ backgroundColor: chipSem.bg, color: chipSem.fg }}
               >
                 {dayState.label}
               </span>
             </div>
-            <p className="m-0 mt-3 text-sm leading-relaxed sm:text-[15px]" style={{ color: theme.text }}>
-              {dayState.insight}
-            </p>
-            <ol className="m-0 mt-4 list-none space-y-3 p-0">
-              {dayState.actions.map((action, idx) => {
-                const Icon = idx === 0 ? Dumbbell : BedDouble
-                return (
-                  <li key={action} className="flex items-start gap-3">
-                    <span
-                      className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold tabular-nums"
-                      style={{
-                        backgroundColor: chipSem.bg,
-                        color: chipSem.fg,
-                      }}
-                    >
-                      {idx + 1}
-                    </span>
-                    <motion.span
-                      className="mt-0.5 inline-flex shrink-0"
-                      animate={{ y: [0, -2, 0] }}
-                      transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut", delay: idx * 0.15 }}
-                      aria-hidden
-                    >
-                      <Icon className="h-7 w-7" strokeWidth={1.65} style={{ color: chipSem.fg }} />
-                    </motion.span>
-                    <p className="m-0 min-w-0 flex-1 text-[16px] font-semibold leading-snug sm:text-[17px]">{action}</p>
-                  </li>
-                )
-              })}
-            </ol>
-          </div>
-
-          <div className="relative grid grid-cols-1 gap-3 sm:grid-cols-3">
-            {[
-              {
-                label: "Recuperación",
-                tint: SALUD_SEM.recovery,
-                icon: MoonStar,
-                rows: [
-                  { k: "Sueño", v: latest?.sleep_hours != null ? `${Math.round(latest.sleep_hours * 10) / 10} h` : "Sin dato" },
-                  { k: "HRV", v: latest?.hrv_ms != null ? `${latest.hrv_ms} ms` : "Sin dato" },
-                ],
-              },
-              {
-                label: "Energía",
-                tint: SALUD_SEM.energy,
-                icon: Zap,
-                rows: [
-                  { k: "Pasos", v: latest?.steps != null ? latest.steps.toLocaleString("es-LA") : "Sin dato" },
-                  { k: "Actividad", v: latest?.readiness_score != null ? `${latest.readiness_score}/100` : "Sin dato" },
-                ],
-              },
-              {
-                label: "Estado general",
-                tint: SALUD_SEM.neutral,
-                icon: Sparkles,
-                rows: [
-                  { k: "Check-in", v: `${salud.scoreSalud}/100` },
-                  { k: "Sync Apple", v: staleSync ? "Desactualizado" : latest?.observed_at ? "Al día" : "Pendiente" },
-                ],
-              },
-            ].map((group) => {
-              const Icon = group.icon
-              return (
-                <div
-                  key={group.label}
-                  className="rounded-2xl p-4 sm:p-5"
-                  style={{
-                    backgroundColor: saludHexToRgba(group.tint, 0.1),
-                  }}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: theme.textMuted }}>
-                      {group.label}
-                    </p>
-                    <motion.div
-                      style={{ color: group.tint }}
-                      animate={{ scale: [1, 1.05, 1] }}
-                      transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
-                      aria-hidden
-                    >
-                      <Icon className="h-7 w-7" strokeWidth={1.65} />
-                    </motion.div>
-                  </div>
-                  <div className="mt-4 space-y-3">
-                    {group.rows.map((row) => (
-                      <div key={row.k} className="flex items-baseline justify-between gap-2">
-                        <span className="text-[11px] font-medium sm:text-xs" style={{ color: theme.textMuted }}>
-                          {row.k}
-                        </span>
-                        <span className="text-right text-xl font-bold tabular-nums sm:text-2xl" style={{ color: theme.text }}>
-                          {row.v}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-
-          <div
-            className="flex gap-3 border-t pt-6"
-            style={{ borderColor: saludHexToRgba(theme.border, 0.65) }}
-          >
-            <Lightbulb className="mt-0.5 h-6 w-6 shrink-0" style={{ color: SALUD_SEM.warn }} aria-hidden />
-            <div className="min-w-0 space-y-2">
-              <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.2em]" style={{ color: theme.textMuted }}>
-                Sugerencia del sistema
-              </p>
-              <p className="m-0 text-sm leading-relaxed sm:text-[15px]" style={{ color: theme.text }}>
-                {recoveryNarrative(latest?.readiness_score, weekAvg)}
-              </p>
-              <p className="m-0 text-xs leading-relaxed sm:text-sm" style={{ color: theme.textMuted }}>
-                Check-in: {salud.scoreSalud}/100. Si Apple sube y tú te sientes bajo, prioriza descanso y baja carga.
-              </p>
-            </div>
           </div>
         </div>
-      )}
+
+        <div className="relative grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {[
+            {
+              label: "Recuperación",
+              tint: SALUD_SEM.recovery,
+              icon: MoonStar,
+              rows: [
+                { k: "Sueño", v: sleepLabel },
+                { k: "HRV", v: hrvLabel },
+              ],
+            },
+            {
+              label: "Movimiento",
+              tint: SALUD_SEM.energy,
+              icon: Zap,
+              rows: [
+                { k: "Pasos", v: stepsLabel },
+                { k: "Energía activa", v: kcalLabel },
+                { k: "Entreno", v: formatWorkoutDuration(latest) },
+              ],
+            },
+            {
+              label: "Estado general",
+              tint: SALUD_SEM.uiBlue,
+              icon: Sparkles,
+              rows: [
+                { k: "Check-in", v: `${salud.scoreSalud}/100` },
+                { k: "Sync Apple", v: staleSync ? "Desactualizado" : latest?.observed_at ? "Al día" : "Pendiente" },
+              ],
+            },
+          ].map((group) => {
+            const Icon = group.icon
+            return (
+              <div
+                key={group.label}
+                className="rounded-2xl p-4 sm:p-5"
+                style={{
+                  backgroundColor: saludHexToRgba(group.tint, 0.1),
+                }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: theme.textMuted }}>
+                    {group.label}
+                  </p>
+                  <motion.div
+                    style={{ color: group.tint }}
+                    animate={{ scale: [1, 1.05, 1] }}
+                    transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
+                    aria-hidden
+                  >
+                    <Icon className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={1.65} />
+                  </motion.div>
+                </div>
+                <div className="mt-3 space-y-2.5 sm:mt-4 sm:space-y-3">
+                  {group.rows.map((row) => (
+                    <div key={row.k} className="flex items-baseline justify-between gap-2">
+                      <span className="text-[11px] font-medium sm:text-xs" style={{ color: theme.textMuted }}>
+                        {row.k}
+                      </span>
+                      <span className="max-w-[55%] text-right text-lg font-bold tabular-nums leading-tight sm:text-xl" style={{ color: theme.text }}>
+                        {row.v}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        <div
+          className="flex gap-3 border-t pt-5"
+          style={{ borderColor: saludHexToRgba(theme.border, 0.65) }}
+        >
+          <Lightbulb className="mt-0.5 h-5 w-5 shrink-0 sm:h-6 sm:w-6" style={{ color: SALUD_SEM.warn }} aria-hidden />
+          <div className="min-w-0 space-y-1.5">
+            <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.2em] sm:text-[11px]" style={{ color: theme.textMuted }}>
+              Sugerencia del sistema
+            </p>
+            <p className="m-0 text-sm leading-relaxed sm:text-[15px]" style={{ color: theme.text }}>
+              {recoveryNarrative(latest?.readiness_score, weekAvg)}
+            </p>
+            <p className="m-0 text-xs leading-relaxed sm:text-sm" style={{ color: theme.textMuted }}>
+              Check-in: {salud.scoreSalud}/100. Si Apple sube y tú te sientes bajo, prioriza descanso y baja carga.
+            </p>
+          </div>
+        </div>
+      </div>
     </motion.section>
   )
 }

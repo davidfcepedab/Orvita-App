@@ -10,6 +10,8 @@ export const SALUD_SEM = {
   recovery: "#a855f7",
   energy: "#f97316",
   neutral: "#94a3b8",
+  /** UI neutra (tarjetas conexión / check-in vs Apple), no semáforo. */
+  uiBlue: "#3b82f6",
 } as const
 
 export type SaludSemanticKey = keyof typeof SALUD_SEM

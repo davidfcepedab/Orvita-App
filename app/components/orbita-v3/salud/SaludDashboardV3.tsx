@@ -54,27 +54,33 @@ export default function SaludDashboardV3() {
 
   if (salud.loading) {
     return (
-      <main className="mx-auto max-w-[min(72rem,calc(100vw-1.5rem))] px-1 py-2 text-sm text-[var(--color-text-secondary)]">
+      <section
+        className="orbita-page-stack mx-auto w-full max-w-[min(72rem,calc(100vw-1.5rem))] space-y-4 px-1 py-2 text-sm text-[var(--color-text-secondary)]"
+        aria-label="Salud — decisión, Apple Health, insight y operativo"
+        aria-busy="true"
+      >
         Cargando brief de salud…
-      </main>
+      </section>
     )
   }
 
   if (salud.error) {
     return (
-      <main className="mx-auto max-w-[min(72rem,calc(100vw-1.5rem))] px-1 py-2 text-sm text-[var(--color-accent-finance)]">
+      <section
+        className="orbita-page-stack mx-auto w-full max-w-[min(72rem,calc(100vw-1.5rem))] space-y-4 px-1 py-2 text-sm text-[var(--color-accent-finance)]"
+        aria-label="Salud — decisión, Apple Health, insight y operativo"
+      >
         {salud.error}
-      </main>
+      </section>
     )
   }
 
   return (
-    <main
+    <section
       className="orbita-page-stack mx-auto w-full max-w-[min(72rem,calc(100vw-1.5rem))] space-y-4"
-      aria-label="Salud — decisión, Apple Health y operativo"
+      aria-label="Salud — decisión, Apple Health, insight y operativo"
     >
       <HeroDecisionCard brief={brief} syncSummary={syncSummary} />
-      <SaludInsightSection brief={brief} />
 
       <AppleHealthLuxurySection
         salud={salud}
@@ -82,6 +88,8 @@ export default function SaludDashboardV3() {
         loading={autoHealth.loading}
         onRefresh={autoHealth.refetch}
       />
+
+      <SaludInsightSection brief={brief} />
 
       <section className="space-y-3 px-0.5 sm:px-0">
         <HealthOperationsV3
@@ -93,6 +101,6 @@ export default function SaludDashboardV3() {
           layout="full"
         />
       </section>
-    </main>
+    </section>
   )
 }

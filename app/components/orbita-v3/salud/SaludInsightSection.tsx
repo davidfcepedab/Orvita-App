@@ -21,33 +21,30 @@ export function SaludInsightSection({ brief }: Props) {
 
   return (
     <section
-      className="rounded-2xl border-l-4 p-5 sm:p-6"
+      className="rounded-xl border-l-[3px] px-4 py-3 sm:px-4 sm:py-3.5"
       style={{
         ...saludPanelStyle(theme, 0.92),
         borderColor: theme.border,
         borderLeftColor: accent,
+        boxShadow: "none",
       }}
       aria-labelledby="salud-insight-heading"
     >
       <h2
         id="salud-insight-heading"
-        className="m-0 text-[11px] font-semibold uppercase tracking-[0.18em]"
+        className="m-0 text-[10px] font-semibold uppercase tracking-[0.18em]"
         style={{ color: theme.textMuted }}
       >
         Insight
       </h2>
-      <p className="m-0 mt-3 text-base font-semibold leading-snug sm:text-lg" style={{ color: theme.text }}>
+      <p className="m-0 mt-2 text-sm font-semibold leading-snug sm:text-[15px]" style={{ color: theme.text }}>
         {brief.executiveInsight}
       </p>
-      <ul className="m-0 mt-3 list-none space-y-2 p-0">
-        {brief.evidenceBullets.map((line) => (
-          <li key={line} className="flex gap-2 text-sm" style={{ color: theme.textMuted }}>
-            <span className="mt-2 h-1 w-1 shrink-0 rounded-full" style={{ backgroundColor: accent }} aria-hidden />
-            {line}
-          </li>
-        ))}
-      </ul>
-      <p className="m-0 mt-3 text-sm font-medium leading-snug" style={{ color: theme.text }}>
+      <p className="m-0 mt-1.5 text-xs leading-snug sm:text-[13px]" style={{ color: theme.textMuted }}>
+        {brief.evidenceBullets[0]}
+        {brief.evidenceBullets[1] ? ` · ${brief.evidenceBullets[1]}` : ""}
+      </p>
+      <p className="m-0 mt-2 text-xs font-medium leading-snug sm:text-sm" style={{ color: theme.text }}>
         {brief.directAction}
       </p>
     </section>

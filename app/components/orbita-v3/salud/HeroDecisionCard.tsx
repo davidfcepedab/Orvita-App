@@ -24,37 +24,39 @@ export function HeroDecisionCard({ brief, syncSummary }: Props) {
 
   return (
     <section
-      className="rounded-2xl border-2 p-5 sm:p-6"
+      className="rounded-2xl border-2 px-4 py-3.5 sm:px-5 sm:py-4"
       style={{
         ...saludPanelStyle(theme, 0.95),
         borderColor: saludHexToRgba(border, brief.semantic === "ok" ? 0.65 : 0.55),
       }}
     >
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0 flex-1">
-          <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: theme.textMuted }}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <div className="min-w-0 flex-1 space-y-1.5">
+          <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: theme.textMuted }}>
             Decisión del día
           </p>
-          <h1 className="m-0 mt-2 text-2xl font-bold tracking-tight sm:text-3xl" style={{ color: theme.text }}>
+          <h1 className="m-0 text-xl font-bold leading-tight tracking-tight sm:text-2xl" style={{ color: theme.text }}>
             {brief.dayStateLabel}
           </h1>
-          <p className="m-0 mt-3 text-4xl font-bold tabular-nums leading-none" style={{ color: border }}>
-            {brief.energyScore}
-            <span className="ml-2 text-sm font-semibold normal-case" style={{ color: theme.textMuted }}>
+          <p className="m-0 flex flex-wrap items-baseline gap-x-1.5 gap-y-0">
+            <span className="text-3xl font-bold tabular-nums leading-none sm:text-4xl" style={{ color: border }}>
+              {brief.energyScore}
+            </span>
+            <span className="text-xs font-semibold normal-case" style={{ color: theme.textMuted }}>
               energía
             </span>
           </p>
-          <p className="m-0 mt-3 text-sm font-medium leading-snug" style={{ color: theme.text }}>
-            Causa: {brief.causeLine}
+          <p className="m-0 text-[13px] font-medium leading-snug sm:text-sm" style={{ color: theme.text }}>
+            {brief.causeLine}
           </p>
-          <p className="m-0 mt-2 text-[11px]" style={{ color: theme.textMuted }}>
+          <p className="m-0 text-[10px] leading-snug sm:text-[11px]" style={{ color: theme.textMuted }}>
             {syncSummary}
           </p>
         </div>
-        <div className="flex w-full shrink-0 flex-col gap-2 lg:max-w-xs">
+        <div className="flex w-full shrink-0 sm:w-auto sm:max-w-[12rem]">
           <Link
             href="/training"
-            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold no-underline lg:w-auto"
+            className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold no-underline sm:min-h-11"
             style={{ backgroundColor: theme.text, color: theme.bg }}
           >
             <Dumbbell className="h-4 w-4 shrink-0" aria-hidden />
