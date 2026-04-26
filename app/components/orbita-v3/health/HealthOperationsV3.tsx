@@ -223,7 +223,7 @@ export default function HealthOperationsV3({
 
         <div className="mt-8 border-t pt-8" style={{ borderColor: theme.border }}>
           <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em]" style={{ color: theme.textMuted }}>
-            Tu check-in (órbita interna)
+            Tu check-in (Órvita interna)
           </p>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {[
@@ -289,20 +289,44 @@ export default function HealthOperationsV3({
               )
             })}
           </div>
-          <p
-            className="mt-6 rounded-2xl border p-4 text-sm leading-relaxed"
+          <div
+            className="mt-6 rounded-2xl border p-4 sm:p-5"
             style={{
-              borderColor: theme.border,
-              backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.75),
-              color: theme.textMuted,
-              position: "relative",
-              zIndex: 0,
+              borderColor:
+                appleReadiness != null && health.scoreSalud > 0 && Math.abs(appleReadiness - health.scoreSalud) >= 14
+                  ? saludHexToRgba(theme.accent.agenda, 0.45)
+                  : theme.border,
+              backgroundColor:
+                appleReadiness != null && health.scoreSalud > 0 && Math.abs(appleReadiness - health.scoreSalud) >= 14
+                  ? saludHexToRgba(theme.accent.agenda, 0.13)
+                  : saludHexToRgba(theme.surfaceAlt, 0.75),
             }}
           >
-            {appleReadiness != null && health.scoreSalud > 0
-              ? `Apple sugiere ${appleReadiness}/100 de disposición y tú reportas ${health.scoreSalud}/100 en salud. Si divergen, toma el día con más descanso y menos intensidad.`
-              : "Cuando llegue tu importación de Apple, cruzaremos esas señales con tu check-in para darte una lectura más accionable."}
-          </p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ color: theme.textMuted }}>
+              Divergencia Apple vs check-in
+            </p>
+            <p className="mt-2 text-sm leading-relaxed" style={{ color: theme.text }}>
+              {appleReadiness != null && health.scoreSalud > 0
+                ? appleReadiness > health.scoreSalud
+                  ? `Apple te ve mejor de lo que te sientes (${appleReadiness} vs ${health.scoreSalud}).`
+                  : `Te sientes mejor de lo que marca Apple (${health.scoreSalud} vs ${appleReadiness}).`
+                : "Aún no hay cruce completo entre Apple y check-in."}
+            </p>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              <p
+                className="rounded-xl border px-3 py-2 text-[13px]"
+                style={{ borderColor: theme.border, backgroundColor: saludHexToRgba(theme.surface, 0.68), color: theme.text }}
+              >
+                Acción 1: ajusta carga del día antes de entrenar.
+              </p>
+              <p
+                className="rounded-xl border px-3 py-2 text-[13px]"
+                style={{ borderColor: theme.border, backgroundColor: saludHexToRgba(theme.surface, 0.68), color: theme.text }}
+              >
+                Acción 2: confirma cómo cierras sueño e hidratación hoy.
+              </p>
+            </div>
+          </div>
         </div>
       </motion.div>
 

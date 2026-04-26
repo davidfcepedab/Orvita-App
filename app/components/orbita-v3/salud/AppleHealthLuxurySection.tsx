@@ -134,6 +134,55 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
     }
   }, [latest?.observed_at, staleSync, theme])
 
+  const dayState = useMemo(() => {
+    const readiness = latest?.readiness_score
+    const checkin = salud.scoreSalud
+    const systemScore = Math.max(0, Math.min(100, Math.round(((readiness ?? checkin) + checkin) / 2)))
+    if (readiness == null) {
+      return {
+        label: "Info",
+        title: "Falta lectura Apple para cerrar estado del día",
+        score: systemScore,
+        color: theme.accent.agenda,
+        bg: `linear-gradient(135deg, ${saludHexToRgba(theme.accent.agenda, 0.13)} 0%, ${saludHexToRgba(theme.surface, 0.9)} 75%)`,
+        insight: `Tu check-in marca ${checkin}/100. Usa “Traer datos de hoy” para completar la recomendación automática.`,
+        actions: ["Ejecuta Atajo y refresca lectura", "Mantén carga moderada hasta validar Apple"],
+      }
+    }
+    const divergence = Math.round(readiness - checkin)
+    if (!staleSync && readiness >= 68 && checkin >= 60 && Math.abs(divergence) <= 12) {
+      return {
+        label: "Listo",
+        title: "Tu sistema está listo para una carga útil",
+        score: systemScore,
+        color: theme.accent.health,
+        bg: `linear-gradient(135deg, ${saludHexToRgba(theme.accent.health, 0.16)} 0%, ${saludHexToRgba(theme.surface, 0.88)} 78%)`,
+        insight: "Apple y check-in están alineados: energía y recuperación permiten avanzar.",
+        actions: ["Mantén sesión planificada", "Protege hidratación y cierre de sueño"],
+      }
+    }
+    if (readiness < 50 || checkin < 45 || divergence <= -18) {
+      return {
+        label: "Recuperar",
+        title: "Hoy conviene priorizar recuperación",
+        score: systemScore,
+        color: theme.accent.finance,
+        bg: `linear-gradient(135deg, ${saludHexToRgba(theme.accent.finance, 0.14)} 0%, ${saludHexToRgba(theme.surface, 0.9)} 78%)`,
+        insight: `Divergencia relevante (Apple ${readiness}/100 vs check-in ${checkin}/100): evita sobrecarga.`,
+        actions: ["Reduce intensidad y volumen", "Prioriza descanso + movilidad"],
+      }
+    }
+    return {
+      label: "Moderar",
+      title: "Estado intermedio: avanza con control",
+      score: systemScore,
+      color: theme.accent.agenda,
+      bg: `linear-gradient(135deg, ${saludHexToRgba(theme.accent.agenda, 0.15)} 0%, ${saludHexToRgba(theme.surface, 0.88)} 78%)`,
+      insight: `Apple ${readiness}/100 y check-in ${checkin}/100: hay margen, pero sin excederte.`,
+      actions: ["Entrena en zona técnica", "Evalúa sensación al terminar"],
+    }
+  }, [latest?.readiness_score, salud.scoreSalud, staleSync, theme])
+
   if (salud.loading) {
     return (
       <div
@@ -280,116 +329,113 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
           </div>
         ) : null}
 
-        <div className="relative grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {[
-            {
-              label: "Sueño",
-              value: latest?.sleep_hours != null ? Math.round(latest.sleep_hours * 10) / 10 : null,
-              unit: "h",
-              hint: "Ideal 7-9 h",
-              icon: MoonStar,
-            },
-            {
-              label: "HRV",
-              value: latest?.hrv_ms ?? null,
-              unit: "ms",
-              hint: "Tu margen de recuperación",
-              icon: Activity,
-            },
-            {
-              label: "Recuperación (proxy)",
-              value: latest?.readiness_score ?? null,
-              unit: "",
-              hint: "Estado diario",
-              icon: Sparkles,
-            },
-            {
-              label: "Pasos",
-              value: latest?.steps ?? null,
-              unit: "",
-              hint: "Objetivo base 7k",
-              icon: Zap,
-            },
-          ].map((card) => {
-            const Icon = card.icon
-            const status =
-              card.label === "Sueño"
-                ? card.value == null
-                  ? "Sin dato"
-                  : card.value >= 7
-                    ? "En rango"
-                    : "Bajo"
-                : card.label === "HRV"
-                  ? card.value == null
-                    ? "Sin dato"
-                    : card.value >= 35
-                      ? "Bien"
-                      : "Bajo"
-                  : card.label === "Recuperación (proxy)"
-                    ? card.value == null
-                      ? "Sin dato"
-                      : card.value >= 65
-                        ? "Listo"
-                        : card.value >= 45
-                          ? "Neutro"
-                          : "Cuidar"
-                    : card.value == null
-                      ? "Sin dato"
-                      : card.value >= 7000
-                        ? "Meta"
-                        : "Subir"
-            const statusColor =
-              status === "En rango" || status === "Bien" || status === "Listo" || status === "Meta"
-                ? theme.accent.health
-                : status === "Neutro" || status === "Subir"
-                  ? theme.accent.agenda
-                  : theme.textMuted
-            return (
-              <motion.div
-                key={card.label}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                className="rounded-[22px] border p-5 shadow-inner"
+        <div
+          className="relative rounded-[24px] border p-5 sm:p-6"
+          style={{
+            borderColor: saludHexToRgba(dayState.color, 0.35),
+            background: dayState.bg,
+          }}
+        >
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em]" style={{ color: theme.textMuted }}>
+                Estado del día
+              </p>
+              <h2 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">{dayState.title}</h2>
+            </div>
+            <div className="flex items-center gap-3">
+              <span
+                className="rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em]"
                 style={{
-                  borderColor: theme.border,
-                  backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.75),
-                  boxShadow: `inset 0 1px 0 ${saludHexToRgba(theme.border, 0.35)}`,
+                  borderColor: saludHexToRgba(dayState.color, 0.38),
+                  backgroundColor: saludHexToRgba(dayState.color, 0.13),
+                  color: dayState.color,
                 }}
               >
-                <div className="flex items-center justify-between gap-2">
+                {dayState.label}
+              </span>
+              <p className="text-4xl font-bold leading-none tabular-nums" style={{ color: dayState.color }}>
+                {dayState.score}
+              </p>
+            </div>
+          </div>
+          <p className="mt-3 text-sm leading-relaxed" style={{ color: theme.text }}>
+            {dayState.insight}
+          </p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            {dayState.actions.map((action) => (
+              <p
+                key={action}
+                className="rounded-xl border px-3 py-2 text-[13px] leading-relaxed"
+                style={{
+                  borderColor: saludHexToRgba(dayState.color, 0.22),
+                  backgroundColor: saludHexToRgba(theme.surface, 0.64),
+                  color: theme.text,
+                }}
+              >
+                {action}
+              </p>
+            ))}
+          </div>
+        </div>
+
+        <div className="relative grid gap-4 md:grid-cols-3">
+          {[
+            {
+              label: "Recuperación",
+              border: theme.accent.health,
+              icon: MoonStar,
+              rows: [
+                { k: "Sueño", v: latest?.sleep_hours != null ? `${Math.round(latest.sleep_hours * 10) / 10} h` : "Sin dato" },
+                { k: "HRV", v: latest?.hrv_ms != null ? `${latest.hrv_ms} ms` : "Sin dato" },
+              ],
+            },
+            {
+              label: "Energía",
+              border: theme.accent.agenda,
+              icon: Zap,
+              rows: [
+                { k: "Pasos", v: latest?.steps != null ? latest.steps.toLocaleString("es-LA") : "Sin dato" },
+                { k: "Actividad", v: latest?.readiness_score != null ? `${latest.readiness_score}/100` : "Sin dato" },
+              ],
+            },
+            {
+              label: "Estado general",
+              border: theme.accent.finance,
+              icon: Sparkles,
+              rows: [
+                { k: "Check-in", v: `${salud.scoreSalud}/100` },
+                { k: "Sync Apple", v: staleSync ? "Desactualizado" : latest?.observed_at ? "Al día" : "Pendiente" },
+              ],
+            },
+          ].map((group) => {
+            const Icon = group.icon
+            return (
+              <div
+                key={group.label}
+                className="rounded-[22px] border p-5"
+                style={{
+                  borderColor: saludHexToRgba(group.border, 0.35),
+                  backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.72),
+                }}
+              >
+                <div className="flex items-center justify-between gap-3">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ color: theme.textMuted }}>
-                    {card.label}
+                    {group.label}
                   </p>
-                  <span
-                    className="rounded-full border px-2.5 py-0.5 text-[10px] font-semibold sm:text-[11px]"
-                    style={{
-                      borderColor: saludHexToRgba(statusColor, 0.4),
-                      backgroundColor: saludHexToRgba(statusColor, 0.12),
-                      color: statusColor,
-                    }}
-                  >
-                    {status}
-                  </span>
+                  <Icon className="h-5 w-5" style={{ color: group.border }} aria-hidden />
                 </div>
-                <p className="mt-4 text-3xl font-semibold tracking-tight">
-                  {loading ? "…" : card.value == null ? "—" : card.value.toLocaleString("es-LA")}
-                  {card.unit ? <span className="ml-1 text-sm font-medium">{card.unit}</span> : null}
-                </p>
-                <p className="mt-2 text-[12px] leading-relaxed" style={{ color: theme.textMuted }}>
-                  {card.hint}
-                </p>
-                <div className="mt-3 flex justify-end">
-                  <motion.div
-                    style={{ color: statusColor }}
-                    animate={{ y: [0, -5, 0] }}
-                    transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
-                    aria-hidden
-                  >
-                    <Icon className="h-10 w-10 shrink-0 drop-shadow-md" strokeWidth={1.65} />
-                  </motion.div>
+                <div className="mt-3 space-y-2">
+                  {group.rows.map((row) => (
+                    <div key={row.k} className="flex items-center justify-between gap-2 text-sm">
+                      <span style={{ color: theme.textMuted }}>{row.k}</span>
+                      <span className="font-semibold" style={{ color: theme.text }}>
+                        {row.v}
+                      </span>
+                    </div>
+                  ))}
                 </div>
-              </motion.div>
+              </div>
             )
           })}
         </div>
