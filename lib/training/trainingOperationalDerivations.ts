@@ -74,14 +74,15 @@ export function buildWeeklyTimeline(days: TrainingDay[], todayIso = agendaTodayY
   for (const day of days) {
     if (!byDate.has(day.date)) byDate.set(day.date, day)
   }
+  const monday = startOfWeekMonday(todayIso)
   return Array.from({ length: 7 }).map((_, index) => {
-    const date = addCalendarDaysYmd(todayIso, index - 3)
+    const date = addCalendarDaysYmd(monday, index)
     const plan = planForDate(date)
     const executed = byDate.get(date)
     const status = classifyTimelineStatus(executed, plan, date, todayIso)
     return {
       date,
-      label: date.slice(5),
+      label: formatWeekLabel(date),
       plan,
       executed: executed?.workoutName ?? null,
       status,
@@ -184,6 +185,22 @@ function planForDate(date: string): string {
   if (Number.isNaN(anchor)) return "Push"
   const idx = new Date(anchor).getUTCDay() % PLAN_SEQUENCE.length
   return PLAN_SEQUENCE[idx] ?? "Push"
+}
+
+function startOfWeekMonday(date: string): string {
+  const anchor = Date.parse(`${date}T12:00:00Z`)
+  if (Number.isNaN(anchor)) return date
+  const utcDay = new Date(anchor).getUTCDay()
+  const diffToMonday = utcDay === 0 ? -6 : 1 - utcDay
+  return addCalendarDaysYmd(date, diffToMonday)
+}
+
+function formatWeekLabel(date: string): string {
+  const anchor = Date.parse(`${date}T12:00:00Z`)
+  if (Number.isNaN(anchor)) return date.slice(5)
+  const day = new Date(anchor).getUTCDay()
+  const names = ["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"]
+  return `${names[day] ?? ""} ${date.slice(8, 10)}`
 }
 
 function classifyTimelineStatus(
