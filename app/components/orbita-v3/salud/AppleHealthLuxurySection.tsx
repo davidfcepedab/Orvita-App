@@ -345,8 +345,11 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
                   ? theme.accent.agenda
                   : theme.textMuted
             return (
-              <div
+              <motion.div
                 key={card.label}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                 className="rounded-[22px] border p-5 shadow-inner"
                 style={{
                   borderColor: theme.border,
@@ -376,8 +379,17 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
                 <p className="mt-2 text-[12px] leading-relaxed" style={{ color: theme.textMuted }}>
                   {card.hint}
                 </p>
-                <Icon className="mt-2 h-4 w-4 shrink-0" style={{ color: theme.textMuted }} aria-hidden />
-              </div>
+                <div className="mt-3 flex justify-end">
+                  <motion.div
+                    style={{ color: statusColor }}
+                    animate={{ y: [0, -5, 0] }}
+                    transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
+                    aria-hidden
+                  >
+                    <Icon className="h-10 w-10 shrink-0 drop-shadow-md" strokeWidth={1.65} />
+                  </motion.div>
+                </div>
+              </motion.div>
             )
           })}
         </div>

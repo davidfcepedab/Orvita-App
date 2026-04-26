@@ -136,7 +136,7 @@ export default function BottomNav() {
 
   return (
     <nav
-      className="orbita-chrome-surface fixed bottom-0 left-0 right-0 z-[100] border-t border-[color-mix(in_srgb,var(--color-border)_85%,transparent)] pb-[env(safe-area-inset-bottom,0px)] shadow-nav"
+      className="orbita-chrome-surface fixed bottom-0 left-0 right-0 z-[100] border-t border-[color-mix(in_srgb,var(--color-border)_85%,transparent)] pb-[env(safe-area-inset-bottom,0px)] shadow-nav md:hidden"
       aria-label="Navegación principal"
     >
       <div className="orbita-bottom-nav-safe mx-auto flex max-w-[1400px] items-stretch justify-between gap-1 px-1 py-2 sm:gap-2 sm:px-3 sm:py-3">

@@ -6,6 +6,7 @@ import { useOrbitaSkin } from "@/app/contexts/AppContext"
 import type { AutoHealthMetric } from "@/app/hooks/useHealthAutoMetrics"
 import type { SaludContextSnapshot } from "@/app/salud/_hooks/useSaludContext"
 import type { ShortcutHealthAnalyticsSnapshot } from "@/lib/health/shortcutHealthAnalytics"
+import { dedupeMetricsByLocalDay, vitalityScoreFromAppleRow } from "@/lib/health/appleTimelineDerived"
 import { saludHexToRgba, saludPanelStyle } from "@/lib/salud/saludThemeStyles"
 
 type Props = {
@@ -14,9 +15,11 @@ type Props = {
   timeline: AutoHealthMetric[]
   analytics: ShortcutHealthAnalyticsSnapshot | null
   loading: boolean
+  /** Dentro del mismo card que el gráfico semanal (sin envoltorio duplicado). */
+  variant?: "standalone" | "embedded"
 }
 
-export function HealthCorrelationsPanel({ salud, latest, timeline, analytics, loading }: Props) {
+export function HealthCorrelationsPanel({ salud, latest, timeline, analytics, loading, variant = "standalone" }: Props) {
   const theme = useOrbitaSkin()
   const statusTone = (value: "ok" | "warn" | "risk") => {
     if (value === "ok") return { label: "En línea", color: theme.accent.health }
@@ -24,40 +27,36 @@ export function HealthCorrelationsPanel({ salud, latest, timeline, analytics, lo
     return { label: "Desbalance", color: theme.accent.finance }
   }
 
-  const sleepVsEnergySeries = useMemo(
-    () =>
-      timeline
-        .filter((row) => row.sleep_hours != null || row.energy_index != null)
-        .slice(-7)
-        .map((row) => ({
-          day: new Date(row.observed_at).toLocaleDateString("es-LA", { weekday: "short" }),
-          sleep: row.sleep_hours ?? null,
-          energy: row.energy_index ?? null,
-        })),
-    [timeline],
-  )
+  const sleepVsEnergySeries = useMemo(() => {
+    const rows = dedupeMetricsByLocalDay(
+      timeline.filter((row) => row.sleep_hours != null || row.steps != null),
+    ).slice(-7)
+    return rows.map((row) => ({
+      day: new Date(row.observed_at).toLocaleDateString("es-LA", { weekday: "short" }),
+      sleep: row.sleep_hours ?? null,
+      vitality: vitalityScoreFromAppleRow(row),
+    }))
+  }, [timeline])
 
-  const hrvVsLoadSeries = useMemo(
-    () =>
-      timeline
-        .filter((row) => row.hrv_ms != null || row.calories != null || row.apple_workout_minutes != null)
-        .slice(-7)
-        .map((row) => ({
-          day: new Date(row.observed_at).toLocaleDateString("es-LA", { weekday: "short" }),
-          hrv: row.hrv_ms ?? null,
-          load: (row.calories ?? 0) + (row.apple_workout_minutes ?? 0),
-        })),
-    [timeline],
-  )
+  const hrvVsLoadSeries = useMemo(() => {
+    const rows = dedupeMetricsByLocalDay(
+      timeline.filter((row) => row.hrv_ms != null || row.calories != null || row.apple_workout_minutes != null),
+    ).slice(-7)
+    return rows.map((row) => ({
+      day: new Date(row.observed_at).toLocaleDateString("es-LA", { weekday: "short" }),
+      hrv: row.hrv_ms ?? null,
+      load: (row.calories ?? 0) + (row.apple_workout_minutes ?? 0),
+    }))
+  }, [timeline])
 
   const sleepEnergyStatus = useMemo(() => {
     const s = latest?.sleep_hours
-    const e = latest?.energy_index
-    if (s == null || e == null) return { level: "warn" as const, text: "Falta una de las dos señales para comparar." }
-    if (s < 6 && e < 45) return { level: "risk" as const, text: "Sueño corto y energía baja: conviene proteger descanso hoy." }
-    if (s >= 7 && e >= 60) return { level: "ok" as const, text: "Buen acople entre horas de sueño y energía percibida." }
+    const v = latest ? vitalityScoreFromAppleRow(latest) : null
+    if (s == null || v == null) return { level: "warn" as const, text: "Falta una de las dos señales para comparar." }
+    if (s < 6 && v < 45) return { level: "risk" as const, text: "Sueño corto y vitalidad baja: conviene proteger descanso hoy." }
+    if (s >= 7 && v >= 60) return { level: "ok" as const, text: "Buen acople entre horas de sueño y vitalidad (sueño + movimiento)." }
     return { level: "warn" as const, text: "Relación mixta: prioriza rutina de sueño y evita sobrecarga." }
-  }, [latest?.sleep_hours, latest?.energy_index])
+  }, [latest])
 
   const hrvLoadStatus = useMemo(() => {
     const hrv = latest?.hrv_ms
@@ -94,7 +93,7 @@ export function HealthCorrelationsPanel({ salud, latest, timeline, analytics, lo
 
   const cards = [
     {
-      title: "Sueño vs energía",
+      title: "Sueño vs vitalidad",
       source: "Apple Health",
       status: sleepEnergyStatus,
       chart: (
@@ -114,7 +113,7 @@ export function HealthCorrelationsPanel({ salud, latest, timeline, analytics, lo
                 }}
               />
               <Area yAxisId="left" type="monotone" dataKey="sleep" fill={saludHexToRgba(theme.accent.agenda, 0.22)} stroke="none" />
-              <Line yAxisId="right" type="monotone" dataKey="energy" stroke={theme.accent.health} strokeWidth={2} dot={false} />
+              <Line yAxisId="right" type="monotone" dataKey="vitality" stroke={theme.accent.health} strokeWidth={2} dot={false} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -161,62 +160,78 @@ export function HealthCorrelationsPanel({ salud, latest, timeline, analytics, lo
     },
   ]
 
+  const header = (
+    <>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.2em]" style={{ color: theme.textMuted }}>
+        Correlaciones clave
+      </p>
+      <h3 className="mt-2 text-xl font-semibold">Datos -&gt; interpretación -&gt; acción</h3>
+      <p className="mt-2 text-sm" style={{ color: theme.textMuted }}>
+        Cuatro cruces simples para decidir el día sin saturarte con métricas.
+      </p>
+      <p className="mt-1 text-xs" style={{ color: theme.textMuted }}>
+        En línea = señal estable · Atención = revisar hoy · Desbalance = ajustar carga/descanso.
+      </p>
+    </>
+  )
+
+  const body = loading ? (
+    <p className="mt-4 text-sm" style={{ color: theme.textMuted }}>
+      Preparando correlaciones…
+    </p>
+  ) : (
+    <div className="mt-5 grid gap-4 md:grid-cols-2">
+      {cards.map((item) => {
+        const tone = statusTone(item.status.level)
+        return (
+          <div
+            key={item.title}
+            className="rounded-2xl border p-4"
+            style={{
+              borderColor: theme.border,
+              backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.78),
+            }}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold">{item.title}</p>
+              <span
+                className="rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]"
+                style={{
+                  borderColor: saludHexToRgba(tone.color, 0.45),
+                  backgroundColor: saludHexToRgba(tone.color, 0.14),
+                  color: theme.text,
+                }}
+              >
+                {tone.label}
+              </span>
+            </div>
+            <p className="mt-1 text-[11px]" style={{ color: theme.textMuted }}>
+              Fuente: {item.source}
+            </p>
+            <p className="mt-2 text-sm" style={{ color: theme.textMuted }}>
+              {item.status.text}
+            </p>
+            {item.chart}
+          </div>
+        )
+      })}
+    </div>
+  )
+
+  if (variant === "embedded") {
+    return (
+      <div className="mt-8 border-t pt-8" style={{ borderColor: theme.border }}>
+        {header}
+        {body}
+      </div>
+    )
+  }
+
   return (
     <section className="space-y-4">
       <div className="rounded-[26px] border p-6 backdrop-blur-2xl" style={saludPanelStyle(theme, 0.84)}>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.2em]" style={{ color: theme.textMuted }}>
-          Correlaciones clave
-        </p>
-        <h3 className="mt-2 text-xl font-semibold">Datos -&gt; interpretación -&gt; acción</h3>
-        <p className="mt-2 text-sm" style={{ color: theme.textMuted }}>
-          Cuatro cruces simples para decidir el día sin saturarte con métricas.
-        </p>
-        <p className="mt-1 text-xs" style={{ color: theme.textMuted }}>
-          En línea = señal estable · Atención = revisar hoy · Desbalance = ajustar carga/descanso.
-        </p>
-
-        {loading ? (
-          <p className="mt-4 text-sm" style={{ color: theme.textMuted }}>
-            Preparando correlaciones…
-          </p>
-        ) : (
-          <div className="mt-5 grid gap-4 md:grid-cols-2">
-            {cards.map((item) => {
-              const tone = statusTone(item.status.level)
-              return (
-                <div
-                  key={item.title}
-                  className="rounded-2xl border p-4"
-                  style={{
-                    borderColor: theme.border,
-                    backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.78),
-                  }}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-semibold">{item.title}</p>
-                    <span
-                      className="rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]"
-                      style={{
-                        borderColor: saludHexToRgba(tone.color, 0.4),
-                        backgroundColor: saludHexToRgba(tone.color, 0.12),
-                        color: tone.color,
-                      }}
-                    >
-                      {tone.label}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-[11px]" style={{ color: theme.textMuted }}>
-                    Fuente: {item.source}
-                  </p>
-                  <p className="mt-2 text-sm" style={{ color: theme.textMuted }}>
-                    {item.status.text}
-                  </p>
-                  {item.chart}
-                </div>
-              )
-            })}
-          </div>
-        )}
+        {header}
+        {body}
       </div>
     </section>
   )
