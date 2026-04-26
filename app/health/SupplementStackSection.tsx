@@ -119,7 +119,12 @@ export function SupplementStackSection({
 
   return (
     <Card>
-      <div className="grid gap-[var(--spacing-md)] p-[var(--spacing-md)]">
+      <div
+        className="grid gap-[var(--spacing-md)] rounded-xl p-[var(--spacing-md)]"
+        style={{
+          backgroundColor: "color-mix(in srgb, var(--color-accent-health) 7%, var(--color-surface-alt))",
+        }}
+      >
         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--color-border)] pb-4">
           <div className="flex min-w-0 flex-1 gap-3">
             <span

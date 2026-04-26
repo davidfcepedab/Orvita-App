@@ -347,7 +347,7 @@ export default function HealthOperationsV3({
                       </span>
                     </div>
                     <span
-                      className="shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold sm:text-[11px]"
+                      className="inline-flex min-w-[7rem] shrink-0 justify-center rounded-full px-2.5 py-0.5 text-center text-[10px] font-bold sm:text-[11px]"
                       style={{
                         backgroundColor: saludHexToRgba(statusColor, 0.18),
                         color: statusColor,

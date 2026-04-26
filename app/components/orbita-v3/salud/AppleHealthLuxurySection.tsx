@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react"
 import { motion } from "framer-motion"
-import { BedDouble, ClipboardCopy, Dumbbell, KeyRound, Lightbulb, MoonStar, Sparkles, Zap } from "lucide-react"
+import { BedDouble, ChevronDown, ClipboardCopy, Dumbbell, KeyRound, Lightbulb, MoonStar, Sparkles, Zap } from "lucide-react"
 import { useOrbitaSkin } from "@/app/contexts/AppContext"
 import type { SaludContextSnapshot } from "@/app/salud/_hooks/useSaludContext"
 import type { AutoHealthMetric } from "@/app/hooks/useHealthAutoMetrics"
@@ -181,6 +181,7 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
   const stepsLabel = latest?.steps != null ? latest.steps.toLocaleString("es-LA") : "Sin dato"
   const kcalLabel =
     latest?.calories != null ? `${Math.round(latest.calories).toLocaleString("es-LA")} kcal` : "Sin dato"
+  const workoutLine = formatWorkoutDuration(latest)
 
   return (
     <motion.section
@@ -193,10 +194,7 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
       aria-label="Apple Health"
     >
       <div className="relative flex flex-col gap-6 p-5 sm:p-7" style={{ color: theme.text }}>
-        <div className="flex flex-col gap-3 border-b pb-5" style={{ borderColor: saludHexToRgba(theme.border, 0.65) }}>
-          <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.22em]" style={{ color: theme.textMuted }}>
-            Apple Health
-          </p>
+        <div className="flex flex-col gap-4">
           <div className="max-w-3xl space-y-2">
             <h1 className="m-0 text-[1.55rem] font-semibold leading-tight tracking-tight sm:text-3xl">
               Datos automáticos, con calma y precisión
@@ -206,22 +204,51 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
             </p>
           </div>
 
-          <section
-            className="rounded-xl border px-3 py-3 sm:px-4 sm:py-3.5"
-            style={{ borderColor: saludHexToRgba(theme.border, 0.7) }}
-            aria-labelledby="apple-health-connect-label"
-          >
-            <div className="mb-2.5 flex items-center gap-2" id="apple-health-connect-label">
-              <KeyRound className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-              <p className="m-0 text-xs font-semibold sm:text-[13px]" style={{ color: theme.text }}>
-                Token, atajo y sync
-              </p>
-            </div>
-            <div
-              className="flex flex-wrap items-center gap-2 sm:gap-2"
-              role="toolbar"
-              aria-label="Acciones Apple Health"
-            >
+          <details className="group">
+            <summary className="flex cursor-pointer list-none items-center gap-3 py-1 [&::-webkit-details-marker]:hidden">
+              <span className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.2em]" style={{ color: theme.textMuted }}>
+                Apple Health
+              </span>
+              <a
+                href={runShortcutHref}
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white no-underline transition active:scale-[0.98]"
+                style={{ backgroundColor: SALUD_SEM.energy }}
+                aria-label="Traer datos de hoy (Atajo)"
+                title="Traer hoy"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Zap className="h-4 w-4 shrink-0" aria-hidden />
+              </a>
+              <button
+                type="button"
+                disabled={minting}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition active:scale-[0.99] disabled:opacity-50 sm:px-3 sm:text-xs"
+                style={{
+                  borderColor: saludHexToRgba(theme.border, 0.85),
+                  backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.35),
+                  color: theme.text,
+                }}
+                title="Genera token para el Atajo"
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  void mintToken()
+                }}
+              >
+                <KeyRound className="h-3.5 w-3.5 shrink-0 opacity-85" aria-hidden />
+                {minting ? "Generando…" : "Generar token"}
+              </button>
+              <span className="ml-auto inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-[0.14em]" style={{ color: theme.textMuted }}>
+                Detalles
+                <ChevronDown
+                  className="h-3.5 w-3.5 shrink-0 transition group-open:rotate-180"
+                  style={{ color: theme.textMuted }}
+                  aria-hidden
+                />
+              </span>
+            </summary>
+            <div className="mt-3 space-y-3 border-t pt-3" style={{ borderColor: saludHexToRgba(theme.border, 0.5) }}>
+              <div className="flex flex-wrap items-center gap-2" role="toolbar" aria-label="Sincronización y token">
                 <button
                   type="button"
                   onClick={mintToken}
@@ -267,12 +294,12 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
                   {syncChip.label}
                 </span>
               </div>
-              <p className="m-0 mt-2 text-[10px] leading-snug" style={{ color: theme.textMuted }}>
+              <p className="m-0 text-[10px] leading-snug" style={{ color: theme.textMuted }}>
                 Token una vez por sesión; luego “Traer hoy” sincroniza el día.
               </p>
               {toast ? (
                 <p
-                  className="m-0 mt-3 border-l-[3px] py-2 pl-3 text-sm leading-snug"
+                  className="m-0 border-l-[3px] py-2 pl-3 text-sm leading-snug"
                   style={{
                     borderLeftColor: SALUD_SEM.warn,
                     color: theme.text,
@@ -283,7 +310,7 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
               ) : null}
               {token ? (
                 <div
-                  className="relative mt-3 space-y-2 rounded-xl border p-3 sm:p-4"
+                  className="relative space-y-2 rounded-xl border p-3 sm:p-4"
                   style={{
                     borderColor: theme.border,
                     backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.95),
@@ -317,7 +344,8 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
                   ) : null}
                 </div>
               ) : null}
-          </section>
+            </div>
+          </details>
         </div>
 
         <div className="relative border-t pt-5" style={{ borderColor: saludHexToRgba(theme.border, 0.65) }}>
@@ -389,7 +417,6 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
               rows: [
                 { k: "Pasos", v: stepsLabel },
                 { k: "Energía activa", v: kcalLabel },
-                { k: "Entreno", v: formatWorkoutDuration(latest) },
               ],
             },
             {
@@ -455,6 +482,7 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
             </p>
             <p className="m-0 text-xs leading-relaxed sm:text-sm" style={{ color: theme.textMuted }}>
               Check-in: {salud.scoreSalud}/100. Si Apple sube y tú te sientes bajo, prioriza descanso y baja carga.
+              {workoutLine !== "Sin dato" ? ` Entreno (Apple): ${workoutLine}.` : ""}
             </p>
           </div>
         </div>

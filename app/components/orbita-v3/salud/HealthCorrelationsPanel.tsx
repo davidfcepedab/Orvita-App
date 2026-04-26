@@ -196,7 +196,7 @@ export function HealthCorrelationsPanel({ salud, latest, timeline, analytics, lo
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm font-semibold">{item.title}</p>
               <span
-                className="rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]"
+                className="inline-flex min-w-[7rem] justify-center rounded-full border px-2 py-1 text-center text-[10px] font-semibold uppercase tracking-[0.12em]"
                 style={{
                   borderColor: saludHexToRgba(tone.color, 0.45),
                   backgroundColor: saludHexToRgba(tone.color, 0.14),
