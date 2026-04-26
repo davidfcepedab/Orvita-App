@@ -166,9 +166,27 @@ export default function HealthOperationsV3({
     borderRadius: "16px",
     color: theme.text,
   }
+  const latestWeekly = weeklyChartData[weeklyChartData.length - 1] ?? null
+  const prevWeekly = weeklyChartData.length > 1 ? weeklyChartData[weeklyChartData.length - 2] : null
+  const divergence = latestWeekly ? latestWeekly.vitality - latestWeekly.recovery : 0
+  const deltaVitality = latestWeekly && prevWeekly ? latestWeekly.vitality - prevWeekly.vitality : 0
+  const predictiveActions = latestWeekly
+    ? [
+        divergence <= -10
+          ? "Vitalidad por debajo de recuperación: baja intensidad y prioriza movilidad + sueño."
+          : divergence >= 12
+            ? "Vitalidad por encima de recuperación: aprovecha energía, pero evita volumen extra."
+            : "Vitalidad y recuperación en rango cercano: mantén plan base sin sobrecorrecciones.",
+        deltaVitality <= -6
+          ? "Tu vitalidad cayó vs ayer: sube hidratación y reduce una serie pesada."
+          : deltaVitality >= 6
+            ? "Tu vitalidad subió vs ayer: buen día para sesión de calidad controlada."
+            : "Cambio estable vs ayer: enfócate en consistencia, no en intensidad.",
+      ]
+    : ["Sin suficientes lecturas Apple para sugerir ajustes diarios."]
 
   return (
-    <section className="space-y-8" style={{ color: theme.text }}>
+    <section className="mt-10 space-y-10 lg:space-y-12" style={{ color: theme.text }}>
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -238,7 +256,7 @@ export default function HealthOperationsV3({
                       {metric.label}
                     </span>
                     <span
-                    className="rounded-full border px-2 py-0.5 text-[9px] font-semibold sm:text-[10px]"
+                      className="rounded-full border px-2.5 py-0.5 text-[10px] font-semibold sm:text-[11px]"
                       style={{
                         borderColor: saludHexToRgba(statusColor, 0.4),
                         backgroundColor: saludHexToRgba(statusColor, 0.12),
@@ -295,7 +313,7 @@ export default function HealthOperationsV3({
         className="rounded-[28px] border p-6 backdrop-blur-2xl sm:p-8"
         style={saludPanelStyle(theme, 0.9)}
       >
-        <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex flex-wrap items-stretch justify-between gap-4 md:flex-nowrap">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em]" style={{ color: theme.textMuted }}>
               Operativo
@@ -306,7 +324,7 @@ export default function HealthOperationsV3({
             </p>
           </div>
           <div
-            className="flex min-w-[140px] items-center gap-3 rounded-2xl border px-4 py-3"
+            className="flex min-w-[180px] items-center gap-3 self-stretch rounded-2xl border px-4 py-3 md:justify-center"
             style={{
               borderColor: saludHexToRgba(theme.accent.health, 0.35),
               backgroundColor: saludHexToRgba(theme.accent.health, 0.08),
@@ -505,6 +523,21 @@ export default function HealthOperationsV3({
               />
             </ComposedChart>
           </ResponsiveContainer>
+        </div>
+        <div className="mt-5 grid gap-3 md:grid-cols-2">
+          {predictiveActions.map((action) => (
+            <div
+              key={action}
+              className="rounded-xl border p-3 text-sm leading-relaxed"
+              style={{
+                borderColor: theme.border,
+                backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.72),
+                color: theme.text,
+              }}
+            >
+              {action}
+            </div>
+          ))}
         </div>
 
         <HealthCorrelationsPanel

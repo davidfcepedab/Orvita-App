@@ -31,8 +31,8 @@ export default function TrainingOperationsV3({ salud: health }: Props) {
   const ringTrack = saludHexToRgba(theme.border, 0.55)
 
   return (
-    <section className="space-y-8" style={{ color: theme.text }}>
-      <div className="rounded-[26px] border p-6 backdrop-blur-2xl" style={saludPanelStyle(theme, 0.82)}>
+    <section className="mt-12" style={{ color: theme.text }}>
+      <div className="rounded-[28px] border p-6 backdrop-blur-2xl sm:p-8" style={saludPanelStyle(theme, 0.82)}>
         <div className="flex items-center gap-3">
           <div
             className="rounded-3xl p-3 ring-1"
@@ -57,9 +57,9 @@ export default function TrainingOperationsV3({ salud: health }: Props) {
             </p>
           </div>
         </div>
-      </div>
 
-      <div className="rounded-[26px] border p-6 backdrop-blur-2xl" style={saludPanelStyle(theme, 0.82)}>
+        <div className="mt-8 space-y-8 border-t pt-8" style={{ borderColor: theme.border }}>
+          <div className="rounded-[26px] border p-6 backdrop-blur-2xl" style={saludPanelStyle(theme, 0.82)}>
         <div className="flex flex-col gap-8 md:flex-row md:items-center">
           <div className="flex-1">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em]" style={{ color: theme.textMuted }}>
@@ -348,6 +348,8 @@ export default function TrainingOperationsV3({ salud: health }: Props) {
           ) : null}
         </div>
       </div>
+    </div>
+  </div>
     </section>
   )
 }
