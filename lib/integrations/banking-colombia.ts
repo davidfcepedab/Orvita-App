@@ -223,15 +223,7 @@ export async function createBelvoWidgetSession(input: { locale?: string } = {}):
       process.env.BANKING_BELVO_WIDGET_CO_INSTITUTIONS?.split(",")
         .map((s) => s.trim())
         .filter(Boolean) ?? []
-    if (fromEnv.length > 0) return fromEnv
-    const defaults = [
-      process.env.BANKING_BELVO_SANDBOX_DEFAULT_INSTITUTION_CO?.trim(),
-      "bancolombia_co_retail",
-      "davivienda_co_retail",
-      "nequi_co_retail",
-      "ofmockbank_co_retail",
-    ].filter(Boolean) as string[]
-    return defaults
+    return fromEnv
   })()
 
   const tokenBody: Record<string, unknown> = {
@@ -300,8 +292,6 @@ export async function createBelvoWidgetSession(input: { locale?: string } = {}):
   const institutionsFilter = process.env.BANKING_BELVO_WIDGET_CO_INSTITUTIONS?.trim()
   if (institutionsFilter) {
     params.set("institutions", institutionsFilter)
-  } else if (widgetInstitutions.length > 0) {
-    params.set("institutions", widgetInstitutions.join(","))
   }
   const widgetUrl = `https://widget.belvo.io/?${params.toString()}`
   return { access, refresh: tokenPayload.refresh ?? null, widgetUrl }
