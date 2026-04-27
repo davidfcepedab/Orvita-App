@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/api/requireUser"
 import {
   connectBankingColombia,
   createBelvoWidgetSession,
+  getBelvoSandboxUsernameType,
   isBelvoBankingConfigured,
   isBelvoSandbox,
 } from "@/lib/integrations/banking-colombia"
@@ -18,8 +19,8 @@ function toBankConnectErrorMessage(error: unknown) {
   if (lower.includes("integración bancaria real no configurada")) {
     return "Integración bancaria real no configurada en servidor. Configura BANKING_COLOMBIA_BASE_URL, CLIENT_ID, CLIENT_SECRET y REDIRECT_URI."
   }
-  if (lower.includes("username_type")) {
-    return "Belvo requiere tipo de usuario (103 o 104) para este banco. Usa variables BANKING_BELVO_SANDBOX_USERNAME_TYPE o conecta con una institución Colombia en Vercel."
+  if (lower.includes("username_type") && !lower.includes("request_id")) {
+    return "Belvo exige username_type (103 o 104) para este enlace. Comprueba en Vercel el slug Colombia (p. ej. BANKING_BELVO_INSTITUTION_BANCOLOMBIA) y BANKING_BELVO_SANDBOX_USERNAME_TYPE. Evita ofmockbank si buscas Bancolombia/Davivienda/Nequi."
   }
   if (lower.includes("widget") && lower.includes("invalid")) {
     return "Belvo rechazó la configuración del widget. Revisa BANKING_COLOMBIA_REDIRECT_URI (https, coincide con el callback) y vuelve a intentar."
@@ -81,7 +82,7 @@ export async function POST(req: NextRequest) {
     const usernameType =
       typeof body.username_type === "number" && (body.username_type === 103 || body.username_type === 104)
         ? body.username_type
-        : undefined
+        : getBelvoSandboxUsernameType()
 
     const connectedList = await connectBankingColombia({
       provider,
@@ -107,8 +108,14 @@ export async function POST(req: NextRequest) {
       connectionLabel,
       integrationBackend: "belvo",
       belvoSandbox: isBelvoSandbox(),
+      belvoCountryCodes: ["CO"],
+      belvoUsernameType: usernameType,
     })
   } catch (error) {
+    const raw = error instanceof Error ? error.message : String(error)
+    if (raw.includes("Belvo") || raw.includes("request_id")) {
+      console.error("[banking/connect] Belvo", raw)
+    }
     const message = toBankConnectErrorMessage(error)
     return NextResponse.json({ success: false, error: message }, { status: 500 })
   }

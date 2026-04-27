@@ -46,7 +46,11 @@ function belvoInstitutionForProvider(provider: BankProvider): string {
   if (fromEnv) return fromEnv
   const fallback = process.env.BANKING_BELVO_SANDBOX_INSTITUTION?.trim()
   if (fallback) return fallback
-  return "ofmockbank_br_retail"
+  const coDefault = process.env.BANKING_BELVO_SANDBOX_DEFAULT_INSTITUTION_CO?.trim()
+  if (coDefault) return coDefault
+  if (provider === "davivienda") return "davivienda_co_retail"
+  if (provider === "nequi") return "nequi_co_retail"
+  return "bancolombia_co_retail"
 }
 
 function sandboxLinkCredentials(): { username: string; password: string } {
@@ -67,14 +71,26 @@ export function isBelvoSandbox(): boolean {
   return base.length > 0 && isBelvoSandboxBase(base)
 }
 
+/** Tipo de usuario Belvo Colombia (sandbox): 103 o 104. Lee env con fallback seguro. */
+export function getBelvoSandboxUsernameType(): number {
+  const raw = process.env.BANKING_BELVO_SANDBOX_USERNAME_TYPE?.trim()
+  if (!raw) return 103
+  const n = Number.parseInt(raw, 10)
+  if (n === 103 || n === 104) return n
+  return 103
+}
+
+function isBelvoBrSandboxMockInstitution(institution: string): boolean {
+  const ins = institution.toLowerCase()
+  return ins.includes("ofmockbank")
+}
+
 /**
- * Banca Colombia vía Belvo exige `username_type` (103 o 104) en muchos enlaces.
- * No lo enviamos para instituciones sandbox BR (`ofmockbank`, `_br_`).
+ * Enlaces Órvita (CO): siempre `username_type` salvo mock BR explícito (ofmockbank).
  */
 function linkRequiresUsernameType(institution: string, orvitaColombiaBankFlow: boolean): boolean {
-  const ins = institution.toLowerCase()
-  if (ins.includes("_br_") || ins.includes("ofmockbank")) return false
-  return orvitaColombiaBankFlow
+  if (!orvitaColombiaBankFlow) return false
+  return !isBelvoBrSandboxMockInstitution(institution)
 }
 
 function resolveLinkUsernameType(
@@ -86,10 +102,7 @@ function resolveLinkUsernameType(
   if (explicit !== undefined && Number.isFinite(explicit) && (explicit === 103 || explicit === 104)) {
     return explicit
   }
-  const raw = process.env.BANKING_BELVO_SANDBOX_USERNAME_TYPE?.trim()
-  const n = raw ? parseInt(raw, 10) : 103
-  if (n === 103 || n === 104) return n
-  return 103
+  return getBelvoSandboxUsernameType()
 }
 
 export function isBelvoBankingConfigured(): boolean {
@@ -127,6 +140,25 @@ function normalizeBelvoList(payload: unknown): unknown[] {
   return []
 }
 
+export function parseBelvoErrorPayload(text: string): { requestId: string | null; summary: string } {
+  let requestId: string | null = null
+  let summary = text.slice(0, 500)
+  try {
+    const parsed = JSON.parse(text) as unknown
+    if (Array.isArray(parsed) && parsed.length > 0 && parsed[0] && typeof parsed[0] === "object") {
+      const row = parsed[0] as { request_id?: string; message?: string; field?: string; code?: string }
+      if (typeof row.request_id === "string") requestId = row.request_id
+      const parts = [row.message, row.field ? `field=${row.field}` : null, row.code ? `code=${row.code}` : null].filter(
+        Boolean,
+      )
+      if (parts.length) summary = parts.join(" · ")
+    }
+  } catch {
+    /* usar texto crudo */
+  }
+  return { requestId, summary }
+}
+
 async function belvoRequestJson<T>(
   base: string,
   path: string,
@@ -146,7 +178,9 @@ async function belvoRequestJson<T>(
   const res = await fetch(url, { method: init.method ?? "GET", headers, body })
   const text = await res.text()
   if (!res.ok) {
-    throw new Error(`Belvo ${path} → ${res.status}: ${text.slice(0, 400)}`)
+    const { requestId, summary } = parseBelvoErrorPayload(text)
+    const idPart = requestId ? ` request_id=${requestId}` : ""
+    throw new Error(`Belvo ${path} → ${res.status}:${idPart} ${summary}`)
   }
   if (!text) return {} as T
   try {
@@ -182,13 +216,21 @@ export async function createBelvoWidgetSession(input: { locale?: string } = {}):
   const termsVersion = process.env.BANKING_BELVO_WIDGET_TERMS_VERSION?.trim() || "2024-03-15"
 
   const tokenUrl = `${env.base}/api/token/`
-  const tokenBody = {
+  const sandbox = isBelvoSandboxBase(env.base)
+  const usernameType = getBelvoSandboxUsernameType()
+  const tokenBody: Record<string, unknown> = {
     id: env.clientId,
     password: env.clientSecret,
     scopes: "read_institutions,write_links",
     fetch_resources: ["ACCOUNTS", "TRANSACTIONS"],
     credentials_storage: "store",
     stale_in: "365d",
+    ...(sandbox
+      ? {
+          country_codes: ["CO"],
+          username_type: usernameType,
+        }
+      : {}),
     widget: {
       callback_urls: {
         success: redirect,
@@ -201,6 +243,11 @@ export async function createBelvoWidgetSession(input: { locale?: string } = {}):
         company_terms_version: termsVersion,
       },
       theme: [] as unknown[],
+      ...(sandbox
+        ? {
+            country_codes: ["CO"],
+          }
+        : {}),
     },
   }
 
@@ -220,7 +267,9 @@ export async function createBelvoWidgetSession(input: { locale?: string } = {}):
   }
   const tokenText = await tokenRes.text()
   if (!tokenRes.ok) {
-    throw new Error(`Belvo /api/token/ → ${tokenRes.status}: ${tokenText.slice(0, 400)}`)
+    const { requestId, summary } = parseBelvoErrorPayload(tokenText)
+    const idPart = requestId ? ` request_id=${requestId}` : ""
+    throw new Error(`Belvo /api/token/ → ${tokenRes.status}:${idPart} ${summary}`)
   }
   let tokenPayload: { access?: string; refresh?: string }
   try {
@@ -236,7 +285,12 @@ export async function createBelvoWidgetSession(input: { locale?: string } = {}):
     locale,
     country_codes: "CO",
     access_mode: "recurrent",
+    institution_types: "retail",
   })
+  const institutionsFilter = process.env.BANKING_BELVO_WIDGET_CO_INSTITUTIONS?.trim()
+  if (institutionsFilter) {
+    params.set("institutions", institutionsFilter)
+  }
   const widgetUrl = `https://widget.belvo.io/?${params.toString()}`
   return { access, refresh: tokenPayload.refresh ?? null, widgetUrl }
 }
@@ -254,6 +308,9 @@ async function registerBelvoLink(
     institution,
     username: creds.username,
     password: creds.password,
+  }
+  if (isBelvoSandboxBase(base) && linkRequiresUsernameType(institution, orvitaColombiaBankFlow)) {
+    payload.country_codes = ["CO"]
   }
   const ut = resolveLinkUsernameType(institution, usernameType, orvitaColombiaBankFlow)
   if (ut !== undefined) payload.username_type = ut

@@ -533,6 +533,19 @@ export function ConfigStrategicIntegrationsPanel({
       <p className="m-0 mt-1 text-[11px] leading-relaxed sm:text-xs" style={{ color: theme.textMuted }}>
         Agregación en sandbox: credenciales en servidor, link y widget según Belvo. Colombia (Bancolombia, Davivienda, Nequi) según institución configurada en Vercel.
       </p>
+      <p className="m-0 mt-2 text-[11px] leading-relaxed sm:text-xs" style={{ color: theme.textMuted }}>
+        <span style={{ color: theme.text }}>username_type:</span> Órvita envía{" "}
+        <span className="font-semibold" style={{ color: theme.text }}>
+          103
+        </span>{" "}
+        por defecto (variable <span style={{ color: theme.text }}>BANKING_BELVO_SANDBOX_USERNAME_TYPE</span> si Belvo
+        exige 104). País{" "}
+        <span className="font-semibold" style={{ color: theme.text }}>
+          CO
+        </span>{" "}
+        en token y enlaces. Si el widget solo muestra mocks, revisa slugs reales o{" "}
+        <span style={{ color: theme.text }}>BANKING_BELVO_WIDGET_CO_INSTITUTIONS</span>.
+      </p>
       <div className="mt-2.5 flex flex-wrap gap-1.5">
         <button
           type="button"

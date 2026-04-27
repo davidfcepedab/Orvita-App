@@ -257,7 +257,22 @@ export function ConnectedBankAccountsCard() {
       </div>
 
       {error ? <p className="mt-2 text-xs text-[var(--color-accent-danger)]">{error}</p> : null}
+      {error && /username_type|tipo de usuario/i.test(error) ? (
+        <p className="mt-1 text-[11px] leading-relaxed text-orbita-secondary">
+          El servidor ya envía <span className="font-medium text-orbita-primary">username_type 103</span> por defecto
+          (o el valor de <span className="font-medium">BANKING_BELVO_SANDBOX_USERNAME_TYPE</span> en Vercel). Si el error
+          continúa, confirma slugs Colombia en variables{" "}
+          <span className="font-medium">BANKING_BELVO_INSTITUTION_*</span> y evita instituciones solo mock BR.
+        </p>
+      ) : null}
       {notice ? <p className="mt-2 text-xs text-orbita-secondary">{notice}</p> : null}
+
+      <p className="mt-3 text-[11px] leading-relaxed text-orbita-secondary">
+        Widget y enlaces sandbox usan <span className="font-medium text-orbita-primary">CO</span> y documento Belvo{" "}
+        <span className="font-medium">103</span> por defecto. Para acotar bancos en el widget, define{" "}
+        <span className="font-medium">BANKING_BELVO_WIDGET_CO_INSTITUTIONS</span> en Vercel (slugs separados por coma,
+        según tu panel Belvo).
+      </p>
 
       {accounts.length > 0 ? (
         <ul className="mt-3 space-y-2">
