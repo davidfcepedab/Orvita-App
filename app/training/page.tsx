@@ -1,398 +1,253 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import Link from "next/link"
+import { useMemo } from "react"
 import { useRouter } from "next/navigation"
-import { ChevronDown, Clock3, Dumbbell, Sparkles } from "lucide-react"
+import { Clock3, Dumbbell } from "lucide-react"
 import { useTraining } from "@/src/modules/training/useTraining"
 import { useHealthAutoMetrics } from "@/app/hooks/useHealthAutoMetrics"
-import { useAppleHevyCorrelationNarrative } from "@/app/health/useAppleHevyCorrelationNarrative"
 import { appleDaySignalsFromHealthMetric, HEVY_INTEGRATION_LABEL } from "@/lib/health/appleHevyRelation"
-import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
-import { TrainingFallbackState } from "@/app/training/components/TrainingFallbackState"
-import { TrainingVisualBodySection } from "@/app/training/TrainingVisualBodySection"
-import {
-  buildGoalAlignment,
-  buildInconsistencies,
-  buildPlanVsExecution,
-  buildTrainingReadiness,
-  buildWeeklyTimeline,
-  pickLastHevySession,
-  summarizeTopExercises,
-} from "@/lib/training/trainingOperationalDerivations"
+import { buildPlanVsExecution, buildTrainingReadiness, pickLastHevySession } from "@/lib/training/trainingOperationalDerivations"
 import { agendaTodayYmd } from "@/lib/agenda/localDateKey"
 import { useTrainingPreferences } from "@/app/hooks/useTrainingPreferences"
-import { buildAdjustmentHints } from "@/lib/training/adjustmentHints"
 import { TrainingActionQuerySync } from "@/app/training/TrainingActionQuerySync"
 import { Card } from "@/src/components/ui/Card"
-
-type AgendaApiTask = {
-  id: string
-  title: string
-  dueDate: string | null
-  status: "pending" | "in-progress" | "completed"
-}
 
 export default function TrainingPage() {
   const router = useRouter()
   const todayIso = agendaTodayYmd()
   const { today, days, loading, error, setManualStatus, todayState, dataMeta } = useTraining()
   const { latest: appleHealth, loading: appleLoading } = useHealthAutoMetrics()
-  const [agendaTasks, setAgendaTasks] = useState<AgendaApiTask[] | null>(null)
-  const [agendaLoading, setAgendaLoading] = useState(false)
-  const [agendaNotice, setAgendaNotice] = useState<string | null>(null)
-  const [showSessionDetail, setShowSessionDetail] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const [trainingNotice, setTrainingNotice] = useState<string | null>(null)
-  const [goalImageGenerating, setGoalImageGenerating] = useState(false)
-  const [goalImageDisplayKey, setGoalImageDisplayKey] = useState(0)
-  const [goalImageAiMode, setGoalImageAiMode] = useState<"create" | "edit">("create")
-  const {
-    bodyRows,
-    prefs,
-    loading: prefsLoading,
-    updatePrefs,
-    setGoalImageUrl,
-  } = useTrainingPreferences()
+  const { bodyRows, prefs } = useTrainingPreferences()
   const appleSignals = useMemo(() => appleDaySignalsFromHealthMetric(appleHealth), [appleHealth])
   const readiness = useMemo(() => buildTrainingReadiness(appleSignals, days), [appleSignals, days])
   const planVsExecution = useMemo(() => buildPlanVsExecution(days, todayState, todayIso), [days, todayState, todayIso])
-  const timeline = useMemo(() => buildWeeklyTimeline(days, todayIso), [days, todayIso])
   const lastSession = useMemo(() => pickLastHevySession(days), [days])
-  const topExercises = useMemo(() => summarizeTopExercises(lastSession?.exercises), [lastSession?.exercises])
-  const inconsistencies = useMemo(
-    () => buildInconsistencies(appleSignals, planVsExecution, lastSession),
-    [appleSignals, planVsExecution, lastSession],
+  const hasHevy = days.some((day) => day.source === "hevy")
+  const hs = appleSignals?.health_signals ?? null
+  const weeklyDays = useMemo(() => days.filter((day) => day.date >= shiftDays(todayIso, -6)), [days, todayIso])
+  const sessionStatus = todayState === "completed" ? "completada" : todayState === "moved" ? "omitida" : "pendiente"
+  const plannedFocus = focusForPlan(planVsExecution.plannedToday)
+  const statusChip = resolveTrainingStatusChip(readiness.score, hasHevy || !!appleSignals)
+  const hevyStatus = hasHevy ? "conectado" : loading ? "pendiente" : "sin datos"
+  const latestTrainingAt = lastSession?.startedAt ?? lastSession?.endedAt ?? null
+
+  const trainingsWeek = weeklyDays.filter((day) => day.status === "trained" || day.status === "swim").length
+  const minutesFromHevy = weeklyDays.reduce((sum, day) => sum + (day.duration ?? 0), 0)
+  const volumeEstimated = weeklyDays.reduce((sum, day) => sum + (day.volumeScore ?? 0), 0)
+  const exerciseMinutes = firstNumber(hs?.exercise_minutes, hs?.workout_minutes, hs?.workouts_minutes, appleSignals?.workout_minutes)
+  const activeEnergyKcal = firstNumber(hs?.active_energy_kcal, appleSignals?.calories)
+  const workoutsCount = firstNumber(hs?.workouts_count, appleSignals?.workouts_count)
+  const workoutsDurationSeconds = firstNumber(
+    hs?.workouts_duration_seconds,
+    exerciseMinutes != null ? Math.round(exerciseMinutes * 60) : null,
   )
-  const goalAlignment = useMemo(
-    () => buildGoalAlignment(readiness, planVsExecution, days),
-    [readiness, planVsExecution, days],
-  )
-  const hints = useMemo(() => buildAdjustmentHints(bodyRows), [bodyRows])
-  const insight = useAppleHevyCorrelationNarrative({
-    loading: loading || appleLoading,
-    apple: appleSignals,
-    hevyToday: today ?? null,
-  })
+  const trainingLoad = firstNumber(hs?.training_load)
+  const steps = firstNumber(hs?.steps, appleSignals?.steps)
 
-  const hasHevy = days.some((d) => d.source === "hevy")
-
-  const handleRegister = () => {
-    router.push("/configuracion#acordeon-config-hevy")
-  }
-
-  const onPickImage = () => fileInputRef.current?.click()
-
-  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !file.type.startsWith("image/")) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      const result = reader.result
-      if (typeof result === "string") {
-        setGoalImageDisplayKey((k) => k + 1)
-        setGoalImageUrl(result)
-      }
-    }
-    reader.readAsDataURL(file)
-    e.target.value = ""
-  }
-
-  const showTrainingNotice = useCallback((message: string) => {
-    setTrainingNotice(message)
-    window.setTimeout(() => setTrainingNotice(null), 7000)
-  }, [])
-
-  useEffect(() => {
-    if (agendaTasks !== null) return
-    void handleSuggestBlock()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const onGenerateGoalWithAI = async () => {
-    const prompt = (prefs.visualGoalDescription ?? "").trim()
-    if (!prompt) {
-      showTrainingNotice("Escribe una descripción del objetivo para generar la imagen.")
-      return
-    }
-    setGoalImageGenerating(true)
-    try {
-      const payload: { prompt: string; mode: "create" | "edit"; imageBase64?: string } = { prompt, mode: goalImageAiMode }
-      if (goalImageAiMode === "edit" && (prefs.goalImageUrl ?? "").startsWith("data:")) {
-        payload.imageBase64 = prefs.goalImageUrl
-      }
-      const res = await fetch("/api/training/goal-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      })
-      const data = (await res.json()) as { ok?: boolean; imageDataUrl?: string; error?: string; detail?: string }
-      if (!res.ok || !data.ok || !data.imageDataUrl) {
-        throw new Error(data.detail ?? data.error ?? "No se pudo generar la imagen")
-      }
-      setGoalImageDisplayKey((k) => k + 1)
-      setGoalImageUrl(data.imageDataUrl)
-      showTrainingNotice("Imagen de objetivo actualizada.")
-    } catch (e) {
-      showTrainingNotice(e instanceof Error ? e.message : "Error generando imagen")
-    } finally {
-      setGoalImageGenerating(false)
-    }
-  }
-
-  const handleSuggestBlock = async () => {
-    setAgendaLoading(true)
-    setAgendaNotice(null)
-    try {
-      const headers = await browserBearerHeaders()
-      const res = await fetch("/api/agenda", { cache: "no-store", headers })
-      const payload = (await res.json()) as { success?: boolean; data?: AgendaApiTask[]; error?: string }
-      if (!res.ok || !payload.success) {
-        throw new Error(payload.error ?? "No pudimos leer agenda")
-      }
-      const todayItems = (payload.data ?? []).filter((task) => task.dueDate === todayIso)
-      setAgendaTasks(todayItems)
-      if (todayItems.length === 0) {
-        setAgendaNotice("No hay bloque hoy. Sugerencia: agenda 45-60 min entre 6:00 y 8:00 p. m. (con confirmación).")
-      }
-    } catch (e) {
-      setAgendaNotice(e instanceof Error ? e.message : "No pudimos conectar agenda")
-    } finally {
-      setAgendaLoading(false)
-    }
-  }
+  const weightMetric = bodyRows.find((row) => /peso/i.test(row.label))
+  const waistMetric = bodyRows.find((row) => /cintura/i.test(row.label))
+  const objective = deriveObjective(prefs.visualGoalDescription)
+  const trendRows = bodyRows.slice(0, 4)
+  const hasLoadData =
+    trainingsWeek > 0 ||
+    minutesFromHevy > 0 ||
+    activeEnergyKcal != null ||
+    workoutsDurationSeconds != null ||
+    trainingLoad != null ||
+    exerciseMinutes != null
 
   return (
     <main className="orbita-page-stack mx-auto w-full max-w-[min(72rem,calc(100vw-1.5rem))]" aria-label="Entrenamiento operativo">
       <TrainingActionQuerySync setManualStatus={setManualStatus} />
       <div className="min-w-0 px-1 py-1 sm:px-2">
-        <h1 className="m-0 text-2xl font-semibold tracking-tight text-[var(--color-text-primary)] sm:text-[2rem]">Entrenamiento operativo</h1>
-        <p className="m-0 mt-1.5 max-w-[48rem] text-[13px] leading-relaxed text-[var(--color-text-secondary)]">
-          Decide qué hacer hoy cruzando plan, ejecución y recuperación. {HEVY_INTEGRATION_LABEL} manda en entrenamiento
-          estructurado; Apple Health aporta señal física.
-        </p>
+        <h1 className="m-0 text-2xl font-semibold tracking-tight text-[var(--color-text-primary)] sm:text-[2rem]">Entrenamiento</h1>
+        <p className="m-0 mt-1.5 text-sm leading-relaxed text-[var(--color-text-secondary)]">Carga, sesión y progreso físico</p>
+        <div className="mt-3">
+          <StatusChip label={statusChip.label} tone={statusChip.tone} />
+        </div>
       </div>
 
       <Card>
-        <div className="relative overflow-hidden p-[var(--spacing-lg)]">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,color-mix(in_srgb,var(--color-accent-health)_14%,transparent),transparent_55%)]" />
-          <div className="relative grid gap-4 lg:grid-cols-12">
-            <div className="lg:col-span-4">
-              <p className="m-0 text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-secondary)]">Entrenamiento de hoy</p>
-              <h2 className="m-0 mt-1.5 text-2xl font-semibold text-[var(--color-text-primary)]">{planVsExecution.plannedToday}</h2>
-              <p className="m-0 mt-1 text-xs text-[var(--color-text-secondary)]">Fuente principal: {dataMeta.sourceLabel}</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={handleRegister}
-                  className="inline-flex min-h-9 items-center justify-center rounded-full border border-[var(--color-accent-health)] bg-[var(--color-accent-health)] px-3 text-xs font-semibold text-white"
-                >
-                  Registrar entrenamiento
-                </button>
-                <a
-                  href="https://hevy.com/app"
-                  target="_blank"
-                  className="inline-flex min-h-9 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 text-xs font-medium text-[var(--color-text-primary)] no-underline"
-                >
-                  Abrir Hevy
-                </a>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] p-4 lg:col-span-4">
-              <p className="m-0 text-[11px] uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">Cómo me encuentro para entrenar</p>
-              <div className="mt-2 flex items-end justify-between">
-                <h3 className="m-0 text-lg font-semibold text-[var(--color-text-primary)]">{readiness.label}</h3>
-                <p className="m-0 text-2xl font-bold text-[var(--color-text-primary)]">{readiness.score}</p>
-              </div>
-              <p className="m-0 mt-1.5 text-xs text-[var(--color-text-secondary)]">{readiness.rationale}</p>
-              <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-                <MetricMini label="Sueño" value={appleSignals?.sleep_hours != null ? `${appleSignals.sleep_hours.toFixed(1)} h` : "—"} />
-                <MetricMini label="HRV" value={appleSignals?.hrv_ms != null ? `${Math.round(appleSignals.hrv_ms)} ms` : "—"} />
-                <MetricMini label="FC reposo" value={appleSignals?.resting_hr_bpm != null ? `${Math.round(appleSignals.resting_hr_bpm)} bpm` : "—"} />
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] p-4 lg:col-span-4">
-              <div className="flex items-center justify-between gap-2">
-                <p className="m-0 text-[11px] uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">Registro reciente</p>
-                <button
-                  type="button"
-                  onClick={() => setShowSessionDetail((v) => !v)}
-                  className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-text-secondary)]"
-                >
-                  {showSessionDetail ? "Ocultar" : "Ver"}
-                  <ChevronDown className={`h-3.5 w-3.5 transition ${showSessionDetail ? "rotate-180" : ""}`} />
-                </button>
-              </div>
-              {lastSession ? (
-                <>
-                  <h3 className="m-0 mt-2 text-sm font-semibold text-[var(--color-text-primary)]">{lastSession.workoutName ?? "Sesión Hevy"}</h3>
-                  <p className="m-0 mt-1 text-xs text-[var(--color-text-secondary)]">
-                    {lastSession.duration ? `${Math.round(lastSession.duration)} min` : "Duración no disponible"} · {lastSession.totalSets ?? 0} sets · vol{" "}
-                    {Math.round(lastSession.volumeScore ?? 0)}
-                  </p>
-                  {showSessionDetail ? (
-                    <div className="mt-2 space-y-1.5">
-                      {topExercises.length > 0 ? (
-                        topExercises.map((line) => (
-                          <p key={line} className="m-0 rounded-lg bg-[var(--color-surface)] px-2 py-1.5 text-xs text-[var(--color-text-primary)]">
-                            {line}
-                          </p>
-                        ))
-                      ) : (
-                        <p className="m-0 text-xs text-[var(--color-text-secondary)]">Sin detalle de ejercicios en esta sesión.</p>
-                      )}
-                    </div>
-                  ) : null}
-                </>
-              ) : (
-                <p className="m-0 mt-2 text-xs text-[var(--color-text-secondary)]">
-                  Si esto te aporta como historial, lo mantenemos. Si prefieres, lo movemos a una vista de sesiones.
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      <Card>
-        <div className="p-[var(--spacing-lg)]">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p className="m-0 text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-secondary)]">Semana + agenda</p>
-              <p className="m-0 mt-1 text-sm text-[var(--color-text-secondary)]">Vista semanal inicia en lunes. Plan y agenda se coordinan aquí.</p>
-            </div>
+        <div className="p-[var(--spacing-lg)] sm:p-[calc(var(--spacing-lg)+2px)]">
+          <p className="m-0 text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-secondary)]">Decisión del día</p>
+          <p className="m-0 mt-1 text-sm font-medium text-[var(--color-text-primary)]">
+            Hoy está planeado <strong>{planVsExecution.plannedToday}</strong>. Decide rápido según carga y agenda.
+          </p>
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
             <button
               type="button"
-              onClick={() => {
-                void handleSuggestBlock()
-              }}
-              className="inline-flex min-h-8 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 text-xs font-medium text-[var(--color-text-primary)]"
+              onClick={() => (hasHevy ? window.open("https://hevy.com/app", "_blank", "noopener,noreferrer") : router.push("/configuracion#acordeon-config-hevy"))}
+              className="inline-flex min-h-10 w-full items-center justify-center rounded-xl border border-[var(--color-accent-health)] bg-[var(--color-accent-health)] px-3 text-xs font-semibold text-white sm:w-auto"
             >
-              Actualizar agenda
-            </button>
-          </div>
-          <div className="mt-3 overflow-x-auto">
-            <div className="min-w-[720px] grid-cols-7 gap-2 sm:grid">
-              {timeline.map((item) => (
-                <div key={item.date} className="mb-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] p-2.5 sm:mb-0">
-                  <p className="m-0 text-[11px] font-semibold text-[var(--color-text-primary)]">{item.label}</p>
-                  <p className="m-0 mt-1 text-xs text-[var(--color-text-primary)]">{item.plan}</p>
-                  <p className="m-0 mt-1 text-[11px] text-[var(--color-text-secondary)]">{item.executed ?? "Sin sesión"}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="mt-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] p-3">
-            <p className="m-0 text-[11px] uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">Agenda de hoy</p>
-            {agendaLoading ? (
-              <p className="m-0 mt-1.5 text-xs text-[var(--color-text-secondary)]">Comprobando agenda…</p>
-            ) : (agendaTasks ?? []).length > 0 ? (
-              <div className="mt-2 space-y-1.5">
-                {(agendaTasks ?? []).map((task) => (
-                  <p key={task.id} className="m-0 rounded-lg bg-[var(--color-surface)] px-2.5 py-1.5 text-xs text-[var(--color-text-primary)]">
-                    {task.title} · {task.status}
-                  </p>
-                ))}
-              </div>
-            ) : (
-              <p className="m-0 mt-1.5 text-xs text-[var(--color-text-secondary)]">
-                No hay bloque de entreno en agenda. Sugerencia: 45–60 min hoy con confirmación.
-              </p>
-            )}
-            <p className="m-0 mt-2 text-xs text-[var(--color-text-secondary)]">{planVsExecution.suggestion}</p>
-          </div>
-        </div>
-      </Card>
-
-      <TrainingVisualBodySection
-        goalImageUrl={prefs.goalImageUrl ?? ""}
-        goalImageDisplayKey={goalImageDisplayKey}
-        placeholderImageSrc="/training/visual-goal-placeholder.png"
-        visualGoalDescription={prefs.visualGoalDescription ?? ""}
-        visualGoalDeadlineYm={prefs.visualGoalDeadlineYm ?? ""}
-        visualGoalPriority={prefs.visualGoalPriority ?? "alta"}
-        bodyRows={bodyRows}
-        hints={hints}
-        prefsLoading={prefsLoading}
-        remotePrefs
-        fileInputRef={fileInputRef}
-        onPickImage={onPickImage}
-        onFileChange={onFileChange}
-        onVisualGoalDescriptionChange={(value) => updatePrefs({ visualGoalDescription: value })}
-        goalImageGenerating={goalImageGenerating}
-        goalImageAiMode={goalImageAiMode}
-        onGoalImageAiModeChange={setGoalImageAiMode}
-        onGenerateGoalWithAI={onGenerateGoalWithAI}
-      />
-
-      <Card>
-        <div className="p-[var(--spacing-lg)]">
-          <p className="m-0 text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-secondary)]">Lectura integrada + acciones</p>
-          {loading || appleLoading ? (
-            <p className="m-0 mt-2 text-sm text-[var(--color-text-secondary)]">Cargando señales de hoy…</p>
-          ) : (
-            <p className="m-0 mt-2 text-sm leading-relaxed text-[var(--color-text-primary)]">{insight.paragraph}</p>
-          )}
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setManualStatus("rest")}
-              className="inline-flex min-h-8 items-center justify-center rounded-full border border-[var(--color-border)] px-3 text-xs text-[var(--color-text-primary)]"
-            >
-              Marcar descanso
+              Ir a entrenamiento
             </button>
             <button
               type="button"
               onClick={() => setManualStatus("skip")}
-              className="inline-flex min-h-8 items-center justify-center rounded-full border border-[var(--color-border)] px-3 text-xs text-[var(--color-text-primary)]"
+              className="inline-flex min-h-10 w-full items-center justify-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 text-xs font-medium text-[var(--color-text-primary)] sm:w-auto"
             >
-              Reprogramar para mañana
+              Ajustar sesión
             </button>
             <button
               type="button"
-              onClick={() => {
-                void handleSuggestBlock()
-              }}
-              className="inline-flex min-h-8 items-center justify-center rounded-full border border-[var(--color-border)] px-3 text-xs text-[var(--color-text-primary)]"
+              onClick={() => router.push("/agenda")}
+              className="inline-flex min-h-10 w-full items-center justify-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 text-xs font-medium text-[var(--color-text-primary)] sm:w-auto"
             >
-              Ver agenda de hoy
+              Ajustar día
+            </button>
+            <button
+              type="button"
+              onClick={() => setManualStatus("rest")}
+              className="inline-flex min-h-10 w-full items-center justify-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 text-xs font-medium text-[var(--color-text-primary)] sm:w-auto"
+            >
+              Descansar / movilidad
             </button>
           </div>
-          <div className="mt-3 space-y-2">
-            <p className="m-0 rounded-xl bg-[var(--color-surface-alt)] px-2.5 py-2 text-xs text-[var(--color-text-primary)]">
-              <strong>Alineación:</strong> {goalAlignment.insight}
-            </p>
-            <p className="m-0 rounded-xl bg-[var(--color-surface-alt)] px-2.5 py-2 text-xs text-[var(--color-text-primary)]">
-              <Sparkles className="mr-1 inline h-3.5 w-3.5" />
-              {goalAlignment.actionables[0]}
-            </p>
+        </div>
+      </Card>
+
+      <Card>
+        <div className="p-[var(--spacing-lg)]">
+          <p className="m-0 text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-secondary)]">Sesión de hoy</p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <MetricMini label="Tipo" value={planVsExecution.plannedToday} />
+            <MetricMini label="Duración estimada" value={`${estimateSessionMinutes(today?.duration, planVsExecution.plannedToday)} min`} />
+            <MetricMini label="Enfoque muscular" value={plannedFocus} />
+            <MetricMini label="Estado" value={sessionStatus} />
           </div>
-          {!hasHevy ? (
-            <div className="mt-3">
-              <TrainingFallbackState
-                title="Sin sesiones recientes de Hevy"
-                detail="No encontramos sesiones estructuradas en los últimos días."
-                ctaLabel="Conectar o revisar Hevy"
-                onAction={handleRegister}
+          <div className="mt-3">
+            <Link
+              href={hasHevy ? "https://hevy.com/app" : "/configuracion#acordeon-config-hevy"}
+              target={hasHevy ? "_blank" : undefined}
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-[var(--color-accent-health)] bg-[var(--color-accent-health)] px-4 text-sm font-semibold text-white no-underline"
+            >
+              <Dumbbell className="h-4 w-4" />
+              {hasHevy ? (todayState === "completed" ? "Abrir Hevy" : "Iniciar en Hevy") : "Registrar entrenamiento"}
+            </Link>
+          </div>
+        </div>
+      </Card>
+
+      <Card>
+        <div className="p-[var(--spacing-lg)]">
+          <p className="m-0 text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-secondary)]">Carga semanal</p>
+          {loading || appleLoading ? (
+            <p className="m-0 mt-2 text-sm text-[var(--color-text-secondary)]">Cargando carga semanal…</p>
+          ) : hasLoadData ? (
+            <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              <MetricMini label="Entrenamientos semana" value={String(trainingsWeek)} />
+              <MetricMini label="Minutos entrenados" value={String(Math.round(firstNumber(minutesFromHevy, exerciseMinutes ?? 0) ?? 0))} />
+              <MetricMini label="Volumen estimado" value={volumeEstimated > 0 ? `${Math.round(volumeEstimated)}` : "—"} />
+              <MetricMini label="workouts_count" value={workoutsCount != null ? `${Math.round(workoutsCount)}` : "—"} />
+              <MetricMini label="active_energy_kcal" value={activeEnergyKcal != null ? `${Math.round(activeEnergyKcal)}` : "—"} />
+              <MetricMini
+                label="workouts_duration_seconds"
+                value={workoutsDurationSeconds != null ? `${Math.round(workoutsDurationSeconds)}` : "—"}
               />
+              <MetricMini label="training_load" value={trainingLoad != null ? `${Math.round(trainingLoad)}` : "—"} />
             </div>
-          ) : null}
-          {inconsistencies.length > 0 ? (
-            <div className="mt-3 space-y-2">
-              {inconsistencies.map((item) => (
-                <p key={item.id} className="m-0 rounded-xl bg-[var(--color-surface-alt)] px-2.5 py-2 text-xs text-[var(--color-text-primary)]">
-                  {item.message}
+          ) : (
+            <EmptyDataState />
+          )}
+          {steps != null ? <p className="m-0 mt-2 text-xs text-[var(--color-text-secondary)]">Pasos hoy: {Math.round(steps)}</p> : null}
+        </div>
+      </Card>
+
+      <Card>
+        <div className="p-[var(--spacing-lg)]">
+          <p className="m-0 text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-secondary)]">Progreso físico</p>
+          {bodyRows.length > 0 ? (
+            <>
+              <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                <MetricMini label="Peso" value={weightMetric ? `${weightMetric.current}` : "—"} />
+                <MetricMini label="Cintura" value={waistMetric ? `${waistMetric.current}` : "—"} />
+                <MetricMini label="Objetivo actual" value={objective} />
+              </div>
+              <div className="mt-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] p-3">
+                <p className="m-0 text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">Tendencia</p>
+                <div className="mt-2 flex items-end gap-1">
+                  {trendRows.map((row) => (
+                    <div key={row.label} className="flex-1">
+                      <div className="h-16 rounded-md bg-[var(--color-surface)] px-1 py-1">
+                        <div
+                          className="h-full rounded-sm bg-[var(--color-accent-health)]"
+                          style={{ height: `${Math.max(8, Math.min(100, row.progressPct))}%` }}
+                        />
+                      </div>
+                      <p className="m-0 mt-1 truncate text-[10px] text-[var(--color-text-secondary)]">{row.label}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="mt-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] p-3">
+                <p className="m-0 text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">Cómo me quiero ver</p>
+                <p className="m-0 mt-1 text-sm text-[var(--color-text-primary)]">
+                  {(prefs.visualGoalDescription ?? "").trim() || "Define tu objetivo visual para orientar el entrenamiento de la semana."}
                 </p>
-              ))}
-            </div>
+                <p className="m-0 mt-1 text-xs text-[var(--color-text-secondary)]">
+                  Prioridad: {prefs.visualGoalPriority ?? "alta"} {prefs.visualGoalDeadlineYm ? `· Meta ${prefs.visualGoalDeadlineYm}` : ""}
+                </p>
+              </div>
+            </>
+          ) : (
+            <EmptyDataState />
+          )}
+        </div>
+      </Card>
+
+      <Card>
+        <div className="p-[var(--spacing-lg)]">
+          <p className="m-0 text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-secondary)]">Hevy / Integración</p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <StatusChip
+              label={`Estado Hevy: ${hevyStatus}`}
+              tone={hevyStatus === "conectado" ? "ok" : hevyStatus === "pendiente" ? "warn" : "muted"}
+            />
+            <span className="text-xs text-[var(--color-text-secondary)]">Fuente principal: {dataMeta.sourceLabel || HEVY_INTEGRATION_LABEL}</span>
+          </div>
+          <p className="m-0 mt-2 text-sm text-[var(--color-text-primary)]">
+            {lastSession?.workoutName
+              ? `Último entrenamiento: ${lastSession.workoutName}${lastSession.duration ? ` · ${Math.round(lastSession.duration)} min` : ""}`
+              : "Aún no hay sesiones estructuradas recibidas."}
+          </p>
+          {latestTrainingAt ? (
+            <p className="m-0 mt-1 text-xs text-[var(--color-text-secondary)]">
+              Recibido: {new Date(latestTrainingAt).toLocaleString("es-CO")}
+            </p>
           ) : null}
-          {agendaLoading ? (
-            <p className="m-0 mt-2 text-xs text-[var(--color-text-secondary)]">Comprobando agenda…</p>
-          ) : agendaNotice ? (
-            <p className="m-0 mt-2 text-xs text-[var(--color-text-secondary)]">{agendaNotice}</p>
-          ) : null}
-          {trainingNotice ? <p className="m-0 mt-2 text-xs text-[var(--color-text-secondary)]">{trainingNotice}</p> : null}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {!hasHevy ? (
+              <button
+                type="button"
+                onClick={() => router.push("/configuracion#acordeon-config-hevy")}
+                className="inline-flex min-h-9 items-center justify-center rounded-xl border border-[var(--color-accent-health)] bg-[var(--color-accent-health)] px-3 text-xs font-semibold text-white"
+              >
+                Conectar Hevy
+              </button>
+            ) : (
+              <a
+                href="https://hevy.com/app"
+                target="_blank"
+                className="inline-flex min-h-9 items-center justify-center rounded-xl border border-[var(--color-accent-health)] bg-[var(--color-accent-health)] px-3 text-xs font-semibold text-white no-underline"
+              >
+                Abrir Hevy
+              </a>
+            )}
+            <button
+              type="button"
+              onClick={() => router.refresh()}
+              className="inline-flex min-h-9 items-center justify-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 text-xs font-medium text-[var(--color-text-primary)]"
+            >
+              Sincronizar
+            </button>
+            <Link
+              href="/configuracion#acordeon-config-hevy"
+              className="inline-flex min-h-9 items-center justify-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 text-xs font-medium text-[var(--color-text-primary)] no-underline"
+            >
+              Revisar conexión
+            </Link>
+          </div>
           {dataMeta.lastSyncAt ? (
             <p className="m-0 mt-2 inline-flex items-center gap-1 text-[11px] text-[var(--color-text-secondary)]">
               <Clock3 className="h-3.5 w-3.5" />
@@ -400,7 +255,7 @@ export default function TrainingPage() {
             </p>
           ) : null}
           {error ? (
-            <p className="m-0 mt-2 text-xs text-[var(--color-accent-finance)]">{error}</p>
+            <p className="m-0 mt-2 text-xs text-[var(--color-text-secondary)]">Aún no hay datos suficientes para estimar carga.</p>
           ) : null}
         </div>
       </Card>
@@ -413,6 +268,86 @@ function MetricMini({ label, value }: { label: string; value: string }) {
     <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5">
       <p className="m-0 text-[10px] uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">{label}</p>
       <p className="m-0 mt-1 text-xs font-semibold text-[var(--color-text-primary)]">{value}</p>
+    </div>
+  )
+}
+
+function resolveTrainingStatusChip(score: number, hasSignals: boolean) {
+  if (!hasSignals) return { label: "Sin datos suficientes", tone: "muted" as const }
+  if (score < 50) return { label: "Priorizar recuperación", tone: "risk" as const }
+  if (score >= 74) return { label: "Listo para entrenar", tone: "ok" as const }
+  return { label: "Carga moderada", tone: "warn" as const }
+}
+
+function StatusChip({ label, tone }: { label: string; tone: "ok" | "warn" | "risk" | "muted" }) {
+  const styles =
+    tone === "ok"
+      ? "border-[color:color-mix(in_srgb,var(--color-accent-health)_60%,white)] bg-[color:color-mix(in_srgb,var(--color-accent-health)_15%,transparent)] text-[var(--color-text-primary)]"
+      : tone === "warn"
+        ? "border-[color:color-mix(in_srgb,var(--color-accent-warning,#f59e0b)_55%,white)] bg-[color:color-mix(in_srgb,var(--color-accent-warning,#f59e0b)_14%,transparent)] text-[var(--color-text-primary)]"
+        : tone === "risk"
+          ? "border-[color:color-mix(in_srgb,var(--color-accent-finance)_60%,white)] bg-[color:color-mix(in_srgb,var(--color-accent-finance)_14%,transparent)] text-[var(--color-text-primary)]"
+          : "border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-secondary)]"
+  return <span className={`inline-flex rounded-full border px-3 py-1.5 text-xs font-semibold ${styles}`}>{label}</span>
+}
+
+function firstNumber(...values: Array<number | null | undefined>) {
+  for (const value of values) {
+    if (typeof value === "number" && Number.isFinite(value)) return value
+  }
+  return null
+}
+
+function shiftDays(ymd: string, days: number) {
+  const date = new Date(`${ymd}T12:00:00Z`)
+  date.setUTCDate(date.getUTCDate() + days)
+  return date.toISOString().slice(0, 10)
+}
+
+function focusForPlan(plan: string) {
+  const lower = plan.toLowerCase()
+  if (lower.includes("push")) return "Pecho, hombro y tríceps"
+  if (lower.includes("pull")) return "Espalda y bíceps"
+  if (lower.includes("leg") || lower.includes("lower") || lower.includes("pierna")) return "Pierna y cadena posterior"
+  if (lower.includes("upper")) return "Tren superior"
+  if (lower.includes("cardio")) return "Cardio y acondicionamiento"
+  return "General"
+}
+
+function estimateSessionMinutes(duration: number | undefined, plan: string) {
+  if (typeof duration === "number" && duration > 0) return Math.round(duration)
+  const lower = plan.toLowerCase()
+  if (lower.includes("cardio")) return 35
+  if (lower.includes("leg") || lower.includes("lower")) return 70
+  return 55
+}
+
+function deriveObjective(description: string | undefined) {
+  const text = (description ?? "").toLowerCase()
+  if (text.includes("defin")) return "Definición"
+  if (text.includes("manten")) return "Mantenimiento"
+  return "Volumen limpio"
+}
+
+function EmptyDataState() {
+  return (
+    <div className="mt-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] p-3">
+      <p className="m-0 text-sm text-[var(--color-text-secondary)]">Aún no hay datos suficientes para estimar carga.</p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <Link
+          href="/configuracion#acordeon-config-hevy"
+          className="inline-flex min-h-8 items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-xs font-medium text-[var(--color-text-primary)] no-underline"
+        >
+          Conectar Hevy
+        </Link>
+        <button
+          type="button"
+          onClick={() => window.open("https://hevy.com/app", "_blank", "noopener,noreferrer")}
+          className="inline-flex min-h-8 items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-xs font-medium text-[var(--color-text-primary)]"
+        >
+          Registrar entrenamiento
+        </button>
+      </div>
     </div>
   )
 }

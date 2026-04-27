@@ -1,12 +1,11 @@
 "use client"
 
 import Link from "next/link"
-import { Dumbbell } from "lucide-react"
 import { useOrbitaSkin } from "@/app/contexts/AppContext"
 import type { SaludDecisionBrief } from "@/lib/salud/saludDecisionBrief"
 import type { PlanVsExecution } from "@/lib/training/trainingOperationalDerivations"
 import { SALUD_SEM } from "@/lib/salud/saludSemanticPalette"
-import { saludHexToRgba, saludPanelStyle } from "@/lib/salud/saludThemeStyles"
+import { saludPanelStyle } from "@/lib/salud/saludThemeStyles"
 
 type Props = {
   brief: SaludDecisionBrief
@@ -36,29 +35,9 @@ export function TrainingBridgeCard({ brief, plan, hasHevy }: Props) {
       <p className="m-0 mt-2 text-xs leading-snug" style={{ color: theme.textMuted }}>
         {plan.suggestion}
       </p>
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Link
-          href="/training"
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-5 text-sm font-semibold no-underline"
-          style={{
-            borderColor: saludHexToRgba(SALUD_SEM.ok, 0.45),
-            backgroundColor: saludHexToRgba(SALUD_SEM.ok, 0.1),
-            color: theme.text,
-          }}
-        >
-          <Dumbbell className="h-4 w-4 shrink-0" aria-hidden />
-          Ir a entrenamiento
-        </Link>
-        {!hasHevy ? (
-          <Link
-            href="/configuracion#acordeon-config-hevy"
-            className="inline-flex min-h-11 items-center justify-center rounded-xl border px-4 text-sm font-medium no-underline"
-            style={{ borderColor: theme.border, color: theme.textMuted }}
-          >
-            Conectar Hevy
-          </Link>
-        ) : null}
-      </div>
+      <Link href="/training" className="m-0 mt-4 inline-flex text-xs font-semibold no-underline" style={{ color: theme.textMuted }}>
+        Ver recomendación en entrenamiento
+      </Link>
     </section>
   )
 }

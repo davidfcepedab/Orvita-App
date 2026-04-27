@@ -1,7 +1,6 @@
 "use client"
 
 import Link from "next/link"
-import { Dumbbell } from "lucide-react"
 import { useOrbitaSkin } from "@/app/contexts/AppContext"
 import type { SaludDecisionBrief } from "@/lib/salud/saludDecisionBrief"
 import { SALUD_SEM } from "@/lib/salud/saludSemanticPalette"
@@ -53,16 +52,13 @@ export function HeroDecisionCard({ brief, syncSummary }: Props) {
             {syncSummary}
           </p>
         </div>
-        <div className="flex w-full shrink-0 sm:w-auto sm:max-w-[12rem]">
-          <Link
-            href="/training"
-            className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold no-underline sm:min-h-11"
-            style={{ backgroundColor: theme.text, color: theme.bg }}
-          >
-            <Dumbbell className="h-4 w-4 shrink-0" aria-hidden />
-            Ir a entrenamiento
-          </Link>
-        </div>
+        <Link
+          href="/training"
+          className="text-[11px] font-semibold no-underline"
+          style={{ color: theme.textMuted }}
+        >
+          Ver recomendación en entrenamiento
+        </Link>
       </div>
     </section>
   )
