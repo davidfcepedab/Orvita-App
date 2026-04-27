@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
-import { connectBankingColombia } from "@/lib/integrations/banking-colombia"
+import {
+  connectBankingColombia,
+  createBelvoWidgetSession,
+  isBelvoBankingConfigured,
+} from "@/lib/integrations/banking-colombia"
+import { persistBankingConnectionRows } from "@/lib/integrations/persist-banking-connection"
 
 type BankProvider = "bancolombia" | "davivienda" | "nequi"
 
@@ -12,8 +17,8 @@ function toBankConnectErrorMessage(error: unknown) {
   if (lower.includes("integración bancaria real no configurada")) {
     return "Integración bancaria real no configurada en servidor. Configura BANKING_COLOMBIA_BASE_URL, CLIENT_ID, CLIENT_SECRET y REDIRECT_URI."
   }
-  if (lower.includes("oauth bancario falló")) {
-    return "El banco rechazó la autorización OAuth. Intenta de nuevo y confirma permisos en el banco."
+  if (lower.includes("belvo")) {
+    return raw.length > 280 ? `${raw.slice(0, 280)}…` : raw
   }
   return raw
 }
@@ -23,7 +28,13 @@ export async function POST(req: NextRequest) {
     const auth = await requireUser(req)
     if (auth instanceof NextResponse) return auth
     const { userId, supabase } = auth
-    const body = (await req.json().catch(() => ({}))) as { provider?: BankProvider; code?: string; state?: string }
+    const body = (await req.json().catch(() => ({}))) as {
+      provider?: BankProvider
+      code?: string
+      state?: string
+      flow?: "register" | "widget"
+      belvoInstitution?: string
+    }
     const provider = body.provider ?? "bancolombia"
     if (!["bancolombia", "davivienda", "nequi"].includes(provider)) {
       return NextResponse.json({ success: false, error: "Proveedor bancario no soportado." }, { status: 400 })
@@ -41,53 +52,45 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const nowIso = new Date().toISOString()
-    const connected = await connectBankingColombia({
+    if (body.flow === "widget") {
+      if (!isBelvoBankingConfigured()) {
+        return NextResponse.json(
+          { success: false, error: "Belvo no está configurado en el servidor (variables BANKING_COLOMBIA_*)." },
+          { status: 503 },
+        )
+      }
+      const session = await createBelvoWidgetSession({ locale: "es" })
+      return NextResponse.json({
+        success: true,
+        flow: "widget",
+        widgetAccessToken: session.access,
+        widgetUrl: session.widgetUrl,
+        connectionLabel: "Completa el enlace en la ventana de Belvo Sandbox.",
+      })
+    }
+
+    const connectedList = await connectBankingColombia({
       provider,
       authCode: body.code,
       state: body.state,
+      belvoInstitution: body.belvoInstitution,
     })
 
-    const { error: connError } = await supabase.from("integration_connections").upsert(
-      {
-        user_id: userId,
-        integration: provider,
-        provider_account_id: connected.providerAccountId,
-        access_token: connected.accessToken,
-        refresh_token: connected.refreshToken,
-        connected: true,
-        connected_at: nowIso,
-        last_synced_at: nowIso,
-        metadata: connected.metadata,
-        updated_at: nowIso,
-      },
-      { onConflict: "user_id,integration,provider_account_id" },
+    const { nowIso, accountsLinked, connectionLabel } = await persistBankingConnectionRows(
+      supabase,
+      userId,
+      provider,
+      connectedList,
     )
-    if (connError) throw new Error(connError.message)
-
-    const { error: accountError } = await supabase.from("bank_accounts").upsert(
-      {
-        user_id: userId,
-        provider,
-        account_name: connected.accountName,
-        account_mask: connected.accountMask,
-        balance_available: connected.balanceAvailable,
-        balance_current: connected.balanceCurrent,
-        last_synced_at: nowIso,
-        connected: true,
-        metadata: { source: "banking_colombia_real_adapter", ...connected.metadata },
-        updated_at: nowIso,
-      },
-      { onConflict: "user_id,provider,account_mask" },
-    )
-    if (accountError) throw new Error(accountError.message)
 
     return NextResponse.json({
       success: true,
       provider,
       connected: true,
       lastSyncAt: nowIso,
-      connectionLabel: `Conectado a ${provider[0].toUpperCase()}${provider.slice(1)}`,
+      accountsLinked,
+      connectionLabel,
+      integrationBackend: "belvo",
     })
   } catch (error) {
     const message = toBankConnectErrorMessage(error)

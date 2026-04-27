@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
 import { createNotificationForUser } from "@/lib/notifications/createNotification"
-import { syncBankingColombia } from "@/lib/integrations/banking-colombia"
+import { fetchBelvoAccountBalances, isBelvoBankingConfigured, syncBankingColombia } from "@/lib/integrations/banking-colombia"
 
 export const runtime = "nodejs"
+
+type BankProvider = "bancolombia" | "davivienda" | "nequi"
+
+function readBelvoAccountId(metadata: unknown): string | null {
+  if (!metadata || typeof metadata !== "object") return null
+  const id = (metadata as { belvo_account_id?: unknown }).belvo_account_id
+  return typeof id === "string" && id.trim() ? id.trim() : null
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,7 +21,7 @@ export async function POST(req: NextRequest) {
 
     const { data: accounts, error: accountsError } = await supabase
       .from("bank_accounts")
-      .select("id,provider,balance_current,account_name")
+      .select("id,provider,balance_current,account_name,metadata")
       .eq("user_id", userId)
       .eq("connected", true)
 
@@ -26,54 +34,113 @@ export async function POST(req: NextRequest) {
     let inserted = 0
     let netMonthly = 0
 
+    const byProvider = new Map<BankProvider, typeof accounts>()
     for (const account of accounts) {
+      const p = account.provider as BankProvider
+      if (!byProvider.has(p)) byProvider.set(p, [])
+      byProvider.get(p)!.push(account)
+    }
+
+    for (const [provider, providerAccounts] of byProvider) {
       const { data: conn, error: connError } = await supabase
         .from("integration_connections")
         .select("access_token")
         .eq("user_id", userId)
-        .eq("integration", account.provider)
+        .eq("integration", provider)
         .eq("connected", true)
         .limit(1)
         .maybeSingle()
       if (connError) throw new Error(connError.message)
       if (!conn?.access_token) {
-        throw new Error(`Falta token para ${account.provider}. Reconecta la cuenta en Configuración.`)
+        throw new Error(`Falta link Belvo para ${provider}. Reconecta la cuenta en Configuración.`)
       }
 
-      const externalTx = await syncBankingColombia({
-        provider: account.provider as "bancolombia" | "davivienda" | "nequi",
-        accessToken: conn.access_token,
-      })
+      const linkId = conn.access_token
+      let balanceByBelvoId: Map<string, { balanceAvailable: number; balanceCurrent: number }> | null = null
+      if (isBelvoBankingConfigured()) {
+        const bals = await fetchBelvoAccountBalances({ provider, linkId })
+        balanceByBelvoId = new Map(bals.map((b) => [b.belvoAccountId, b]))
+      }
 
-      const rows = externalTx.map((tx) => {
-        const signed = tx.direction === "credit" ? Math.abs(tx.amount) : -Math.abs(tx.amount)
-        netMonthly += signed
-        return {
-          user_id: userId,
-          bank_account_id: account.id,
-          posted_at: tx.postedAt,
-          description: tx.description,
-          amount: Math.abs(tx.amount),
-          direction: tx.direction,
-          category: tx.category,
-          metadata: { provider: account.provider, sync: "real_adapter_v1" },
+      for (const account of providerAccounts) {
+        const belvoAccountId = readBelvoAccountId(account.metadata)
+
+        const externalTx = await syncBankingColombia({
+          provider,
+          accessToken: linkId,
+          belvoAccountId,
+        })
+
+        for (const tx of externalTx) {
+          const signed = tx.direction === "credit" ? Math.abs(tx.amount) : -Math.abs(tx.amount)
+          netMonthly += signed
         }
-      })
-      const { error } = await supabase.from("transactions").insert(rows)
-      if (error) throw new Error(error.message)
-      inserted += rows.length
 
-      const { error: accountUpdateError } = await supabase
-        .from("bank_accounts")
-        .update({
-          balance_current:
-            Number(account.balance_current ?? 0) +
-            rows.reduce((sum, row) => sum + (row.direction === "credit" ? row.amount : -row.amount), 0),
+        let existingIds = new Set<string>()
+        if (externalTx.some((t) => t.externalId)) {
+          const { data: existingRows, error: exErr } = await supabase
+            .from("transactions")
+            .select("metadata")
+            .eq("bank_account_id", account.id)
+            .limit(5000)
+          if (exErr) throw new Error(exErr.message)
+          existingIds = new Set(
+            (existingRows ?? [])
+              .map((r) =>
+                r.metadata && typeof r.metadata === "object" && "belvo_transaction_id" in r.metadata
+                  ? String((r.metadata as { belvo_transaction_id?: string }).belvo_transaction_id ?? "")
+                  : "",
+              )
+              .filter(Boolean),
+          )
+        }
+
+        const rows = externalTx
+          .filter((tx) => !tx.externalId || !existingIds.has(tx.externalId))
+          .map((tx) => {
+            const signed = tx.direction === "credit" ? Math.abs(tx.amount) : -Math.abs(tx.amount)
+            return {
+              user_id: userId,
+              bank_account_id: account.id,
+              posted_at: tx.postedAt,
+              description: tx.description,
+              amount: Math.abs(tx.amount),
+              direction: tx.direction,
+              category: tx.category,
+              metadata: {
+                provider,
+                sync: "belvo",
+                belvo_transaction_id: tx.externalId,
+              },
+            }
+          })
+
+        if (rows.length > 0) {
+          const { error } = await supabase.from("transactions").insert(rows)
+          if (error) throw new Error(error.message)
+          inserted += rows.length
+        }
+
+        let nextBalance: number | null = null
+        let nextAvailable: number | null = null
+        if (balanceByBelvoId && belvoAccountId) {
+          const b = balanceByBelvoId.get(belvoAccountId)
+          if (b) {
+            nextBalance = b.balanceCurrent
+            nextAvailable = b.balanceAvailable
+          }
+        }
+
+        const patch: Record<string, unknown> = {
           last_synced_at: nowIso,
           updated_at: nowIso,
-        })
-        .eq("id", account.id)
-      if (accountUpdateError) throw new Error(accountUpdateError.message)
+        }
+        if (nextBalance != null) patch.balance_current = nextBalance
+        if (nextAvailable != null) patch.balance_available = nextAvailable
+
+        const { error: accountUpdateError } = await supabase.from("bank_accounts").update(patch).eq("id", account.id)
+        if (accountUpdateError) throw new Error(accountUpdateError.message)
+      }
     }
 
     const { error: connUpdateError } = await supabase
@@ -84,13 +151,18 @@ export async function POST(req: NextRequest) {
     if (connUpdateError) throw new Error(connUpdateError.message)
 
     if (netMonthly < 0) {
+      const formatted = new Intl.NumberFormat("es-CO", {
+        style: "currency",
+        currency: "COP",
+        maximumFractionDigits: 0,
+      }).format(Math.round(netMonthly))
       await createNotificationForUser({
         userId,
         title: "Presión de caja detectada",
-        body: "Tus movimientos conectados muestran flujo neto negativo. Revisa Capital para conciliar.",
+        body: `Flujo neto negativo (~${formatted}) en movimientos sincronizados (Belvo). Revisa Capital para conciliar y priorizar salidas.`,
         category: "finance",
         link: "/finanzas/overview",
-        metadata: { source: "bank_sync", netMonthly },
+        metadata: { source: "bank_sync_belvo", netMonthly },
       })
     }
 
@@ -100,7 +172,8 @@ export async function POST(req: NextRequest) {
       transactionsImported: inserted,
       netMonthly,
       syncedAt: nowIso,
-      statusLabel: accounts.length > 0 ? `Conectado a ${accounts[0]?.provider ?? "banco"}` : "No conectado",
+      integrationBackend: isBelvoBankingConfigured() ? "belvo_sandbox" : "mock",
+      statusLabel: accounts.length > 0 ? "Conectado vía Belvo Sandbox" : "No conectado",
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : "No se pudo sincronizar banca"

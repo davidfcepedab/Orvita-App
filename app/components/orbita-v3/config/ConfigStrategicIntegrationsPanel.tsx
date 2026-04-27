@@ -49,7 +49,7 @@ type BankingAccount = {
 type ToggleKey = "health_enabled" | "banking_enabled" | "push_enhanced_enabled"
 const TOGGLE_OPTIONS: Array<{ key: ToggleKey; label: string }> = [
   { key: "health_enabled", label: "Salud automática" },
-  { key: "banking_enabled", label: "Banca abierta" },
+  { key: "banking_enabled", label: "Banca abierta (Belvo Sandbox)" },
   { key: "push_enhanced_enabled", label: "Push inteligente" },
 ]
 
@@ -245,6 +245,27 @@ export function ConfigStrategicIntegrationsPanel({
     }
   }
 
+  const syncBankingOnly = async () => {
+    setBusy("bank-sync")
+    setError(null)
+    setNotice(null)
+    try {
+      const headers = await browserBearerHeaders()
+      const syncRes = await fetch("/api/integrations/banking/sync", { method: "POST", headers })
+      const syncPayload = (await syncRes.json()) as { success?: boolean; error?: string }
+      if (!syncRes.ok || !syncPayload.success) {
+        throw new Error(syncPayload.error ?? "No se pudo sincronizar banca")
+      }
+      await load()
+      setNotice("Belvo Sandbox: sincronización completada.")
+    } catch (e) {
+      setLastFailedAction("banking")
+      setError(e instanceof Error ? e.message : "Error sincronizando banca")
+    } finally {
+      setBusy(null)
+    }
+  }
+
   const connectBank = async (provider: "bancolombia" | "davivienda" | "nequi") => {
     setBusy(`bank-${provider}`)
     setError(null)
@@ -254,7 +275,7 @@ export function ConfigStrategicIntegrationsPanel({
       const connectRes = await fetch("/api/integrations/banking/connect", {
         method: "POST",
         headers,
-        body: JSON.stringify({ provider }),
+        body: JSON.stringify({ provider, flow: "register" }),
       })
       const connectPayload = (await connectRes.json()) as { success?: boolean; error?: string; connectionLabel?: string }
       if (!connectRes.ok || !connectPayload.success) {
@@ -507,12 +528,23 @@ export function ConfigStrategicIntegrationsPanel({
       style={unified ? undefined : { backgroundColor: theme.surface, borderColor: theme.border }}
     >
       <p className="m-0 text-sm font-medium" style={{ color: theme.text }}>
-        Bancos en Colombia
+        Banca abierta (Belvo Sandbox)
       </p>
       <p className="m-0 mt-1 text-[11px] leading-relaxed sm:text-xs" style={{ color: theme.textMuted }}>
-        Bancolombia, Davivienda o Nequi (Open Finance, cuando apliquen).
+        Agregación en sandbox: credenciales en servidor, link y widget según Belvo. Colombia (Bancolombia, Davivienda, Nequi) según institución configurada en Vercel.
       </p>
       <div className="mt-2.5 flex flex-wrap gap-1.5">
+        <button
+          type="button"
+          onClick={() => void syncBankingOnly()}
+          disabled={busy === "bank-sync" || !settings.banking_enabled || bankAccounts.length === 0}
+          className="inline-flex min-h-8 items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-semibold transition hover:-translate-y-[1px] hover:shadow-sm disabled:pointer-events-none disabled:opacity-40"
+          style={{ borderColor: theme.accent.finance, color: "#fff", backgroundColor: theme.accent.finance }}
+          title="Importar movimientos y actualizar saldos desde Belvo."
+        >
+          <RefreshCw className="h-3 w-3.5" aria-hidden />
+          {busy === "bank-sync" ? "…" : "Sincronizar ahora"}
+        </button>
         {(["bancolombia", "davivienda", "nequi"] as const).map((provider) => (
           <button
             key={provider}
@@ -521,7 +553,7 @@ export function ConfigStrategicIntegrationsPanel({
             disabled={busy === `bank-${provider}` || !settings.banking_enabled}
             className="inline-flex min-h-8 min-w-[8.25rem] items-center justify-between gap-1.5 rounded-full border px-3 py-1 text-[11px] font-medium transition hover:-translate-y-[1px] hover:shadow-sm disabled:pointer-events-none disabled:opacity-40"
             style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surfaceAlt }}
-            title={`Conectar ${provider}`}
+            title={`Registrar link sandbox · ${provider}`}
           >
             <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: theme.accent.finance }} />
             <span>{busy === `bank-${provider}` ? "…" : provider[0].toUpperCase() + provider.slice(1)}</span>
@@ -530,8 +562,8 @@ export function ConfigStrategicIntegrationsPanel({
       </div>
       <p className="mt-2.5 text-[11px]" style={{ color: theme.textMuted }}>
         {bankAccounts.length > 0
-          ? `${bankAccounts.length} cuenta(s) · ${formatRelativeSyncAgo(bankLastSync)}`
-          : `Sin banca · ${formatRelativeSyncAgo(bankLastSync)}`}
+          ? `${bankAccounts.length} cuenta(s) vía Belvo Sandbox · ${formatRelativeSyncAgo(bankLastSync)}`
+          : `Sin cuentas · ${formatRelativeSyncAgo(bankLastSync)}`}
       </p>
     </div>
   )
@@ -574,7 +606,7 @@ export function ConfigStrategicIntegrationsPanel({
     ) : !settings.banking_enabled ? (
       <ConfigConnectionPill state="disabled" disconnectedLabel="Banca inactiva" />
     ) : bankAccounts.length > 0 ? (
-      <ConfigConnectionPill state="connected" connectedLabel="Banca lista" />
+      <ConfigConnectionPill state="connected" connectedLabel="Belvo listo" />
     ) : (
       <ConfigConnectionPill state="disconnected" disconnectedLabel="Conectar" />
     )
@@ -607,7 +639,7 @@ export function ConfigStrategicIntegrationsPanel({
           <div className="flex flex-col gap-0">
             {makeTogglesBlock(
               ["banking_enabled", "push_enhanced_enabled"],
-              "Banca y avisos del sistema.",
+              "Banca abierta (Belvo Sandbox) y avisos del sistema.",
               "accordion",
             )}
             {bankBlock}
