@@ -151,7 +151,7 @@ describe("normalizeAppleHealthPayload", () => {
     expect(r.normalized.sleep_duration_seconds).toBe(34513)
   })
 
-  test("sleep_duration_seconds agregada > 24h (Atajos) se acepta y capa a 1 día", () => {
+  test("sleep_duration_seconds > 24h y ≤ 36h se acepta sin capar a 24h", () => {
     const r = normalizeAppleHealthPayload({
       apple_bundle: {
         observed_at: "2026-04-25",
@@ -165,7 +165,137 @@ describe("normalizeAppleHealthPayload", () => {
     })
     expect(r.ok).toBe(true)
     if (!r.ok) return
-    expect(r.normalized.sleep_duration_seconds).toBe(86_400)
+    expect(r.normalized.sleep_duration_seconds).toBe(113_278)
+    expect(r.normalized.sleep_hours).toBeCloseTo(113_278 / 3600, 2)
+    expect(r.accepted_metrics).toEqual(expect.arrayContaining(["sleep_duration_seconds", "sleep_hours"]))
+  })
+
+  test("sleep_duration_seconds > 36h se capa a 36h", () => {
+    const r = normalizeAppleHealthPayload({
+      apple_bundle: {
+        observed_at: "2026-04-25",
+        steps: 1,
+        hrv_ms: 30,
+        resting_hr_bpm: 50,
+        active_energy_kcal: 0,
+        workouts_duration_seconds: 0,
+        sleep_duration_seconds: 200_000,
+      },
+    })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.normalized.sleep_duration_seconds).toBe(36 * 3600)
+  })
+
+  test("solo sleep_hours se acepta y deriva sleep_duration_seconds", () => {
+    const r = normalizeAppleHealthPayload({
+      apple_bundle: {
+        observed_at: "2026-04-25",
+        steps: 1,
+        hrv_ms: 30,
+        resting_hr_bpm: 50,
+        active_energy_kcal: 0,
+        workouts_duration_seconds: 0,
+        sleep_hours: 7.5,
+      },
+    })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.accepted_metrics).toEqual(expect.arrayContaining(["sleep_hours", "sleep_duration_seconds"]))
+    expect(r.normalized.sleep_duration_seconds).toBe(27_000)
+  })
+
+  test("alias vo2max → vo2_max; vo2max = 0 se ignora", () => {
+    const ok = normalizeAppleHealthPayload({
+      apple_bundle: {
+        observed_at: "2026-04-25",
+        steps: 1,
+        hrv_ms: 30,
+        resting_hr_bpm: 50,
+        active_energy_kcal: 0,
+        workouts_duration_seconds: 0,
+        sleep_duration_seconds: 1,
+        vo2max: 48.2,
+      },
+    })
+    expect(ok.ok).toBe(true)
+    if (!ok.ok) return
+    expect(ok.normalized.vo2_max).toBe(48.2)
+    expect(ok.accepted_metrics).toContain("vo2_max")
+
+    const zero = normalizeAppleHealthPayload({
+      apple_bundle: {
+        observed_at: "2026-04-25",
+        steps: 1,
+        hrv_ms: 30,
+        resting_hr_bpm: 50,
+        active_energy_kcal: 0,
+        workouts_duration_seconds: 0,
+        sleep_duration_seconds: 1,
+        vo2max: 0,
+      },
+    })
+    expect(zero.ok).toBe(true)
+    if (!zero.ok) return
+    expect(zero.normalized.vo2_max).toBeUndefined()
+    expect(zero.accepted_metrics).not.toContain("vo2_max")
+  })
+
+  test("alias distance_meters → walking_running_m", () => {
+    const r = normalizeAppleHealthPayload({
+      apple_bundle: {
+        observed_at: "2026-04-25",
+        steps: 1,
+        hrv_ms: 30,
+        resting_hr_bpm: 50,
+        active_energy_kcal: 0,
+        workouts_duration_seconds: 0,
+        sleep_duration_seconds: 1,
+        distance_meters: 5234.7,
+      },
+    })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.normalized.walking_running_m).toBe(5235)
+    expect(r.accepted_metrics).toContain("walking_running_m")
+  })
+
+  test("alias walking_heart_rate_avg → walking_hr_avg", () => {
+    const r = normalizeAppleHealthPayload({
+      apple_bundle: {
+        observed_at: "2026-04-25",
+        steps: 1,
+        hrv_ms: 30,
+        resting_hr_bpm: 50,
+        active_energy_kcal: 0,
+        workouts_duration_seconds: 0,
+        sleep_duration_seconds: 1,
+        walking_heart_rate_avg: 112,
+      },
+    })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.normalized.walking_hr_avg).toBe(112)
+    expect(r.accepted_metrics).toContain("walking_hr_avg")
+  })
+
+  test("deriva training_load y recovery_score_proxy si faltan", () => {
+    const r = normalizeAppleHealthPayload({
+      apple_bundle: {
+        observed_at: "2026-04-25",
+        steps: 100,
+        hrv_ms: 50,
+        resting_hr_bpm: 50,
+        active_energy_kcal: 200,
+        workouts_duration_seconds: 3600,
+        sleep_duration_seconds: 28_800,
+      },
+    })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.normalized.training_load).toBeCloseTo(1840, 5)
+    expect(r.normalized.recovery_score_proxy).toBe(10)
+    expect(r.accepted_metrics).toEqual(expect.arrayContaining(["training_load", "recovery_score_proxy"]))
   })
 })
 

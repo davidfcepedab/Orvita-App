@@ -1,27 +1,42 @@
-import { APPLE_BUNDLE_MAPPED_KEYS } from "@/lib/integrations/appleHealthBundleContract"
+import {
+  APPLE_BUNDLE_MAPPED_KEYS,
+  APPLE_SHORTCUT_BUNDLE_INPUT_KEYS,
+  normalizeOxygenToSpo2Pct,
+  type AppleShortcutBundleInputKey,
+} from "@/lib/integrations/appleHealthBundleContract"
 
 const RESERVED_BODY_KEYS = new Set(["source", "schema_version", "import_token", "entries", "apple_bundle"])
 
-export const APPLE_IMPORT_METRIC_KEYS = [
-  "steps",
-  "hrv_ms",
-  "resting_hr_bpm",
-  "active_energy_kcal",
-  "workouts_duration_seconds",
-  "sleep_duration_seconds",
-  "sleep_hours",
-] as const
+/** Claves de métricas reconocidas en cuerpo plano (sin `observed_at`). */
+export const APPLE_IMPORT_METRIC_KEYS = APPLE_SHORTCUT_BUNDLE_INPUT_KEYS.filter((k) => k !== "observed_at")
 
-export type AppleImportMetricKey = (typeof APPLE_IMPORT_METRIC_KEYS)[number]
+export type AppleImportMetricKey = Exclude<AppleShortcutBundleInputKey, "observed_at">
 
 export type NormalizedAppleHealthMetrics = {
   steps?: number
+  exercise_minutes?: number
+  active_energy_kcal?: number
+  sleep_hours?: number
+  sleep_duration_seconds?: number
+  sleep_sessions_count?: number
   /** ms, 1 decimal */
   hrv_ms?: number
   resting_hr_bpm?: number
-  active_energy_kcal?: number
+  workouts_count?: number
+  workouts_minutes?: number
   workouts_duration_seconds?: number
-  sleep_duration_seconds?: number
+  walking_running_m?: number
+  stand_minutes?: number
+  readiness_score?: number
+  vo2_max?: number
+  spo2_pct?: number
+  respiratory_rate?: number
+  walking_hr_avg?: number
+  walking_speed_m_s?: number
+  six_minute_walk_m?: number
+  body_mass_kg?: number
+  training_load?: number
+  recovery_score_proxy?: number
 }
 
 type Ok = {
@@ -200,6 +215,88 @@ function takeMetric(
   return r.v
 }
 
+function takeMetricFirst(
+  bundle: Record<string, unknown>,
+  keys: readonly string[],
+  validate: (n: number) => { v: number } | { err: string },
+  field_errors: Record<string, string>,
+): number | undefined {
+  for (const key of keys) {
+    const c = coalesceNumericHealth(bundle[key])
+    if (c === null) continue
+    const r = validate(c)
+    if ("err" in r) {
+      field_errors[key] = r.err
+      continue
+    }
+    return r.v
+  }
+  return undefined
+}
+
+const MAX_SLEEP_SECONDS = 36 * 3600
+
+/** Orden estable de `accepted_metrics` en respuestas API. */
+const ACCEPTED_METRICS_STABLE_ORDER: (keyof NormalizedAppleHealthMetrics)[] = [
+  "steps",
+  "exercise_minutes",
+  "active_energy_kcal",
+  "sleep_duration_seconds",
+  "sleep_hours",
+  "sleep_sessions_count",
+  "hrv_ms",
+  "resting_hr_bpm",
+  "workouts_count",
+  "workouts_minutes",
+  "workouts_duration_seconds",
+  "walking_running_m",
+  "stand_minutes",
+  "readiness_score",
+  "vo2_max",
+  "spo2_pct",
+  "respiratory_rate",
+  "walking_hr_avg",
+  "walking_speed_m_s",
+  "six_minute_walk_m",
+  "body_mass_kg",
+  "training_load",
+  "recovery_score_proxy",
+]
+
+function sortAcceptedMetrics(accepted: (keyof NormalizedAppleHealthMetrics)[]): (keyof NormalizedAppleHealthMetrics)[] {
+  const bag = new Set(accepted)
+  const seen = new Set<string>()
+  const out: (keyof NormalizedAppleHealthMetrics)[] = []
+  for (const k of ACCEPTED_METRICS_STABLE_ORDER) {
+    if (bag.has(k) && !seen.has(k)) {
+      out.push(k)
+      seen.add(k)
+    }
+  }
+  for (const k of accepted) {
+    if (!seen.has(k)) {
+      out.push(k)
+      seen.add(k)
+    }
+  }
+  return out
+}
+
+function takeVo2Max(bundle: Record<string, unknown>, field_errors: Record<string, string>): number | undefined {
+  for (const key of ["vo2_max", "vo2max"] as const) {
+    const c = coalesceNumericHealth(bundle[key])
+    if (c === null) continue
+    if (c === 0) continue
+    if (!Number.isFinite(c)) {
+      field_errors[key] = "not a finite number"
+      continue
+    }
+    const v = Math.min(90, Math.max(10, Math.round(c * 10) / 10))
+    return v
+  }
+  return undefined
+}
+
 function collectNumericExtras(bundle: Record<string, unknown>, field_errors: Record<string, string>) {
   const out: Record<string, number> = {}
   for (const [k, v] of Object.entries(bundle)) {
@@ -304,6 +401,10 @@ export function normalizeAppleHealthPayload(input: unknown): NormalizeAppleHealt
   const n: NormalizedAppleHealthMetrics = {}
   const accepted: (keyof NormalizedAppleHealthMetrics)[] = []
 
+  const pushAcc = (key: keyof NormalizedAppleHealthMetrics) => {
+    accepted.push(key)
+  }
+
   const steps = takeMetric(
     bundle,
     "steps",
@@ -312,19 +413,30 @@ export function normalizeAppleHealthPayload(input: unknown): NormalizeAppleHealt
   )
   if (steps !== undefined) {
     n.steps = steps
-    accepted.push("steps")
+    pushAcc("steps")
+  }
+
+  const exercise = takeMetric(
+    bundle,
+    "exercise_minutes",
+    (v) => (v >= 0 && v <= 1440 ? { v: Math.round(v) } : { err: "must be 0–1440" }),
+    field_errors,
+  )
+  if (exercise !== undefined) {
+    n.exercise_minutes = exercise
+    pushAcc("exercise_minutes")
   }
 
   const hrv = takeMetric(
     bundle,
     "hrv_ms",
     (v) =>
-      v > 0 && v < 300 ? { v: Math.round(v * 10) / 10 } : { err: "must be > 0 and < 300 (ms)" },
+      v >= 5 && v <= 250 ? { v: Math.round(v * 10) / 10 } : { err: "must be 5–250 (ms)" },
     field_errors,
   )
   if (hrv !== undefined) {
     n.hrv_ms = hrv
-    accepted.push("hrv_ms")
+    pushAcc("hrv_ms")
   }
 
   const rhr = takeMetric(
@@ -335,7 +447,7 @@ export function normalizeAppleHealthPayload(input: unknown): NormalizeAppleHealt
   )
   if (rhr !== undefined) {
     n.resting_hr_bpm = rhr
-    accepted.push("resting_hr_bpm")
+    pushAcc("resting_hr_bpm")
   }
 
   const aek = takeMetric(
@@ -346,7 +458,7 @@ export function normalizeAppleHealthPayload(input: unknown): NormalizeAppleHealt
   )
   if (aek !== undefined) {
     n.active_energy_kcal = aek
-    accepted.push("active_energy_kcal")
+    pushAcc("active_energy_kcal")
   }
 
   const wds = takeMetric(
@@ -357,37 +469,208 @@ export function normalizeAppleHealthPayload(input: unknown): NormalizeAppleHealt
   )
   if (wds !== undefined) {
     n.workouts_duration_seconds = wds
-    accepted.push("workouts_duration_seconds")
+    pushAcc("workouts_duration_seconds")
   }
 
-  let sleepSec = takeMetric(
+  const wCount = takeMetric(
+    bundle,
+    "workouts_count",
+    (v) => (v >= 0 && v <= 50 ? { v: Math.round(v) } : { err: "must be 0–50" }),
+    field_errors,
+  )
+  if (wCount !== undefined) {
+    n.workouts_count = wCount
+    pushAcc("workouts_count")
+  }
+
+  const wMin = takeMetric(
+    bundle,
+    "workouts_minutes",
+    (v) => (v >= 0 && v <= 1440 ? { v: Math.round(v) } : { err: "must be 0–1440" }),
+    field_errors,
+  )
+  if (wMin !== undefined) {
+    n.workouts_minutes = wMin
+    pushAcc("workouts_minutes")
+  }
+
+  const stand = takeMetric(
+    bundle,
+    "stand_minutes",
+    (v) => (v >= 0 && v <= 1440 ? { v: Math.round(v) } : { err: "must be 0–1440" }),
+    field_errors,
+  )
+  if (stand !== undefined) {
+    n.stand_minutes = stand
+    pushAcc("stand_minutes")
+  }
+
+  const readiness = takeMetric(
+    bundle,
+    "readiness_score",
+    (v) => (v >= 0 && v <= 100 ? { v: Math.round(v) } : { err: "must be 0–100" }),
+    field_errors,
+  )
+  if (readiness !== undefined) {
+    n.readiness_score = readiness
+    pushAcc("readiness_score")
+  }
+
+  const sleepSessions = takeMetric(
+    bundle,
+    "sleep_sessions_count",
+    (v) => (v >= 0 && v <= 80 ? { v: Math.round(v) } : { err: "must be 0–80" }),
+    field_errors,
+  )
+  if (sleepSessions !== undefined) {
+    n.sleep_sessions_count = sleepSessions
+    pushAcc("sleep_sessions_count")
+  }
+
+  const walkRun = takeMetricFirst(
+    bundle,
+    ["walking_running_m", "distance_meters"],
+    (v) => (v >= 0 && v <= 100_000 ? { v: Math.round(v) } : { err: "must be 0–100000 m" }),
+    field_errors,
+  )
+  if (walkRun !== undefined) {
+    n.walking_running_m = walkRun
+    pushAcc("walking_running_m")
+  }
+
+  const walkHr = takeMetricFirst(
+    bundle,
+    ["walking_hr_avg", "walking_heart_rate_avg"],
+    (v) => (v >= 40 && v <= 200 ? { v: Math.round(v) } : { err: "must be 40–200" }),
+    field_errors,
+  )
+  if (walkHr !== undefined) {
+    n.walking_hr_avg = walkHr
+    pushAcc("walking_hr_avg")
+  }
+
+  const walkSpeed = takeMetric(
+    bundle,
+    "walking_speed_m_s",
+    (v) => (v >= 0 && v <= 4 ? { v: Math.round(v * 100) / 100 } : { err: "must be 0–4" }),
+    field_errors,
+  )
+  if (walkSpeed !== undefined) {
+    n.walking_speed_m_s = walkSpeed
+    pushAcc("walking_speed_m_s")
+  }
+
+  const sixWalk = takeMetric(
+    bundle,
+    "six_minute_walk_m",
+    (v) => (v >= 0 && v <= 2000 ? { v: Math.round(v) } : { err: "must be 0–2000" }),
+    field_errors,
+  )
+  if (sixWalk !== undefined) {
+    n.six_minute_walk_m = sixWalk
+    pushAcc("six_minute_walk_m")
+  }
+
+  const bodyMass = takeMetric(
+    bundle,
+    "body_mass_kg",
+    (v) => (v >= 25 && v <= 300 ? { v: Math.round(v * 10) / 10 } : { err: "must be 25–300" }),
+    field_errors,
+  )
+  if (bodyMass !== undefined) {
+    n.body_mass_kg = bodyMass
+    pushAcc("body_mass_kg")
+  }
+
+  const resp = takeMetric(
+    bundle,
+    "respiratory_rate",
+    (v) => (v >= 4 && v <= 40 ? { v: Math.round(v * 10) / 10 } : { err: "must be 4–40" }),
+    field_errors,
+  )
+  if (resp !== undefined) {
+    n.respiratory_rate = resp
+    pushAcc("respiratory_rate")
+  }
+
+  const tlIn = takeMetric(
+    bundle,
+    "training_load",
+    (v) => (v >= 0 && v <= 1_000_000 ? { v: Math.round(v * 10) / 10 } : { err: "must be 0–1e6" }),
+    field_errors,
+  )
+  if (tlIn !== undefined) {
+    n.training_load = tlIn
+    pushAcc("training_load")
+  }
+
+  const recIn = takeMetric(
+    bundle,
+    "recovery_score_proxy",
+    (v) => (v >= 0 && v <= 500 ? { v: Math.round(v * 10) / 10 } : { err: "must be 0–500" }),
+    field_errors,
+  )
+  if (recIn !== undefined) {
+    n.recovery_score_proxy = recIn
+    pushAcc("recovery_score_proxy")
+  }
+
+  const vo2 = takeVo2Max(bundle, field_errors)
+  if (vo2 !== undefined) {
+    n.vo2_max = vo2
+    pushAcc("vo2_max")
+  }
+
+  const oxyIn = coalesceNumericHealth(bundle.oxygen_saturation_avg)
+  const spo2In = coalesceNumericHealth(bundle.spo2_pct)
+  if (oxyIn != null && Number.isFinite(oxyIn)) {
+    n.spo2_pct = normalizeOxygenToSpo2Pct(oxyIn)
+    pushAcc("spo2_pct")
+  } else if (spo2In != null && Number.isFinite(spo2In)) {
+    n.spo2_pct = normalizeOxygenToSpo2Pct(spo2In)
+    pushAcc("spo2_pct")
+  }
+
+  const sleepSec = takeMetric(
     bundle,
     "sleep_duration_seconds",
-    (v) =>
-      v >= 0 && v <= 200_000
-        ? { v: Math.min(Math.round(v), 86_400) }
-        : { err: "must be 0–200000s (capped to 1 day for storage)" },
+    (v) => (v >= 0 ? { v: Math.min(Math.round(v), MAX_SLEEP_SECONDS) } : { err: "must be >= 0" }),
     field_errors,
   )
   if (sleepSec !== undefined) {
     n.sleep_duration_seconds = sleepSec
-    accepted.push("sleep_duration_seconds")
+    pushAcc("sleep_duration_seconds")
+    n.sleep_hours = Math.round((sleepSec / 3600) * 1000) / 1000
+    pushAcc("sleep_hours")
   } else {
     const sh = takeMetric(
       bundle,
       "sleep_hours",
-      (v) => (v >= 0 && v <= 24 ? { v: v } : { err: "must be 0–24 h" }),
+      (v) => (v >= 0 && v <= 36 ? { v: Math.round(v * 1000) / 1000 } : { err: "must be 0–36 h" }),
       field_errors,
     )
     if (sh !== undefined) {
-      const sec = Math.round(sh * 3600)
-      if (sec > 86_400) {
-        field_errors.sleep_hours = "implies more than 24h sleep"
-      } else {
-        n.sleep_duration_seconds = sec
-        accepted.push("sleep_duration_seconds")
-      }
+      n.sleep_hours = sh
+      pushAcc("sleep_hours")
+      const sec = Math.min(Math.round(sh * 3600), MAX_SLEEP_SECONDS)
+      n.sleep_duration_seconds = sec
+      pushAcc("sleep_duration_seconds")
     }
+  }
+
+  if (n.training_load === undefined && n.workouts_duration_seconds != null && n.active_energy_kcal != null) {
+    n.training_load = Math.round((n.workouts_duration_seconds * 0.5 + n.active_energy_kcal * 0.2) * 10) / 10
+    pushAcc("training_load")
+  }
+
+  if (
+    n.recovery_score_proxy === undefined &&
+    n.hrv_ms != null &&
+    n.resting_hr_bpm != null &&
+    n.resting_hr_bpm > 0
+  ) {
+    n.recovery_score_proxy = Math.round(((n.hrv_ms / n.resting_hr_bpm) * 10) * 10) / 10
+    pushAcc("recovery_score_proxy")
   }
 
   const extras = collectNumericExtras(bundle, field_errors)
@@ -404,9 +687,6 @@ export function normalizeAppleHealthPayload(input: unknown): NormalizeAppleHealt
   }
 
   const synthetic_bundle: Record<string, unknown> = { ...bundle, observed_at, ...n }
-  if (n.sleep_duration_seconds != null) {
-    synthetic_bundle.sleep_duration_seconds = n.sleep_duration_seconds
-  }
 
   return {
     ok: true,
@@ -414,7 +694,7 @@ export function normalizeAppleHealthPayload(input: unknown): NormalizeAppleHealt
     observed_at_inferred,
     source_label,
     observed_at_iso,
-    accepted_metrics: accepted,
+    accepted_metrics: sortAcceptedMetrics(accepted),
     normalized: n,
     has_bundle_extras,
     bundle_extras: extras,

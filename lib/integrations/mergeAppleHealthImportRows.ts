@@ -43,9 +43,11 @@ export function buildImportRowFromNormalized(
 
   const sleep_duration_seconds = m.sleep_duration_seconds
   const sleep_hours =
-    sleep_duration_seconds != null && sleep_duration_seconds > 0
-      ? Math.min(24, sleep_duration_seconds / 3600)
-      : undefined
+    m.sleep_hours != null && Number.isFinite(m.sleep_hours)
+      ? Math.min(36, m.sleep_hours)
+      : sleep_duration_seconds != null && sleep_duration_seconds > 0
+        ? Math.min(36, sleep_duration_seconds / 3600)
+        : undefined
 
   const wds = m.workouts_duration_seconds
   const workout_minutes_from_sec =
@@ -91,11 +93,13 @@ export function buildImportRowFromNormalized(
   if (m.sleep_duration_seconds != null) bundleForSanitize.sleep_duration_seconds = m.sleep_duration_seconds
 
   const training_load =
+    m.training_load ??
     coalesceNumericHealth(originalBundle.training_load) ??
     (m.workouts_duration_seconds != null && m.active_energy_kcal != null
       ? m.workouts_duration_seconds * 0.5 + m.active_energy_kcal * 0.2
       : undefined)
   const recovery_score_proxy =
+    m.recovery_score_proxy ??
     coalesceNumericHealth(originalBundle.recovery_score_proxy) ??
     (m.hrv_ms != null && m.resting_hr_bpm != null && m.resting_hr_bpm > 0
       ? (m.hrv_ms / m.resting_hr_bpm) * 10
@@ -165,13 +169,13 @@ function rowsFromAppleBundlePayloadLegacyCoerced(bundle: Record<string, unknown>
   const sleep_duration_seconds = coalesceNumericHealth(bundle.sleep_duration_seconds) ?? undefined
   const sleep_hours_from_seconds =
     typeof sleep_duration_seconds === "number" && sleep_duration_seconds > 0
-      ? Math.min(24, sleep_duration_seconds / 3600)
+      ? Math.min(36, sleep_duration_seconds / 3600)
       : undefined
   const sleep_hours =
-    sleep_hours_raw != null && sleep_hours_raw > 0 ? sleep_hours_raw : sleep_hours_from_seconds
+    sleep_hours_raw != null && sleep_hours_raw >= 0 ? sleep_hours_raw : sleep_hours_from_seconds
 
   let hrv_ms = coalesceNumericHealth(bundle.hrv_ms) ?? undefined
-  if (hrv_ms != null && (hrv_ms <= 0 || hrv_ms >= 300)) hrv_ms = undefined
+  if (hrv_ms != null && (hrv_ms < 5 || hrv_ms > 250)) hrv_ms = undefined
   let resting_hr_bpm = coalesceNumericHealth(bundle.resting_hr_bpm) ?? undefined
   if (resting_hr_bpm != null && (resting_hr_bpm <= 20 || resting_hr_bpm >= 220)) resting_hr_bpm = undefined
   const workouts_count = coalesceNumericHealth(bundle.workouts_count) ?? undefined

@@ -18,7 +18,7 @@ Modo `minimal`: token, fecha ISO, una sola búsqueda (pasos) + suma, diccionario
 El POST incluye cabecera `x-orvita-observed-at` (misma fecha que `apple_bundle.observed_at`) para
 evitar fallos de Atajos cuando el JSON serializa `observed_at` como null (ver API `applyObservedAtFromRequestHeaders`).
 
-**Token en el iPhone (por defecto):** el plist generado intenta leer `Shortcuts/orvita_import_token.txt` en **iCloud Drive**
+**Token en el iPhone (por defecto):** el plist generado intenta leer `orvita_import_token.txt` en **iCloud Drive**
 (sin selector de archivo). Si el archivo tiene texto (recuento de caracteres > 0), se usa como cabecera
 `x-orvita-import-token`. Si no, se pide una vez con «Solicitar entrada», se guarda en esa ruta y se reutiliza en
 siguientes ejecuciones. Con `--legacy-token-prompt` se omite archivo y solo se pregunta siempre (modo antiguo).
@@ -136,6 +136,49 @@ def content_filter_health_quantity_today(type_value: str) -> dict:
     }
 
 
+def content_filter_sleep_benchmark() -> dict:
+    """Sleep (benchmark atajo 41): Type Sleep; Start Date «últimos 3» (1001); Value is + Unit 4 (sin Asleep)."""
+    return {
+        "Value": {
+            "WFActionParameterFilterPrefix": 1,
+            "WFContentPredicateBoundedDate": False,
+            "WFActionParameterFilterTemplates": [
+                {
+                    "Bounded": True,
+                    "Operator": 4,
+                    "Property": "Type",
+                    "Removable": False,
+                    "Values": {
+                        "Enumeration": {
+                            "Value": "Sleep",
+                            "WFSerializationType": "WFStringSubstitutableState",
+                        }
+                    },
+                },
+                {
+                    "Operator": 1001,
+                    "Property": "Start Date",
+                    "Removable": True,
+                    "Values": {
+                        "Number": "3",
+                        "Unit": 16,
+                    },
+                },
+                {
+                    "Bounded": True,
+                    "Operator": 4,
+                    "Property": "Value",
+                    "Removable": False,
+                    "Values": {
+                        "Unit": 4,
+                    },
+                },
+            ],
+        },
+        "WFSerializationType": "WFContentPredicateTableTemplate",
+    }
+
+
 def find_health_quantity(
     *,
     u_find: str,
@@ -146,6 +189,16 @@ def find_health_quantity(
         "WFWorkflowActionParameters": {
             "UUID": u_find,
             "WFContentItemFilter": content_filter_health_quantity_today(type_value),
+        },
+    }
+
+
+def find_sleep_samples(*, u_find: str) -> dict:
+    return {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.filter.health.quantity",
+        "WFWorkflowActionParameters": {
+            "UUID": u_find,
+            "WFContentItemFilter": content_filter_sleep_benchmark(),
         },
     }
 
@@ -171,7 +224,7 @@ def statistics_on(
 ) -> dict:
     params: dict = {
         "UUID": u_stat,
-        "WFInput": {
+        "Input": {
             "Value": {
                 "OutputUUID": u_find,
                 "OutputName": output_name,
@@ -194,6 +247,44 @@ def statistics_on(
     return {
         "WFWorkflowActionIdentifier": "is.workflow.actions.statistics",
         "WFWorkflowActionParameters": params,
+    }
+
+
+def get_health_sample_detail_duration(*, u: str, u_find: str) -> dict:
+    """Obtener detalles de muestras de salud: Duración (entrada = muestras Sleep previas)."""
+    return {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.properties.health.quantity",
+        "WFWorkflowActionParameters": {
+            "UUID": u,
+            "WFInput": {
+                "Value": {
+                    "OutputUUID": u_find,
+                    "OutputName": "Health Samples",
+                    "Type": "ActionOutput",
+                },
+                "WFSerializationType": "WFTextTokenAttachment",
+            },
+            "WFContentItemPropertyName": "Duration",
+        },
+    }
+
+
+def get_workout_detail_duration(*, u: str, u_find_workouts: str) -> dict:
+    """Obtener detalles de entrenos: Duración (entrada = entrenos encontrados)."""
+    return {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.properties.workout",
+        "WFWorkflowActionParameters": {
+            "UUID": u,
+            "WFInput": {
+                "Value": {
+                    "OutputUUID": u_find_workouts,
+                    "OutputName": "Workouts",
+                    "Type": "ActionOutput",
+                },
+                "WFSerializationType": "WFTextTokenAttachment",
+            },
+            "WFContentItemPropertyName": "Duration",
+        },
     }
 
 
@@ -244,7 +335,7 @@ def ask_text(*, u: str, prompt: str) -> dict:
 
 
 # Ruta en iCloud Drive (sin «Mostrar selector») donde el atajo guarda el token persistente.
-ORVITA_TOKEN_ICLOUD_PATH = "Shortcuts/orvita_import_token.txt"
+ORVITA_TOKEN_ICLOUD_PATH = "orvita_import_token.txt"
 
 
 def action_output_ref(output_uuid: str, output_name: str) -> dict:
@@ -595,13 +686,22 @@ def append_quantity_sum_avg_chain(
     variable_name: str,
     type_label: str,
     operation: str,
+    use_duration_detail: bool = False,
 ) -> None:
     u_find = uid()
+    u_detail = uid()
     u_stat = uid()
     u_detect = uid()
     u_set = uid()
-    actions.append(find_health_quantity(u_find=u_find, type_value=type_label))
-    actions.append(statistics_on(u_find, u_stat, operation))
+    if use_duration_detail and variable_name == "sleep_duration_num":
+        actions.append(find_sleep_samples(u_find=u_find))
+    else:
+        actions.append(find_health_quantity(u_find=u_find, type_value=type_label))
+    if use_duration_detail:
+        actions.append(get_health_sample_detail_duration(u=u_detail, u_find=u_find))
+        actions.append(statistics_on(u_detail, u_stat, operation, output_name="Duración"))
+    else:
+        actions.append(statistics_on(u_find, u_stat, operation))
     actions.append(detect_numbers_from_input(u=u_detect))
     actions.append(
         set_variable_from_output(
@@ -675,7 +775,7 @@ def build_actions_full(
 
     actions: list[dict] = [
         comment(
-            "Token iCloud Shortcuts/orvita_import_token.txt; métricas con variables *_num; POST JSON plano. "
+            "Token iCloud orvita_import_token.txt; métricas con variables *_num; POST JSON plano. "
             "Derivadas training_load / recovery_score_proxy: servidor si faltan."
         ),
         *token_actions,
@@ -690,7 +790,13 @@ def build_actions_full(
     ]
 
     for var_name, _json_key, type_label, op in QUANTITY_SUM_AVG:
-        append_quantity_sum_avg_chain(actions, variable_name=var_name, type_label=type_label, operation=op)
+        append_quantity_sum_avg_chain(
+            actions,
+            variable_name=var_name,
+            type_label=type_label,
+            operation=op,
+            use_duration_detail=(var_name == "sleep_duration_num"),
+        )
 
     for var_name, _json_key, type_label in QUANTITY_COUNT_ONLY:
         append_quantity_count_chain(actions, variable_name=var_name, type_label=type_label)
@@ -718,14 +824,16 @@ def build_actions_full(
             )
         )
     else:
+        u_workout_detail_dur = uid()
+        actions.append(
+            get_workout_detail_duration(u=u_workout_detail_dur, u_find_workouts=u_find_workouts)
+        )
         actions.append(
             statistics_on(
-                u_find_workouts,
+                u_workout_detail_dur,
                 u_stat_workout_dur,
                 "Sum",
-                output_name="Workouts",
-                aggregate_property="Duration",
-                aggregate_property_serialization=workout_stat_prop_ser,
+                output_name="Workout Detail",
             )
         )
         actions.append(detect_numbers_from_input(u=u_detect_workout_dur))
