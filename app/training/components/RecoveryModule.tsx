@@ -126,12 +126,12 @@ export function RecoveryModule({
         )}
       </motion.div>
 
-      <div className="grid grid-cols-1 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:items-stretch">
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.36, delay: 0.04 }}
-          className="rounded-[28px] bg-slate-900 p-4 text-white shadow-lg"
+          className="flex h-full min-h-0 flex-col rounded-[28px] bg-slate-900 p-4 text-white shadow-lg"
         >
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
@@ -141,7 +141,7 @@ export function RecoveryModule({
             </div>
             <Sparkles className="h-5 w-5 shrink-0 text-blue-400/90" aria-hidden />
           </div>
-          <div className="mt-4 flex flex-col gap-1.5">
+          <div className="mt-4 flex flex-1 flex-col justify-end gap-1.5">
             <button
               type="button"
               onClick={onStartProtocol}
@@ -181,7 +181,7 @@ export function RecoveryModule({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.36, delay: 0.06 }}
-          className="flex flex-col gap-3 rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm"
+          className="flex h-full min-h-0 flex-col gap-3 rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm"
         >
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div className="flex items-center gap-2">
