@@ -190,22 +190,26 @@ export function VisualGoalGenerator({
               ))}
             </div>
             <p className="m-0 mt-1 text-[11px] text-slate-500">{priorityLevelLabel}</p>
-            <label className="mt-3 block" htmlFor="visual-goal-mode">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">Tipo de objetivo</span>
-              <select
-                id="visual-goal-mode"
-                value={visualGoalMode}
-                onChange={(e) => onVisualPrefsChange({ visualGoalMode: e.target.value as VisualGoalMode })}
-                className="mt-1.5 w-full max-w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200 sm:max-w-[20rem]"
-              >
-                {VISUAL_GOAL_MODE_OPTIONS.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {modeMeta ? <p className="m-0 mt-1 text-[11px] text-slate-500">{modeMeta.short}</p> : null}
+            <div className="mt-3 min-w-0">
+              <label htmlFor="visual-goal-mode" className="block min-w-0">
+                <span className="mb-1 block text-[11px] font-medium leading-normal tracking-normal text-slate-500">
+                  Tipo de objetivo
+                </span>
+                <select
+                  id="visual-goal-mode"
+                  value={visualGoalMode}
+                  onChange={(e) => onVisualPrefsChange({ visualGoalMode: e.target.value as VisualGoalMode })}
+                  className="w-full min-w-0 rounded-lg border border-slate-200/90 bg-slate-50/60 py-1.5 pl-2.5 pr-8 text-xs font-medium text-slate-700 shadow-none transition-colors hover:bg-slate-50 hover:border-slate-300/90 focus:border-slate-300 focus:bg-white focus:outline-none focus:ring-1 focus:ring-slate-200/80"
+                >
+                  {VISUAL_GOAL_MODE_OPTIONS.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            {modeMeta ? <p className="m-0 mt-1.5 text-[11px] leading-snug text-slate-500">{modeMeta.short}</p> : null}
           </div>
           <div>
             <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">Meta temporal</p>
