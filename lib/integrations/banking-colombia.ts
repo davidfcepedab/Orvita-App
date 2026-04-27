@@ -218,6 +218,22 @@ export async function createBelvoWidgetSession(input: { locale?: string } = {}):
   const tokenUrl = `${env.base}/api/token/`
   const sandbox = isBelvoSandboxBase(env.base)
   const usernameType = getBelvoSandboxUsernameType()
+  const widgetInstitutions = (() => {
+    const fromEnv =
+      process.env.BANKING_BELVO_WIDGET_CO_INSTITUTIONS?.split(",")
+        .map((s) => s.trim())
+        .filter(Boolean) ?? []
+    if (fromEnv.length > 0) return fromEnv
+    const defaults = [
+      process.env.BANKING_BELVO_SANDBOX_DEFAULT_INSTITUTION_CO?.trim(),
+      "bancolombia_co_retail",
+      "davivienda_co_retail",
+      "nequi_co_retail",
+      "ofmockbank_co_retail",
+    ].filter(Boolean) as string[]
+    return defaults
+  })()
+
   const tokenBody: Record<string, unknown> = {
     id: env.clientId,
     password: env.clientSecret,
@@ -225,12 +241,9 @@ export async function createBelvoWidgetSession(input: { locale?: string } = {}):
     fetch_resources: ["ACCOUNTS", "TRANSACTIONS"],
     credentials_storage: "store",
     stale_in: "365d",
-    ...(sandbox
-      ? {
-          country_codes: ["CO"],
-          username_type: usernameType,
-        }
-      : {}),
+    country_codes: ["CO"],
+    username_type: usernameType,
+    institution_types: ["retail"],
     widget: {
       callback_urls: {
         success: redirect,
@@ -243,11 +256,8 @@ export async function createBelvoWidgetSession(input: { locale?: string } = {}):
         company_terms_version: termsVersion,
       },
       theme: [] as unknown[],
-      ...(sandbox
-        ? {
-            country_codes: ["CO"],
-          }
-        : {}),
+      country_codes: ["CO"],
+      institution_types: ["retail"],
     },
   }
 
@@ -290,6 +300,8 @@ export async function createBelvoWidgetSession(input: { locale?: string } = {}):
   const institutionsFilter = process.env.BANKING_BELVO_WIDGET_CO_INSTITUTIONS?.trim()
   if (institutionsFilter) {
     params.set("institutions", institutionsFilter)
+  } else if (widgetInstitutions.length > 0) {
+    params.set("institutions", widgetInstitutions.join(","))
   }
   const widgetUrl = `https://widget.belvo.io/?${params.toString()}`
   return { access, refresh: tokenPayload.refresh ?? null, widgetUrl }
