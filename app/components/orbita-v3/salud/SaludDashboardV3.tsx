@@ -47,10 +47,10 @@ export default function SaludDashboardV3() {
     return (
       <section
         className="orbita-page-stack mx-auto w-full max-w-[min(72rem,calc(100vw-1.5rem))] space-y-4 px-1 py-2 text-sm text-[var(--color-text-secondary)]"
-        aria-label="Salud — decisión, Apple Health, insight y operativo"
+        aria-label="Salud: decisión, Apple Health e interpretación"
         aria-busy="true"
       >
-        Cargando brief de salud…
+        Cargando tu resumen de salud…
       </section>
     )
   }
@@ -59,7 +59,7 @@ export default function SaludDashboardV3() {
     return (
       <section
         className="orbita-page-stack mx-auto w-full max-w-[min(72rem,calc(100vw-1.5rem))] space-y-4 px-1 py-2 text-sm text-[var(--color-accent-finance)]"
-        aria-label="Salud — decisión, Apple Health, insight y operativo"
+        aria-label="Salud: decisión, Apple Health e interpretación"
       >
         {salud.error}
       </section>
@@ -69,7 +69,7 @@ export default function SaludDashboardV3() {
   return (
     <section
       className="orbita-page-stack mx-auto w-full max-w-[min(72rem,calc(100vw-1.5rem))] space-y-4"
-      aria-label="Salud — decisión, Apple Health, insight y operativo"
+      aria-label="Salud: decisión, Apple Health e interpretación"
     >
       <HeroDecisionCard brief={brief} syncLine={syncLine} />
 

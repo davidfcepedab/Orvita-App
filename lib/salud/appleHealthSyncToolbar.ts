@@ -85,8 +85,8 @@ export function buildAppleHealthHeroSyncLine(
 ): AppleHeroSyncLine {
   if (!latest?.observed_at) {
     return {
-      statusText: "Sin lectura",
-      detailText: " · Conecta con el atajo y pulsa Actualizar lectura",
+      statusText: "Sin datos recientes",
+      detailText: " · Usa el atajo de iPhone y toca Actualizar lectura",
       statusColor: SALUD_SEM.risk,
     }
   }
@@ -97,14 +97,14 @@ export function buildAppleHealthHeroSyncLine(
 
   if (stale || fresh === "stale") {
     return {
-      statusText: "Sync desactualizado",
+      statusText: "Datos desactualizados",
       detailText: ` · ${detailCore}`,
       statusColor: SALUD_SEM.risk,
     }
   }
   if (fresh === "aging") {
     return {
-      statusText: "Sync aceptable",
+      statusText: "Datos aceptables",
       detailText: ` · ${detailCore}`,
       statusColor: SALUD_SEM.warn,
     }
@@ -150,20 +150,20 @@ export function buildAppleHealthSyncChipCompact(latest: AutoHealthMetric | null 
 export function buildAppleHealthSyncChip(latest: AutoHealthMetric | null | undefined): AppleSyncChip {
   if (!latest?.observed_at) {
     return {
-      label: "Sync · sin lectura",
+      label: "Sin lectura de Apple",
       fg: SALUD_SEM.warn,
       bg: saludHexToRgba(SALUD_SEM.warn, 0.14),
     }
   }
   if (appleHealthSyncStale(latest.observed_at)) {
     return {
-      label: `Sync · ${formatAppleHealthSyncWhen(latest.observed_at)} · desactualizado`,
+      label: `Apple · ${formatAppleHealthSyncWhen(latest.observed_at)} · desactualizado`,
       fg: SALUD_SEM.risk,
       bg: saludHexToRgba(SALUD_SEM.risk, 0.14),
     }
   }
   return {
-    label: `Sync · ${formatAppleHealthSyncWhen(latest.observed_at)} · ok`,
+    label: `Apple · ${formatAppleHealthSyncWhen(latest.observed_at)} · al día`,
     fg: SALUD_SEM.ok,
     bg: saludHexToRgba(SALUD_SEM.ok, 0.14),
   }

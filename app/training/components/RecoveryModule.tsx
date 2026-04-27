@@ -81,17 +81,17 @@ export function RecoveryModule({
         className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm"
       >
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">Recuperación y señales</p>
+          <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">Recuperación y lecturas</p>
           {syncChips ? (
             <div className="flex flex-wrap justify-end gap-1">
               <RecoverySyncChip on={syncChips.apple} label="Apple Health" />
               <RecoverySyncChip on={syncChips.hevy} label="Hevy" />
-              <RecoverySyncChip on={syncChips.manual} label="Check-in" />
+              <RecoverySyncChip on={syncChips.manual} label="Registro del día" />
             </div>
           ) : (
             <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-slate-500">
               <Activity className="h-3 w-3" aria-hidden />
-              Sin fuentes
+              Sin Apple, Hevy ni registro
             </span>
           )}
         </div>
@@ -189,7 +189,7 @@ export function RecoveryModule({
                 <Brain className="h-4 w-4" aria-hidden />
               </div>
               <div>
-                <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Neural Advisor</p>
+                <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Guía del plan</p>
                 <p className="m-0 text-xs font-semibold text-slate-800">Estado: {advisor.statusLabel}</p>
               </div>
             </div>
@@ -197,13 +197,13 @@ export function RecoveryModule({
               <div className="flex flex-wrap gap-1">
                 <RecoverySyncChip on={syncChips.apple} label="Apple" />
                 <RecoverySyncChip on={syncChips.hevy} label="Hevy" />
-                <RecoverySyncChip on={syncChips.manual} label="Manual" />
+                <RecoverySyncChip on={syncChips.manual} label="A mano" />
               </div>
             ) : null}
           </div>
           <div className="space-y-2">
-            <AdvisorRow label="Fatiga CNS" value={advisor.cnsLevel} valueClass={cnsFatigueToneClass(advisor.cnsLevel)} />
-            <AdvisorRow label="Intra-entreno" value={`${advisor.intraChoG} g CHO`} valueClass="text-blue-600" />
+            <AdvisorRow label="Fatiga del sistema nervioso" value={advisor.cnsLevel} valueClass={cnsFatigueToneClass(advisor.cnsLevel)} />
+            <AdvisorRow label="Carbos en sesión" value={`${advisor.intraChoG} g`} valueClass="text-blue-600" />
             <AdvisorRow label="Ritmo hipertrofia" value={advisor.hypertrophyHint} valueClass="text-slate-800" />
           </div>
           <p className="m-0 border-t border-slate-100 pt-2 text-[11px] italic leading-relaxed text-slate-600">&ldquo;{advisor.quote}&rdquo;</p>

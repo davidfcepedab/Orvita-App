@@ -186,7 +186,7 @@ export function energyPressureFromOperationalContext(data: OperationalContextDat
   if (apple.sync_stale) {
     return {
       ...base,
-      hint: `${base.hint} Apple Health lleva sin actualizar: corre el Atajo para calibrar.`,
+      hint: `${base.hint} Apple Health no se ha actualizado: ejecuta el atajo de iPhone para afinar la lectura.`,
     }
   }
 
@@ -202,7 +202,7 @@ export function energyPressureFromOperationalContext(data: OperationalContextDat
     return {
       band: "moderado",
       fillPct: Math.min(88, base.fillPct + 18),
-      hint: "Readiness bajo en Apple frente a un check-in optimista: ajusta el ritmo antes de apretar el día.",
+      hint: "En Apple la recuperación sale baja y tu registro del día es optimista: afloja un poco el ritmo antes de apretar.",
       unknown: false,
     }
   }

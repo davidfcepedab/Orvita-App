@@ -83,9 +83,9 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
     if (readiness == null) {
       return {
         label: "Info",
-        title: "Falta lectura Apple para cerrar estado del día",
+        title: "Faltan datos recientes de Apple Health",
         score: systemScore,
-        actions: ["Ejecuta Atajo y refresca lectura", "Mantén carga moderada hasta validar Apple"],
+        actions: ["Ejecuta el atajo y actualiza la lectura", "Mantén intensidad moderada hasta tener señal"],
       }
     }
     const divergence = Math.round(readiness - checkin)
@@ -369,7 +369,7 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
               icon: MoonStar,
               rows: [
                 { k: "Sueño", v: sleepLabel },
-                { k: "HRV", v: hrvLabel },
+                { k: "VFC", v: hrvLabel },
               ],
             },
             {
@@ -386,8 +386,8 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
               tint: SALUD_SEM.uiBlue,
               icon: Sparkles,
               rows: [
-                { k: "Check-in", v: `${salud.scoreSalud}/100` },
-                { k: "Sync Apple", v: staleSync ? "Desactualizado" : latest?.observed_at ? "Al día" : "Pendiente" },
+                { k: "Tu registro", v: `${salud.scoreSalud}/100` },
+                { k: "Datos de Apple", v: staleSync ? "Desactualizados" : latest?.observed_at ? "Al día" : "Pendiente" },
               ],
             },
           ].map((group) => {

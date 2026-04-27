@@ -46,7 +46,7 @@ export function SignalsStrip({ latest, loading }: Props) {
   return (
     <section className="rounded-2xl border p-4 sm:p-5" style={{ ...saludPanelStyle(theme, 0.92), borderColor: theme.border }}>
       <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: theme.textMuted }}>
-        Señales Apple · última lectura
+        Lecturas de Apple · última vez
       </p>
       {loading ? (
         <p className="m-0 mt-3 text-sm" style={{ color: theme.textMuted }}>
@@ -54,7 +54,7 @@ export function SignalsStrip({ latest, loading }: Props) {
         </p>
       ) : (
         <div className="mt-3 flex flex-wrap gap-2 sm:flex-nowrap sm:gap-2">
-          <Cell label="HRV" value={hrv} theme={theme} />
+          <Cell label="VFC" value={hrv} theme={theme} />
           <Cell label="Sueño" value={sleep} theme={theme} />
           <Cell label="Pasos" value={steps} theme={theme} />
           <Cell label="Recuperación" value={rec} theme={theme} />

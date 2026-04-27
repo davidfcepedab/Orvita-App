@@ -60,7 +60,7 @@ export function InsightActionBlock({ brief }: Props) {
           style={{ backgroundColor: theme.text, color: theme.bg }}
         >
           <Dumbbell className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          Ejecutar en training
+          Ir a Entrenamiento
         </Link>
       </div>
     </section>

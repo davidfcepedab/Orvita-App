@@ -154,15 +154,15 @@ export function TrainingDashboard({
         </summary>
         <div className="space-y-2 border-t border-slate-100 px-3 pb-3 pt-2 text-xs text-slate-600 sm:px-4">
           <p className="m-0">
-            Fuente: <span className="font-medium text-slate-800">{hevy.sourceLabel || HEVY_INTEGRATION_LABEL}</span>
+            Origen: <span className="font-medium text-slate-800">{hevy.sourceLabel || HEVY_INTEGRATION_LABEL}</span>
           </p>
           {hevy.latestTrainingAt ? (
-            <p className="m-0">Recibido: {new Date(hevy.latestTrainingAt).toLocaleString("es-CO")}</p>
+            <p className="m-0">Último dato: {new Date(hevy.latestTrainingAt).toLocaleString("es-CO")}</p>
           ) : null}
           {hevy.lastSyncAt ? (
             <p className="m-0 inline-flex items-center gap-1 text-slate-500">
               <Clock3 className="h-3 w-3" aria-hidden />
-              Sync: {new Date(hevy.lastSyncAt).toLocaleString("es-CO")}
+              Sincronizado: {new Date(hevy.lastSyncAt).toLocaleString("es-CO")}
             </p>
           ) : null}
           {hevy.showErrorHint ? <p className="m-0 text-slate-500">Aún no hay datos suficientes para estimar carga.</p> : null}
@@ -177,7 +177,7 @@ export function TrainingDashboard({
               </button>
             )}
             <button type="button" onClick={hevy.onSync} className="rounded-full border border-slate-200 px-2.5 py-1 text-[11px] font-medium text-slate-600 hover:bg-slate-50">
-              Sync
+              Sincronizar
             </button>
             <Link href="/configuracion#acordeon-config-hevy" className="rounded-full border border-slate-200 px-2.5 py-1 text-[11px] font-medium text-slate-600 no-underline hover:bg-slate-50">
               Ajustes

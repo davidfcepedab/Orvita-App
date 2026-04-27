@@ -168,7 +168,7 @@ export function ZenHomeOverview({
                   className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-orbita-border/50 bg-transparent px-2 py-1.5 text-[10px] font-medium text-orbita-secondary transition hover:border-orbita-border hover:text-orbita-primary disabled:opacity-50 sm:text-[11px]"
                 >
                   <Sparkles className="h-3 w-3 text-[var(--color-accent-health)]" aria-hidden />
-                  {isGenerating ? "IA…" : "Análisis IA"}
+                  {isGenerating ? "Generando…" : "Resumen con IA"}
                 </button>
               </div>
 

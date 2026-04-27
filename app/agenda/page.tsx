@@ -162,12 +162,13 @@ export default function AgendaPage() {
   const agendaTitle = viewerFirstName ? `Agenda ${viewerFirstName}` : "Tu agenda diaria"
 
   const agendaTagline = useMemo(() => {
-    if (loading) return "Cargando tu tablero Órvita y datos de Google (Calendar / Tasks)…"
+    if (loading) return "Cargando tu agenda unificada…"
     const n = agendaTasks.length
     const active = agendaTasks.filter((t) => t.status !== "completed").length
-    if (n === 0) return "Órvita y Google en un solo lugar: crea, importa o revisa la lista unificada (solo tu cuenta y tus asignaciones aceptadas)."
-    if (active === 0) return "Sin pendientes en tu tablero Órvita."
-    return `${active} pendiente${active === 1 ? "" : "s"} en Órvita. Las vistas combinan tu tablero con Calendar y Tasks de tu cuenta Google.`
+    if (n === 0)
+      return "Aquí conviven tus tareas Órvita y lo que traes de Google. Crea una tarea o conecta la cuenta en Configuración."
+    if (active === 0) return "No hay pendientes en tu tablero Órvita."
+    return `${active} pendiente${active === 1 ? "" : "s"} en Órvita. Las vistas mezclan tablero, calendario y recordatorios de tu Google.`
   }, [loading, agendaTasks])
 
   useEffect(() => {

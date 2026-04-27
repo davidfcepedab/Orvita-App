@@ -426,12 +426,12 @@ export function ConfigStrategicIntegrationsPanel({
             title="Si ya importaste desde el iPhone, refresca estado; si no hay Apple, intenta Google Fit o semilla de respaldo según tu cuenta."
           >
             <RefreshCw className="h-3.5 w-3.5" />
-            {busy === "health" ? "…" : "Sync salud"}
+            {busy === "health" ? "…" : "Sincronizar salud"}
           </button>
         </div>
         <p className="mt-2.5 text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
           {healthLastSync
-            ? `Fuente: ${healthSourceLabel(healthSource)} · ${formatShortSampleAgo(healthLastSync)} (muestra).`
+            ? `Origen: ${healthSourceLabel(healthSource)} · ${formatShortSampleAgo(healthLastSync)} (muestra).`
             : "Sin filas aún. Usa el atajo o los botones de arriba."}
         </p>
       </div>
@@ -495,7 +495,7 @@ export function ConfigStrategicIntegrationsPanel({
           </div>
           <p className="mt-2 text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
             {healthLastSync
-              ? `Fuente: ${healthSourceLabel(healthSource)} · ${formatShortSampleAgo(healthLastSync)}.`
+              ? `Origen: ${healthSourceLabel(healthSource)} · ${formatShortSampleAgo(healthLastSync)}.`
               : "Sin muestras todavía. Usa el atajo y luego sincroniza."}
           </p>
         </div>

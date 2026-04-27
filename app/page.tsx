@@ -50,9 +50,9 @@ export default function HomePage() {
       try {
         if (!silent) setIsLoading(true)
         const res = await authedFetch("/api/orbita/home", { method: "GET" })
-        if (!res.ok) throw new Error(`home GET ${res.status}`)
+        if (!res.ok) throw new Error("No pudimos conectar con el servidor. Intenta de nuevo.")
         const json = (await res.json()) as { success?: boolean; data?: OrbitaHomeModel; error?: string }
-        if (!json?.success || !json.data) throw new Error(json?.error || "home payload inválido")
+        if (!json?.success || !json.data) throw new Error(json?.error || "La respuesta de Inicio no es válida.")
         setModel(json.data)
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Error desconocido"
@@ -73,13 +73,13 @@ export default function HomePage() {
     try {
       setStatusLine("Generando análisis…")
       const res = await authedFetch("/api/orbita/home/analysis", { method: "POST" })
-      if (!res.ok) throw new Error(`analysis POST ${res.status}`)
+      if (!res.ok) throw new Error("No se pudo generar el análisis. Reintenta en un momento.")
       const json = (await res.json()) as {
         success?: boolean
         data?: { generatedAt?: string; insights?: OrbitaHomeModel["predictive"]["insights"] }
         error?: string
       }
-      if (!json?.success || !json.data?.insights) throw new Error(json?.error || "analysis payload inválido")
+      if (!json?.success || !json.data?.insights) throw new Error(json?.error || "El análisis llegó incompleto.")
       setModel((prev) => {
         if (!prev) return prev
         return {
@@ -106,7 +106,7 @@ export default function HomePage() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ kind: "alert_ai_resolve", id: alertId }),
       })
-      if (!res.ok) throw new Error(`action POST ${res.status}`)
+      if (!res.ok) throw new Error("No se pudo resolver la alerta.")
       setModel((prev) => (prev ? { ...prev, alerts: prev.alerts.filter((a) => a.id !== alertId) } : prev))
       setStatusLine("Alerta resuelta.")
       if (!appIsMock) await loadHome({ silent: true })
@@ -124,7 +124,7 @@ export default function HomePage() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ kind: "alert_one_click", id: alertId }),
       })
-      if (!res.ok) throw new Error(`action POST ${res.status}`)
+      if (!res.ok) throw new Error("No se pudo aplicar la acción.")
       setModel((prev) => (prev ? { ...prev, alerts: prev.alerts.filter((a) => a.id !== alertId) } : prev))
       setStatusLine("Acción aplicada.")
       if (!appIsMock) await loadHome({ silent: true })
@@ -142,7 +142,7 @@ export default function HomePage() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ kind: "smart_action", id, action }),
       })
-      if (!res.ok) throw new Error(`action POST ${res.status}`)
+      if (!res.ok) throw new Error("No se pudo registrar la acción.")
       setModel((prev) => (prev ? { ...prev, smartActions: prev.smartActions.filter((a) => a.id !== id) } : prev))
       setStatusLine(`Acción registrada: ${action}.`)
       if (!appIsMock) await loadHome({ silent: true })

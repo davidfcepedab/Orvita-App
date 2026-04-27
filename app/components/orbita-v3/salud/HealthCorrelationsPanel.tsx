@@ -23,7 +23,7 @@ type Props = {
 export function HealthCorrelationsPanel({ salud, latest, timeline, analytics, loading, variant = "standalone" }: Props) {
   const theme = useOrbitaSkin()
   const statusTone = (value: "ok" | "warn" | "risk") => {
-    if (value === "ok") return { label: "OK", color: SALUD_SEM.ok }
+    if (value === "ok") return { label: "Bien", color: SALUD_SEM.ok }
     if (value === "warn") return { label: "Atención", color: SALUD_SEM.warn }
     return { label: "Desbalance", color: SALUD_SEM.risk }
   }
@@ -62,8 +62,8 @@ export function HealthCorrelationsPanel({ salud, latest, timeline, analytics, lo
   const hrvLoadStatus = useMemo(() => {
     const hrv = latest?.hrv_ms
     const load = analytics?.recovery.training_load?.proxy ?? null
-    if (hrv == null || load == null) return { level: "warn" as const, text: "Sin datos suficientes para cruzar HRV y carga." }
-    if (hrv < 32 && load > 350) return { level: "risk" as const, text: "HRV bajo con carga alta: mejor sesión ligera." }
+    if (hrv == null || load == null) return { level: "warn" as const, text: "Aún no hay datos para cruzar VFC y carga." }
+    if (hrv < 32 && load > 350) return { level: "risk" as const, text: "VFC baja con carga alta: conviene un entreno suave." }
     if (hrv >= 40 && load <= 320) return { level: "ok" as const, text: "Carga en zona razonable para tu variabilidad." }
     return { level: "warn" as const, text: "Cruce intermedio: ajusta intensidad según sensaciones." }
   }, [latest?.hrv_ms, analytics?.recovery.training_load?.proxy])
@@ -72,7 +72,7 @@ export function HealthCorrelationsPanel({ salud, latest, timeline, analytics, lo
     const steps = latest?.steps
     const readiness = latest?.readiness_score
     if (steps == null || readiness == null) {
-      return { level: "warn" as const, text: "Sin pasos o readiness para estimar desbalance." }
+      return { level: "warn" as const, text: "Faltan pasos o la lectura de recuperación de Apple." }
     }
     if (steps > 8000 && readiness < 45) {
       return { level: "risk" as const, text: "Actividad alta con recuperación baja: baja volumen mañana." }
@@ -85,11 +85,11 @@ export function HealthCorrelationsPanel({ salud, latest, timeline, analytics, lo
 
   const checkinVsAppleStatus = useMemo(() => {
     const readiness = latest?.readiness_score
-    if (readiness == null) return { level: "warn" as const, text: "Falta import de Apple para contrastar check-in." }
+    if (readiness == null) return { level: "warn" as const, text: "Faltan datos de Apple para comparar con tu registro del día." }
     const delta = Math.round(salud.scoreSalud - readiness)
-    if (Math.abs(delta) <= 8) return { level: "ok" as const, text: `Coincidencia alta entre check-in y Apple (Δ ${delta}).` }
-    if (delta > 8) return { level: "warn" as const, text: `Te sientes mejor que Apple (Δ +${delta}). Cuida recuperación.` }
-    return { level: "risk" as const, text: `Apple te ve mejor que tu check-in (Δ ${delta}). Revisa estrés/sueño.` }
+    if (Math.abs(delta) <= 8) return { level: "ok" as const, text: `Tu registro y Apple van alineados (diferencia ${delta}).` }
+    if (delta > 8) return { level: "warn" as const, text: `Te sientes mejor que la lectura de Apple (Δ +${delta}). Cuida la recuperación.` }
+    return { level: "risk" as const, text: `Apple te muestra más recuperación que lo que sientes (Δ ${delta}). Revisa sueño o estrés.` }
   }, [latest?.readiness_score, salud.scoreSalud])
 
   const cards = [
@@ -121,7 +121,7 @@ export function HealthCorrelationsPanel({ salud, latest, timeline, analytics, lo
       ),
     },
     {
-      title: "HRV vs carga entrenamiento",
+      title: "VFC vs carga de entrenamiento",
       source: "Apple + Atajo",
       status: hrvLoadStatus,
       chart: (

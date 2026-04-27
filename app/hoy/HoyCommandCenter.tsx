@@ -328,7 +328,7 @@ export default function HoyCommandCenter() {
       return {
         band: "moderado" as PressureBand,
         fillPct: 25,
-        hint: "Conecta capital para ver presión financiera del mes.",
+        hint: "Cuando Finanzas esté activo en tu hogar, verás la presión del mes aquí.",
       }
     }
     return moneyPressureFromMonth(finance.total_income_current, finance.total_expense_current)
@@ -625,7 +625,7 @@ export default function HoyCommandCenter() {
               </div>
               <div>
                 <h3 className="m-0 text-xl font-semibold leading-snug text-[var(--color-text-primary)] sm:text-2xl">
-                  {ctxLoading ? "Sincronizando contexto…" : primary.title}
+                  {ctxLoading ? "Cargando tu prioridad…" : primary.title}
                 </h3>
                 {primary.subtitle ? (
                   <p

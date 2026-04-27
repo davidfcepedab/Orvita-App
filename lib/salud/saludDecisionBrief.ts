@@ -56,13 +56,13 @@ function buildCauseLine(
 ): string {
   const parts: string[] = []
   if (latest?.hrv_ms != null) {
-    parts.push(readiness.score < 55 && latest.hrv_ms < 38 ? "HRV bajo" : `HRV ${Math.round(latest.hrv_ms)} ms`)
-  } else parts.push("HRV sin dato")
+    parts.push(readiness.score < 55 && latest.hrv_ms < 38 ? "VFC baja" : `VFC ${Math.round(latest.hrv_ms)} ms`)
+  } else parts.push("VFC sin dato")
   if (latest?.sleep_hours != null) {
     parts.push(latest.sleep_hours < 6.5 ? "sueño incompleto" : `${latest.sleep_hours.toFixed(1)} h sueño`)
   } else parts.push("sueño sin dato")
   if (salud.strain > salud.scoreRecuperacion + 6) parts.push("carga percibida alta vs recuperación")
-  if (staleSync) parts.push("sync Apple desactualizado")
+  if (staleSync) parts.push("datos de Apple desactualizados")
   return parts.slice(0, 3).join(" · ")
 }
 
@@ -78,7 +78,7 @@ function buildExecutiveInsight(
     return "Estás cerca del límite de recuperación: ajusta volumen o intensidad antes de forzar."
   }
   if (latest?.readiness_score != null && salud.scoreSalud > 0 && Math.abs(latest.readiness_score - salud.scoreSalud) >= 16) {
-    return "Hay desalineación fuerte entre Apple y tu sensación: decide con la sensación, no con el ego."
+    return "Lo que marca el reloj y lo que sientes no coinciden: confía en tu cuerpo, no en forzar el plan."
   }
   return "Capacidad y señales alineadas: puedes ejecutar el plan con foco en técnica y cierre de sueño."
 }
@@ -89,7 +89,7 @@ function buildBullets(
   readiness: TrainingReadiness,
 ): [string, string] {
   const a: string[] = []
-  if (latest?.hrv_ms != null && latest.hrv_ms < 38) a.push("HRV bajo vs lo habitual para entrenar fuerte.")
+  if (latest?.hrv_ms != null && latest.hrv_ms < 38) a.push("VFC baja frente a lo que sueles tener para un día exigente.")
   if (latest?.sleep_hours != null && latest.sleep_hours < 6.5) a.push("Sueño corto: el sistema penaliza capacidad hoy.")
   if (salud.strain > salud.scoreRecuperacion + 8) a.push("Carga percibida por encima de recuperación.")
   if (a.length === 0) a.push(readiness.rationale)
