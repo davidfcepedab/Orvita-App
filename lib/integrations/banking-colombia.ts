@@ -56,6 +56,42 @@ function sandboxLinkCredentials(): { username: string; password: string } {
   }
 }
 
+/** Host sandbox Belvo (links Colombia suelen exigir `username_type` 103 o 104). */
+export function isBelvoSandboxBase(baseUrl: string): boolean {
+  const u = baseUrl.toLowerCase()
+  return u.includes("sandbox.belvo")
+}
+
+export function isBelvoSandbox(): boolean {
+  const base = process.env.BANKING_COLOMBIA_BASE_URL?.trim() ?? ""
+  return base.length > 0 && isBelvoSandboxBase(base)
+}
+
+/**
+ * Banca Colombia vía Belvo exige `username_type` (103 o 104) en muchos enlaces.
+ * No lo enviamos para instituciones sandbox BR (`ofmockbank`, `_br_`).
+ */
+function linkRequiresUsernameType(institution: string, orvitaColombiaBankFlow: boolean): boolean {
+  const ins = institution.toLowerCase()
+  if (ins.includes("_br_") || ins.includes("ofmockbank")) return false
+  return orvitaColombiaBankFlow
+}
+
+function resolveLinkUsernameType(
+  institution: string,
+  explicit: number | undefined,
+  orvitaColombiaBankFlow: boolean,
+): number | undefined {
+  if (!linkRequiresUsernameType(institution, orvitaColombiaBankFlow)) return undefined
+  if (explicit !== undefined && Number.isFinite(explicit) && (explicit === 103 || explicit === 104)) {
+    return explicit
+  }
+  const raw = process.env.BANKING_BELVO_SANDBOX_USERNAME_TYPE?.trim()
+  const n = raw ? parseInt(raw, 10) : 103
+  if (n === 103 || n === 104) return n
+  return 103
+}
+
 export function isBelvoBankingConfigured(): boolean {
   const base = process.env.BANKING_COLOMBIA_BASE_URL?.trim()
   const clientId = process.env.BANKING_COLOMBIA_CLIENT_ID?.trim()
@@ -128,33 +164,60 @@ export function mapBelvoInstitutionToProvider(institution: string | null | undef
   return "bancolombia"
 }
 
-/** Token de widget (Hosted Widget). POST /api/token/ usa cuerpo id/password (sin Basic Auth). */
+/**
+ * Token de widget (Hosted Widget).
+ * Spec Belvo: `POST /api/token/` con Basic Auth + cuerpo JSON; widget requiere URLs válidas y branding mínimo.
+ */
 export async function createBelvoWidgetSession(input: { locale?: string } = {}): Promise<BelvoWidgetSession> {
   const env = getEnv("bancolombia")
   if (env.fallback) {
     throw new Error("Widget Belvo no disponible en modo mock.")
   }
-  const redirect = env.redirectUri
+  const redirect = env.redirectUri.replace(/\/+$/, "")
+  const exitUrl = redirect.includes("?") ? `${redirect}&event=exit` : `${redirect}?event=exit`
+  const eventUrl = redirect.includes("?") ? `${redirect}&event=error` : `${redirect}?event=error`
+  const companyName = process.env.BANKING_BELVO_WIDGET_COMPANY_NAME?.trim() || "Órvita"
+  const termsUrl =
+    process.env.BANKING_BELVO_WIDGET_TERMS_URL?.trim() || "https://belvo.com/legal/terms-of-use-and-privacy-policy/"
+  const termsVersion = process.env.BANKING_BELVO_WIDGET_TERMS_VERSION?.trim() || "2024-03-15"
+
   const tokenUrl = `${env.base}/api/token/`
-  const tokenRes = await fetch(tokenUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      id: env.clientId,
-      password: env.clientSecret,
-      scopes: "read_institutions,write_links",
-      fetch_resources: ["ACCOUNTS", "TRANSACTIONS"],
-      credentials_storage: "store",
-      stale_in: "300d",
-      widget: {
-        callback_urls: {
-          success: redirect,
-          exit: `${redirect}?event=exit`,
-          event: `${redirect}?event=error`,
-        },
+  const tokenBody = {
+    id: env.clientId,
+    password: env.clientSecret,
+    scopes: "read_institutions,write_links",
+    fetch_resources: ["ACCOUNTS", "TRANSACTIONS"],
+    credentials_storage: "store",
+    stale_in: "365d",
+    widget: {
+      callback_urls: {
+        success: redirect,
+        exit: exitUrl,
+        event: eventUrl,
       },
-    }),
-  })
+      branding: {
+        company_name: companyName,
+        company_terms_url: termsUrl,
+        company_terms_version: termsVersion,
+      },
+      theme: [] as unknown[],
+    },
+  }
+
+  const postToken = (useBasic: boolean) =>
+    fetch(tokenUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(useBasic ? { Authorization: basicAuthHeader(env.clientId, env.clientSecret) } : {}),
+      },
+      body: JSON.stringify(tokenBody),
+    })
+
+  let tokenRes = await postToken(false)
+  if (tokenRes.status === 401) {
+    tokenRes = await postToken(true)
+  }
   const tokenText = await tokenRes.text()
   if (!tokenRes.ok) {
     throw new Error(`Belvo /api/token/ → ${tokenRes.status}: ${tokenText.slice(0, 400)}`)
@@ -168,7 +231,13 @@ export async function createBelvoWidgetSession(input: { locale?: string } = {}):
   const access = tokenPayload.access
   if (!access) throw new Error("Belvo no devolvió access token para el widget.")
   const locale = input.locale ?? "es"
-  const widgetUrl = `https://widget.belvo.io/?access_token=${encodeURIComponent(access)}&locale=${encodeURIComponent(locale)}`
+  const params = new URLSearchParams({
+    access_token: access,
+    locale,
+    country_codes: "CO",
+    access_mode: "recurrent",
+  })
+  const widgetUrl = `https://widget.belvo.io/?${params.toString()}`
   return { access, refresh: tokenPayload.refresh ?? null, widgetUrl }
 }
 
@@ -177,15 +246,21 @@ async function registerBelvoLink(
   clientId: string,
   clientSecret: string,
   institution: string,
+  usernameType: number | undefined,
+  orvitaColombiaBankFlow: boolean,
 ): Promise<string> {
   const creds = sandboxLinkCredentials()
+  const payload: Record<string, unknown> = {
+    institution,
+    username: creds.username,
+    password: creds.password,
+  }
+  const ut = resolveLinkUsernameType(institution, usernameType, orvitaColombiaBankFlow)
+  if (ut !== undefined) payload.username_type = ut
+
   const created = await belvoRequestJson<{ id?: string }>(base, "/api/links/", clientId, clientSecret, {
     method: "POST",
-    json: {
-      institution,
-      username: creds.username,
-      password: creds.password,
-    },
+    json: payload,
   })
   if (!created.id) throw new Error("Belvo no devolvió id de link al registrar.")
   return created.id
@@ -249,7 +324,7 @@ function belvoRowsToConnectionResults(
         belvo_link_id: linkId,
         belvo_account_id: id,
         belvo_institution: institutionName,
-        environment: process.env.BANKING_COLOMBIA_BASE_URL?.includes("sandbox") ? "sandbox" : "production",
+        environment: isBelvoSandbox() ? "sandbox" : "production",
       },
     } satisfies BankingConnectionResult
   })
@@ -260,6 +335,8 @@ export async function connectBankingColombia(input: {
   authCode?: string
   state?: string
   belvoInstitution?: string
+  /** Forzar 103 o 104 (Colombia / sandbox); si se omite, se infiere del entorno. */
+  usernameType?: number
 }): Promise<BankingConnectionResult[]> {
   const env = getEnv(input.provider)
   if (env.fallback) {
@@ -291,7 +368,7 @@ export async function connectBankingColombia(input: {
       method: "GET",
     })
   } else {
-    linkId = await registerBelvoLink(env.base, env.clientId, env.clientSecret, institution)
+    linkId = await registerBelvoLink(env.base, env.clientId, env.clientSecret, institution, input.usernameType, true)
   }
 
   const accountRows = await fetchBelvoAccounts(env.base, env.clientId, env.clientSecret, linkId)
