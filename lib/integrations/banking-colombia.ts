@@ -53,6 +53,10 @@ function belvoInstitutionForProvider(provider: BankProvider): string {
   return "bancolombia_co_retail"
 }
 
+function belvoSandboxFallbackInstitution(): string {
+  return process.env.BANKING_BELVO_SANDBOX_FALLBACK_INSTITUTION?.trim() || "ofmockbank_br_retail"
+}
+
 function sandboxLinkCredentials(): { username: string; password: string } {
   return {
     username: process.env.BANKING_BELVO_SANDBOX_USERNAME?.trim() || "belvouser100",
@@ -427,7 +431,17 @@ export async function connectBankingColombia(input: {
       method: "GET",
     })
   } else {
-    linkId = await registerBelvoLink(env.base, env.clientId, env.clientSecret, institution, input.usernameType, true)
+    try {
+      linkId = await registerBelvoLink(env.base, env.clientId, env.clientSecret, institution, input.usernameType, true)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      if (msg.toLowerCase().includes("does_not_exist") || msg.toLowerCase().includes("object with name")) {
+        const fbInstitution = belvoSandboxFallbackInstitution()
+        linkId = await registerBelvoLink(env.base, env.clientId, env.clientSecret, fbInstitution, input.usernameType, false)
+      } else {
+        throw err
+      }
+    }
   }
 
   const accountRows = await fetchBelvoAccounts(env.base, env.clientId, env.clientSecret, linkId)
