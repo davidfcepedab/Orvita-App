@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useMemo } from "react"
+import { useMemo, useRef, useState, type ChangeEvent } from "react"
 import { useRouter } from "next/navigation"
 import { Clock3, Dumbbell } from "lucide-react"
 import { useTraining } from "@/src/modules/training/useTraining"
@@ -12,7 +12,7 @@ import { agendaTodayYmd } from "@/lib/agenda/localDateKey"
 import { useTrainingPreferences } from "@/app/hooks/useTrainingPreferences"
 import { TrainingActionQuerySync } from "@/app/training/TrainingActionQuerySync"
 import { Card } from "@/src/components/ui/Card"
-import { aggregateZoneProgress } from "@/lib/training/effectiveSets"
+import { aggregateZoneProgress, type ZoneStatus } from "@/lib/training/effectiveSets"
 import { buildAiRecommendations, deriveNutritionStatus, nutritionStatusTone } from "@/lib/training/decisionEngine"
 
 export default function TrainingPage() {
@@ -20,7 +20,7 @@ export default function TrainingPage() {
   const todayIso = agendaTodayYmd()
   const { today, days, loading, error, setManualStatus, todayState, dataMeta } = useTraining()
   const { latest: appleHealth, loading: appleLoading } = useHealthAutoMetrics()
-  const { bodyRows, mealDays, prefs } = useTrainingPreferences()
+  const { bodyRows, mealDays, prefs, updatePrefs, setGoalImageUrl } = useTrainingPreferences()
   const appleSignals = useMemo(() => appleDaySignalsFromHealthMetric(appleHealth), [appleHealth])
   const readiness = useMemo(() => buildTrainingReadiness(appleSignals, days), [appleSignals, days])
   const planVsExecution = useMemo(() => buildPlanVsExecution(days, todayState, todayIso), [days, todayState, todayIso])
@@ -48,12 +48,58 @@ export default function TrainingPage() {
   const nutritionPlan = useMemo(() => deriveNutritionPlan(mealDays), [mealDays])
   const nutritionStatus = deriveNutritionStatus(weightMetric)
   const aiRecommendations = buildAiRecommendations({ bodyPartProgress, nutritionStatus, hasHevy })
+  const [goalImageGenerating, setGoalImageGenerating] = useState(false)
+  const [trainingNotice, setTrainingNotice] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const hasLoadData =
     trainingsWeek > 0 ||
     minutesFromHevy > 0 ||
     trainingLoad != null ||
     exerciseMinutes != null ||
     volumeEstimated > 0
+
+  const showTrainingNotice = (message: string) => {
+    setTrainingNotice(message)
+    window.setTimeout(() => setTrainingNotice(null), 6000)
+  }
+
+  const onPickImage = () => fileInputRef.current?.click()
+
+  const onFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !file.type.startsWith("image/")) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = reader.result
+      if (typeof result === "string") setGoalImageUrl(result)
+    }
+    reader.readAsDataURL(file)
+    e.target.value = ""
+  }
+
+  const onGenerateGoalWithAI = async () => {
+    const prompt = (prefs.visualGoalDescription ?? "").trim()
+    if (!prompt) {
+      showTrainingNotice("Define primero tu objetivo físico para generar imagen.")
+      return
+    }
+    setGoalImageGenerating(true)
+    try {
+      const res = await fetch("/api/training/goal-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, mode: "create" as const }),
+      })
+      const data = (await res.json()) as { ok?: boolean; imageDataUrl?: string; error?: string; detail?: string }
+      if (!res.ok || !data.ok || !data.imageDataUrl) throw new Error(data.detail ?? data.error ?? "No se pudo generar imagen")
+      setGoalImageUrl(data.imageDataUrl)
+      showTrainingNotice("Imagen de referencia actualizada.")
+    } catch (e) {
+      showTrainingNotice(e instanceof Error ? e.message : "Error generando imagen")
+    } finally {
+      setGoalImageGenerating(false)
+    }
+  }
 
   return (
     <main className="orbita-page-stack mx-auto w-full max-w-[min(72rem,calc(100vw-1.5rem))]" aria-label="Entrenamiento operativo">
@@ -67,9 +113,9 @@ export default function TrainingPage() {
       </div>
 
       <Card>
-        <div className="rounded-2xl border border-[color:color-mix(in_srgb,var(--color-accent-health)_35%,var(--color-border))] bg-[color:color-mix(in_srgb,var(--color-accent-health)_14%,var(--color-surface))] p-[var(--spacing-lg)] sm:p-[calc(var(--spacing-lg)+4px)]">
+        <div className="rounded-2xl border border-[color:color-mix(in_srgb,var(--color-accent-health)_35%,var(--color-border))] bg-[radial-gradient(circle_at_top_right,color-mix(in_srgb,var(--color-accent-health)_20%,transparent),transparent_60%),color-mix(in_srgb,var(--color-accent-health)_12%,var(--color-surface))] p-[var(--spacing-lg)] sm:p-[calc(var(--spacing-lg)+2px)]">
           <p className="m-0 text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-secondary)]">Decisión del día</p>
-          <p className="m-0 mt-1 text-base font-semibold text-[var(--color-text-primary)]">
+          <p className="m-0 mt-1 text-sm font-semibold text-[var(--color-text-primary)] sm:text-base">
             Hoy está planeado <strong>{planVsExecution.plannedToday}</strong>. Decide rápido según carga y agenda.
           </p>
           <div className="mt-3 grid grid-cols-1 gap-2">
@@ -103,6 +149,51 @@ export default function TrainingPage() {
             >
               Descansar / movilidad
             </button>
+          </div>
+        </div>
+      </Card>
+
+      <Card>
+        <div className="p-[var(--spacing-lg)]">
+          <div className="rounded-2xl border border-[color:color-mix(in_srgb,var(--color-accent-health)_30%,var(--color-border))] bg-[radial-gradient(circle_at_bottom_left,color-mix(in_srgb,var(--color-accent-health)_16%,transparent),transparent_58%),color-mix(in_srgb,var(--color-accent-health)_8%,var(--color-surface-alt))] p-4">
+            <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">Cómo me quiero ver</p>
+            <p className="m-0 mt-1 text-sm font-medium text-[var(--color-text-primary)]">
+              {(prefs.visualGoalDescription ?? "").trim() || "Define tu objetivo visual para orientar la progresión física."}
+            </p>
+            <p className="m-0 mt-1 text-xs text-[var(--color-text-secondary)]">
+              Prioridad: {prefs.visualGoalPriority ?? "alta"} {prefs.visualGoalDeadlineYm ? `· Meta ${prefs.visualGoalDeadlineYm}` : "· Sin fecha definida"}
+            </p>
+            <div className="mt-3 overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+              {prefs.goalImageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={prefs.goalImageUrl} alt="Referencia física objetivo" className="h-40 w-full object-cover" />
+              ) : (
+                <div className="flex h-40 items-center justify-center px-4 text-center text-xs text-[var(--color-text-secondary)]">
+                  Agrega una referencia visual para mantener dirección clara del objetivo físico.
+                </div>
+              )}
+            </div>
+            <div className="mt-3 grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
+              <button
+                type="button"
+                onClick={() => {
+                  void onGenerateGoalWithAI()
+                }}
+                disabled={goalImageGenerating}
+                className="inline-flex min-h-10 items-center justify-center rounded-xl border border-[var(--color-accent-health)] bg-[var(--color-accent-health)] px-4 text-sm font-semibold text-white disabled:opacity-60"
+              >
+                {goalImageGenerating ? "Generando..." : "Generar imagen IA"}
+              </button>
+              <button
+                type="button"
+                onClick={onPickImage}
+                className="inline-flex min-h-10 items-center justify-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-sm font-medium text-[var(--color-text-primary)]"
+              >
+                Actualizar referencia
+              </button>
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={onFileChange} className="hidden" />
+            </div>
+            {trainingNotice ? <p className="m-0 mt-2 text-xs text-[var(--color-text-secondary)]">{trainingNotice}</p> : null}
           </div>
         </div>
       </Card>
@@ -149,15 +240,6 @@ export default function TrainingPage() {
       <Card>
         <div className="p-[var(--spacing-lg)]">
           <p className="m-0 text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-secondary)]">Progreso físico</p>
-          <div className="mt-3 rounded-xl border border-[color:color-mix(in_srgb,var(--color-accent-health)_30%,var(--color-border))] bg-[color:color-mix(in_srgb,var(--color-accent-health)_10%,var(--color-surface-alt))] p-3">
-            <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">Cómo me quiero ver</p>
-            <p className="m-0 mt-1 text-sm font-medium text-[var(--color-text-primary)]">
-              {(prefs.visualGoalDescription ?? "").trim() || "Define tu objetivo visual para orientar el entrenamiento de la semana."}
-            </p>
-            <p className="m-0 mt-1 text-xs text-[var(--color-text-secondary)]">
-              Prioridad: {prefs.visualGoalPriority ?? "alta"} {prefs.visualGoalDeadlineYm ? `· Meta ${prefs.visualGoalDeadlineYm}` : ""}
-            </p>
-          </div>
           {bodyRows.length > 0 || bodyPartProgress.some((zone) => zone.actualSets > 0) ? (
             <>
               <div className="mt-3 grid gap-2 sm:grid-cols-3">
@@ -165,20 +247,33 @@ export default function TrainingPage() {
                 <MetricMini label="Cintura" value={waistMetric ? `${waistMetric.current}` : "—"} />
                 <MetricMini label="Objetivo actual" value={objective} />
               </div>
-              <div className="mt-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] p-3">
+              <div className="mt-3 rounded-xl bg-[var(--color-surface-alt)] p-3">
                 <p className="m-0 text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">Físico actual por zonas</p>
-                <div className="mt-2 space-y-2">
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
                   {bodyPartProgress.map((zone) => (
-                    <div key={zone.key}>
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="m-0 text-xs font-medium text-[var(--color-text-primary)]">{zone.label}</p>
-                        <p className="m-0 text-[11px] text-[var(--color-text-secondary)]">
-                          {zone.actualSets.toFixed(1)} / {zone.targetSets} sets · {zone.progress}% · {zone.status}
-                        </p>
+                    <div key={zone.key} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-2.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="m-0 text-sm font-semibold text-[var(--color-text-primary)]">{zone.label}</p>
+                        <StatusChip label={zone.status} tone={zoneTone(zone.status)} />
                       </div>
-                      <div className="mt-1 h-2 rounded-full bg-[var(--color-surface)]">
-                        <div className="h-2 rounded-full bg-[var(--color-accent-health)]" style={{ width: `${zone.progress}%` }} />
-                      </div>
+                      {zone.actualSets > 0 ? (
+                        <>
+                          <p className="m-0 mt-1 text-xs text-[var(--color-text-secondary)]">
+                            {zone.actualSets.toFixed(1)} sets actuales · objetivo {zone.targetSets}
+                          </p>
+                          <div className="mt-1.5 h-2 rounded-full bg-[var(--color-surface-alt)]">
+                            <div className="h-2 rounded-full bg-[var(--color-accent-health)]" style={{ width: `${Math.min(100, zone.progress)}%` }} />
+                          </div>
+                          <p className="m-0 mt-1 text-[11px] text-[var(--color-text-secondary)]">{zoneHint(zone)}</p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="m-0 mt-1 text-xs text-[var(--color-text-secondary)]">Sin señal suficiente esta semana.</p>
+                          <p className="m-0 mt-1 text-[11px] text-[var(--color-text-secondary)]">
+                            Registra o sincroniza entrenamientos para calcular carga por músculo.
+                          </p>
+                        </>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -210,7 +305,7 @@ export default function TrainingPage() {
 
       <Card>
         <div className="p-[var(--spacing-lg)]" id="plan-nutricion">
-          <p className="m-0 text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-secondary)]">Plan de nutrición</p>
+          <p className="m-0 text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-secondary)]">Plan de comida para el objetivo</p>
           {nutritionPlan.available ? (
             <>
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -226,7 +321,20 @@ export default function TrainingPage() {
                   onClick={() => router.push("/training#plan-nutricion")}
                   className="inline-flex min-h-8 items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 text-xs font-medium text-[var(--color-text-primary)]"
                 >
-                  Ver plan de comidas
+                  Ver meal plan
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    updatePrefs({
+                      visualGoalDescription:
+                        (prefs.visualGoalDescription ?? "").trim() +
+                        " Ajusta macros para mejorar adherencia al objetivo.",
+                    })
+                  }
+                  className="inline-flex min-h-8 items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 text-xs font-medium text-[var(--color-text-primary)]"
+                >
+                  Ajustar con IA
                 </button>
               </div>
             </>
@@ -238,14 +346,19 @@ export default function TrainingPage() {
 
       <Card>
         <div className="p-[var(--spacing-lg)]">
-          <p className="m-0 text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-secondary)]">Ajuste IA</p>
-          <p className="m-0 mt-1 text-sm text-[var(--color-text-primary)]">Optimización semanal</p>
+          <p className="m-0 text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-secondary)]">Qué ajustar esta semana</p>
           <div className="mt-2 space-y-1.5">
-            {aiRecommendations.map((line) => (
-              <p key={line} className="m-0 rounded-lg bg-[var(--color-surface-alt)] px-3 py-2 text-xs text-[var(--color-text-primary)]">
-                {line}
+            {bodyPartProgress.some((zone) => zone.actualSets > 0) ? (
+              aiRecommendations.map((line) => (
+                <p key={line} className="m-0 rounded-lg bg-[var(--color-surface-alt)] px-3 py-2 text-xs text-[var(--color-text-primary)]">
+                  {line}
+                </p>
+              ))
+            ) : (
+              <p className="m-0 rounded-lg bg-[var(--color-surface-alt)] px-3 py-2 text-xs text-[var(--color-text-primary)]">
+                Completa 2–3 entrenamientos para generar una recomendación más precisa.
               </p>
-            ))}
+            )}
           </div>
         </div>
       </Card>
@@ -427,5 +540,19 @@ function deriveNutritionPlan(mealDays: Array<{ kcal: number; pro: number; carb: 
     carbs: Math.round(total.carb / len),
     fats: Math.round(total.fat / len),
   }
+}
+
+function zoneTone(status: ZoneStatus): "ok" | "warn" | "risk" | "muted" {
+  if (status === "bien") return "ok"
+  if (status === "en desarrollo") return "warn"
+  if (status === "sobrecarga") return "risk"
+  return "muted"
+}
+
+function zoneHint(zone: { status: ZoneStatus; label: string }): string {
+  if (zone.status === "bien") return "Mantén el ritmo actual y consolida técnica."
+  if (zone.status === "en desarrollo") return `Refuerza ${zone.label.toLowerCase()} con 1 bloque extra esta semana.`
+  if (zone.status === "sobrecarga") return `Baja carga en ${zone.label.toLowerCase()} y prioriza recuperación.`
+  return `Prioriza ${zone.label.toLowerCase()} en la próxima sesión para activar progreso.`
 }
 
