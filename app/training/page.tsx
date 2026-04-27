@@ -36,14 +36,7 @@ export default function TrainingPage() {
   const minutesFromHevy = weeklyDays.reduce((sum, day) => sum + (day.duration ?? 0), 0)
   const volumeEstimated = weeklyDays.reduce((sum, day) => sum + (day.volumeScore ?? 0), 0)
   const exerciseMinutes = firstNumber(hs?.exercise_minutes, hs?.workout_minutes, hs?.workouts_minutes, appleSignals?.workout_minutes)
-  const activeEnergyKcal = firstNumber(hs?.active_energy_kcal, appleSignals?.calories)
-  const workoutsCount = firstNumber(hs?.workouts_count, appleSignals?.workouts_count)
-  const workoutsDurationSeconds = firstNumber(
-    hs?.workouts_duration_seconds,
-    exerciseMinutes != null ? Math.round(exerciseMinutes * 60) : null,
-  )
   const trainingLoad = firstNumber(hs?.training_load)
-  const steps = firstNumber(hs?.steps, appleSignals?.steps)
 
   const weightMetric = bodyRows.find((row) => /peso/i.test(row.label))
   const waistMetric = bodyRows.find((row) => /cintura/i.test(row.label))
@@ -52,10 +45,9 @@ export default function TrainingPage() {
   const hasLoadData =
     trainingsWeek > 0 ||
     minutesFromHevy > 0 ||
-    activeEnergyKcal != null ||
-    workoutsDurationSeconds != null ||
     trainingLoad != null ||
-    exerciseMinutes != null
+    exerciseMinutes != null ||
+    volumeEstimated > 0
 
   return (
     <main className="orbita-page-stack mx-auto w-full max-w-[min(72rem,calc(100vw-1.5rem))]" aria-label="Entrenamiento operativo">
@@ -69,37 +61,39 @@ export default function TrainingPage() {
       </div>
 
       <Card>
-        <div className="p-[var(--spacing-lg)] sm:p-[calc(var(--spacing-lg)+2px)]">
+        <div className="rounded-2xl border border-[color:color-mix(in_srgb,var(--color-accent-health)_35%,var(--color-border))] bg-[color:color-mix(in_srgb,var(--color-accent-health)_14%,var(--color-surface))] p-[var(--spacing-lg)] sm:p-[calc(var(--spacing-lg)+4px)]">
           <p className="m-0 text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-secondary)]">Decisión del día</p>
-          <p className="m-0 mt-1 text-sm font-medium text-[var(--color-text-primary)]">
+          <p className="m-0 mt-1 text-base font-semibold text-[var(--color-text-primary)]">
             Hoy está planeado <strong>{planVsExecution.plannedToday}</strong>. Decide rápido según carga y agenda.
           </p>
-          <div className="mt-3 grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
+          <div className="mt-3 grid grid-cols-1 gap-2">
             <button
               type="button"
               onClick={() => (hasHevy ? window.open("https://hevy.com/app", "_blank", "noopener,noreferrer") : router.push("/configuracion#acordeon-config-hevy"))}
-              className="inline-flex min-h-10 w-full items-center justify-center rounded-xl border border-[var(--color-accent-health)] bg-[var(--color-accent-health)] px-3 text-xs font-semibold text-white sm:w-auto"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-[var(--color-accent-health)] bg-[var(--color-accent-health)] px-4 text-sm font-semibold text-white"
             >
               Ir a entrenamiento
             </button>
+          </div>
+          <div className="mt-2 grid grid-cols-1 gap-1.5 sm:flex sm:flex-wrap sm:gap-2">
             <button
               type="button"
               onClick={() => setManualStatus("skip")}
-              className="inline-flex min-h-10 w-full items-center justify-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 text-xs font-medium text-[var(--color-text-primary)] sm:w-auto"
+              className="inline-flex min-h-9 w-full items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 text-xs font-medium text-[var(--color-text-secondary)] sm:w-auto"
             >
               Ajustar sesión
             </button>
             <button
               type="button"
               onClick={() => router.push("/agenda")}
-              className="inline-flex min-h-10 w-full items-center justify-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 text-xs font-medium text-[var(--color-text-primary)] sm:w-auto"
+              className="inline-flex min-h-9 w-full items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 text-xs font-medium text-[var(--color-text-secondary)] sm:w-auto"
             >
               Ajustar día
             </button>
             <button
               type="button"
               onClick={() => setManualStatus("rest")}
-              className="inline-flex min-h-10 w-full items-center justify-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 text-xs font-medium text-[var(--color-text-primary)] sm:w-auto"
+              className="inline-flex min-h-9 w-full items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 text-xs font-medium text-[var(--color-text-secondary)] sm:w-auto"
             >
               Descansar / movilidad
             </button>
@@ -135,22 +129,14 @@ export default function TrainingPage() {
           {loading || appleLoading ? (
             <p className="m-0 mt-2 text-sm text-[var(--color-text-secondary)]">Cargando carga semanal…</p>
           ) : hasLoadData ? (
-            <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-3 grid gap-2 sm:grid-cols-3">
               <MetricMini label="Entrenamientos semana" value={String(trainingsWeek)} />
               <MetricMini label="Minutos entrenados" value={String(Math.round(firstNumber(minutesFromHevy, exerciseMinutes ?? 0) ?? 0))} />
-              <MetricMini label="Volumen estimado" value={volumeEstimated > 0 ? `${Math.round(volumeEstimated)}` : "—"} />
-              <MetricMini label="workouts_count" value={workoutsCount != null ? `${Math.round(workoutsCount)}` : "—"} />
-              <MetricMini label="active_energy_kcal" value={activeEnergyKcal != null ? `${Math.round(activeEnergyKcal)}` : "—"} />
-              <MetricMini
-                label="workouts_duration_seconds"
-                value={workoutsDurationSeconds != null ? `${Math.round(workoutsDurationSeconds)}` : "—"}
-              />
               <MetricMini label="training_load" value={trainingLoad != null ? `${Math.round(trainingLoad)}` : "—"} />
             </div>
           ) : (
             <EmptyDataState />
           )}
-          {steps != null ? <p className="m-0 mt-2 text-xs text-[var(--color-text-secondary)]">Pasos hoy: {Math.round(steps)}</p> : null}
         </div>
       </Card>
 
@@ -180,9 +166,9 @@ export default function TrainingPage() {
                   ))}
                 </div>
               </div>
-              <div className="mt-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] p-3">
-                <p className="m-0 text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">Cómo me quiero ver</p>
-                <p className="m-0 mt-1 text-sm text-[var(--color-text-primary)]">
+              <div className="mt-3 rounded-xl border border-[color:color-mix(in_srgb,var(--color-accent-health)_30%,var(--color-border))] bg-[color:color-mix(in_srgb,var(--color-accent-health)_10%,var(--color-surface-alt))] p-3">
+                <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">Cómo me quiero ver</p>
+                <p className="m-0 mt-1 text-sm font-medium text-[var(--color-text-primary)]">
                   {(prefs.visualGoalDescription ?? "").trim() || "Define tu objetivo visual para orientar el entrenamiento de la semana."}
                 </p>
                 <p className="m-0 mt-1 text-xs text-[var(--color-text-secondary)]">
@@ -265,7 +251,7 @@ export default function TrainingPage() {
 
 function MetricMini({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5">
+    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-2">
       <p className="m-0 text-[10px] uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">{label}</p>
       <p className="m-0 mt-1 text-xs font-semibold text-[var(--color-text-primary)]">{value}</p>
     </div>
