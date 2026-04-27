@@ -19,14 +19,21 @@ export const APPLE_SHORTCUT_BUNDLE_INPUT_KEYS = [
   "workouts_duration_seconds",
   "readiness_score",
   "walking_running_m",
+  "distance_meters",
   "floors_climbed",
   "vo2_max",
+  "vo2max",
   "oxygen_saturation_avg",
   "respiratory_rate",
   "walking_hr_avg",
+  "walking_heart_rate_avg",
   "walking_speed_m_s",
   "six_minute_walk_m",
   "body_mass_kg",
+  "stand_minutes",
+  "sleep_sessions_count",
+  "training_load",
+  "recovery_score_proxy",
 ] as const
 
 export type AppleShortcutBundleInputKey = (typeof APPLE_SHORTCUT_BUNDLE_INPUT_KEYS)[number]
@@ -42,6 +49,15 @@ const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(mi
 function readFiniteNumber(bundle: Record<string, unknown>, key: string): number | undefined {
   const v = bundle[key]
   return typeof v === "number" && Number.isFinite(v) ? v : undefined
+}
+
+/** Primera clave presente con número finito (atajo puede mandar alias `vo2max`, `distance_meters`, etc.). */
+function readFiniteNumberFirst(bundle: Record<string, unknown>, keys: string[]): number | undefined {
+  for (const key of keys) {
+    const n = readFiniteNumber(bundle, key)
+    if (n !== undefined) return n
+  }
+  return undefined
 }
 
 /** SpO₂: HealthKit suele mandar 0–1; si ya viene como %, respétalo. */
@@ -80,11 +96,25 @@ export function sanitizeBundleToHealthSignals(bundle: Record<string, unknown>): 
   )
   put("readiness_score", readFiniteNumber(bundle, "readiness_score"), (n) => clamp(Math.round(n), 0, 100))
 
-  put("walking_running_m", readFiniteNumber(bundle, "walking_running_m"), (n) => clamp(Math.round(n), 0, 100_000))
+  put(
+    "walking_running_m",
+    readFiniteNumberFirst(bundle, ["walking_running_m", "distance_meters"]),
+    (n) => clamp(Math.round(n), 0, 100_000),
+  )
   put("floors_climbed", readFiniteNumber(bundle, "floors_climbed"), (n) => clamp(Math.round(n), 0, 500))
-  put("vo2_max", readFiniteNumber(bundle, "vo2_max"), (n) => clamp(Math.round(n * 10) / 10, 10, 90))
+  put("vo2_max", readFiniteNumberFirst(bundle, ["vo2_max", "vo2max"]), (n) => clamp(Math.round(n * 10) / 10, 10, 90))
   put("respiratory_rate", readFiniteNumber(bundle, "respiratory_rate"), (n) => clamp(Math.round(n * 10) / 10, 4, 40))
-  put("walking_hr_avg", readFiniteNumber(bundle, "walking_hr_avg"), (n) => clamp(Math.round(n), 40, 200))
+  put(
+    "walking_hr_avg",
+    readFiniteNumberFirst(bundle, ["walking_hr_avg", "walking_heart_rate_avg"]),
+    (n) => clamp(Math.round(n), 40, 200),
+  )
+  put("stand_minutes", readFiniteNumber(bundle, "stand_minutes"), (n) => clamp(Math.round(n), 0, 24 * 60))
+  put("sleep_sessions_count", readFiniteNumber(bundle, "sleep_sessions_count"), (n) => clamp(Math.round(n), 0, 80))
+  put("training_load", readFiniteNumber(bundle, "training_load"), (n) => clamp(Math.round(n * 10) / 10, 0, 1_000_000))
+  put("recovery_score_proxy", readFiniteNumber(bundle, "recovery_score_proxy"), (n) =>
+    clamp(Math.round(n * 10) / 10, 0, 500),
+  )
   put("walking_speed_m_s", readFiniteNumber(bundle, "walking_speed_m_s"), (n) => clamp(Math.round(n * 100) / 100, 0, 4))
   put("six_minute_walk_m", readFiniteNumber(bundle, "six_minute_walk_m"), (n) => clamp(Math.round(n), 0, 2000))
   put("body_mass_kg", readFiniteNumber(bundle, "body_mass_kg"), (n) => clamp(Math.round(n * 10) / 10, 25, 300))
@@ -115,6 +145,7 @@ export const HEALTH_SIGNALS_STABLE_ORDER = [
   "active_energy_kcal",
   "sleep_hours",
   "sleep_duration_seconds",
+  "sleep_sessions_count",
   "hrv_ms",
   "resting_hr_bpm",
   "readiness_score",
@@ -122,6 +153,7 @@ export const HEALTH_SIGNALS_STABLE_ORDER = [
   "workouts_minutes",
   "workouts_duration_seconds",
   "walking_running_m",
+  "stand_minutes",
   "floors_climbed",
   "vo2_max",
   "spo2_pct",
@@ -130,6 +162,8 @@ export const HEALTH_SIGNALS_STABLE_ORDER = [
   "walking_speed_m_s",
   "six_minute_walk_m",
   "body_mass_kg",
+  "training_load",
+  "recovery_score_proxy",
 ] as const
 
 /** Etiquetas en castellano para tarjetas (clave = clave en `health_signals` / bundle). */
@@ -146,6 +180,8 @@ export const HEALTH_SIGNAL_LABEL_ES: Record<string, string> = {
   workouts_minutes: "Min. entreno",
   workouts_duration_seconds: "Duración entrenos (s)",
   walking_running_m: "Distancia caminar/correr (m)",
+  stand_minutes: "Min. de pie (Apple)",
+  sleep_sessions_count: "Sesiones de sueño",
   floors_climbed: "Plantas (escaleras)",
   vo2_max: "VO₂ máx.",
   spo2_pct: "SpO₂ (%)",
@@ -155,6 +191,8 @@ export const HEALTH_SIGNAL_LABEL_ES: Record<string, string> = {
   walking_speed_m_s: "Velocidad al caminar (m/s)",
   six_minute_walk_m: "Test 6 min (m)",
   body_mass_kg: "Peso (kg)",
+  training_load: "Carga de entreno (proxy)",
+  recovery_score_proxy: "Recuperación (proxy)",
 }
 
 export const HEALTH_SIGNAL_UNIT_ES: Record<string, string> = {
@@ -178,6 +216,10 @@ export const HEALTH_SIGNAL_UNIT_ES: Record<string, string> = {
   walking_speed_m_s: "m/s",
   six_minute_walk_m: "m",
   body_mass_kg: "kg",
+  stand_minutes: "min",
+  sleep_sessions_count: "",
+  training_load: "",
+  recovery_score_proxy: "",
 }
 
 /** Claves que ya muestra la franja principal de Salud (evitar duplicar en “Señales extendidas”). */

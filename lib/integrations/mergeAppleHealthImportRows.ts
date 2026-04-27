@@ -90,6 +90,19 @@ export function buildImportRowFromNormalized(
   if (m.workouts_duration_seconds != null) bundleForSanitize.workouts_duration_seconds = m.workouts_duration_seconds
   if (m.sleep_duration_seconds != null) bundleForSanitize.sleep_duration_seconds = m.sleep_duration_seconds
 
+  const training_load =
+    coalesceNumericHealth(originalBundle.training_load) ??
+    (m.workouts_duration_seconds != null && m.active_energy_kcal != null
+      ? m.workouts_duration_seconds * 0.5 + m.active_energy_kcal * 0.2
+      : undefined)
+  const recovery_score_proxy =
+    coalesceNumericHealth(originalBundle.recovery_score_proxy) ??
+    (m.hrv_ms != null && m.resting_hr_bpm != null && m.resting_hr_bpm > 0
+      ? (m.hrv_ms / m.resting_hr_bpm) * 10
+      : undefined)
+  if (training_load != null) bundleForSanitize.training_load = training_load
+  if (recovery_score_proxy != null) bundleForSanitize.recovery_score_proxy = recovery_score_proxy
+
   const health_signals = sanitizeBundleToHealthSignals(bundleForSanitize)
   const bundleExtras = n.bundle_extras ?? collectBundleExtrasCoerced(originalBundle)
 

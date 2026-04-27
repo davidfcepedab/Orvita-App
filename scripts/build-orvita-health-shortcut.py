@@ -5,17 +5,13 @@ Compatibilidad: las acciones usan identificadores estándar de Shortcuts
 (`is.workflow.actions.filter.health.quantity`, `statistics` + `detect.number`, `filter.workouts`, etc.),
 no dependen de un iOS "futuro". Si al importar ves «Buscar muestras de Salud» con tipo (null)
 o tarjetas «Acción desconocida» en el medio, suele ser **serialización** del .shortcut, no
-permisos ni caché: prueba `--mode minimal`, `--quantity-type plain` y/o
-`--omit-workout-duration-stat` (ver `--help`).
+permisos ni caché: prueba `--mode minimal` y/o `--omit-workout-duration-stat` (ver `--help`).
 
-Métricas en modo `full` (lista `BUNDLE_QUANTITY_METRICS`, alineada con `lib/integrations/appleHealthBundleContract.ts`):
-- Pasos, minutos de ejercicio, energía activa, HRV, FC en reposo, distancia caminar/correr (m),
-  plantas, VO₂, saturación O₂ (media HK → `oxygen_saturation_avg`), frecuencia respiratoria,
-  FC media al caminar, velocidad al caminar, test 6 min (m), masa corporal; entrenamientos
-  (conteo + duración salvo `--omit-workout-duration-stat`).
-- **No** incluimos agregado de sueño por categoría + «Calcular estadísticas (duración)»;
-  el diccionario no manda `sleep_hours` / `sleep_duration_seconds` desde el atajo generado
-  (puedes añadirlos a mano en Atajos si lo necesitas).
+Modo `full`: token → fecha ISO → por cada métrica: Buscar muestras (tipo + hoy) → Calcular (Suma/Media) o Conteo
+→ Obtener números → Establecer variable (`*_num`) → diccionario y POST JSON **plano** (sin `apple_bundle`).
+Entrenos: conteo real y duración en segundos (suma de `Duration`) como variables distintas.
+Sueño: suma (`sleep_duration_seconds`) y conteo de sesiones. Derivadas `training_load` / `recovery_score_proxy`
+las calcula el servidor si faltan en el cuerpo.
 
 Modo `minimal`: token, fecha ISO, una sola búsqueda (pasos) + suma, diccionario mínimo, POST
 — para validar en un iPhone real que el flujo básico no se rompe antes de añadir métricas.
@@ -37,22 +33,23 @@ import sys
 import uuid
 from pathlib import Path
 
-# Alinear con `APPLE_SHORTCUT_BUNDLE_INPUT_KEYS` / atajo → merge (TypeScript).
-BUNDLE_QUANTITY_METRICS: list[tuple[str, str, str]] = [
-    ("steps", "HKQuantityTypeIdentifierStepCount", "Sum"),
-    ("exercise_minutes", "HKQuantityTypeIdentifierAppleExerciseTime", "Sum"),
-    ("active_energy_kcal", "HKQuantityTypeIdentifierActiveEnergyBurned", "Sum"),
-    ("hrv_ms", "HKQuantityTypeIdentifierHeartRateVariabilitySDNN", "Average"),
-    ("resting_hr_bpm", "HKQuantityTypeIdentifierRestingHeartRate", "Average"),
-    ("walking_running_m", "HKQuantityTypeIdentifierDistanceWalkingRunning", "Sum"),
-    ("floors_climbed", "HKQuantityTypeIdentifierFlightsClimbed", "Sum"),
-    ("vo2_max", "HKQuantityTypeIdentifierVO2Max", "Average"),
-    ("oxygen_saturation_avg", "HKQuantityTypeIdentifierOxygenSaturation", "Average"),
-    ("respiratory_rate", "HKQuantityTypeIdentifierRespiratoryRate", "Average"),
-    ("walking_hr_avg", "HKQuantityTypeIdentifierWalkingHeartRateAverage", "Average"),
-    ("walking_speed_m_s", "HKQuantityTypeIdentifierWalkingSpeed", "Average"),
-    ("six_minute_walk_m", "HKQuantityTypeIdentifierSixMinuteWalkTestDistance", "Average"),
-    ("body_mass_kg", "HKQuantityTypeIdentifierBodyMass", "Average"),
+# (variable_atajo, clave_JSON, etiqueta_tipo_Shortcuts_en_inglés, operación_statistics)
+QUANTITY_SUM_AVG: list[tuple[str, str, str, str]] = [
+    ("steps_num", "steps", "Steps", "Sum"),
+    ("active_energy_num", "active_energy_kcal", "Active Calories", "Sum"),
+    ("exercise_minutes_num", "exercise_minutes", "Exercise Time", "Sum"),
+    ("stand_minutes_num", "stand_minutes", "Stand Time", "Sum"),
+    ("distance_meters_num", "distance_meters", "Walking + Running Distance", "Sum"),
+    ("hrv_num", "hrv_ms", "Heart Rate Variability", "Average"),
+    ("resting_hr_num", "resting_hr_bpm", "Resting Heart Rate", "Average"),
+    ("walking_heart_rate_avg_num", "walking_heart_rate_avg", "Walking Heart Rate Average", "Average"),
+    ("vo2max_num", "vo2max", "VO2 Max", "Average"),
+    ("sleep_duration_num", "sleep_duration_seconds", "Sleep", "Sum"),
+]
+
+# (variable_atajo, clave_JSON, etiqueta_tipo) — conteo de muestras con acción Contar
+QUANTITY_COUNT_ONLY: list[tuple[str, str, str]] = [
+    ("sleep_sessions_count_num", "sleep_sessions_count", "Sleep"),
 ]
 
 
@@ -68,6 +65,22 @@ def text_token_string(attachment_uuid: str, output_name: str = "Provided Input")
                     "Type": "ActionOutput",
                     "OutputUUID": attachment_uuid,
                     "OutputName": output_name,
+                }
+            },
+            "string": "\ufffc",
+        },
+        "WFSerializationType": "WFTextTokenString",
+    }
+
+
+def text_token_variable(variable_name: str) -> dict:
+    """Referencia a variable de atajo en Diccionario / cabeceras."""
+    return {
+        "Value": {
+            "attachmentsByRange": {
+                "{0, 1}": {
+                    "Type": "Variable",
+                    "VariableName": variable_name,
                 }
             },
             "string": "\ufffc",
@@ -93,34 +106,46 @@ def content_filter_today() -> dict:
     }
 
 
-def wf_quantity_type_parameter(identifier: str, style: str) -> str | dict:
-    """Cómo se guarda el tipo de muestra (HK…) en el picker de Atajos.
-
-    - field: estructura clásica Value + WFQuantityTypeFieldValue (la que exportan muchos plist).
-    - plain: un solo string (algunas builds de Atajos lo aceptan si el anidado no resuelve).
-    """
-    if style == "plain":
-        return identifier
-    if style != "field":
-        raise ValueError(f"Unknown quantity type style: {style!r}")
+def content_filter_health_quantity_today(type_value: str) -> dict:
+    """Tipo explícito (evita null) + fecha de inicio = hoy (plantilla Start Date)."""
     return {
-        "Value": {"WFQuantityTypeIdentifier": identifier},
-        "WFSerializationType": "WFQuantityTypeFieldValue",
+        "Value": {
+            "WFActionParameterFilterPrefix": 1,
+            "WFContentPredicateBoundedDate": False,
+            "WFActionParameterFilterTemplates": [
+                {
+                    "Bounded": True,
+                    "Operator": 4,
+                    "Property": "Type",
+                    "Removable": False,
+                    "Values": {
+                        "Enumeration": {
+                            "Value": type_value,
+                            "WFSerializationType": "WFStringSubstitutableState",
+                        }
+                    },
+                },
+                {
+                    "Operator": 1002,
+                    "Property": "Start Date",
+                    "Removable": True,
+                },
+            ],
+        },
+        "WFSerializationType": "WFContentPredicateTableTemplate",
     }
 
 
 def find_health_quantity(
     *,
     u_find: str,
-    identifier: str,
-    quantity_type_style: str = "field",
+    type_value: str,
 ) -> dict:
     return {
         "WFWorkflowActionIdentifier": "is.workflow.actions.filter.health.quantity",
         "WFWorkflowActionParameters": {
             "UUID": u_find,
-            "WFContentItemFilter": content_filter_today(),
-            "WFQuantityType": wf_quantity_type_parameter(identifier, quantity_type_style),
+            "WFContentItemFilter": content_filter_health_quantity_today(type_value),
         },
     }
 
@@ -412,83 +437,44 @@ def format_iso8601(*, u: str, u_date: str) -> dict:
     }
 
 
-def dictionary_bundle_dynamic(
-    *,
-    u_dict: str,
-    u_iso: str,
-    quantity_stat_pairs: list[tuple[str, str, str]],
-    u_workout_count: str,
-    u_workout_dur_sec: str,
-    include_workout_duration_seconds: bool = True,
-    workout_duration_output_name: str = "Numbers",
-) -> dict:
+def build_flat_payload_items() -> list[dict]:
+    """Mismo orden de claves para Diccionario y cuerpo JSON del POST (referencias a variables)."""
     items: list[dict] = [
         {
             "WFItemType": 0,
             "WFKey": text_plain("observed_at"),
-            "WFValue": text_token_string(u_iso, "Formatted Date"),
+            "WFValue": {"Value": text_token_variable("observed_at"), "WFSerializationType": "WFTextTokenString"},
         },
     ]
-    for key, u_stat, output_name in quantity_stat_pairs:
+    for _var, payload_key in [
+        ("steps_num", "steps"),
+        ("active_energy_num", "active_energy_kcal"),
+        ("workout_count", "workouts_count"),
+        ("workouts_duration_seconds_num", "workouts_duration_seconds"),
+        ("sleep_duration_num", "sleep_duration_seconds"),
+        ("resting_hr_num", "resting_hr_bpm"),
+        ("hrv_num", "hrv_ms"),
+        ("exercise_minutes_num", "exercise_minutes"),
+        ("stand_minutes_num", "stand_minutes"),
+        ("distance_meters_num", "distance_meters"),
+        ("vo2max_num", "vo2max"),
+        ("walking_heart_rate_avg_num", "walking_heart_rate_avg"),
+        ("sleep_sessions_count_num", "sleep_sessions_count"),
+    ]:
         items.append(
             {
                 "WFItemType": 1,
-                "WFKey": text_plain(key),
+                "WFKey": text_plain(payload_key),
                 "WFValue": {
-                    "Value": text_token_string(u_stat, output_name),
+                    "Value": text_token_variable(_var),
                     "WFSerializationType": "WFTextTokenString",
                 },
             }
         )
-    items.append(
-        {
-            "WFItemType": 1,
-            "WFKey": text_plain("workouts_count"),
-            "WFValue": {
-                "Value": text_token_string(u_workout_count, "Count"),
-                "WFSerializationType": "WFTextTokenString",
-            },
-        }
-    )
-    if include_workout_duration_seconds:
-        items.append(
-            {
-                "WFItemType": 1,
-                "WFKey": text_plain("workouts_duration_seconds"),
-                "WFValue": {
-                    "Value": text_token_string(u_workout_dur_sec, workout_duration_output_name),
-                    "WFSerializationType": "WFTextTokenString",
-                },
-            }
-        )
-    return {
-        "WFWorkflowActionIdentifier": "is.workflow.actions.dictionary",
-        "WFWorkflowActionParameters": {
-            "UUID": u_dict,
-            "WFItems": {
-                "Value": {"WFDictionaryFieldValueItems": items},
-                "WFSerializationType": "WFDictionaryFieldValue",
-            },
-        },
-    }
+    return items
 
 
-def dictionary_bundle_minimal(*, u_dict: str, u_iso: str, u_steps: str) -> dict:
-    items: list[dict] = [
-        {
-            "WFItemType": 0,
-            "WFKey": text_plain("observed_at"),
-            "WFValue": text_token_string(u_iso, "Formatted Date"),
-        },
-        {
-            "WFItemType": 1,
-            "WFKey": text_plain("steps"),
-            "WFValue": {
-                "Value": text_token_string(u_steps, "Numbers"),
-                "WFSerializationType": "WFTextTokenString",
-            },
-        },
-    ]
+def dictionary_from_items(*, u_dict: str, items: list[dict]) -> dict:
     return {
         "WFWorkflowActionIdentifier": "is.workflow.actions.dictionary",
         "WFWorkflowActionParameters": {
@@ -505,7 +491,8 @@ def text_plain(s: str) -> dict:
     return {"Value": {"string": s}, "WFSerializationType": "WFTextTokenString"}
 
 
-def post_import(*, u_post: str, u_token: str, u_dict: str, u_iso: str) -> dict:
+def post_import(*, u_post: str, u_token: str, json_items: list[dict]) -> dict:
+    """POST con JSON plano (mismas entradas que el Diccionario previo)."""
     return {
         "WFWorkflowActionIdentifier": "is.workflow.actions.downloadurl",
         "WFWorkflowActionParameters": {
@@ -536,7 +523,7 @@ def post_import(*, u_post: str, u_token: str, u_dict: str, u_iso: str) -> dict:
                             "WFItemType": 0,
                             "WFKey": text_plain("x-orvita-observed-at"),
                             "WFValue": {
-                                "Value": text_token_string(u_iso, "Formatted Date"),
+                                "Value": text_token_variable("observed_at"),
                                 "WFSerializationType": "WFTextTokenString",
                             },
                         },
@@ -545,22 +532,7 @@ def post_import(*, u_post: str, u_token: str, u_dict: str, u_iso: str) -> dict:
                 "WFSerializationType": "WFDictionaryFieldValue",
             },
             "WFJSONValues": {
-                "Value": {
-                    "WFDictionaryFieldValueItems": [
-                        {
-                            "WFItemType": 3,
-                            "WFKey": text_plain("apple_bundle"),
-                            "WFValue": {
-                                "Value": {
-                                    "OutputUUID": u_dict,
-                                    "OutputName": "Dictionary",
-                                    "Type": "ActionOutput",
-                                },
-                                "WFSerializationType": "WFTextTokenAttachment",
-                            },
-                        }
-                    ]
-                },
+                "Value": {"WFDictionaryFieldValueItems": json_items},
                 "WFSerializationType": "WFDictionaryFieldValue",
             },
         },
@@ -617,6 +589,51 @@ def build_root(actions: list[dict], *, workflow_name: str = "Órvita – Importa
     }
 
 
+def append_quantity_sum_avg_chain(
+    actions: list[dict],
+    *,
+    variable_name: str,
+    type_label: str,
+    operation: str,
+) -> None:
+    u_find = uid()
+    u_stat = uid()
+    u_detect = uid()
+    u_set = uid()
+    actions.append(find_health_quantity(u_find=u_find, type_value=type_label))
+    actions.append(statistics_on(u_find, u_stat, operation))
+    actions.append(detect_numbers_from_input(u=u_detect))
+    actions.append(
+        set_variable_from_output(
+            u=u_set,
+            variable_name=variable_name,
+            source_uuid=u_detect,
+            source_output_name="Numbers",
+        )
+    )
+
+
+def append_quantity_count_chain(
+    actions: list[dict],
+    *,
+    variable_name: str,
+    type_label: str,
+) -> None:
+    u_find = uid()
+    u_cnt = uid()
+    u_set = uid()
+    actions.append(find_health_quantity(u_find=u_find, type_value=type_label))
+    actions.append(count_items(u_input=u_find, u_count=u_cnt, output_name="Health Samples"))
+    actions.append(
+        set_variable_from_output(
+            u=u_set,
+            variable_name=variable_name,
+            source_uuid=u_cnt,
+            source_output_name="Count",
+        )
+    )
+
+
 def build_actions_full(
     *,
     quantity_type_style: str,
@@ -625,13 +642,18 @@ def build_actions_full(
     workout_stat_prop_ser: str,
     legacy_token_prompt: bool,
 ) -> list[dict]:
+    _ = quantity_type_style  # reservado por compatibilidad CLI; el plist ya no usa HKQuantityType.
+
     u_date = uid()
     u_iso = uid()
+    u_set_obs = uid()
 
     u_find_workouts = uid()
     u_count_workouts = uid()
     u_stat_workout_dur = uid()
+    u_detect_workout_dur = uid()
     u_zero_dur = uid()
+    u_set_wd = uid()
 
     u_dict = uid()
     u_post = uid()
@@ -653,54 +675,49 @@ def build_actions_full(
 
     actions: list[dict] = [
         comment(
-            "Token: iCloud Drive/Shortcuts/orvita_import_token.txt (léelo primero; si falta o está vacío, "
-            "pide token, guárdalo y reutiliza). Regenerar/revocar en Órvita → borrar ese archivo. "
-            "Métricas BUNDLE_QUANTITY_METRICS + entrenos; sin sueño automático por categoría. "
-            "Modo solo-pregunta: generar con --legacy-token-prompt."
+            "Token iCloud Shortcuts/orvita_import_token.txt; métricas con variables *_num; POST JSON plano. "
+            "Derivadas training_load / recovery_score_proxy: servidor si faltan."
         ),
         *token_actions,
         current_date(u=u_date),
         format_iso8601(u=u_iso, u_date=u_date),
+        set_variable_from_output(
+            u=u_set_obs,
+            variable_name="observed_at",
+            source_uuid=u_iso,
+            source_output_name="Formatted Date",
+        ),
     ]
 
-    quantity_stat_pairs: list[tuple[str, str, str]] = []
-    for key, hk_id, op in BUNDLE_QUANTITY_METRICS:
-        u_find = uid()
-        u_stat = uid()
-        u_detect = uid()
-        actions.append(
-            find_health_quantity(
-                u_find=u_find,
-                identifier=hk_id,
-                quantity_type_style=quantity_type_style,
-            )
-        )
-        actions.append(statistics_on(u_find, u_stat, op))
-        actions.append(detect_numbers_from_input(u=u_detect))
-        quantity_stat_pairs.append((key, u_detect, "Numbers"))
+    for var_name, _json_key, type_label, op in QUANTITY_SUM_AVG:
+        append_quantity_sum_avg_chain(actions, variable_name=var_name, type_label=type_label, operation=op)
 
-    actions.extend(
-        [
-            find_workouts(u_find=u_find_workouts),
-            count_items(u_input=u_find_workouts, u_count=u_count_workouts, output_name="Workouts"),
-        ]
+    for var_name, _json_key, type_label in QUANTITY_COUNT_ONLY:
+        append_quantity_count_chain(actions, variable_name=var_name, type_label=type_label)
+
+    u_set_wc = uid()
+    actions.append(find_workouts(u_find=u_find_workouts))
+    actions.append(count_items(u_input=u_find_workouts, u_count=u_count_workouts, output_name="Workouts"))
+    actions.append(
+        set_variable_from_output(
+            u=u_set_wc,
+            variable_name="workout_count",
+            source_uuid=u_count_workouts,
+            source_output_name="Count",
+        )
     )
 
-    u_dur_for_dict: str
-    include_dur: bool
-    dur_output_name: str
     if omit_workout_duration_stat:
-        if duration_placeholders == "zero":
-            actions.append(static_number(u=u_zero_dur, n=0.0))
-            u_dur_for_dict = u_zero_dur
-            include_dur = True
-            dur_output_name = "Number"
-        else:
-            u_dur_for_dict = u_stat_workout_dur
-            include_dur = False
-            dur_output_name = "Calculation Result"
+        actions.append(static_number(u=u_zero_dur, n=0.0))
+        actions.append(
+            set_variable_from_output(
+                u=u_set_wd,
+                variable_name="workouts_duration_seconds_num",
+                source_uuid=u_zero_dur,
+                source_output_name="Number",
+            )
+        )
     else:
-        u_detect_workout_dur = uid()
         actions.append(
             statistics_on(
                 u_find_workouts,
@@ -712,36 +729,32 @@ def build_actions_full(
             )
         )
         actions.append(detect_numbers_from_input(u=u_detect_workout_dur))
-        u_dur_for_dict = u_detect_workout_dur
-        include_dur = True
-        dur_output_name = "Numbers"
-
-    actions.append(
-        dictionary_bundle_dynamic(
-            u_dict=u_dict,
-            u_iso=u_iso,
-            quantity_stat_pairs=quantity_stat_pairs,
-            u_workout_count=u_count_workouts,
-            u_workout_dur_sec=u_dur_for_dict,
-            include_workout_duration_seconds=include_dur,
-            workout_duration_output_name=dur_output_name,
+        actions.append(
+            set_variable_from_output(
+                u=u_set_wd,
+                variable_name="workouts_duration_seconds_num",
+                source_uuid=u_detect_workout_dur,
+                source_output_name="Numbers",
+            )
         )
-    )
-    actions.extend(
-        [
-            post_import(u_post=u_post, u_token=u_header, u_dict=u_dict, u_iso=u_iso),
-            show_result(u=u_show, u_post=u_post),
-        ]
-    )
+
+    json_items = build_flat_payload_items()
+    actions.append(dictionary_from_items(u_dict=u_dict, items=json_items))
+    actions.append(post_import(u_post=u_post, u_token=u_header, json_items=json_items))
+    actions.append(show_result(u=u_show, u_post=u_post))
     return actions
 
 
 def build_actions_minimal(*, quantity_type_style: str, legacy_token_prompt: bool) -> list[dict]:
+    _ = quantity_type_style
     u_date = uid()
     u_iso = uid()
+    u_set_obs = uid()
     u_find_steps = uid()
     u_stat_steps = uid()
     u_detect_steps = uid()
+    u_set_steps = uid()
+    u_zero = uid()
     u_dict = uid()
     u_post = uid()
     u_show = uid()
@@ -760,26 +773,60 @@ def build_actions_minimal(*, quantity_type_style: str, legacy_token_prompt: bool
             ask_prompt="Pega tu token de Órvita",
         )
 
-    return [
-        comment(
-            "Mínimo de validación: solo pasos (suma) + token + ISO + POST. "
-            "Si esto abre sin (null) ni tarjetas grises, el fallo estaba en otra acción/serialización; "
-            "vuelve al modo completo o añade métricas de una en una."
-        ),
+    json_items = build_flat_payload_items()
+    zero_fill = [
+        "active_energy_num",
+        "exercise_minutes_num",
+        "stand_minutes_num",
+        "distance_meters_num",
+        "hrv_num",
+        "resting_hr_num",
+        "walking_heart_rate_avg_num",
+        "vo2max_num",
+        "sleep_duration_num",
+        "sleep_sessions_count_num",
+        "workout_count",
+        "workouts_duration_seconds_num",
+    ]
+    actions: list[dict] = [
+        comment("Diagnóstico: solo pasos reales; el resto de claves a 0 (atajo mínimo)."),
         *token_actions,
         current_date(u=u_date),
         format_iso8601(u=u_iso, u_date=u_date),
-        find_health_quantity(
-            u_find=u_find_steps,
-            identifier="HKQuantityTypeIdentifierStepCount",
-            quantity_type_style=quantity_type_style,
+        set_variable_from_output(
+            u=u_set_obs,
+            variable_name="observed_at",
+            source_uuid=u_iso,
+            source_output_name="Formatted Date",
         ),
+        find_health_quantity(u_find=u_find_steps, type_value="Steps"),
         statistics_on(u_find_steps, u_stat_steps, "Sum"),
         detect_numbers_from_input(u=u_detect_steps),
-        dictionary_bundle_minimal(u_dict=u_dict, u_iso=u_iso, u_steps=u_detect_steps),
-        post_import(u_post=u_post, u_token=u_header, u_dict=u_dict, u_iso=u_iso),
-        show_result(u=u_show, u_post=u_post),
+        set_variable_from_output(
+            u=u_set_steps,
+            variable_name="steps_num",
+            source_uuid=u_detect_steps,
+            source_output_name="Numbers",
+        ),
+        static_number(u=u_zero, n=0.0),
     ]
+    for zname in zero_fill:
+        actions.append(
+            set_variable_from_output(
+                u=uid(),
+                variable_name=zname,
+                source_uuid=u_zero,
+                source_output_name="Number",
+            )
+        )
+    actions.extend(
+        [
+            dictionary_from_items(u_dict=u_dict, items=json_items),
+            post_import(u_post=u_post, u_token=u_header, json_items=json_items),
+            show_result(u=u_show, u_post=u_post),
+        ]
+    )
+    return actions
 
 
 def main() -> int:
@@ -804,7 +851,7 @@ def main() -> int:
         dest="quantity_type",
         choices=("field", "plain"),
         default="field",
-        help="Serialización de WFQuantityType: field (anidado) o plain (string HK…).",
+        help="Obsoleto: ignorado (el plist usa etiquetas de tipo en inglés, sin HKQuantityTypeIdentifier).",
     )
     p.add_argument(
         "--omit-workout-duration-stat",
