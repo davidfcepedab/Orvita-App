@@ -18,6 +18,14 @@ export type MealDayDisplay = {
 
 export type VisualGoalPriority = "alta" | "media" | "baja"
 
+/** Modo de objetivo corporal (persistido; alimenta copy de prioridad y nutrición). */
+export type VisualGoalMode =
+  | "recomposicion"
+  | "bajar_medidas"
+  | "hipertrofia_magra"
+  | "definicion"
+  | "mantenimiento"
+
 export type TrainingPreferencesPayload = {
   goalImageUrl?: string
   /** Texto largo del objetivo corporal (overlay en tarjeta negra). */
@@ -25,6 +33,8 @@ export type TrainingPreferencesPayload = {
   /** Mes objetivo `YYYY-MM` para badge tipo OCT 2026. */
   visualGoalDeadlineYm?: string
   visualGoalPriority?: VisualGoalPriority
+  /** Eje principal del plan (recomposición, déficit, hipertrofia, etc.). */
+  visualGoalMode?: VisualGoalMode
   bodyMetrics?: BodyMetricDisplayRow[]
   mealPlan?: MealDayDisplay[]
   mealNotes?: string

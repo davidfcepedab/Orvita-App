@@ -9,6 +9,14 @@ export function parseMetricNumber(raw: string | undefined): number | null {
   return Number.isFinite(n) ? n : null
 }
 
+/** Masa magra ≈ peso × (1 − %grasa/100). Devuelve null si los datos están fuera de rango plausible. */
+export function estimateLeanMassKg(weightKg: number, fatPct: number): number | null {
+  if (!Number.isFinite(weightKg) || !Number.isFinite(fatPct)) return null
+  if (weightKg <= 30) return null
+  if (fatPct < 3 || fatPct > 60) return null
+  return weightKg * (1 - fatPct / 100)
+}
+
 export function bodyCompositionChartPoints(weightRow: BodyMetricDisplayRow | undefined, fatRow: BodyMetricDisplayRow | undefined) {
   const pts: { label: string; weight: number; fatPct: number }[] = []
   if (!weightRow || !fatRow) return pts

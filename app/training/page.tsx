@@ -12,6 +12,7 @@ import { TrainingActionQuerySync } from "@/app/training/TrainingActionQuerySync"
 import { aggregateZoneProgress } from "@/lib/training/effectiveSets"
 import { deriveNutritionStatus } from "@/lib/training/decisionEngine"
 import { TrainingDashboard } from "@/app/training/components/TrainingDashboard"
+import { buildAgendaSuggestTrainingUrl } from "@/lib/training/agendaTrainingLinks"
 import type { HrvPoint } from "@/app/training/components/RecoveryModule"
 import { advisorQuoteFromPlan, buildCoachInsightParagraph } from "@/lib/training/coachCopy"
 import {
@@ -20,12 +21,14 @@ import {
   countWeeklySets,
   cnsFatigueLabel,
   deltaQualityFromTrend,
+  estimateLeanMassKg,
   formatDeadlineYm,
   hypertrophyRateHint,
   intraWorkoutCarbsG,
   parseMetricNumber,
   trainingStreakDays,
 } from "@/lib/training/trainingDashboardDerivations"
+import { defaultVisualGoalMode, labelForVisualGoalMode } from "@/lib/training/visualGoalModeLabels"
 
 export default function TrainingPage() {
   const router = useRouter()
@@ -48,7 +51,8 @@ export default function TrainingPage() {
   const weightMetric = bodyRows.find((row) => /peso/i.test(row.label))
   const fatMetric = bodyRows.find((row) => /grasa|bf|body fat/i.test(row.label))
   const leanMetric = bodyRows.find((row) => /magr|lean|masa mag/i.test(row.label))
-  const objective = deriveObjective(prefs.visualGoalDescription)
+  const visualGoalMode = prefs.visualGoalMode ?? defaultVisualGoalMode()
+  const objective = labelForVisualGoalMode(visualGoalMode)
   const bodyPartProgress = useMemo(() => aggregateZoneProgress(weeklyDays), [weeklyDays])
   const nutritionPlan = useMemo(() => deriveNutritionPlan(mealDays), [mealDays])
   const nutritionStatus = deriveNutritionStatus(weightMetric)
@@ -74,9 +78,25 @@ export default function TrainingPage() {
     [readiness.rationale, plannedFocus],
   )
 
+  const weightKgCur = parseMetricNumber(weightMetric?.current)
+  const fatPctCur = parseMetricNumber(fatMetric?.current)
+  const leanFromEstimate =
+    !leanMetric && weightKgCur != null && fatPctCur != null ? estimateLeanMassKg(weightKgCur, fatPctCur) : null
+
   const weightLabel = weightMetric ? `${weightMetric.current} kg` : "—"
   const bodyFatLabel = fatMetric ? `${fatMetric.current}%` : "—"
-  const leanMassLabel = leanMetric ? `${leanMetric.current} kg` : "—"
+  const leanMassLabel = leanMetric
+    ? `${leanMetric.current} kg`
+    : leanFromEstimate != null
+      ? `${leanFromEstimate.toFixed(1)} kg`
+      : "—"
+  const leanMassFootnote = leanFromEstimate != null ? "Estimado a partir de peso y % grasa" : undefined
+
+  const weightKgPrev = parseMetricNumber(weightMetric?.previous)
+  const fatPctPrev = parseMetricNumber(fatMetric?.previous)
+  const leanPrevEst =
+    !leanMetric && weightKgPrev != null && fatPctPrev != null ? estimateLeanMassKg(weightKgPrev, fatPctPrev) : null
+
   const weightDelta = weightMetric
     ? weightMetric.trend === "down"
       ? "↓ respecto a la lectura anterior"
@@ -97,11 +117,27 @@ export default function TrainingPage() {
       : leanMetric.trend === "up"
         ? "↑ vs anterior"
         : "Sin cambio"
-    : undefined
+    : leanFromEstimate != null && leanPrevEst != null
+      ? leanFromEstimate - leanPrevEst > 0.1
+        ? "↑ vs estimación anterior"
+        : leanFromEstimate - leanPrevEst < -0.1
+          ? "↓ vs estimación anterior"
+          : "Sin cambio vs estimación anterior"
+      : leanFromEstimate != null
+        ? "Sin lectura anterior para comparar"
+        : undefined
 
   const weightDeltaQuality = weightMetric ? deltaQualityFromTrend(weightMetric.trend, "weight") : "neutral"
   const fatDeltaQuality = fatMetric ? deltaQualityFromTrend(fatMetric.trend, "fat") : "neutral"
-  const leanDeltaQuality = leanMetric ? deltaQualityFromTrend(leanMetric.trend, "weight") : "neutral"
+  const leanDeltaQuality = leanMetric
+    ? deltaQualityFromTrend(leanMetric.trend, "weight")
+    : leanFromEstimate != null && leanPrevEst != null
+      ? leanFromEstimate - leanPrevEst > 0.1
+        ? "good"
+        : leanFromEstimate - leanPrevEst < -0.1
+          ? "warn"
+          : "neutral"
+      : "neutral"
 
   const chartPoints = useMemo(() => {
     const pts = bodyCompositionChartPoints(weightMetric, fatMetric)
@@ -147,7 +183,7 @@ export default function TrainingPage() {
     [readiness.score, nutritionOk, planVsExecution.plannedToday, zonesAvgProgress, coachQuote, setsDoneWeek, streakDays],
   )
 
-  const priorityTitle = objective
+  const priorityTitle = labelForVisualGoalMode(visualGoalMode)
   const priorityLevelLabel =
     prefs.visualGoalPriority === "media" ? "Prioridad media" : prefs.visualGoalPriority === "baja" ? "Prioridad baja" : "Prioridad alta"
   const deadlineDisplay = formatDeadlineYm(prefs.visualGoalDeadlineYm ?? null)
@@ -209,10 +245,6 @@ export default function TrainingPage() {
     else router.push("/configuracion#acordeon-config-hevy")
   }
 
-  const onScrollMealPlan = () => {
-    document.getElementById("plan-nutricion")?.scrollIntoView({ behavior: "smooth", block: "start" })
-  }
-
   const lastWorkoutLine = lastSession?.workoutName
     ? `${lastSession.workoutName}${lastSession.duration ? ` · ${Math.round(lastSession.duration)} min` : ""}`
     : "Sin sesión reciente"
@@ -230,12 +262,17 @@ export default function TrainingPage() {
         plannedSession={plannedSession}
         sessionFocus={sessionFocus}
         onStartProtocol={onStartProtocol}
-        onOpenAgenda={() => router.push("/agenda")}
+        onOpenAgenda={() => router.push(buildAgendaSuggestTrainingUrl({ origen: "calendario" }))}
+        onOpenAgendaFromRestModal={() => router.push(buildAgendaSuggestTrainingUrl({ origen: "descanso" }))}
         onReprogramSession={() => setManualStatus("skip")}
         onConfirmRestDay={() => setManualStatus("rest")}
         advisor={advisor}
         visual={{
           visualDescription: prefs.visualGoalDescription ?? "",
+          visualGoalPriority: prefs.visualGoalPriority ?? "alta",
+          visualGoalMode,
+          onVisualPrefsChange: updatePrefs,
+          bodyMetricRows: bodyRows,
           priorityTitle,
           priorityLevelLabel,
           deadlineYm: prefs.visualGoalDeadlineYm ?? null,
@@ -246,6 +283,7 @@ export default function TrainingPage() {
           weightLabel,
           bodyFatLabel,
           leanMassLabel,
+          leanMassFootnote,
           weightDelta,
           fatDelta,
           leanDelta,
@@ -268,12 +306,8 @@ export default function TrainingPage() {
         mealDays={mealDays}
         nutritionStatusLabel={nutritionStatus}
         onRegenerateNutrition={() =>
-          updatePrefs({
-            visualGoalDescription:
-              (prefs.visualGoalDescription ?? "").trim() + " Ajusta macros para mejorar adherencia al objetivo.",
-          })
+          showTrainingNotice("Vista de comidas recalculada con tus kcal del día, macros registradas y tipo de objetivo.")
         }
-        onScrollMealPlan={onScrollMealPlan}
         onExportToast={showTrainingNotice}
         hevy={{
           hevyStatus,
@@ -287,7 +321,9 @@ export default function TrainingPage() {
           onOpenApp: () => window.open("https://hevy.com/app", "_blank", "noopener,noreferrer"),
           onSync: () => router.refresh(),
         }}
-        statusChipLabel={statusChip.label}
+        statusChip={statusChip}
+        trainingDays={days}
+        weekAnchorYmd={todayIso}
       />
     </main>
   )
@@ -322,13 +358,6 @@ function prettifyPlanTitle(plan: string) {
   return p.charAt(0).toUpperCase() + p.slice(1)
 }
 
-function deriveObjective(description: string | undefined) {
-  const text = (description ?? "").toLowerCase()
-  if (text.includes("defin")) return "Definición"
-  if (text.includes("manten")) return "Mantenimiento"
-  return "Hipertrofia magra"
-}
-
 function deriveNutritionPlan(mealDays: Array<{ kcal: number; pro: number; carb: number; fat: number }>) {
   if (!mealDays.length) {
     return { available: false as const, kcalTarget: 0, protein: 0, carbs: 0, fats: 0 }
@@ -352,9 +381,12 @@ function deriveNutritionPlan(mealDays: Array<{ kcal: number; pro: number; carb: 
   }
 }
 
-function resolveTrainingStatusChip(score: number, hasSignals: boolean) {
-  if (!hasSignals) return { label: "Sin datos suficientes", tone: "muted" as const }
-  if (score < 50) return { label: "Priorizar recuperación", tone: "risk" as const }
-  if (score >= 74) return { label: "Listo para entrenar", tone: "ok" as const }
-  return { label: "Carga moderada", tone: "warn" as const }
+function resolveTrainingStatusChip(score: number, hasSignals: boolean): {
+  label: string
+  tone: "ok" | "warn" | "risk" | "muted"
+} {
+  if (!hasSignals) return { label: "Sin datos suficientes", tone: "muted" }
+  if (score < 50) return { label: "Priorizar recuperación", tone: "risk" }
+  if (score >= 74) return { label: "Listo para entrenar", tone: "ok" }
+  return { label: "Carga moderada", tone: "warn" }
 }

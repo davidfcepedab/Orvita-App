@@ -5,10 +5,23 @@ import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { createBrowserClient } from "@/lib/supabase/browser"
 import { isAppMockMode, isSupabaseEnabled } from "@/lib/checkins/flags"
 import { defaultBodyMetricRows, defaultMealPlan, emptyBodyMetricRows, emptyMealPlan } from "@/lib/training/defaultTrainingDisplay"
-import type { BodyMetricDisplayRow, MealDayDisplay, TrainingPreferencesPayload } from "@/lib/training/trainingPrefsTypes"
+import type { BodyMetricDisplayRow, MealDayDisplay, TrainingPreferencesPayload, VisualGoalMode } from "@/lib/training/trainingPrefsTypes"
+import { defaultVisualGoalMode } from "@/lib/training/visualGoalModeLabels"
 
 const PREFS_KEY = "orbita:training:prefs:v1"
 const LEGACY_GOAL_KEY = "orbita:training:goal-image"
+
+const VISUAL_GOAL_MODES = new Set<VisualGoalMode>([
+  "recomposicion",
+  "bajar_medidas",
+  "hipertrofia_magra",
+  "definicion",
+  "mantenimiento",
+])
+
+function isVisualGoalMode(v: unknown): v is VisualGoalMode {
+  return typeof v === "string" && VISUAL_GOAL_MODES.has(v as VisualGoalMode)
+}
 
 function buildDefaults(): TrainingPreferencesPayload {
   if (isAppMockMode()) {
@@ -20,6 +33,7 @@ function buildDefaults(): TrainingPreferencesPayload {
         "Cuerpo atlético con 12% grasa, hombros y brazos marcados, postura fuerte y energía sostenida todo el día.",
       visualGoalDeadlineYm: "2026-10",
       visualGoalPriority: "alta",
+      visualGoalMode: "hipertrofia_magra",
     }
   }
   return {
@@ -29,6 +43,7 @@ function buildDefaults(): TrainingPreferencesPayload {
     visualGoalDescription: "",
     visualGoalDeadlineYm: "",
     visualGoalPriority: "alta",
+    visualGoalMode: defaultVisualGoalMode(),
   }
 }
 
@@ -51,6 +66,7 @@ function readLocalPrefs(): TrainingPreferencesPayload {
         visualGoalDeadlineYm:
           typeof parsed.visualGoalDeadlineYm === "string" ? parsed.visualGoalDeadlineYm : defaults.visualGoalDeadlineYm,
         visualGoalPriority: parsed.visualGoalPriority ?? defaults.visualGoalPriority,
+        visualGoalMode: isVisualGoalMode(parsed.visualGoalMode) ? parsed.visualGoalMode : defaults.visualGoalMode,
       }
     }
   } catch {
@@ -136,6 +152,10 @@ export function useTrainingPreferences() {
             ? server.visualGoalDeadlineYm
             : local.visualGoalDeadlineYm ?? defaults.visualGoalDeadlineYm,
         visualGoalPriority: server.visualGoalPriority ?? local.visualGoalPriority ?? defaults.visualGoalPriority,
+        visualGoalMode:
+          server.visualGoalMode && isVisualGoalMode(server.visualGoalMode)
+            ? server.visualGoalMode
+            : local.visualGoalMode ?? defaults.visualGoalMode,
       }
       setPrefsState(merged)
       writeLocalPrefs(merged)

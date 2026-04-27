@@ -3,13 +3,21 @@
 import Link from "next/link"
 import { ChevronDown, Clock3 } from "lucide-react"
 import { HEVY_INTEGRATION_LABEL } from "@/lib/health/appleHevyRelation"
+import { buildAgendaSuggestTrainingUrl } from "@/lib/training/agendaTrainingLinks"
 import type { HrvPoint, RecoveryAdvisorProps } from "./RecoveryModule"
 import { RecoveryModule } from "./RecoveryModule"
 import { VisualGoalGenerator } from "./VisualGoalGenerator"
 import type { NutritionPlanView } from "./WeeklyMealPlan"
 import { WeeklyMealPlan } from "./WeeklyMealPlan"
 import type { ZoneProgress } from "@/lib/training/effectiveSets"
-import type { MealDayDisplay } from "@/lib/training/trainingPrefsTypes"
+import type {
+  BodyMetricDisplayRow,
+  MealDayDisplay,
+  TrainingPreferencesPayload,
+  VisualGoalMode,
+  VisualGoalPriority,
+} from "@/lib/training/trainingPrefsTypes"
+import type { TrainingDay } from "@/src/modules/training/types"
 import type { ChangeEvent, RefObject } from "react"
 import type { DeltaQuality } from "@/lib/training/trainingDashboardDerivations"
 
@@ -26,6 +34,8 @@ export type HevyStripProps = {
   onSync: () => void
 }
 
+export type TrainingStatusChip = { label: string; tone: "ok" | "warn" | "risk" | "muted" }
+
 export type TrainingDashboardProps = {
   readinessScore: number
   readinessLabel: string
@@ -37,11 +47,23 @@ export type TrainingDashboardProps = {
   sessionFocus: string
   onStartProtocol: () => void
   onOpenAgenda: () => void
+  onOpenAgendaFromRestModal?: () => void
   onReprogramSession: () => void
   onConfirmRestDay: () => void
   advisor: RecoveryAdvisorProps
   visual: {
     visualDescription: string
+    visualGoalPriority: VisualGoalPriority
+    visualGoalMode: VisualGoalMode
+    onVisualPrefsChange: (
+      patch: Partial<
+        Pick<
+          TrainingPreferencesPayload,
+          "visualGoalDescription" | "visualGoalDeadlineYm" | "visualGoalPriority" | "visualGoalMode"
+        >
+      >,
+    ) => void
+    bodyMetricRows: BodyMetricDisplayRow[]
     priorityTitle: string
     priorityLevelLabel: string
     deadlineYm: string | null
@@ -52,6 +74,7 @@ export type TrainingDashboardProps = {
     weightLabel: string
     bodyFatLabel: string
     leanMassLabel: string
+    leanMassFootnote?: string
     weightDelta?: string
     fatDelta?: string
     leanDelta?: string
@@ -74,10 +97,11 @@ export type TrainingDashboardProps = {
   mealDays: MealDayDisplay[]
   nutritionStatusLabel: string
   onRegenerateNutrition: () => void
-  onScrollMealPlan: () => void
   onExportToast: (message: string) => void
   hevy: HevyStripProps
-  statusChipLabel: string
+  statusChip: TrainingStatusChip
+  trainingDays: TrainingDay[]
+  weekAnchorYmd: string
 }
 
 export function TrainingDashboard({
@@ -91,6 +115,7 @@ export function TrainingDashboard({
   sessionFocus,
   onStartProtocol,
   onOpenAgenda,
+  onOpenAgendaFromRestModal,
   onReprogramSession,
   onConfirmRestDay,
   advisor,
@@ -99,18 +124,27 @@ export function TrainingDashboard({
   mealDays,
   nutritionStatusLabel,
   onRegenerateNutrition,
-  onScrollMealPlan,
   onExportToast,
   hevy,
-  statusChipLabel,
+  statusChip,
+  trainingDays,
+  weekAnchorYmd,
 }: TrainingDashboardProps) {
   const hevySummary = hevy.hasHevy ? `Conectado · ${hevy.lastWorkoutLine}` : "Sin conexión activa"
+  const chipToneClass =
+    statusChip.tone === "ok"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+      : statusChip.tone === "warn"
+        ? "border-amber-200 bg-amber-50 text-amber-950"
+        : statusChip.tone === "risk"
+          ? "border-rose-200 bg-rose-50 text-rose-900"
+          : "border-slate-200/90 bg-white/80 text-slate-600"
 
   return (
     <div className="mx-auto w-full max-w-[min(100rem,calc(100vw-2rem))] px-4 py-6 sm:px-6 lg:px-8">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <h1 className="m-0 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Entrenamiento</h1>
-        <span className="rounded-full border border-slate-200/90 bg-white/80 px-3 py-1.5 text-[11px] font-semibold text-slate-600 shadow-sm">{statusChipLabel}</span>
+        <span className={`rounded-full border px-3 py-1.5 text-[11px] font-semibold shadow-sm ${chipToneClass}`}>{statusChip.label}</span>
       </div>
 
       <details className="group mb-5 rounded-2xl border border-slate-200/90 bg-white/90 shadow-sm open:shadow-md">
@@ -150,44 +184,46 @@ export function TrainingDashboard({
             <Link href="/configuracion#acordeon-config-hevy" className="rounded-full border border-slate-200 px-2.5 py-1 text-[11px] font-medium text-slate-600 no-underline hover:bg-slate-50">
               Ajustes
             </Link>
-            <Link href="/agenda" className="rounded-full border border-slate-200 px-2.5 py-1 text-[11px] font-medium text-slate-600 no-underline hover:bg-slate-50">
+            <Link
+              href={buildAgendaSuggestTrainingUrl({ origen: "calendario" })}
+              className="rounded-full border border-slate-200 px-2.5 py-1 text-[11px] font-medium text-slate-600 no-underline hover:bg-slate-50"
+            >
               Agenda
             </Link>
           </div>
         </div>
       </details>
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
-        <div className="xl:col-span-3">
-          <RecoveryModule
-            readinessScore={readinessScore}
-            readinessLabel={readinessLabel}
-            sleepHours={sleepHours}
-            hrvSeries={hrvSeries}
-            hrvHasData={hrvHasData}
-            plannedSession={plannedSession}
-            sessionFocus={sessionFocus}
-            onStartProtocol={onStartProtocol}
-            onOpenAgenda={onOpenAgenda}
-            onReprogramSession={onReprogramSession}
-            onConfirmRestDay={onConfirmRestDay}
-            loading={recoveryLoading}
-            advisor={advisor}
-          />
-        </div>
-        <div className="xl:col-span-5">
-          <VisualGoalGenerator {...visual} />
-        </div>
-        <div className="xl:col-span-4">
-          <WeeklyMealPlan
-            plan={nutritionPlan}
-            mealDays={mealDays}
-            nutritionStatusLabel={nutritionStatusLabel}
-            onRegenerateIa={onRegenerateNutrition}
-            onScrollMealPlan={onScrollMealPlan}
-            onExportToast={onExportToast}
-          />
-        </div>
+      <div className="grid grid-cols-1 gap-5">
+        <RecoveryModule
+          readinessScore={readinessScore}
+          readinessLabel={readinessLabel}
+          sleepHours={sleepHours}
+          hrvSeries={hrvSeries}
+          hrvHasData={hrvHasData}
+          plannedSession={plannedSession}
+          sessionFocus={sessionFocus}
+          onStartProtocol={onStartProtocol}
+          onOpenAgenda={onOpenAgenda}
+          onOpenAgendaFromRestModal={onOpenAgendaFromRestModal}
+          onReprogramSession={onReprogramSession}
+          onConfirmRestDay={onConfirmRestDay}
+          loading={recoveryLoading}
+          advisor={advisor}
+          syncChips={visual.syncChips}
+        />
+        <VisualGoalGenerator {...visual} />
+        <WeeklyMealPlan
+          plan={nutritionPlan}
+          mealDays={mealDays}
+          nutritionStatusLabel={nutritionStatusLabel}
+          onRegenerateIa={onRegenerateNutrition}
+          onExportToast={onExportToast}
+          trainingDays={trainingDays}
+          weekAnchorYmd={weekAnchorYmd}
+          visualGoalSummary={visual.priorityTitle}
+          visualGoalMode={visual.visualGoalMode}
+        />
       </div>
     </div>
   )

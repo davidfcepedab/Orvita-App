@@ -1,11 +1,12 @@
 "use client"
 
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type FormEvent } from "react"
+import { Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type FormEvent } from "react"
 import { Card } from "@/src/components/ui/Card"
 import { CalendarDays, CalendarRange, LayoutGrid, ListChecks, Plus, Search } from "lucide-react"
 
 import { GoogleAgendaPanel } from "@/app/agenda/GoogleAgendaPanel"
 import { AgendaColorLegend } from "@/app/agenda/AgendaColorLegend"
+import { AgendaTrainingSuggestPanel } from "@/app/agenda/AgendaTrainingSuggestPanel"
 
 import { useAgendaTasks, type AgendaTaskPriority } from "@/app/hooks/useAgendaTasks"
 import { useGoogleCalendar } from "@/app/hooks/useGoogleCalendar"
@@ -555,6 +556,14 @@ export default function AgendaPage() {
             </button>
           </div>
         </header>
+
+        <Suspense fallback={null}>
+          <AgendaTrainingSuggestPanel
+            events={googleCalendar.events}
+            calendarConnected={googleCalendar.connected}
+            calendarLoading={googleCalendar.loading}
+          />
+        </Suspense>
 
         {error ? (
           <div

@@ -1,6 +1,6 @@
 "use client"
 
-import { useId, useMemo, useState, type CSSProperties } from "react"
+import { useEffect, useId, useMemo, useState, type CSSProperties } from "react"
 import { motion } from "framer-motion"
 import {
   Activity,
@@ -117,7 +117,17 @@ export default function HealthOperationsV3({
 }: Props) {
   const theme = useOrbitaSkin()
   const compact = layout === "operativePredictiveOnly"
-  const [showNutrition, setShowNutrition] = useState(true)
+  const [showNutrition, setShowNutrition] = useState(false)
+  const hasFuelMetrics = useMemo(
+    () =>
+      !health.loading &&
+      !health.error &&
+      (health.macrosFromLog || health.macros.some((m) => m.current > 0)),
+    [health.loading, health.error, health.macrosFromLog, health.macros],
+  )
+  useEffect(() => {
+    if (!hasFuelMetrics) setShowNutrition(false)
+  }, [hasFuelMetrics])
   const energyChartGradientId = useId().replace(/:/g, "")
   const {
     supplements,
@@ -443,11 +453,17 @@ export default function HealthOperationsV3({
               </p>
               <button
                 type="button"
-                className="rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]"
+                disabled={!hasFuelMetrics}
+                title={
+                  hasFuelMetrics
+                    ? undefined
+                    : "Registra macros del día en preferencias de salud para ver el desglose."
+                }
+                className="rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] disabled:cursor-not-allowed disabled:opacity-45"
                 style={{ backgroundColor: saludHexToRgba(theme.border, 0.2), color: theme.textMuted }}
-                onClick={() => setShowNutrition((v) => !v)}
+                onClick={() => hasFuelMetrics && setShowNutrition((v) => !v)}
               >
-                {showNutrition ? "Ocultar" : "Mostrar"}
+                {showNutrition && hasFuelMetrics ? "Ocultar" : "Mostrar"}
               </button>
             </div>
             <div
@@ -499,7 +515,7 @@ export default function HealthOperationsV3({
               </div>
             </div>
 
-            <div className={`${showNutrition ? "mt-5 space-y-4" : "hidden"}`}>
+            <div className={`${showNutrition && hasFuelMetrics ? "mt-5 space-y-4" : "hidden"}`}>
               <p className="text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
                 {health.macrosFromLog
                   ? "Macros desde lo que guardaste hoy en preferencias de salud (gramos de P / C / G)."

@@ -307,7 +307,7 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
           </details>
         </div>
 
-        <div className="relative border-t pt-6" style={{ borderColor: saludHexToRgba(theme.border, 0.65) }}>
+        <div className="relative pt-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
             <div className="min-w-0 flex-1">
               <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.22em]" style={{ color: theme.textMuted }}>

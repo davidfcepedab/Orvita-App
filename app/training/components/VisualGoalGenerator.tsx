@@ -1,31 +1,35 @@
 "use client"
 
 import { motion } from "framer-motion"
-import type { ChangeEvent, RefObject } from "react"
+import dynamic from "next/dynamic"
+import { useEffect, useState, type ChangeEvent, type RefObject } from "react"
 import Link from "next/link"
-import { Activity, Brain, Droplets, History, ImageIcon, Pencil, RefreshCw, Scale, Settings2, Sparkles } from "lucide-react"
+import { Activity, Brain, Droplets, History, ImageIcon, RefreshCw, Scale, Settings2, Sparkles } from "lucide-react"
 import type { ZoneProgress, ZoneStatus } from "@/lib/training/effectiveSets"
 import type { DeltaQuality } from "@/lib/training/trainingDashboardDerivations"
 import { deltaQualityLabel } from "@/lib/training/trainingDashboardDerivations"
-import {
-  Area,
-  CartesianGrid,
-  ComposedChart,
-  Legend,
-  Line,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts"
+import type { BodyMetricDisplayRow, TrainingPreferencesPayload, VisualGoalMode, VisualGoalPriority } from "@/lib/training/trainingPrefsTypes"
+import { VISUAL_GOAL_MODE_OPTIONS } from "@/lib/training/visualGoalModeLabels"
 
-export type TrendRow = { label: string; progressPct: number }
+const BodyCompositionChart = dynamic(() => import("./charts/BodyCompositionChart").then((m) => m.BodyCompositionChart), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-full items-center justify-center text-[10px] text-slate-400">Cargando gráfico…</div>
+  ),
+})
 
 type SyncChips = { apple: boolean; hevy: boolean; manual: boolean }
 
+type VisualPrefsPatch = Partial<
+  Pick<TrainingPreferencesPayload, "visualGoalDescription" | "visualGoalDeadlineYm" | "visualGoalPriority" | "visualGoalMode">
+>
+
 type Props = {
   visualDescription: string
-  priorityTitle: string
+  visualGoalPriority: VisualGoalPriority
+  visualGoalMode: VisualGoalMode
+  onVisualPrefsChange: (patch: VisualPrefsPatch) => void
+  bodyMetricRows: BodyMetricDisplayRow[]
   priorityLevelLabel: string
   deadlineYm: string | null
   deadlineDisplay: string | null
@@ -35,6 +39,7 @@ type Props = {
   weightLabel: string
   bodyFatLabel: string
   leanMassLabel: string
+  leanMassFootnote?: string
   weightDelta?: string
   fatDelta?: string
   leanDelta?: string
@@ -61,25 +66,19 @@ function statusLabel(s: ZoneStatus): string {
   return "Rezagado"
 }
 
+/** Semántica: bien = verde, desarrollo = ámbar, rezagado/sobrecarga = rojo. */
 function statusBarColor(s: ZoneStatus): string {
   if (s === "bien") return "bg-emerald-500"
-  if (s === "en desarrollo") return "bg-blue-500"
+  if (s === "en desarrollo") return "bg-amber-500"
   if (s === "sobrecarga") return "bg-rose-500"
-  return "bg-amber-500"
+  return "bg-rose-500"
 }
 
 function statusClasses(s: ZoneStatus): string {
   if (s === "bien") return "border-emerald-200 bg-emerald-50 text-emerald-800"
-  if (s === "en desarrollo") return "border-blue-200 bg-blue-50 text-blue-800"
+  if (s === "en desarrollo") return "border-amber-200 bg-amber-50 text-amber-900"
   if (s === "sobrecarga") return "border-rose-200 bg-rose-50 text-rose-800"
-  return "border-amber-200 bg-amber-50 text-amber-900"
-}
-
-function zoneHint(zone: ZoneProgress): string {
-  if (zone.status === "bien") return "Mantén el ritmo y la técnica."
-  if (zone.status === "en desarrollo") return `Añade un bloque extra de ${zone.label.toLowerCase()} esta semana.`
-  if (zone.status === "sobrecarga") return `Baja un poco la carga en ${zone.label.toLowerCase()}.`
-  return `Prioriza ${zone.label.toLowerCase()} en la próxima sesión.`
+  return "border-rose-200 bg-rose-50 text-rose-900"
 }
 
 function deltaClass(q: DeltaQuality): string {
@@ -88,9 +87,17 @@ function deltaClass(q: DeltaQuality): string {
   return "text-slate-500"
 }
 
+function trendGlyph(trend: "up" | "down"): { symbol: string; className: string } {
+  if (trend === "down") return { symbol: "↓", className: "text-emerald-600" }
+  return { symbol: "↑", className: "text-emerald-600" }
+}
+
 export function VisualGoalGenerator({
   visualDescription,
-  priorityTitle,
+  visualGoalPriority,
+  visualGoalMode,
+  onVisualPrefsChange,
+  bodyMetricRows,
   priorityLevelLabel,
   deadlineYm,
   deadlineDisplay,
@@ -100,6 +107,7 @@ export function VisualGoalGenerator({
   weightLabel,
   bodyFatLabel,
   leanMassLabel,
+  leanMassFootnote,
   weightDelta,
   fatDelta,
   leanDelta,
@@ -120,6 +128,25 @@ export function VisualGoalGenerator({
 }: Props) {
   const _deadline = deadlineDisplay ?? (deadlineYm ? deadlineYm : "Sin fecha")
   const hasChart = chartPoints.length >= 2
+  const [descDraft, setDescDraft] = useState(visualDescription)
+
+  useEffect(() => {
+    setDescDraft(visualDescription)
+  }, [visualDescription])
+
+  const priorityOptions: { id: VisualGoalPriority; label: string }[] = [
+    { id: "alta", label: "Alta" },
+    { id: "media", label: "Media" },
+    { id: "baja", label: "Baja" },
+  ]
+
+  const modeMeta = VISUAL_GOAL_MODE_OPTIONS.find((o) => o.id === visualGoalMode)
+  const overlayCaption = (() => {
+    const t = (visualDescription ?? "").trim()
+    if (!t) return objective
+    if (t.length <= 120) return t
+    return `${t.slice(0, 117)}…`
+  })()
 
   return (
     <motion.div
@@ -128,8 +155,74 @@ export function VisualGoalGenerator({
       transition={{ duration: 0.38 }}
       className="rounded-[36px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
     >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
+      <div className="space-y-3 rounded-2xl border border-slate-100 bg-slate-50/60 p-4">
+        <div>
+          <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">Descripción del objetivo</p>
+          <textarea
+            value={descDraft}
+            onChange={(e) => setDescDraft(e.target.value)}
+            onBlur={() => onVisualPrefsChange({ visualGoalDescription: descDraft.trim() })}
+            rows={3}
+            className="mt-1.5 w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
+            placeholder="Ej. cuerpo atlético, % grasa objetivo, estilo de vida…"
+          />
+          <p className="m-0 mt-1.5 text-[10px] leading-snug text-slate-500">
+            Este texto alimenta la imagen de referencia (IA) y el contexto del plan. Una sola fuente: edítalo aquí.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">Prioridad</p>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {priorityOptions.map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  onClick={() => onVisualPrefsChange({ visualGoalPriority: o.id })}
+                  className={`rounded-full border px-3 py-1 text-[11px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 ${
+                    visualGoalPriority === o.id
+                      ? "border-slate-900 bg-slate-900 text-white"
+                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                  }`}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+            <p className="m-0 mt-1 text-[11px] text-slate-500">{priorityLevelLabel}</p>
+            <label className="mt-3 block" htmlFor="visual-goal-mode">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">Tipo de objetivo</span>
+              <select
+                id="visual-goal-mode"
+                value={visualGoalMode}
+                onChange={(e) => onVisualPrefsChange({ visualGoalMode: e.target.value as VisualGoalMode })}
+                className="mt-1.5 w-full max-w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200 sm:max-w-[20rem]"
+              >
+                {VISUAL_GOAL_MODE_OPTIONS.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {modeMeta ? <p className="m-0 mt-1 text-[11px] text-slate-500">{modeMeta.short}</p> : null}
+          </div>
+          <div>
+            <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">Meta temporal</p>
+            <input
+              type="month"
+              value={deadlineYm ?? ""}
+              onChange={(e) => onVisualPrefsChange({ visualGoalDeadlineYm: e.target.value })}
+              className="mt-1.5 w-full max-w-[14rem] rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
+            />
+            <p className="m-0 mt-1 text-xs font-semibold text-slate-800">{_deadline}</p>
+            {deadlineYm ? <p className="m-0 text-[11px] text-slate-500">Referencia: {deadlineYm}</p> : null}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-6 flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="h-1 w-6 rounded-full bg-blue-500" aria-hidden />
             <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">Objetivo visual</p>
@@ -138,35 +231,16 @@ export function VisualGoalGenerator({
             Physical <span className="text-blue-600">Vision.</span>
           </h2>
           <p className="m-0 mt-1 text-[11px] text-slate-500">
-            Prioridad y meta temporal se definen en{" "}
+            Referencia visual y métricas automáticas.{" "}
             <Link href={settingsHref} className="font-semibold text-blue-600 underline-offset-2 hover:underline">
-              preferencias
+              Preferencias completas
             </Link>
             .
           </p>
         </div>
-        <span className="shrink-0 rounded-full border border-emerald-200/80 bg-emerald-50 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-wider text-emerald-800">
-          Visible
-        </span>
       </div>
 
-      <div className="mt-4 rounded-2xl border border-slate-100 bg-slate-50/60 p-4">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-0">
-          <div className="sm:pr-4">
-            <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">Prioridad</p>
-            <p className="m-0 mt-1 text-lg font-bold text-slate-900">{priorityTitle}</p>
-            <p className="m-0 mt-0.5 text-xs text-slate-500">{priorityLevelLabel}</p>
-          </div>
-          <div className="hidden w-px bg-slate-200 sm:block" aria-hidden />
-          <div className="border-t border-slate-200 pt-4 sm:border-t-0 sm:pl-4 sm:pt-0">
-            <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">Meta temporal</p>
-            <p className="m-0 mt-1 text-lg font-bold text-slate-900">{_deadline}</p>
-            {deadlineYm ? <p className="m-0 mt-0.5 text-xs text-slate-500">Referencia: {deadlineYm}</p> : null}
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-5 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
+      <div className="mt-5 grid grid-cols-1 gap-6 lg:gap-8">
         <div className="flex min-w-0 flex-col gap-3">
           <div className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-slate-100">
             {goalImageUrl ? (
@@ -180,13 +254,13 @@ export function VisualGoalGenerator({
             )}
             <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-900/88 to-transparent px-3 py-3">
               <p className="m-0 text-[9px] font-semibold uppercase tracking-[0.18em] text-slate-300">Proyección IA</p>
-              <p className="m-0 text-xs font-semibold text-white">{objective}</p>
+              <p className="m-0 text-xs font-semibold text-white">{overlayCaption}</p>
             </div>
             <button
               type="button"
               aria-label="Subir referencia"
               onClick={onPickReference}
-              className="absolute bottom-2.5 right-2.5 inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/25 bg-white/15 text-white backdrop-blur transition hover:bg-white/25"
+              className="absolute bottom-2.5 right-2.5 inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/25 bg-white/15 text-white backdrop-blur transition hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
             >
               <Settings2 className="h-4 w-4" aria-hidden />
             </button>
@@ -196,7 +270,7 @@ export function VisualGoalGenerator({
               type="button"
               onClick={onGenerateImage}
               disabled={goalImageGenerating}
-              className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
+              className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2"
             >
               <Sparkles className="h-3.5 w-3.5 text-blue-500" aria-hidden />
               {goalImageGenerating ? "Generando…" : "Imagen IA"}
@@ -204,7 +278,7 @@ export function VisualGoalGenerator({
             <button
               type="button"
               onClick={onPickReference}
-              className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-transparent px-3.5 text-xs font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+              className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-transparent px-3.5 text-xs font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
             >
               <RefreshCw className="h-3.5 w-3.5" aria-hidden />
               Subir foto
@@ -212,15 +286,6 @@ export function VisualGoalGenerator({
           </div>
           <input ref={fileInputRef} type="file" accept="image/*" onChange={onFileChange} className="hidden" />
           {notice ? <p className="m-0 text-xs text-slate-500">{notice}</p> : null}
-
-          <div className="rounded-2xl border border-slate-200 bg-blue-50/40 px-3 py-2.5">
-            <div className="flex items-start gap-2">
-              <Pencil className="mt-0.5 h-3.5 w-3.5 shrink-0 text-blue-600" aria-hidden />
-              <p className="m-0 text-xs leading-relaxed text-slate-700">
-                {(visualDescription ?? "").trim() || "Escribe aquí el prompt para la imagen IA (cuerpo, estilo, referencias)."}
-              </p>
-            </div>
-          </div>
         </div>
 
         <div className="flex min-w-0 flex-col gap-4">
@@ -243,7 +308,14 @@ export function VisualGoalGenerator({
                 deltaQuality={weightDeltaQuality}
               />
               <MetricPill icon="drop" label="% grasa" value={bodyFatLabel} delta={fatDelta} deltaQuality={fatDeltaQuality} />
-              <MetricPill icon="muscle" label="Masa magra" value={leanMassLabel} delta={leanDelta} deltaQuality={leanDeltaQuality} />
+              <MetricPill
+                icon="muscle"
+                label="Masa magra"
+                value={leanMassLabel}
+                delta={leanDelta}
+                deltaQuality={leanDeltaQuality}
+                footnote={leanMassFootnote}
+              />
             </div>
           </div>
 
@@ -266,66 +338,7 @@ export function VisualGoalGenerator({
             </div>
             <div className="mt-2 h-[168px]">
               {hasChart ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={chartPoints} margin={{ top: 10, right: 10, left: 4, bottom: 4 }}>
-                    <defs>
-                      <linearGradient id="wAreaTraining" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#6366f1" stopOpacity={0.2} />
-                        <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="4 4" stroke="#e2e8f0" vertical={false} />
-                    <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-                    <YAxis
-                      yAxisId="w"
-                      orientation="left"
-                      width={44}
-                      tick={{ fontSize: 10, fill: "#3b82f6" }}
-                      axisLine={false}
-                      tickLine={false}
-                      tickFormatter={(v) => `${v}kg`}
-                      domain={["dataMin - 0.5", "dataMax + 0.5"]}
-                    />
-                    <YAxis
-                      yAxisId="f"
-                      orientation="right"
-                      width={40}
-                      tick={{ fontSize: 10, fill: "#fb923c" }}
-                      axisLine={false}
-                      tickLine={false}
-                      tickFormatter={(v) => `${v}%`}
-                      domain={["dataMin - 0.4", "dataMax + 0.4"]}
-                    />
-                    <Tooltip
-                      contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 11 }}
-                      formatter={(value, name) => {
-                        const v = typeof value === "number" ? value : Number(value)
-                        return [String(name) === "weight" ? `${v} kg` : `${v}%`, String(name) === "weight" ? "Peso" : "Grasa"]
-                      }}
-                    />
-                    <Legend wrapperStyle={{ display: "none" }} />
-                    <Area yAxisId="w" type="monotone" dataKey="weight" stroke="none" fill="url(#wAreaTraining)" />
-                    <Line
-                      yAxisId="w"
-                      type="monotone"
-                      dataKey="weight"
-                      name="weight"
-                      stroke="#3b82f6"
-                      strokeWidth={2}
-                      strokeDasharray="4 3"
-                      dot={{ r: 3, fill: "#3b82f6", strokeWidth: 0 }}
-                    />
-                    <Line
-                      yAxisId="f"
-                      type="monotone"
-                      dataKey="fatPct"
-                      name="fatPct"
-                      stroke="#fb923c"
-                      strokeWidth={2}
-                      dot={{ r: 4, fill: "#fb923c", stroke: "#fff", strokeWidth: 2 }}
-                    />
-                  </ComposedChart>
-                </ResponsiveContainer>
+                <BodyCompositionChart chartPoints={chartPoints} />
               ) : (
                 <p className="m-0 flex h-full items-center justify-center px-2 text-center text-xs text-slate-500">
                   Añade peso y % grasa en tus métricas corporales para ver la tendencia.
@@ -335,12 +348,106 @@ export function VisualGoalGenerator({
           </div>
 
           <div>
-            <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Progreso por grupo</p>
-            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {zones.map((zone) => (
-                <ZoneCard key={zone.key} zone={zone} />
-              ))}
+            <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Estado actual vs objetivo</p>
+            {bodyMetricRows.length ? (
+              <div className="mt-2 overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+                <table className="w-full min-w-[520px] border-collapse text-left text-[11px]">
+                  <thead>
+                    <tr className="border-b border-slate-100 bg-slate-50/90 text-[9px] font-semibold uppercase tracking-wide text-slate-500">
+                      <th className="px-2 py-2">Medida</th>
+                      <th className="px-2 py-2">Hoy</th>
+                      <th className="px-2 py-2">Previo</th>
+                      <th className="px-2 py-2">Objetivo</th>
+                      <th className="px-2 py-2">Proyección</th>
+                      <th className="px-2 py-2">Meta</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bodyMetricRows.map((row) => {
+                      const tg = trendGlyph(row.trend)
+                      return (
+                        <tr key={row.label} className="border-b border-slate-50 last:border-0">
+                          <td className="px-2 py-2 font-semibold text-slate-900">{row.label}</td>
+                          <td className="px-2 py-2 tabular-nums text-slate-800">
+                            <span className="inline-flex items-center gap-0.5">
+                              {row.current} <span className={`text-xs font-bold ${tg.className}`}>{tg.symbol}</span>
+                            </span>
+                          </td>
+                          <td className="px-2 py-2 tabular-nums text-slate-600">{row.previous}</td>
+                          <td className="px-2 py-2 tabular-nums text-slate-600">{row.target}</td>
+                          <td className="px-2 py-2 tabular-nums text-slate-600">{row.projection}</td>
+                          <td className="px-2 py-2">
+                            <div className="flex items-center gap-2">
+                              <div className="h-1.5 min-w-[48px] flex-1 overflow-hidden rounded-full bg-slate-100">
+                                <div
+                                  className="h-full rounded-full bg-teal-500"
+                                  style={{ width: `${Math.min(100, Math.max(0, row.progressPct))}%` }}
+                                />
+                              </div>
+                              <span className="shrink-0 tabular-nums text-[10px] font-semibold text-slate-600">{row.progressPct}%</span>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="m-0 mt-2 text-xs text-slate-500">Sin medidas corporales en preferencias. Añádelas en configuración.</p>
+            )}
+          </div>
+
+          <div>
+            <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Volumen por grupo (Hevy · esta semana)</p>
+            <div className="mt-2 overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+              <table className="w-full min-w-[400px] border-collapse text-left text-[11px]">
+                <thead>
+                  <tr className="border-b border-slate-100 bg-slate-50/90 text-[9px] font-semibold uppercase tracking-wide text-slate-500">
+                    <th className="px-2 py-2">Grupo</th>
+                    <th className="px-2 py-2">Sets hechos</th>
+                    <th className="px-2 py-2">Meta sets</th>
+                    <th className="px-2 py-2">Avance</th>
+                    <th className="px-2 py-2">Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {zones.map((zone) => {
+                    const w = Math.min(100, Math.round(zone.progress))
+                    return (
+                      <tr key={zone.key} className="border-b border-slate-50 last:border-0">
+                        <td className="px-2 py-2 font-semibold text-slate-900">{zone.label}</td>
+                        <td className="px-2 py-2 tabular-nums text-slate-800">{zone.actualSets > 0 ? zone.actualSets.toFixed(1) : "—"}</td>
+                        <td className="px-2 py-2 tabular-nums text-slate-600">{zone.targetSets}</td>
+                        <td className="px-2 py-2">
+                          <div className="flex items-center gap-2">
+                            <div className="h-1.5 min-w-[56px] flex-1 overflow-hidden rounded-full bg-slate-100">
+                              <motion.div
+                                className={`h-full rounded-full ${statusBarColor(zone.status)}`}
+                                initial={{ width: 0 }}
+                                animate={{ width: `${w}%` }}
+                                transition={{ type: "spring", stiffness: 120, damping: 18 }}
+                              />
+                            </div>
+                            <span className="shrink-0 tabular-nums text-[10px] font-semibold text-slate-600">{w}%</span>
+                          </div>
+                        </td>
+                        <td className="px-2 py-2">
+                          <span className={`inline-flex rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${statusClasses(zone.status)}`}>
+                            {statusLabel(zone.status)}
+                          </span>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
+            {zones.length ? (
+              <p className="m-0 mt-2 text-[10px] leading-snug text-slate-400">
+                Colores: verde = en rango, ámbar = puedes sumar volumen, rojo = rezagado o sobrecarga.
+              </p>
+            ) : null}
           </div>
 
           <div className="rounded-2xl bg-slate-900 px-4 py-3.5 text-white">
@@ -380,55 +487,20 @@ function SyncChip({ on, label }: { on: boolean; label: string }) {
   )
 }
 
-function ZoneCard({ zone }: { zone: ZoneProgress }) {
-  const w = Math.min(100, Math.round(zone.progress))
-  return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition hover:border-slate-300"
-    >
-      <div className="flex items-start justify-between gap-2">
-        <p className="m-0 text-sm font-semibold text-slate-900">{zone.label}</p>
-        <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${statusClasses(zone.status)}`}>
-          {statusLabel(zone.status)}
-        </span>
-      </div>
-      <p className="m-0 mt-1 text-[11px] tabular-nums text-slate-500">
-        {zone.actualSets > 0 ? (
-          <>
-            {zone.actualSets.toFixed(1)} / {zone.targetSets} sets · {w}%
-          </>
-        ) : (
-          "Sin datos esta semana"
-        )}
-      </p>
-      <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
-        <motion.div
-          className={`h-full rounded-full ${statusBarColor(zone.status)}`}
-          initial={{ width: 0 }}
-          animate={{ width: `${w}%` }}
-          transition={{ type: "spring", stiffness: 120, damping: 18 }}
-        />
-      </div>
-      <p className="m-0 mt-1.5 text-[11px] leading-snug text-slate-500">{zoneHint(zone)}</p>
-    </motion.div>
-  )
-}
-
 function MetricPill({
   icon,
   label,
   value,
   delta,
   deltaQuality,
+  footnote,
 }: {
   icon: "scale" | "drop" | "muscle"
   label: string
   value: string
   delta?: string
   deltaQuality: DeltaQuality
+  footnote?: string
 }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm">
@@ -436,6 +508,7 @@ function MetricPill({
       <p className="m-0 mt-0.5 text-base font-bold tracking-tight text-slate-900">{value}</p>
       {delta ? <p className={`m-0 mt-0.5 text-[10px] font-semibold ${deltaClass(deltaQuality)}`}>{delta}</p> : null}
       <p className="m-0 mt-0.5 text-[9px] text-slate-400">{deltaQualityLabel(deltaQuality)}</p>
+      {footnote ? <p className="m-0 mt-1 text-[9px] leading-snug text-slate-500">{footnote}</p> : null}
       <div className="mt-1 flex justify-end text-slate-300">
         {icon === "scale" ? <Scale className="h-4 w-4" aria-hidden /> : null}
         {icon === "drop" ? <Droplets className="h-4 w-4" aria-hidden /> : null}
