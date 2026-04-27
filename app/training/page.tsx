@@ -10,28 +10,22 @@ import { agendaTodayYmd } from "@/lib/agenda/localDateKey"
 import { useTrainingPreferences } from "@/app/hooks/useTrainingPreferences"
 import { TrainingActionQuerySync } from "@/app/training/TrainingActionQuerySync"
 import { aggregateZoneProgress } from "@/lib/training/effectiveSets"
-import { buildAiRecommendations, deriveNutritionStatus } from "@/lib/training/decisionEngine"
+import { deriveNutritionStatus } from "@/lib/training/decisionEngine"
 import { TrainingDashboard } from "@/app/training/components/TrainingDashboard"
 import type { HrvPoint } from "@/app/training/components/RecoveryModule"
-import type { TrendRow } from "@/app/training/components/VisualGoalGenerator"
-
-const MOCK_HRV_SERIES: HrvPoint[] = [
-  { label: "Lun", hrv: 48 },
-  { label: "Mar", hrv: 52 },
-  { label: "Mié", hrv: 46 },
-  { label: "Jue", hrv: 55 },
-  { label: "Vie", hrv: 51 },
-  { label: "Sáb", hrv: 58 },
-  { label: "Dom", hrv: 54 },
-]
-
-const MOCK_PHYSIQUE_CHART = [
-  { label: "01 Mar", weight: 77.0, fatPct: 12.8 },
-  { label: "15 Mar", weight: 76.6, fatPct: 12.5 },
-  { label: "01 Abr", weight: 76.4, fatPct: 12.35 },
-  { label: "15 Abr", weight: 76.3, fatPct: 12.25 },
-  { label: "Hoy", weight: 76.2, fatPct: 12.2 },
-]
+import { advisorQuoteFromPlan, buildCoachInsightParagraph } from "@/lib/training/coachCopy"
+import {
+  advisorStatusLabel,
+  bodyCompositionChartPoints,
+  countWeeklySets,
+  cnsFatigueLabel,
+  deltaQualityFromTrend,
+  formatDeadlineYm,
+  hypertrophyRateHint,
+  intraWorkoutCarbsG,
+  parseMetricNumber,
+  trainingStreakDays,
+} from "@/lib/training/trainingDashboardDerivations"
 
 export default function TrainingPage() {
   const router = useRouter()
@@ -44,6 +38,7 @@ export default function TrainingPage() {
   const planVsExecution = useMemo(() => buildPlanVsExecution(days, todayState, todayIso), [days, todayState, todayIso])
   const lastSession = useMemo(() => pickLastHevySession(days), [days])
   const hasHevy = days.some((day) => day.source === "hevy")
+  const hasManualDay = days.some((d) => d.source === "manual")
   const weeklyDays = useMemo(() => days.filter((day) => day.date >= shiftDays(todayIso, -6)), [days, todayIso])
   const plannedFocus = focusForPlan(planVsExecution.plannedToday)
   const statusChip = resolveTrainingStatusChip(readiness.score, hasHevy || !!appleSignals)
@@ -52,47 +47,119 @@ export default function TrainingPage() {
 
   const weightMetric = bodyRows.find((row) => /peso/i.test(row.label))
   const fatMetric = bodyRows.find((row) => /grasa|bf|body fat/i.test(row.label))
+  const leanMetric = bodyRows.find((row) => /magr|lean|masa mag/i.test(row.label))
   const objective = deriveObjective(prefs.visualGoalDescription)
-  const trendRows: TrendRow[] = useMemo(() => bodyRows.slice(0, 4).map((r) => ({ label: r.label, progressPct: r.progressPct })), [bodyRows])
   const bodyPartProgress = useMemo(() => aggregateZoneProgress(weeklyDays), [weeklyDays])
   const nutritionPlan = useMemo(() => deriveNutritionPlan(mealDays), [mealDays])
   const nutritionStatus = deriveNutritionStatus(weightMetric)
-  const aiRecommendations = buildAiRecommendations({ bodyPartProgress, nutritionStatus, hasHevy })
   const [goalImageGenerating, setGoalImageGenerating] = useState(false)
   const [trainingNotice, setTrainingNotice] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const hrvSeries = useMemo(() => {
-    const pts = timeline
+  const hrvRaw = useMemo(() => {
+    return timeline
       .filter((t) => typeof t.hrv_ms === "number" && (t.hrv_ms ?? 0) > 0)
       .slice(-7)
       .map((t) => ({
         label: new Date(t.observed_at).toLocaleDateString("es-CO", { day: "numeric", month: "short" }),
         hrv: t.hrv_ms as number,
-      }))
-    return pts.length ? pts : MOCK_HRV_SERIES
+      })) as HrvPoint[]
   }, [timeline])
+  const hrvHasData = hrvRaw.length > 0
+  const hrvSeries = hrvRaw
 
   const plannedSession = useMemo(() => prettifyPlanTitle(planVsExecution.plannedToday), [planVsExecution.plannedToday])
   const sessionFocus = useMemo(
-    () => `${readiness.rationale} Enfoque muscular: ${plannedFocus.toLowerCase()}.`,
+    () => `${readiness.rationale} Enfoque: ${plannedFocus.toLowerCase()}.`,
     [readiness.rationale, plannedFocus],
   )
 
-  const weightLabel = weightMetric ? `${weightMetric.current} kg` : "76.2 kg"
-  const bodyFatLabel = fatMetric ? `${fatMetric.current}%` : "12.2%"
-  const leanMassLabel = "66.9 kg"
-  const weightDelta = weightMetric ? (weightMetric.trend === "down" ? "−0.4 kg esta semana" : weightMetric.trend === "up" ? "+0.2 kg esta semana" : "Estable") : "−0.4 kg esta semana (ref.)"
-  const fatDelta = fatMetric ? (fatMetric.trend === "down" ? "−0.2 pts esta semana" : "Estable") : "−0.2 pts esta semana (ref.)"
-  const leanDelta = "+0.1 kg esta semana (ref.)"
+  const weightLabel = weightMetric ? `${weightMetric.current} kg` : "—"
+  const bodyFatLabel = fatMetric ? `${fatMetric.current}%` : "—"
+  const leanMassLabel = leanMetric ? `${leanMetric.current} kg` : "—"
+  const weightDelta = weightMetric
+    ? weightMetric.trend === "down"
+      ? "↓ respecto a la lectura anterior"
+      : weightMetric.trend === "up"
+        ? "↑ respecto a la lectura anterior"
+        : "Sin cambio vs anterior"
+    : undefined
+  const fatDelta = fatMetric
+    ? fatMetric.trend === "down"
+      ? "↓ vs anterior"
+      : fatMetric.trend === "up"
+        ? "↑ vs anterior"
+        : "Sin cambio"
+    : undefined
+  const leanDelta = leanMetric
+    ? leanMetric.trend === "down"
+      ? "↓ vs anterior"
+      : leanMetric.trend === "up"
+        ? "↑ vs anterior"
+        : "Sin cambio"
+    : undefined
 
-  const neuralBanner = useMemo(() => {
-    const first = aiRecommendations[0]
-    if (first) return `${first} ${planVsExecution.suggestion ? `· ${planVsExecution.suggestion}` : ""}`
-    return `${readiness.rationale} ${planVsExecution.suggestion ? `· ${planVsExecution.suggestion}` : ""}`
-  }, [aiRecommendations, planVsExecution.suggestion, readiness.rationale])
+  const weightDeltaQuality = weightMetric ? deltaQualityFromTrend(weightMetric.trend, "weight") : "neutral"
+  const fatDeltaQuality = fatMetric ? deltaQualityFromTrend(fatMetric.trend, "fat") : "neutral"
+  const leanDeltaQuality = leanMetric ? deltaQualityFromTrend(leanMetric.trend, "weight") : "neutral"
 
-  const priorityBadge = priorityFromPrefs(prefs.visualGoalPriority)
+  const chartPoints = useMemo(() => {
+    const pts = bodyCompositionChartPoints(weightMetric, fatMetric)
+    if (pts.length >= 2) return pts
+    const w = parseMetricNumber(weightMetric?.current)
+    const f = parseMetricNumber(fatMetric?.current)
+    if (w != null && f != null) return [{ label: "Hoy", weight: w, fatPct: f }]
+    return []
+  }, [weightMetric, fatMetric])
+
+  const nutritionOk = !nutritionStatus.toLowerCase().includes("fuera")
+  const coachInsight = useMemo(
+    () =>
+      buildCoachInsightParagraph({
+        readiness,
+        nutritionStatus,
+        hasHevy,
+      }),
+    [readiness, nutritionStatus, hasHevy],
+  )
+  const coachQuote = useMemo(() => advisorQuoteFromPlan(planVsExecution.plannedToday, readiness), [planVsExecution.plannedToday, readiness])
+
+  const zonesAvgProgress = useMemo(() => {
+    const active = bodyPartProgress.filter((z) => z.actualSets > 0)
+    const arr = active.length ? active : bodyPartProgress
+    if (!arr.length) return 0
+    return arr.reduce((s, z) => s + z.progress, 0) / arr.length
+  }, [bodyPartProgress])
+
+  const setsDoneWeek = useMemo(() => countWeeklySets(weeklyDays), [weeklyDays])
+  const streakDays = useMemo(() => trainingStreakDays(days, todayIso), [days, todayIso])
+
+  const advisor = useMemo(
+    () => ({
+      statusLabel: advisorStatusLabel(readiness.score, nutritionOk),
+      cnsLevel: cnsFatigueLabel(readiness.score),
+      intraChoG: String(intraWorkoutCarbsG(planVsExecution.plannedToday)),
+      hypertrophyHint: hypertrophyRateHint(zonesAvgProgress),
+      quote: coachQuote,
+      setsDone: setsDoneWeek,
+      streakDays,
+    }),
+    [readiness.score, nutritionOk, planVsExecution.plannedToday, zonesAvgProgress, coachQuote, setsDoneWeek, streakDays],
+  )
+
+  const priorityTitle = objective
+  const priorityLevelLabel =
+    prefs.visualGoalPriority === "media" ? "Prioridad media" : prefs.visualGoalPriority === "baja" ? "Prioridad baja" : "Prioridad alta"
+  const deadlineDisplay = formatDeadlineYm(prefs.visualGoalDeadlineYm ?? null)
+
+  const syncChips = useMemo(
+    () => ({
+      apple: Boolean(appleHealth && (timeline.length > 0 || appleSignals?.sleep_hours != null || appleSignals?.hrv_ms != null)),
+      hevy: hasHevy,
+      manual: hasManualDay,
+    }),
+    [appleHealth, timeline.length, appleSignals?.sleep_hours, appleSignals?.hrv_ms, hasHevy, hasManualDay],
+  )
 
   const showTrainingNotice = (message: string) => {
     setTrainingNotice(message)
@@ -147,41 +214,49 @@ export default function TrainingPage() {
   }
 
   const lastWorkoutLine = lastSession?.workoutName
-    ? `Último entrenamiento: ${lastSession.workoutName}${lastSession.duration ? ` · ${Math.round(lastSession.duration)} min` : ""}`
-    : "Aún no hay sesiones estructuradas recibidas."
+    ? `${lastSession.workoutName}${lastSession.duration ? ` · ${Math.round(lastSession.duration)} min` : ""}`
+    : "Sin sesión reciente"
 
   return (
-    <main className="min-h-screen bg-[#F8FAFC]" aria-label="Entrenamiento operativo">
+    <main className="min-h-0" aria-label="Entrenamiento operativo">
       <TrainingActionQuerySync setManualStatus={setManualStatus} />
       <TrainingDashboard
         readinessScore={readiness.score}
         readinessLabel={readiness.label}
         sleepHours={appleSignals?.sleep_hours ?? null}
         hrvSeries={hrvSeries}
+        hrvHasData={hrvHasData}
         recoveryLoading={loading || appleLoading}
         plannedSession={plannedSession}
         sessionFocus={sessionFocus}
-        hasHevy={hasHevy}
         onStartProtocol={onStartProtocol}
         onOpenAgenda={() => router.push("/agenda")}
-        onSkipSession={() => setManualStatus("skip")}
-        onRestDay={() => setManualStatus("rest")}
+        onReprogramSession={() => setManualStatus("skip")}
+        onConfirmRestDay={() => setManualStatus("rest")}
+        advisor={advisor}
         visual={{
           visualDescription: prefs.visualGoalDescription ?? "",
-          priority: priorityBadge,
+          priorityTitle,
+          priorityLevelLabel,
           deadlineYm: prefs.visualGoalDeadlineYm ?? null,
+          deadlineDisplay,
           goalImageUrl: prefs.goalImageUrl,
           zones: bodyPartProgress,
           objective,
-          trendRows,
           weightLabel,
           bodyFatLabel,
           leanMassLabel,
           weightDelta,
           fatDelta,
           leanDelta,
-          chartPoints: MOCK_PHYSIQUE_CHART,
-          aiBullets: aiRecommendations,
+          weightDeltaQuality,
+          fatDeltaQuality,
+          leanDeltaQuality,
+          chartPoints,
+          coachInsight,
+          coachExtras: [],
+          syncChips,
+          settingsHref: "/configuracion",
           goalImageGenerating,
           onGenerateImage: () => void onGenerateGoalWithAI(),
           onPickReference: onPickImage,
@@ -190,6 +265,7 @@ export default function TrainingPage() {
           notice: trainingNotice,
         }}
         nutritionPlan={nutritionPlan}
+        mealDays={mealDays}
         nutritionStatusLabel={nutritionStatus}
         onRegenerateNutrition={() =>
           updatePrefs({
@@ -198,6 +274,7 @@ export default function TrainingPage() {
           })
         }
         onScrollMealPlan={onScrollMealPlan}
+        onExportToast={showTrainingNotice}
         hevy={{
           hevyStatus,
           hasHevy,
@@ -210,7 +287,6 @@ export default function TrainingPage() {
           onOpenApp: () => window.open("https://hevy.com/app", "_blank", "noopener,noreferrer"),
           onSync: () => router.refresh(),
         }}
-        neuralBanner={neuralBanner}
         statusChipLabel={statusChip.label}
       />
     </main>
@@ -281,10 +357,4 @@ function resolveTrainingStatusChip(score: number, hasSignals: boolean) {
   if (score < 50) return { label: "Priorizar recuperación", tone: "risk" as const }
   if (score >= 74) return { label: "Listo para entrenar", tone: "ok" as const }
   return { label: "Carga moderada", tone: "warn" as const }
-}
-
-function priorityFromPrefs(p: "alta" | "media" | "baja" | undefined) {
-  if (p === "media") return "Hipertrofia magra · prioridad media"
-  if (p === "baja") return "Hipertrofia magra · prioridad baja"
-  return "Hipertrofia magra · prioridad alta"
 }
