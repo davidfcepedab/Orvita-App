@@ -65,7 +65,6 @@ export type TrainingDashboardProps = {
     ) => void
     bodyMetricRows: BodyMetricDisplayRow[]
     priorityTitle: string
-    priorityLevelLabel: string
     deadlineYm: string | null
     deadlineDisplay: string | null
     goalImageUrl?: string | null

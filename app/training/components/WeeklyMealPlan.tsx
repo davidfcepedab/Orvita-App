@@ -1,13 +1,29 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { Apple, Check, ChevronRight, Dumbbell, Flame, Moon, Printer, RefreshCw, Share2, ShoppingCart, Sun, UtensilsCrossed } from "lucide-react"
+import {
+  Apple,
+  Check,
+  ChevronDown,
+  ChevronRight,
+  Dumbbell,
+  Flame,
+  Moon,
+  Printer,
+  RefreshCw,
+  Share2,
+  ShoppingCart,
+  Sun,
+  UtensilsCrossed,
+} from "lucide-react"
 import dynamic from "next/dynamic"
 import { useEffect, useMemo, useState } from "react"
 import type { MealDayDisplay, VisualGoalMode } from "@/lib/training/trainingPrefsTypes"
 import { buildConcreteDayMeals } from "@/lib/training/concreteMealSuggestions"
 import { buildShoppingListPlainText, openShoppingListPrintWindow, sharePlainText } from "@/lib/training/shoppingListExport"
+import { mealDetailBulletLines } from "@/lib/training/mealDetailFormat"
 import { dailyKcalTargetsFromTrainingSchedule, isTrainingDayYmd, weekYmdForMealDayLabel } from "@/lib/training/mealTrainingKcal"
+import { averageLoggedMacros, macroTargetsFromPlanKcalAndMode } from "@/lib/training/planMacroTargets"
 import type { TrainingDay } from "@/src/modules/training/types"
 
 const KcalBarChart = dynamic(() => import("./charts/KcalBarChart").then((m) => m.KcalBarChart), {
@@ -85,12 +101,32 @@ function buildPrepRows(plan: NutritionPlanView): PrepRow[] {
 }
 
 function mealIcon(kind: "sun" | "utensils" | "apple" | "moon") {
-  const cls = "h-4 w-4 shrink-0 text-slate-500"
+  const cls = "h-4 w-4 shrink-0 text-slate-600"
   if (kind === "sun") return <Sun className={cls} aria-hidden />
   if (kind === "utensils") return <UtensilsCrossed className={cls} aria-hidden />
   if (kind === "apple") return <Apple className={cls} aria-hidden />
   return <Moon className={cls} aria-hidden />
 }
+
+function mealSlotCardClass(icon: "sun" | "utensils" | "apple" | "moon"): string {
+  switch (icon) {
+    case "sun":
+      return "border-amber-200/80 bg-amber-50/75"
+    case "utensils":
+      return "border-orange-200/75 bg-orange-50/65"
+    case "apple":
+      return "border-lime-200/75 bg-lime-50/55"
+    default:
+      return "border-violet-200/75 bg-violet-50/65"
+  }
+}
+
+const PREP_CARD_SURFACE = [
+  "border-amber-200/80 bg-amber-50/80",
+  "border-orange-200/75 bg-orange-50/75",
+  "border-emerald-200/75 bg-emerald-50/70",
+  "border-violet-200/75 bg-violet-50/75",
+] as const
 
 export function WeeklyMealPlan({
   plan,
@@ -126,20 +162,21 @@ export function WeeklyMealPlan({
     return { kcal: 0, p: 0, c: 0, f: 0 }
   }, [plan])
 
-  const macroGoals = useMemo(
-    () => ({
-      p: targets.p > 0 ? Math.max(targets.p, 160) : 200,
-      c: targets.c > 0 ? Math.max(targets.c, 200) : 300,
-      f: targets.f > 0 ? Math.max(targets.f, 60) : 85,
-    }),
-    [targets],
+  const planMacroTargets = useMemo(
+    () => macroTargetsFromPlanKcalAndMode(targets.kcal, visualGoalMode),
+    [targets.kcal, visualGoalMode],
   )
 
-  const macroBars = [
-    { key: "Proteína", current: targets.p || plan.protein, goal: macroGoals.p, color: "bg-slate-900" },
-    { key: "Carbos", current: targets.c || plan.carbs, goal: macroGoals.c, color: "bg-blue-500" },
-    { key: "Grasas", current: targets.f || plan.fats, goal: macroGoals.f, color: "bg-sky-300" },
-  ] as const
+  const loggedMacros = useMemo(() => averageLoggedMacros(mealDays), [mealDays])
+
+  const macroBars = useMemo(() => {
+    const g = plan.available ? planMacroTargets : { protein: 0, carbs: 0, fats: 0 }
+    return [
+      { key: "Proteína", current: loggedMacros.protein, goal: g.protein, color: "bg-slate-900" },
+      { key: "Carbos", current: loggedMacros.carbs, goal: g.carbs, color: "bg-blue-500" },
+      { key: "Grasas", current: loggedMacros.fats, goal: g.fats, color: "bg-sky-300" },
+    ] as const
+  }, [plan.available, planMacroTargets, loggedMacros])
 
   const dailyTargets = useMemo(() => {
     if (!mealDays.length || targets.kcal <= 0 || !weekAnchorYmd) {
@@ -208,11 +245,12 @@ export function WeeklyMealPlan({
   const ringPct = useMemo(() => {
     if (!plan.available) return 0
     const pct = (cur: number, goal: number) => (goal > 0 ? Math.min(100, Math.round((cur / goal) * 100)) : 0)
-    const p = pct(targets.p, macroGoals.p)
-    const c = pct(targets.c, macroGoals.c)
-    const f = pct(targets.f, macroGoals.f)
+    const g = planMacroTargets
+    const p = pct(loggedMacros.protein, g.protein || 1)
+    const c = pct(loggedMacros.carbs, g.carbs || 1)
+    const f = pct(loggedMacros.fats, g.fats || 1)
     return Math.round((p + c + f) / 3)
-  }, [plan.available, targets, macroGoals])
+  }, [plan.available, planMacroTargets, loggedMacros])
 
   const selectedDay = mealDays[selectedDayIdx]
   const selectedTargetKcal = selectedDay ? (dailyTargets[selectedDayIdx] ?? targets.kcal) : 0
@@ -258,7 +296,7 @@ export function WeeklyMealPlan({
         <div className="flex shrink-0 items-center gap-3">
           <div
             className="relative flex h-14 w-14 flex-col items-center justify-center rounded-full border border-blue-200/80 bg-white shadow-[0_0_20px_rgba(59,130,246,0.18)]"
-            title="Promedio de cumplimiento de proteína, carbos y grasas respecto al objetivo guardado en preferencias (no es adherencia al día)."
+            title="Alineación: promedio registrado en tu plan vs objetivo de macros derivado del kcal medio y tu tipo de objetivo visual."
           >
             <svg className="h-12 w-12 -rotate-90" viewBox="0 0 36 36" aria-hidden>
               <circle cx="18" cy="18" r="15.5" fill="none" stroke="#e2e8f0" strokeWidth="3" />
@@ -275,8 +313,8 @@ export function WeeklyMealPlan({
             </svg>
             <span className="absolute text-[10px] font-bold leading-none text-slate-800">{ringPct}%</span>
             <span className="sr-only">
-              Alineación de macros: aproximadamente {ringPct} por ciento de cumplimiento medio de proteína, carbohidratos y grasas frente al
-              objetivo del plan.
+              Alineación de macros: aproximadamente {ringPct} por ciento de la media registrada frente a la meta teórica según kcal del plan y
+              tipo de objetivo.
             </span>
           </div>
           <button
@@ -289,7 +327,9 @@ export function WeeklyMealPlan({
           </button>
         </div>
       </div>
-      <p className="m-0 -mt-2 text-[10px] text-slate-400">Anillo: alineación P/C/G vs objetivo del plan guardado.</p>
+      <p className="m-0 -mt-2 text-[10px] text-slate-400">
+        Anillo: tu media registrada vs meta P/C/G calculada (kcal plan + tipo de objetivo).
+      </p>
 
       <div className="rounded-2xl border border-slate-100 bg-slate-50/90 px-3 py-2.5 text-sm leading-snug text-slate-700">
         <span className="font-medium text-slate-900">Nutrición:</span> {nutritionStatusLabel}
@@ -344,23 +384,39 @@ export function WeeklyMealPlan({
                 </div>
               </div>
               <ul className="m-0 mt-3 list-none space-y-3 p-0">
-                {suggestedMeals.map((m) => (
-                  <li
-                    key={m.time + m.label}
-                    className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm"
-                  >
-                    <span className="mt-0.5 text-slate-400">{mealIcon(m.icon)}</span>
-                    <div className="min-w-0 flex-1">
-                      <p className="m-0 font-semibold text-slate-900">
-                        <span className="tabular-nums text-slate-500">{m.time}</span> · {m.label}
-                      </p>
-                      <p className="m-0 mt-1 text-xs font-medium tabular-nums text-slate-600">
-                        ~{m.kcal} kcal · {m.proteinG} g P · {m.carbG} g CHO · {m.fatG} g G
-                      </p>
-                      <p className="m-0 mt-1.5 text-xs leading-relaxed text-slate-700 text-pretty">{m.detail}</p>
-                    </div>
-                  </li>
-                ))}
+                {suggestedMeals.map((m) => {
+                  const bullets = mealDetailBulletLines(m.detail)
+                  const tone = mealSlotCardClass(m.icon)
+                  return (
+                    <li
+                      key={m.time + m.label}
+                      className={`flex items-start gap-3 rounded-xl border px-3 py-3 text-sm shadow-sm ${tone}`}
+                    >
+                      <span className="mt-0.5 rounded-lg bg-white/70 p-1 shadow-sm">{mealIcon(m.icon)}</span>
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <div>
+                          <p className="m-0 font-semibold text-slate-900">
+                            <span className="tabular-nums text-slate-600">{m.time}</span> · {m.label}
+                          </p>
+                          <p className="m-0 mt-1 text-[11px] font-semibold tabular-nums text-slate-800">
+                            ~{m.kcal} kcal · {m.proteinG} g P · {m.carbG} g CHO · {m.fatG} g G
+                          </p>
+                        </div>
+                        {bullets.length > 1 ? (
+                          <ul className="m-0 list-disc space-y-1 pl-4 text-[11px] leading-relaxed text-slate-700 marker:text-slate-400">
+                            {bullets.map((line) => (
+                              <li key={line} className="text-pretty">
+                                {line}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="m-0 text-[11px] leading-relaxed text-slate-700 text-pretty">{m.detail}</p>
+                        )}
+                      </div>
+                    </li>
+                  )
+                })}
               </ul>
               <p className="m-0 mt-2 text-[10px] leading-snug text-slate-400">
                 Horarios y nombres son una guía; reparte tus macros reales como prefieras.
@@ -394,7 +450,13 @@ export function WeeklyMealPlan({
       </div>
 
       <div className="space-y-2.5">
-        <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Macros vs objetivo (media del plan)</p>
+        <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+          Macros · registrado vs objetivo plan
+        </p>
+        <p className="m-0 text-[10px] leading-snug text-slate-500">
+          Objetivo = reparto teórico según kcal medio del plan y tipo de objetivo visual. Registrado = media de tus días en
+          preferencias.
+        </p>
         {macroBars.map((row) => {
           const cur = typeof row.current === "number" ? row.current : 0
           const pct = row.goal > 0 ? Math.min(100, Math.round((cur / row.goal) * 100)) : 0
@@ -403,7 +465,9 @@ export function WeeklyMealPlan({
               <div className="flex items-baseline justify-between gap-2">
                 <p className="m-0 text-[11px] font-semibold uppercase tracking-wide text-slate-500">{row.key}</p>
                 <p className="m-0 text-[11px] tabular-nums text-slate-500">
-                  <span className="font-semibold text-slate-900">{cur}g</span> / {row.goal}g
+                  <span className="font-semibold text-slate-900">{cur}g</span>
+                  <span className="text-slate-400"> → </span>
+                  <span className="font-medium text-slate-700">{row.goal > 0 ? `${row.goal}g` : "—"}</span>
                 </p>
               </div>
               <div className="mt-1 h-2.5 overflow-hidden rounded-full bg-slate-100">
@@ -419,38 +483,49 @@ export function WeeklyMealPlan({
         })}
       </div>
 
-      <div>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Meal prep stack · semana</p>
-          <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
-            ~{prepMinutesTotal} min
-          </span>
-        </div>
-        <ul className="mt-2 space-y-2">
-          {prep.map((item) => (
-            <li key={item.id}>
-              <button
-                type="button"
-                onClick={() => togglePrep(item.id)}
-                className="flex w-full items-start gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-left shadow-sm transition hover:border-slate-300"
-              >
-                <span
-                  className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border ${
-                    item.done ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-slate-50 text-slate-400"
-                  }`}
+      <details className="group rounded-2xl border border-slate-200 bg-slate-50/50">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 sm:px-4 sm:py-3 [&::-webkit-details-marker]:hidden">
+          <div className="min-w-0">
+            <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Meal prep stack · semana</p>
+            <p className="m-0 mt-0.5 text-[11px] text-slate-600">Toca para ver batch cooking y tiempos</p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
+              ~{prepMinutesTotal} min
+            </span>
+            <ChevronDown className="h-4 w-4 text-slate-400 transition group-open:rotate-180" aria-hidden />
+          </div>
+        </summary>
+        <ul className="space-y-2 border-t border-slate-100 px-3 pb-3 pt-2 sm:px-4">
+          {prep.map((item, idx) => {
+            const surface = PREP_CARD_SURFACE[idx % PREP_CARD_SURFACE.length]
+            return (
+              <li key={item.id}>
+                <button
+                  type="button"
+                  onClick={() => togglePrep(item.id)}
+                  className={`flex w-full items-start gap-3 rounded-xl border px-3 py-2.5 text-left shadow-sm transition hover:opacity-95 ${surface}`}
                 >
-                  <Check className="h-4 w-4" aria-hidden />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-semibold text-slate-900">{item.title}</span>
-                  <span className="mt-0.5 block text-[11px] leading-snug text-slate-500">{item.detail}</span>
-                </span>
-                <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">{item.minutes} min</span>
-              </button>
-            </li>
-          ))}
+                  <span
+                    className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border bg-white/80 ${
+                      item.done ? "border-emerald-200 text-emerald-700" : "border-slate-200/80 text-slate-400"
+                    }`}
+                  >
+                    <Check className="h-4 w-4" aria-hidden />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-slate-900">{item.title}</span>
+                    <span className="mt-0.5 block text-[11px] leading-snug text-slate-600">{item.detail}</span>
+                  </span>
+                  <span className="shrink-0 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-semibold text-slate-700 shadow-sm">
+                    {item.minutes} min
+                  </span>
+                </button>
+              </li>
+            )
+          })}
         </ul>
-      </div>
+      </details>
 
       <div className="mt-auto flex flex-col gap-2 border-t border-slate-100 pt-3">
         <button

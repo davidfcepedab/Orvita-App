@@ -184,8 +184,6 @@ export default function TrainingPage() {
   )
 
   const priorityTitle = labelForVisualGoalMode(visualGoalMode)
-  const priorityLevelLabel =
-    prefs.visualGoalPriority === "media" ? "Prioridad media" : prefs.visualGoalPriority === "baja" ? "Prioridad baja" : "Prioridad alta"
   const deadlineDisplay = formatDeadlineYm(prefs.visualGoalDeadlineYm ?? null)
 
   const syncChips = useMemo(
@@ -274,7 +272,6 @@ export default function TrainingPage() {
           onVisualPrefsChange: updatePrefs,
           bodyMetricRows: bodyRows,
           priorityTitle,
-          priorityLevelLabel,
           deadlineYm: prefs.visualGoalDeadlineYm ?? null,
           deadlineDisplay,
           goalImageUrl: prefs.goalImageUrl,

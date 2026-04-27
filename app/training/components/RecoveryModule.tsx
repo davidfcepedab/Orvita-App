@@ -141,7 +141,7 @@ export function RecoveryModule({
             </div>
             <Sparkles className="h-5 w-5 shrink-0 text-blue-400/90" aria-hidden />
           </div>
-          <div className="mt-4 flex flex-1 flex-col justify-end gap-1.5">
+          <div className="mt-4 flex flex-col gap-1.5">
             <button
               type="button"
               onClick={onStartProtocol}
@@ -289,7 +289,7 @@ function RecoverySyncChip({ on, label }: { on: boolean; label: string }) {
         on ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-slate-200 bg-slate-50 text-slate-400"
       }`}
     >
-      Sync · {label}
+      {label}
       {!on ? " · —" : ""}
     </span>
   )

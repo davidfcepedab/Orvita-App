@@ -114,6 +114,6 @@ export function hypertrophyRateHint(zonesAvgProgress: number): string {
 export function formatDeadlineYm(ym: string | null | undefined): string | null {
   if (!ym || !/^\d{4}-\d{2}$/.test(ym)) return null
   const [y, m] = ym.split("-").map(Number)
-  const month = new Date(Date.UTC(y, m - 1, 1)).toLocaleString("es", { month: "short" })
-  return `${month} ${y}`
+  const month = new Date(Date.UTC(y, m - 1, 1)).toLocaleString("es", { month: "short", timeZone: "UTC" })
+  return `${month.trim()} ${y}`.replace(/\.$/, "")
 }
