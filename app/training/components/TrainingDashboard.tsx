@@ -84,7 +84,6 @@ export type TrainingDashboardProps = {
     coachInsight: string
     coachExtras?: string[]
     syncChips: { apple: boolean; hevy: boolean; manual: boolean }
-    settingsHref: string
     goalImageGenerating: boolean
     onGenerateImage: () => void
     onPickReference: () => void

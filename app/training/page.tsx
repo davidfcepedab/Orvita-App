@@ -291,7 +291,6 @@ export default function TrainingPage() {
           coachInsight,
           coachExtras: [],
           syncChips,
-          settingsHref: "/configuracion",
           goalImageGenerating,
           onGenerateImage: () => void onGenerateGoalWithAI(),
           onPickReference: onPickImage,

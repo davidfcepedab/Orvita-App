@@ -3,7 +3,6 @@
 import { motion } from "framer-motion"
 import dynamic from "next/dynamic"
 import { useEffect, useState, type ChangeEvent, type RefObject } from "react"
-import Link from "next/link"
 import { Activity, Brain, Droplets, History, ImageIcon, RefreshCw, Scale, Settings2, Sparkles } from "lucide-react"
 import type { ZoneProgress, ZoneStatus } from "@/lib/training/effectiveSets"
 import type { DeltaQuality } from "@/lib/training/trainingDashboardDerivations"
@@ -49,7 +48,6 @@ type Props = {
   coachInsight: string
   coachExtras?: string[]
   syncChips: SyncChips
-  settingsHref: string
   goalImageGenerating: boolean
   onGenerateImage: () => void
   onPickReference: () => void
@@ -116,7 +114,6 @@ export function VisualGoalGenerator({
   coachInsight,
   coachExtras,
   syncChips,
-  settingsHref,
   goalImageGenerating,
   onGenerateImage,
   onPickReference,
@@ -239,11 +236,7 @@ export function VisualGoalGenerator({
             Physical <span className="text-blue-600">Vision.</span>
           </h2>
           <p className="m-0 mt-1 text-[11px] text-slate-500">
-            Referencia visual y métricas automáticas.{" "}
-            <Link href={settingsHref} className="font-semibold text-blue-600 underline-offset-2 hover:underline">
-              Preferencias completas
-            </Link>
-            .
+            Referencia visual, métricas corporales de preferencias y lecturas automáticas (Apple / Hevy / check-in).
           </p>
         </div>
       </div>
@@ -357,6 +350,13 @@ export function VisualGoalGenerator({
 
           <div>
             <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Estado actual vs objetivo</p>
+            <p className="m-0 mt-1 max-w-2xl text-[10px] leading-snug text-slate-500">
+              Objetivo, proyección y % de meta vienen del listado guardado en preferencias de entrenamiento (
+              <span className="font-mono text-[9px] text-slate-600">bodyMetrics</span>
+              ), el mismo JSON que persiste imagen y plan de comidas (local y, con sesión,{" "}
+              <span className="font-mono text-[9px] text-slate-600">/api/training/preferences</span>). La página Configuración
+              general no edita esta tabla.
+            </p>
             {bodyMetricRows.length ? (
               <div className="mt-2 overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
                 <table className="w-full min-w-[520px] border-collapse text-left text-[11px]">
@@ -402,7 +402,10 @@ export function VisualGoalGenerator({
                 </table>
               </div>
             ) : (
-              <p className="m-0 mt-2 text-xs text-slate-500">Sin medidas corporales en preferencias. Añádelas en configuración.</p>
+              <p className="m-0 mt-2 text-xs leading-snug text-slate-500">
+                Sin filas en <span className="font-mono text-[10px]">bodyMetrics</span>. En modo demo se muestran datos de ejemplo;
+                en producción el listado llega vacío hasta que se rellene vía preferencias de entrenamiento.
+              </p>
             )}
           </div>
 
