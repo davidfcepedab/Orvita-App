@@ -3,12 +3,13 @@
 import Link from "next/link"
 import { useOrbitaSkin } from "@/app/contexts/AppContext"
 import type { SaludDecisionBrief } from "@/lib/salud/saludDecisionBrief"
+import type { AppleHeroSyncLine } from "@/lib/salud/appleHealthSyncToolbar"
 import { SALUD_SEM } from "@/lib/salud/saludSemanticPalette"
 import { saludHexToRgba, saludPanelStyle } from "@/lib/salud/saludThemeStyles"
 
 type Props = {
   brief: SaludDecisionBrief
-  syncSummary: string
+  syncLine: AppleHeroSyncLine
 }
 
 function semanticBorder(s: SaludDecisionBrief["semantic"]) {
@@ -17,7 +18,7 @@ function semanticBorder(s: SaludDecisionBrief["semantic"]) {
   return SALUD_SEM.risk
 }
 
-export function HeroDecisionCard({ brief, syncSummary }: Props) {
+export function HeroDecisionCard({ brief, syncLine }: Props) {
   const theme = useOrbitaSkin()
   const border = semanticBorder(brief.semantic)
 
@@ -48,8 +49,12 @@ export function HeroDecisionCard({ brief, syncSummary }: Props) {
           <p className="m-0 text-[13px] font-medium leading-snug sm:text-sm" style={{ color: theme.text }}>
             {brief.causeLine}
           </p>
-          <p className="m-0 text-[10px] leading-snug sm:text-[11px]" style={{ color: theme.textMuted }}>
-            {syncSummary}
+          <p className="m-0 text-[10px] leading-snug sm:text-[11px]">
+            <span style={{ color: theme.textMuted }}>Apple Health: </span>
+            <span className="font-semibold" style={{ color: syncLine.statusColor }}>
+              {syncLine.statusText}
+            </span>
+            <span style={{ color: theme.textMuted }}>{syncLine.detailText}</span>
           </p>
         </div>
         <Link

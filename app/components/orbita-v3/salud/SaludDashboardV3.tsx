@@ -12,12 +12,7 @@ import { buildSaludDecisionBrief } from "@/lib/salud/saludDecisionBrief"
 import { HeroDecisionCard } from "@/app/components/orbita-v3/salud/HeroDecisionCard"
 import { SaludInsightSection } from "@/app/components/orbita-v3/salud/SaludInsightSection"
 import AppleHealthLuxurySection from "@/app/components/orbita-v3/salud/AppleHealthLuxurySection"
-
-function formatSyncSummary(latestObservedAt: string | null | undefined, stale: boolean): string {
-  if (!latestObservedAt) return "Apple Health: sin lectura reciente."
-  if (stale) return `Apple Health: sync desactualizado · ${new Intl.DateTimeFormat("es-LA", { dateStyle: "short", timeStyle: "short" }).format(new Date(latestObservedAt))}`
-  return `Apple Health: al día · ${new Intl.DateTimeFormat("es-LA", { dateStyle: "short", timeStyle: "short" }).format(new Date(latestObservedAt))}`
-}
+import { appleHealthSyncStale, buildAppleHealthHeroSyncLine } from "@/lib/salud/appleHealthSyncToolbar"
 
 export default function SaludDashboardV3() {
   const salud = useSaludContext()
@@ -25,11 +20,7 @@ export default function SaludDashboardV3() {
   const { days, todayState } = useTraining()
   const todayIso = agendaTodayYmd()
 
-  const staleSync = useMemo(() => {
-    if (!autoHealth.latest?.observed_at) return false
-    const ageMs = Date.now() - new Date(autoHealth.latest.observed_at).getTime()
-    return Number.isFinite(ageMs) && ageMs > 36 * 60 * 60 * 1000
-  }, [autoHealth.latest?.observed_at])
+  const staleSync = useMemo(() => appleHealthSyncStale(autoHealth.latest?.observed_at), [autoHealth.latest?.observed_at])
 
   const appleSignals = useMemo(() => appleDaySignalsFromHealthMetric(autoHealth.latest), [autoHealth.latest])
   const readiness = useMemo(() => buildTrainingReadiness(appleSignals, days), [appleSignals, days])
@@ -47,9 +38,9 @@ export default function SaludDashboardV3() {
     [salud, autoHealth.latest, readiness, planVsExecution, todayState, staleSync],
   )
 
-  const syncSummary = useMemo(
-    () => formatSyncSummary(autoHealth.latest?.observed_at ?? null, staleSync),
-    [autoHealth.latest?.observed_at, staleSync],
+  const syncLine = useMemo(
+    () => buildAppleHealthHeroSyncLine(autoHealth.latest, staleSync),
+    [autoHealth.latest, staleSync],
   )
 
   if (salud.loading) {
@@ -80,7 +71,7 @@ export default function SaludDashboardV3() {
       className="orbita-page-stack mx-auto w-full max-w-[min(72rem,calc(100vw-1.5rem))] space-y-4"
       aria-label="Salud — decisión, Apple Health, insight y operativo"
     >
-      <HeroDecisionCard brief={brief} syncSummary={syncSummary} />
+      <HeroDecisionCard brief={brief} syncLine={syncLine} />
 
       <AppleHealthLuxurySection
         salud={salud}

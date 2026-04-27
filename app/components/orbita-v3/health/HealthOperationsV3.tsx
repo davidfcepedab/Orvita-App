@@ -33,6 +33,11 @@ import type { ShortcutHealthAnalyticsSnapshot } from "@/lib/health/shortcutHealt
 import { useHealthSupplements } from "@/app/hooks/useHealthSupplements"
 import { SupplementStackSection } from "@/app/health/SupplementStackSection"
 import { dedupeMetricsByLocalDay, vitalityScoreFromAppleRow } from "@/lib/health/appleTimelineDerived"
+import {
+  clampCheckinScore0to100,
+  displayCompositeEnergyIndex,
+  normalizedCompositeEnergyIndex,
+} from "@/lib/salud/checkinScoreDisplay"
 import { SALUD_SEM } from "@/lib/salud/saludSemanticPalette"
 import { saludHexToRgba, saludMetricTone, saludPanelStyle } from "@/lib/salud/saludThemeStyles"
 import { HealthCorrelationsPanel } from "@/app/components/orbita-v3/salud/HealthCorrelationsPanel"
@@ -302,32 +307,56 @@ export default function HealthOperationsV3({
         </div>
 
         <div className="mt-8 border-t pt-8" style={{ borderColor: theme.border }}>
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em]" style={{ color: theme.textMuted }}>
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.22em]" style={{ color: theme.textMuted }}>
             Tu check-in (Órvita interna)
+          </p>
+          <p className="mb-3 mt-1 text-[10px] leading-snug sm:text-[11px]" style={{ color: theme.textMuted }}>
+            Las tres primeras métricas son subjetivas <strong className="font-medium text-inherit">0–100</strong> del último
+            check-in. <strong className="font-medium text-inherit">Recuperación percibida</strong> hoy usa el mismo eje base
+            que salud emocional en el motor de contexto (sin campo aparte en la fila de check-in). El{" "}
+            <strong className="font-medium text-inherit">índice de energía</strong> es un compuesto interno acotado{" "}
+            <strong className="font-medium text-inherit">12–99</strong> (≈55% salud + 45% físico, redondeado).
           </p>
           <div className="grid grid-cols-1 gap-4 min-[480px]:grid-cols-2 xl:grid-cols-4">
             {[
-              { label: "Salud emocional", value: health.scoreSalud, meta: "/100", icon: Sparkles, tint: SALUD_SEM.recovery },
-              { label: "Energía física", value: health.scoreFisico, meta: "/100", icon: Activity, tint: SALUD_SEM.energy },
+              {
+                label: "Salud emocional",
+                value: clampCheckinScore0to100(health.scoreSalud),
+                meta: "/100",
+                icon: Sparkles,
+                tint: SALUD_SEM.recovery,
+                isComposite: false,
+              },
+              {
+                label: "Energía física",
+                value: clampCheckinScore0to100(health.scoreFisico),
+                meta: "/100",
+                icon: Activity,
+                tint: SALUD_SEM.energy,
+                isComposite: false,
+              },
               {
                 label: "Recuperación percibida",
-                value: health.scoreRecuperacion,
+                value: clampCheckinScore0to100(health.scoreRecuperacion),
                 meta: "/100",
                 icon: MoonStar,
                 tint: SALUD_SEM.recovery,
+                isComposite: false,
               },
               {
                 label: "Índice de energía",
-                value: health.bodyBattery,
-                meta: "/100",
+                value: displayCompositeEnergyIndex(health.bodyBattery),
+                meta: " · compuesto 12–99",
                 icon: BatteryCharging,
                 tint: SALUD_SEM.energy,
+                isComposite: true,
               },
             ].map((metric, index) => {
               const Icon = metric.icon
-              const status = metric.value >= 70 ? "OK" : metric.value >= 45 ? "Atención" : "Desbalance"
+              const statusScore = metric.isComposite ? normalizedCompositeEnergyIndex(metric.value) : metric.value
+              const status = statusScore >= 70 ? "OK" : statusScore >= 45 ? "Atención" : "Desbalance"
               const statusColor =
-                metric.value >= 70 ? SALUD_SEM.ok : metric.value >= 45 ? SALUD_SEM.warn : SALUD_SEM.risk
+                statusScore >= 70 ? SALUD_SEM.ok : statusScore >= 45 ? SALUD_SEM.warn : SALUD_SEM.risk
               return (
                 <motion.div
                   key={metric.label}

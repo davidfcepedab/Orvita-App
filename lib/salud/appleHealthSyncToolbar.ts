@@ -43,6 +43,109 @@ export function formatAppleHealthSyncWhenShort(iso: string | null | undefined): 
 
 export type AppleSyncChip = { label: string; fg: string; bg: string }
 
+/** Frescura del último `observed_at` (misma ventana stale 36h). */
+export type AppleSyncFreshness = "live" | "recent" | "aging" | "stale" | "none"
+
+export function appleHealthSyncFreshness(observedAt: string | null | undefined): AppleSyncFreshness {
+  if (!observedAt) return "none"
+  if (appleHealthSyncStale(observedAt)) return "stale"
+  const ageMs = Date.now() - new Date(observedAt).getTime()
+  if (!Number.isFinite(ageMs) || ageMs < 0) return "none"
+  if (ageMs < 3 * 60 * 60 * 1000) return "live"
+  if (ageMs < 12 * 60 * 60 * 1000) return "recent"
+  return "aging"
+}
+
+export function appleHealthSyncAgeHint(observedAt: string | null | undefined): string {
+  if (!observedAt) return ""
+  const t = new Date(observedAt).getTime()
+  if (!Number.isFinite(t)) return ""
+  const ageMs = Date.now() - t
+  if (ageMs < 0) return ""
+  const mins = Math.floor(ageMs / (60 * 1000))
+  const hours = Math.floor(ageMs / (60 * 60 * 1000))
+  if (mins < 60) return `dato de hace ~${mins} min`
+  if (hours < 48) return `dato de hace ~${hours} h`
+  return "dato antiguo"
+}
+
+export type AppleHeroSyncLine = {
+  /** Texto corto coloreado: estado del sync. */
+  statusText: string
+  /** Resto de la línea (fecha + cercanía), tono neutro. */
+  detailText: string
+  /** Color del estado (hex semántico). */
+  statusColor: string
+}
+
+/** Línea bajo el brief del día: estado en color + detalle con frescura del dato. */
+export function buildAppleHealthHeroSyncLine(
+  latest: AutoHealthMetric | null | undefined,
+  stale: boolean,
+): AppleHeroSyncLine {
+  if (!latest?.observed_at) {
+    return {
+      statusText: "Sin lectura",
+      detailText: " · Conecta con el atajo y pulsa Actualizar lectura",
+      statusColor: SALUD_SEM.risk,
+    }
+  }
+  const when = new Intl.DateTimeFormat("es-LA", { dateStyle: "short", timeStyle: "short" }).format(new Date(latest.observed_at))
+  const fresh = appleHealthSyncFreshness(latest.observed_at)
+  const hint = appleHealthSyncAgeHint(latest.observed_at)
+  const detailCore = hint ? `${when} · ${hint}` : when
+
+  if (stale || fresh === "stale") {
+    return {
+      statusText: "Sync desactualizado",
+      detailText: ` · ${detailCore}`,
+      statusColor: SALUD_SEM.risk,
+    }
+  }
+  if (fresh === "aging") {
+    return {
+      statusText: "Sync aceptable",
+      detailText: ` · ${detailCore}`,
+      statusColor: SALUD_SEM.warn,
+    }
+  }
+  if (fresh === "recent") {
+    return {
+      statusText: "Al día",
+      detailText: ` · ${detailCore}`,
+      statusColor: SALUD_SEM.ok,
+    }
+  }
+  return {
+    statusText: "Al día",
+    detailText: ` · ${detailCore}`,
+    statusColor: SALUD_SEM.ok,
+  }
+}
+
+/** Chip corto para `<summary>` colapsado (sin fecha larga repetida). */
+export function buildAppleHealthSyncChipCompact(latest: AutoHealthMetric | null | undefined): AppleSyncChip {
+  if (!latest?.observed_at) {
+    return {
+      label: "Sin lectura",
+      fg: SALUD_SEM.warn,
+      bg: saludHexToRgba(SALUD_SEM.warn, 0.1),
+    }
+  }
+  if (appleHealthSyncStale(latest.observed_at)) {
+    return {
+      label: `Desactualizado · ${formatAppleHealthSyncWhenShort(latest.observed_at)}`,
+      fg: SALUD_SEM.risk,
+      bg: saludHexToRgba(SALUD_SEM.risk, 0.1),
+    }
+  }
+  return {
+    label: `Ok · ${formatAppleHealthSyncWhenShort(latest.observed_at)}`,
+    fg: SALUD_SEM.ok,
+    bg: saludHexToRgba(SALUD_SEM.ok, 0.1),
+  }
+}
+
 /** Chip + colores alineados con AppleHealthLuxurySection. */
 export function buildAppleHealthSyncChip(latest: AutoHealthMetric | null | undefined): AppleSyncChip {
   if (!latest?.observed_at) {

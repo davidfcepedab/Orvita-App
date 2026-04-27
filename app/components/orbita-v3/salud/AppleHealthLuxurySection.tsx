@@ -8,7 +8,11 @@ import { useOrbitaSkin } from "@/app/contexts/AppContext"
 import type { SaludContextSnapshot } from "@/app/salud/_hooks/useSaludContext"
 import type { AutoHealthMetric } from "@/app/hooks/useHealthAutoMetrics"
 import { buildOrvitaRunShortcutHref, ORVITA_HEALTH_SHORTCUT_NAME } from "@/lib/shortcuts/orvitaHealthShortcut"
-import { appleHealthSyncStale, buildAppleHealthSyncChip } from "@/lib/salud/appleHealthSyncToolbar"
+import {
+  appleHealthSyncStale,
+  buildAppleHealthSyncChip,
+  buildAppleHealthSyncChipCompact,
+} from "@/lib/salud/appleHealthSyncToolbar"
 import { saludHexToRgba, saludPanelStyle } from "@/lib/salud/saludThemeStyles"
 import { SALUD_SEM } from "@/lib/salud/saludSemanticPalette"
 
@@ -69,6 +73,7 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
 
   const runShortcutHref = useMemo(() => buildOrvitaRunShortcutHref(), [])
   const staleSync = appleHealthSyncStale(latest?.observed_at)
+  const syncChipSummary = useMemo(() => buildAppleHealthSyncChipCompact(latest), [latest])
   const syncChip = useMemo(() => buildAppleHealthSyncChip(latest), [latest])
 
   const dayState = useMemo(() => {
@@ -164,36 +169,34 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
           >
             <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
               {/* Cerrado: solo Apple Health + atajo + chip sync (resto al expandir) */}
-              <div className="flex flex-wrap items-center gap-2 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3 group-open:hidden">
-                <span
-                  className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.2em]"
-                  style={{ color: theme.textMuted }}
-                >
-                  Apple Health
+              <div className="group-open:hidden flex items-center gap-2 px-2 py-1.5 sm:px-3 sm:py-2">
+                <span className="shrink-0 text-[9px] font-semibold uppercase tracking-[0.16em] opacity-80" style={{ color: theme.textMuted }}>
+                  Apple
                 </span>
                 <a
                   href={runShortcutHref}
-                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white no-underline transition active:scale-[0.98]"
+                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-white no-underline transition active:scale-[0.98]"
                   style={{ backgroundColor: SALUD_SEM.energy }}
                   aria-label="Traer datos de hoy (Atajo)"
-                  title="Traer hoy — abre el atajo en el iPhone"
+                  title="Traer hoy — atajo iPhone"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <Zap className="h-4 w-4 shrink-0" aria-hidden />
+                  <Zap className="h-3.5 w-3.5 shrink-0" aria-hidden />
                 </a>
                 <span
-                  className="inline-flex min-w-0 max-w-full flex-1 items-center gap-2 rounded-full px-2.5 py-1 text-[10px] font-semibold leading-snug sm:max-w-[min(100%,22rem)] sm:px-3 sm:text-[11px]"
+                  className="inline-flex min-w-0 max-w-[min(100%,18rem)] flex-1 items-center gap-1.5 rounded-md border px-2 py-0.5 text-[9px] font-medium leading-tight sm:max-w-[20rem] sm:text-[10px]"
                   style={{
-                    backgroundColor: syncChip.bg,
-                    color: syncChip.fg,
+                    borderColor: saludHexToRgba(syncChipSummary.fg, 0.22),
+                    backgroundColor: syncChipSummary.bg,
+                    color: syncChipSummary.fg,
                   }}
                 >
-                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-90" aria-hidden />
-                  <span className="min-w-0 truncate">{syncChip.label}</span>
+                  <span className="h-1 w-1 shrink-0 rounded-full bg-current opacity-80" aria-hidden />
+                  <span className="min-w-0 truncate">{syncChipSummary.label}</span>
                 </span>
-                <span className="ml-auto inline-flex shrink-0 items-center gap-1" style={{ color: theme.textMuted }}>
+                <span className="ml-auto inline-flex shrink-0 items-center opacity-50" style={{ color: theme.textMuted }}>
                   <span className="sr-only">Abrir detalles de sincronización</span>
-                  <ChevronDown className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
+                  <ChevronDown className="h-3.5 w-3.5 shrink-0" aria-hidden />
                 </span>
               </div>
               {/* Abierto: solo barra para cerrar (sin duplicar atajo / token en la misma franja) */}
