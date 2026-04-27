@@ -12,13 +12,15 @@ import { agendaTodayYmd } from "@/lib/agenda/localDateKey"
 import { useTrainingPreferences } from "@/app/hooks/useTrainingPreferences"
 import { TrainingActionQuerySync } from "@/app/training/TrainingActionQuerySync"
 import { Card } from "@/src/components/ui/Card"
+import { aggregateZoneProgress } from "@/lib/training/effectiveSets"
+import { buildAiRecommendations, deriveNutritionStatus, nutritionStatusTone } from "@/lib/training/decisionEngine"
 
 export default function TrainingPage() {
   const router = useRouter()
   const todayIso = agendaTodayYmd()
   const { today, days, loading, error, setManualStatus, todayState, dataMeta } = useTraining()
   const { latest: appleHealth, loading: appleLoading } = useHealthAutoMetrics()
-  const { bodyRows, prefs } = useTrainingPreferences()
+  const { bodyRows, mealDays, prefs } = useTrainingPreferences()
   const appleSignals = useMemo(() => appleDaySignalsFromHealthMetric(appleHealth), [appleHealth])
   const readiness = useMemo(() => buildTrainingReadiness(appleSignals, days), [appleSignals, days])
   const planVsExecution = useMemo(() => buildPlanVsExecution(days, todayState, todayIso), [days, todayState, todayIso])
@@ -42,6 +44,10 @@ export default function TrainingPage() {
   const waistMetric = bodyRows.find((row) => /cintura/i.test(row.label))
   const objective = deriveObjective(prefs.visualGoalDescription)
   const trendRows = bodyRows.slice(0, 4)
+  const bodyPartProgress = useMemo(() => aggregateZoneProgress(weeklyDays), [weeklyDays])
+  const nutritionPlan = useMemo(() => deriveNutritionPlan(mealDays), [mealDays])
+  const nutritionStatus = deriveNutritionStatus(weightMetric)
+  const aiRecommendations = buildAiRecommendations({ bodyPartProgress, nutritionStatus, hasHevy })
   const hasLoadData =
     trainingsWeek > 0 ||
     minutesFromHevy > 0 ||
@@ -143,7 +149,16 @@ export default function TrainingPage() {
       <Card>
         <div className="p-[var(--spacing-lg)]">
           <p className="m-0 text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-secondary)]">Progreso físico</p>
-          {bodyRows.length > 0 ? (
+          <div className="mt-3 rounded-xl border border-[color:color-mix(in_srgb,var(--color-accent-health)_30%,var(--color-border))] bg-[color:color-mix(in_srgb,var(--color-accent-health)_10%,var(--color-surface-alt))] p-3">
+            <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">Cómo me quiero ver</p>
+            <p className="m-0 mt-1 text-sm font-medium text-[var(--color-text-primary)]">
+              {(prefs.visualGoalDescription ?? "").trim() || "Define tu objetivo visual para orientar el entrenamiento de la semana."}
+            </p>
+            <p className="m-0 mt-1 text-xs text-[var(--color-text-secondary)]">
+              Prioridad: {prefs.visualGoalPriority ?? "alta"} {prefs.visualGoalDeadlineYm ? `· Meta ${prefs.visualGoalDeadlineYm}` : ""}
+            </p>
+          </div>
+          {bodyRows.length > 0 || bodyPartProgress.some((zone) => zone.actualSets > 0) ? (
             <>
               <div className="mt-3 grid gap-2 sm:grid-cols-3">
                 <MetricMini label="Peso" value={weightMetric ? `${weightMetric.current}` : "—"} />
@@ -151,34 +166,87 @@ export default function TrainingPage() {
                 <MetricMini label="Objetivo actual" value={objective} />
               </div>
               <div className="mt-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] p-3">
-                <p className="m-0 text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">Tendencia</p>
-                <div className="mt-2 flex items-end gap-1">
-                  {trendRows.map((row) => (
-                    <div key={row.label} className="flex-1">
-                      <div className="h-16 rounded-md bg-[var(--color-surface)] px-1 py-1">
-                        <div
-                          className="h-full rounded-sm bg-[var(--color-accent-health)]"
-                          style={{ height: `${Math.max(8, Math.min(100, row.progressPct))}%` }}
-                        />
+                <p className="m-0 text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">Físico actual por zonas</p>
+                <div className="mt-2 space-y-2">
+                  {bodyPartProgress.map((zone) => (
+                    <div key={zone.key}>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="m-0 text-xs font-medium text-[var(--color-text-primary)]">{zone.label}</p>
+                        <p className="m-0 text-[11px] text-[var(--color-text-secondary)]">
+                          {zone.actualSets.toFixed(1)} / {zone.targetSets} sets · {zone.progress}% · {zone.status}
+                        </p>
                       </div>
-                      <p className="m-0 mt-1 truncate text-[10px] text-[var(--color-text-secondary)]">{row.label}</p>
+                      <div className="mt-1 h-2 rounded-full bg-[var(--color-surface)]">
+                        <div className="h-2 rounded-full bg-[var(--color-accent-health)]" style={{ width: `${zone.progress}%` }} />
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
-              <div className="mt-3 rounded-xl border border-[color:color-mix(in_srgb,var(--color-accent-health)_30%,var(--color-border))] bg-[color:color-mix(in_srgb,var(--color-accent-health)_10%,var(--color-surface-alt))] p-3">
-                <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">Cómo me quiero ver</p>
-                <p className="m-0 mt-1 text-sm font-medium text-[var(--color-text-primary)]">
-                  {(prefs.visualGoalDescription ?? "").trim() || "Define tu objetivo visual para orientar el entrenamiento de la semana."}
-                </p>
-                <p className="m-0 mt-1 text-xs text-[var(--color-text-secondary)]">
-                  Prioridad: {prefs.visualGoalPriority ?? "alta"} {prefs.visualGoalDeadlineYm ? `· Meta ${prefs.visualGoalDeadlineYm}` : ""}
-                </p>
+              {trendRows.length > 0 ? (
+                <div className="mt-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] p-3">
+                  <p className="m-0 text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">Tendencia</p>
+                  <div className="mt-2 flex items-end gap-1">
+                    {trendRows.map((row) => (
+                      <div key={row.label} className="flex-1">
+                        <div className="h-16 rounded-md bg-[var(--color-surface)] px-1 py-1">
+                          <div
+                            className="h-full rounded-sm bg-[var(--color-accent-health)]"
+                            style={{ height: `${Math.max(8, Math.min(100, row.progressPct))}%` }}
+                          />
+                        </div>
+                        <p className="m-0 mt-1 truncate text-[10px] text-[var(--color-text-secondary)]">{row.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <EmptyDataState />
+          )}
+        </div>
+      </Card>
+
+      <Card>
+        <div className="p-[var(--spacing-lg)]" id="plan-nutricion">
+          <p className="m-0 text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-secondary)]">Plan de nutrición</p>
+          {nutritionPlan.available ? (
+            <>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <MetricMini label="Calorías objetivo" value={`${nutritionPlan.kcalTarget} kcal`} />
+                <MetricMini label="Proteína" value={`${nutritionPlan.protein} g`} />
+                <MetricMini label="Carbs" value={`${nutritionPlan.carbs} g`} />
+                <MetricMini label="Grasa" value={`${nutritionPlan.fats} g`} />
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <StatusChip label={`Estado: ${nutritionStatus}`} tone={nutritionStatusTone(nutritionStatus)} />
+                <button
+                  type="button"
+                  onClick={() => router.push("/training#plan-nutricion")}
+                  className="inline-flex min-h-8 items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 text-xs font-medium text-[var(--color-text-primary)]"
+                >
+                  Ver plan de comidas
+                </button>
               </div>
             </>
           ) : (
             <EmptyDataState />
           )}
+        </div>
+      </Card>
+
+      <Card>
+        <div className="p-[var(--spacing-lg)]">
+          <p className="m-0 text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-secondary)]">Ajuste IA</p>
+          <p className="m-0 mt-1 text-sm text-[var(--color-text-primary)]">Optimización semanal</p>
+          <div className="mt-2 space-y-1.5">
+            {aiRecommendations.map((line) => (
+              <p key={line} className="m-0 rounded-lg bg-[var(--color-surface-alt)] px-3 py-2 text-xs text-[var(--color-text-primary)]">
+                {line}
+              </p>
+            ))}
+          </div>
         </div>
       </Card>
 
@@ -337,3 +405,27 @@ function EmptyDataState() {
     </div>
   )
 }
+
+function deriveNutritionPlan(mealDays: Array<{ kcal: number; pro: number; carb: number; fat: number }>) {
+  if (!mealDays.length) {
+    return { available: false as const, kcalTarget: 0, protein: 0, carbs: 0, fats: 0 }
+  }
+  const total = mealDays.reduce(
+    (acc, day) => ({
+      kcal: acc.kcal + day.kcal,
+      pro: acc.pro + day.pro,
+      carb: acc.carb + day.carb,
+      fat: acc.fat + day.fat,
+    }),
+    { kcal: 0, pro: 0, carb: 0, fat: 0 },
+  )
+  const len = mealDays.length
+  return {
+    available: true as const,
+    kcalTarget: Math.round(total.kcal / len),
+    protein: Math.round(total.pro / len),
+    carbs: Math.round(total.carb / len),
+    fats: Math.round(total.fat / len),
+  }
+}
+
