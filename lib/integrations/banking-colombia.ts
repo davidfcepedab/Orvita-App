@@ -150,13 +150,68 @@ function getBelvoLinkPayload(institutionSlug: string): BelvoLinkAttempt[] {
   const creds = sandboxLinkCredentials()
   const username = normalizeSandboxUsernameForInstitution(institutionSlug, creds.username)
   const fallbackInstitution = "ofmockbank_br_retail"
-  const fallbackUsername = process.env.BANKING_BELVO_SANDBOX_CPF?.trim() || "52998224725"
-  const brMockConsent = {
+  const fallbackUsernamePrimary = process.env.BANKING_BELVO_SANDBOX_CPF?.trim() || "52998224725"
+  const fallbackUsernameCandidates = Array.from(
+    new Set([fallbackUsernamePrimary, "52998224725", "11144477735"].map((s) => s.trim()).filter(Boolean)),
+  )
+  const brMockConsentBase = {
     scopes: ["read_accounts", "read_balances", "read_transactions"],
     consent_type: "explicit",
-    consent_mode: "recurrent",
-    expiration_date: "2026-12-31",
   }
+  const brMockConsentCandidates: Array<Record<string, unknown>> = [
+    {
+      ...brMockConsentBase,
+      consent_mode: "recurrent",
+      expiration_date: "2026-12-31",
+    },
+    {
+      ...brMockConsentBase,
+      consent_mode: "single",
+      expiration_date: "2026-12-31",
+    },
+    {
+      ...brMockConsentBase,
+      consent_mode: "recurrent",
+      expiration_date: "2026-12-31T00:00:00Z",
+    },
+    {
+      consent: {
+        ...brMockConsentBase,
+        consent_mode: "recurrent",
+        expiration_date: "2026-12-31",
+      },
+    },
+  ]
+  const brFallbackAttempts: BelvoLinkAttempt[] = []
+  for (const cpf of fallbackUsernameCandidates) {
+    for (const [idx, consentVariant] of brMockConsentCandidates.entries()) {
+      brFallbackAttempts.push({
+        label: `br-fallback-consent-v${idx + 1}-ut-103-cpf-${cpf.slice(-4)}`,
+        institution: fallbackInstitution,
+        payload: {
+          institution: fallbackInstitution,
+          username: cpf,
+          password: creds.password,
+          username_type: "103",
+          country_codes: ["BR"],
+          ...consentVariant,
+        },
+      })
+      brFallbackAttempts.push({
+        label: `br-fallback-consent-v${idx + 1}-ut-104-cpf-${cpf.slice(-4)}`,
+        institution: fallbackInstitution,
+        payload: {
+          institution: fallbackInstitution,
+          username: cpf,
+          password: creds.password,
+          username_type: 104,
+          country_codes: ["BR"],
+          ...consentVariant,
+        },
+      })
+    }
+  }
+
   return [
     {
       label: "co-ut-103",
@@ -196,25 +251,13 @@ function getBelvoLinkPayload(institutionSlug: string): BelvoLinkAttempt[] {
       institution: fallbackInstitution,
       payload: {
         institution: fallbackInstitution,
-        username: fallbackUsername,
+        username: fallbackUsernamePrimary,
         password: creds.password,
         username_type: "103",
         country_codes: ["BR"],
-        ...brMockConsent,
       },
     },
-    {
-      label: "br-fallback-consent-ut-104",
-      institution: fallbackInstitution,
-      payload: {
-        institution: fallbackInstitution,
-        username: fallbackUsername,
-        password: creds.password,
-        username_type: "104",
-        country_codes: ["BR"],
-        ...brMockConsent,
-      },
-    },
+    ...brFallbackAttempts,
   ]
 }
 
@@ -430,7 +473,7 @@ async function registerBelvoLink(
 ): Promise<string> {
   const sandbox = isBelvoSandboxBase(base)
   let lastErr: unknown = null
-  const attempts = sandbox ? getBelvoLinkPayload(institution).slice(0, 5) : getBelvoLinkPayload(institution).slice(0, 1)
+  const attempts = sandbox ? getBelvoLinkPayload(institution) : getBelvoLinkPayload(institution).slice(0, 1)
 
   for (const [idx, attempt] of attempts.entries()) {
     try {
