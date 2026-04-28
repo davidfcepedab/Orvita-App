@@ -61,6 +61,17 @@ function belvoSandboxFallbackInstitution(): string {
   )
 }
 
+function belvoSandboxInstitutionCandidates(primary: string): string[] {
+  const list = [
+    primary,
+    process.env.BANKING_BELVO_SANDBOX_DEFAULT_INSTITUTION_CO?.trim(),
+    process.env.BANKING_BELVO_SANDBOX_FALLBACK_INSTITUTION?.trim(),
+    "ofmockbank_co_retail",
+    "ofmockbank_br_retail",
+  ].filter(Boolean) as string[]
+  return Array.from(new Set(list.map((s) => s.trim()).filter(Boolean)))
+}
+
 function sandboxLinkCredentials(): { username: string; password: string } {
   return {
     username: process.env.BANKING_BELVO_SANDBOX_USERNAME?.trim() || "belvouser100",
@@ -416,23 +427,33 @@ export async function connectBankingColombia(input: {
   }
 
   const institution = input.belvoInstitution?.trim() || belvoInstitutionForProvider(input.provider)
-  let linkId: string
+  let linkId = ""
   if (input.authCode?.trim()) {
     linkId = input.authCode.trim()
     await belvoRequestJson<unknown>(env.base, `/api/links/${encodeURIComponent(linkId)}/`, env.clientId, env.clientSecret, {
       method: "GET",
     })
   } else {
-    try {
-      linkId = await registerBelvoLink(env.base, env.clientId, env.clientSecret, institution, input.usernameType, true)
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      if (msg.toLowerCase().includes("does_not_exist") || msg.toLowerCase().includes("object with name")) {
-        const fbInstitution = belvoSandboxFallbackInstitution()
-        linkId = await registerBelvoLink(env.base, env.clientId, env.clientSecret, fbInstitution, input.usernameType, false)
-      } else {
-        throw err
+    let lastErr: unknown = null
+    const candidates = belvoSandboxInstitutionCandidates(institution)
+    for (const candidate of candidates) {
+      try {
+        linkId = await registerBelvoLink(env.base, env.clientId, env.clientSecret, candidate, input.usernameType, true)
+        break
+      } catch (err) {
+        lastErr = err
+        const msg = err instanceof Error ? err.message : String(err)
+        const missingInstitution = msg.toLowerCase().includes("does_not_exist") || msg.toLowerCase().includes("object with name")
+        if (!missingInstitution) {
+          throw err
+        }
       }
+    }
+    if (!linkId) {
+      const fallbackHint = belvoSandboxFallbackInstitution()
+      const suffix = fallbackHint ? ` Configura un slug válido en BANKING_BELVO_SANDBOX_DEFAULT_INSTITUTION_CO o BANKING_BELVO_SANDBOX_FALLBACK_INSTITUTION (actual sugerido: ${fallbackHint}).` : ""
+      const raw = lastErr instanceof Error ? lastErr.message : "No se encontró una institución sandbox válida."
+      throw new Error(`${raw}${suffix}`)
     }
   }
 
