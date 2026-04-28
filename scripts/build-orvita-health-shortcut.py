@@ -2,8 +2,11 @@
 """Genera el plist del atajo iOS, listo para `plutil` + `shortcuts sign` (en macOS).
 
 Compatibilidad: las acciones usan identificadores estándar de Shortcuts
-(`is.workflow.actions.filter.health.quantity`, `statistics` + `detect.number`, `filter.workouts`, etc.),
-no dependen de un iOS "futuro". Si al importar ves «Buscar muestras de Salud» con tipo (null)
+(`is.workflow.actions.filter.health.quantity`, `statistics` + `detect.number`, etc.).
+En iOS reciente, `filter.workouts` y `properties.workout` suelen aparecer como «Acción desconocida»;
+el modo por defecto usa **Buscar muestras de salud** con tipo **Workouts** + detalle Duración (misma
+cadena que el sueño). Opción `--legacy-workout-actions` restaura el flujo antiguo si tu dispositivo
+lo soporta. Si al importar ves «Buscar muestras de Salud» con tipo (null)
 o tarjetas «Acción desconocida» en el medio, suele ser **serialización** del .shortcut, no
 permisos ni caché: prueba `--mode minimal` y/o `--omit-workout-duration-stat` (ver `--help`).
 
@@ -251,7 +254,7 @@ def statistics_on(
 
 
 def get_health_sample_detail_duration(*, u: str, u_find: str) -> dict:
-    """Obtener detalles de muestras de salud: Duración (entrada = muestras Sleep previas)."""
+    """Obtener detalles de muestras de salud: Duración (entrada = muestras de la búsqueda previa)."""
     return {
         "WFWorkflowActionIdentifier": "is.workflow.actions.properties.health.quantity",
         "WFWorkflowActionParameters": {
@@ -742,8 +745,10 @@ def build_actions_full(
     duration_placeholders: str,
     workout_stat_prop_ser: str,
     legacy_token_prompt: bool,
+    legacy_workout_actions: bool,
 ) -> list[dict]:
     _ = quantity_type_style  # reservado por compatibilidad CLI; el plist ya no usa HKQuantityType.
+    _ = workout_stat_prop_ser  # reservado (ruta legacy de serialización en estadística de entrenos).
 
     u_date = uid()
     u_iso = uid()
@@ -803,8 +808,13 @@ def build_actions_full(
         append_quantity_count_chain(actions, variable_name=var_name, type_label=type_label)
 
     u_set_wc = uid()
-    actions.append(find_workouts(u_find=u_find_workouts))
-    actions.append(count_items(u_input=u_find_workouts, u_count=u_count_workouts, output_name="Workouts"))
+    if legacy_workout_actions:
+        actions.append(find_workouts(u_find=u_find_workouts))
+        actions.append(count_items(u_input=u_find_workouts, u_count=u_count_workouts, output_name="Workouts"))
+    else:
+        # iOS 18+: filter.workouts / properties.workout → «Acción desconocida». Misma acción que pasos/HRV.
+        actions.append(find_health_quantity(u_find=u_find_workouts, type_value="Workouts"))
+        actions.append(count_items(u_input=u_find_workouts, u_count=u_count_workouts, output_name="Health Samples"))
     actions.append(
         set_variable_from_output(
             u=u_set_wc,
@@ -826,17 +836,28 @@ def build_actions_full(
         )
     else:
         u_workout_detail_dur = uid()
-        actions.append(
-            get_workout_detail_duration(u=u_workout_detail_dur, u_find_workouts=u_find_workouts)
-        )
-        actions.append(
-            statistics_on(
-                u_workout_detail_dur,
-                u_stat_workout_dur,
-                "Sum",
-                output_name="Workout Detail",
+        if legacy_workout_actions:
+            actions.append(
+                get_workout_detail_duration(u=u_workout_detail_dur, u_find_workouts=u_find_workouts)
             )
-        )
+            actions.append(
+                statistics_on(
+                    u_workout_detail_dur,
+                    u_stat_workout_dur,
+                    "Sum",
+                    output_name="Workout Detail",
+                )
+            )
+        else:
+            actions.append(get_health_sample_detail_duration(u=u_workout_detail_dur, u_find=u_find_workouts))
+            actions.append(
+                statistics_on(
+                    u_workout_detail_dur,
+                    u_stat_workout_dur,
+                    "Sum",
+                    output_name="Duración",
+                )
+            )
         actions.append(detect_numbers_from_input(u=u_detect_workout_dur))
         actions.append(
             set_variable_from_output(
@@ -986,6 +1007,11 @@ def main() -> int:
         action="store_true",
         help="Solo «Solicitar entrada» del token en cada ejecución (sin leer/guardar archivo en iCloud).",
     )
+    p.add_argument(
+        "--legacy-workout-actions",
+        action="store_true",
+        help="Usa is.workflow.actions.filter.workouts + properties.workout (solo si tu iOS aún las reconoce).",
+    )
     args = p.parse_args()
     if args.wplace == "omit" and not args.omit_workout_duration_stat:
         p.error("--workout-duration-placeholder=omit requiere --omit-workout-duration-stat")
@@ -1006,6 +1032,7 @@ def main() -> int:
             duration_placeholders=args.wplace,
             workout_stat_prop_ser=args.workout_agg_ser,
             legacy_token_prompt=args.legacy_token_prompt,
+            legacy_workout_actions=args.legacy_workout_actions,
         )
     out: Path = args.output
     with out.open("wb") as f:

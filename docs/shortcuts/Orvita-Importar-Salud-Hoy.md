@@ -45,6 +45,19 @@ El POST plano incluye (entre otras) lecturas de Apple Health alineadas al contra
 
 Claves JSON frecuentes del atajo: `observed_at`, `steps`, `active_energy_kcal`, `workouts_count`, `workouts_duration_seconds`, `sleep_duration_seconds`, `hrv_ms`, `resting_hr_bpm`, …
 
+## Entrenos y «Acción desconocida» (iOS reciente)
+
+En iPhone con iOS muy nuevo, las acciones antiguas **`Buscar entrenos`** (`is.workflow.actions.filter.workouts`) y **`Obtener detalles del entreno`** (`is.workflow.actions.properties.workout`) a menudo importan como **Acción desconocida** y rompen todo lo que viene después (conteo de entrenos, duración, diccionario y POST con **«0 elementos»** porque las variables ya no existen).
+
+El generador por defecto ya **no** las usa: hace **Buscar muestras de salud** con tipo **Workouts** (misma acción que pasos/HRV) → **Contar** → **Obtener detalles de muestras de salud** (Duración) → **Calcular estadísticas** (suma) → variable `workouts_duration_seconds_num`, igual que la cadena de sueño.
+
+- Si en tu Mac necesitas el plist **antiguo**:  
+  `python3 scripts/build-orvita-health-shortcut.py --legacy-workout-actions`
+- Tras regenerar, vuelve a firmar el `.shortcut` y reinstálalo en el iPhone (borra el atajo roto antes).
+- En **Diccionario** y **Obtener contenido de URL**, cada valor debe mostrar la **pastilla azul** de la variable (`steps_num`, `workout_count`, etc.). Si ves **«0 elementos»** o texto plano, toca la celda y vuelve a elegir la variable desde el menú **Variables** (o reimporta el `.shortcut` generado).
+
+Cabecera del token: debe ser exactamente **`x-orvita-import-token`** (no un nombre recortado tipo `x-orvita-imp…`); el valor debe ser la variable del archivo/token, no el placeholder «Texto».
+
 ## Errores y notificación en iOS
 
 - Si el POST devuelve **4xx/5xx**, Atajos muestra el error y **no** ejecuta la notificación final.
