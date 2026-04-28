@@ -79,13 +79,24 @@ function sandboxLinkCredentials(): { username: string; password: string } {
   }
 }
 
+function isBelvoBrInstitution(institution: string): boolean {
+  const n = institution.toLowerCase()
+  return n.includes("_br_") || n.includes("ofmockbank_br")
+}
+
+function sandboxCountryCodesForInstitution(institution: string): Array<"CO" | "BR"> {
+  return isBelvoBrInstitution(institution) ? ["BR"] : ["CO"]
+}
+
 function sandboxCredentialCandidates(): Array<{ username: string; password: string }> {
   const base = sandboxLinkCredentials()
   const extraUser = process.env.BANKING_BELVO_SANDBOX_USERNAME_ALT?.trim()
   const extraPass = process.env.BANKING_BELVO_SANDBOX_PASSWORD_ALT?.trim()
+  const cpfDefault = process.env.BANKING_BELVO_SANDBOX_CPF?.trim() || "12345678901"
   const candidates = [
     base,
     { username: "belvouser100", password: "sandbox" },
+    { username: cpfDefault, password: "sandbox" },
     { username: "12345678900", password: "sandbox" },
     { username: "test", password: "test" },
     extraUser && extraPass ? { username: extraUser, password: extraPass } : null,
@@ -341,16 +352,20 @@ async function registerBelvoLink(
   const credentials = sandbox ? sandboxCredentialCandidates() : [sandboxLinkCredentials()]
   const types = usernameTypeCandidates(usernameType)
   let lastErr: unknown = null
+  const isBrInstitution = isBelvoBrInstitution(institution)
 
   for (const creds of credentials) {
     for (const ut of types) {
+      const usernameForInstitution = isBrInstitution
+        ? (process.env.BANKING_BELVO_SANDBOX_CPF?.trim() || "12345678901")
+        : creds.username
       const payload: Record<string, unknown> = {
         institution,
-        username: creds.username,
+        username: usernameForInstitution,
         password: creds.password,
-        username_type: ut,
       }
-      if (sandbox) payload.country_codes = ["CO"]
+      if (!isBrInstitution) payload.username_type = ut
+      if (sandbox) payload.country_codes = sandboxCountryCodesForInstitution(institution)
       try {
         const created = await belvoRequestJson<{ id?: string }>(base, "/api/links/", clientId, clientSecret, {
           method: "POST",
