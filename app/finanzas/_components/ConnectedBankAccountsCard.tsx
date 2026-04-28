@@ -268,10 +268,8 @@ export function ConnectedBankAccountsCard() {
       {notice ? <p className="mt-2 text-xs text-orbita-secondary">{notice}</p> : null}
 
       <p className="mt-3 text-[11px] leading-relaxed text-orbita-secondary">
-        Widget y enlaces sandbox usan <span className="font-medium text-orbita-primary">CO</span> y documento Belvo{" "}
-        <span className="font-medium">103</span> por defecto. Para acotar bancos en el widget, define{" "}
-        <span className="font-medium">BANKING_BELVO_WIDGET_CO_INSTITUTIONS</span> en Vercel (slugs separados por coma,
-        según tu panel Belvo).
+        Usando banco mock <span className="font-medium text-orbita-primary">BR</span> en sandbox.{" "}
+        <span className="font-medium">CO</span> se activará cuando tu tenant Belvo tenga instituciones Colombia habilitadas.
       </p>
 
       {accounts.length > 0 ? (

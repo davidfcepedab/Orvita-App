@@ -541,10 +541,9 @@ export function ConfigStrategicIntegrationsPanel({
         por defecto (variable <span style={{ color: theme.text }}>BANKING_BELVO_SANDBOX_USERNAME_TYPE</span> si Belvo
         exige 104). País{" "}
         <span className="font-semibold" style={{ color: theme.text }}>
-          CO
+          BR (mock)
         </span>{" "}
-        en token y enlaces. Si el widget solo muestra mocks, revisa slugs reales o{" "}
-        <span style={{ color: theme.text }}>BANKING_BELVO_WIDGET_CO_INSTITUTIONS</span>.
+        en sandbox. CO se activará cuando tu tenant Belvo tenga catálogo Colombia.
       </p>
       <div className="mt-2.5 flex flex-wrap gap-1.5">
         <button

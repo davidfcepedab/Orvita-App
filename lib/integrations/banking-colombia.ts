@@ -94,26 +94,11 @@ function inferWidgetCountryFromInstitutions(institutions: string[]): "CO" | "BR"
   return institutions.some((name) => isBelvoBrInstitution(name)) ? "BR" : "CO"
 }
 
-function sandboxCredentialCandidates(): Array<{ username: string; password: string }> {
-  const base = sandboxLinkCredentials()
-  const extraUser = process.env.BANKING_BELVO_SANDBOX_USERNAME_ALT?.trim()
-  const extraPass = process.env.BANKING_BELVO_SANDBOX_PASSWORD_ALT?.trim()
-  const cpfDefault = process.env.BANKING_BELVO_SANDBOX_CPF?.trim() || "12345678901"
-  const candidates = [
-    base,
-    { username: "belvouser100", password: "sandbox" },
-    { username: cpfDefault, password: "sandbox" },
-    { username: "12345678900", password: "sandbox" },
-    { username: "test", password: "test" },
-    extraUser && extraPass ? { username: extraUser, password: extraPass } : null,
-  ].filter(Boolean) as Array<{ username: string; password: string }>
-  const seen = new Set<string>()
-  return candidates.filter((c) => {
-    const key = `${c.username}::${c.password}`
-    if (seen.has(key)) return false
-    seen.add(key)
-    return true
-  })
+function normalizeSandboxUsernameForInstitution(institution: string, username: string): string {
+  if (isBelvoBrInstitution(institution)) {
+    return process.env.BANKING_BELVO_SANDBOX_CPF?.trim() || username || "12345678901"
+  }
+  return username
 }
 
 /** Host sandbox Belvo (links Colombia suelen exigir `username_type` 103 o 104). */
@@ -152,6 +137,70 @@ function resolveLinkUsernameType(explicit: number | undefined): number {
 function usernameTypeCandidates(explicit?: number): number[] {
   const primary = resolveLinkUsernameType(explicit)
   return primary === 103 ? [103, 104] : [104, 103]
+}
+
+type BelvoLinkAttempt = {
+  label: string
+  institution: string
+  payload: Record<string, unknown>
+}
+
+/** Cierre sandbox: 4 combinaciones determinísticas en orden. */
+function getBelvoLinkPayload(institutionSlug: string): BelvoLinkAttempt[] {
+  const creds = sandboxLinkCredentials()
+  const username = normalizeSandboxUsernameForInstitution(institutionSlug, creds.username)
+  const fallbackInstitution = "ofmockbank_br_retail"
+  const fallbackUsername = normalizeSandboxUsernameForInstitution(fallbackInstitution, creds.username)
+  return [
+    {
+      label: "co-ut-103",
+      institution: institutionSlug,
+      payload: {
+        institution: institutionSlug,
+        username,
+        password: creds.password,
+        username_type: "103",
+        country_codes: ["CO"],
+      },
+    },
+    {
+      label: "co-ut-104",
+      institution: institutionSlug,
+      payload: {
+        institution: institutionSlug,
+        username,
+        password: creds.password,
+        username_type: "104",
+        country_codes: ["CO"],
+      },
+    },
+    {
+      label: "br-no-ut",
+      institution: institutionSlug,
+      payload: {
+        institution: institutionSlug,
+        username,
+        password: creds.password,
+        country_codes: ["BR"],
+      },
+    },
+    {
+      label: "br-fallback-ut-103",
+      institution: fallbackInstitution,
+      payload: {
+        institution: fallbackInstitution,
+        username: fallbackUsername,
+        password: creds.password,
+        username_type: "103",
+        country_codes: ["BR"],
+      },
+    },
+  ]
+}
+
+function extractRequestIdFromBelvoErrorMessage(message: string): string | null {
+  const m = message.match(/request_id=([a-f0-9]{32})/i)
+  return m?.[1] ?? null
 }
 
 export function isBelvoBankingConfigured(): boolean {
@@ -360,51 +409,27 @@ async function registerBelvoLink(
   orvitaColombiaBankFlow: boolean,
 ): Promise<string> {
   const sandbox = isBelvoSandboxBase(base)
-  const credentials = sandbox ? sandboxCredentialCandidates() : [sandboxLinkCredentials()]
-  const types = usernameTypeCandidates(usernameType)
   let lastErr: unknown = null
-  const isBrInstitution = isBelvoBrInstitution(institution)
-  const countryCodeVariants: Array<Array<"CO" | "BR"> | null> = sandbox
-    ? [sandboxCountryCodesForInstitution(institution), null]
-    : [null]
-  const usernameTypeVariants = (ut: number): Array<number | string | null> =>
-    isBrInstitution ? [ut, String(ut), null] : [ut, String(ut)]
+  const attempts = sandbox ? getBelvoLinkPayload(institution).slice(0, 4) : getBelvoLinkPayload(institution).slice(0, 1)
 
-  for (const creds of credentials) {
-    for (const ut of types) {
-      const usernameForInstitution = isBrInstitution
-        ? (process.env.BANKING_BELVO_SANDBOX_CPF?.trim() || "12345678901")
-        : creds.username
-      for (const usernameTypeValue of usernameTypeVariants(ut)) {
-        for (const countryCodes of countryCodeVariants) {
-          const payload: Record<string, unknown> = {
-            institution,
-            username: usernameForInstitution,
-            password: creds.password,
-          }
-          if (usernameTypeValue !== null) payload.username_type = usernameTypeValue
-          if (countryCodes) payload.country_codes = countryCodes
-          try {
-            const created = await belvoRequestJson<{ id?: string }>(base, "/api/links/", clientId, clientSecret, {
-              method: "POST",
-              json: payload,
-            })
-            if (!created.id) throw new Error("Belvo no devolvió id de link al registrar.")
-            return created.id
-          } catch (err) {
-            lastErr = err
-            const msg = err instanceof Error ? err.message.toLowerCase() : String(err).toLowerCase()
-            const retryable =
-              msg.includes("field=username") ||
-              msg.includes("incorrect credentials format") ||
-              msg.includes("username_type") ||
-              msg.includes("credentials") ||
-              msg.includes("invalid_choice") ||
-              msg.includes("this field is required")
-            if (!retryable) throw err
-          }
-        }
-      }
+  for (const [idx, attempt] of attempts.entries()) {
+    try {
+      const created = await belvoRequestJson<{ id?: string }>(base, "/api/links/", clientId, clientSecret, {
+        method: "POST",
+        json: attempt.payload,
+      })
+      if (!created.id) throw new Error("Belvo no devolvió id de link al registrar.")
+      return created.id
+    } catch (err) {
+      lastErr = err
+      const msg = err instanceof Error ? err.message : String(err)
+      const requestId = extractRequestIdFromBelvoErrorMessage(msg)
+      console.warn("[belvo/registerLink] intento fallido", {
+        attempt: idx + 1,
+        label: attempt.label,
+        institution: attempt.institution,
+        request_id: requestId,
+      })
     }
   }
   throw (lastErr instanceof Error ? lastErr : new Error("Belvo no permitió crear el link con las credenciales sandbox probadas."))
