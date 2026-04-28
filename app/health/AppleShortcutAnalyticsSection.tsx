@@ -66,6 +66,18 @@ export function AppleShortcutAnalyticsSection({ latest, analytics, loading }: Pr
             Resumen del último envío y señales simples (no clínicas) frente a la semana previa, usando el mismo
             endpoint que el atajo iOS.
           </p>
+          {latest?.source === "apple_health_shortcut" && latest.observed_at ? (
+            <p className="m-0 mt-2 inline-flex max-w-full items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--color-accent-health)_35%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_10%,transparent)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-primary)]">
+              <span className="text-[var(--color-accent-health)]">●</span>
+              Importado vía Atajo ·{" "}
+              {new Date(latest.observed_at).toLocaleString("es-CO", {
+                day: "numeric",
+                month: "short",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </p>
+          ) : null}
         </div>
         <div className="grid gap-3 lg:grid-cols-3">
           <div
@@ -78,7 +90,8 @@ export function AppleShortcutAnalyticsSection({ latest, analytics, loading }: Pr
               <p className="m-0 mt-3 text-[13px] text-[var(--color-text-secondary)]">Cargando…</p>
             ) : !latest ? (
               <p className="m-0 mt-3 text-[12px] text-[var(--color-accent-warning)]">
-                Sin datos todavía. Ejecuta &quot;Órvita – Importar Salud Hoy&quot; en el iPhone.
+                Sin datos todavía. Ejecuta el atajo <span className="font-medium">Orvita-Importar-Salud-Hoy</span> en el
+                iPhone.
               </p>
             ) : (
               <ul className="m-0 mt-3 list-none space-y-1.5 p-0 text-[13px] text-[var(--color-text-primary)]">

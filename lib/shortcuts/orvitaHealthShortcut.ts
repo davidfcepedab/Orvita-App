@@ -7,7 +7,8 @@ import { siteOrigin } from "@/lib/site/origin"
  * Si en Atajos lo renombraste, el botón "Abrir atajo" de la web o un widget con el nombre antiguo fallará con
  * "el archivo no existe" hasta que reinstales el .shortcut o restaures el nombre.
  */
-export const ORVITA_HEALTH_SHORTCUT_NAME = "Órvita – Importar Salud Hoy"
+/** Nombre exacto en la biblioteca de Atajos (debe coincidir con «Nombre del atajo» al compartir / ejecutar). */
+export const ORVITA_HEALTH_SHORTCUT_NAME = "Orvita-Importar-Salud-Hoy"
 
 export const ORVITA_HEALTH_SHORTCUT_FILE_PATH = "/shortcuts/Orvita-Importar-Salud-Hoy.shortcut"
 

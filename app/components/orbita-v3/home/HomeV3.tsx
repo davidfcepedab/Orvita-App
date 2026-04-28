@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useOrbitaSkin } from "@/app/contexts/AppContext"
 import { Activity, AlertCircle, CheckCircle2, Wind } from "lucide-react"
 import { useOperationalContext } from "@/app/hooks/useOperationalContext"
-import { StrategicDayCapitalHero } from "@/app/components/orbita-v3/strategic/StrategicDayCapitalHero"
+import { StrategicDayHero } from "@/app/components/orbita-v3/strategic/StrategicDayCapitalHero"
 import { useHealthAutoMetrics } from "@/app/hooks/useHealthAutoMetrics"
 import type { OperationalHabit } from "@/lib/operational/types"
 
@@ -78,7 +78,7 @@ export default function HomeV3() {
         ))}
       </div>
 
-      <StrategicDayCapitalHero capital={data?.capital} />
+      <StrategicDayHero capital={data?.capital} health={data?.apple_health} />
 
       <div className="space-y-4">
         {clusters.map((cluster) => (
@@ -196,9 +196,23 @@ export default function HomeV3() {
                   >
                     {energy}%
                   </p>
-                  {autoHealth?.observed_at ? (
+                  {autoHealth?.source === "apple_health_shortcut" && autoHealth.observed_at ? (
                     <p className="mt-1 text-[11px]" style={{ color: theme.textMuted }}>
-                      Auto-sync salud · {new Date(autoHealth.observed_at).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" })}
+                      Importado vía Atajo ·{" "}
+                      {new Date(autoHealth.observed_at).toLocaleString("es-CO", {
+                        day: "numeric",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                  ) : autoHealth?.observed_at ? (
+                    <p className="mt-1 text-[11px]" style={{ color: theme.textMuted }}>
+                      Auto-sync salud ·{" "}
+                      {new Date(autoHealth.observed_at).toLocaleTimeString("es-CO", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </p>
                   ) : null}
                 </div>

@@ -618,6 +618,11 @@ def post_import(*, u_post: str, u_token: str, json_items: list[dict]) -> dict:
                                 "WFSerializationType": "WFTextTokenString",
                             },
                         },
+                        {
+                            "WFItemType": 0,
+                            "WFKey": text_plain("x-orvita-client"),
+                            "WFValue": text_plain("orvita-ios-shortcut"),
+                        },
                     ]
                 },
                 "WFSerializationType": "WFDictionaryFieldValue",
@@ -630,22 +635,18 @@ def post_import(*, u_post: str, u_token: str, json_items: list[dict]) -> dict:
     }
 
 
-def show_result(*, u: str, u_post: str) -> dict:
+def success_notification(*, u: str) -> dict:
+    """Notificación al usuario tras POST 2xx (errores HTTP detienen el atajo antes)."""
     return {
-        "WFWorkflowActionIdentifier": "is.workflow.actions.showresult",
+        "WFWorkflowActionIdentifier": "is.workflow.actions.notification",
         "WFWorkflowActionParameters": {
             "UUID": u,
-            "Text": {
-                "Value": {
-                    "attachmentsByRange": {
-                        "{0, 1}": {
-                            "Type": "ActionOutput",
-                            "OutputUUID": u_post,
-                            "OutputName": "Contents of URL",
-                        }
-                    },
-                    "string": "\ufffc",
-                },
+            "WFNotificationActionBody": {
+                "Value": {"string": "Datos de Apple Health importados a Órvita ✓"},
+                "WFSerializationType": "WFTextTokenString",
+            },
+            "WFNotificationActionTitle": {
+                "Value": {"string": "Órvita"},
                 "WFSerializationType": "WFTextTokenString",
             },
         },
@@ -660,7 +661,7 @@ def comment(text: str) -> dict:
     }
 
 
-def build_root(actions: list[dict], *, workflow_name: str = "Órvita – Importar Salud Hoy") -> dict:
+def build_root(actions: list[dict], *, workflow_name: str = "Orvita-Importar-Salud-Hoy") -> dict:
     return {
         "WFWorkflowActions": actions,
         "WFWorkflowClientVersion": "2700.0.4",
@@ -849,7 +850,7 @@ def build_actions_full(
     json_items = build_flat_payload_items()
     actions.append(dictionary_from_items(u_dict=u_dict, items=json_items))
     actions.append(post_import(u_post=u_post, u_token=u_header, json_items=json_items))
-    actions.append(show_result(u=u_show, u_post=u_post))
+    actions.append(success_notification(u=u_show))
     return actions
 
 
@@ -931,7 +932,7 @@ def build_actions_minimal(*, quantity_type_style: str, legacy_token_prompt: bool
         [
             dictionary_from_items(u_dict=u_dict, items=json_items),
             post_import(u_post=u_post, u_token=u_header, json_items=json_items),
-            show_result(u=u_show, u_post=u_post),
+            success_notification(u=u_show),
         ]
     )
     return actions
@@ -989,9 +990,9 @@ def main() -> int:
     if args.wplace == "omit" and not args.omit_workout_duration_stat:
         p.error("--workout-duration-placeholder=omit requiere --omit-workout-duration-stat")
     wname = (
-        "Órvita – Importar Salud Hoy (mín.)"
+        "Orvita-Importar-Salud-Hoy (mín.)"
         if args.mode == "minimal"
-        else "Órvita – Importar Salud Hoy"
+        else "Orvita-Importar-Salud-Hoy"
     )
     if args.mode == "minimal":
         actions = build_actions_minimal(

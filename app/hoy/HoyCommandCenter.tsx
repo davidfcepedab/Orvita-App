@@ -45,7 +45,7 @@ import {
   totalMeetingMinutes,
   type PressureBand,
 } from "@/lib/hoy/commandDerivation"
-import { StrategicDayCapitalHero } from "@/app/components/orbita-v3/strategic/StrategicDayCapitalHero"
+import { StrategicDayHero } from "@/app/components/orbita-v3/strategic/StrategicDayCapitalHero"
 import type { OperationalCommandDomain, OperationalDomain, OperationalTask } from "@/lib/operational/types"
 
 const TIMELINE_FALLBACK_EXAMPLE = [
@@ -495,7 +495,7 @@ export default function HoyCommandCenter() {
         </div>
       </nav>
 
-      <StrategicDayCapitalHero capital={ctx?.capital} />
+      <StrategicDayHero capital={ctx?.capital} health={ctx?.apple_health} />
 
       {/* —— Presión operativa —— */}
       <section aria-labelledby="hoy-pressure-heading" className="space-y-3">

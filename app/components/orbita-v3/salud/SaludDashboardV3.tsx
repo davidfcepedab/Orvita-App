@@ -12,6 +12,7 @@ import { buildSaludDecisionBrief } from "@/lib/salud/saludDecisionBrief"
 import { HeroDecisionCard } from "@/app/components/orbita-v3/salud/HeroDecisionCard"
 import { SaludInsightSection } from "@/app/components/orbita-v3/salud/SaludInsightSection"
 import AppleHealthLuxurySection from "@/app/components/orbita-v3/salud/AppleHealthLuxurySection"
+import { AppleShortcutAnalyticsSection } from "@/app/health/AppleShortcutAnalyticsSection"
 import { appleHealthSyncStale, buildAppleHealthHeroSyncLine } from "@/lib/salud/appleHealthSyncToolbar"
 
 export default function SaludDashboardV3() {
@@ -78,6 +79,12 @@ export default function SaludDashboardV3() {
         latest={autoHealth.latest}
         loading={autoHealth.loading}
         onRefresh={autoHealth.refetch}
+      />
+
+      <AppleShortcutAnalyticsSection
+        latest={autoHealth.latest}
+        analytics={autoHealth.analytics}
+        loading={autoHealth.loading}
       />
 
       <SaludInsightSection brief={brief} />

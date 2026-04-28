@@ -3,13 +3,32 @@ import type { AppleHealthImportRow } from "@/lib/integrations/appleHealth"
 import { normalizeAppleHealthRows } from "@/lib/integrations/appleHealth"
 import { rowsFromAppleBundlePayload } from "@/lib/integrations/mergeAppleHealthImportRows"
 import { extractHealthBundleFromBody, normalizeAppleHealthPayload } from "@/lib/integrations/normalizeAppleHealthPayload"
-import { upsertAppleHealthImportRow } from "@/lib/integrations/upsertHealthMetricRow"
+import {
+  upsertAppleHealthImportRow,
+  type HealthMetricsPersistedSource,
+} from "@/lib/integrations/upsertHealthMetricRow"
 import { resolveAppleHealthImportAuth } from "@/lib/integrations/resolveAppleHealthImportAuth"
 import { applyObservedAtFromRequestHeaders } from "@/lib/integrations/applyObservedAtFromRequestHeaders"
 
 export const runtime = "nodejs"
 
-const SOURCE: "apple_health_export" = "apple_health_export"
+function resolveHealthMetricsSource(
+  req: NextRequest,
+  body: Record<string, unknown>,
+  authKind: "session" | "import_token",
+): HealthMetricsPersistedSource {
+  const hdr = req.headers.get("x-orvita-health-source")?.trim().toLowerCase()
+  if (hdr === "shortcut" || hdr === "apple_health_shortcut") return "apple_health_shortcut"
+  const client = req.headers.get("x-orvita-client")?.trim().toLowerCase()
+  if (client === "orvita-ios-shortcut" || client === "ios-shortcut") return "apple_health_shortcut"
+  const bodySrc = typeof body.source === "string" ? body.source.trim().toLowerCase() : ""
+  if (bodySrc === "apple_health_shortcut" || bodySrc === "shortcut") return "apple_health_shortcut"
+  if (typeof body.import_channel === "string" && body.import_channel.trim().toLowerCase() === "ios_shortcut") {
+    return "apple_health_shortcut"
+  }
+  if (authKind === "import_token") return "apple_health_shortcut"
+  return "apple_health_export"
+}
 
 function rowHasSignal(row: {
   sleep_hours?: number
@@ -112,6 +131,7 @@ export async function POST(req: NextRequest) {
     if (auth instanceof NextResponse) return auth
 
     const { userId, supabase } = auth
+    const healthRowsSource = resolveHealthMetricsSource(req, body, auth.kind)
 
     const ext = extractHealthBundleFromBody(body)
     const fromBundle = ext ? rowsFromAppleBundlePayload(ext.bundle) : []
@@ -150,7 +170,7 @@ export async function POST(req: NextRequest) {
 
     let lastPersistence: "ok" | "fail" = "ok"
     for (const row of useMerged) {
-      const u = await upsertAppleHealthImportRow(supabase, userId, SOURCE, row)
+      const u = await upsertAppleHealthImportRow(supabase, userId, healthRowsSource, row)
       if ("error" in u) {
         lastPersistence = "fail"
         logImport({ event: "error", received_keys: topKeys, message: u.error })
@@ -166,7 +186,11 @@ export async function POST(req: NextRequest) {
         access_token: "server-apple-health-placeholder",
         connected: true,
         last_synced_at: nowIso,
-        metadata: { mode: "apple_health_priority", import_rows: useMerged.length },
+        metadata: {
+          mode: "apple_health_priority",
+          import_rows: useMerged.length,
+          last_health_metrics_source: healthRowsSource,
+        },
         updated_at: nowIso,
       },
       { onConflict: "user_id,integration,provider_account_id" },
@@ -209,7 +233,7 @@ export async function POST(req: NextRequest) {
           ? { keys: ext ? Object.keys(ext.bundle) : [], schema_version: body.schema_version }
           : undefined,
       imported: useMerged.length,
-      source: SOURCE,
+      health_metrics_source: healthRowsSource,
       syncedAt: nowIso,
     })
   } catch (error) {

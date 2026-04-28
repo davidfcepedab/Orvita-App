@@ -1,6 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { AppleHealthImportRow } from "@/lib/integrations/appleHealth"
 
+/** Origen persistido en `health_metrics.source` (Atajo iOS vs otras importaciones). */
+export type HealthMetricsPersistedSource = "apple_health_export" | "apple_health_shortcut"
+
 function dayBoundsUtcFromIso(iso: string): { start: string; end: string } | null {
   const t = new Date(iso)
   if (Number.isNaN(t.getTime())) return null
@@ -25,7 +28,7 @@ function mergeNumber(prev: NullableNum, next: NullableNum) {
 export async function upsertAppleHealthImportRow(
   supabase: SupabaseClient,
   userId: string,
-  source: "apple_health_export",
+  source: HealthMetricsPersistedSource,
   row: AppleHealthImportRow,
 ) {
   const obs = row.observed_at
@@ -83,7 +86,12 @@ export async function upsertAppleHealthImportRow(
   const mergedMetadata = (() => {
     const a = (prev?.metadata as Record<string, unknown> | undefined) ?? {}
     const b = (pMeta as Record<string, unknown> | undefined) ?? {}
-    return { ...a, ...b, merged_at: new Date().toISOString() }
+    return {
+      ...a,
+      ...b,
+      merged_at: new Date().toISOString(),
+      ...(source === "apple_health_shortcut" ? { ios_shortcut_import: true } : {}),
+    }
   })()
 
   if (id) {

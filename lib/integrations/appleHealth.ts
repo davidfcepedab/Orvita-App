@@ -59,7 +59,9 @@ export function normalizeAppleHealthRows(input: unknown): AppleHealthImportRow[]
       })(),
       calories: (() => {
         const c = numish(row, "calories")
-        return c != null ? Math.round(c) : undefined
+        const k = numish(row, "active_energy_kcal")
+        const v = c ?? k
+        return v != null ? Math.round(v) : undefined
       })(),
       energy_index: (() => {
         const e = numish(row, "energy_index")
