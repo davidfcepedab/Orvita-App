@@ -639,8 +639,10 @@ export async function connectBankingColombia(input: {
       } catch (err) {
         lastErr = err
         const msg = err instanceof Error ? err.message : String(err)
-        const missingInstitution = msg.toLowerCase().includes("does_not_exist") || msg.toLowerCase().includes("object with name")
-        if (!missingInstitution) {
+        const lower = msg.toLowerCase()
+        const missingInstitution = lower.includes("does_not_exist") || lower.includes("object with name")
+        const consentBlocked = lower.includes("invalid consent") || lower.includes("code=login_error")
+        if (!missingInstitution && !consentBlocked) {
           throw err
         }
       }
