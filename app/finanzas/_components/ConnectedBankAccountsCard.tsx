@@ -268,8 +268,8 @@ export function ConnectedBankAccountsCard() {
       {notice ? <p className="mt-2 text-xs text-orbita-secondary">{notice}</p> : null}
 
       <p className="mt-3 text-[11px] leading-relaxed text-orbita-secondary">
-        Usando banco mock <span className="font-medium text-orbita-primary">BR</span> en sandbox.{" "}
-        <span className="font-medium">CO</span> se activará cuando tu tenant Belvo tenga instituciones Colombia habilitadas.
+        Sandbox <span className="font-medium text-orbita-primary">BR mock</span> activo. Cuenta de prueba creada.{" "}
+        <span className="font-medium">CO</span> se activará cuando tu tenant Belvo tenga instituciones colombianas.
       </p>
 
       {accounts.length > 0 ? (

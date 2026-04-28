@@ -543,7 +543,7 @@ export function ConfigStrategicIntegrationsPanel({
         <span className="font-semibold" style={{ color: theme.text }}>
           BR (mock)
         </span>{" "}
-        en sandbox. CO se activará cuando tu tenant Belvo tenga catálogo Colombia.
+        en sandbox. Cuenta de prueba creada. CO se activará cuando tu tenant Belvo tenga instituciones colombianas.
       </p>
       <div className="mt-2.5 flex flex-wrap gap-1.5">
         <button
