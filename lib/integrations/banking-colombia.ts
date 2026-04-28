@@ -88,6 +88,12 @@ function sandboxCountryCodesForInstitution(institution: string): Array<"CO" | "B
   return isBelvoBrInstitution(institution) ? ["BR"] : ["CO"]
 }
 
+function inferWidgetCountryFromInstitutions(institutions: string[]): "CO" | "BR" {
+  const forced = process.env.BANKING_BELVO_WIDGET_COUNTRY?.trim().toUpperCase()
+  if (forced === "BR" || forced === "CO") return forced
+  return institutions.some((name) => isBelvoBrInstitution(name)) ? "BR" : "CO"
+}
+
 function sandboxCredentialCandidates(): Array<{ username: string; password: string }> {
   const base = sandboxLinkCredentials()
   const extraUser = process.env.BANKING_BELVO_SANDBOX_USERNAME_ALT?.trim()
@@ -268,6 +274,12 @@ export async function createBelvoWidgetSession(input: { locale?: string } = {}):
         .filter(Boolean) ?? []
     return fromEnv
   })()
+  const institutionsFilter = process.env.BANKING_BELVO_WIDGET_CO_INSTITUTIONS?.trim()
+  const widgetCountry = inferWidgetCountryFromInstitutions(
+    institutionsFilter
+      ? institutionsFilter.split(",").map((s) => s.trim()).filter(Boolean)
+      : widgetInstitutions,
+  )
 
   const tokenBody: Record<string, unknown> = {
     id: env.clientId,
@@ -276,8 +288,8 @@ export async function createBelvoWidgetSession(input: { locale?: string } = {}):
     fetch_resources: ["ACCOUNTS", "TRANSACTIONS"],
     credentials_storage: "store",
     stale_in: "365d",
-    country_codes: ["CO"],
-    username_type: usernameType,
+    country_codes: [widgetCountry],
+    ...(widgetCountry === "CO" ? { username_type: usernameType } : {}),
     institution_types: ["retail"],
     widget: {
       callback_urls: {
@@ -291,7 +303,7 @@ export async function createBelvoWidgetSession(input: { locale?: string } = {}):
         company_terms_version: termsVersion,
       },
       theme: [] as unknown[],
-      country_codes: ["CO"],
+      country_codes: [widgetCountry],
       institution_types: ["retail"],
     },
   }
@@ -328,11 +340,10 @@ export async function createBelvoWidgetSession(input: { locale?: string } = {}):
   const params = new URLSearchParams({
     access_token: access,
     locale,
-    country_codes: "CO",
+    country_codes: widgetCountry,
     access_mode: "recurrent",
     institution_types: "retail",
   })
-  const institutionsFilter = process.env.BANKING_BELVO_WIDGET_CO_INSTITUTIONS?.trim()
   if (institutionsFilter) {
     params.set("institutions", institutionsFilter)
   }
@@ -364,7 +375,7 @@ async function registerBelvoLink(
         username: usernameForInstitution,
         password: creds.password,
       }
-      if (!isBrInstitution) payload.username_type = ut
+      if (!isBrInstitution) payload.username_type = String(ut)
       if (sandbox) payload.country_codes = sandboxCountryCodesForInstitution(institution)
       try {
         const created = await belvoRequestJson<{ id?: string }>(base, "/api/links/", clientId, clientSecret, {
