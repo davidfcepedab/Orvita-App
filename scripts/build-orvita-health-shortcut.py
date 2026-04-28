@@ -532,7 +532,14 @@ def format_iso8601(*, u: str, u_date: str) -> dict:
 
 
 def build_flat_payload_items() -> list[dict]:
-    """Mismo orden de claves para Diccionario y cuerpo JSON del POST (referencias a variables)."""
+    """Mismo orden de claves para Diccionario y cuerpo JSON del POST (referencias a variables).
+
+    WFItemType en WFDictionaryFieldValueItems (JSON / Diccionario):
+    - 0 = texto / WFTextTokenString (incluye variables que resuelven a número).
+    - 1 = subdiccionario (en iOS aparece como «0 elementos» si no hay hijos) — no usar para *_num.
+
+    Ver skills/erik-agens/shortcuts-skill (Get Contents of URL / WFJSONValues).
+    """
     items: list[dict] = [
         {
             "WFItemType": 0,
@@ -557,7 +564,7 @@ def build_flat_payload_items() -> list[dict]:
     ]:
         items.append(
             {
-                "WFItemType": 1,
+                "WFItemType": 0,
                 "WFKey": text_plain(payload_key),
                 "WFValue": {
                     "Value": text_token_variable(_var),

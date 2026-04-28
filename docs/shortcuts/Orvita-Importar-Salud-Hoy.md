@@ -54,7 +54,8 @@ El generador por defecto ya **no** las usa: hace **Buscar muestras de salud** co
 - Si en tu Mac necesitas el plist **antiguo**:  
   `python3 scripts/build-orvita-health-shortcut.py --legacy-workout-actions`
 - Tras regenerar, vuelve a firmar el `.shortcut` y reinstálalo en el iPhone (borra el atajo roto antes).
-- En **Diccionario** y **Obtener contenido de URL**, cada valor debe mostrar la **pastilla azul** de la variable (`steps_num`, `workout_count`, etc.). Si ves **«0 elementos»** o texto plano, toca la celda y vuelve a elegir la variable desde el menú **Variables** (o reimporta el `.shortcut` generado).
+- En **Diccionario** y **Obtener contenido de URL**, cada valor debe mostrar la **pastilla azul** de la variable (`steps_num`, `workout_count`, etc.). Si ves **«0 elementos»** o JSON con valores `{}` vacíos, suele ser un **bug de serialización del plist**: cada clave del JSON debe llevar `WFItemType = 0` (texto/token con variable). Con `WFItemType = 1`, iOS interpreta un **subdiccionario vacío** («0 elementos»). El generador del repo ya usa `0` para todas las métricas; reinstala el `.shortcut` firmado desde Órvita.
+- Si aun así falta la pastilla, toca la celda y vuelve a elegir la variable desde **Variables**, o reimporta el atajo.
 
 Cabecera del token: debe ser exactamente **`x-orvita-import-token`** (no un nombre recortado tipo `x-orvita-imp…`); el valor debe ser la variable del archivo/token, no el placeholder «Texto».
 
