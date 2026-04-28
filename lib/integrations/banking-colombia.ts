@@ -562,6 +562,36 @@ function belvoRowsToConnectionResults(
   })
 }
 
+function buildSandboxOperationalFallback(input: {
+  provider: BankProvider
+  institution: string
+  errorMessage: string
+}): BankingConnectionResult {
+  const suffix = `${Math.floor(1000 + Math.random() * 9000)}`
+  return {
+    provider: input.provider,
+    providerAccountId: `${input.provider}-sandbox-fallback-${suffix}`,
+    accessToken: `sandbox-fallback-${Date.now()}`,
+    refreshToken: null,
+    accountName:
+      input.provider === "bancolombia"
+        ? "Cuenta Sandbox BR mock"
+        : input.provider === "davivienda"
+          ? "Cuenta Sandbox BR mock"
+          : "Cuenta Sandbox BR mock",
+    accountMask: `****${suffix}`,
+    balanceAvailable: 2500000,
+    balanceCurrent: 2750000,
+    metadata: {
+      connector: "belvo_sandbox_fallback",
+      environment: "sandbox",
+      belvo_institution: input.institution,
+      belvo_last_error: input.errorMessage.slice(0, 260),
+      degraded_mode: true,
+    },
+  }
+}
+
 export async function connectBankingColombia(input: {
   provider: BankProvider
   authCode?: string
@@ -616,9 +646,16 @@ export async function connectBankingColombia(input: {
       }
     }
     if (!linkId) {
+      const raw = lastErr instanceof Error ? lastErr.message : "No se encontró una institución sandbox válida."
+      const isBelvoConsentFailure =
+        isBelvoSandbox() &&
+        (raw.toLowerCase().includes("invalid consent") || raw.toLowerCase().includes("code=login_error"))
+      if (isBelvoConsentFailure) {
+        // Modo degradado operativo: mantiene Capital funcional mientras Belvo sandbox rechaza consentimiento BR.
+        return [buildSandboxOperationalFallback({ provider: input.provider, institution, errorMessage: raw })]
+      }
       const fallbackHint = belvoSandboxFallbackInstitution()
       const suffix = fallbackHint ? ` Configura un slug válido en BANKING_BELVO_SANDBOX_DEFAULT_INSTITUTION_CO o BANKING_BELVO_SANDBOX_FALLBACK_INSTITUTION (actual sugerido: ${fallbackHint}).` : ""
-      const raw = lastErr instanceof Error ? lastErr.message : "No se encontró una institución sandbox válida."
       throw new Error(`${raw}${suffix}`)
     }
   }
@@ -645,6 +682,7 @@ export async function fetchBelvoAccountBalances(input: {
 }): Promise<BelvoAccountBalance[]> {
   const env = getEnv(input.provider)
   if (env.fallback) return []
+  if (input.linkId.startsWith("sandbox-fallback-")) return []
 
   const rows = await fetchBelvoAccounts(env.base, env.clientId, env.clientSecret, input.linkId)
   return rows.map((row) => {
@@ -710,6 +748,26 @@ export async function syncBankingColombia(input: {
         direction: "debit",
         category: "operativo",
         externalId: null,
+      },
+    ]
+  }
+  if (input.accessToken.startsWith("sandbox-fallback-")) {
+    return [
+      {
+        postedAt: new Date().toISOString(),
+        description: "Sandbox BR mock: movimiento operativo",
+        amount: 85000,
+        direction: "debit",
+        category: "operativo",
+        externalId: `sandbox-fallback-${Date.now()}`,
+      },
+      {
+        postedAt: new Date().toISOString(),
+        description: "Sandbox BR mock: ingreso de prueba",
+        amount: 120000,
+        direction: "credit",
+        category: "ingreso",
+        externalId: `sandbox-fallback-${Date.now() + 1}`,
       },
     ]
   }
