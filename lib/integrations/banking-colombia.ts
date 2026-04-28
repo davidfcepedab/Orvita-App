@@ -79,6 +79,26 @@ function sandboxLinkCredentials(): { username: string; password: string } {
   }
 }
 
+function sandboxCredentialCandidates(): Array<{ username: string; password: string }> {
+  const base = sandboxLinkCredentials()
+  const extraUser = process.env.BANKING_BELVO_SANDBOX_USERNAME_ALT?.trim()
+  const extraPass = process.env.BANKING_BELVO_SANDBOX_PASSWORD_ALT?.trim()
+  const candidates = [
+    base,
+    { username: "belvouser100", password: "sandbox" },
+    { username: "12345678900", password: "sandbox" },
+    { username: "test", password: "test" },
+    extraUser && extraPass ? { username: extraUser, password: extraPass } : null,
+  ].filter(Boolean) as Array<{ username: string; password: string }>
+  const seen = new Set<string>()
+  return candidates.filter((c) => {
+    const key = `${c.username}::${c.password}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
 /** Host sandbox Belvo (links Colombia suelen exigir `username_type` 103 o 104). */
 export function isBelvoSandboxBase(baseUrl: string): boolean {
   const u = baseUrl.toLowerCase()
@@ -110,6 +130,11 @@ function resolveLinkUsernameType(explicit: number | undefined): number {
     return explicit
   }
   return getBelvoSandboxUsernameType()
+}
+
+function usernameTypeCandidates(explicit?: number): number[] {
+  const primary = resolveLinkUsernameType(explicit)
+  return primary === 103 ? [103, 104] : [104, 103]
 }
 
 export function isBelvoBankingConfigured(): boolean {
@@ -312,24 +337,40 @@ async function registerBelvoLink(
   usernameType: number | undefined,
   orvitaColombiaBankFlow: boolean,
 ): Promise<string> {
-  const creds = sandboxLinkCredentials()
-  const payload: Record<string, unknown> = {
-    institution,
-    username: creds.username,
-    password: creds.password,
-  }
-  if (isBelvoSandboxBase(base)) {
-    payload.country_codes = ["CO"]
-  }
-  const ut = resolveLinkUsernameType(usernameType)
-  payload.username_type = ut
+  const sandbox = isBelvoSandboxBase(base)
+  const credentials = sandbox ? sandboxCredentialCandidates() : [sandboxLinkCredentials()]
+  const types = usernameTypeCandidates(usernameType)
+  let lastErr: unknown = null
 
-  const created = await belvoRequestJson<{ id?: string }>(base, "/api/links/", clientId, clientSecret, {
-    method: "POST",
-    json: payload,
-  })
-  if (!created.id) throw new Error("Belvo no devolvió id de link al registrar.")
-  return created.id
+  for (const creds of credentials) {
+    for (const ut of types) {
+      const payload: Record<string, unknown> = {
+        institution,
+        username: creds.username,
+        password: creds.password,
+        username_type: ut,
+      }
+      if (sandbox) payload.country_codes = ["CO"]
+      try {
+        const created = await belvoRequestJson<{ id?: string }>(base, "/api/links/", clientId, clientSecret, {
+          method: "POST",
+          json: payload,
+        })
+        if (!created.id) throw new Error("Belvo no devolvió id de link al registrar.")
+        return created.id
+      } catch (err) {
+        lastErr = err
+        const msg = err instanceof Error ? err.message.toLowerCase() : String(err).toLowerCase()
+        const retryable =
+          msg.includes("field=username") ||
+          msg.includes("incorrect credentials format") ||
+          msg.includes("username_type") ||
+          msg.includes("credentials")
+        if (!retryable) throw err
+      }
+    }
+  }
+  throw (lastErr instanceof Error ? lastErr : new Error("Belvo no permitió crear el link con las credenciales sandbox probadas."))
 }
 
 async function fetchBelvoAccounts(
@@ -489,6 +530,30 @@ export async function fetchBelvoAccountBalances(input: {
       belvoAccountId: id,
       balanceAvailable: pickNumber(bal.available, a.available_balance),
       balanceCurrent: pickNumber(bal.current, bal.available, a.current_balance),
+    }
+  })
+}
+
+export async function listBelvoInstitutions(input: { countryCode: "CO" | "BR" }) {
+  const env = getEnv("bancolombia")
+  if (env.fallback) return []
+  const raw = await belvoRequestJson<unknown>(
+    env.base,
+    `/api/institutions/?country_code=${encodeURIComponent(input.countryCode)}&page_size=100`,
+    env.clientId,
+    env.clientSecret,
+    { method: "GET" },
+  )
+  return normalizeBelvoList(raw).map((r) => {
+    const row = r as Record<string, unknown>
+    return {
+      id: row.id ?? null,
+      name: row.name ?? null,
+      display_name: row.display_name ?? null,
+      type: row.type ?? null,
+      country_codes: row.country_codes ?? [],
+      form_fields: row.form_fields ?? [],
+      status: row.status ?? null,
     }
   })
 }
