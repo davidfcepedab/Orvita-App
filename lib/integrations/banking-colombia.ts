@@ -181,12 +181,13 @@ function getBelvoLinkPayload(institutionSlug: string): BelvoLinkAttempt[] {
       },
     },
     {
-      label: "br-no-ut",
+      label: "br-ut-103",
       institution: institutionSlug,
       payload: {
         institution: institutionSlug,
         username,
         password: creds.password,
+        username_type: "103",
         country_codes: ["BR"],
       },
     },
@@ -203,12 +204,13 @@ function getBelvoLinkPayload(institutionSlug: string): BelvoLinkAttempt[] {
       },
     },
     {
-      label: "br-fallback-consent-no-ut",
+      label: "br-fallback-consent-ut-104",
       institution: fallbackInstitution,
       payload: {
         institution: fallbackInstitution,
         username: fallbackUsername,
         password: creds.password,
+        username_type: "104",
         country_codes: ["BR"],
         ...brMockConsent,
       },
