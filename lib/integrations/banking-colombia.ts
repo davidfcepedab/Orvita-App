@@ -364,35 +364,46 @@ async function registerBelvoLink(
   const types = usernameTypeCandidates(usernameType)
   let lastErr: unknown = null
   const isBrInstitution = isBelvoBrInstitution(institution)
+  const countryCodeVariants: Array<Array<"CO" | "BR"> | null> = sandbox
+    ? [sandboxCountryCodesForInstitution(institution), null]
+    : [null]
+  const usernameTypeVariants = (ut: number): Array<number | string | null> =>
+    isBrInstitution ? [ut, String(ut), null] : [ut, String(ut)]
 
   for (const creds of credentials) {
     for (const ut of types) {
       const usernameForInstitution = isBrInstitution
         ? (process.env.BANKING_BELVO_SANDBOX_CPF?.trim() || "12345678901")
         : creds.username
-      const payload: Record<string, unknown> = {
-        institution,
-        username: usernameForInstitution,
-        password: creds.password,
-      }
-      if (!isBrInstitution) payload.username_type = String(ut)
-      if (sandbox) payload.country_codes = sandboxCountryCodesForInstitution(institution)
-      try {
-        const created = await belvoRequestJson<{ id?: string }>(base, "/api/links/", clientId, clientSecret, {
-          method: "POST",
-          json: payload,
-        })
-        if (!created.id) throw new Error("Belvo no devolvió id de link al registrar.")
-        return created.id
-      } catch (err) {
-        lastErr = err
-        const msg = err instanceof Error ? err.message.toLowerCase() : String(err).toLowerCase()
-        const retryable =
-          msg.includes("field=username") ||
-          msg.includes("incorrect credentials format") ||
-          msg.includes("username_type") ||
-          msg.includes("credentials")
-        if (!retryable) throw err
+      for (const usernameTypeValue of usernameTypeVariants(ut)) {
+        for (const countryCodes of countryCodeVariants) {
+          const payload: Record<string, unknown> = {
+            institution,
+            username: usernameForInstitution,
+            password: creds.password,
+          }
+          if (usernameTypeValue !== null) payload.username_type = usernameTypeValue
+          if (countryCodes) payload.country_codes = countryCodes
+          try {
+            const created = await belvoRequestJson<{ id?: string }>(base, "/api/links/", clientId, clientSecret, {
+              method: "POST",
+              json: payload,
+            })
+            if (!created.id) throw new Error("Belvo no devolvió id de link al registrar.")
+            return created.id
+          } catch (err) {
+            lastErr = err
+            const msg = err instanceof Error ? err.message.toLowerCase() : String(err).toLowerCase()
+            const retryable =
+              msg.includes("field=username") ||
+              msg.includes("incorrect credentials format") ||
+              msg.includes("username_type") ||
+              msg.includes("credentials") ||
+              msg.includes("invalid_choice") ||
+              msg.includes("this field is required")
+            if (!retryable) throw err
+          }
+        }
       }
     }
   }
