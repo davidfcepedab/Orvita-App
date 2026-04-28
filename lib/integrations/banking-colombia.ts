@@ -50,11 +50,15 @@ function belvoInstitutionForProvider(provider: BankProvider): string {
   if (coDefault) return coDefault
   if (provider === "davivienda") return "davivienda_co_retail"
   if (provider === "nequi") return "nequi_co_retail"
-  return "bancolombia_co_retail"
+  return "ofmockbank_co_retail"
 }
 
 function belvoSandboxFallbackInstitution(): string {
-  return process.env.BANKING_BELVO_SANDBOX_FALLBACK_INSTITUTION?.trim() || "ofmockbank_br_retail"
+  return (
+    process.env.BANKING_BELVO_SANDBOX_FALLBACK_INSTITUTION?.trim() ||
+    process.env.BANKING_BELVO_SANDBOX_DEFAULT_INSTITUTION_CO?.trim() ||
+    "ofmockbank_co_retail"
+  )
 }
 
 function sandboxLinkCredentials(): { username: string; password: string } {
@@ -86,23 +90,11 @@ export function getBelvoSandboxUsernameType(): number {
 
 function isBelvoBrSandboxMockInstitution(institution: string): boolean {
   const ins = institution.toLowerCase()
-  return ins.includes("ofmockbank")
+  return ins.includes("ofmockbank_br")
 }
 
-/**
- * Enlaces Órvita (CO): siempre `username_type` salvo mock BR explícito (ofmockbank).
- */
-function linkRequiresUsernameType(institution: string, orvitaColombiaBankFlow: boolean): boolean {
-  if (!orvitaColombiaBankFlow) return false
-  return !isBelvoBrSandboxMockInstitution(institution)
-}
-
-function resolveLinkUsernameType(
-  institution: string,
-  explicit: number | undefined,
-  orvitaColombiaBankFlow: boolean,
-): number | undefined {
-  if (!linkRequiresUsernameType(institution, orvitaColombiaBankFlow)) return undefined
+/** Enlaces Órvita (CO): siempre `username_type` (103/104) incluso en sandbox. */
+function resolveLinkUsernameType(explicit: number | undefined): number {
   if (explicit !== undefined && Number.isFinite(explicit) && (explicit === 103 || explicit === 104)) {
     return explicit
   }
@@ -315,11 +307,11 @@ async function registerBelvoLink(
     username: creds.username,
     password: creds.password,
   }
-  if (isBelvoSandboxBase(base) && linkRequiresUsernameType(institution, orvitaColombiaBankFlow)) {
+  if (isBelvoSandboxBase(base)) {
     payload.country_codes = ["CO"]
   }
-  const ut = resolveLinkUsernameType(institution, usernameType, orvitaColombiaBankFlow)
-  if (ut !== undefined) payload.username_type = ut
+  const ut = resolveLinkUsernameType(usernameType)
+  payload.username_type = ut
 
   const created = await belvoRequestJson<{ id?: string }>(base, "/api/links/", clientId, clientSecret, {
     method: "POST",
