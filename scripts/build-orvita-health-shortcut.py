@@ -459,7 +459,7 @@ def get_named_variable(*, u: str, variable_name: str, custom_output_name: str) -
 
 
 def build_token_storage_prelude(*, ask_prompt: str) -> tuple[list[dict], str]:
-    """Devuelve (acciones, uuid_cabecera) donde uuid_cabecera alimenta x-orvita-import-token en el POST."""
+    """Devuelve (acciones, uuid_get_var) — el POST usa la variable `import_token` (get final)."""
     u_file = uid()
     u_text = uid()
     u_count = uid()
@@ -575,6 +575,20 @@ def build_flat_payload_items() -> list[dict]:
     return items
 
 
+def build_post_json_apple_bundle_items() -> list[dict]:
+    """Cuerpo POST: una sola clave `apple_bundle` = diccionario (mismo contrato que el atajo que ya funcionó en iOS)."""
+    return [
+        {
+            "WFItemType": 0,
+            "WFKey": text_plain("apple_bundle"),
+            "WFValue": {
+                "Value": text_token_variable("apple_bundle"),
+                "WFSerializationType": "WFTextTokenString",
+            },
+        }
+    ]
+
+
 def dictionary_from_items(*, u_dict: str, items: list[dict]) -> dict:
     return {
         "WFWorkflowActionIdentifier": "is.workflow.actions.dictionary",
@@ -592,8 +606,8 @@ def text_plain(s: str) -> dict:
     return {"Value": {"string": s}, "WFSerializationType": "WFTextTokenString"}
 
 
-def post_import(*, u_post: str, u_token: str, json_items: list[dict]) -> dict:
-    """POST con JSON plano (mismas entradas que el Diccionario previo)."""
+def post_import(*, u_post: str, json_items: list[dict]) -> dict:
+    """POST JSON: por defecto `{ apple_bundle: <variable apple_bundle> }` (API `extractHealthBundleFromBody`)."""
     return {
         "WFWorkflowActionIdentifier": "is.workflow.actions.downloadurl",
         "WFWorkflowActionParameters": {
@@ -616,7 +630,7 @@ def post_import(*, u_post: str, u_token: str, json_items: list[dict]) -> dict:
                             "WFItemType": 0,
                             "WFKey": text_plain("x-orvita-import-token"),
                             "WFValue": {
-                                "Value": text_token_string(u_token, "Provided Input"),
+                                "Value": text_token_variable("import_token"),
                                 "WFSerializationType": "WFTextTokenString",
                             },
                         },
@@ -769,27 +783,34 @@ def build_actions_full(
     u_set_wd = uid()
 
     u_dict = uid()
+    u_set_bundle = uid()
     u_post = uid()
     u_show = uid()
 
     if legacy_token_prompt:
         u_token = uid()
+        u_set_import_token = uid()
         token_actions: list[dict] = [
             ask_text(
                 u=u_token,
                 prompt="Pega el token de importación que generaste en Órvita (Configuración).",
             ),
+            set_variable_from_output(
+                u=u_set_import_token,
+                variable_name="import_token",
+                source_uuid=u_token,
+                source_output_name="Provided Input",
+            ),
         ]
-        u_header = u_token
     else:
-        token_actions, u_header = build_token_storage_prelude(
+        token_actions, _ = build_token_storage_prelude(
             ask_prompt="Pega tu token de Órvita",
         )
 
     actions: list[dict] = [
         comment(
-            "Token iCloud orvita_import_token.txt; métricas con variables *_num; POST JSON plano. "
-            "Derivadas training_load / recovery_score_proxy: servidor si faltan."
+            "Token iCloud orvita_import_token.txt; métricas *_num; Diccionario → variable apple_bundle; "
+            "POST JSON { apple_bundle }. Derivadas training_load / recovery_score_proxy: servidor si faltan."
         ),
         *token_actions,
         current_date(u=u_date),
@@ -877,7 +898,15 @@ def build_actions_full(
 
     json_items = build_flat_payload_items()
     actions.append(dictionary_from_items(u_dict=u_dict, items=json_items))
-    actions.append(post_import(u_post=u_post, u_token=u_header, json_items=json_items))
+    actions.append(
+        set_variable_from_output(
+            u=u_set_bundle,
+            variable_name="apple_bundle",
+            source_uuid=u_dict,
+            source_output_name="Dictionary",
+        )
+    )
+    actions.append(post_import(u_post=u_post, json_items=build_post_json_apple_bundle_items()))
     actions.append(success_notification(u=u_show))
     return actions
 
@@ -893,20 +922,27 @@ def build_actions_minimal(*, quantity_type_style: str, legacy_token_prompt: bool
     u_set_steps = uid()
     u_zero = uid()
     u_dict = uid()
+    u_set_bundle = uid()
     u_post = uid()
     u_show = uid()
 
     if legacy_token_prompt:
         u_token = uid()
+        u_set_import_token = uid()
         token_actions = [
             ask_text(
                 u=u_token,
                 prompt="Pega el token de importación que generaste en Órvita (Configuración).",
             ),
+            set_variable_from_output(
+                u=u_set_import_token,
+                variable_name="import_token",
+                source_uuid=u_token,
+                source_output_name="Provided Input",
+            ),
         ]
-        u_header = u_token
     else:
-        token_actions, u_header = build_token_storage_prelude(
+        token_actions, _ = build_token_storage_prelude(
             ask_prompt="Pega tu token de Órvita",
         )
 
@@ -956,10 +992,18 @@ def build_actions_minimal(*, quantity_type_style: str, legacy_token_prompt: bool
                 source_output_name="Number",
             )
         )
+    actions.append(dictionary_from_items(u_dict=u_dict, items=json_items))
+    actions.append(
+        set_variable_from_output(
+            u=u_set_bundle,
+            variable_name="apple_bundle",
+            source_uuid=u_dict,
+            source_output_name="Dictionary",
+        )
+    )
     actions.extend(
         [
-            dictionary_from_items(u_dict=u_dict, items=json_items),
-            post_import(u_post=u_post, u_token=u_header, json_items=json_items),
+            post_import(u_post=u_post, json_items=build_post_json_apple_bundle_items()),
             success_notification(u=u_show),
         ]
     )

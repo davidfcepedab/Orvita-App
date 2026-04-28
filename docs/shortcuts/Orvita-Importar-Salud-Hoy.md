@@ -15,7 +15,7 @@ Nombre exacto en la biblioteca de Atajos: **Orvita-Importar-Salud-Hoy** (debe co
 ## Endpoint
 
 - **URL:** `POST /api/integrations/health/apple/import` (producción: `https://orvita.app/api/integrations/health/apple/import`).
-- **Cuerpo:** JSON con al menos una métrica numérica; suele incluir `observed_at` (fecha del día, p. ej. `yyyy-MM-dd`) y claves planas o `entries` / `apple_bundle` según el cliente.
+- **Cuerpo:** JSON con al menos una métrica numérica; suele incluir `observed_at` (fecha del día, p. ej. `yyyy-MM-dd`). El atajo generado envía **`{ "apple_bundle": { … } }`**: un **Diccionario** con las métricas se guarda en la variable `apple_bundle` y el POST tiene una sola clave `apple_bundle` con ese valor (el servidor también acepta cuerpo plano con las mismas claves en la raíz o `entries`).
 
 ### Cabeceras recomendadas (Atajo)
 
@@ -37,7 +37,7 @@ Respuesta JSON incluye `health_metrics_source` con el valor aplicado.
 
 ## Métricas que lee el atajo generado (`build-orvita-health-shortcut.py`)
 
-El POST plano incluye (entre otras) lecturas de Apple Health alineadas al contrato del API:
+Las métricas van en el **Diccionario** (variable `apple_bundle`) y el POST JSON tiene solo **`apple_bundle`** como objeto anidado. Incluye (entre otras) lecturas de Apple Health alineadas al contrato del API:
 
 - Pasos, energía activa (kcal), **conteo de entrenos**, duración de entrenos (segundos → minutos en servidor).
 - Sueño (suma en segundos → horas en servidor), HRV (ms), FC en reposo, minutos de ejercicio / estar de pie, distancia, VO2 máx., etc.
@@ -57,7 +57,7 @@ El generador por defecto ya **no** las usa: hace **Buscar muestras de salud** co
 - En **Diccionario** y **Obtener contenido de URL**, cada valor debe mostrar la **pastilla azul** de la variable (`steps_num`, `workout_count`, etc.). Si ves **«0 elementos»** o JSON con valores `{}` vacíos, suele ser un **bug de serialización del plist**: cada clave del JSON debe llevar `WFItemType = 0` (texto/token con variable). Con `WFItemType = 1`, iOS interpreta un **subdiccionario vacío** («0 elementos»). El generador del repo ya usa `0` para todas las métricas; reinstala el `.shortcut` firmado desde Órvita.
 - Si aun así falta la pastilla, toca la celda y vuelve a elegir la variable desde **Variables**, o reimporta el atajo.
 
-Cabecera del token: debe ser exactamente **`x-orvita-import-token`** (no un nombre recortado tipo `x-orvita-imp…`); el valor debe ser la variable del archivo/token, no el placeholder «Texto».
+Cabecera del token: debe ser exactamente **`x-orvita-import-token`** (no un nombre recortado tipo `x-orvita-imp…`); el valor debe ser la variable **`import_token`** (archivo iCloud o token pegado en modo legacy), no el placeholder «Texto».
 
 ## Errores y notificación en iOS
 
