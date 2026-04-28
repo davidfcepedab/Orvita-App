@@ -1,4 +1,5 @@
 import type {
+  OperationalCommandDomain,
   OperationalContextData,
   OperationalDomain,
   OperationalTask,
@@ -8,8 +9,10 @@ const DOMAIN_PRIORITY: OperationalDomain[] = ["profesional", "agenda", "salud", 
 
 export type PressureBand = "bajo" | "moderado" | "alto"
 
-export function domainAccentVar(domain: OperationalDomain): string {
+export function domainAccentVar(domain: OperationalCommandDomain): string {
   switch (domain) {
+    case "capital":
+      return "var(--color-accent-finance)"
     case "agenda":
       return "var(--color-accent-agenda)"
     case "profesional":
@@ -22,8 +25,10 @@ export function domainAccentVar(domain: OperationalDomain): string {
   }
 }
 
-export function domainShortLabel(domain: OperationalDomain): string {
+export function domainShortLabel(domain: OperationalCommandDomain): string {
   switch (domain) {
+    case "capital":
+      return "Capital"
     case "agenda":
       return "Agenda"
     case "profesional":
@@ -46,16 +51,57 @@ export function sortTasksByDomainPriority(tasks: OperationalTask[]): Operational
 export type PrimaryCommand = {
   title: string
   subtitle?: string
-  domain?: OperationalDomain
+  domain?: OperationalCommandDomain
   taskId?: string
   timeHint?: string
   source: "api" | "task" | "insight" | "fallback"
 }
 
+function capitalPrimaryCommand(data: OperationalContextData | null): PrimaryCommand | null {
+  const cap = data?.capital
+  if (!cap) return null
+
+  const energy = energyPressureFromOperationalContext(data)
+
+  if (cap.pressure === "alta") {
+    return {
+      title:
+        "Protege la caja: abre Capital, revisa salidas del mes y evita compras impulsivas.",
+      subtitle:
+        energy.band === "alto"
+          ? "Presión financiera + energía baja — Palanca #1"
+          : "Palanca #1 · Dinero",
+      timeHint: "10–15 min en Capital",
+      source: "insight",
+      domain: "capital",
+    }
+  }
+
+  if (cap.pressure === "media" && cap.monthlyNetCop < 0) {
+    return {
+      title:
+        "Flujo neto del mes en rojo: concilia en Capital y recorta un gasto negociable.",
+      subtitle:
+        energy.band === "alto"
+          ? "Energía baja: solo decisiones pequeñas y descanso antes de gastar."
+          : "Palanca #1 · Dinero",
+      timeHint: "15–20 min",
+      source: "insight",
+      domain: "capital",
+    }
+  }
+
+  return null
+}
+
 /**
  * En producción, `next_action` solo existe en mock; priorizamos tareas abiertas por dominio.
+ * Si hay presión de capital (Belvo + flujo), Palanca #1 va primero.
  */
 export function derivePrimaryCommand(data: OperationalContextData | null): PrimaryCommand {
+  const capitalCmd = capitalPrimaryCommand(data)
+  if (capitalCmd) return capitalCmd
+
   const next = data?.next_action?.trim()
   if (next) {
     return {

@@ -1,11 +1,13 @@
 import type {
   AppleHealthContextSignals,
   Checkin,
+  OperationalCapitalSnapshot,
   OperationalContextData,
   OperationalHabit,
   OperationalTask,
 } from "@/lib/operational/types"
 import { buildAppleOperationalInsights } from "@/lib/health/appleOperationalMerge"
+import { buildStrategicCorrelatedInsights } from "@/lib/insights/buildStrategicDay"
 import { applyDerivedCommandFocusToContext } from "@/lib/hoy/commandDerivation"
 
 function normalizeScore(value: number | null | undefined) {
@@ -32,6 +34,8 @@ export function buildOperationalContext(params: {
   recentCheckinsDesc?: Checkin[] | null
   /** Última fila `health_metrics` (Apple / importación). null = sin señales recientes. */
   appleHealthLatest?: AppleHealthContextSignals | null
+  /** Belvo + resumen mensual (hogar). null si aún no hay señal. */
+  capital?: OperationalCapitalSnapshot | null
 }): OperationalContextData {
   const latest = params.latestCheckin
   const score_global_raw = latest?.score_global
@@ -61,6 +65,7 @@ export function buildOperationalContext(params: {
 
   const apple_health = params.appleHealthLatest ?? null
   const appleInsights = buildAppleOperationalInsights(score_salud, score_fisico, apple_health)
+  const capital = params.capital ?? null
 
   const base: OperationalContextData = {
     score_global,
@@ -77,9 +82,16 @@ export function buildOperationalContext(params: {
     prediction: null,
     insights: appleInsights,
     apple_health,
+    capital,
     today_tasks: params.tasks,
     habits: params.habits,
   }
 
-  return applyDerivedCommandFocusToContext(base)
+  const strategicDay = buildStrategicCorrelatedInsights(base)
+  const merged: OperationalContextData = {
+    ...base,
+    insights: [...strategicDay, ...appleInsights],
+  }
+
+  return applyDerivedCommandFocusToContext(merged)
 }

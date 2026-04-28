@@ -2,6 +2,24 @@ import type { HabitCompletionMetrics } from "@/lib/habits/habitMetrics"
 
 export type OperationalDomain = "salud" | "fisico" | "profesional" | "agenda"
 
+/** Foco de Palanca #1 (p. ej. comando derivado); no se usa en creación de tareas/hábitos. */
+export type OperationalCommandDomain = OperationalDomain | "capital"
+
+/** Presión de capital alineada a producto (alta / media / baja). */
+export type CapitalPressureLevel = "baja" | "media" | "alta"
+
+/** Instantánea Capital + Belvo para el sistema operativo estratégico. */
+export type OperationalCapitalSnapshot = {
+  totalBalanceCop: number
+  monthlyNetCop: number
+  pressure: CapitalPressureLevel
+  lastBankSyncAt: string | null
+  connectedAccounts: number
+  belvoSandbox: boolean
+  /** Link sandbox degradado (consent BR) aún con movimiento operativo. */
+  sandboxDegraded: boolean
+}
+
 export type HabitSuccessMetricType = "duracion" | "repeticiones" | "cantidad" | "si_no"
 
 /** Tipo de hábito para UI y reglas (p. ej. seguimiento de agua con ml). */
@@ -103,6 +121,8 @@ export interface OperationalContextData {
   insights: string[]
   /** null = sin datos Apple recientes en `health_metrics`. */
   apple_health: AppleHealthContextSignals | null
+  /** Capital (Belvo + flujo mensual del hogar); null si no hay datos útiles. */
+  capital: OperationalCapitalSnapshot | null
   today_tasks: OperationalTask[]
   habits: OperationalHabit[]
   next_action?: string
@@ -112,7 +132,7 @@ export interface OperationalContextData {
   /** Id de `operational_tasks` cuando el foco viene de la cola operativa (PATCH /api/tasks). */
   next_task_id?: string
   /** Dominio del foco para acentos de UI (p. ej. /hoy). */
-  command_focus_domain?: OperationalDomain
+  command_focus_domain?: OperationalCommandDomain
 }
 
 

@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useOrbitaSkin } from "@/app/contexts/AppContext"
 import { Activity, AlertCircle, CheckCircle2, Wind } from "lucide-react"
 import { useOperationalContext } from "@/app/hooks/useOperationalContext"
+import { StrategicDayCapitalHero } from "@/app/components/orbita-v3/strategic/StrategicDayCapitalHero"
 import { useHealthAutoMetrics } from "@/app/hooks/useHealthAutoMetrics"
 import type { OperationalHabit } from "@/lib/operational/types"
 
@@ -76,6 +77,8 @@ export default function HomeV3() {
           </button>
         ))}
       </div>
+
+      <StrategicDayCapitalHero capital={data?.capital} />
 
       <div className="space-y-4">
         {clusters.map((cluster) => (

@@ -147,4 +147,32 @@ describe("buildOperationalContext", () => {
     expect(context.apple_health?.sleep_hours).toBe(5.1)
     expect(context.insights.some((line) => /sueño/i.test(line))).toBe(true)
   })
+
+  test("prioriza Palanca #1 financiera cuando hay presión de capital alta", () => {
+    const context = buildOperationalContext({
+      tasks: [
+        {
+          id: "t-pro",
+          title: "Cerrar informe",
+          completed: false,
+          domain: "profesional",
+          created_at: "2026-03-26T11:00:00Z",
+        },
+      ],
+      habits: [],
+      latestCheckin: null,
+      capital: {
+        totalBalanceCop: 1_200_000,
+        monthlyNetCop: -400_000,
+        pressure: "alta",
+        lastBankSyncAt: "2026-04-28T12:00:00.000Z",
+        connectedAccounts: 1,
+        belvoSandbox: true,
+        sandboxDegraded: false,
+      },
+    })
+
+    expect(context.next_action).toMatch(/caja|Capital/i)
+    expect(context.command_focus_domain).toBe("capital")
+  })
 })

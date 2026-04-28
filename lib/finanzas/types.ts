@@ -18,4 +18,7 @@ export interface FinanceTransaction {
   created_at: string
   updated_at: string
   deleted_at?: string | null
+  /** Origen automático (p. ej. belvo) — ver migración `orbita_finance_tx_belvo_sync`. */
+  sync_source?: string | null
+  sync_external_id?: string | null
 }

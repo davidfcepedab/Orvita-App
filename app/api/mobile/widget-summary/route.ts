@@ -4,6 +4,7 @@ import type { AuthedRequest } from "@/lib/api/requireUser"
 import { requireUser } from "@/lib/api/requireUser"
 import { isAppMockMode } from "@/lib/checkins/flags"
 import { buildOperationalContext } from "@/lib/operational/context"
+import { fetchOperationalCapitalSnapshot } from "@/lib/operational/fetchOperationalCapital"
 import { mapHealthMetricsRowToAppleSignals } from "@/lib/health/appleOperationalMerge"
 import {
   mapCheckin,
@@ -60,38 +61,44 @@ function mockWidgetPayload(webBaseUrl: string): MobileWidgetSummary {
 async function widgetPayloadForUser(auth: AuthedRequest, webBaseUrl: string): Promise<MobileWidgetSummary> {
   const { supabase, userId } = auth
 
-  const [{ data: tasks }, { data: habits }, { data: latestCheckin }, { data: healthRow, error: healthError }] =
-    await Promise.all([
-      supabase
-        .from("operational_tasks")
-        .select("id,title,completed,domain,created_at")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(120),
-      supabase
-        .from("operational_habits")
-        .select("id,name,completed,domain,created_at,metadata")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(80),
-      supabase
-        .from("checkins")
-        .select("id,score_global,score_fisico,score_salud,score_profesional,created_at,updated_at")
-        .eq("user_id", userId)
-        .order("updated_at", { ascending: false })
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-      supabase
-        .from("health_metrics")
-        .select(
-          "observed_at, source, sleep_hours, hrv_ms, readiness_score, steps, calories, energy_index, resting_hr_bpm, apple_workouts_count, apple_workout_minutes, metadata",
-        )
-        .eq("user_id", userId)
-        .order("observed_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-    ])
+  const [
+    { data: tasks },
+    { data: habits },
+    { data: latestCheckin },
+    { data: healthRow, error: healthError },
+    capitalSnapshot,
+  ] = await Promise.all([
+    supabase
+      .from("operational_tasks")
+      .select("id,title,completed,domain,created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(120),
+    supabase
+      .from("operational_habits")
+      .select("id,name,completed,domain,created_at,metadata")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(80),
+    supabase
+      .from("checkins")
+      .select("id,score_global,score_fisico,score_salud,score_profesional,created_at,updated_at")
+      .eq("user_id", userId)
+      .order("updated_at", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("health_metrics")
+      .select(
+        "observed_at, source, sleep_hours, hrv_ms, readiness_score, steps, calories, energy_index, resting_hr_bpm, apple_workouts_count, apple_workout_minutes, metadata",
+      )
+      .eq("user_id", userId)
+      .order("observed_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    fetchOperationalCapitalSnapshot(supabase, userId),
+  ])
 
   if (healthError) throw healthError
 
@@ -105,6 +112,7 @@ async function widgetPayloadForUser(auth: AuthedRequest, webBaseUrl: string): Pr
     habits: mappedHabits,
     latestCheckin: latestCheckin ? mapCheckin(latestCheckin as CheckinRow) : null,
     appleHealthLatest,
+    capital: capitalSnapshot,
   })
 
   const operationalOpenTasks = mappedTasks.filter((t) => !t.completed).length

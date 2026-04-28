@@ -45,7 +45,8 @@ import {
   totalMeetingMinutes,
   type PressureBand,
 } from "@/lib/hoy/commandDerivation"
-import type { OperationalDomain, OperationalTask } from "@/lib/operational/types"
+import { StrategicDayCapitalHero } from "@/app/components/orbita-v3/strategic/StrategicDayCapitalHero"
+import type { OperationalCommandDomain, OperationalDomain, OperationalTask } from "@/lib/operational/types"
 
 const TIMELINE_FALLBACK_EXAMPLE = [
   { time: "08:00", label: "Bloque de trabajo profundo" },
@@ -309,7 +310,7 @@ export default function HoyCommandCenter() {
         subtitle: undefined as string | undefined,
         timeHint: undefined as string | undefined,
         taskId: undefined as string | undefined,
-        domain: undefined as OperationalDomain | undefined,
+        domain: undefined as OperationalCommandDomain | undefined,
       }
     }
     return {
@@ -494,6 +495,8 @@ export default function HoyCommandCenter() {
         </div>
       </nav>
 
+      <StrategicDayCapitalHero capital={ctx?.capital} />
+
       {/* —— Presión operativa —— */}
       <section aria-labelledby="hoy-pressure-heading" className="space-y-3">
         <div className="flex flex-wrap items-end justify-between gap-2">
@@ -660,6 +663,14 @@ export default function HoyCommandCenter() {
                       </>
                     )}
                   </button>
+                ) : primary.domain === "capital" ? (
+                  <Link
+                    href="/finanzas/overview"
+                    className="inline-flex min-h-[44px] items-center justify-center rounded-[var(--radius-button)] border border-[color-mix(in_srgb,var(--color-accent-finance)_38%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-finance)_10%,var(--color-surface-alt))] px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-text-primary)] motion-safe:hover:bg-[color-mix(in_srgb,var(--color-accent-finance)_16%,var(--color-surface-alt))]"
+                    style={{ textDecoration: "none" }}
+                  >
+                    Ir a Capital
+                  </Link>
                 ) : (
                   <Link
                     href="/agenda"

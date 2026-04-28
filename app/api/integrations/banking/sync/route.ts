@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
 import { createNotificationForUser } from "@/lib/notifications/createNotification"
 import { fetchBelvoAccountBalances, isBelvoBankingConfigured, syncBankingColombia } from "@/lib/integrations/banking-colombia"
+import {
+  mirrorBelvoTransactionsToOrbitaLedger,
+  rebuildSnapshotsForMonths,
+  resolveOrbitaFinanceAccountIdForBankAccount,
+} from "@/lib/integrations/mirrorBankingToOrbitaFinance"
+import { orbitaLedgerLabelForBankAccount } from "@/lib/integrations/orbitaLedgerLabel"
+import { getHouseholdId } from "@/lib/households/getHouseholdId"
 
 export const runtime = "nodejs"
 
@@ -19,9 +26,11 @@ export async function POST(req: NextRequest) {
     if (auth instanceof NextResponse) return auth
     const { userId, supabase } = auth
 
+    const householdId = await getHouseholdId(supabase, userId)
+
     const { data: accounts, error: accountsError } = await supabase
       .from("bank_accounts")
-      .select("id,provider,balance_current,account_name,metadata")
+      .select("id,provider,balance_current,account_name,account_mask,metadata")
       .eq("user_id", userId)
       .eq("connected", true)
 
@@ -95,30 +104,77 @@ export async function POST(req: NextRequest) {
           )
         }
 
-        const rows = externalTx
-          .filter((tx) => !tx.externalId || !existingIds.has(tx.externalId))
-          .map((tx) => {
-            const signed = tx.direction === "credit" ? Math.abs(tx.amount) : -Math.abs(tx.amount)
-            return {
-              user_id: userId,
-              bank_account_id: account.id,
-              posted_at: tx.postedAt,
-              description: tx.description,
-              amount: Math.abs(tx.amount),
-              direction: tx.direction,
-              category: tx.category,
-              metadata: {
-                provider,
-                sync: "belvo",
-                belvo_transaction_id: tx.externalId,
-              },
-            }
-          })
+        const freshTx = externalTx.filter((tx) => !tx.externalId || !existingIds.has(tx.externalId))
+
+        const rows = freshTx.map((tx) => {
+          return {
+            user_id: userId,
+            bank_account_id: account.id,
+            posted_at: tx.postedAt,
+            description: tx.description,
+            amount: Math.abs(tx.amount),
+            direction: tx.direction,
+            category: tx.category,
+            metadata: {
+              provider,
+              sync: "belvo",
+              belvo_transaction_id: tx.externalId,
+            },
+          }
+        })
 
         if (rows.length > 0) {
           const { error } = await supabase.from("transactions").insert(rows)
           if (error) throw new Error(error.message)
           inserted += rows.length
+        }
+
+        if (freshTx.length > 0 && householdId) {
+          const financeAccountId = await resolveOrbitaFinanceAccountIdForBankAccount(supabase, householdId, {
+            id: account.id,
+            account_name: account.account_name,
+            account_mask: account.account_mask,
+            metadata: account.metadata,
+          })
+          const prevMeta =
+            account.metadata && typeof account.metadata === "object"
+              ? (account.metadata as Record<string, unknown>)
+              : {}
+          if (financeAccountId && prevMeta.orbita_finance_account_id !== financeAccountId) {
+            const { error: metaErr } = await supabase
+              .from("bank_accounts")
+              .update({
+                metadata: { ...prevMeta, orbita_finance_account_id: financeAccountId },
+                updated_at: nowIso,
+              })
+              .eq("id", account.id)
+            if (metaErr) console.warn("[banking/sync] metadata orbita_finance_account_id", metaErr.message)
+          }
+
+          if (financeAccountId) {
+            const accountLabel = orbitaLedgerLabelForBankAccount({
+              account_name: account.account_name,
+              account_mask: account.account_mask,
+            })
+            const { snapshotMonthsTouched } = await mirrorBelvoTransactionsToOrbitaLedger({
+              supabase,
+              userId,
+              householdId,
+              bankAccount: {
+                id: account.id,
+                account_name: account.account_name,
+                account_mask: account.account_mask,
+                metadata: account.metadata,
+              },
+              financeAccountId,
+              accountLabel,
+              providerLabel: provider,
+              txs: freshTx,
+            })
+            if (snapshotMonthsTouched.length > 0) {
+              await rebuildSnapshotsForMonths(supabase, householdId, snapshotMonthsTouched)
+            }
+          }
         }
 
         let nextBalance: number | null = null
