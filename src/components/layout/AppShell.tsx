@@ -217,6 +217,16 @@ export function AppShell({
       }).format(new Date()),
     [],
   )
+  const headerDateLabelMobile = useMemo(
+    () =>
+      new Intl.DateTimeFormat("es-CO", {
+        timeZone: getAgendaDisplayTimeZone(),
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }).format(new Date()),
+    [],
+  )
 
   const navItems = useMemo(
     () => [
@@ -251,7 +261,7 @@ export function AppShell({
       >
         <div className="orbita-shell-inline orbita-header-bar mx-auto max-w-[1400px]">
           <div className="flex items-center justify-between gap-2 sm:gap-[var(--spacing-lg)]">
-            <div className="flex min-w-0 items-center gap-2 sm:flex-col sm:items-start sm:gap-1.5">
+            <div className="flex min-w-0 flex-col gap-0.5 sm:gap-1.5">
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2.5">
                 <span
                   className="h-2.5 w-2.5 shrink-0 rounded-full sm:h-[9px] sm:w-[9px]"
@@ -263,19 +273,25 @@ export function AppShell({
                   aria-hidden
                 />
                 <h1 className="orbita-large-title m-0 max-sm:text-[1.55rem]">Órvita</h1>
-                <span className="min-w-0 truncate text-[12px] font-medium leading-snug text-[var(--color-text-primary)] sm:hidden">
-                  {pathname.startsWith("/auth") && !isAppMockMode()
-                    ? "Inicia sesión"
-                    : userName == null
-                      ? isAppMockMode()
-                        ? "Cargando…"
-                        : "…"
-                      : `Hola, ${userName}`}
-                </span>
                 <span className="hidden text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-secondary)] sm:inline">
                   Sistema operativo estratégico
                 </span>
               </div>
+              <span className="min-w-0 truncate pl-[18px] text-[12px] font-medium leading-snug text-[var(--color-text-primary)] sm:hidden">
+                {pathname.startsWith("/auth") && !isAppMockMode()
+                  ? "Inicia sesión"
+                  : userName == null
+                    ? isAppMockMode()
+                      ? "Cargando…"
+                      : "…"
+                    : `Hola, ${userName}`}
+              </span>
+              <time
+                dateTime={agendaTodayYmd()}
+                className="w-fit pl-[18px] text-[11px] font-medium capitalize leading-snug text-[var(--color-text-secondary)] sm:hidden"
+              >
+                {headerDateLabelMobile}
+              </time>
               <div className="hidden min-w-0 flex-col gap-0.5 pl-[22px] sm:flex">
                 <span className="text-[14px] font-medium leading-snug tracking-[-0.01em] text-[var(--color-text-primary)] sm:text-[15px] max-sm:leading-snug">
                   {pathname.startsWith("/auth") && !isAppMockMode()
@@ -300,7 +316,7 @@ export function AppShell({
                 <button
                   type="button"
                   onClick={() => setOpen((prev) => !prev)}
-                  className="orbita-focus-ring relative h-16 w-16 overflow-hidden rounded-full border-0 bg-[color-mix(in_srgb,var(--color-surface-alt)_92%,transparent)] p-0 shadow-[0_3px_20px_color-mix(in_srgb,var(--color-text-primary)_16%,transparent)] ring-[3px] ring-[color-mix(in_srgb,var(--color-accent-primary)_48%,transparent)] ring-offset-2 ring-offset-[var(--color-background)] transition-[box-shadow,transform] hover:scale-[1.03] hover:shadow-[0_6px_24px_color-mix(in_srgb,var(--color-accent-primary)_22%,transparent)] active:scale-[0.98] sm:h-[3.5rem] sm:w-[3.5rem] sm:ring-2 sm:ring-offset-[3px]"
+                  className="orbita-focus-ring relative h-[4.25rem] w-[4.25rem] overflow-hidden rounded-full border-0 bg-[color-mix(in_srgb,var(--color-surface-alt)_92%,transparent)] p-0 shadow-[0_3px_20px_color-mix(in_srgb,var(--color-text-primary)_16%,transparent)] ring-[3px] ring-[color-mix(in_srgb,var(--color-accent-primary)_48%,transparent)] ring-offset-2 ring-offset-[var(--color-background)] transition-[box-shadow,transform] hover:scale-[1.03] hover:shadow-[0_6px_24px_color-mix(in_srgb,var(--color-accent-primary)_22%,transparent)] active:scale-[0.98] sm:h-[3.5rem] sm:w-[3.5rem] sm:ring-2 sm:ring-offset-[3px]"
                   aria-label="Menú de usuario"
                   aria-expanded={open}
                 >
@@ -308,7 +324,7 @@ export function AppShell({
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={avatarUrl} alt="" className="h-full w-full object-cover" width={64} height={64} />
                   ) : (
-                    <User className="mx-auto h-8 w-8 text-[var(--color-text-secondary)] sm:h-7 sm:w-7" aria-hidden />
+                    <User className="mx-auto h-9 w-9 text-[var(--color-text-secondary)] sm:h-7 sm:w-7" aria-hidden />
                   )}
                 </button>
                 {open && (
