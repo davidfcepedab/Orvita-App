@@ -1,4 +1,5 @@
 import {
+  buildOrvitaHistorialShortcutImportHref,
   buildOrvitaShortcutImportHref,
   buildOrvitaShortcutImportHrefXCallback,
   getOrvitaHealthShortcutIcloudUrl,
@@ -39,6 +40,16 @@ describe("orvitaHealthShortcut", () => {
     process.env.NEXT_PUBLIC_SITE_URL = "https://orvita.app"
     const h = buildOrvitaShortcutImportHrefXCallback()
     expect(h.startsWith("shortcuts://x-callback-url/import-shortcut?url=")).toBe(true)
+  })
+
+  test("historial import href points at historial .shortcut file", () => {
+    process.env.NEXT_PUBLIC_SITE_URL = "https://orvita.app"
+    const href = buildOrvitaHistorialShortcutImportHref()
+    expect(href).toMatch(/^shortcuts:\/\/import-shortcut\?url=/)
+    const after = href.split("?url=")[1]
+    expect(decodeURIComponent(after!)).toBe(
+      `https://orvita.app/shortcuts/Orvita-Salud-Historial-15Dias.shortcut?v=${ORVITA_HEALTH_SHORTCUT_ASSET_VERSION}`,
+    )
   })
 
   test("iCloud URL is null when unset; https only when set", () => {

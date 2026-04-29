@@ -11,8 +11,8 @@ o tarjetas «Acción desconocida» en el medio, suele ser **serialización** del
 permisos ni caché: prueba `--mode minimal` y/o `--omit-workout-duration-stat` (ver `--help`).
 
 Modo `full`: token → fecha ISO → por cada métrica: Buscar muestras (tipo + hoy) → Calcular (Suma/Media) o Conteo.
-`--variant historial-15d`: segundo plist «Orvita-Salud-Historial-15Dias» (mismo flujo; comentario en el atajo).
-→ Obtener números → Establecer variable (`*_num`) → diccionario y POST JSON **plano** (sin `apple_bundle`).
+`--variant historial-15d`: segundo plist «Orvita-Salud-Historial-15Dias» (mismo flujo y POST con `apple_bundle` que «hoy»; otro nombre en Atajos).
+→ Obtener números → Establecer variable (`*_num`) → diccionario y POST JSON con `apple_bundle`.
 Entrenos: conteo real y duración en segundos (suma de `Duration`) como variables distintas.
 Sueño: **Sleep Analysis**, inicio = hoy, **Valor no es Awake ni In Bed**, suma de Duración (y el conteo usa el mismo filtro).
 Variación manual por diccionario de fases (REM/Light/Deep/Core): ver `scripts/shortcuts/orvita-sleep-stages-orvita.txt`.
@@ -932,9 +932,9 @@ def build_actions_full(
 
 
 HISTORIAL_15D_INTRO = (
-    "Orvita · Salud Historial-15Dias: instálalo y ejecútalo una vez como primer paso (junto a la guía en la web); "
-    "luego usa «Importar Salud Hoy» y automatízalo dos veces al día. "
-    "Backfill de 15 fechas con filtros por día en el generador: en roadmap."
+    "Orvita · Salud Historial-15Dias: mismo flujo y mismos datos del día que «Importar Salud Hoy», "
+    "con otro nombre para poder instalarlo primero sin pisar el atajo diario. "
+    "Ejecútalo una vez si quieres; luego usa el atajo principal y automatízalo."
 )
 
 

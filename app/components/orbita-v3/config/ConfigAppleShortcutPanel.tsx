@@ -6,6 +6,8 @@ import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import type { OrbitaConfigTheme } from "@/app/components/orbita-v3/config/configThemeTypes"
 import { isStandaloneDisplayMode } from "@/lib/pwa/installPrompt"
 import {
+  buildOrvitaHistorialShortcutImportHref,
+  buildOrvitaHistorialShortcutImportHrefXCallback,
   buildOrvitaRunShortcutHref,
   buildOrvitaShortcutImportHref,
   buildOrvitaShortcutImportHrefXCallback,
@@ -14,6 +16,7 @@ import {
   getOrvitaHealthShortcutFileUrl,
   getOrvitaHealthShortcutIcloudUrl,
   isOrvitaShortcutImportFromHttpDev,
+  ORVITA_HEALTH_HISTORIAL15_SHORTCUT_NAME,
   ORVITA_HEALTH_SHORTCUT_NAME,
 } from "@/lib/shortcuts/orvitaHealthShortcut"
 
@@ -104,18 +107,29 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
     setIsPwaStandalone(isStandaloneDisplayMode())
   }, [])
 
-  const { shortcutInstallHref, shortcutInstallHrefAlt, runShortcutHref, fileUrl, historialFileUrl, instructionsUrl, icloudUrl } =
-    useMemo(() => {
-      return {
-        fileUrl: getOrvitaHealthShortcutDownloadFileUrl(),
-        historialFileUrl: getOrvitaHealthHistorial15ShortcutDownloadFileUrl(),
-        instructionsUrl: INSTRUCCIONES,
-        icloudUrl: getOrvitaHealthShortcutIcloudUrl(),
-        shortcutInstallHref: buildOrvitaShortcutImportHref(),
-        shortcutInstallHrefAlt: buildOrvitaShortcutImportHrefXCallback(),
-        runShortcutHref: buildOrvitaRunShortcutHref(),
-      }
-    }, [])
+  const {
+    shortcutInstallHref,
+    shortcutInstallHrefAlt,
+    historialInstallHref,
+    historialInstallHrefAlt,
+    runShortcutHref,
+    fileUrl,
+    historialFileUrl,
+    instructionsUrl,
+    icloudUrl,
+  } = useMemo(() => {
+    return {
+      fileUrl: getOrvitaHealthShortcutDownloadFileUrl(),
+      historialFileUrl: getOrvitaHealthHistorial15ShortcutDownloadFileUrl(),
+      instructionsUrl: INSTRUCCIONES,
+      icloudUrl: getOrvitaHealthShortcutIcloudUrl(),
+      shortcutInstallHref: buildOrvitaShortcutImportHref(),
+      shortcutInstallHrefAlt: buildOrvitaShortcutImportHrefXCallback(),
+      historialInstallHref: buildOrvitaHistorialShortcutImportHref(),
+      historialInstallHrefAlt: buildOrvitaHistorialShortcutImportHrefXCallback(),
+      runShortcutHref: buildOrvitaRunShortcutHref(),
+    }
+  }, [])
 
   const mintOrRegenerate = useCallback(async () => {
     setMinting(true)
@@ -216,13 +230,20 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
             <p className="text-sm font-semibold" style={{ color: theme.text }}>
               Tu atajo de Salud en el iPhone
             </p>
-            <p className="text-xs leading-relaxed" style={{ color: theme.textMuted }}>
-              Instálalo <strong className="font-medium text-inherit">una sola vez</strong> desde{" "}
-              <strong className="font-medium text-inherit">Safari</strong> (en el iPhone). Si algo falla, vuelve a descargarlo desde aquí.
-              {" "}
-              En Atajos, <strong className="font-medium text-inherit">no dupliques</strong> el atajo (los que acaban en «2» o «3»): esas copias
-              a veces dejan de enviar bien los datos. Mejor bórralas y vuelve a instalar el original desde Órvita.
-            </p>
+            {moduleCard ? (
+              <p className="text-xs leading-relaxed" style={{ color: theme.textMuted }}>
+                En el iPhone, usa <strong className="font-medium text-inherit">Safari</strong>. Instala el atajo una vez; si falla, bórralo en Atajos y
+                vuelve a instalarlo desde aquí (evita copias con «2» al final).
+              </p>
+            ) : (
+              <p className="text-xs leading-relaxed" style={{ color: theme.textMuted }}>
+                Instálalo <strong className="font-medium text-inherit">una sola vez</strong> desde{" "}
+                <strong className="font-medium text-inherit">Safari</strong> (en el iPhone). Si algo falla, vuelve a descargarlo desde aquí.
+                {" "}
+                En Atajos, <strong className="font-medium text-inherit">no dupliques</strong> el atajo (los que acaban en «2» o «3»): esas copias
+                a veces dejan de enviar bien los datos. Mejor bórralas y vuelve a instalar el original desde Órvita.
+              </p>
+            )}
           </div>
         </div>
 
@@ -261,6 +282,14 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
                 <Download className="h-3.5 w-3.5 shrink-0" aria-hidden />
                 {icloudUrl ? "Instalar desde Órvita" : "Instalar atajo"}
               </a>
+              <a
+                href={historialInstallHref}
+                className={`${moduleCard ? chipCta : subtleCta} no-underline flex`}
+                style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surface }}
+              >
+                <Download className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                Instalar atajo opcional (primer paso)
+              </a>
               {moduleCard ? null : (
                 <a
                   href={shortcutInstallHrefAlt}
@@ -268,6 +297,15 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
                   style={{ borderColor: theme.border, color: theme.textMuted, backgroundColor: theme.surface }}
                 >
                   Otra forma de abrirlo
+                </a>
+              )}
+              {moduleCard ? null : (
+                <a
+                  href={historialInstallHrefAlt}
+                  className={`${subtleCta} no-underline text-center sm:text-left flex`}
+                  style={{ borderColor: theme.border, color: theme.textMuted, backgroundColor: theme.surface }}
+                >
+                  Otra forma (atajo opcional)
                 </a>
               )}
             </>
@@ -309,18 +347,36 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
             style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surface }}
           >
             <Download className="h-3.5 w-3.5" aria-hidden />
-            Descargar atajo de histórico (15 días)
+            {moduleCard ? "Descargar atajo opcional" : "Descargar atajo opcional (archivo)"}
           </a>
-          <p
-            className="w-full basis-full text-[10px] leading-snug sm:text-[11px]"
-            style={{ color: theme.textMuted }}
-          >
-            <strong className="font-medium text-inherit">Primera vez:</strong> descarga{" "}
-            <strong className="font-medium text-inherit">Orvita-Salud-Historial-15Dias</strong>, ejecútalo y revisa Salud en Órvita; luego instala{" "}
-            <strong className="font-medium text-inherit">Orvita-Importar-Salud-Hoy</strong> y programa dos automatizaciones diarias (p. ej.{" "}
-            <strong className="font-medium text-inherit">01:00</strong> y <strong className="font-medium text-inherit">14:00</strong>) que lancen el
-            atajo diario. El histórico es el primer paso para dejar una base en la app; el archivo diario mantiene los datos al día.
-          </p>
+          {moduleCard ? (
+            <p className="w-full basis-full text-[10px] leading-snug sm:text-[11px]" style={{ color: theme.textMuted }}>
+              Opcional: <strong className="font-medium text-inherit">{ORVITA_HEALTH_HISTORIAL15_SHORTCUT_NAME}</strong> sirve para instalar primero sin
+              pisar el del día a día; hace lo mismo que el principal (datos del día). Luego usa{" "}
+              <strong className="font-medium text-inherit">{ORVITA_HEALTH_SHORTCUT_NAME}</strong> cada día o con automatizaciones.
+            </p>
+          ) : (
+            <p
+              className="w-full basis-full text-[10px] leading-snug sm:text-[11px]"
+              style={{ color: theme.textMuted }}
+            >
+              <strong className="font-medium text-inherit">Primera vez (recomendado):</strong> instala y ejecuta una vez{" "}
+              <strong className="font-medium text-inherit">{ORVITA_HEALTH_HISTORIAL15_SHORTCUT_NAME}</strong>, revisa Salud en Órvita; después instala{" "}
+              <strong className="font-medium text-inherit">{ORVITA_HEALTH_SHORTCUT_NAME}</strong>. Puedes programar en Atajos dos horas al día (por
+              ejemplo <strong className="font-medium text-inherit">01:00</strong> y <strong className="font-medium text-inherit">14:00</strong>) para
+              lanzar el atajo principal.
+            </p>
+          )}
+          {moduleCard ? (
+            <button
+              type="button"
+              onClick={() => setGuideOpen(true)}
+              className="w-full text-left text-[10px] font-medium underline-offset-2 hover:underline sm:text-[11px]"
+              style={{ color: theme.accent.health }}
+            >
+              Pasos y permisos (breve)
+            </button>
+          ) : null}
           {moduleCard ? null : (
             <button
               type="button"
@@ -349,15 +405,23 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
             <strong className="font-medium text-inherit">Archivos</strong>. En la web normal de Órvita suele bastar con tocar instalar desde Safari.
           </p>
         ) : null}
-        <p className="mt-3 rounded-lg border px-3 py-2 text-[11px] leading-relaxed sm:text-xs" style={{ borderColor: theme.border, color: theme.textMuted }}>
-          <span className="font-semibold" style={{ color: theme.text }}>
-            Que sea el atajo bueno:
-          </span>{" "}
-          en la app Atajos el nombre debe ser{" "}
-          <strong className="font-medium text-inherit">{ORVITA_HEALTH_SHORTCUT_NAME}</strong>, sin números raros al final. Si al
-          abrirlo ves recuadros de color en la lista de datos, va bien; si casi todo sale como texto gris vacío, no es la
-          instalación correcta: borra esa copia y vuelve a descargar desde esta página.
-        </p>
+        {moduleCard ? (
+          <p className="mt-2 text-[10px] leading-snug sm:text-[11px]" style={{ color: theme.textMuted }}>
+            En Atajos, el atajo diario debe llamarse exactamente{" "}
+            <strong className="font-medium text-inherit">{ORVITA_HEALTH_SHORTCUT_NAME}</strong> (sin «2»). Si al editarlo casi todo es gris vacío,
+            reinstálalo desde aquí.
+          </p>
+        ) : (
+          <p className="mt-3 rounded-lg border px-3 py-2 text-[11px] leading-relaxed sm:text-xs" style={{ borderColor: theme.border, color: theme.textMuted }}>
+            <span className="font-semibold" style={{ color: theme.text }}>
+              Que sea el atajo bueno:
+            </span>{" "}
+            en la app Atajos el nombre debe ser{" "}
+            <strong className="font-medium text-inherit">{ORVITA_HEALTH_SHORTCUT_NAME}</strong>, sin números raros al final. Si al
+            abrirlo ves recuadros de color en la lista de datos, va bien; si casi todo sale como texto gris vacío, no es la
+            instalación correcta: borra esa copia y vuelve a descargar desde esta página.
+          </p>
+        )}
       </div>
 
       <div
@@ -416,14 +480,24 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
             </button>
           ) : null}
           {isIOS ? (
-            <a
-              href={runShortcutHref}
-              className={`${subtleCta} no-underline flex`}
-              style={{ borderColor: theme.accent.health, color: theme.accent.health, backgroundColor: "transparent" }}
-            >
-              <Zap className="h-3.5 w-3.5" aria-hidden />
-              Abrir en Atajos
-            </a>
+            <>
+              <a
+                href={runShortcutHref}
+                className={`${subtleCta} no-underline flex`}
+                style={{ borderColor: theme.accent.health, color: theme.accent.health, backgroundColor: "transparent" }}
+              >
+                <Zap className="h-3.5 w-3.5" aria-hidden />
+                Abrir atajo diario
+              </a>
+              <a
+                href={buildOrvitaRunShortcutHref(ORVITA_HEALTH_HISTORIAL15_SHORTCUT_NAME)}
+                className={`${subtleCta} no-underline flex`}
+                style={{ borderColor: theme.border, color: theme.textMuted, backgroundColor: "transparent" }}
+              >
+                <Zap className="h-3.5 w-3.5" aria-hidden />
+                Abrir atajo opcional
+              </a>
+            </>
           ) : null}
         </div>
 

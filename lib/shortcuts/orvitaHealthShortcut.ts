@@ -8,7 +8,7 @@ import { siteOrigin } from "@/lib/site/origin"
  * "el archivo no existe" hasta que reinstales el .shortcut o restaures el nombre.
  */
 /** Bust de caché en enlaces de descarga (CDN / PWA). Subir cuando cambie el binario en `public/shortcuts/`. */
-export const ORVITA_HEALTH_SHORTCUT_ASSET_VERSION = "20260429j"
+export const ORVITA_HEALTH_SHORTCUT_ASSET_VERSION = "20260429k"
 
 /** Nombre exacto en la biblioteca de Atajos (debe coincidir con «Nombre del atajo» al compartir / ejecutar). */
 export const ORVITA_HEALTH_SHORTCUT_NAME = "Orvita-Importar-Salud-Hoy"
@@ -81,6 +81,36 @@ export function getOrvitaHealthShortcutDownloadFileUrl(): string {
   return `${window.location.origin}${ORVITA_HEALTH_SHORTCUT_FILE_PATH}${q}`
 }
 
+/**
+ * URL absoluta HTTPS al .shortcut del «primer paso» (mismo contrato que el diario; otro nombre en Atajos).
+ * Usar con `shortcuts://import-shortcut?url=…` en el iPhone (no solo `<a download>`).
+ */
+export function getOrvitaHealthHistorial15ShortcutFileUrl(): string {
+  const q = shortcutAssetQuery()
+  if (typeof window === "undefined") {
+    return `${siteOrigin()}${ORVITA_HEALTH_HISTORIAL15_SHORTCUT_FILE_PATH}${q}`
+  }
+
+  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, "")
+  if (fromEnv) {
+    return `${fromEnv}${ORVITA_HEALTH_HISTORIAL15_SHORTCUT_FILE_PATH}${q}`
+  }
+
+  if (window.location.protocol === "https:") {
+    return `${window.location.origin}${ORVITA_HEALTH_HISTORIAL15_SHORTCUT_FILE_PATH}${q}`
+  }
+
+  if (
+    window.location.origin &&
+    (window.location.hostname === "localhost" ||
+      /^[0-9.]+$/u.test(window.location.hostname))
+  ) {
+    return `${window.location.origin}${ORVITA_HEALTH_HISTORIAL15_SHORTCUT_FILE_PATH}${q}`
+  }
+
+  return `https://orvita.app${ORVITA_HEALTH_HISTORIAL15_SHORTCUT_FILE_PATH}${q}`
+}
+
 /** Descarga del segundo atajo (histórico / instalación paralela). */
 export function getOrvitaHealthHistorial15ShortcutDownloadFileUrl(): string {
   const q = shortcutAssetQuery()
@@ -102,6 +132,15 @@ export function buildOrvitaShortcutImportHref(): string {
 /** Algunas versiones o contextos (p. ej. visor in-app) responden mejor a x-callback-url. Misma `url` codificada. */
 export function buildOrvitaShortcutImportHrefXCallback(): string {
   return `shortcuts://x-callback-url/import-shortcut?url=${encodeURIComponent(getOrvitaHealthShortcutFileUrl())}`
+}
+
+/** Abre Atajos para importar el atajo «primer paso» (histórico / nombre paralelo). */
+export function buildOrvitaHistorialShortcutImportHref(): string {
+  return `shortcuts://import-shortcut?url=${encodeURIComponent(getOrvitaHealthHistorial15ShortcutFileUrl())}`
+}
+
+export function buildOrvitaHistorialShortcutImportHrefXCallback(): string {
+  return `shortcuts://x-callback-url/import-shortcut?url=${encodeURIComponent(getOrvitaHealthHistorial15ShortcutFileUrl())}`
 }
 
 /** @param shortcutName Nombre del atajo tal como aparece en la biblioteca de Atajos; por defecto el canónico. */

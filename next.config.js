@@ -63,6 +63,20 @@ const nextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
         ],
       },
+      {
+        source: "/shortcuts/Orvita-Salud-Historial-15Dias.shortcut",
+        headers: [
+          {
+            key: "Content-Type",
+            value: "application/octet-stream",
+          },
+          {
+            key: "Content-Disposition",
+            value: 'attachment; filename="Orvita-Salud-Historial-15Dias.shortcut"',
+          },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+        ],
+      },
     ]
   },
 }
