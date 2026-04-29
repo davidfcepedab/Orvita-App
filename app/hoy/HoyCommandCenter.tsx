@@ -774,39 +774,47 @@ export default function HoyCommandCenter() {
           </Card>
         </div>
 
-        <aside className="flex min-w-0 flex-col gap-[var(--layout-gap)]">
-          <div className="space-y-2">
-            <SectionLabel>Acciones de alto impacto</SectionLabel>
-            <p className="m-0 text-[11px] text-[var(--color-text-secondary)]">
-              Tres palancas. Una mirada.
-            </p>
+        <aside className="flex min-w-0 flex-col gap-5 lg:gap-6">
+          <Card className="p-4">
+            <div className="mb-3 flex items-start gap-2 border-b border-[color-mix(in_srgb,var(--color-border)_75%,transparent)] pb-3">
+              <Zap className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-accent-primary)]" aria-hidden />
+              <div className="min-w-0">
+                <SectionLabel>Acciones de alto impacto</SectionLabel>
+                <p className="m-0 mt-1.5 text-[11px] leading-snug text-[var(--color-text-secondary)]">
+                  Tres palancas. Una mirada.
+                </p>
+              </div>
+            </div>
             <div className="grid gap-2">
               {IMPACT_LINKS.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="group flex min-h-[52px] items-center justify-between gap-3 rounded-[var(--radius-card)] border px-3 py-3 motion-safe:transition-[box-shadow,transform,background-color,border-color] motion-safe:duration-300 motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-[var(--shadow-hover)]"
-                  style={{
-                    textDecoration: "none",
-                    background: `color-mix(in srgb, ${item.accent} 12%, var(--color-surface))`,
-                    borderColor: `color-mix(in srgb, ${item.accent} 34%, var(--color-border))`,
-                  }}
+                  className="group flex min-h-[44px] items-stretch overflow-hidden rounded-lg border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-alt)_65%,var(--color-surface))] motion-safe:transition-[background-color,box-shadow] motion-safe:duration-200 motion-safe:hover:bg-[var(--color-surface-alt)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color-mix(in_srgb,var(--color-accent-primary)_38%,transparent)]"
+                  style={{ textDecoration: "none" }}
                 >
-                  <div className="min-w-0">
-                    <p className="m-0 text-sm font-semibold text-[var(--color-text-primary)]">{item.title}</p>
-                    <p className="m-0 text-[11px] text-[var(--color-text-secondary)]">{item.desc}</p>
-                  </div>
-                  <ChevronRight
-                    className="h-4 w-4 shrink-0 opacity-40 motion-safe:transition-transform motion-safe:duration-300 group-hover:translate-x-0.5"
-                    style={{ color: item.accent }}
+                  <span
+                    className="w-[3px] shrink-0 self-stretch"
+                    style={{ background: item.accent }}
                     aria-hidden
                   />
+                  <span className="flex min-w-0 flex-1 items-center justify-between gap-3 px-3 py-2">
+                    <span className="min-w-0">
+                      <span className="m-0 block text-sm font-semibold text-[var(--color-text-primary)]">{item.title}</span>
+                      <span className="m-0 block text-[11px] text-[var(--color-text-secondary)]">{item.desc}</span>
+                    </span>
+                    <ChevronRight
+                      className="h-4 w-4 shrink-0 opacity-45 motion-safe:transition-transform motion-safe:duration-200 group-hover:translate-x-0.5"
+                      style={{ color: item.accent }}
+                      aria-hidden
+                    />
+                  </span>
                 </Link>
               ))}
             </div>
-          </div>
+          </Card>
 
-          <Card hover className="p-4">
+          <Card className="p-4">
             <div className="mb-3 flex items-center gap-2">
               <Target className="h-4 w-4 text-[var(--color-accent-health)]" aria-hidden />
               <SectionLabel>Hábitos clave</SectionLabel>
