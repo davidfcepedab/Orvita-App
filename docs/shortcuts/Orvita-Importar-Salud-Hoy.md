@@ -63,8 +63,25 @@ El generador por defecto ya **no** las usa: hace **Buscar muestras de salud** co
 - Si en tu Mac necesitas el plist **antiguo**:  
   `python3 scripts/build-orvita-health-shortcut.py --legacy-workout-actions`
 - Tras regenerar, vuelve a firmar el `.shortcut` y reinstálalo en el iPhone (borra el atajo roto antes).
-- En **Diccionario** y **Obtener contenido de URL**, cada valor debe mostrar la **pastilla azul** de la variable (`steps_num`, `workout_count`, etc.). Si ves **«0 elementos»** o JSON con valores `{}` vacíos, suele ser un **bug de serialización del plist**: cada clave del JSON debe llevar `WFItemType = 0` (texto/token con variable). Con `WFItemType = 1`, iOS interpreta un **subdiccionario vacío** («0 elementos»). El generador del repo ya usa `0` para todas las métricas; reinstala el `.shortcut` firmado desde Órvita.
+- En **Diccionario** y **Obtener contenido de URL**, cada valor debe mostrar la **pastilla azul** de la variable (`steps_num`, `workouts_count_num`, `workouts_duration_seconds_num`, etc.). Si ves **«0 elementos»** o JSON con valores `{}` vacíos, suele ser un **bug de serialización del plist**: cada clave del JSON debe llevar `WFItemType = 0` (texto/token con variable). Con `WFItemType = 1`, iOS interpreta un **subdiccionario vacío** («0 elementos»). El generador del repo ya usa `0` para todas las métricas; reinstala el `.shortcut` firmado desde Órvita.
 - Si aun así falta la pastilla, toca la celda y vuelve a elegir la variable desde **Variables**, o reimporta el atajo.
+
+### Placeholder «Texto» gris, JSON con `""` y enlaces de instalación
+
+Si en el diccionario o en **Obtener contenido de URL** los valores aparecen como **«Texto»** (gris) y no como pastilla azul, Atajos está enviando **cadenas vacías**: el servidor y cualquier flujo que dependa del cuerpo (p. ej. compartir / reimportar el atajo) verán **todo sin valor**. No basta con repetir los **nombres** de las claves JSON en la columna de valor: hay que enlazar la **salida de una acción anterior** o una **variable** creada con **Establecer variable** (como en el `.shortcut` generado). Un atajo duplicado a mano («Orvita-Importar-Salud-Hoy 2») suele quedar así hasta que vuelvas a insertar cada variable.
+
+### Pastillas rojas en entrenos (workouts)
+
+La **clave** del diccionario es la del contrato API (`workouts_count`, `workouts_duration_seconds`). El **valor** debe ser la variable numérica del flujo, **no** el mismo texto que la clave:
+
+| Clave en el diccionario (JSON) | Variable que debe aparecer en la pastilla |
+|--------------------------------|---------------------------------------------|
+| `workouts_count` | `workouts_count_num` (salida de **Contar** sobre muestras tipo Workouts) |
+| `workouts_duration_seconds` | `workouts_duration_seconds_num` (suma de duraciones + **Obtener números**) |
+
+Si pones `workouts_duration_seconds` como valor, Atajos lo trata como texto o referencia rota → **pastilla roja** y valor vacío al ejecutar. Los permisos de Salud para Atajos pueden estar bien (como en tu captura); el fallo entonces es de **cableado** o de un paso previo roto (**Acción desconocida** tras un plist antiguo).
+
+**Demo con «Entrenamiento»:** mostrar `[Entrenamiento]` en un aviso prueba que el objeto **Workout** existe; eso no reemplaza el flujo del atajo Órvita, que necesita **conteo** y **suma de duraciones** vía muestras de salud. Si en **Filtrar [Entrenamiento]** el tipo queda en **Pasos** u otra categoría que no son entrenos, el filtro no devuelve entrenos aunque otros atajos lean pasos bien.
 
 Cabecera del token: debe ser exactamente **`x-orvita-import-token`** (no un nombre recortado tipo `x-orvita-imp…`); el valor debe ser la variable **`import_token`** (archivo iCloud o token pegado en modo legacy), no el placeholder «Texto».
 

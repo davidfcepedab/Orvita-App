@@ -87,7 +87,7 @@ function NavButton({
       className={clsx(
         "orbita-focus-ring flex min-h-[48px] flex-col items-center justify-center gap-0.5 rounded-[var(--radius-card)] px-0.5 transition-[color,background-color,box-shadow,transform] active:opacity-90 sm:min-h-[52px] sm:gap-1",
         isCenter
-          ? "relative z-[1] w-[4.75rem] shrink-0 flex-none sm:w-[5.25rem]"
+          ? "relative z-[1] w-[5rem] shrink-0 flex-none sm:w-[5.5rem]"
           : "min-w-0 flex-1 basis-0",
         active ? "orbita-chrome-tab-active" : "orbita-chrome-tab-idle",
         isCenter &&
@@ -139,8 +139,8 @@ export default function BottomNav() {
       className="orbita-chrome-surface fixed bottom-0 left-0 right-0 z-[100] border-t border-[color-mix(in_srgb,var(--color-border)_85%,transparent)] pb-[env(safe-area-inset-bottom,0px)] shadow-nav md:hidden"
       aria-label="Navegación principal"
     >
-      <div className="orbita-bottom-nav-safe mx-auto grid w-full max-w-[1400px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-end gap-x-1.5 px-2 py-2 sm:gap-x-2 sm:px-3 sm:py-3">
-        <div className="flex min-w-0 justify-end gap-0.5 sm:gap-1">
+      <div className="orbita-bottom-nav-safe mx-auto grid w-full max-w-[1400px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2 px-2 py-2.5 sm:gap-x-2.5 sm:px-3 sm:py-3">
+        <div className="flex min-w-0 items-stretch justify-end gap-1 sm:gap-1.5">
           {left.map((tab) => (
             <NavButton
               key={tab.route}
@@ -151,7 +151,7 @@ export default function BottomNav() {
           ))}
         </div>
 
-        <div className="isolate flex justify-center px-0.5 sm:px-1">
+        <div className="isolate flex items-center justify-center self-center px-1 sm:px-1.5">
           <NavButton
             tab={center}
             active={center.match(pathname)}
@@ -159,7 +159,7 @@ export default function BottomNav() {
           />
         </div>
 
-        <div className="flex min-w-0 justify-start gap-0.5 sm:gap-1">
+        <div className="flex min-w-0 items-stretch justify-start gap-1 sm:gap-1.5">
           {right.map((tab) => (
             <NavButton
               key={tab.route}

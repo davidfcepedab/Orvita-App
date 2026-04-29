@@ -512,7 +512,7 @@ def build_flat_payload_items() -> list[dict]:
     for _var, payload_key in [
         ("steps_num", "steps"),
         ("active_energy_num", "active_energy_kcal"),
-        ("workout_count", "workouts_count"),
+        ("workouts_count_num", "workouts_count"),
         ("workouts_duration_seconds_num", "workouts_duration_seconds"),
         ("sleep_duration_num", "sleep_duration_seconds"),
         ("resting_hr_num", "resting_hr_bpm"),
@@ -814,7 +814,7 @@ def build_actions_full(
     actions.append(
         set_variable_from_output(
             u=u_set_wc,
-            variable_name="workout_count",
+            variable_name="workouts_count_num",
             source_uuid=u_count_workouts,
             source_output_name="Count",
         )
@@ -955,7 +955,7 @@ def build_actions_minimal(*, quantity_type_style: str, legacy_token_prompt: bool
         "vo2max_num",
         "sleep_duration_num",
         "sleep_sessions_count_num",
-        "workout_count",
+        "workouts_count_num",
         "workouts_duration_seconds_num",
     ]
     actions: list[dict] = [

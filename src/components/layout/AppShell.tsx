@@ -308,19 +308,19 @@ export function AppShell({
                 {loggingOut ? "Saliendo..." : "Salir"}
               </button>
 
-              <div className="relative">
+              <div className="relative shrink-0">
                 <button
                   type="button"
                   onClick={() => setOpen((prev) => !prev)}
-                  className="orbita-icon-button orbita-focus-ring h-11 w-11 overflow-hidden rounded-full p-0 ring-1 ring-[color-mix(in_srgb,var(--color-border)_65%,transparent)] sm:h-9 sm:w-9 sm:ring-0"
+                  className="orbita-focus-ring h-14 w-14 overflow-hidden rounded-full border-0 bg-[color-mix(in_srgb,var(--color-surface-alt)_90%,transparent)] p-0 shadow-[0_2px_14px_color-mix(in_srgb,var(--color-text-primary)_14%,transparent)] ring-2 ring-[color-mix(in_srgb,var(--color-accent-primary)_42%,transparent)] transition-[box-shadow,transform] hover:scale-[1.02] hover:shadow-[0_4px_18px_color-mix(in_srgb,var(--color-text-primary)_18%,transparent)] active:scale-[0.98] sm:h-12 sm:w-12 sm:ring-1 sm:ring-[color-mix(in_srgb,var(--color-accent-primary)_32%,transparent)]"
                   aria-label="Menú de usuario"
                   aria-expanded={open}
                 >
                   {avatarUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={avatarUrl} alt="" className="h-full w-full object-cover" width={44} height={44} />
+                    <img src={avatarUrl} alt="" className="h-full w-full object-cover" width={56} height={56} />
                   ) : (
-                    <User className="h-5 w-5 sm:h-4 sm:w-4" aria-hidden />
+                    <User className="mx-auto h-7 w-7 text-[var(--color-text-secondary)] sm:h-6 sm:w-6" aria-hidden />
                   )}
                 </button>
                 {open && (
