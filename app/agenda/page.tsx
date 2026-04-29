@@ -617,7 +617,7 @@ export default function AgendaPage() {
                     className="min-w-0 flex-1 border-0 bg-transparent text-[12px] text-[var(--color-text-primary)] outline-none placeholder:text-[var(--color-text-secondary)]"
                   />
                 </div>
-                <div className="flex w-full min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 sm:w-auto sm:flex-[0_1_auto] sm:justify-end">
+                <div className="hidden w-full min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 sm:flex sm:w-auto sm:flex-[0_1_auto] sm:justify-end">
                   <GoogleAgendaPanel
                     feed={googleTasksFeed}
                     compact
@@ -635,21 +635,33 @@ export default function AgendaPage() {
                   <button
                     type="button"
                     onClick={() => setMobileFiltersOpen((v) => !v)}
-                    className="flex w-full items-center justify-between rounded-md border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-2.5 py-1.5 text-left"
+                    className="flex w-full items-center justify-between rounded-md px-1 py-1 text-left"
                     aria-expanded={mobileFiltersOpen}
                     aria-controls="agenda-mobile-filters"
                   >
-                    <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-secondary)]">
-                      <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden />
+                    <span className="inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-[0.1em] text-[var(--color-text-secondary)]">
+                      <SlidersHorizontal className="h-3 w-3" aria-hidden />
                       Filtros
                     </span>
-                    <span className="inline-flex items-center gap-1.5 text-[10px] text-[var(--color-text-secondary)]">
+                    <span className="inline-flex items-center gap-1 text-[9px] text-[var(--color-text-secondary)]">
                       {mobileFilterCount > 0 ? `${mobileFilterCount} activos` : "Sin filtros"}
-                      {mobileFiltersOpen ? <ChevronUp className="h-3.5 w-3.5" aria-hidden /> : <ChevronDown className="h-3.5 w-3.5" aria-hidden />}
+                      {mobileFiltersOpen ? <ChevronUp className="h-3 w-3" aria-hidden /> : <ChevronDown className="h-3 w-3" aria-hidden />}
                     </span>
                   </button>
                 </div>
                 <div id="agenda-mobile-filters" className={`${mobileFiltersOpen ? "mt-1.5 flex flex-col gap-1" : "hidden"} sm:mt-0 sm:flex sm:flex-col sm:gap-y-1`}>
+                  <div className="flex w-full min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 sm:hidden">
+                    <GoogleAgendaPanel
+                      feed={googleTasksFeed}
+                      compact
+                      inlineCompact
+                      onAfterTasksSync={() => {
+                        void refresh()
+                        void googleCalendar.refresh()
+                        void googleTasksFeed.refresh()
+                      }}
+                    />
+                  </div>
                   <div className="hidden min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 sm:flex">
                     <AgendaColorLegend inline omitHeading sourcesOnly dense />
                   </div>
@@ -706,12 +718,33 @@ export default function AgendaPage() {
             </div>
 
             <div className="rounded-lg border border-[var(--color-border)] p-0.5 sm:p-1.5" style={agendaPanelSurfaceStyle}>
-              <div className="px-1 py-1 sm:hidden">
-                <p className="m-0 text-[9px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-secondary)]">
-                  Vista: {viewOptions.find((v) => v.key === view)?.label ?? "Lista"}
-                </p>
+              <div className="flex min-w-0 flex-row gap-1 sm:hidden" role="tablist" aria-label="Vista de agenda">
+                {viewOptions.map((item) => {
+                  const Icon = item.icon
+                  const active = view === item.key
+                  return (
+                    <button
+                      key={`mobile-${item.key}`}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      title={item.label}
+                      aria-label={`${item.label}: ${item.description}`}
+                      onClick={() => setView(item.key)}
+                      className="flex min-h-8 min-w-0 flex-1 items-center justify-center rounded-md px-1.5 py-1 transition-[background-color,border-color] duration-150"
+                      style={{
+                        border: active ? `1.5px solid ${item.color}` : "1px solid var(--color-border)",
+                        background: active
+                          ? `color-mix(in srgb, ${item.color} 12%, var(--color-surface-alt))`
+                          : "var(--color-surface-alt)",
+                      }}
+                    >
+                      <Icon size={14} strokeWidth={2} className="shrink-0" style={{ color: item.color }} aria-hidden />
+                    </button>
+                  )
+                })}
               </div>
-              <div className={`${mobileFiltersOpen ? "flex" : "hidden"} flex-col gap-1 sm:flex sm:flex-row sm:items-stretch sm:gap-2`}>
+              <div className="hidden sm:flex sm:flex-row sm:items-stretch sm:gap-2">
                 <div
                   className="flex min-w-0 flex-1 flex-row flex-wrap gap-0.5 sm:gap-1"
                   role="tablist"
