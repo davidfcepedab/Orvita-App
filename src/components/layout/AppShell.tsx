@@ -278,7 +278,7 @@ export function AppShell({
               </span>
             </div>
 
-            <div className="flex w-full flex-wrap items-center gap-2 max-sm:justify-between sm:w-auto sm:justify-end sm:gap-[var(--spacing-md)]">
+            <div className="flex w-full flex-wrap items-end gap-2 max-sm:justify-between sm:w-auto sm:items-center sm:justify-end sm:gap-[var(--spacing-md)]">
               <time
                 dateTime={agendaTodayYmd()}
                 className="min-w-0 max-sm:flex-1 max-sm:text-[12px] max-sm:font-medium shrink-0 text-[11px] capitalize text-[var(--color-text-secondary)] sm:w-auto sm:text-xs"
@@ -286,7 +286,7 @@ export function AppShell({
                 {headerDateLabel}
               </time>
 
-              <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5 sm:gap-[var(--spacing-md)]">
+              <div className="flex shrink-0 flex-wrap items-end justify-end gap-1.5 sm:items-center sm:gap-[var(--spacing-md)]">
               <NotificationsBell />
 
               <button
