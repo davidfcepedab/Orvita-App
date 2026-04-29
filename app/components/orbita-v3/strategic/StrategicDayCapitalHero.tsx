@@ -1,7 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import { Activity, Landmark, RefreshCw } from "lucide-react"
+import { Activity, Dumbbell, Landmark, RefreshCw } from "lucide-react"
+import { Card } from "@/src/components/ui/Card"
 import { formatInstantInAgendaTz, formatLocalDateLabelEsCo, formatStoredYmdLabelEsCo } from "@/lib/agenda/localDateKey"
 import type { AppleHealthContextSignals, OperationalCapitalSnapshot } from "@/lib/operational/types"
 
@@ -60,14 +61,22 @@ function formatShortcutImportDayLabel(h: AppleHealthContextSignals) {
 type Props = {
   capital?: OperationalCapitalSnapshot | null
   health?: AppleHealthContextSignals | null
+  /** En `/hoy` suele ocultarse el bloque Capital para dejar pulso + check-in. */
+  showCapital?: boolean
   className?: string
 }
 
 /**
- * Día estratégico: Apple Health (Atajo) + Capital. Inicio / Hoy.
+ * Día estratégico: Apple Health (Atajo) + Capital opcional. Inicio / Hoy.
  */
-export function StrategicDayHero({ capital, health, className = "" }: Props) {
-  if (!capital && !health) return null
+export function StrategicDayHero({
+  capital,
+  health,
+  showCapital = true,
+  className = "",
+}: Props) {
+  const showCapitalBlock = showCapital && Boolean(capital)
+  if (!showCapitalBlock && !health) return null
 
   const corr = health ? healthCorrelationLine(health) : null
   const shortcutBadge =
@@ -84,75 +93,92 @@ export function StrategicDayHero({ capital, health, className = "" }: Props) {
   return (
     <div className={`flex flex-col gap-4 ${className}`}>
       {health ? (
-        <section
-          aria-labelledby="strategic-health-hero-heading"
-          className="relative overflow-hidden rounded-[var(--radius-card)] border border-[color-mix(in_srgb,var(--color-accent-health)_28%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_7%,var(--color-surface))] p-4 shadow-[0_1px_0_color-mix(in_srgb,var(--color-border)_80%,transparent)] backdrop-blur-xl sm:p-5"
-        >
-          <div
-            className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full opacity-[0.12]"
-            style={{ background: "var(--color-accent-health)" }}
-            aria-hidden
-          />
-          <div className="relative flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0 space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <Activity className="h-4 w-4 shrink-0 text-[var(--color-accent-health)]" aria-hidden />
-                <p
-                  id="strategic-health-hero-heading"
-                  className="m-0 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-text-secondary)]"
-                >
-                  Salud · pulso del día
-                </p>
+        <section aria-labelledby="strategic-health-hero-heading">
+          <Card className="overflow-hidden p-0 shadow-[0_1px_0_color-mix(in_srgb,var(--color-border)_80%,transparent)]">
+            <div className="flex min-w-0 flex-col sm:flex-row">
+              <div
+                className="h-1 w-full shrink-0 sm:h-auto sm:w-1 sm:min-h-[8rem]"
+                style={{ background: "var(--color-accent-health)" }}
+                aria-hidden
+              />
+              <div className="flex min-w-0 flex-1 flex-col gap-4 p-4 sm:flex-row sm:items-stretch sm:justify-between sm:gap-6 sm:p-5">
+                <div className="min-w-0 flex-1 space-y-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Activity className="h-4 w-4 shrink-0 text-[var(--color-accent-health)]" aria-hidden />
+                    <p
+                      id="strategic-health-hero-heading"
+                      className="m-0 text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-text-secondary)]"
+                    >
+                      Pulso del día · Apple Health
+                    </p>
+                  </div>
+                  {corr ? (
+                    <p className="m-0 text-lg font-semibold leading-snug tracking-tight text-[var(--color-text-primary)] sm:text-xl">
+                      {corr}
+                    </p>
+                  ) : (
+                    <p className="m-0 text-sm leading-snug text-[var(--color-text-secondary)]">
+                      Datos de Apple listos; completa el check-in en{" "}
+                      <Link href="/checkin" className="font-medium text-[var(--color-accent-health)] underline-offset-2 hover:underline">
+                        Check-in
+                      </Link>{" "}
+                      para afinar el foco (misma lectura que en{" "}
+                      <Link href="/salud" className="font-medium text-[var(--color-accent-health)] underline-offset-2 hover:underline">
+                        Salud
+                      </Link>
+                      ).
+                    </p>
+                  )}
+                  <div className="grid grid-cols-3 gap-2 sm:max-w-lg">
+                    <div className="rounded-xl border border-[color-mix(in_srgb,var(--color-border)_75%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_6%,var(--color-surface-alt))] px-2 py-2 sm:px-3">
+                      <p className="m-0 text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
+                        Listo
+                      </p>
+                      <p className="m-0 mt-0.5 text-base font-bold tabular-nums text-[var(--color-text-primary)]">
+                        {health.readiness_score != null ? Math.round(health.readiness_score) : "—"}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-[color-mix(in_srgb,var(--color-border)_75%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_6%,var(--color-surface-alt))] px-2 py-2 sm:px-3">
+                      <p className="m-0 text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
+                        Pasos
+                      </p>
+                      <p className="m-0 mt-0.5 text-base font-bold tabular-nums text-[var(--color-text-primary)]">
+                        {health.steps != null ? health.steps.toLocaleString("es-CO") : "—"}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-[color-mix(in_srgb,var(--color-border)_75%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_6%,var(--color-surface-alt))] px-2 py-2 sm:px-3">
+                      <p className="m-0 text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
+                        Entrenos
+                      </p>
+                      <p className="m-0 mt-0.5 text-base font-bold tabular-nums text-[var(--color-text-primary)]">
+                        {health.workouts_count != null ? health.workouts_count : "—"}
+                      </p>
+                    </div>
+                  </div>
+                  {shortcutBadge}
+                </div>
+                <div className="flex shrink-0 flex-col gap-2 sm:max-w-[11rem] sm:justify-center">
+                  <Link
+                    href="/salud"
+                    className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--color-accent-health)_40%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_14%,var(--color-surface))] px-4 py-2.5 text-center text-xs font-semibold text-[var(--color-text-primary)] no-underline motion-safe:transition-opacity motion-safe:hover:opacity-90"
+                  >
+                    Ver Salud
+                  </Link>
+                  <Link
+                    href="/training"
+                    className="inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 py-2 text-center text-[11px] font-semibold text-[var(--color-text-secondary)] no-underline motion-safe:transition-colors motion-safe:hover:text-[var(--color-text-primary)]"
+                  >
+                    <Dumbbell className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
+                    Entrenamiento
+                  </Link>
+                </div>
               </div>
-              {corr ? (
-                <p className="m-0 text-[15px] font-medium leading-snug tracking-tight text-[var(--color-text-primary)] sm:text-base">
-                  {corr}
-                </p>
-              ) : (
-                <p className="m-0 text-sm text-[var(--color-text-secondary)]">
-                  Datos de Apple listos; completa el check-in para afinar el foco.
-                </p>
-              )}
-              <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-[var(--color-text-secondary)]">
-                {health.readiness_score != null ? (
-                  <span>
-                    Listo:{" "}
-                    <span className="font-semibold tabular-nums text-[var(--color-text-primary)]">
-                      {Math.round(health.readiness_score)}
-                    </span>
-                  </span>
-                ) : null}
-                {health.steps != null ? (
-                  <span>
-                    Pasos:{" "}
-                    <span className="font-semibold tabular-nums text-[var(--color-text-primary)]">
-                      {health.steps.toLocaleString("es-CO")}
-                    </span>
-                  </span>
-                ) : null}
-                {health.workouts_count != null ? (
-                  <span>
-                    Entrenos:{" "}
-                    <span className="font-semibold tabular-nums text-[var(--color-text-primary)]">
-                      {health.workouts_count}
-                    </span>
-                  </span>
-                ) : null}
-              </div>
-              {shortcutBadge}
             </div>
-            <Link
-              href="/salud"
-              className="inline-flex min-h-[44px] shrink-0 items-center justify-center self-start rounded-[var(--radius-button)] border border-[color-mix(in_srgb,var(--color-accent-health)_35%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_12%,var(--color-surface))] px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-primary)] motion-safe:transition-colors motion-safe:hover:bg-[color-mix(in_srgb,var(--color-accent-health)_18%,var(--color-surface))]"
-              style={{ textDecoration: "none" }}
-            >
-              Ver salud
-            </Link>
-          </div>
+          </Card>
         </section>
       ) : null}
 
-      {capital ? (
+      {showCapitalBlock && capital ? (
         <section
           aria-labelledby="strategic-capital-hero-heading"
           className="relative overflow-hidden rounded-[var(--radius-card)] border border-[color-mix(in_srgb,var(--color-accent-finance)_28%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-finance)_7%,var(--color-surface))] p-4 shadow-[0_1px_0_color-mix(in_srgb,var(--color-border)_80%,transparent)] backdrop-blur-xl sm:p-5"

@@ -159,6 +159,12 @@ const IMPACT_LINKS = [
   },
 ] as const
 
+const CHECKIN_DAY_SEGMENTS = [
+  { href: "/checkin#checkin-manana", label: "Mañana", hint: "Sueño · energía", Icon: Sunrise },
+  { href: "/checkin#checkin-dia", label: "Día", hint: "Foco · cuerpo · vínculos", Icon: Sun },
+  { href: "/checkin#checkin-noche", label: "Noche", hint: "Cierre · medidas", Icon: Moon },
+] as const
+
 export default function HoyCommandCenter() {
   const { data: ctx, loading: ctxLoading, error: ctxError, refetch: refetchCtx } = useOperationalContext()
   const { data: finance, loading: finLoading, error: finError, month: financeMonth } = useFinanceMonthSummary()
@@ -335,7 +341,11 @@ export default function HoyCommandCenter() {
     return moneyPressureFromMonth(finance.total_income_current, finance.total_expense_current)
   }, [finance])
 
-  const queueTasks = useMemo(() => sortTasksByDomainPriority(ctx?.today_tasks ?? []).slice(0, 6), [ctx?.today_tasks])
+  const queueTasks = useMemo(
+    () =>
+      sortTasksByDomainPriority((ctx?.today_tasks ?? []).filter((t) => !t.completed)).slice(0, 6),
+    [ctx?.today_tasks],
+  )
 
   const habitsShown = useMemo(() => habitHookList.slice(0, 5), [habitHookList])
   const habitsDone = habitHookList.filter((h) => h.completed).length
@@ -432,59 +442,42 @@ export default function HoyCommandCenter() {
         </div>
       </header>
 
-      <nav
-        aria-label="Check-in por momento del día"
-        className="min-w-0 rounded-[var(--radius-card)] border border-[color-mix(in_srgb,var(--color-accent-health)_30%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_9%,var(--color-surface))] p-3 sm:p-4"
-      >
-        <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
-          <div className="min-w-0 lg:max-w-xl lg:shrink">
-            <SectionLabel>Check-in del día</SectionLabel>
-            <p className="m-0 mt-1 text-xs leading-snug text-[var(--color-text-secondary)] [text-wrap:pretty]">
-              Tres momentos: abre el bloque que te toque. Al final, usa{" "}
-              <span className="font-medium text-[var(--color-text-primary)]">Guardar check-in completo</span>.
-            </p>
+      <nav aria-label="Check-in por momento del día" className="min-w-0">
+        <Card className="overflow-hidden p-0 shadow-[0_1px_0_color-mix(in_srgb,var(--color-border)_80%,transparent)]">
+          <div className="border-b border-[color-mix(in_srgb,var(--color-border)_85%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_5%,var(--color-surface))] px-4 py-3 sm:px-5 sm:py-3.5">
+            <div className="flex flex-wrap items-start gap-3 sm:items-center">
+              <div className="flex min-w-0 flex-1 items-start gap-2">
+                <Sunrise className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-accent-health)]" aria-hidden />
+                <div className="min-w-0">
+                  <SectionLabel>Check-in del día</SectionLabel>
+                  <p className="m-0 mt-1 text-xs leading-snug text-[var(--color-text-secondary)] [text-wrap:pretty]">
+                    Tres bloques al estilo <Link href="/salud" className="font-medium text-[var(--color-accent-health)] underline-offset-2 hover:underline">Salud</Link>. Al terminar,{" "}
+                    <span className="font-medium text-[var(--color-text-primary)]">Guardar check-in completo</span>.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="flex w-full min-w-0 flex-col gap-2 lg:w-auto lg:max-w-none lg:shrink-0">
-            <div className="grid min-w-0 grid-cols-3 gap-2 lg:flex lg:w-auto lg:gap-2">
-              {(
-                [
-                  {
-                    href: "/checkin#checkin-manana",
-                    label: "Mañana",
-                    hint: "Sueño · energía",
-                    Icon: Sunrise,
-                  },
-                  {
-                    href: "/checkin#checkin-dia",
-                    label: "Día",
-                    hint: "Foco · cuerpo · vínculos",
-                    Icon: Sun,
-                  },
-                  {
-                    href: "/checkin#checkin-noche",
-                    label: "Noche",
-                    hint: "Cierre · medidas",
-                    Icon: Moon,
-                  },
-                ] as const
-              ).map(({ href, label, hint, Icon }) => (
-                <Link
-                  key={href}
-                  href={href}
-                  className="inline-flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-[var(--radius-button)] border border-[color-mix(in_srgb,var(--color-accent-health)_22%,var(--color-border))] bg-[var(--color-surface)] px-1.5 py-2 text-center motion-safe:transition-[background,transform,border-color] motion-safe:active:scale-[0.99] motion-safe:hover:border-[color-mix(in_srgb,var(--color-accent-health)_40%,var(--color-border))] motion-safe:hover:bg-[var(--color-surface-alt)] sm:px-2.5 lg:min-h-[52px] lg:min-w-[6.25rem] lg:px-3"
-                  style={{ textDecoration: "none" }}
-                >
-                  <Icon className="h-3.5 w-3.5 shrink-0 text-[var(--color-accent-health)]" aria-hidden />
-                  <span className="text-[11px] font-semibold leading-tight text-[var(--color-text-primary)]">{label}</span>
-                  <span className="line-clamp-2 max-w-[11rem] text-[9px] leading-tight text-[var(--color-text-secondary)] sm:max-w-none">
-                    {hint}
-                  </span>
-                </Link>
-              ))}
+          <div className="p-3 sm:p-4">
+            <div className="rounded-xl bg-[var(--color-surface-alt)] p-1">
+              <div className="grid grid-cols-3 gap-1">
+                {CHECKIN_DAY_SEGMENTS.map(({ href, label, hint, Icon }) => (
+                  <Link
+                    key={href}
+                    href={href}
+                    className="flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg border border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] bg-[var(--color-surface)] px-1.5 py-2 text-center shadow-sm motion-safe:transition-[border-color,transform] motion-safe:active:scale-[0.99] motion-safe:hover:border-[color-mix(in_srgb,var(--color-accent-health)_38%,var(--color-border))] sm:min-h-[60px] sm:px-2.5 sm:py-2.5"
+                    style={{ textDecoration: "none" }}
+                  >
+                    <Icon className="h-4 w-4 shrink-0 text-[var(--color-accent-health)]" aria-hidden />
+                    <span className="text-[11px] font-semibold leading-tight text-[var(--color-text-primary)]">{label}</span>
+                    <span className="line-clamp-2 text-[9px] leading-tight text-[var(--color-text-secondary)] sm:text-[10px]">{hint}</span>
+                  </Link>
+                ))}
+              </div>
             </div>
             <Link
               href="/checkin"
-              className="inline-flex min-h-[48px] w-full min-w-0 items-center justify-center rounded-[var(--radius-button)] border border-dashed border-[color-mix(in_srgb,var(--color-accent-health)_28%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_6%,transparent)] px-2 py-2.5 text-center text-[10px] font-semibold uppercase leading-snug tracking-[0.1em] text-[var(--color-text-secondary)] motion-safe:hover:border-[var(--color-accent-health)] motion-safe:hover:text-[var(--color-text-primary)] sm:min-h-[52px] sm:px-4 lg:w-auto lg:self-center lg:px-5 lg:py-3"
+              className="mt-3 flex min-h-12 w-full items-center justify-center rounded-full border border-dashed border-[color-mix(in_srgb,var(--color-accent-health)_32%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_4%,transparent)] px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--color-text-secondary)] motion-safe:hover:border-[var(--color-accent-health)] motion-safe:hover:text-[var(--color-text-primary)]"
               style={{ textDecoration: "none" }}
               title="Abrir el check-in completo en una sola vista"
             >
@@ -492,10 +485,10 @@ export default function HoyCommandCenter() {
               <span className="inline min-[400px]:hidden [text-wrap:balance]">Formulario completo</span>
             </Link>
           </div>
-        </div>
+        </Card>
       </nav>
 
-      <StrategicDayHero capital={ctx?.capital} health={ctx?.apple_health} />
+      <StrategicDayHero capital={ctx?.capital} health={ctx?.apple_health} showCapital={false} />
 
       {/* —— Presión operativa —— */}
       <section aria-labelledby="hoy-pressure-heading" className="space-y-3">
@@ -790,25 +783,22 @@ export default function HoyCommandCenter() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="group flex min-h-[44px] items-stretch overflow-hidden rounded-lg border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-alt)_65%,var(--color-surface))] motion-safe:transition-[background-color,box-shadow] motion-safe:duration-200 motion-safe:hover:bg-[var(--color-surface-alt)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color-mix(in_srgb,var(--color-accent-primary)_38%,transparent)]"
-                  style={{ textDecoration: "none" }}
+                  className="group flex min-h-[52px] items-center justify-between gap-3 rounded-[var(--radius-card)] border px-3 py-3 motion-safe:transition-[box-shadow,transform,background-color,border-color] motion-safe:duration-300 motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-[var(--shadow-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color-mix(in_srgb,var(--color-accent-primary)_38%,transparent)]"
+                  style={{
+                    textDecoration: "none",
+                    background: `color-mix(in srgb, ${item.accent} 14%, var(--color-surface))`,
+                    borderColor: `color-mix(in srgb, ${item.accent} 38%, var(--color-border))`,
+                  }}
                 >
-                  <span
-                    className="w-[3px] shrink-0 self-stretch"
-                    style={{ background: item.accent }}
+                  <span className="min-w-0">
+                    <span className="m-0 block text-sm font-semibold text-[var(--color-text-primary)]">{item.title}</span>
+                    <span className="m-0 block text-[11px] text-[var(--color-text-secondary)]">{item.desc}</span>
+                  </span>
+                  <ChevronRight
+                    className="h-4 w-4 shrink-0 opacity-45 motion-safe:transition-transform motion-safe:duration-300 group-hover:translate-x-0.5"
+                    style={{ color: item.accent }}
                     aria-hidden
                   />
-                  <span className="flex min-w-0 flex-1 items-center justify-between gap-3 px-3 py-2">
-                    <span className="min-w-0">
-                      <span className="m-0 block text-sm font-semibold text-[var(--color-text-primary)]">{item.title}</span>
-                      <span className="m-0 block text-[11px] text-[var(--color-text-secondary)]">{item.desc}</span>
-                    </span>
-                    <ChevronRight
-                      className="h-4 w-4 shrink-0 opacity-45 motion-safe:transition-transform motion-safe:duration-200 group-hover:translate-x-0.5"
-                      style={{ color: item.accent }}
-                      aria-hidden
-                    />
-                  </span>
                 </Link>
               ))}
             </div>
