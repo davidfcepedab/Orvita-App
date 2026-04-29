@@ -384,49 +384,94 @@ export function VisualGoalGenerator({
               general no edita esta tabla.
             </p>
             {bodyMetricRows.length ? (
-              <div className="mt-2 overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-                <table className="w-full min-w-[520px] border-collapse text-left text-[11px]">
-                  <thead>
-                    <tr className="border-b border-slate-100 bg-slate-50/90 text-[9px] font-semibold uppercase tracking-wide text-slate-500">
-                      <th className="px-2 py-2">Medida</th>
-                      <th className="px-2 py-2">Hoy</th>
-                      <th className="px-2 py-2">Previo</th>
-                      <th className="px-2 py-2">Objetivo</th>
-                      <th className="px-2 py-2">Proyección</th>
-                      <th className="px-2 py-2">Meta</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {bodyMetricRows.map((row) => {
-                      const tg = trendGlyph(row.trend)
-                      return (
-                        <tr key={row.label} className="border-b border-slate-50 last:border-0">
-                          <td className="px-2 py-2 font-semibold text-slate-900">{row.label}</td>
-                          <td className="px-2 py-2 tabular-nums text-slate-800">
+              <>
+                <ul className="mt-2 flex list-none flex-col gap-2 p-0 lg:hidden">
+                  {bodyMetricRows.map((row) => {
+                    const tg = trendGlyph(row.trend)
+                    return (
+                      <li
+                        key={row.label}
+                        className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm"
+                      >
+                        <p className="m-0 text-sm font-semibold text-slate-900">{row.label}</p>
+                        <dl className="m-0 mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-[11px] leading-snug">
+                          <dt className="font-medium text-slate-400">Hoy</dt>
+                          <dd className="m-0 tabular-nums text-slate-800">
                             <span className="inline-flex items-center gap-0.5">
                               {row.current} <span className={`text-xs font-bold ${tg.className}`}>{tg.symbol}</span>
                             </span>
-                          </td>
-                          <td className="px-2 py-2 tabular-nums text-slate-600">{row.previous}</td>
-                          <td className="px-2 py-2 tabular-nums text-slate-600">{row.target}</td>
-                          <td className="px-2 py-2 tabular-nums text-slate-600">{row.projection}</td>
-                          <td className="px-2 py-2">
-                            <div className="flex items-center gap-2">
-                              <div className="h-1.5 min-w-[48px] flex-1 overflow-hidden rounded-full bg-slate-100">
+                          </dd>
+                          <dt className="font-medium text-slate-400">Previo</dt>
+                          <dd className="m-0 tabular-nums text-slate-600">{row.previous}</dd>
+                          <dt className="font-medium text-slate-400">Objetivo</dt>
+                          <dd className="m-0 tabular-nums text-slate-600">{row.target}</dd>
+                          <dt className="font-medium text-slate-400">Proyección</dt>
+                          <dd className="m-0 tabular-nums text-slate-600">{row.projection}</dd>
+                          <dt className="font-medium text-slate-400">Meta</dt>
+                          <dd className="m-0 min-w-0">
+                            <div className="flex max-w-full items-center gap-2">
+                              <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-slate-100">
                                 <div
                                   className="h-full rounded-full bg-teal-500"
                                   style={{ width: `${Math.min(100, Math.max(0, row.progressPct))}%` }}
                                 />
                               </div>
-                              <span className="shrink-0 tabular-nums text-[10px] font-semibold text-slate-600">{row.progressPct}%</span>
+                              <span className="shrink-0 tabular-nums text-[10px] font-semibold text-slate-600">
+                                {row.progressPct}%
+                              </span>
                             </div>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                          </dd>
+                        </dl>
+                      </li>
+                    )
+                  })}
+                </ul>
+                <div className="mt-2 hidden overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm lg:block">
+                  <table className="w-full min-w-[520px] border-collapse text-left text-[11px]">
+                    <thead>
+                      <tr className="border-b border-slate-100 bg-slate-50/90 text-[9px] font-semibold uppercase tracking-wide text-slate-500">
+                        <th className="px-2 py-2">Medida</th>
+                        <th className="px-2 py-2">Hoy</th>
+                        <th className="px-2 py-2">Previo</th>
+                        <th className="px-2 py-2">Objetivo</th>
+                        <th className="px-2 py-2">Proyección</th>
+                        <th className="px-2 py-2">Meta</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {bodyMetricRows.map((row) => {
+                        const tg = trendGlyph(row.trend)
+                        return (
+                          <tr key={row.label} className="border-b border-slate-50 last:border-0">
+                            <td className="px-2 py-2 font-semibold text-slate-900">{row.label}</td>
+                            <td className="px-2 py-2 tabular-nums text-slate-800">
+                              <span className="inline-flex items-center gap-0.5">
+                                {row.current} <span className={`text-xs font-bold ${tg.className}`}>{tg.symbol}</span>
+                              </span>
+                            </td>
+                            <td className="px-2 py-2 tabular-nums text-slate-600">{row.previous}</td>
+                            <td className="px-2 py-2 tabular-nums text-slate-600">{row.target}</td>
+                            <td className="px-2 py-2 tabular-nums text-slate-600">{row.projection}</td>
+                            <td className="px-2 py-2">
+                              <div className="flex items-center gap-2">
+                                <div className="h-1.5 min-w-[48px] flex-1 overflow-hidden rounded-full bg-slate-100">
+                                  <div
+                                    className="h-full rounded-full bg-teal-500"
+                                    style={{ width: `${Math.min(100, Math.max(0, row.progressPct))}%` }}
+                                  />
+                                </div>
+                                <span className="shrink-0 tabular-nums text-[10px] font-semibold text-slate-600">
+                                  {row.progressPct}%
+                                </span>
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             ) : (
               <p className="m-0 mt-2 text-xs leading-snug text-slate-500">
                 Sin filas en <span className="font-mono text-[10px]">bodyMetrics</span>. En modo demo se muestran datos de ejemplo;
@@ -437,7 +482,46 @@ export function VisualGoalGenerator({
 
           <div>
             <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Volumen por grupo (Hevy · esta semana)</p>
-            <div className="mt-2 overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+            <ul className="mt-2 flex list-none flex-col gap-2 p-0 lg:hidden">
+              {zones.map((zone) => {
+                const w = Math.min(100, Math.round(zone.progress))
+                const doneLabel = zone.actualSets > 0 ? zone.actualSets.toFixed(1) : "—"
+                return (
+                  <li
+                    key={zone.key}
+                    className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <p className="m-0 text-sm font-semibold text-slate-900">{zone.label}</p>
+                      <span
+                        className={`inline-flex shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${statusClasses(zone.status)}`}
+                      >
+                        {statusLabel(zone.status)}
+                      </span>
+                    </div>
+                    <p className="m-0 mt-2 text-[11px] text-slate-600">
+                      <span className="tabular-nums font-medium text-slate-800">{doneLabel}</span>
+                      {" · "}
+                      <span className="text-slate-400">meta</span>{" "}
+                      <span className="tabular-nums text-slate-700">{zone.targetSets}</span>{" "}
+                      <span className="text-slate-400">sets</span>
+                    </p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-slate-100">
+                        <motion.div
+                          className={`h-full rounded-full ${statusBarColor(zone.status)}`}
+                          initial={{ width: 0 }}
+                          animate={{ width: `${w}%` }}
+                          transition={{ type: "spring", stiffness: 120, damping: 18 }}
+                        />
+                      </div>
+                      <span className="shrink-0 tabular-nums text-[10px] font-semibold text-slate-600">{w}%</span>
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+            <div className="mt-2 hidden overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm lg:block">
               <table className="w-full min-w-[400px] border-collapse text-left text-[11px]">
                 <thead>
                   <tr className="border-b border-slate-100 bg-slate-50/90 text-[9px] font-semibold uppercase tracking-wide text-slate-500">
