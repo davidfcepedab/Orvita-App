@@ -15,7 +15,10 @@ export const ORVITA_HEALTH_SHORTCUT_NAME = "Orvita-Importar-Salud-Hoy"
 
 export const ORVITA_HEALTH_SHORTCUT_FILE_PATH = "/shortcuts/Orvita-Importar-Salud-Hoy.shortcut"
 
-/** Segundo atajo: mismo payload por ejecución que el diario (`observed_at` = hoy). Nombre distinto = instalación en paralelo; no es aún un “backfill” de 15 días en una pasada. */
+/**
+ * Segundo atajo (onboarding): el usuario lo instala y ejecuta antes del diario para sentar la base de Salud en Órvita.
+ * Debe convivir en paralelo con el atajo diario; el nombre evita sobrescribir «Importar Salud Hoy».
+ */
 export const ORVITA_HEALTH_HISTORIAL15_SHORTCUT_NAME = "Orvita-Salud-Historial-15Dias"
 
 export const ORVITA_HEALTH_HISTORIAL15_SHORTCUT_FILE_PATH = "/shortcuts/Orvita-Salud-Historial-15Dias.shortcut"

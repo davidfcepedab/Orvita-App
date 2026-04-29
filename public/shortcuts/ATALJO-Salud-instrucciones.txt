@@ -1,5 +1,12 @@
 Órvita — Atajo «Importar Salud Hoy» (iPhone)
 
+Flujo recomendado la primera vez (Salud + base en Órvita)
+1) Descarga e instala desde Órvita el atajo «Orvita-Salud-Historial-15Dias» (histórico / ventana de referencia).
+2) Ejecútalo una vez y abre Órvita: comprueba que la sección de Salud muestre bien tus datos recientes (base para que el sistema tenga contexto).
+3) Descarga e instala «Orvita-Importar-Salud-Hoy» (importación del día).
+4) En el iPhone: app Atajos → pestaña Automatización → crea dos automatizaciones personales «Hora del día», una a la 01:00 y otra a las 14:00, ambas los días que quieras, que ejecuten el atajo «Orvita-Importar-Salud-Hoy» (confirmación manual si iOS lo pide).
+   Así el día se sincroniza dos veces al día sin tener que acordarte del atajo principal.
+
 Dos cosas distintas en Ajustes (no confundir)
 - «Salud en el iPhone (atajo)»: instalar y ejecutar el atajo que lee Salud y envía JSON a la API (HealthKit en el teléfono).
 - «Conexiones» → «Apple Health + Google Fit»: ajustes del servidor (módulos activos, conectar Apple export, sincronizar). No sustituye al atajo; son flujos complementarios.

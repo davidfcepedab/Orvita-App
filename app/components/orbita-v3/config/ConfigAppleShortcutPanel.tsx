@@ -315,9 +315,11 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
             className="w-full basis-full text-[10px] leading-snug sm:text-[11px]"
             style={{ color: theme.textMuted }}
           >
-            El segundo archivo instala <strong className="font-medium text-inherit">Orvita-Salud-Historial-15Dias</strong>: mismo envío que el atajo
-            principal (una corrida = datos del día en curso). Sirve para tener <strong className="font-medium text-inherit">dos atajos en paralelo</strong>{" "}
-            (p. ej. otra automatización o widget). Un repaso automático de varios días en una sola ejecución está planificado; aún no está en el archivo.
+            <strong className="font-medium text-inherit">Primera vez:</strong> descarga{" "}
+            <strong className="font-medium text-inherit">Orvita-Salud-Historial-15Dias</strong>, ejecútalo y revisa Salud en Órvita; luego instala{" "}
+            <strong className="font-medium text-inherit">Orvita-Importar-Salud-Hoy</strong> y programa dos automatizaciones diarias (p. ej.{" "}
+            <strong className="font-medium text-inherit">01:00</strong> y <strong className="font-medium text-inherit">14:00</strong>) que lancen el
+            atajo diario. El histórico es el primer paso para dejar una base en la app; el archivo diario mantiene los datos al día.
           </p>
           {moduleCard ? null : (
             <button
@@ -500,7 +502,29 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
               Esta web no instala nada sola: tú descargas el atajo y, cuando lo ejecutas, tus datos del día viajan a tu cuenta
               en Órvita.
             </p>
-            <ol className="mt-3 list-decimal space-y-2 pl-4 text-xs leading-relaxed" style={{ color: theme.text }}>
+            <p className="m-0 mt-2 text-xs font-medium" style={{ color: theme.text }}>
+              Primera configuración (orden sugerido)
+            </p>
+            <ol className="mt-2 list-decimal space-y-2 pl-4 text-xs leading-relaxed" style={{ color: theme.text }}>
+              <li>
+                Descarga e instala <strong className="font-medium text-inherit">Orvita-Salud-Historial-15Dias</strong> y ejecútalo una vez.
+              </li>
+              <li>
+                Abre Órvita y comprueba la vista de Salud (ventana reciente / base para el sistema).
+              </li>
+              <li>
+                Descarga e instala <strong className="font-medium text-inherit">{ORVITA_HEALTH_SHORTCUT_NAME}</strong>.
+              </li>
+              <li>
+                En Atajos → <strong className="font-medium text-inherit">Automatización</strong>: dos disparadores «Hora del día» (por ejemplo{" "}
+                <strong className="font-medium text-inherit">01:00</strong> y <strong className="font-medium text-inherit">14:00</strong>) que ejecuten
+                el atajo diario.
+              </li>
+            </ol>
+            <p className="m-0 mt-3 text-xs font-medium" style={{ color: theme.text }}>
+              Widget en la pantalla de inicio (opcional)
+            </p>
+            <ol className="mt-2 list-decimal space-y-2 pl-4 text-xs leading-relaxed" style={{ color: theme.text }}>
               <li>Pantalla de inicio: modo edición, luego <strong className="font-medium text-inherit">+</strong> o Añadir widget.</li>
               <li>
                 Busca el widget del sistema <strong className="font-medium text-inherit">Atajos</strong>, elige

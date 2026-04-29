@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import clsx from "clsx"
-import { Activity, Dumbbell, Footprints, Landmark, RefreshCw, Sparkles } from "lucide-react"
+import { Activity, Dumbbell, Footprints, Heart, Landmark, RefreshCw, Sparkles } from "lucide-react"
 import { Card } from "@/src/components/ui/Card"
 import { formatInstantInAgendaTz, formatLocalDateLabelEsCo, formatStoredYmdLabelEsCo } from "@/lib/agenda/localDateKey"
 import type { AppleHealthContextSignals, OperationalCapitalSnapshot } from "@/lib/operational/types"
@@ -201,21 +201,21 @@ export function StrategicDayHero({
                   </p>
                 )}
 
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch sm:gap-4">
-                  <div className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_5%,var(--color-surface-alt))] px-3 py-3">
+                <div className="flex min-w-0 flex-nowrap items-stretch gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:gap-3 sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden">
+                  <div className="flex min-w-[10.5rem] shrink-0 flex-[1.15] items-center gap-2.5 rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_5%,var(--color-surface-alt))] px-2.5 py-2 sm:min-w-0 sm:flex-1 sm:gap-3 sm:px-3 sm:py-2.5">
                     <ReadinessRing score={health.readiness_score ?? null} />
                     <div className="min-w-0 flex-1">
                       <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
                         Disposición
                       </p>
-                      <p className="m-0 mt-0.5 text-xl font-bold tabular-nums leading-none text-[var(--color-text-primary)]">
+                      <p className="m-0 mt-0.5 text-lg font-bold tabular-nums leading-none text-[var(--color-text-primary)] sm:text-xl">
                         {health.readiness_score != null ? Math.round(health.readiness_score) : "—"}
                         <span className="ml-0.5 text-[11px] font-semibold text-[var(--color-text-secondary)]">/100</span>
                       </p>
                       {tier ? (
                         <span
                           className={clsx(
-                            "mt-1.5 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold leading-none",
+                            "mt-1 inline-flex max-w-full items-center gap-1 truncate rounded-full border px-1.5 py-0.5 text-[9px] font-semibold leading-none sm:mt-1.5 sm:px-2 sm:text-[10px]",
                             tier.style,
                           )}
                         >
@@ -226,25 +226,23 @@ export function StrategicDayHero({
                     </div>
                   </div>
 
-                  <div className="grid min-w-0 flex-1 grid-cols-2 gap-2 sm:max-w-xs">
-                    <div className="rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[var(--color-surface-alt)] px-3 py-2.5">
-                      <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--color-text-secondary)]">
-                        <Footprints className="h-3.5 w-3.5 shrink-0 opacity-85" aria-hidden />
-                        Pasos
-                      </div>
-                      <p className="m-0 mt-1 text-lg font-bold tabular-nums text-[var(--color-text-primary)]">
-                        {health.steps != null ? health.steps.toLocaleString("es-CO") : "—"}
-                      </p>
+                  <div className="flex min-w-[6.5rem] shrink-0 flex-1 flex-col justify-center rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[var(--color-surface-alt)] px-2.5 py-2 sm:min-w-0 sm:px-3 sm:py-2.5">
+                    <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--color-text-secondary)]">
+                      <Footprints className="h-3.5 w-3.5 shrink-0 opacity-85" aria-hidden />
+                      Pasos
                     </div>
-                    <div className="rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[var(--color-surface-alt)] px-3 py-2.5">
-                      <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--color-text-secondary)]">
-                        <Dumbbell className="h-3.5 w-3.5 shrink-0 opacity-85" aria-hidden />
-                        Sesiones
-                      </div>
-                      <p className="m-0 mt-1 text-lg font-bold tabular-nums text-[var(--color-text-primary)]">
-                        {health.workouts_count != null ? health.workouts_count : "—"}
-                      </p>
+                    <p className="m-0 mt-0.5 text-base font-bold tabular-nums leading-none text-[var(--color-text-primary)] sm:text-lg">
+                      {health.steps != null ? health.steps.toLocaleString("es-CO") : "—"}
+                    </p>
+                  </div>
+                  <div className="flex min-w-[6.5rem] shrink-0 flex-1 flex-col justify-center rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[var(--color-surface-alt)] px-2.5 py-2 sm:min-w-0 sm:px-3 sm:py-2.5">
+                    <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--color-text-secondary)]">
+                      <Dumbbell className="h-3.5 w-3.5 shrink-0 opacity-85" aria-hidden />
+                      Sesiones
                     </div>
+                    <p className="m-0 mt-0.5 text-base font-bold tabular-nums leading-none text-[var(--color-text-primary)] sm:text-lg">
+                      {health.workouts_count != null ? health.workouts_count : "—"}
+                    </p>
                   </div>
                 </div>
 
@@ -260,11 +258,12 @@ export function StrategicDayHero({
                 <Link
                   href="/salud"
                   className={clsx(
-                    "inline-flex w-full items-center justify-center text-center no-underline motion-safe:transition-opacity",
+                    "inline-flex w-full items-center justify-center gap-1.5 text-center no-underline motion-safe:transition-opacity",
                     "max-sm:min-h-0 max-sm:flex-1 max-sm:border-0 max-sm:bg-transparent max-sm:py-1.5 max-sm:text-[11px] max-sm:font-medium max-sm:text-[var(--color-accent-health)] max-sm:underline max-sm:underline-offset-4 max-sm:decoration-[color-mix(in_srgb,var(--color-accent-health)_40%,transparent)] max-sm:hover:opacity-85",
                     "sm:min-h-11 sm:rounded-full sm:border sm:border-[color-mix(in_srgb,var(--color-accent-health)_38%,var(--color-border))] sm:bg-[color-mix(in_srgb,var(--color-accent-health)_12%,var(--color-surface))] sm:px-4 sm:py-2.5 sm:text-xs sm:font-semibold sm:text-[var(--color-text-primary)] sm:hover:opacity-90",
                   )}
                 >
+                  <Heart className="h-3.5 w-3.5 shrink-0 opacity-85" aria-hidden />
                   Ver Salud
                 </Link>
                 <Link

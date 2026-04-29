@@ -932,9 +932,9 @@ def build_actions_full(
 
 
 HISTORIAL_15D_INTRO = (
-    "Orvita · Salud Historial-15Dias: mismo flujo que «Importar Salud Hoy» (una ejecución = un POST con observed_at = día de ejecución). "
-    "El nombre sirve para tener un segundo atajo en paralelo en el iPhone (p. ej. otra automatización). "
-    "No recorre todavía 15 días en una sola pasada; backfill día a día en roadmap (filtros de fecha por día)."
+    "Orvita · Salud Historial-15Dias: instálalo y ejecútalo una vez como primer paso (junto a la guía en la web); "
+    "luego usa «Importar Salud Hoy» y automatízalo dos veces al día. "
+    "Backfill de 15 fechas con filtros por día en el generador: en roadmap."
 )
 
 

@@ -85,26 +85,42 @@ export function unifiedTimelineSectionTitle(dayKey: string | null, todayYmd: str
     Number.isFinite(y) && Number.isFinite(m) && Number.isFinite(d)
       ? new Date(Date.UTC(y, m - 1, d, 12, 0, 0))
       : null
-  const fmt = new Intl.DateTimeFormat("es-CO", {
+  const fmtWithWeekday = new Intl.DateTimeFormat("es-CO", {
     weekday: "long",
     day: "numeric",
-    month: "short",
+    month: "long",
+    timeZone: tz,
+  })
+  /** Solo día civil (sin repetir «lunes…» cuando ya dice Hoy/Mañana). */
+  const fmtDateOnly = new Intl.DateTimeFormat("es-CO", {
+    day: "numeric",
+    month: "long",
     timeZone: tz,
   })
   const longDay =
     civilNoonUtc && !Number.isNaN(civilNoonUtc.getTime())
       ? (() => {
           try {
-            return fmt.format(civilNoonUtc)
+            return fmtWithWeekday.format(civilNoonUtc)
+          } catch {
+            return dayKey
+          }
+        })()
+      : dayKey
+  const dateOnly =
+    civilNoonUtc && !Number.isNaN(civilNoonUtc.getTime())
+      ? (() => {
+          try {
+            return fmtDateOnly.format(civilNoonUtc)
           } catch {
             return dayKey
           }
         })()
       : dayKey
 
-  if (dayKey === todayYmd) return `Hoy · ${longDay}`
+  if (dayKey === todayYmd) return `Hoy · ${dateOnly}`
   const tom = addDaysToYmd(todayYmd, 1)
-  if (dayKey === tom) return `Mañana · ${longDay}`
+  if (dayKey === tom) return `Mañana · ${dateOnly}`
 
   const mon = mondayOfCalendarWeekContainingYmd(todayYmd)
   const sun = addDaysToYmd(mon, 6)

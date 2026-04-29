@@ -48,6 +48,21 @@ import {
 import { StrategicDayHero } from "@/app/components/orbita-v3/strategic/StrategicDayCapitalHero"
 import type { OperationalCommandDomain, OperationalDomain, OperationalTask } from "@/lib/operational/types"
 
+function operationalDomainLabelEs(domain: OperationalDomain): string {
+  switch (domain) {
+    case "profesional":
+      return "Trabajo"
+    case "agenda":
+      return "Agenda"
+    case "salud":
+      return "Salud"
+    case "fisico":
+      return "Cuerpo"
+    default:
+      return domain
+  }
+}
+
 const TIMELINE_FALLBACK_EXAMPLE = [
   { time: "08:00", label: "Bloque de trabajo profundo" },
   { time: "10:30", label: "Sincronización con equipo" },
@@ -213,7 +228,7 @@ export default function HoyCommandCenter() {
   }, [refreshCal, refreshTasks])
 
   const [timelineNow, setTimelineNow] = useState(() => Date.now())
-  const [googleTasksAsideOpen, setGoogleTasksAsideOpen] = useState(true)
+  const [googleTasksAsideOpen, setGoogleTasksAsideOpen] = useState(false)
   useEffect(() => {
     const id = window.setInterval(() => setTimelineNow(Date.now()), 60_000)
     return () => window.clearInterval(id)
@@ -873,9 +888,9 @@ export default function HoyCommandCenter() {
           </Card>
 
           <Card className="p-4">
-            <SectionLabel>Cola operativa</SectionLabel>
+            <SectionLabel>Tu orden del día</SectionLabel>
             <p className="mb-3 mt-1 text-[10px] leading-snug text-[var(--color-text-secondary)]">
-              Prioridad: profesional → agenda → salud → cuerpo. (Datos desde tu contexto Supabase.)
+              Primero trabajo y citas; después bienestar y movimiento. Así te ayudamos a enfocarte sin abrumarte.
             </p>
             <ul className="m-0 grid list-none gap-2 p-0">
               {queueTasks.map((task: OperationalTask) => (
@@ -891,13 +906,15 @@ export default function HoyCommandCenter() {
                   <div className="min-w-0">
                     <p className="m-0 text-sm font-medium text-[var(--color-text-primary)]">{task.title}</p>
                     <p className="m-0 text-[10px] uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
-                      {task.completed ? "Hecha" : "Pendiente"} · {task.domain}
+                      {task.completed ? "Hecha" : "Pendiente"} · {operationalDomainLabelEs(task.domain)}
                     </p>
                   </div>
                 </li>
               ))}
               {queueTasks.length === 0 && !ctxLoading ? (
-                <li className="text-xs text-[var(--color-text-secondary)]">Cola vacía. Buen momento para cerrar ciclos.</li>
+                <li className="text-xs text-[var(--color-text-secondary)]">
+                  Nada pendiente en esta lista. Buen momento para cerrar cosas o descansar.
+                </li>
               ) : null}
             </ul>
           </Card>
@@ -917,7 +934,7 @@ export default function HoyCommandCenter() {
                   aria-hidden
                 />
                 <span className="m-0 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-text-secondary)]">
-                  Google Tasks · vence hoy
+                  Tareas para hoy
                 </span>
                 {!googleTasksAsideOpen && tasksConnected && googleTasksToday.length > 0 ? (
                   <span className="text-[10px] tabular-nums text-[var(--color-text-secondary)]">
@@ -931,7 +948,7 @@ export default function HoyCommandCenter() {
                 onClick={() => void refreshGoogleFeeds()}
                 className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--color-accent-primary)] underline-offset-2 hover:underline disabled:opacity-50"
               >
-                Actualizar
+                Sincronizar
               </button>
             </div>
             <div
@@ -946,13 +963,16 @@ export default function HoyCommandCenter() {
                 <p className="m-0 text-xs text-[var(--color-accent-danger)]">{tasksError}</p>
               ) : !tasksConnected ? (
                 <p className="m-0 text-xs text-[var(--color-text-secondary)]">
-                  {tasksNotice ?? "Conecta Google Tasks."}{" "}
+                  {tasksNotice ??
+                    "Conecta tu cuenta de Google para ver aquí las tareas que vencen hoy."}{" "}
                   <Link href="/configuracion" className="font-medium text-[var(--color-accent-primary)] underline">
-                    Configuración
+                    Ir a ajustes
                   </Link>
                 </p>
               ) : googleTasksToday.length === 0 ? (
-                <p className="m-0 text-xs text-[var(--color-text-secondary)]">Nada con vencimiento hoy.</p>
+                <p className="m-0 text-xs text-[var(--color-text-secondary)]">
+                  No tienes tareas con fecha de hoy.
+                </p>
               ) : (
                 <ul className="m-0 list-none space-y-1.5 p-0">
                   {googleTasksToday.map((gt) => (

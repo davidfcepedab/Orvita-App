@@ -12,7 +12,6 @@ import { useAgendaTasks, type AgendaTaskPriority } from "@/app/hooks/useAgendaTa
 import { useGoogleCalendar } from "@/app/hooks/useGoogleCalendar"
 import { useGoogleTasks } from "@/app/hooks/useGoogleTasks"
 import { mapAgendaTaskToUi, priorityFormToApi, type UiAgendaTask } from "@/app/agenda/mapAgendaTaskToUi"
-import { agendaPanelSurfaceStyle } from "@/app/agenda/agendaUiTokens"
 import { priorityFilterControlStyle } from "@/app/agenda/agendaUnifiedCardStyles"
 import { formatPriorityTitle } from "@/app/agenda/taskCardFormat"
 
@@ -162,13 +161,13 @@ export default function AgendaPage() {
   const agendaTitle = viewerFirstName ? `Agenda ${viewerFirstName}` : "Tu agenda diaria"
 
   const agendaTagline = useMemo(() => {
-    if (loading) return "Cargando tu agenda unificada…"
+    if (loading) return "Cargando…"
     const n = agendaTasks.length
     const active = agendaTasks.filter((t) => t.status !== "completed").length
     if (n === 0)
-      return "Aquí conviven tus tareas Órvita y lo que traes de Google. Crea una tarea o conecta la cuenta en Configuración."
-    if (active === 0) return "No hay pendientes en tu tablero Órvita."
-    return `${active} pendiente${active === 1 ? "" : "s"} en Órvita. Las vistas mezclan tablero, calendario y recordatorios de tu Google.`
+      return "Órvita aquí; si conectas tu cuenta, también verás citas y recordatorios en el mismo lugar."
+    if (active === 0) return "Todo al día en tu lista."
+    return `${active} pendiente${active === 1 ? "" : "s"}. Citas y recordatorios se muestran cuando están sincronizados.`
   }, [loading, agendaTasks])
 
   useEffect(() => {
@@ -559,16 +558,16 @@ export default function AgendaPage() {
           </header>
 
           <div
-            className="sticky z-10 border-t border-[color-mix(in_srgb,var(--color-border)_65%,transparent)] px-3 py-1.5 sm:px-4 sm:py-2 lg:px-6"
+            className="sticky z-10 border-t border-[color-mix(in_srgb,var(--color-border)_65%,transparent)] px-3 py-2 sm:px-4 sm:py-2.5 lg:px-6"
             style={{ top: "max(4rem, calc(env(safe-area-inset-top, 0px) + 3.25rem))", background: "var(--agenda-shell-bg)" }}
           >
-            <div className="flex flex-col gap-1 max-sm:gap-1 sm:gap-1.5">
             <div
-              className="rounded-lg border border-[var(--color-border)] px-2 py-1 sm:px-2.5 sm:py-2 max-sm:shadow-none"
-              style={agendaPanelSurfaceStyle}
+              className="overflow-hidden rounded-xl border border-[color-mix(in_srgb,var(--color-border)_68%,transparent)] bg-[var(--color-surface)] shadow-none divide-y divide-[color-mix(in_srgb,var(--color-border)_78%,transparent)]"
+              style={{ borderWidth: "0.5px" }}
               role="region"
-              aria-label="Buscar, sincronizar Google y filtros"
+              aria-label="Buscar, filtros y vista de agenda"
             >
+              <div className="px-2 py-2 sm:px-2.5 sm:py-2.5">
               <div className="flex w-full min-w-0 flex-col gap-1 sm:gap-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-2 sm:gap-y-1">
                 <div className="flex min-w-0 w-full flex-1 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2">
                 <div className="flex min-h-[34px] min-w-0 flex-1 items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-2 py-1 sm:min-w-[10rem] sm:max-w-md lg:max-w-xl">
@@ -606,7 +605,9 @@ export default function AgendaPage() {
                   />
                 </div>
               </div>
-              <div className="mt-1 border-t border-[var(--color-border)] pt-1 sm:mt-1.5 sm:pt-1.5">
+              </div>
+
+              <div className="px-2 py-2 sm:px-2.5 sm:py-2">
                 <div className="sm:hidden">
                   <button
                     type="button"
@@ -691,9 +692,8 @@ export default function AgendaPage() {
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div className="rounded-lg border border-[var(--color-border)] p-0.5 sm:p-1.5" style={agendaPanelSurfaceStyle}>
+              <div className="p-1 sm:p-1.5">
               <div className="flex min-w-0 flex-row gap-1 sm:hidden" role="tablist" aria-label="Vista de agenda">
                 {viewOptions.map((item) => {
                   const Icon = item.icon
@@ -758,9 +758,9 @@ export default function AgendaPage() {
                   })}
                 </div>
               </div>
+              </div>
             </div>
           </div>
-        </div>
         </div>
 
         <Suspense fallback={null}>
