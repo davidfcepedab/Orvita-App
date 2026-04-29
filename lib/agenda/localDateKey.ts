@@ -53,9 +53,6 @@ export function calendarEventLocalDayKey(ev: {
   return localDateKeyFromIso(ev.startAt) ?? ev.startAt.slice(0, 10)
 }
 
-/**
- * Etiqueta legible es-CO desde ISO completo o YYYY-MM-DD (siempre día civil local).
- */
 function civilNoonUtcFromYmd(key: string): Date | null {
   if (key.length < 10) return null
   const y = Number(key.slice(0, 4))
@@ -65,10 +62,50 @@ function civilNoonUtcFromYmd(key: string): Date | null {
   return new Date(Date.UTC(y, m, d, 12, 0, 0))
 }
 
+/**
+ * Etiqueta es-CO para un `YYYY-MM-DD` **persistido** (bundle / all-day): calendario en `UTC` para que
+ * el día mostrado coincida con la cadena en cualquier `NEXT_PUBLIC_AGENDA_DISPLAY_TZ`.
+ */
+export function formatStoredYmdLabelEsCo(ymd: string): string {
+  const civilNoon = civilNoonUtcFromYmd(ymd.slice(0, 10))
+  if (!civilNoon) return "—"
+  const y = Number(ymd.slice(0, 4))
+  const nowY = Number(agendaTodayYmd().slice(0, 4))
+  return new Intl.DateTimeFormat("es-CO", {
+    timeZone: "UTC",
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    ...(y !== nowY ? { year: "numeric" as const } : {}),
+  }).format(civilNoon)
+}
+
+function formatStoredYmdFullShortEsCo(ymd: string): string {
+  const civilNoon = civilNoonUtcFromYmd(ymd.slice(0, 10))
+  if (!civilNoon) return "—"
+  return new Intl.DateTimeFormat("es-CO", {
+    timeZone: "UTC",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(civilNoon)
+}
+
+/**
+ * Etiqueta legible es-CO desde ISO o YYYY-MM-DD.
+ * - `YYYY-MM-DD` o `…T00:00:00.000Z`: día **almacenado** (etiqueta en UTC = dígitos del YMD).
+ * - Otros ISO: instante interpretado en la zona de agenda.
+ */
 export function formatLocalDateLabelEsCo(isoOrYmd: string | null | undefined): string {
+  if (!isoOrYmd) return "—"
+  const trimmed = isoOrYmd.trim()
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return formatStoredYmdLabelEsCo(trimmed)
+  const utcMidnight = trimmed.match(/^(\d{4}-\d{2}-\d{2})T00:00:00(?:\.0+)?Z$/i)
+  if (utcMidnight) return formatStoredYmdLabelEsCo(utcMidnight[1]!)
+
   const key =
     localDateKeyFromIso(isoOrYmd ?? "") ??
-    (isoOrYmd && isoOrYmd.length >= 10 && /^\d{4}-\d{2}-\d{2}/.test(isoOrYmd) ? isoOrYmd.slice(0, 10) : "")
+    (isoOrYmd.length >= 10 && /^\d{4}-\d{2}-\d{2}/.test(isoOrYmd) ? isoOrYmd.slice(0, 10) : "")
   const civilNoon = civilNoonUtcFromYmd(key)
   if (!civilNoon) return "—"
   const y = Number(key.slice(0, 4))
@@ -82,11 +119,17 @@ export function formatLocalDateLabelEsCo(isoOrYmd: string | null | undefined): s
   }).format(civilNoon)
 }
 
-/** Día civil con año (p. ej. transacciones / rangos): siempre en `NEXT_PUBLIC_AGENDA_DISPLAY_TZ`. */
+/** Día con año corto es-CO; mismas reglas almacenado vs instante que {@link formatLocalDateLabelEsCo}. */
 export function formatLocalDateFullShortEsCo(isoOrYmd: string | null | undefined): string {
+  if (!isoOrYmd) return "—"
+  const trimmed = isoOrYmd.trim()
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return formatStoredYmdFullShortEsCo(trimmed)
+  const utcMidnight = trimmed.match(/^(\d{4}-\d{2}-\d{2})T00:00:00(?:\.0+)?Z$/i)
+  if (utcMidnight) return formatStoredYmdFullShortEsCo(utcMidnight[1]!)
+
   const key =
     localDateKeyFromIso(isoOrYmd ?? "") ??
-    (isoOrYmd && isoOrYmd.length >= 10 && /^\d{4}-\d{2}-\d{2}/.test(isoOrYmd) ? isoOrYmd.slice(0, 10) : "")
+    (isoOrYmd.length >= 10 && /^\d{4}-\d{2}-\d{2}/.test(isoOrYmd) ? isoOrYmd.slice(0, 10) : "")
   const civilNoon = civilNoonUtcFromYmd(key)
   if (!civilNoon) return "—"
   return new Intl.DateTimeFormat("es-CO", {
@@ -97,12 +140,12 @@ export function formatLocalDateFullShortEsCo(isoOrYmd: string | null | undefined
   }).format(civilNoon)
 }
 
-/** «mar., 28 abr» desde YYYY-MM-DD civil (ancla mediodía UTC del día). */
+/** «mar., 28 abr» desde `YYYY-MM-DD` almacenado (calendario UTC = dígitos del YMD). */
 export function formatLocalDateWeekdayShortDayMonthEsCo(ymd: string): string {
   const civilNoon = civilNoonUtcFromYmd(ymd.slice(0, 10))
   if (!civilNoon) return ymd
   return new Intl.DateTimeFormat("es-CO", {
-    timeZone: getAgendaDisplayTimeZone(),
+    timeZone: "UTC",
     weekday: "short",
     day: "numeric",
     month: "short",

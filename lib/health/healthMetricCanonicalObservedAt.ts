@@ -21,11 +21,14 @@ export function shortcutBundleObservedYmd(row: HealthMetricRowLike | null | unde
   return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null
 }
 
-/** ISO ancla mediodía UTC del día del bundle (para formateo civil estable en toda la app). */
+/**
+ * ISO sentinela del día del bundle (atajo): `YYYY-MM-DDT00:00:00.000Z` alinea con `localDateKeyFromIso`
+ * y con `formatLocalDateLabelEsCo` (día almacenado, no “mediodía UTC” visto en otra zona civil).
+ */
 export function healthMetricObservedAtIsoForDisplay(row: HealthMetricRowLike | null | undefined): string {
   const raw = (row?.observed_at ?? "").trim()
   const ymd = shortcutBundleObservedYmd(row)
-  if (ymd) return `${ymd}T12:00:00.000Z`
+  if (ymd) return `${ymd}T00:00:00.000Z`
   return raw
 }
 
