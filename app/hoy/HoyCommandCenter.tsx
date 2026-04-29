@@ -407,7 +407,7 @@ export default function HoyCommandCenter() {
           <h1 className="m-0 text-2xl font-semibold tracking-tight text-[var(--color-text-primary)] sm:text-[1.75rem]">
             Hoy
           </h1>
-          <p className="m-0 flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
+          <p className="m-0 hidden items-center gap-2 text-sm text-[var(--color-text-secondary)] sm:flex">
             <Calendar className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
             <span className="capitalize">{dateLine}</span>
           </p>

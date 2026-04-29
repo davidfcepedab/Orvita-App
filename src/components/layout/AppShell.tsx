@@ -288,7 +288,7 @@ export function AppShell({
               </span>
               <time
                 dateTime={agendaTodayYmd()}
-                className="w-fit pl-[18px] text-[11px] font-medium capitalize leading-snug text-[var(--color-text-secondary)] sm:hidden"
+                className="w-fit pl-[18px] text-[13px] font-medium capitalize leading-snug text-[var(--color-text-secondary)] sm:hidden"
               >
                 {headerDateLabelMobile}
               </time>
