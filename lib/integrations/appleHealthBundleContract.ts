@@ -79,10 +79,10 @@ export function sanitizeBundleToHealthSignals(bundle: Record<string, unknown>): 
   const sleepHours = readFiniteNumber(bundle, "sleep_hours")
 
   if (sleepSeconds !== undefined) {
-    put("sleep_duration_seconds", sleepSeconds, (n) => clamp(Math.round(n), 0, 36 * 3600))
-    put("sleep_hours", sleepSeconds / 3600, (n) => clamp(n, 0, 36))
+    put("sleep_duration_seconds", sleepSeconds, (n) => clamp(Math.round(n), 0, 24 * 3600))
+    put("sleep_hours", sleepSeconds / 3600, (n) => clamp(n, 0, 24))
   } else {
-    put("sleep_hours", sleepHours, (n) => clamp(n, 0, 36))
+    put("sleep_hours", sleepHours, (n) => clamp(n, 0, 24))
   }
 
   put("hrv_ms", readFiniteNumber(bundle, "hrv_ms"), (n) => clamp(Math.round(n), 5, 250))

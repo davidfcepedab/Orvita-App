@@ -406,7 +406,7 @@ body.orbita-app-root {
   outline-offset: 2px;
 }
 
-/* Acciones compactas del header (tema, salir, etc.) */
+/* Acciones compactas del header (tema, salir, etc.) — estilo ghost, sin “pill” rellena */
 .orbita-header-action {
   display: inline-flex;
   align-items: center;
@@ -415,20 +415,23 @@ body.orbita-app-root {
   min-height: 40px;
   padding: 0.5rem 0.75rem;
   border-radius: var(--radius-button);
-  border: 1px solid color-mix(in srgb, var(--color-border) 88%, transparent);
-  background: var(--color-surface-alt);
+  border: none;
+  background: transparent;
   font-family: var(--font-sans);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--color-text-primary);
+  color: var(--color-text-secondary);
   cursor: pointer;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease;
 }
 
 .orbita-header-action:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--color-surface-alt) 88%, var(--color-accent-primary) 12%);
-  border-color: color-mix(in srgb, var(--color-border) 70%, var(--color-accent-primary) 18%);
+  background: color-mix(in srgb, var(--color-text-primary) 7%, transparent);
+  color: var(--color-text-primary);
 }
 
 .orbita-header-action:disabled {
@@ -437,24 +440,33 @@ body.orbita-app-root {
 }
 
 .orbita-header-action--surface {
-  background: var(--color-surface);
+  background: transparent;
+  color: var(--color-text-secondary);
 }
 
-/* Botón icono circular (menú usuario); tamaño vía utilidades Tailwind en el componente */
+/* Botón icono circular (notificaciones, menú usuario); tamaño vía utilidades Tailwind en el componente */
 .orbita-icon-button {
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
   border-radius: 9999px;
-  border: 1px solid color-mix(in srgb, var(--color-border) 88%, transparent);
-  background: var(--color-surface-alt);
-  color: var(--color-text-primary);
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
   cursor: pointer;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease;
 }
 
-.orbita-icon-button:hover {
-  background: color-mix(in srgb, var(--color-surface-alt) 85%, var(--color-accent-primary) 10%);
+.orbita-icon-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-text-primary) 8%, transparent);
+  color: var(--color-text-primary);
+}
+
+.orbita-icon-button:disabled:hover {
+  background: transparent;
 }
 
 /* Píldora activa: rail superior + tabs inferiores (misma receta) */

@@ -25,8 +25,8 @@ Nombre exacto en la biblioteca de Atajos: **Orvita-Importar-Salud-Hoy** (debe co
 | `Authorization: Bearer <access_token>` | Alternativa | Sesión Supabase (misma que la web). |
 | `x-orvita-import-token` **o** `import_token` en JSON | Alternativa | Token emitido por la app (flujo sin sesión en Shortcuts). |
 | `x-orvita-observed-at` | Muy recomendada | Misma fecha que `observed_at` en el cuerpo; evita que Atajos serialice `null` en el JSON. |
-| `x-orvita-client: orvita-ios-shortcut` | Recomendada | Marca el cliente; con sesión **Bearer** fuerza tratamiento como atajo en origen. |
-| `x-orvita-health-source: apple_health_shortcut` | Opcional | Equivalente a lo anterior para `health_metrics.source`. |
+| `x-orvita-client: orvita-ios-shortcut` | Sí (plist generado) | Marca el cliente; con sesión **Bearer** fuerza tratamiento como atajo en origen. |
+| `x-orvita-health-source: apple_health_shortcut` | Sí (plist generado) | Refuerzo para `health_metrics.source` = atajo. |
 
 **Origen en base de datos (`health_metrics.source`):**
 
@@ -47,7 +47,7 @@ La respuesta incluye **`syncedAt`**: instante en que el servidor guardó el impo
 Las métricas van en el **Diccionario** (variable `apple_bundle`) y el POST JSON tiene solo **`apple_bundle`** como objeto anidado. Incluye (entre otras) lecturas de Apple Health alineadas al contrato del API:
 
 - Pasos, energía activa (kcal), **conteo de entrenos**, duración de entrenos (segundos → minutos en servidor).
-- Sueño (suma en segundos → horas en servidor), HRV (ms), FC en reposo, minutos de ejercicio / estar de pie, distancia, VO2 máx., etc.
+- Sueño (suma en segundos → horas en servidor **solo muestras con inicio = hoy**; el servidor además capa a 24 h por día), HRV (ms), FC en reposo, minutos de ejercicio / estar de pie, distancia, VO2 máx., etc.
 - `readiness_score` puede completarse en servidor a partir de señales si faltara en el cliente.
 
 Claves JSON frecuentes del atajo: `observed_at`, `steps`, `active_energy_kcal`, `workouts_count`, `workouts_duration_seconds`, `sleep_duration_seconds`, `hrv_ms`, `resting_hr_bpm`, …

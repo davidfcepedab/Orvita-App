@@ -272,7 +272,8 @@ function takeMetricFirst(
   return undefined
 }
 
-const MAX_SLEEP_SECONDS = 36 * 3600
+/** Máx. por día civil en bundle de atajo (evita sumas multi-día mal filtradas). */
+const MAX_SLEEP_SECONDS = 24 * 3600
 
 /** Orden estable de `accepted_metrics` en respuestas API. */
 const ACCEPTED_METRICS_STABLE_ORDER: (keyof NormalizedAppleHealthMetrics)[] = [
@@ -685,7 +686,7 @@ export function normalizeAppleHealthPayload(input: unknown): NormalizeAppleHealt
     const sh = takeMetric(
       bundle,
       "sleep_hours",
-      (v) => (v >= 0 && v <= 36 ? { v: Math.round(v * 1000) / 1000 } : { err: "must be 0–36 h" }),
+      (v) => (v >= 0 && v <= 24 ? { v: Math.round(v * 1000) / 1000 } : { err: "must be 0–24 h" }),
       field_errors,
     )
     if (sh !== undefined) {

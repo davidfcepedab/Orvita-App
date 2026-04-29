@@ -151,7 +151,7 @@ describe("normalizeAppleHealthPayload", () => {
     expect(r.normalized.sleep_duration_seconds).toBe(34513)
   })
 
-  test("sleep_duration_seconds > 24h y ≤ 36h se acepta sin capar a 24h", () => {
+  test("sleep_duration_seconds > 24h se capa a 24h (bundle diario)", () => {
     const r = normalizeAppleHealthPayload({
       apple_bundle: {
         observed_at: "2026-04-25",
@@ -165,12 +165,12 @@ describe("normalizeAppleHealthPayload", () => {
     })
     expect(r.ok).toBe(true)
     if (!r.ok) return
-    expect(r.normalized.sleep_duration_seconds).toBe(113_278)
-    expect(r.normalized.sleep_hours).toBeCloseTo(113_278 / 3600, 2)
+    expect(r.normalized.sleep_duration_seconds).toBe(24 * 3600)
+    expect(r.normalized.sleep_hours).toBe(24)
     expect(r.accepted_metrics).toEqual(expect.arrayContaining(["sleep_duration_seconds", "sleep_hours"]))
   })
 
-  test("sleep_duration_seconds > 36h se capa a 36h", () => {
+  test("sleep_duration_seconds muy alto se capa a 24h", () => {
     const r = normalizeAppleHealthPayload({
       apple_bundle: {
         observed_at: "2026-04-25",
@@ -184,7 +184,7 @@ describe("normalizeAppleHealthPayload", () => {
     })
     expect(r.ok).toBe(true)
     if (!r.ok) return
-    expect(r.normalized.sleep_duration_seconds).toBe(36 * 3600)
+    expect(r.normalized.sleep_duration_seconds).toBe(24 * 3600)
   })
 
   test("solo sleep_hours se acepta y deriva sleep_duration_seconds", () => {

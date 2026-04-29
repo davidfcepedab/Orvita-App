@@ -47,6 +47,8 @@ export function formatAppleHealthSyncWhenShort(iso: string | null | undefined): 
     return mins < 5 ? "Al día" : `Hace ${mins} min`
   }
   if (hours < 12) return "Al día"
+  // No mostrar >24 h: el chip describe frescura del import, no un intervalo > un día civil.
+  if (hours >= 24) return "Hace 24+ h"
   return `Hace ${hours} h`
 }
 
@@ -79,7 +81,8 @@ export function appleHealthSyncAgeHint(observedAt: string | null | undefined): s
   const mins = Math.floor(ageMs / (60 * 1000))
   const hours = Math.floor(ageMs / (60 * 60 * 1000))
   if (mins < 60) return `dato de hace ~${mins} min`
-  if (hours < 48) return `dato de hace ~${hours} h`
+  if (hours < 24) return `dato de hace ~${hours} h`
+  if (hours < 48) return "dato de hace 24+ h"
   return "dato antiguo"
 }
 

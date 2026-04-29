@@ -13,7 +13,8 @@ permisos ni caché: prueba `--mode minimal` y/o `--omit-workout-duration-stat` (
 Modo `full`: token → fecha ISO → por cada métrica: Buscar muestras (tipo + hoy) → Calcular (Suma/Media) o Conteo
 → Obtener números → Establecer variable (`*_num`) → diccionario y POST JSON **plano** (sin `apple_bundle`).
 Entrenos: conteo real y duración en segundos (suma de `Duration`) como variables distintas.
-Sueño: suma (`sleep_duration_seconds`) y conteo de sesiones. Derivadas `training_load` / `recovery_score_proxy`
+Sueño: suma (`sleep_duration_seconds`) y conteo de sesiones **solo con inicio = hoy** (mismo filtro que pasos/HRV).
+Derivadas `training_load` / `recovery_score_proxy`
 las calcula el servidor si faltan en el cuerpo.
 
 Modo `minimal`: token, fecha ISO, una sola búsqueda (pasos) + suma, diccionario mínimo, POST
@@ -21,7 +22,7 @@ Modo `minimal`: token, fecha ISO, una sola búsqueda (pasos) + suma, diccionario
 El POST incluye cabecera `x-orvita-observed-at` (misma fecha que `apple_bundle.observed_at`) para
 evitar fallos de Atajos cuando el JSON serializa `observed_at` como null (ver API `applyObservedAtFromRequestHeaders`).
 
-**Token en el iPhone (por defecto):** el plist generado intenta leer `orvita_import_token.txt` en **iCloud Drive**
+**Token en el iPhone (por defecto):** el plist lee/escribe `Shortcuts/orvita_import_token.txt` en **iCloud Drive**
 (sin selector de archivo). Si el archivo tiene texto (recuento de caracteres > 0), se usa como cabecera
 `x-orvita-import-token`. Si no, se pide una vez con «Solicitar entrada», se guarda en esa ruta y se reutiliza en
 siguientes ejecuciones. Con `--legacy-token-prompt` se omite archivo y solo se pregunta siempre (modo antiguo).
@@ -139,49 +140,6 @@ def content_filter_health_quantity_today(type_value: str) -> dict:
     }
 
 
-def content_filter_sleep_benchmark() -> dict:
-    """Sleep (benchmark atajo 41): Type Sleep; Start Date «últimos 3» (1001); Value is + Unit 4 (sin Asleep)."""
-    return {
-        "Value": {
-            "WFActionParameterFilterPrefix": 1,
-            "WFContentPredicateBoundedDate": False,
-            "WFActionParameterFilterTemplates": [
-                {
-                    "Bounded": True,
-                    "Operator": 4,
-                    "Property": "Type",
-                    "Removable": False,
-                    "Values": {
-                        "Enumeration": {
-                            "Value": "Sleep",
-                            "WFSerializationType": "WFStringSubstitutableState",
-                        }
-                    },
-                },
-                {
-                    "Operator": 1001,
-                    "Property": "Start Date",
-                    "Removable": True,
-                    "Values": {
-                        "Number": "3",
-                        "Unit": 16,
-                    },
-                },
-                {
-                    "Bounded": True,
-                    "Operator": 4,
-                    "Property": "Value",
-                    "Removable": False,
-                    "Values": {
-                        "Unit": 4,
-                    },
-                },
-            ],
-        },
-        "WFSerializationType": "WFContentPredicateTableTemplate",
-    }
-
-
 def find_health_quantity(
     *,
     u_find: str,
@@ -197,11 +155,12 @@ def find_health_quantity(
 
 
 def find_sleep_samples(*, u_find: str) -> dict:
+    """Misma ventana «hoy» que el resto de cantidades (evita sumar noches de varios días)."""
     return {
         "WFWorkflowActionIdentifier": "is.workflow.actions.filter.health.quantity",
         "WFWorkflowActionParameters": {
             "UUID": u_find,
-            "WFContentItemFilter": content_filter_sleep_benchmark(),
+            "WFContentItemFilter": content_filter_health_quantity_today("Sleep"),
         },
     }
 
@@ -337,8 +296,8 @@ def ask_text(*, u: str, prompt: str) -> dict:
     }
 
 
-# Ruta en iCloud Drive (sin «Mostrar selector») donde el atajo guarda el token persistente.
-ORVITA_TOKEN_ICLOUD_PATH = "orvita_import_token.txt"
+# Ruta en iCloud Drive (sin «Mostrar selector»), misma carpeta que documenta la app (`Shortcuts/…`).
+ORVITA_TOKEN_ICLOUD_PATH = "Shortcuts/orvita_import_token.txt"
 
 
 def action_output_ref(output_uuid: str, output_name: str) -> dict:
@@ -512,13 +471,15 @@ def current_date(*, u: str) -> dict:
     }
 
 
-def format_iso8601(*, u: str, u_date: str) -> dict:
+def format_observed_at_ymd(*, u: str, u_date: str) -> dict:
+    """Salida estricta yyyy-MM-dd (día civil del dispositivo): API, cabecera y bundle alineados."""
     return {
         "WFWorkflowActionIdentifier": "is.workflow.actions.format.date",
         "WFWorkflowActionParameters": {
             "UUID": u,
-            "WFDateFormatStyle": "ISO 8601",
-            "WFTimeFormatStyle": "Short",
+            "WFDateFormatStyle": "Custom",
+            "WFDateFormat": "yyyy-MM-dd",
+            "WFTimeFormatStyle": "None",
             "WFInput": {
                 "Value": {
                     "OutputUUID": u_date,
@@ -646,6 +607,11 @@ def post_import(*, u_post: str, json_items: list[dict]) -> dict:
                             "WFItemType": 0,
                             "WFKey": text_plain("x-orvita-client"),
                             "WFValue": text_plain("orvita-ios-shortcut"),
+                        },
+                        {
+                            "WFItemType": 0,
+                            "WFKey": text_plain("x-orvita-health-source"),
+                            "WFValue": text_plain("apple_health_shortcut"),
                         },
                     ]
                 },
@@ -809,12 +775,13 @@ def build_actions_full(
 
     actions: list[dict] = [
         comment(
-            "Token iCloud orvita_import_token.txt; métricas *_num; Diccionario → variable apple_bundle; "
+            "Token iCloud Shortcuts/orvita_import_token.txt; fecha observed_at = yyyy-MM-dd; métricas *_num; "
+            "Diccionario → variable apple_bundle; "
             "POST JSON { apple_bundle }. Derivadas training_load / recovery_score_proxy: servidor si faltan."
         ),
         *token_actions,
         current_date(u=u_date),
-        format_iso8601(u=u_iso, u_date=u_date),
+        format_observed_at_ymd(u=u_iso, u_date=u_date),
         set_variable_from_output(
             u=u_set_obs,
             variable_name="observed_at",
@@ -965,7 +932,7 @@ def build_actions_minimal(*, quantity_type_style: str, legacy_token_prompt: bool
         comment("Diagnóstico: solo pasos reales; el resto de claves a 0 (atajo mínimo)."),
         *token_actions,
         current_date(u=u_date),
-        format_iso8601(u=u_iso, u_date=u_date),
+        format_observed_at_ymd(u=u_iso, u_date=u_date),
         set_variable_from_output(
             u=u_set_obs,
             variable_name="observed_at",

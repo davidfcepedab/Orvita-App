@@ -44,9 +44,9 @@ export function buildImportRowFromNormalized(
   const sleep_duration_seconds = m.sleep_duration_seconds
   const sleep_hours =
     m.sleep_hours != null && Number.isFinite(m.sleep_hours)
-      ? Math.min(36, m.sleep_hours)
+      ? Math.min(24, m.sleep_hours)
       : sleep_duration_seconds != null && sleep_duration_seconds > 0
-        ? Math.min(36, sleep_duration_seconds / 3600)
+        ? Math.min(24, sleep_duration_seconds / 3600)
         : undefined
 
   const wds = m.workouts_duration_seconds
@@ -169,10 +169,12 @@ function rowsFromAppleBundlePayloadLegacyCoerced(bundle: Record<string, unknown>
   const sleep_duration_seconds = coalesceNumericHealth(bundle.sleep_duration_seconds) ?? undefined
   const sleep_hours_from_seconds =
     typeof sleep_duration_seconds === "number" && sleep_duration_seconds > 0
-      ? Math.min(36, sleep_duration_seconds / 3600)
+      ? Math.min(24, sleep_duration_seconds / 3600)
       : undefined
   const sleep_hours =
-    sleep_hours_raw != null && sleep_hours_raw >= 0 ? sleep_hours_raw : sleep_hours_from_seconds
+    sleep_hours_raw != null && sleep_hours_raw >= 0
+      ? Math.min(24, sleep_hours_raw)
+      : sleep_hours_from_seconds
 
   let hrv_ms = coalesceNumericHealth(bundle.hrv_ms) ?? undefined
   if (hrv_ms != null && (hrv_ms < 5 || hrv_ms > 250)) hrv_ms = undefined
