@@ -250,8 +250,8 @@ export function AppShell({
         }}
       >
         <div className="orbita-shell-inline orbita-header-bar mx-auto max-w-[1400px]">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-[var(--spacing-lg)]">
-            <div className="flex min-w-0 flex-col gap-1 sm:gap-1.5">
+          <div className="flex items-center justify-between gap-2 sm:gap-[var(--spacing-lg)]">
+            <div className="flex min-w-0 items-center gap-2 sm:flex-col sm:items-start sm:gap-1.5">
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2.5">
                 <span
                   className="h-2.5 w-2.5 shrink-0 rounded-full sm:h-[9px] sm:w-[9px]"
@@ -263,11 +263,20 @@ export function AppShell({
                   aria-hidden
                 />
                 <h1 className="orbita-large-title m-0 max-sm:text-[1.55rem]">Órvita</h1>
+                <span className="min-w-0 truncate text-[12px] font-medium leading-snug text-[var(--color-text-primary)] sm:hidden">
+                  {pathname.startsWith("/auth") && !isAppMockMode()
+                    ? "Inicia sesión"
+                    : userName == null
+                      ? isAppMockMode()
+                        ? "Cargando…"
+                        : "…"
+                      : `Hola, ${userName}`}
+                </span>
                 <span className="hidden text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-secondary)] sm:inline">
                   Sistema operativo estratégico
                 </span>
               </div>
-              <div className="flex min-w-0 flex-col gap-0.5 pl-[18px] sm:pl-[22px]">
+              <div className="hidden min-w-0 flex-col gap-0.5 pl-[22px] sm:flex">
                 <span className="text-[14px] font-medium leading-snug tracking-[-0.01em] text-[var(--color-text-primary)] sm:text-[15px] max-sm:leading-snug">
                   {pathname.startsWith("/auth") && !isAppMockMode()
                     ? "Inicia sesión para continuar"
@@ -286,8 +295,8 @@ export function AppShell({
               </div>
             </div>
 
-            <div className="flex min-w-0 flex-wrap items-center justify-end gap-1.5 sm:shrink-0 sm:gap-[var(--spacing-md)]">
-              <div className="relative order-first shrink-0 sm:order-last">
+            <div className="flex min-w-0 shrink-0 items-center justify-end gap-1.5 sm:gap-[var(--spacing-md)]">
+              <div className="relative order-last shrink-0">
                 <button
                   type="button"
                   onClick={() => setOpen((prev) => !prev)}
@@ -352,9 +361,10 @@ export function AppShell({
                 className="orbita-header-action orbita-focus-ring max-sm:!min-h-9 max-sm:gap-1 max-sm:px-2.5 max-sm:py-1.5 max-sm:text-[10px] max-sm:tracking-[0.08em] sm:min-h-0 sm:py-1.5"
                 onClick={cycleTheme}
                 type="button"
+                aria-label="Cambiar tema"
               >
                 <SunMoon className="h-3 w-3 sm:h-3.5 sm:w-3.5" aria-hidden />
-                Tema
+                <span className="hidden sm:inline">Tema</span>
               </button>
 
               <button
@@ -362,9 +372,10 @@ export function AppShell({
                 onClick={handleLogout}
                 disabled={loggingOut}
                 className="orbita-header-action orbita-header-action--surface orbita-focus-ring max-sm:!min-h-9 max-sm:gap-1 max-sm:px-2.5 max-sm:py-1.5 max-sm:text-[10px] max-sm:tracking-[0.08em] sm:min-h-0 sm:py-1.5"
+                aria-label={loggingOut ? "Saliendo" : "Salir"}
               >
                 <LogOut className="h-3 w-3 sm:h-3.5 sm:w-3.5" aria-hidden />
-                {loggingOut ? "Saliendo..." : "Salir"}
+                <span className="hidden sm:inline">{loggingOut ? "Saliendo..." : "Salir"}</span>
               </button>
             </div>
           </div>
