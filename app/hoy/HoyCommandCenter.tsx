@@ -47,7 +47,6 @@ import {
   totalMeetingMinutes,
   type PressureBand,
 } from "@/lib/hoy/commandDerivation"
-import { agendaTodayYmd } from "@/lib/agenda/localDateKey"
 import { isScheduledOnUtcDay } from "@/lib/habits/habitMetrics"
 import { StrategicDayHero } from "@/app/components/orbita-v3/strategic/StrategicDayCapitalHero"
 import type { OperationalCommandDomain, OperationalDomain, OperationalTask } from "@/lib/operational/types"
