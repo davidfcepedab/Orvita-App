@@ -70,6 +70,12 @@ El generador por defecto ya **no** las usa: hace **Buscar muestras de salud** co
 
 Si en el diccionario o en **Obtener contenido de URL** los valores aparecen como **«Texto»** (gris) y no como pastilla azul, Atajos está enviando **cadenas vacías**: el servidor y cualquier flujo que dependa del cuerpo (p. ej. compartir / reimportar el atajo) verán **todo sin valor**. No basta con repetir los **nombres** de las claves JSON en la columna de valor: hay que enlazar la **salida de una acción anterior** o una **variable** creada con **Establecer variable** (como en el `.shortcut` generado). Un atajo duplicado a mano («Orvita-Importar-Salud-Hoy 2») suele quedar así hasta que vuelvas a insertar cada variable.
 
+**No duplicar el atajo en Atajos:** al tocar **Duplicar** en la biblioteca, iOS a menudo genera un atajo nuevo (nombre con «2», «3»…) cuyo **Diccionario conserva las claves pero pierde el enlace a variables**; parece que «llegó sin diccionario» aunque el bloque exista. La solución es **borrar esa copia** e **instalar de nuevo** el `.shortcut` desde `orvita.app` (o el enlace de la app), no reutilizar la duplicada.
+
+### «No se encontraron muestras» en Workouts (tipo + inicio hoy)
+
+Al **editar** el atajo y tocar **Buscar muestras de salud** (Workouts, inicio hoy), iOS muestra una vista previa. Si **no has registrado ningún entreno con fecha de inicio en el día civil actual**, el sistema puede mostrar *No se encontraron muestras* o sugerir permisos. Eso **no impide** que el atajo completo continúe: el conteo puede ser **0** y el POST envía `workouts_count: 0` (u omite el valor según el flujo). Si sí entrenaste hoy y sigue en 0, abre **Salud → Compartir → Atajos** y confirma lectura de **Entrenamientos**; luego reinstala el atajo desde Órvita (no la copia duplicada).
+
 ### Pastillas rojas en entrenos (workouts)
 
 La **clave** del diccionario es la del contrato API (`workouts_count`, `workouts_duration_seconds`). El **valor** debe ser la variable numérica del flujo, **no** el mismo texto que la clave:

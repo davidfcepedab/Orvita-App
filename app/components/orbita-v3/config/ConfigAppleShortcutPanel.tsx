@@ -218,6 +218,10 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
             </p>
             <p className="text-xs leading-relaxed" style={{ color: theme.textMuted }}>
               Instálalo una vez desde <strong className="font-medium text-inherit">Safari</strong>. Si falla, vuelve a descargarlo.
+              {" "}
+              <strong className="font-medium text-inherit">No uses «Duplicar»</strong> en la app Atajos (atajos «… 2», «… 3»):
+              esa copia suele llegar <strong className="font-medium text-inherit">sin variables enlazadas</strong>: el bloque
+              Diccionario muestra solo «Texto» gris y el servidor recibe vacío. Borra la copia y reinstala desde Órvita.
             </p>
           </div>
         </div>
