@@ -47,8 +47,17 @@ describe("orvita-importar-salud-hoy shortcut plist (contrato)", () => {
 
     assertCommonHealthShortcutXml(hoy, "Orvita-Importar-Salud-Hoy")
     assertCommonHealthShortcutXml(hist, "Orvita-Salud-Historial-15Dias")
-    expect(hist).toContain("Histórico 15 días")
+    expect(hist).toContain("Historial-15Dias")
     assertDictionaryVariableTokens(hoy)
     assertDictionaryVariableTokens(hist)
+
+    for (const xml of [hoy, hist]) {
+      expect(xml).toContain("<string>Sleep Analysis</string>")
+      expect(xml).toContain("<string>Awake</string>")
+      expect(xml).toContain("<string>In Bed</string>")
+      expect(xml).toContain("<string>Value</string>")
+      const nOp5 = (xml.match(/<key>Operator<\/key>\s*<integer>5<\/integer>/g) ?? []).length
+      expect(nOp5).toBeGreaterThanOrEqual(4)
+    }
   })
 })

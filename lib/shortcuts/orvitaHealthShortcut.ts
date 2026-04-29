@@ -8,14 +8,14 @@ import { siteOrigin } from "@/lib/site/origin"
  * "el archivo no existe" hasta que reinstales el .shortcut o restaures el nombre.
  */
 /** Bust de caché en enlaces de descarga (CDN / PWA). Subir cuando cambie el binario en `public/shortcuts/`. */
-export const ORVITA_HEALTH_SHORTCUT_ASSET_VERSION = "20260429i"
+export const ORVITA_HEALTH_SHORTCUT_ASSET_VERSION = "20260429j"
 
 /** Nombre exacto en la biblioteca de Atajos (debe coincidir con «Nombre del atajo» al compartir / ejecutar). */
 export const ORVITA_HEALTH_SHORTCUT_NAME = "Orvita-Importar-Salud-Hoy"
 
 export const ORVITA_HEALTH_SHORTCUT_FILE_PATH = "/shortcuts/Orvita-Importar-Salud-Hoy.shortcut"
 
-/** Segundo atajo (mismo flujo técnico que el diario; nombre distinto para instalar en paralelo). Backfill día-a-día real en roadmap. */
+/** Segundo atajo: mismo payload por ejecución que el diario (`observed_at` = hoy). Nombre distinto = instalación en paralelo; no es aún un “backfill” de 15 días en una pasada. */
 export const ORVITA_HEALTH_HISTORIAL15_SHORTCUT_NAME = "Orvita-Salud-Historial-15Dias"
 
 export const ORVITA_HEALTH_HISTORIAL15_SHORTCUT_FILE_PATH = "/shortcuts/Orvita-Salud-Historial-15Dias.shortcut"

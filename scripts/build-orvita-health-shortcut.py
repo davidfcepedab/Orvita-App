@@ -14,10 +14,8 @@ Modo `full`: token → fecha ISO → por cada métrica: Buscar muestras (tipo + 
 `--variant historial-15d`: segundo plist «Orvita-Salud-Historial-15Dias» (mismo flujo; comentario en el atajo).
 → Obtener números → Establecer variable (`*_num`) → diccionario y POST JSON **plano** (sin `apple_bundle`).
 Entrenos: conteo real y duración en segundos (suma de `Duration`) como variables distintas.
-Sueño: suma (`sleep_duration_seconds`) y conteo de sesiones **solo con inicio = hoy** (mismo filtro que pasos/HRV).
-La suma usa tipo **Sleep** (cantidad) + Duración de cada muestra. Alternativa más cercana a «horas dormidas»
-sin tiempo en cama / despierto: construir un **diccionario por fases** (In Bed, Awake, REM, Light, Deep, Core),
-excluir claves Awake e In Bed y sumar REM+Light+Deep+Core — ver `scripts/shortcuts/orvita-sleep-stages-orvita.txt`.
+Sueño: **Sleep Analysis**, inicio = hoy, **Valor no es Awake ni In Bed**, suma de Duración (y el conteo usa el mismo filtro).
+Variación manual por diccionario de fases (REM/Light/Deep/Core): ver `scripts/shortcuts/orvita-sleep-stages-orvita.txt`.
 Derivadas `training_load` / `recovery_score_proxy`
 las calcula el servidor si faltan en el cuerpo.
 
@@ -143,6 +141,62 @@ def content_filter_health_quantity_today(type_value: str) -> dict:
     }
 
 
+def _filter_enum_row(
+    *,
+    property_name: str,
+    operator: int,
+    enumeration_value: str,
+    bounded: bool | None = None,
+    removable: bool = False,
+) -> dict:
+    row: dict = {
+        "Operator": operator,
+        "Property": property_name,
+        "Removable": removable,
+        "Values": {
+            "Enumeration": {
+                "Value": enumeration_value,
+                "WFSerializationType": "WFStringSubstitutableState",
+            }
+        },
+    }
+    if bounded is not None:
+        row["Bounded"] = bounded
+    return row
+
+
+def content_filter_sleep_analysis_asleep_phases_today() -> dict:
+    """Sleep Analysis (HKCategory) + inicio hoy; excluye Awake e In Bed (solo tiempo dormido por fases).
+
+    Etiquetas como en el selector en inglés de Atajos («Sleep Analysis», «Awake», «In Bed»).
+    Si tu iPhone solo muestra nombres en español en la UI, el plist sigue usando las claves internas en inglés.
+    """
+    return {
+        "Value": {
+            "WFActionParameterFilterPrefix": 1,
+            "WFContentPredicateBoundedDate": False,
+            "WFActionParameterFilterTemplates": [
+                _filter_enum_row(
+                    property_name="Type",
+                    operator=4,
+                    enumeration_value="Sleep Analysis",
+                    bounded=True,
+                    removable=False,
+                ),
+                {
+                    "Operator": 1002,
+                    "Property": "Start Date",
+                    "Removable": True,
+                },
+                # Operator 5 = «no es» (excluir tiempo despierto / en cama del total)
+                _filter_enum_row(property_name="Value", operator=5, enumeration_value="Awake", removable=True),
+                _filter_enum_row(property_name="Value", operator=5, enumeration_value="In Bed", removable=True),
+            ],
+        },
+        "WFSerializationType": "WFContentPredicateTableTemplate",
+    }
+
+
 def find_health_quantity(
     *,
     u_find: str,
@@ -158,17 +212,16 @@ def find_health_quantity(
 
 
 def find_sleep_samples(*, u_find: str) -> dict:
-    """Busca muestras de cantidad tipo Sleep (HealthKit) para el día de observed_at.
+    """Busca muestras categoría Sleep Analysis (HealthKit) para el día; sin Awake ni In Bed.
 
-    No implementa aquí la lógica «Sleep Analysis» por diccionario de fases (REM/Light/Deep/Core);
-    para eso hay que sustituir esta cadena por sumas sobre un diccionario filtrado — ver
+    Suma de duraciones ≈ tiempo en fases dormidas (Core/Deep/REM/Unspecified); ver notas en
     `scripts/shortcuts/orvita-sleep-stages-orvita.txt`.
     """
     return {
         "WFWorkflowActionIdentifier": "is.workflow.actions.filter.health.quantity",
         "WFWorkflowActionParameters": {
             "UUID": u_find,
-            "WFContentItemFilter": content_filter_health_quantity_today("Sleep"),
+            "WFContentItemFilter": content_filter_sleep_analysis_asleep_phases_today(),
         },
     }
 
@@ -709,7 +762,10 @@ def append_quantity_count_chain(
     u_find = uid()
     u_cnt = uid()
     u_set = uid()
-    actions.append(find_health_quantity(u_find=u_find, type_value=type_label))
+    if variable_name == "sleep_sessions_count_num":
+        actions.append(find_sleep_samples(u_find=u_find))
+    else:
+        actions.append(find_health_quantity(u_find=u_find, type_value=type_label))
     actions.append(count_items(u_input=u_find, u_count=u_cnt, output_name="Health Samples"))
     actions.append(
         set_variable_from_output(
@@ -876,9 +932,9 @@ def build_actions_full(
 
 
 HISTORIAL_15D_INTRO = (
-    "Orvita · Histórico 15 días (v1): mismo flujo técnico que «Importar Salud Hoy» (filtro Salud = día de ejecución). "
-    "Nombre distinto para instalar en paralelo. Backfill automático por cada día civil pasado (sin hoy) queda en roadmap "
-    "(Atajos: filtro por fecha variable en muestras)."
+    "Orvita · Salud Historial-15Dias: mismo flujo que «Importar Salud Hoy» (una ejecución = un POST con observed_at = día de ejecución). "
+    "El nombre sirve para tener un segundo atajo en paralelo en el iPhone (p. ej. otra automatización). "
+    "No recorre todavía 15 días en una sola pasada; backfill día a día en roadmap (filtros de fecha por día)."
 )
 
 

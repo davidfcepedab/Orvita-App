@@ -3,11 +3,11 @@
 ================================================================================
 QUÉ HACE HOY EL GENERADOR (orvita-importar-salud-hoy.shortcut.src.plist)
 ================================================================================
-- Busca muestras de cantidad tipo «Sleep» con inicio = día de observed_at.
-- Suma la propiedad Duración de todas esas muestras → sleep_duration_seconds.
+- Busca muestras tipo «Sleep Analysis» con inicio = día de observed_at.
+- Filtra **Valor**: no es «Awake», no es «In Bed» (Atajos en inglés en el plist).
+- Suma la propiedad Duración de las muestras que pasan el filtro → sleep_duration_seconds.
 
-Eso incluye **todas** las filas que Apple etiqueta como muestras «Sleep» en esa ventana.
-Puede mezclar en cama / despierto / fases según cómo HealthKit devuelva las muestras ese día.
+Equivale a tiempo en fases dormidas (Core / Deep / REM / asleep unspecified); sin tiempo en cama ni intervalos «despierto».
 
 ================================================================================
 QUÉ HACE TU ATAJO «SLEEP ANALYSIS FUNCIONAL» (lógica de la captura)

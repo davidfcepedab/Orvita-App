@@ -544,63 +544,25 @@ export default function AgendaPage() {
         className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] shadow-card"
         style={{ borderWidth: "0.5px", background: "var(--agenda-shell-bg)" }}
       >
-        <header
-          className="flex flex-col gap-1.5 border-b border-[var(--color-border)] px-3 pb-2 pt-2.5 sm:gap-2 sm:px-4 sm:pb-2.5 sm:pt-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 lg:px-6 lg:pb-3 lg:pt-4"
-          style={{ background: "var(--agenda-elevated-bg)" }}
-        >
-          <div className="min-w-0 w-full flex-1">
-            <h1 className="m-0 break-words text-[1.25rem] font-medium leading-tight tracking-tight text-[var(--color-text-primary)] sm:text-[24px] lg:text-[26px]">
-              {agendaTitle}
-            </h1>
-            <p className="m-0 mt-0.5 max-w-2xl text-[10px] leading-snug text-[var(--color-text-secondary)] sm:mt-1 sm:text-[12px]">
-              {agendaTagline}
-            </p>
-          </div>
-          <div className="flex shrink-0 flex-wrap gap-1.5 sm:justify-end">
-            <button
-              type="button"
-              onClick={() => setFormOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-white sm:px-3 sm:py-2 sm:text-[11px]"
-              style={{ background: "var(--agenda-assigned)" }}
-            >
-              <Plus size={13} className="shrink-0" /> Nueva tarea
-            </button>
-          </div>
-        </header>
-
-        <Suspense fallback={null}>
-          <AgendaTrainingSuggestPanel
-            events={googleCalendar.events}
-            calendarConnected={googleCalendar.connected}
-            calendarLoading={googleCalendar.loading}
-          />
-        </Suspense>
-
-        {error ? (
-          <div
-            className="flex items-center justify-between gap-3 border-b border-[var(--color-border)] px-5 py-3 text-[13px] lg:px-8"
-            style={{
-              background: "color-mix(in srgb, var(--color-accent-danger) 10%, var(--agenda-shell-bg))",
-              color: "var(--color-accent-danger)",
-            }}
+        <div className="border-b border-[var(--color-border)]" style={{ background: "var(--agenda-shell-bg)" }}>
+          <header
+            className="px-3 pb-2 pt-2.5 sm:px-4 sm:pb-2.5 sm:pt-3 lg:px-6 lg:pb-3 lg:pt-4"
           >
-            <span>{error}</span>
-            <button
-              type="button"
-              onClick={() => void refresh()}
-              className="shrink-0 cursor-pointer rounded-lg border border-[var(--color-border)] px-2.5 py-1.5 text-[12px]"
-              style={{ background: "var(--agenda-elevated-bg)" }}
-            >
-              Reintentar
-            </button>
-          </div>
-        ) : null}
+            <div className="min-w-0">
+              <h1 className="m-0 break-words text-[1.25rem] font-medium leading-tight tracking-tight text-[var(--color-text-primary)] sm:text-[24px] lg:text-[26px]">
+                {agendaTitle}
+              </h1>
+              <p className="m-0 mt-0.5 max-w-2xl text-[10px] leading-snug text-[var(--color-text-secondary)] sm:mt-1 sm:text-[12px]">
+                {agendaTagline}
+              </p>
+            </div>
+          </header>
 
-        <div
-          className="sticky z-10 border-b border-[var(--color-border)] px-3 py-1.5 sm:px-4 sm:py-2 lg:px-6"
-          style={{ top: "max(4rem, calc(env(safe-area-inset-top, 0px) + 3.25rem))", background: "var(--agenda-shell-bg)" }}
-        >
-          <div className="flex flex-col gap-1 max-sm:gap-1 sm:gap-1.5">
+          <div
+            className="sticky z-10 border-t border-[color-mix(in_srgb,var(--color-border)_65%,transparent)] px-3 py-1.5 sm:px-4 sm:py-2 lg:px-6"
+            style={{ top: "max(4rem, calc(env(safe-area-inset-top, 0px) + 3.25rem))", background: "var(--agenda-shell-bg)" }}
+          >
+            <div className="flex flex-col gap-1 max-sm:gap-1 sm:gap-1.5">
             <div
               className="rounded-lg border border-[var(--color-border)] px-2 py-1 sm:px-2.5 sm:py-2 max-sm:shadow-none"
               style={agendaPanelSurfaceStyle}
@@ -608,7 +570,8 @@ export default function AgendaPage() {
               aria-label="Buscar, sincronizar Google y filtros"
             >
               <div className="flex w-full min-w-0 flex-col gap-1 sm:gap-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-2 sm:gap-y-1">
-                <div className="flex min-h-[34px] min-w-0 w-full flex-1 items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-2 py-1 sm:min-w-[10rem] sm:max-w-md lg:max-w-xl">
+                <div className="flex min-w-0 w-full flex-1 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2">
+                <div className="flex min-h-[34px] min-w-0 flex-1 items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-2 py-1 sm:min-w-[10rem] sm:max-w-md lg:max-w-xl">
                   <Search size={13} className="shrink-0 text-[var(--color-text-secondary)]" aria-hidden />
                   <input
                     placeholder="Buscar…"
@@ -616,6 +579,19 @@ export default function AgendaPage() {
                     onChange={(event) => setQuery(event.target.value)}
                     className="min-w-0 flex-1 border-0 bg-transparent text-[12px] text-[var(--color-text-primary)] outline-none placeholder:text-[var(--color-text-secondary)]"
                   />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setFormOpen(true)}
+                  aria-label="Nueva tarea"
+                  className="inline-flex min-h-[34px] shrink-0 items-center justify-center gap-1 rounded-md border border-[color-mix(in_srgb,var(--color-border)_70%,transparent)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-white sm:min-h-[34px] sm:px-3 sm:text-[11px] sm:tracking-[0.1em]"
+                  style={{ background: "var(--agenda-assigned)" }}
+                  title="Crear tarea en Órvita"
+                >
+                  <Plus size={14} className="shrink-0" strokeWidth={2.25} aria-hidden />
+                  <span className="max-sm:sr-only">Nueva tarea</span>
+                  <span className="sm:hidden">Tarea</span>
+                </button>
                 </div>
                 <div className="hidden w-full min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 sm:flex sm:w-auto sm:flex-[0_1_auto] sm:justify-end">
                   <GoogleAgendaPanel
@@ -785,6 +761,35 @@ export default function AgendaPage() {
             </div>
           </div>
         </div>
+        </div>
+
+        <Suspense fallback={null}>
+          <AgendaTrainingSuggestPanel
+            events={googleCalendar.events}
+            calendarConnected={googleCalendar.connected}
+            calendarLoading={googleCalendar.loading}
+          />
+        </Suspense>
+
+        {error ? (
+          <div
+            className="flex items-center justify-between gap-3 border-b border-[var(--color-border)] px-5 py-3 text-[13px] lg:px-8"
+            style={{
+              background: "color-mix(in srgb, var(--color-accent-danger) 10%, var(--agenda-shell-bg))",
+              color: "var(--color-accent-danger)",
+            }}
+          >
+            <span>{error}</span>
+            <button
+              type="button"
+              onClick={() => void refresh()}
+              className="shrink-0 cursor-pointer rounded-lg border border-[var(--color-border)] px-2.5 py-1.5 text-[12px]"
+              style={{ background: "var(--agenda-elevated-bg)" }}
+            >
+              Reintentar
+            </button>
+          </div>
+        ) : null}
 
         <div
           className="unified-agenda-container flex min-w-0 flex-col gap-2 px-3 py-3 sm:gap-3 sm:px-4 sm:py-4 md:gap-4 lg:px-6 lg:py-6"

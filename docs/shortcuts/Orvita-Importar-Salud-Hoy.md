@@ -7,7 +7,7 @@ Flujo canónico: el iPhone lee métricas de **Salud** (y entrenos), arma un JSON
 | Artefacto | Uso |
 |-----------|-----|
 | `public/shortcuts/Orvita-Importar-Salud-Hoy.shortcut` | Descarga / instalación (`shortcuts://import-shortcut?url=…`). Firmado en macOS con `shortcuts sign`. |
-| `public/shortcuts/Orvita-Salud-Historial-15Dias.shortcut` | Segundo atajo (mismo flujo que el diario, otro nombre; ver comentario en el plist). Generado con `--variant historial-15d`. |
+| `public/shortcuts/Orvita-Salud-Historial-15Dias.shortcut` | Segundo atajo: **misma lógica por ejecución** que el diario (un POST, `observed_at` = día de ejecución). Otro nombre para instalar **en paralelo** (p. ej. segunda automatización). *No* recorre 15 días en una sola corrida (roadmap). Generado con `--variant historial-15d`. |
 | `scripts/shortcuts/orvita-importar-salud-hoy.shortcut.src.plist` | Plist fuente (también regenerable). |
 | `scripts/shortcuts/orvita-salud-historial-15dias.src.plist` | Plist del segundo atajo (`--variant historial-15d`). |
 | `scripts/build-orvita-health-shortcut.py` | Genera plist(es): `python3 scripts/build-orvita-health-shortcut.py` y `… --variant historial-15d`. |

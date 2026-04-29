@@ -315,7 +315,9 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
             className="w-full basis-full text-[10px] leading-snug sm:text-[11px]"
             style={{ color: theme.textMuted }}
           >
-            El atajo de histórico sirve si quieres un segundo botón en el iPhone para enviar varios días; el del día a día es el principal de arriba.
+            El segundo archivo instala <strong className="font-medium text-inherit">Orvita-Salud-Historial-15Dias</strong>: mismo envío que el atajo
+            principal (una corrida = datos del día en curso). Sirve para tener <strong className="font-medium text-inherit">dos atajos en paralelo</strong>{" "}
+            (p. ej. otra automatización o widget). Un repaso automático de varios días en una sola ejecución está planificado; aún no está en el archivo.
           </p>
           {moduleCard ? null : (
             <button
