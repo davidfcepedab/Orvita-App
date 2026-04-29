@@ -9,7 +9,7 @@ import type { SaludContextSnapshot } from "@/app/salud/_hooks/useSaludContext"
 import type { AutoHealthMetric } from "@/app/hooks/useHealthAutoMetrics"
 import { buildOrvitaRunShortcutHref, ORVITA_HEALTH_SHORTCUT_NAME } from "@/lib/shortcuts/orvitaHealthShortcut"
 import {
-  appleHealthSyncStale,
+  appleHealthSyncStaleFromMetric,
   buildAppleHealthSyncChip,
   buildAppleHealthSyncChipCompact,
 } from "@/lib/salud/appleHealthSyncToolbar"
@@ -72,7 +72,7 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
   }, [salud.scoreSalud, salud.trendAverage])
 
   const runShortcutHref = useMemo(() => buildOrvitaRunShortcutHref(), [])
-  const staleSync = appleHealthSyncStale(latest?.observed_at)
+  const staleSync = appleHealthSyncStaleFromMetric(latest)
   const syncChipSummary = useMemo(() => buildAppleHealthSyncChipCompact(latest), [latest])
   const syncChip = useMemo(() => buildAppleHealthSyncChip(latest), [latest])
 

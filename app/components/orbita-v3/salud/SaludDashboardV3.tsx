@@ -13,7 +13,7 @@ import { HeroDecisionCard } from "@/app/components/orbita-v3/salud/HeroDecisionC
 import { SaludInsightSection } from "@/app/components/orbita-v3/salud/SaludInsightSection"
 import AppleHealthLuxurySection from "@/app/components/orbita-v3/salud/AppleHealthLuxurySection"
 import { AppleShortcutAnalyticsSection } from "@/app/health/AppleShortcutAnalyticsSection"
-import { appleHealthSyncStale, buildAppleHealthHeroSyncLine } from "@/lib/salud/appleHealthSyncToolbar"
+import { appleHealthSyncStaleFromMetric, buildAppleHealthHeroSyncLine } from "@/lib/salud/appleHealthSyncToolbar"
 
 export default function SaludDashboardV3() {
   const salud = useSaludContext()
@@ -21,7 +21,7 @@ export default function SaludDashboardV3() {
   const { days, todayState } = useTraining()
   const todayIso = agendaTodayYmd()
 
-  const staleSync = useMemo(() => appleHealthSyncStale(autoHealth.latest?.observed_at), [autoHealth.latest?.observed_at])
+  const staleSync = useMemo(() => appleHealthSyncStaleFromMetric(autoHealth.latest), [autoHealth.latest])
 
   const appleSignals = useMemo(() => appleDaySignalsFromHealthMetric(autoHealth.latest), [autoHealth.latest])
   const readiness = useMemo(() => buildTrainingReadiness(appleSignals, days), [appleSignals, days])

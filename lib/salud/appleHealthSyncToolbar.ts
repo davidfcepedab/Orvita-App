@@ -1,5 +1,9 @@
 import type { AutoHealthMetric } from "@/app/hooks/useHealthAutoMetrics"
 import { formatLocalDateLabelEsCo } from "@/lib/agenda/localDateKey"
+import {
+  healthMetricInstantForStaleness,
+  healthMetricObservedAtIsoForDisplay,
+} from "@/lib/health/healthMetricCanonicalObservedAt"
 import { SALUD_SEM } from "@/lib/salud/saludSemanticPalette"
 import { saludHexToRgba } from "@/lib/salud/saludThemeStyles"
 
@@ -8,6 +12,12 @@ export function appleHealthSyncStale(observedAt: string | null | undefined): boo
   if (!observedAt) return false
   const ageMs = Date.now() - new Date(observedAt).getTime()
   return Number.isFinite(ageMs) && ageMs > 36 * 60 * 60 * 1000
+}
+
+/** Stale usando `merged_at` si existe (import reciente vs ancla del día). */
+export function appleHealthSyncStaleFromMetric(latest: AutoHealthMetric | null | undefined): boolean {
+  if (!latest) return false
+  return appleHealthSyncStale(healthMetricInstantForStaleness(latest))
 }
 
 /**
@@ -40,6 +50,11 @@ export function formatAppleHealthSyncWhenShort(iso: string | null | undefined): 
   return `Hace ${hours} h`
 }
 
+export function formatAppleHealthSyncWhenShortFromMetric(latest: AutoHealthMetric | null | undefined): string {
+  if (!latest) return "Sin lectura"
+  return formatAppleHealthSyncWhenShort(healthMetricInstantForStaleness(latest))
+}
+
 export type AppleSyncChip = { label: string; fg: string; bg: string }
 
 /** Frescura del último `observed_at` (misma ventana stale 36h). */
@@ -68,6 +83,11 @@ export function appleHealthSyncAgeHint(observedAt: string | null | undefined): s
   return "dato antiguo"
 }
 
+function freshnessAndHintFromLatest(latest: AutoHealthMetric) {
+  const ref = healthMetricInstantForStaleness(latest)
+  return { fresh: appleHealthSyncFreshness(ref), hint: appleHealthSyncAgeHint(ref) }
+}
+
 export type AppleHeroSyncLine = {
   /** Texto corto coloreado: estado del sync. */
   statusText: string
@@ -89,10 +109,10 @@ export function buildAppleHealthHeroSyncLine(
       statusColor: SALUD_SEM.risk,
     }
   }
-  const dayLabel = formatLocalDateLabelEsCo(latest.observed_at)
-  const when = dayLabel === "—" ? latest.observed_at : dayLabel
-  const fresh = appleHealthSyncFreshness(latest.observed_at)
-  const hint = appleHealthSyncAgeHint(latest.observed_at)
+  const displayIso = healthMetricObservedAtIsoForDisplay(latest)
+  const dayLabel = formatLocalDateLabelEsCo(displayIso)
+  const when = dayLabel === "—" ? displayIso : dayLabel
+  const { fresh, hint } = freshnessAndHintFromLatest(latest)
   const detailCore = hint ? `${when} · ${hint}` : when
 
   if (stale || fresh === "stale") {
@@ -132,15 +152,15 @@ export function buildAppleHealthSyncChipCompact(latest: AutoHealthMetric | null 
       bg: saludHexToRgba(SALUD_SEM.warn, 0.1),
     }
   }
-  if (appleHealthSyncStale(latest.observed_at)) {
+  if (appleHealthSyncStaleFromMetric(latest)) {
     return {
-      label: `Desactualizado · ${formatAppleHealthSyncWhenShort(latest.observed_at)}`,
+      label: `Desactualizado · ${formatAppleHealthSyncWhenShortFromMetric(latest)}`,
       fg: SALUD_SEM.risk,
       bg: saludHexToRgba(SALUD_SEM.risk, 0.1),
     }
   }
   return {
-    label: `Ok · ${formatAppleHealthSyncWhenShort(latest.observed_at)}`,
+    label: `Ok · ${formatAppleHealthSyncWhenShortFromMetric(latest)}`,
     fg: SALUD_SEM.ok,
     bg: saludHexToRgba(SALUD_SEM.ok, 0.1),
   }
@@ -155,15 +175,15 @@ export function buildAppleHealthSyncChip(latest: AutoHealthMetric | null | undef
       bg: saludHexToRgba(SALUD_SEM.warn, 0.14),
     }
   }
-  if (appleHealthSyncStale(latest.observed_at)) {
+  if (appleHealthSyncStaleFromMetric(latest)) {
     return {
-      label: `Apple · ${formatAppleHealthSyncWhen(latest.observed_at)} · desactualizado`,
+      label: `Apple · ${formatAppleHealthSyncWhen(healthMetricObservedAtIsoForDisplay(latest))} · desactualizado`,
       fg: SALUD_SEM.risk,
       bg: saludHexToRgba(SALUD_SEM.risk, 0.14),
     }
   }
   return {
-    label: `Apple · ${formatAppleHealthSyncWhen(latest.observed_at)} · al día`,
+    label: `Apple · ${formatAppleHealthSyncWhen(healthMetricObservedAtIsoForDisplay(latest))} · al día`,
     fg: SALUD_SEM.ok,
     bg: saludHexToRgba(SALUD_SEM.ok, 0.14),
   }

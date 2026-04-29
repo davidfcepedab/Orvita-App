@@ -6,7 +6,7 @@ import { Zap } from "lucide-react"
 import { useOrbitaSkin } from "@/app/contexts/AppContext"
 import type { AutoHealthMetric } from "@/app/hooks/useHealthAutoMetrics"
 import { buildOrvitaRunShortcutHref } from "@/lib/shortcuts/orvitaHealthShortcut"
-import { buildAppleHealthSyncChip, formatAppleHealthSyncWhenShort } from "@/lib/salud/appleHealthSyncToolbar"
+import { buildAppleHealthSyncChip, formatAppleHealthSyncWhenShortFromMetric } from "@/lib/salud/appleHealthSyncToolbar"
 import { SALUD_SEM } from "@/lib/salud/saludSemanticPalette"
 import { saludHexToRgba, saludPanelStyle } from "@/lib/salud/saludThemeStyles"
 
@@ -21,7 +21,7 @@ export function AppleHealthSyncCollapsible({ onRefresh, latest = null }: Props) 
   const panel = useMemo(() => saludPanelStyle(theme, 0.92), [theme])
   const runShortcutHref = useMemo(() => buildOrvitaRunShortcutHref(), [])
   const syncChip = useMemo(() => buildAppleHealthSyncChip(latest), [latest])
-  const summarySyncShort = useMemo(() => formatAppleHealthSyncWhenShort(latest?.observed_at), [latest?.observed_at])
+  const summarySyncShort = useMemo(() => formatAppleHealthSyncWhenShortFromMetric(latest), [latest])
 
   return (
     <details

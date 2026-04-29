@@ -1,4 +1,8 @@
 import type { AppleHealthContextSignals } from "@/lib/operational/types"
+import {
+  healthMetricInstantForStaleness,
+  healthMetricObservedAtIsoForDisplay,
+} from "@/lib/health/healthMetricCanonicalObservedAt"
 
 function num(v: unknown): number | null {
   return typeof v === "number" && Number.isFinite(v) ? v : null
@@ -8,11 +12,17 @@ function num(v: unknown): number | null {
 export function mapHealthMetricsRowToAppleSignals(row: unknown): AppleHealthContextSignals | null {
   if (!row || typeof row !== "object") return null
   const r = row as Record<string, unknown>
-  const observed_at = typeof r.observed_at === "string" ? r.observed_at : null
-  if (!observed_at) return null
+  const observed_at_raw = typeof r.observed_at === "string" ? r.observed_at : null
+  if (!observed_at_raw) return null
 
   const metaRaw = r.metadata
   const meta = metaRaw && typeof metaRaw === "object" && !Array.isArray(metaRaw) ? (metaRaw as Record<string, unknown>) : {}
+  const rowForCanonical = {
+    observed_at: observed_at_raw,
+    source: typeof r.source === "string" ? r.source : null,
+    metadata: meta,
+  }
+  const observed_at = healthMetricObservedAtIsoForDisplay(rowForCanonical)
 
   const wds = num(meta.apple_workouts_duration_seconds)
   const workout_minutes_from_sec = wds != null && wds > 0 ? Math.min(24 * 60, Math.round(wds / 60)) : null
@@ -28,7 +38,8 @@ export function mapHealthMetricsRowToAppleSignals(row: unknown): AppleHealthCont
           ? Math.round(wmMeta)
           : null
 
-  const ageMs = Date.now() - Date.parse(observed_at)
+  const ageRef = healthMetricInstantForStaleness(rowForCanonical)
+  const ageMs = Date.now() - Date.parse(ageRef)
   const sync_stale = Number.isFinite(ageMs) && ageMs > 36 * 60 * 60 * 1000
 
   const wcCol = num(r.apple_workouts_count)
