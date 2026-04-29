@@ -11,7 +11,7 @@ o tarjetas «Acción desconocida» en el medio, suele ser **serialización** del
 permisos ni caché: prueba `--mode minimal` y/o `--omit-workout-duration-stat` (ver `--help`).
 
 Modo `full`: token → fecha ISO → por cada métrica: Buscar muestras (tipo + hoy) → Calcular (Suma/Media) o Conteo.
-`--variant historial-15d`: segundo plist «Orvita-Salud-Historial-15Dias» (mismo flujo y POST con `apple_bundle` que «hoy»; otro nombre en Atajos).
+`--variant historial-15d`: plist «Orvita-Salud-Historial-15Dias» (selector de día tras el token; `observed_at` y filtros Salud/entrenos anclados a esa fecha; mismo POST `apple_bundle`).
 → Obtener números → Establecer variable (`*_num`) → diccionario y POST JSON con `apple_bundle`.
 Entrenos: conteo real y duración en segundos (suma de `Duration`) como variables distintas.
 Sueño: **Sleep Analysis**, inicio = hoy, **Valor no es Awake ni In Bed**, suma de Duración (y el conteo usa el mismo filtro).
@@ -94,25 +94,57 @@ def wf_value_named_variable(variable_name: str) -> dict:
     }
 
 
+def _start_date_row_today() -> dict:
+    """Filtro «hoy» en calendario del dispositivo (operador interno 1002)."""
+    return {
+        "Operator": 1002,
+        "Property": "Start Date",
+        "Removable": True,
+    }
+
+
+def _start_date_row_is_on_action(*, anchor_uuid: str, anchor_output_name: str = "Date") -> dict:
+    """Misma muestra cae el día civil de la fecha devuelta por la acción ancla (p. ej. Obtener variable import_day)."""
+    return {
+        "Operator": 4,
+        "Property": "Start Date",
+        "Removable": True,
+        "Values": {
+            "AnotherDate": {
+                "Value": {
+                    "OutputUUID": anchor_uuid,
+                    "OutputName": anchor_output_name,
+                    "Type": "ActionOutput",
+                },
+                "WFSerializationType": "WFTextTokenAttachment",
+            },
+        },
+    }
+
+
 def content_filter_today() -> dict:
     return {
         "Value": {
             "WFActionParameterFilterPrefix": 1,
             "WFContentPredicateBoundedDate": False,
-            "WFActionParameterFilterTemplates": [
-                {
-                    "Operator": 1002,
-                    "Property": "Start Date",
-                    "Removable": True,
-                }
-            ],
+            "WFActionParameterFilterTemplates": [_start_date_row_today()],
         },
         "WFSerializationType": "WFContentPredicateTableTemplate",
     }
 
 
-def content_filter_health_quantity_today(type_value: str) -> dict:
-    """Tipo explícito (evita null) + fecha de inicio = hoy (plantilla Start Date)."""
+def content_filter_health_quantity_for_day(
+    type_value: str,
+    *,
+    anchor_uuid: str | None,
+    anchor_output_name: str = "Date",
+) -> dict:
+    """Tipo explícito + ventana de día: hoy (1002) o día elegido (Start Date «es» la salida ancla)."""
+    date_row = (
+        _start_date_row_is_on_action(anchor_uuid=anchor_uuid, anchor_output_name=anchor_output_name)
+        if anchor_uuid
+        else _start_date_row_today()
+    )
     return {
         "Value": {
             "WFActionParameterFilterPrefix": 1,
@@ -130,15 +162,16 @@ def content_filter_health_quantity_today(type_value: str) -> dict:
                         }
                     },
                 },
-                {
-                    "Operator": 1002,
-                    "Property": "Start Date",
-                    "Removable": True,
-                },
+                date_row,
             ],
         },
         "WFSerializationType": "WFContentPredicateTableTemplate",
     }
+
+
+def content_filter_health_quantity_today(type_value: str) -> dict:
+    """Compat: solo «hoy»."""
+    return content_filter_health_quantity_for_day(type_value, anchor_uuid=None)
 
 
 def _filter_enum_row(
@@ -165,12 +198,13 @@ def _filter_enum_row(
     return row
 
 
-def content_filter_sleep_analysis_asleep_phases_today() -> dict:
-    """Sleep Analysis (HKCategory) + inicio hoy; excluye Awake e In Bed (solo tiempo dormido por fases).
-
-    Etiquetas como en el selector en inglés de Atajos («Sleep Analysis», «Awake», «In Bed»).
-    Si tu iPhone solo muestra nombres en español en la UI, el plist sigue usando las claves internas en inglés.
-    """
+def content_filter_sleep_analysis_asleep_phases_for_day(*, anchor_uuid: str | None, anchor_output_name: str = "Date") -> dict:
+    """Sleep Analysis (HKCategory) + día (hoy o ancla); excluye Awake e In Bed."""
+    date_row = (
+        _start_date_row_is_on_action(anchor_uuid=anchor_uuid, anchor_output_name=anchor_output_name)
+        if anchor_uuid
+        else _start_date_row_today()
+    )
     return {
         "Value": {
             "WFActionParameterFilterPrefix": 1,
@@ -183,12 +217,7 @@ def content_filter_sleep_analysis_asleep_phases_today() -> dict:
                     bounded=True,
                     removable=False,
                 ),
-                {
-                    "Operator": 1002,
-                    "Property": "Start Date",
-                    "Removable": True,
-                },
-                # Operator 5 = «no es» (excluir tiempo despierto / en cama del total)
+                date_row,
                 _filter_enum_row(property_name="Value", operator=5, enumeration_value="Awake", removable=True),
                 _filter_enum_row(property_name="Value", operator=5, enumeration_value="In Bed", removable=True),
             ],
@@ -197,21 +226,37 @@ def content_filter_sleep_analysis_asleep_phases_today() -> dict:
     }
 
 
+def content_filter_sleep_analysis_asleep_phases_today() -> dict:
+    """Compat: solo «hoy»."""
+    return content_filter_sleep_analysis_asleep_phases_for_day(anchor_uuid=None)
+
+
 def find_health_quantity(
     *,
     u_find: str,
     type_value: str,
+    anchor_uuid: str | None = None,
+    anchor_output_name: str = "Date",
 ) -> dict:
     return {
         "WFWorkflowActionIdentifier": "is.workflow.actions.filter.health.quantity",
         "WFWorkflowActionParameters": {
             "UUID": u_find,
-            "WFContentItemFilter": content_filter_health_quantity_today(type_value),
+            "WFContentItemFilter": content_filter_health_quantity_for_day(
+                type_value,
+                anchor_uuid=anchor_uuid,
+                anchor_output_name=anchor_output_name,
+            ),
         },
     }
 
 
-def find_sleep_samples(*, u_find: str) -> dict:
+def find_sleep_samples(
+    *,
+    u_find: str,
+    anchor_uuid: str | None = None,
+    anchor_output_name: str = "Date",
+) -> dict:
     """Busca muestras categoría Sleep Analysis (HealthKit) para el día; sin Awake ni In Bed.
 
     Suma de duraciones ≈ tiempo en fases dormidas (Core/Deep/REM/Unspecified); ver notas en
@@ -221,17 +266,38 @@ def find_sleep_samples(*, u_find: str) -> dict:
         "WFWorkflowActionIdentifier": "is.workflow.actions.filter.health.quantity",
         "WFWorkflowActionParameters": {
             "UUID": u_find,
-            "WFContentItemFilter": content_filter_sleep_analysis_asleep_phases_today(),
+            "WFContentItemFilter": content_filter_sleep_analysis_asleep_phases_for_day(
+                anchor_uuid=anchor_uuid,
+                anchor_output_name=anchor_output_name,
+            ),
         },
     }
 
 
-def find_workouts(*, u_find: str) -> dict:
+def content_filter_workouts_for_day(*, anchor_uuid: str | None, anchor_output_name: str = "Date") -> dict:
+    if anchor_uuid:
+        return {
+            "Value": {
+                "WFActionParameterFilterPrefix": 1,
+                "WFContentPredicateBoundedDate": False,
+                "WFActionParameterFilterTemplates": [
+                    _start_date_row_is_on_action(anchor_uuid=anchor_uuid, anchor_output_name=anchor_output_name)
+                ],
+            },
+            "WFSerializationType": "WFContentPredicateTableTemplate",
+        }
+    return content_filter_today()
+
+
+def find_workouts(*, u_find: str, anchor_uuid: str | None = None, anchor_output_name: str = "Date") -> dict:
     return {
         "WFWorkflowActionIdentifier": "is.workflow.actions.filter.workouts",
         "WFWorkflowActionParameters": {
             "UUID": u_find,
-            "WFContentItemFilter": content_filter_today(),
+            "WFContentItemFilter": content_filter_workouts_for_day(
+                anchor_uuid=anchor_uuid,
+                anchor_output_name=anchor_output_name,
+            ),
         },
     }
 
@@ -353,6 +419,20 @@ def ask_text(*, u: str, prompt: str) -> dict:
             "UUID": u,
             "WFAskActionPrompt": prompt,
             "WFInputType": "Text",
+        },
+    }
+
+
+def ask_date(*, u: str, prompt: str) -> dict:
+    """Solicitar entrada en modo fecha (solo día civil). Salida típica: «Ask for Input»."""
+    return {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.ask",
+        "WFWorkflowActionParameters": {
+            "UUID": u,
+            "WFAskActionPrompt": prompt,
+            "WFInputType": "Date",
+            "WFAskActionDateGranularity": "Date",
+            "WFAllowsMultilineText": False,
         },
     }
 
@@ -727,6 +807,8 @@ def append_quantity_sum_avg_chain(
     type_label: str,
     operation: str,
     use_duration_detail: bool = False,
+    anchor_uuid: str | None = None,
+    anchor_output_name: str = "Date",
 ) -> None:
     u_find = uid()
     u_detail = uid()
@@ -734,9 +816,22 @@ def append_quantity_sum_avg_chain(
     u_detect = uid()
     u_set = uid()
     if use_duration_detail and variable_name == "sleep_duration_num":
-        actions.append(find_sleep_samples(u_find=u_find))
+        actions.append(
+            find_sleep_samples(
+                u_find=u_find,
+                anchor_uuid=anchor_uuid,
+                anchor_output_name=anchor_output_name,
+            )
+        )
     else:
-        actions.append(find_health_quantity(u_find=u_find, type_value=type_label))
+        actions.append(
+            find_health_quantity(
+                u_find=u_find,
+                type_value=type_label,
+                anchor_uuid=anchor_uuid,
+                anchor_output_name=anchor_output_name,
+            )
+        )
     if use_duration_detail:
         actions.append(get_health_sample_detail_duration(u=u_detail, u_find=u_find))
         actions.append(statistics_on(u_detail, u_stat, operation, output_name="Duración"))
@@ -758,14 +853,29 @@ def append_quantity_count_chain(
     *,
     variable_name: str,
     type_label: str,
+    anchor_uuid: str | None = None,
+    anchor_output_name: str = "Date",
 ) -> None:
     u_find = uid()
     u_cnt = uid()
     u_set = uid()
     if variable_name == "sleep_sessions_count_num":
-        actions.append(find_sleep_samples(u_find=u_find))
+        actions.append(
+            find_sleep_samples(
+                u_find=u_find,
+                anchor_uuid=anchor_uuid,
+                anchor_output_name=anchor_output_name,
+            )
+        )
     else:
-        actions.append(find_health_quantity(u_find=u_find, type_value=type_label))
+        actions.append(
+            find_health_quantity(
+                u_find=u_find,
+                type_value=type_label,
+                anchor_uuid=anchor_uuid,
+                anchor_output_name=anchor_output_name,
+            )
+        )
     actions.append(count_items(u_input=u_find, u_count=u_cnt, output_name="Health Samples"))
     actions.append(
         set_variable_from_output(
@@ -785,11 +895,11 @@ def build_actions_full(
     workout_stat_prop_ser: str,
     legacy_token_prompt: bool,
     legacy_workout_actions: bool,
+    import_day_picker: bool = False,
 ) -> list[dict]:
     _ = quantity_type_style  # reservado por compatibilidad CLI; el plist ya no usa HKQuantityType.
     _ = workout_stat_prop_ser  # reservado (ruta legacy de serialización en estadística de entrenos).
 
-    u_date = uid()
     u_iso = uid()
     u_set_obs = uid()
 
@@ -825,6 +935,31 @@ def build_actions_full(
             ask_prompt="Pega tu token de Órvita",
         )
 
+    if import_day_picker:
+        u_ask_day = uid()
+        u_set_import_day = uid()
+        u_anchor = uid()
+        date_prelude: list[dict] = [
+            ask_date(
+                u=u_ask_day,
+                prompt="Elige el día civil a importar a Órvita (mismas métricas que el atajo diario, de ese día).",
+            ),
+            set_variable_from_output(
+                u=u_set_import_day,
+                variable_name="import_day",
+                source_uuid=u_ask_day,
+                source_output_name="Ask for Input",
+            ),
+            get_named_variable(u=u_anchor, variable_name="import_day", custom_output_name="Date"),
+        ]
+        u_format_src = u_anchor
+        filter_anchor: str | None = u_anchor
+    else:
+        u_date = uid()
+        date_prelude = [current_date(u=u_date)]
+        u_format_src = u_date
+        filter_anchor = None
+
     actions: list[dict] = [
         comment(
             "Órvita · Si al abrir el atajo ves datos en gris y vacíos, suele ser una copia duplicada en Atajos (nombre con «2» o «3»). "
@@ -833,8 +968,8 @@ def build_actions_full(
             "La clave del iPhone se guarda sola en iCloud (carpeta Atajos del teléfono); la fecha del día se arma en el propio atajo."
         ),
         *token_actions,
-        current_date(u=u_date),
-        format_observed_at_ymd(u=u_iso, u_date=u_date),
+        *date_prelude,
+        format_observed_at_ymd(u=u_iso, u_date=u_format_src),
         set_variable_from_output(
             u=u_set_obs,
             variable_name="observed_at",
@@ -850,18 +985,35 @@ def build_actions_full(
             type_label=type_label,
             operation=op,
             use_duration_detail=(var_name == "sleep_duration_num"),
+            anchor_uuid=filter_anchor,
         )
 
     for var_name, _json_key, type_label in QUANTITY_COUNT_ONLY:
-        append_quantity_count_chain(actions, variable_name=var_name, type_label=type_label)
+        append_quantity_count_chain(
+            actions,
+            variable_name=var_name,
+            type_label=type_label,
+            anchor_uuid=filter_anchor,
+        )
 
     u_set_wc = uid()
     if legacy_workout_actions:
-        actions.append(find_workouts(u_find=u_find_workouts))
+        actions.append(
+            find_workouts(
+                u_find=u_find_workouts,
+                anchor_uuid=filter_anchor,
+            )
+        )
         actions.append(count_items(u_input=u_find_workouts, u_count=u_count_workouts, output_name="Workouts"))
     else:
         # iOS 18+: filter.workouts / properties.workout → «Acción desconocida». Misma acción que pasos/HRV.
-        actions.append(find_health_quantity(u_find=u_find_workouts, type_value="Workouts"))
+        actions.append(
+            find_health_quantity(
+                u_find=u_find_workouts,
+                type_value="Workouts",
+                anchor_uuid=filter_anchor,
+            )
+        )
         actions.append(count_items(u_input=u_find_workouts, u_count=u_count_workouts, output_name="Health Samples"))
     actions.append(
         set_variable_from_output(
@@ -932,9 +1084,9 @@ def build_actions_full(
 
 
 HISTORIAL_15D_INTRO = (
-    "Orvita · Salud Historial-15Dias: mismo flujo y mismos datos del día que «Importar Salud Hoy», "
-    "con otro nombre para poder instalarlo primero sin pisar el atajo diario. "
-    "Ejecútalo una vez si quieres; luego usa el atajo principal y automatízalo."
+    "Orvita · Salud Historial-15Dias: tras el token te pedirá la fecha del día a importar; "
+    "observed_at, filtros de Salud y entrenos usan ese día civil (no solo «hoy»). "
+    "Instálalo con otro nombre para no pisar el atajo diario."
 )
 
 
@@ -956,6 +1108,7 @@ def build_actions_historial_15d_full(
             workout_stat_prop_ser=workout_stat_prop_ser,
             legacy_token_prompt=legacy_token_prompt,
             legacy_workout_actions=legacy_workout_actions,
+            import_day_picker=True,
         ),
     ]
 

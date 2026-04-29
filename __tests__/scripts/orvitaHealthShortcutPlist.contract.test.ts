@@ -7,7 +7,12 @@ const PLIST_SRC = path.join(ROOT, "scripts", "shortcuts", "orvita-importar-salud
 const PLIST_HIST = path.join(ROOT, "scripts", "shortcuts", "orvita-salud-historial-15dias.src.plist")
 const BUILDER = path.join(ROOT, "scripts", "build-orvita-health-shortcut.py")
 
-function assertCommonHealthShortcutXml(xml: string, workflowName: string) {
+function assertCommonHealthShortcutXml(
+  xml: string,
+  workflowName: string,
+  opts?: { minStartDateTodayOperator1002?: number },
+) {
+  const min1002 = opts?.minStartDateTodayOperator1002 ?? 12
   expect(xml).toContain("<string>Custom</string>")
   expect(xml).toContain("<string>yyyy-MM-dd</string>")
   expect(xml).toContain("<string>Shortcuts/orvita_import_token.txt</string>")
@@ -20,7 +25,7 @@ function assertCommonHealthShortcutXml(xml: string, workflowName: string) {
   expect(xml).not.toContain("<integer>1001</integer>")
 
   const n1002 = (xml.match(/<integer>1002<\/integer>/g) ?? []).length
-  expect(n1002).toBeGreaterThanOrEqual(12)
+  expect(n1002).toBeGreaterThanOrEqual(min1002)
 }
 
 /** Diccionario y cabeceras POST: variables nombradas como WFTextTokenAttachment (Type Variable + VariableName). */
@@ -46,7 +51,14 @@ describe("orvita-importar-salud-hoy shortcut plist (contrato)", () => {
     const hist = fs.readFileSync(PLIST_HIST, "utf8")
 
     assertCommonHealthShortcutXml(hoy, "Orvita-Importar-Salud-Hoy")
-    assertCommonHealthShortcutXml(hist, "Orvita-Salud-Historial-15Dias")
+    assertCommonHealthShortcutXml(hist, "Orvita-Salud-Historial-15Dias", {
+      minStartDateTodayOperator1002: 0,
+    })
+    expect(hist).toContain("<string>import_day</string>")
+    expect(hist).toContain("<string>Date</string>")
+    expect(hist).toContain("WFAskActionDateGranularity")
+    const nAnotherDate = (hist.match(/<key>AnotherDate<\/key>/g) ?? []).length
+    expect(nAnotherDate).toBeGreaterThanOrEqual(12)
     expect(hist).toContain("Historial-15Dias")
     assertDictionaryVariableTokens(hoy)
     assertDictionaryVariableTokens(hist)

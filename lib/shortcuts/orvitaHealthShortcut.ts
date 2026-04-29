@@ -8,7 +8,7 @@ import { siteOrigin } from "@/lib/site/origin"
  * "el archivo no existe" hasta que reinstales el .shortcut o restaures el nombre.
  */
 /** Bust de caché en enlaces de descarga (CDN / PWA). Subir cuando cambie el binario en `public/shortcuts/`. */
-export const ORVITA_HEALTH_SHORTCUT_ASSET_VERSION = "20260429k"
+export const ORVITA_HEALTH_SHORTCUT_ASSET_VERSION = "20260429l"
 
 /** Nombre exacto en la biblioteca de Atajos (debe coincidir con «Nombre del atajo» al compartir / ejecutar). */
 export const ORVITA_HEALTH_SHORTCUT_NAME = "Orvita-Importar-Salud-Hoy"

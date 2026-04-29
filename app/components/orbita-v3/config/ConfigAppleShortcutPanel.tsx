@@ -352,7 +352,8 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
           {moduleCard ? (
             <p className="w-full basis-full text-[10px] leading-snug sm:text-[11px]" style={{ color: theme.textMuted }}>
               Opcional: <strong className="font-medium text-inherit">{ORVITA_HEALTH_HISTORIAL15_SHORTCUT_NAME}</strong> sirve para instalar primero sin
-              pisar el del día a día; hace lo mismo que el principal (datos del día). Luego usa{" "}
+              pisar el del día a día; tras el token te pide el <strong className="font-medium text-inherit">día civil</strong> a importar (mismas métricas
+              que el principal, de esa fecha). Luego usa{" "}
               <strong className="font-medium text-inherit">{ORVITA_HEALTH_SHORTCUT_NAME}</strong> cada día o con automatizaciones.
             </p>
           ) : (
@@ -361,10 +362,10 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
               style={{ color: theme.textMuted }}
             >
               <strong className="font-medium text-inherit">Primera vez (recomendado):</strong> instala y ejecuta una vez{" "}
-              <strong className="font-medium text-inherit">{ORVITA_HEALTH_HISTORIAL15_SHORTCUT_NAME}</strong>, revisa Salud en Órvita; después instala{" "}
-              <strong className="font-medium text-inherit">{ORVITA_HEALTH_SHORTCUT_NAME}</strong>. Puedes programar en Atajos dos horas al día (por
-              ejemplo <strong className="font-medium text-inherit">01:00</strong> y <strong className="font-medium text-inherit">14:00</strong>) para
-              lanzar el atajo principal.
+              <strong className="font-medium text-inherit">{ORVITA_HEALTH_HISTORIAL15_SHORTCUT_NAME}</strong> (elige el día cuando te lo pida), revisa
+              Salud en Órvita; después instala <strong className="font-medium text-inherit">{ORVITA_HEALTH_SHORTCUT_NAME}</strong>. Puedes programar en
+              Atajos dos horas al día (por ejemplo <strong className="font-medium text-inherit">01:00</strong> y{" "}
+              <strong className="font-medium text-inherit">14:00</strong>) para lanzar el atajo principal.
             </p>
           )}
           {moduleCard ? (
@@ -581,7 +582,8 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
             </p>
             <ol className="mt-2 list-decimal space-y-2 pl-4 text-xs leading-relaxed" style={{ color: theme.text }}>
               <li>
-                Descarga e instala <strong className="font-medium text-inherit">Orvita-Salud-Historial-15Dias</strong> y ejecútalo una vez.
+                Descarga e instala <strong className="font-medium text-inherit">Orvita-Salud-Historial-15Dias</strong> y ejecútalo una vez (tras el token,
+                elige el día civil a importar).
               </li>
               <li>
                 Abre Órvita y comprueba la vista de Salud (ventana reciente / base para el sistema).
