@@ -18,6 +18,10 @@ export type CheckinBodyMetrics = {
   cuadricepsDer?: string | number
   cuadricepsIzq?: string | number
   gluteos?: string | number
+  /** Cierre nocturno · bitácora breve (se guarda en body_metrics). */
+  journalMomento?: string
+  journalGratitud?: string
+  journalVinculo?: string
 }
 
 export type CheckinSource = "sheets" | "manual"
@@ -54,6 +58,9 @@ export type CheckinFormPayload = {
   cuadricepsDer?: string | number
   cuadricepsIzq?: string | number
   gluteos?: string | number
+  journalMomento?: string
+  journalGratitud?: string
+  journalVinculo?: string
   deepWork?: string | number
   productividad?: number
   sheet_row_id?: string
@@ -74,6 +81,8 @@ const BODY_FORM_KEYS = [
   "gluteos",
 ] as const
 
+const JOURNAL_KEYS = ["journalMomento", "journalGratitud", "journalVinculo"] as const
+
 export function buildBodyMetricsFromForm(payload: CheckinFormPayload): CheckinBodyMetrics {
   const out: CheckinBodyMetrics = {}
   if (payload.fecha) {
@@ -83,6 +92,13 @@ export function buildBodyMetricsFromForm(payload: CheckinFormPayload): CheckinBo
     const v = payload[key]
     if (v === undefined || v === null || v === "") continue
     out[key] = typeof v === "number" ? v : String(v)
+  }
+  for (const key of JOURNAL_KEYS) {
+    const raw = payload[key]
+    if (typeof raw !== "string") continue
+    const t = raw.trim()
+    if (!t) continue
+    out[key] = t
   }
   return out
 }
@@ -173,6 +189,9 @@ export function parseCheckinFormBody(body: unknown): { ok: true; data: CheckinFo
     productividad: typeof b.productividad === "number" ? b.productividad : undefined,
     sheet_row_id: typeof b.sheet_row_id === "string" ? b.sheet_row_id.trim() : undefined,
     source,
+    journalMomento: typeof b.journalMomento === "string" ? b.journalMomento : undefined,
+    journalGratitud: typeof b.journalGratitud === "string" ? b.journalGratitud : undefined,
+    journalVinculo: typeof b.journalVinculo === "string" ? b.journalVinculo : undefined,
   }
   return { ok: true, data }
 }

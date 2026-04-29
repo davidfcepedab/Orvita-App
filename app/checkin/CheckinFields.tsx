@@ -113,6 +113,41 @@ export function TimeField({
   )
 }
 
+export function TextareaRow({
+  label,
+  hint,
+  icon: Icon,
+  value,
+  onChange,
+  placeholder,
+  rows = 3,
+}: {
+  label: string
+  hint?: string
+  icon?: LucideIcon
+  value: string
+  onChange: (v: string) => void
+  placeholder?: string
+  rows?: number
+}) {
+  return (
+    <label className="block space-y-1.5">
+      <span className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-orbita-secondary">
+        {Icon ? <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden /> : null}
+        {label}
+      </span>
+      {hint ? <p className="text-[11px] leading-snug text-orbita-secondary">{hint}</p> : null}
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        rows={rows}
+        placeholder={placeholder}
+        className={`${inputBase} min-h-[88px] resize-y py-2.5`}
+      />
+    </label>
+  )
+}
+
 export function NumberUnitField({
   label,
   icon: Icon,

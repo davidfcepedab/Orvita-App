@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import {
   BookOpen,
@@ -13,6 +13,7 @@ import {
   Dumbbell,
   Heart,
   Moon,
+  PenLine,
   Ruler,
   Save,
   Smile,
@@ -36,6 +37,7 @@ import {
   NumberUnitField,
   SelectField,
   SliderRow,
+  TextareaRow,
   TimeField,
   ToggleRow,
 } from "./CheckinFields"
@@ -99,6 +101,9 @@ type FormState = {
   productividad: number
   sheet_row_id: string
   source: "" | "sheets" | "manual"
+  journalMomento: string
+  journalGratitud: string
+  journalVinculo: string
 }
 
 const TRAINING_TYPES = [
@@ -223,6 +228,10 @@ export default function CheckinPage() {
 
     sheet_row_id: "",
     source: "",
+
+    journalMomento: "",
+    journalGratitud: "",
+    journalVinculo: "",
   })
 
   const [savePhase, setSavePhase] = useState<"idle" | "loading" | "success">("idle")
@@ -239,6 +248,11 @@ export default function CheckinPage() {
   const supabaseOn = apiFlags?.supabasePersistenceEnabled ?? supabaseOnFromEnv
   const mockOn = apiFlags?.appMode === "mock" || mockOnFromEnv
   const saveDisabled = !supabaseOn && !mockOn
+
+  /** Medidas corporales ya traídas desde la hoja enlazada: no editar aquí para no duplicar ni pisar datos. */
+  const bodyMeasuresLocked = useMemo(() => {
+    return form.source === "sheets" && Boolean(String(form.sheet_row_id ?? "").trim())
+  }, [form.source, form.sheet_row_id])
 
   useEffect(() => {
     let cancelled = false
@@ -306,6 +320,9 @@ export default function CheckinPage() {
           if (patch.source === "sheets" || patch.source === "manual") {
             next.source = patch.source
           }
+          if (typeof patch.journalMomento === "string") next.journalMomento = patch.journalMomento
+          if (typeof patch.journalGratitud === "string") next.journalGratitud = patch.journalGratitud
+          if (typeof patch.journalVinculo === "string") next.journalVinculo = patch.journalVinculo
           return next
         })
       } catch {
@@ -800,26 +817,124 @@ export default function CheckinPage() {
             onChange={(n) => handleChange("ansiedad", n)}
             accentClass="accent-[var(--color-accent-finance)]"
           />
+
+          <div className="space-y-3 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt/50 p-4">
+            <div className="flex items-start gap-2">
+              <PenLine className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-accent-agenda)]" aria-hidden />
+              <div className="min-w-0 space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-wide text-orbita-primary">Bitácora guiada</p>
+                <p className="text-[11px] leading-snug text-orbita-secondary">
+                  Tres respuestas cortas enlazan lo que marcaste arriba con tu día: descanso percibido, ánimo y vínculos. Se guardan con el check-in para ver patrones después.
+                </p>
+              </div>
+            </div>
+            <TextareaRow
+              label="¿Qué momento del día te costó más soltar?"
+              hint="Una frase basta. Relaciónalo con energía o conexión si quieres."
+              icon={PenLine}
+              value={form.journalMomento}
+              onChange={(v) => handleChange("journalMomento", v)}
+              placeholder="Ej.: La tarde, seguí pensando en el trabajo en la cena…"
+              rows={2}
+            />
+            <TextareaRow
+              label="Algo pequeño por lo que te sientes agradecido"
+              hint="Gratitud concreta, no tiene que ser grande."
+              icon={Sparkles}
+              value={form.journalGratitud}
+              onChange={(v) => handleChange("journalGratitud", v)}
+              placeholder="Ej.: Caminar 10 minutos con mi pareja sin mirar el teléfono."
+              rows={2}
+            />
+            <TextareaRow
+              label="Cómo te sentiste con las personas importantes hoy"
+              hint="Con la misma idea que “Calidad de conexión” del bloque de día."
+              icon={Heart}
+              value={form.journalVinculo}
+              onChange={(v) => handleChange("journalVinculo", v)}
+              placeholder="Ej.: Cercanía con un amigo; distancia con alguien del trabajo…"
+              rows={2}
+            />
+          </div>
         </CheckinSection>
 
         <CheckinSection
           title="Medidas & Composición Corporal"
-          subtitle="Opcional — precarga desde hoja si está configurada"
+          subtitle="Opcional — empieza cerrado para no saturar; abre si quieres revisar o editar"
           icon={Ruler}
           headerTintClass="bg-gradient-to-r from-[color-mix(in_srgb,var(--color-accent-warning)_12%,var(--color-surface))] to-[color-mix(in_srgb,var(--color-accent-danger)_8%,var(--color-background))]"
           iconBoxClass="bg-[color-mix(in_srgb,var(--color-accent-warning)_22%,var(--color-surface-alt))] text-[var(--color-accent-warning)]"
+          collapsible
+          defaultCollapsed
         >
+          {bodyMeasuresLocked ? (
+            <div
+              role="status"
+              className="rounded-xl border border-[color-mix(in_srgb,var(--color-accent-agenda)_35%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-agenda)_8%,var(--color-surface))] px-3 py-2.5 text-[11px] leading-snug text-orbita-primary"
+            >
+              Estos números ya vienen de tu hoja del día enlazada. Para cambiarlos, corrígelos en la hoja y vuelve a cargar el check-in; aquí los dejamos fijos para que no se mezclen versiones por error.
+            </div>
+          ) : null}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <NumberUnitField label="Peso" value={form.peso} onChange={(v) => handleChange("peso", v)} unit="kg" step="0.1" />
-            <NumberUnitField label="% grasa" value={form.pct_grasa} onChange={(v) => handleChange("pct_grasa", v)} unit="%" step="0.1" />
-            <NumberUnitField label="Cintura" value={form.cintura} onChange={(v) => handleChange("cintura", v)} unit="cm" step="0.1" />
-            <NumberUnitField label="Pecho" value={form.pecho} onChange={(v) => handleChange("pecho", v)} unit="cm" step="0.1" />
-            <NumberUnitField label="Hombros" value={form.hombros} onChange={(v) => handleChange("hombros", v)} unit="cm" step="0.1" />
+            <NumberUnitField
+              label="Peso"
+              value={form.peso}
+              onChange={(v) => handleChange("peso", v)}
+              unit="kg"
+              step="0.1"
+              disabled={bodyMeasuresLocked}
+            />
+            <NumberUnitField
+              label="% grasa"
+              value={form.pct_grasa}
+              onChange={(v) => handleChange("pct_grasa", v)}
+              unit="%"
+              step="0.1"
+              disabled={bodyMeasuresLocked}
+            />
+            <NumberUnitField
+              label="Cintura"
+              value={form.cintura}
+              onChange={(v) => handleChange("cintura", v)}
+              unit="cm"
+              step="0.1"
+              disabled={bodyMeasuresLocked}
+            />
+            <NumberUnitField
+              label="Pecho"
+              value={form.pecho}
+              onChange={(v) => handleChange("pecho", v)}
+              unit="cm"
+              step="0.1"
+              disabled={bodyMeasuresLocked}
+            />
+            <NumberUnitField
+              label="Hombros"
+              value={form.hombros}
+              onChange={(v) => handleChange("hombros", v)}
+              unit="cm"
+              step="0.1"
+              disabled={bodyMeasuresLocked}
+            />
           </div>
           <p className="text-xs font-semibold uppercase tracking-wide text-orbita-secondary">Bíceps</p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <NumberUnitField label="Derecho" value={form.bicepsDer} onChange={(v) => handleChange("bicepsDer", v)} unit="cm" step="0.1" />
-            <NumberUnitField label="Izquierdo" value={form.bicepsIzq} onChange={(v) => handleChange("bicepsIzq", v)} unit="cm" step="0.1" />
+            <NumberUnitField
+              label="Derecho"
+              value={form.bicepsDer}
+              onChange={(v) => handleChange("bicepsDer", v)}
+              unit="cm"
+              step="0.1"
+              disabled={bodyMeasuresLocked}
+            />
+            <NumberUnitField
+              label="Izquierdo"
+              value={form.bicepsIzq}
+              onChange={(v) => handleChange("bicepsIzq", v)}
+              unit="cm"
+              step="0.1"
+              disabled={bodyMeasuresLocked}
+            />
           </div>
           <p className="text-xs font-semibold uppercase tracking-wide text-orbita-secondary">Cuádriceps</p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -829,6 +944,7 @@ export default function CheckinPage() {
               onChange={(v) => handleChange("cuadricepsDer", v)}
               unit="cm"
               step="0.1"
+              disabled={bodyMeasuresLocked}
             />
             <NumberUnitField
               label="Izquierdo"
@@ -836,9 +952,17 @@ export default function CheckinPage() {
               onChange={(v) => handleChange("cuadricepsIzq", v)}
               unit="cm"
               step="0.1"
+              disabled={bodyMeasuresLocked}
             />
           </div>
-          <NumberUnitField label="Glúteos" value={form.gluteos} onChange={(v) => handleChange("gluteos", v)} unit="cm" step="0.1" />
+          <NumberUnitField
+            label="Glúteos"
+            value={form.gluteos}
+            onChange={(v) => handleChange("gluteos", v)}
+            unit="cm"
+            step="0.1"
+            disabled={bodyMeasuresLocked}
+          />
         </CheckinSection>
         </div>
         )}
