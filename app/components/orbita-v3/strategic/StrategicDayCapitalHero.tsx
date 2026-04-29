@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import clsx from "clsx"
+import { motion } from "framer-motion"
 import { Activity, Dumbbell, Footprints, Heart, Landmark, RefreshCw, Sparkles } from "lucide-react"
 import { Card } from "@/src/components/ui/Card"
 import { formatInstantInAgendaTz, formatLocalDateLabelEsCo, formatStoredYmdLabelEsCo } from "@/lib/agenda/localDateKey"
@@ -172,8 +173,13 @@ export function StrategicDayHero({
       {health ? (
         <section aria-labelledby="strategic-health-hero-heading">
           <Card className="overflow-hidden p-0 shadow-[0_1px_0_color-mix(in_srgb,var(--color-border)_80%,transparent)]">
-            <div className="flex min-w-0 flex-col gap-4 border-l-[3px] border-[color-mix(in_srgb,var(--color-accent-health)_48%,var(--color-border))] bg-[var(--color-surface)] p-4 sm:flex-row sm:items-stretch sm:justify-between sm:gap-6 sm:p-5">
-              <div className="min-w-0 flex-1 space-y-3">
+            <div className="relative flex min-w-0 flex-col gap-4 overflow-hidden bg-[var(--color-surface)] p-4 sm:flex-row sm:items-stretch sm:justify-between sm:gap-6 sm:p-5">
+              <div
+                className="pointer-events-none absolute -right-8 -top-10 h-36 w-36 rounded-full opacity-[0.06] motion-safe:animate-pulse"
+                style={{ background: "var(--color-accent-health)" }}
+                aria-hidden
+              />
+              <div className="relative z-[1] min-w-0 flex-1 space-y-3">
                 <div className="flex flex-wrap items-baseline gap-2">
                   <Activity className="h-4 w-4 shrink-0 text-[var(--color-accent-health)]" aria-hidden />
                   <div className="min-w-0">
@@ -201,8 +207,13 @@ export function StrategicDayHero({
                   </p>
                 )}
 
-                <div className="flex min-w-0 flex-nowrap items-stretch gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:gap-3 sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden">
-                  <div className="flex min-w-[10.5rem] shrink-0 flex-[1.15] items-center gap-2.5 rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_5%,var(--color-surface-alt))] px-2.5 py-2 sm:min-w-0 sm:flex-1 sm:gap-3 sm:px-3 sm:py-2.5">
+                <div className="grid min-w-0 grid-cols-1 gap-2.5 sm:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_minmax(0,1fr)] sm:gap-3">
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                    className="flex min-w-0 items-center gap-2.5 rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_5%,var(--color-surface-alt))] px-2.5 py-2.5 sm:gap-3 sm:px-3 sm:py-2.5"
+                  >
                     <ReadinessRing score={health.readiness_score ?? null} />
                     <div className="min-w-0 flex-1">
                       <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
@@ -215,18 +226,23 @@ export function StrategicDayHero({
                       {tier ? (
                         <span
                           className={clsx(
-                            "mt-1 inline-flex max-w-full items-center gap-1 truncate rounded-full border px-1.5 py-0.5 text-[9px] font-semibold leading-none sm:mt-1.5 sm:px-2 sm:text-[10px]",
+                            "mt-1 inline-flex max-w-full items-center gap-1 rounded-full border px-1.5 py-0.5 text-[9px] font-semibold leading-tight sm:mt-1.5 sm:px-2 sm:text-[10px]",
                             tier.style,
                           )}
                         >
                           {tier.showSparkle ? <Sparkles className="h-3 w-3 shrink-0 opacity-90" aria-hidden /> : null}
-                          {tier.label}
+                          <span className="min-w-0 text-pretty">{tier.label}</span>
                         </span>
                       ) : null}
                     </div>
-                  </div>
+                  </motion.div>
 
-                  <div className="flex min-w-[6.5rem] shrink-0 flex-1 flex-col justify-center rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[var(--color-surface-alt)] px-2.5 py-2 sm:min-w-0 sm:px-3 sm:py-2.5">
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.35, delay: 0.05, ease: [0.22, 1, 0.36, 1] }}
+                    className="flex min-w-0 flex-col justify-center rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[var(--color-surface-alt)] px-2.5 py-2.5 sm:px-3 sm:py-2.5"
+                  >
                     <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--color-text-secondary)]">
                       <Footprints className="h-3.5 w-3.5 shrink-0 opacity-85" aria-hidden />
                       Pasos
@@ -234,8 +250,13 @@ export function StrategicDayHero({
                     <p className="m-0 mt-0.5 text-base font-bold tabular-nums leading-none text-[var(--color-text-primary)] sm:text-lg">
                       {health.steps != null ? health.steps.toLocaleString("es-CO") : "—"}
                     </p>
-                  </div>
-                  <div className="flex min-w-[6.5rem] shrink-0 flex-1 flex-col justify-center rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[var(--color-surface-alt)] px-2.5 py-2 sm:min-w-0 sm:px-3 sm:py-2.5">
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.35, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+                    className="flex min-w-0 flex-col justify-center rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[var(--color-surface-alt)] px-2.5 py-2.5 sm:px-3 sm:py-2.5"
+                  >
                     <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--color-text-secondary)]">
                       <Dumbbell className="h-3.5 w-3.5 shrink-0 opacity-85" aria-hidden />
                       Sesiones
@@ -243,7 +264,7 @@ export function StrategicDayHero({
                     <p className="m-0 mt-0.5 text-base font-bold tabular-nums leading-none text-[var(--color-text-primary)] sm:text-lg">
                       {health.workouts_count != null ? health.workouts_count : "—"}
                     </p>
-                  </div>
+                  </motion.div>
                 </div>
 
                 {shortcutBadge}
@@ -251,7 +272,7 @@ export function StrategicDayHero({
 
               <div
                 className={clsx(
-                  "flex shrink-0 flex-col gap-2 sm:w-[11rem] sm:justify-center",
+                  "relative z-[1] flex shrink-0 flex-col gap-2 sm:w-[11rem] sm:justify-center",
                   "max-sm:flex-row max-sm:flex-wrap max-sm:border-t max-sm:border-[color-mix(in_srgb,var(--color-border)_82%,transparent)] max-sm:pt-3",
                 )}
               >

@@ -284,16 +284,20 @@ export function WeeklyMealPlan({
       transition={{ duration: 0.4, delay: 0.06 }}
       className="flex h-full flex-col gap-4 rounded-[40px] border border-slate-200/90 bg-white p-5 shadow-sm sm:p-6"
     >
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-4">
-        <div className="min-w-0 flex-1">
-          <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">Fueling sync · Macro-Cloud</p>
-          <h2 className="m-0 mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">Plan alimenticio semanal</h2>
-          <p className="m-0 mt-1 max-w-none text-xs leading-relaxed text-slate-500 text-pretty sm:whitespace-normal">
+      <div className="flex flex-col gap-4 border-b border-slate-100 pb-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-3">
+        <div className="min-w-0 w-full sm:flex-1">
+          <p className="m-0 break-words text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400 sm:tracking-[0.2em]">
+            Fueling sync · Macro-Cloud
+          </p>
+          <h2 className="m-0 mt-1 break-words text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+            Plan alimenticio semanal
+          </h2>
+          <p className="m-0 mt-1 max-w-full text-xs leading-relaxed text-slate-500 text-pretty break-words hyphens-auto sm:whitespace-normal">
             Basado en tus días registrados{plan.available ? ` (${mealDays.length} días)` : ""}. Ajusta en preferencias si tu objetivo cambia.
             {visualGoalSummary ? ` Objetivo: ${visualGoalSummary}.` : ""}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-3">
+        <div className="flex shrink-0 items-center gap-3 self-start sm:self-auto">
           <div
             className="relative flex h-14 w-14 flex-col items-center justify-center rounded-full border border-blue-200/80 bg-white shadow-[0_0_20px_rgba(59,130,246,0.18)]"
             title="Alineación: promedio registrado en tu plan vs objetivo de macros derivado del kcal medio y tu tipo de objetivo visual."

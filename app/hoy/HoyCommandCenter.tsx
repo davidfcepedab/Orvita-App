@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useCallback, useEffect, useMemo, useState } from "react"
+import { motion } from "framer-motion"
 import {
   ArrowRight,
   Calendar,
@@ -16,6 +17,7 @@ import {
   Target,
   TrendingDown,
   TrendingUp,
+  Trophy,
   Zap,
 } from "lucide-react"
 import { Card } from "@/src/components/ui/Card"
@@ -112,44 +114,78 @@ function PressureCell({
   fillPct,
   hint,
   icon,
+  index = 0,
 }: {
   label: string
   band: PressureBand
   fillPct: number
   hint: string
   icon: React.ReactNode
+  index?: number
 }) {
   const color = bandColor(band)
+  const isWin = band === "bajo"
+  const barGlow =
+    band === "alto"
+      ? "0 0 24px -4px color-mix(in srgb, var(--color-accent-danger) 22%, transparent)"
+      : band === "moderado"
+        ? "0 0 20px -4px color-mix(in srgb, var(--color-accent-warning) 18%, transparent)"
+        : "0 0 22px -4px color-mix(in srgb, var(--color-accent-health) 20%, transparent)"
+
   return (
-    <div
-      className="group flex min-w-0 flex-col gap-2 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3.5 transition-[box-shadow,transform] duration-300 motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-[var(--shadow-hover)] sm:p-4"
+    <motion.div
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: index * 0.07, ease: [0.22, 1, 0.36, 1] }}
+      className={[
+        "group relative flex min-w-0 flex-col gap-2.5 overflow-hidden rounded-[var(--radius-card)] border bg-[var(--color-surface)] p-3.5 motion-safe:transition-[transform,box-shadow] motion-safe:duration-300 motion-safe:hover:-translate-y-1 sm:p-4",
+        isWin
+          ? "border-[color-mix(in_srgb,var(--color-accent-health)_32%,var(--color-border))] shadow-[0_10px_36px_-14px_color-mix(in_srgb,var(--color-accent-health)_35%,transparent)] motion-safe:hover:shadow-[0_14px_40px_-12px_color-mix(in_srgb,var(--color-accent-health)_42%,transparent)]"
+          : "border-[color-mix(in_srgb,var(--color-border)_90%,transparent)] shadow-[0_1px_0_color-mix(in_srgb,var(--color-border)_70%,transparent)] motion-safe:hover:shadow-[var(--shadow-hover)]",
+      ].join(" ")}
       role="group"
       aria-label={`${label}: presión ${band}`}
     >
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2 text-[var(--color-text-primary)]">
-          <span className="text-[var(--color-text-secondary)] opacity-80 motion-safe:transition-transform motion-safe:duration-300 group-hover:scale-105">
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-[3px] rounded-t-[inherit]"
+        style={{ background: color }}
+        aria-hidden
+      />
+      {isWin ? (
+        <div
+          className="pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full opacity-[0.12] motion-safe:transition-transform motion-safe:duration-500 group-hover:scale-110"
+          style={{ background: color }}
+          aria-hidden
+        />
+      ) : null}
+      <div className="relative flex items-start justify-between gap-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2 text-[var(--color-text-primary)]">
+          <span className="shrink-0 text-[var(--color-text-secondary)] opacity-85 motion-safe:transition-transform motion-safe:duration-300 group-hover:scale-110">
             {icon}
           </span>
-          <span className="truncate text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
+          <span className="min-w-0 text-pretty text-[11px] font-semibold uppercase leading-tight tracking-[0.1em] text-[var(--color-text-secondary)] sm:tracking-[0.12em]">
             {label}
           </span>
         </div>
-        <span className="shrink-0 text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color }}>
+        <span className="flex shrink-0 items-center gap-0.5 text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color }}>
+          {isWin ? <Trophy className="h-3 w-3" style={{ color }} aria-hidden /> : null}
           {band}
         </span>
       </div>
-      <div
-        className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--color-surface-alt)]"
-        aria-hidden
-      >
-        <div
-          className="h-full rounded-full motion-safe:transition-[width] motion-safe:duration-700 motion-safe:ease-out"
-          style={{ width: `${fillPct}%`, background: color }}
+      <div className="relative h-2 w-full overflow-hidden rounded-full bg-[var(--color-surface-alt)] shadow-inner" aria-hidden>
+        <motion.div
+          className="h-full rounded-full"
+          initial={{ width: 0 }}
+          animate={{ width: `${fillPct}%` }}
+          transition={{ duration: 0.85, delay: 0.12 + index * 0.06, ease: [0.22, 1, 0.36, 1] }}
+          style={{
+            background: color,
+            boxShadow: barGlow,
+          }}
         />
       </div>
-      <p className="m-0 text-[11px] leading-snug text-[var(--color-text-secondary)]">{hint}</p>
-    </div>
+      <p className="relative m-0 text-[11px] leading-snug text-[var(--color-text-secondary)] [text-wrap:pretty]">{hint}</p>
+    </motion.div>
   )
 }
 
@@ -179,6 +215,18 @@ const CHECKIN_DAY_SEGMENTS = [
   { href: "/checkin#checkin-dia", label: "Día", hint: "Foco · cuerpo · vínculos", Icon: Sun },
   { href: "/checkin#checkin-noche", label: "Noche", hint: "Cierre · medidas", Icon: Moon },
 ] as const
+
+const checkinSegmentContainer = {
+  hidden: {},
+  show: {
+    transition: { staggerChildren: 0.07, delayChildren: 0.08 },
+  },
+}
+
+const checkinSegmentItem = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0 },
+}
 
 export default function HoyCommandCenter() {
   const { data: ctx, loading: ctxLoading, error: ctxError, refetch: refetchCtx } = useOperationalContext()
@@ -459,12 +507,41 @@ export default function HoyCommandCenter() {
 
       <nav aria-label="Check-in por momento del día" className="min-w-0">
         <Card className="overflow-hidden p-0 shadow-[0_1px_0_color-mix(in_srgb,var(--color-border)_80%,transparent)]">
-          <div className="border-b border-[color-mix(in_srgb,var(--color-border)_85%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_5%,var(--color-surface))] px-4 py-3 sm:px-5 sm:py-3.5">
-            <div className="flex flex-wrap items-start gap-3 sm:items-center">
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            className="relative overflow-hidden border-b border-[color-mix(in_srgb,var(--color-border)_85%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_6%,var(--color-surface))] px-4 py-3 sm:px-5 sm:py-3.5"
+          >
+            <div
+              className="pointer-events-none absolute -left-10 -top-12 h-32 w-32 rounded-full opacity-[0.14] motion-safe:animate-pulse"
+              style={{ background: "var(--color-accent-health)" }}
+              aria-hidden
+            />
+            <div
+              className="pointer-events-none absolute -bottom-8 right-0 h-24 w-40 rounded-full opacity-[0.08]"
+              style={{ background: "var(--color-accent-primary)" }}
+              aria-hidden
+            />
+            <div className="relative flex flex-wrap items-start gap-3 sm:items-center">
               <div className="flex min-w-0 flex-1 items-start gap-2">
-                <Sunrise className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-accent-health)]" aria-hidden />
+                <motion.span
+                  className="mt-0.5 inline-flex shrink-0"
+                  aria-hidden
+                  initial={{ rotate: -8, scale: 0.92 }}
+                  animate={{ rotate: 0, scale: 1 }}
+                  transition={{ type: "spring", stiffness: 260, damping: 18, delay: 0.05 }}
+                >
+                  <Sunrise className="h-4 w-4 text-[var(--color-accent-health)]" />
+                </motion.span>
                 <div className="min-w-0">
-                  <SectionLabel>Check-in del día</SectionLabel>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <SectionLabel>Check-in del día</SectionLabel>
+                    <span className="inline-flex items-center gap-0.5 rounded-full border border-[color-mix(in_srgb,var(--color-accent-health)_28%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-surface)_88%,transparent)] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[var(--color-accent-health)]">
+                      <Target className="h-3 w-3" aria-hidden />
+                      3 pasos
+                    </span>
+                  </div>
                   <p className="m-0 mt-1 text-xs leading-snug text-[var(--color-text-secondary)] [text-wrap:pretty]">
                     Tres bloques al estilo <Link href="/salud" className="font-medium text-[var(--color-accent-health)] underline-offset-2 hover:underline">Salud</Link>. Al terminar,{" "}
                     <span className="font-medium text-[var(--color-text-primary)]">Guardar check-in completo</span>.
@@ -472,33 +549,46 @@ export default function HoyCommandCenter() {
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
           <div className="p-3 sm:p-4">
             <div className="rounded-xl bg-[var(--color-surface-alt)] p-1">
-              <div className="grid grid-cols-3 gap-1">
+              <motion.div
+                className="grid grid-cols-3 gap-1"
+                variants={checkinSegmentContainer}
+                initial="hidden"
+                animate="show"
+              >
                 {CHECKIN_DAY_SEGMENTS.map(({ href, label, hint, Icon }) => (
-                  <Link
+                  <motion.div
                     key={href}
-                    href={href}
-                    className="flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg border border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] bg-[var(--color-surface)] px-1.5 py-2 text-center shadow-sm motion-safe:transition-[border-color,transform] motion-safe:active:scale-[0.99] motion-safe:hover:border-[color-mix(in_srgb,var(--color-accent-health)_38%,var(--color-border))] sm:min-h-[60px] sm:px-2.5 sm:py-2.5"
-                    style={{ textDecoration: "none" }}
+                    variants={checkinSegmentItem}
+                    transition={{ duration: 0.35, ease: "easeOut" }}
+                    className="min-w-0"
                   >
-                    <Icon className="h-4 w-4 shrink-0 text-[var(--color-accent-health)]" aria-hidden />
-                    <span className="text-[11px] font-semibold leading-tight text-[var(--color-text-primary)]">{label}</span>
-                    <span className="line-clamp-2 text-[9px] leading-tight text-[var(--color-text-secondary)] sm:text-[10px]">{hint}</span>
-                  </Link>
+                    <Link
+                      href={href}
+                      className="group flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg border border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] bg-[var(--color-surface)] px-1.5 py-2 text-center shadow-sm motion-safe:transition-[border-color,transform,box-shadow] motion-safe:active:scale-[0.98] motion-safe:hover:-translate-y-0.5 motion-safe:hover:border-[color-mix(in_srgb,var(--color-accent-health)_45%,var(--color-border))] motion-safe:hover:shadow-[0_8px_22px_-10px_color-mix(in_srgb,var(--color-accent-health)_28%,transparent)] sm:min-h-[60px] sm:px-2.5 sm:py-2.5"
+                      style={{ textDecoration: "none" }}
+                    >
+                      <Icon className="h-4 w-4 shrink-0 text-[var(--color-accent-health)] motion-safe:transition-transform motion-safe:duration-300 motion-safe:group-hover:scale-110" aria-hidden />
+                      <span className="text-[11px] font-semibold leading-tight text-[var(--color-text-primary)]">{label}</span>
+                      <span className="line-clamp-2 text-[9px] leading-tight text-[var(--color-text-secondary)] sm:text-[10px]">{hint}</span>
+                    </Link>
+                  </motion.div>
                 ))}
-              </div>
+              </motion.div>
             </div>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35, duration: 0.35 }}>
             <Link
               href="/checkin"
-              className="mt-3 flex min-h-12 w-full items-center justify-center rounded-full border border-dashed border-[color-mix(in_srgb,var(--color-accent-health)_32%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_4%,transparent)] px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--color-text-secondary)] motion-safe:hover:border-[var(--color-accent-health)] motion-safe:hover:text-[var(--color-text-primary)]"
+              className="mt-3 flex min-h-12 w-full items-center justify-center rounded-full border border-dashed border-[color-mix(in_srgb,var(--color-accent-health)_38%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_7%,transparent)] px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--color-text-secondary)] motion-safe:transition-[border-color,transform,color,background-color] motion-safe:hover:-translate-y-0.5 motion-safe:hover:border-[color-mix(in_srgb,var(--color-accent-health)_55%,var(--color-border))] motion-safe:hover:bg-[color-mix(in_srgb,var(--color-accent-health)_11%,transparent)] motion-safe:hover:text-[var(--color-text-primary)]"
               style={{ textDecoration: "none" }}
               title="Abrir el check-in completo en una sola vista"
             >
               <span className="hidden min-[400px]:inline">Todo el formulario</span>
               <span className="inline min-[400px]:hidden [text-wrap:balance]">Formulario completo</span>
             </Link>
+            </motion.div>
           </div>
         </Card>
       </nav>
@@ -508,16 +598,25 @@ export default function HoyCommandCenter() {
       {/* —— Presión operativa —— */}
       <section aria-labelledby="hoy-pressure-heading" className="space-y-3">
         <div className="flex flex-wrap items-end justify-between gap-2">
-          <h2 id="hoy-pressure-heading" className="m-0 text-sm font-medium text-[var(--color-text-primary)]">
-            Presión operativa
-          </h2>
-          <p className="m-0 max-w-md text-[11px] leading-snug text-[var(--color-text-secondary)]">
+          <div className="flex min-w-0 items-center gap-2">
+            <span
+              className="inline-flex h-2 w-2 shrink-0 rounded-full motion-safe:animate-pulse"
+              style={{ background: "var(--color-accent-warning)" }}
+              aria-hidden
+            />
+            <h2 id="hoy-pressure-heading" className="m-0 flex items-center gap-1.5 text-sm font-semibold text-[var(--color-text-primary)]">
+              Presión operativa
+              <Sparkles className="h-3.5 w-3.5 shrink-0 text-[color-mix(in_srgb,var(--color-accent-warning)_75%,var(--color-text-secondary))]" aria-hidden />
+            </h2>
+          </div>
+          <p className="m-0 max-w-md text-[11px] leading-snug text-[var(--color-text-secondary)] [text-wrap:pretty]">
             Qué está reclamando tu tiempo, energía y dinero <em className="not-italic">ahora</em> — no tu lista
             eterna.
           </p>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <PressureCell
+            index={0}
             label="Tiempo"
             band={timeP.band}
             fillPct={timeP.fillPct}
@@ -525,6 +624,7 @@ export default function HoyCommandCenter() {
             icon={<Calendar className="h-4 w-4" aria-hidden />}
           />
           <PressureCell
+            index={1}
             label="Energía"
             band={energyP.band}
             fillPct={energyP.fillPct}
@@ -532,11 +632,18 @@ export default function HoyCommandCenter() {
             icon={<Zap className="h-4 w-4" aria-hidden />}
           />
           <PressureCell
+            index={2}
             label="Dinero (mes)"
             band={moneyP.band}
             fillPct={moneyP.fillPct}
             hint={finError ? "Capital: sin lectura aún." : moneyP.hint}
-            icon={<TrendingDown className="h-4 w-4" aria-hidden />}
+            icon={
+              moneyP.band === "bajo" ? (
+                <TrendingUp className="h-4 w-4 text-[var(--color-accent-health)]" aria-hidden />
+              ) : (
+                <TrendingDown className="h-4 w-4" aria-hidden />
+              )
+            }
           />
         </div>
       </section>
