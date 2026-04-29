@@ -30,6 +30,7 @@ function isAppleHealthContextPayload(value: unknown): value is AppleHealthContex
   if (typeof a.observed_at !== "string") return false
   if (typeof a.sync_stale !== "boolean") return false
   if (a.source != null && typeof a.source !== "string") return false
+  if ("bundle_day_ymd" in a && a.bundle_day_ymd != null && typeof a.bundle_day_ymd !== "string") return false
   for (const key of [
     "sleep_hours",
     "hrv_ms",

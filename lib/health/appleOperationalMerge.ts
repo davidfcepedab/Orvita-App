@@ -2,6 +2,7 @@ import type { AppleHealthContextSignals } from "@/lib/operational/types"
 import {
   healthMetricInstantForStaleness,
   healthMetricObservedAtIsoForDisplay,
+  shortcutBundleDisplayYmd,
 } from "@/lib/health/healthMetricCanonicalObservedAt"
 
 function num(v: unknown): number | null {
@@ -23,6 +24,7 @@ export function mapHealthMetricsRowToAppleSignals(row: unknown): AppleHealthCont
     metadata: meta,
   }
   const observed_at = healthMetricObservedAtIsoForDisplay(rowForCanonical)
+  const bundle_day_ymd = shortcutBundleDisplayYmd(rowForCanonical)
 
   const wds = num(meta.apple_workouts_duration_seconds)
   const workout_minutes_from_sec = wds != null && wds > 0 ? Math.min(24 * 60, Math.round(wds / 60)) : null
@@ -63,6 +65,7 @@ export function mapHealthMetricsRowToAppleSignals(row: unknown): AppleHealthCont
 
   return {
     observed_at,
+    bundle_day_ymd,
     source: typeof r.source === "string" ? r.source : null,
     sleep_hours: num(r.sleep_hours),
     hrv_ms: num(r.hrv_ms),

@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { Activity, Landmark, RefreshCw } from "lucide-react"
-import { formatInstantInAgendaTz, formatLocalDateLabelEsCo } from "@/lib/agenda/localDateKey"
+import { formatInstantInAgendaTz, formatLocalDateLabelEsCo, formatStoredYmdLabelEsCo } from "@/lib/agenda/localDateKey"
 import type { AppleHealthContextSignals, OperationalCapitalSnapshot } from "@/lib/operational/types"
 
 function formatCop(n: number) {
@@ -48,6 +48,15 @@ function formatObservedAt(iso: string) {
   return lbl === "—" ? iso.slice(0, 16) : lbl
 }
 
+function formatShortcutImportDayLabel(h: AppleHealthContextSignals) {
+  const ymd = h.bundle_day_ymd?.trim()
+  if (ymd && /^\d{4}-\d{2}-\d{2}$/.test(ymd)) {
+    const lbl = formatStoredYmdLabelEsCo(ymd)
+    return lbl === "—" ? ymd : lbl
+  }
+  return formatObservedAt(h.observed_at)
+}
+
 type Props = {
   capital?: OperationalCapitalSnapshot | null
   health?: AppleHealthContextSignals | null
@@ -64,7 +73,7 @@ export function StrategicDayHero({ capital, health, className = "" }: Props) {
   const shortcutBadge =
     health?.source === "apple_health_shortcut" ? (
       <p className="m-0 mt-2 text-[10px] font-medium text-[var(--color-accent-health)]">
-        Importado vía Atajo · {formatObservedAt(health.observed_at)}
+        Importado vía Atajo · {formatShortcutImportDayLabel(health)}
       </p>
     ) : health ? (
       <p className="m-0 mt-2 text-[10px] text-[var(--color-text-secondary)]">

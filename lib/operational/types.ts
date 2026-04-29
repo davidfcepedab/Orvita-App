@@ -88,6 +88,8 @@ export interface Checkin {
 /** Instantánea Apple Health / `health_metrics` para cruzar con check-ins en todo el sistema. */
 export type AppleHealthContextSignals = {
   observed_at: string
+  /** YYYY-MM-DD del bundle (atajo); redundante con `observed_at` serializado pero útil sin `metadata` en cliente. */
+  bundle_day_ymd?: string | null
   source: string | null
   sleep_hours: number | null
   hrv_ms: number | null
