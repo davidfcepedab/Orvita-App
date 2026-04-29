@@ -374,12 +374,12 @@ export function AppShell({
               <NotificationsBell />
 
               <button
-                className="orbita-header-action orbita-focus-ring max-sm:!min-h-9 max-sm:gap-1 max-sm:px-2.5 max-sm:py-1.5 max-sm:text-[10px] max-sm:tracking-[0.08em] sm:min-h-0 sm:py-1.5"
-                onClick={cycleTheme}
                 type="button"
+                onClick={cycleTheme}
                 aria-label="Cambiar tema"
+                className="orbita-header-action orbita-header-icon-slot orbita-focus-ring sm:py-1.5"
               >
-                <SunMoon className="h-3 w-3 sm:h-3.5 sm:w-3.5" aria-hidden />
+                <SunMoon className="h-4 w-4 shrink-0" aria-hidden />
                 <span className="hidden sm:inline">Tema</span>
               </button>
 
@@ -387,10 +387,10 @@ export function AppShell({
                 type="button"
                 onClick={handleLogout}
                 disabled={loggingOut}
-                className="orbita-header-action orbita-header-action--surface orbita-focus-ring max-sm:!min-h-9 max-sm:gap-1 max-sm:px-2.5 max-sm:py-1.5 max-sm:text-[10px] max-sm:tracking-[0.08em] sm:min-h-0 sm:py-1.5"
                 aria-label={loggingOut ? "Saliendo" : "Salir"}
+                className="orbita-header-action orbita-header-action--surface orbita-header-icon-slot orbita-focus-ring sm:py-1.5"
               >
-                <LogOut className="h-3 w-3 sm:h-3.5 sm:w-3.5" aria-hidden />
+                <LogOut className="h-4 w-4 shrink-0" aria-hidden />
                 <span className="hidden sm:inline">{loggingOut ? "Saliendo..." : "Salir"}</span>
               </button>
             </div>
