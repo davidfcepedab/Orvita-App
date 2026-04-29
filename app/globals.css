@@ -501,12 +501,13 @@ body.orbita-app-root {
 }
 
 .orbita-header-bar {
-  padding-top: max(0.875rem, env(safe-area-inset-top, 0px));
-  padding-bottom: 0.875rem;
+  padding-top: max(0.625rem, env(safe-area-inset-top, 0px));
+  padding-bottom: 0.625rem;
 }
 @media (min-width: 640px) {
   .orbita-header-bar {
-    padding-bottom: 1rem;
+    padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
+    padding-bottom: 0.875rem;
   }
 }
 

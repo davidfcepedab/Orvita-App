@@ -535,14 +535,14 @@ export default function AgendaPage() {
         style={{ borderWidth: "0.5px", background: "var(--agenda-shell-bg)" }}
       >
         <header
-          className="flex flex-col gap-2 border-b border-[var(--color-border)] px-4 pb-2.5 pt-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 lg:px-6 lg:pb-3 lg:pt-4"
+          className="flex flex-col gap-1.5 border-b border-[var(--color-border)] px-3 pb-2 pt-2.5 sm:gap-2 sm:px-4 sm:pb-2.5 sm:pt-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 lg:px-6 lg:pb-3 lg:pt-4"
           style={{ background: "var(--agenda-elevated-bg)" }}
         >
           <div className="min-w-0 w-full flex-1">
-            <h1 className="m-0 break-words text-[22px] font-medium leading-tight tracking-tight text-[var(--color-text-primary)] sm:text-[24px] lg:text-[26px]">
+            <h1 className="m-0 break-words text-[1.25rem] font-medium leading-tight tracking-tight text-[var(--color-text-primary)] sm:text-[24px] lg:text-[26px]">
               {agendaTitle}
             </h1>
-            <p className="m-0 mt-1 max-w-2xl text-[11px] leading-snug text-[var(--color-text-secondary)] sm:text-[12px]">
+            <p className="m-0 mt-0.5 max-w-2xl text-[10px] leading-snug text-[var(--color-text-secondary)] sm:mt-1 sm:text-[12px]">
               {agendaTagline}
             </p>
           </div>
@@ -587,17 +587,17 @@ export default function AgendaPage() {
         ) : null}
 
         <div
-          className="sticky z-10 border-b border-[var(--color-border)] px-4 py-2 lg:px-6"
-          style={{ top: "72px", background: "var(--agenda-shell-bg)" }}
+          className="sticky z-10 border-b border-[var(--color-border)] px-3 py-1.5 sm:px-4 sm:py-2 lg:px-6"
+          style={{ top: "max(4rem, calc(env(safe-area-inset-top, 0px) + 3.25rem))", background: "var(--agenda-shell-bg)" }}
         >
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1 max-sm:gap-1 sm:gap-1.5">
             <div
-              className="rounded-lg border border-[var(--color-border)] px-2 py-1.5 sm:px-2.5 sm:py-2"
+              className="rounded-lg border border-[var(--color-border)] px-2 py-1 sm:px-2.5 sm:py-2 max-sm:shadow-none"
               style={agendaPanelSurfaceStyle}
               role="region"
               aria-label="Buscar, sincronizar Google y filtros"
             >
-              <div className="flex w-full min-w-0 flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-2 sm:gap-y-1">
+              <div className="flex w-full min-w-0 flex-col gap-1 sm:gap-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-2 sm:gap-y-1">
                 <div className="flex min-h-[34px] min-w-0 w-full flex-1 items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-2 py-1 sm:min-w-[10rem] sm:max-w-md lg:max-w-xl">
                   <Search size={13} className="shrink-0 text-[var(--color-text-secondary)]" aria-hidden />
                   <input
@@ -620,18 +620,18 @@ export default function AgendaPage() {
                   />
                 </div>
               </div>
-              <div className="mt-1.5 flex flex-col gap-1.5 border-t border-[var(--color-border)] pt-1.5 sm:mt-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-1.5 sm:gap-y-1 sm:pt-1.5">
-                <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
+              <div className="mt-1 flex flex-col gap-1 border-t border-[var(--color-border)] pt-1 sm:mt-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-1.5 sm:gap-y-1 sm:pt-1.5">
+                <div className="hidden min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 sm:flex">
                   <AgendaColorLegend inline omitHeading sourcesOnly dense />
                 </div>
-                <span className="hidden h-3 w-px shrink-0 self-stretch bg-[var(--color-border)] sm:block" aria-hidden />
-                <div className="flex min-w-0 flex-wrap gap-0.5">
+                <span className="hidden h-3 w-px shrink-0 self-stretch bg-[var(--color-border)] md:block" aria-hidden />
+                <div className="flex min-w-0 flex-nowrap gap-0.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden">
                   {tabs.map((item) => (
                     <button
                       key={item.key}
                       type="button"
                       onClick={() => setTab(item.key)}
-                      className="inline-flex min-h-7 items-center gap-1 rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[8.5px] sm:min-h-0 sm:px-2 sm:py-px sm:text-[9px]"
+                      className="inline-flex min-h-7 shrink-0 items-center gap-1 rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[8.5px] sm:min-h-0 sm:px-2 sm:py-px sm:text-[9px]"
                       style={{
                         background: tab === item.key ? "var(--color-surface-alt)" : "transparent",
                         color: tab === item.key ? "var(--color-text-primary)" : "var(--color-text-secondary)",
@@ -647,11 +647,11 @@ export default function AgendaPage() {
                   ))}
                 </div>
                 <span className="hidden h-3 w-px shrink-0 self-stretch bg-[var(--color-border)] lg:block" aria-hidden />
-                <div className="flex w-full min-w-0 flex-wrap items-center gap-0.5 lg:ml-auto lg:w-auto lg:justify-end">
+                <div className="flex w-full min-w-0 flex-nowrap items-center gap-0.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:pb-0 lg:ml-auto lg:w-auto lg:justify-end [&::-webkit-scrollbar]:hidden">
                   <button
                     type="button"
                     onClick={() => setShowPastAgenda((v) => !v)}
-                    className="min-h-7 rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[8px] font-medium uppercase tracking-[0.06em] sm:min-h-0 sm:px-2 sm:py-px sm:text-[8.5px]"
+                    className="min-h-7 shrink-0 rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[8px] font-medium uppercase tracking-[0.06em] sm:min-h-0 sm:px-2 sm:py-px sm:text-[8.5px]"
                     style={{
                       background: showPastAgenda ? "var(--color-surface-alt)" : "transparent",
                       color: showPastAgenda ? "var(--color-text-primary)" : "var(--color-text-secondary)",
@@ -665,7 +665,7 @@ export default function AgendaPage() {
                       key={item}
                       type="button"
                       onClick={() => setPriority(priority === item ? "" : item)}
-                      className="min-h-7 rounded-full px-2 py-0.5 text-[8px] uppercase tracking-[0.06em] sm:min-h-0 sm:px-2 sm:py-px sm:text-[8.5px]"
+                      className="min-h-7 shrink-0 rounded-full px-2 py-0.5 text-[8px] uppercase tracking-[0.06em] sm:min-h-0 sm:px-2 sm:py-px sm:text-[8.5px]"
                       style={priorityFilterControlStyle(item, priority === item)}
                     >
                       {formatPriorityTitle(item)}
@@ -675,10 +675,10 @@ export default function AgendaPage() {
               </div>
             </div>
 
-            <div className="rounded-lg border border-[var(--color-border)] p-1 sm:p-1.5" style={agendaPanelSurfaceStyle}>
-              <div className="flex flex-col gap-1.5 sm:flex-row sm:items-stretch sm:gap-2">
+            <div className="rounded-lg border border-[var(--color-border)] p-0.5 sm:p-1.5" style={agendaPanelSurfaceStyle}>
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-stretch sm:gap-2">
                 <div
-                  className="flex min-w-0 flex-1 flex-row flex-wrap gap-1"
+                  className="flex min-w-0 flex-1 flex-row flex-wrap gap-0.5 sm:gap-1"
                   role="tablist"
                   aria-label="Vista de agenda"
                 >
@@ -719,7 +719,7 @@ export default function AgendaPage() {
         </div>
 
         <div
-          className="unified-agenda-container flex min-w-0 flex-col gap-3 px-4 py-4 md:gap-4 lg:px-6 lg:py-6"
+          className="unified-agenda-container flex min-w-0 flex-col gap-2 px-3 py-3 sm:gap-3 sm:px-4 sm:py-4 md:gap-4 lg:px-6 lg:py-6"
           style={{ background: "var(--agenda-shell-bg)" }}
         >
           <div

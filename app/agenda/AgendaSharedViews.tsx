@@ -694,12 +694,12 @@ export function AgendaSharedList({
     (Boolean(agendaLoading && filtered.length === 0) || waitingGoogle)
 
   const horizonTabs = [
-    { id: "today" as const, label: "Hoy", title: "Solo ítems con fecha de hoy" },
-    { id: "tomorrow" as const, label: "Mañana", title: "Solo el día siguiente" },
-    { id: "this_week" as const, label: "Semana", title: "Desde hoy hasta el domingo de esta semana (lunes–domingo)" },
-    { id: "next_week" as const, label: "Próx. semana", title: "Lunes a domingo de la semana siguiente" },
-    { id: "this_month" as const, label: "Mes", title: "Desde hoy hasta el último día del mes en curso" },
-  ] satisfies { id: UnifiedListHorizonId; label: string; title: string }[]
+    { id: "today" as const, label: "Hoy", labelSm: "Hoy", title: "Solo ítems con fecha de hoy" },
+    { id: "tomorrow" as const, label: "Mañana", labelSm: "Mañ.", title: "Solo el día siguiente" },
+    { id: "this_week" as const, label: "Semana", labelSm: "Sem.", title: "Desde hoy hasta el domingo de esta semana (lunes–domingo)" },
+    { id: "next_week" as const, label: "Próx. semana", labelSm: "Próx.", title: "Lunes a domingo de la semana siguiente" },
+    { id: "this_month" as const, label: "Mes", labelSm: "Mes", title: "Desde hoy hasta el último día del mes en curso" },
+  ] satisfies { id: UnifiedListHorizonId; label: string; labelSm: string; title: string }[]
 
   return (
     <div
@@ -709,7 +709,7 @@ export function AgendaSharedList({
       <div
         role="toolbar"
         aria-label="Ventana temporal de la cronología"
-        className="flex flex-wrap items-center gap-1 sm:gap-1.5"
+        className="flex max-sm:-mx-0.5 max-sm:gap-0.5 max-sm:overflow-x-auto max-sm:px-0.5 max-sm:pb-0.5 max-sm:[-ms-overflow-style:none] max-sm:[scrollbar-width:none] max-sm:[&::-webkit-scrollbar]:hidden sm:flex-wrap sm:items-center sm:gap-1.5"
       >
         {horizonTabs.map((tab) => {
           const active = listHorizon === tab.id
@@ -719,18 +719,19 @@ export function AgendaSharedList({
               type="button"
               title={tab.title}
               onClick={() => setListHorizon(tab.id)}
-              className={`min-h-7 rounded-full border px-2 py-0.5 text-[9px] font-medium uppercase tracking-[0.06em] transition sm:px-2.5 sm:text-[10px] ${
+              className={`min-h-7 shrink-0 rounded-full border px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-[0.06em] transition max-sm:min-h-[26px] sm:px-2.5 sm:text-[10px] ${
                 active
                   ? "border-[color-mix(in_srgb,var(--color-accent-primary)_42%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-primary)_10%,var(--color-surface))] text-[var(--color-text-primary)]"
                   : "border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface)]"
               }`}
             >
-              {tab.label}
+              <span className="sm:hidden">{tab.labelSm}</span>
+              <span className="hidden sm:inline">{tab.label}</span>
             </button>
           )
         })}
       </div>
-      <p className="m-0 text-[10px] leading-snug text-[var(--color-text-secondary)]">{horizonHint}</p>
+      <p className="m-0 hidden text-[10px] leading-snug text-[var(--color-text-secondary)] sm:block">{horizonHint}</p>
 
       {merged.length === 0 && pendingInvites.length === 0 ? (
         <div

@@ -250,9 +250,9 @@ export function AppShell({
         }}
       >
         <div className="orbita-shell-inline orbita-header-bar mx-auto max-w-[1400px]">
-          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-[var(--spacing-lg)]">
-            <div className="flex min-w-0 flex-col gap-1.5">
-              <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-[var(--spacing-lg)]">
+            <div className="flex min-w-0 flex-col gap-1 sm:gap-1.5">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2.5">
                 <span
                   className="h-2.5 w-2.5 shrink-0 rounded-full sm:h-[9px] sm:w-[9px]"
                   style={{
@@ -267,8 +267,8 @@ export function AppShell({
                   Sistema operativo estratégico
                 </span>
               </div>
-              <div className="flex min-w-0 flex-col gap-0.5 pl-[22px]">
-                <span className="text-[15px] font-medium leading-snug tracking-[-0.01em] text-[var(--color-text-primary)] max-sm:text-[0.9375rem] max-sm:leading-snug">
+              <div className="flex min-w-0 flex-col gap-0.5 pl-[18px] sm:pl-[22px]">
+                <span className="text-[14px] font-medium leading-snug tracking-[-0.01em] text-[var(--color-text-primary)] sm:text-[15px] max-sm:leading-snug">
                   {pathname.startsWith("/auth") && !isAppMockMode()
                     ? "Inicia sesión para continuar"
                     : userName == null
@@ -286,41 +286,20 @@ export function AppShell({
               </div>
             </div>
 
-            <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 sm:shrink-0 sm:gap-[var(--spacing-md)]">
-              <NotificationsBell />
-
-              <button
-                className="orbita-header-action orbita-focus-ring max-sm:!min-h-9 max-sm:gap-1 max-sm:px-2.5 max-sm:py-1.5 max-sm:text-[10px] max-sm:tracking-[0.08em] sm:min-h-0 sm:py-1.5"
-                onClick={cycleTheme}
-                type="button"
-              >
-                <SunMoon className="h-3 w-3 sm:h-3.5 sm:w-3.5" aria-hidden />
-                Tema
-              </button>
-
-              <button
-                type="button"
-                onClick={handleLogout}
-                disabled={loggingOut}
-                className="orbita-header-action orbita-header-action--surface orbita-focus-ring max-sm:!min-h-9 max-sm:gap-1 max-sm:px-2.5 max-sm:py-1.5 max-sm:text-[10px] max-sm:tracking-[0.08em] sm:min-h-0 sm:py-1.5"
-              >
-                <LogOut className="h-3 w-3 sm:h-3.5 sm:w-3.5" aria-hidden />
-                {loggingOut ? "Saliendo..." : "Salir"}
-              </button>
-
-              <div className="relative shrink-0">
+            <div className="flex min-w-0 flex-wrap items-center justify-end gap-1.5 sm:shrink-0 sm:gap-[var(--spacing-md)]">
+              <div className="relative order-first shrink-0 sm:order-last">
                 <button
                   type="button"
                   onClick={() => setOpen((prev) => !prev)}
-                  className="orbita-focus-ring h-14 w-14 overflow-hidden rounded-full border-0 bg-[color-mix(in_srgb,var(--color-surface-alt)_90%,transparent)] p-0 shadow-[0_2px_14px_color-mix(in_srgb,var(--color-text-primary)_14%,transparent)] ring-2 ring-[color-mix(in_srgb,var(--color-accent-primary)_42%,transparent)] transition-[box-shadow,transform] hover:scale-[1.02] hover:shadow-[0_4px_18px_color-mix(in_srgb,var(--color-text-primary)_18%,transparent)] active:scale-[0.98] sm:h-12 sm:w-12 sm:ring-1 sm:ring-[color-mix(in_srgb,var(--color-accent-primary)_32%,transparent)]"
+                  className="orbita-focus-ring relative h-16 w-16 overflow-hidden rounded-full border-0 bg-[color-mix(in_srgb,var(--color-surface-alt)_92%,transparent)] p-0 shadow-[0_3px_20px_color-mix(in_srgb,var(--color-text-primary)_16%,transparent)] ring-[3px] ring-[color-mix(in_srgb,var(--color-accent-primary)_48%,transparent)] ring-offset-2 ring-offset-[var(--color-background)] transition-[box-shadow,transform] hover:scale-[1.03] hover:shadow-[0_6px_24px_color-mix(in_srgb,var(--color-accent-primary)_22%,transparent)] active:scale-[0.98] sm:h-[3.5rem] sm:w-[3.5rem] sm:ring-2 sm:ring-offset-[3px]"
                   aria-label="Menú de usuario"
                   aria-expanded={open}
                 >
                   {avatarUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={avatarUrl} alt="" className="h-full w-full object-cover" width={56} height={56} />
+                    <img src={avatarUrl} alt="" className="h-full w-full object-cover" width={64} height={64} />
                   ) : (
-                    <User className="mx-auto h-7 w-7 text-[var(--color-text-secondary)] sm:h-6 sm:w-6" aria-hidden />
+                    <User className="mx-auto h-8 w-8 text-[var(--color-text-secondary)] sm:h-7 sm:w-7" aria-hidden />
                   )}
                 </button>
                 {open && (
@@ -366,6 +345,27 @@ export function AppShell({
                   </div>
                 )}
               </div>
+
+              <NotificationsBell />
+
+              <button
+                className="orbita-header-action orbita-focus-ring max-sm:!min-h-9 max-sm:gap-1 max-sm:px-2.5 max-sm:py-1.5 max-sm:text-[10px] max-sm:tracking-[0.08em] sm:min-h-0 sm:py-1.5"
+                onClick={cycleTheme}
+                type="button"
+              >
+                <SunMoon className="h-3 w-3 sm:h-3.5 sm:w-3.5" aria-hidden />
+                Tema
+              </button>
+
+              <button
+                type="button"
+                onClick={handleLogout}
+                disabled={loggingOut}
+                className="orbita-header-action orbita-header-action--surface orbita-focus-ring max-sm:!min-h-9 max-sm:gap-1 max-sm:px-2.5 max-sm:py-1.5 max-sm:text-[10px] max-sm:tracking-[0.08em] sm:min-h-0 sm:py-1.5"
+              >
+                <LogOut className="h-3 w-3 sm:h-3.5 sm:w-3.5" aria-hidden />
+                {loggingOut ? "Saliendo..." : "Salir"}
+              </button>
             </div>
           </div>
         </div>
