@@ -2,8 +2,8 @@
 
 import { motion } from "framer-motion"
 import dynamic from "next/dynamic"
-import { useEffect, useState, type ChangeEvent, type RefObject } from "react"
-import { Activity, Brain, Droplets, History, ImageIcon, RefreshCw, Scale, Settings2, Sparkles } from "lucide-react"
+import { useEffect, useId, useState, type ChangeEvent, type RefObject } from "react"
+import { Activity, Brain, ChevronDown, Droplets, History, ImageIcon, RefreshCw, Scale, Settings2, Sparkles } from "lucide-react"
 import type { ZoneProgress, ZoneStatus } from "@/lib/training/effectiveSets"
 import type { DeltaQuality } from "@/lib/training/trainingDashboardDerivations"
 import { deltaQualityLabel } from "@/lib/training/trainingDashboardDerivations"
@@ -124,6 +124,7 @@ export function VisualGoalGenerator({
   const _deadline = deadlineDisplay ?? (deadlineYm ? deadlineYm : "Sin fecha")
   const hasChart = chartPoints.length >= 2
   const [descDraft, setDescDraft] = useState(visualDescription)
+  const goalFieldsId = useId()
 
   useEffect(() => {
     setDescDraft(visualDescription)
@@ -143,14 +144,13 @@ export function VisualGoalGenerator({
     return `${t.slice(0, 117)}…`
   })()
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.38 }}
-      className="rounded-[36px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
-    >
-      <div className="space-y-3 rounded-2xl border border-slate-100 bg-slate-50/60 p-4">
+  const goalSummaryPreview =
+    (visualDescription ?? "").trim().slice(0, 72) || "Sin texto todavía · toca para definir tu objetivo"
+
+  const goalSettingsInner = (fieldKey: "m" | "d") => {
+    const selectId = `${goalFieldsId}-${fieldKey}-mode`
+    return (
+      <>
         <div>
           <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">Descripción del objetivo</p>
           <textarea
@@ -162,7 +162,7 @@ export function VisualGoalGenerator({
             placeholder="Ej. cuerpo atlético, % grasa objetivo, estilo de vida…"
           />
           <p className="m-0 mt-1.5 text-[10px] leading-snug text-slate-500">
-            Este texto alimenta la imagen de referencia (IA) y el contexto del plan. Una sola fuente: edítalo aquí.
+            Este texto guía la imagen de referencia y tu plan. Una sola fuente: edítalo aquí.
           </p>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -174,10 +174,10 @@ export function VisualGoalGenerator({
                   key={o.id}
                   type="button"
                   onClick={() => onVisualPrefsChange({ visualGoalPriority: o.id })}
-                  className={`rounded-full border px-3 py-1 text-[11px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 ${
+                  className={`rounded-full border px-2.5 py-1 text-[11px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-1 max-sm:min-h-8 max-sm:border-slate-200/90 max-sm:bg-white/80 ${
                     visualGoalPriority === o.id
-                      ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                      ? "border-slate-600 bg-slate-800 text-white shadow-sm max-sm:border-slate-700 max-sm:bg-slate-800"
+                      : "border-slate-200/90 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50/90"
                   }`}
                 >
                   {o.label}
@@ -185,12 +185,12 @@ export function VisualGoalGenerator({
               ))}
             </div>
             <div className="mt-3 min-w-0">
-              <label htmlFor="visual-goal-mode" className="block min-w-0">
+              <label htmlFor={selectId} className="block min-w-0">
                 <span className="mb-1 block text-[11px] font-medium leading-normal tracking-normal text-slate-500">
                   Tipo de objetivo
                 </span>
                 <select
-                  id="visual-goal-mode"
+                  id={selectId}
                   value={visualGoalMode}
                   onChange={(e) => onVisualPrefsChange({ visualGoalMode: e.target.value as VisualGoalMode })}
                   className="w-full min-w-0 rounded-lg border border-slate-200/90 bg-slate-50/60 py-1.5 pl-2.5 pr-8 text-xs font-medium text-slate-700 shadow-none transition-colors hover:bg-slate-50 hover:border-slate-300/90 focus:border-slate-300 focus:bg-white focus:outline-none focus:ring-1 focus:ring-slate-200/80"
@@ -216,7 +216,7 @@ export function VisualGoalGenerator({
             {deadlineYm ? (
               <p className="m-0 mt-1 text-[11px] leading-snug text-slate-600">
                 <span className="font-semibold text-slate-800">{_deadline ?? deadlineYm}</span>
-                <span className="text-slate-500"> · guardado en preferencias como </span>
+                <span className="text-slate-500"> · guardado como </span>
                 <span className="font-mono text-[10px] text-slate-500">{deadlineYm}</span>
               </p>
             ) : (
@@ -224,7 +224,33 @@ export function VisualGoalGenerator({
             )}
           </div>
         </div>
+      </>
+    )
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.38 }}
+      className="rounded-[36px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
+    >
+      <div className="md:hidden">
+        <details className="group overflow-hidden rounded-2xl border border-slate-100 bg-slate-50/60">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-left [&::-webkit-details-marker]:hidden">
+            <div className="min-w-0 flex-1">
+              <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">Objetivo y plazo</p>
+              <p className="m-0 mt-0.5 line-clamp-2 text-xs leading-snug text-slate-600">{goalSummaryPreview}</p>
+            </div>
+            <ChevronDown
+              className="h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 group-open:rotate-180"
+              aria-hidden
+            />
+          </summary>
+          <div className="space-y-3 border-t border-slate-100/90 px-4 pb-4 pt-1">{goalSettingsInner("m")}</div>
+        </details>
       </div>
+      <div className="hidden space-y-3 rounded-2xl border border-slate-100 bg-slate-50/60 p-4 md:block">{goalSettingsInner("d")}</div>
 
       <div className="mt-6 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
@@ -266,22 +292,22 @@ export function VisualGoalGenerator({
               <Settings2 className="h-4 w-4" aria-hidden />
             </button>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5 sm:gap-2">
             <button
               type="button"
               onClick={onGenerateImage}
               disabled={goalImageGenerating}
-              className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2"
+              className="inline-flex min-h-8 items-center justify-center gap-1 rounded-full border border-slate-200/90 bg-white/90 px-2.5 text-[11px] font-medium text-slate-600 shadow-none transition hover:bg-slate-50 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-1 sm:min-h-9 sm:gap-1.5 sm:border-slate-200 sm:px-3.5 sm:text-xs sm:text-slate-700 sm:shadow-sm sm:focus-visible:ring-blue-400"
             >
-              <Sparkles className="h-3.5 w-3.5 text-blue-500" aria-hidden />
+              <Sparkles className="h-3 w-3 shrink-0 text-blue-500 sm:h-3.5 sm:w-3.5" aria-hidden />
               {goalImageGenerating ? "Generando…" : "Imagen IA"}
             </button>
             <button
               type="button"
               onClick={onPickReference}
-              className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-transparent px-3.5 text-xs font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
+              className="inline-flex min-h-8 items-center justify-center gap-1 rounded-full border border-transparent px-2.5 text-[11px] font-medium text-slate-500 transition hover:bg-slate-100/80 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-1 sm:min-h-9 sm:gap-1.5 sm:px-3.5 sm:text-xs sm:focus-visible:ring-slate-400"
             >
-              <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+              <RefreshCw className="h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5" aria-hidden />
               Subir foto
             </button>
           </div>

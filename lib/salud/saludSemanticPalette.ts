@@ -3,6 +3,13 @@
  * Verde = ok · Ámbar = atención · Rojo = crítico · Púrpura = recuperación · Naranja = energía.
  * Azul solo como neutro estructural (no “estado”).
  */
+/** Variantes más oscuras para números / enlaces sobre fondos tintados (contraste WCAG). */
+export const SALUD_SEM_STRONG = {
+  ok: "#15803d",
+  warn: "#a16207",
+  risk: "#b91c1c",
+} as const
+
 export const SALUD_SEM = {
   ok: "#22c55e",
   warn: "#eab308",

@@ -15,6 +15,9 @@ Modo `full`: token → fecha ISO → por cada métrica: Buscar muestras (tipo + 
 → Obtener números → Establecer variable (`*_num`) → diccionario y POST JSON **plano** (sin `apple_bundle`).
 Entrenos: conteo real y duración en segundos (suma de `Duration`) como variables distintas.
 Sueño: suma (`sleep_duration_seconds`) y conteo de sesiones **solo con inicio = hoy** (mismo filtro que pasos/HRV).
+La suma usa tipo **Sleep** (cantidad) + Duración de cada muestra. Alternativa más cercana a «horas dormidas»
+sin tiempo en cama / despierto: construir un **diccionario por fases** (In Bed, Awake, REM, Light, Deep, Core),
+excluir claves Awake e In Bed y sumar REM+Light+Deep+Core — ver `scripts/shortcuts/orvita-sleep-stages-orvita.txt`.
 Derivadas `training_load` / `recovery_score_proxy`
 las calcula el servidor si faltan en el cuerpo.
 
@@ -155,7 +158,12 @@ def find_health_quantity(
 
 
 def find_sleep_samples(*, u_find: str) -> dict:
-    """Misma ventana «hoy» que el resto de cantidades (evita sumar noches de varios días)."""
+    """Busca muestras de cantidad tipo Sleep (HealthKit) para el día de observed_at.
+
+    No implementa aquí la lógica «Sleep Analysis» por diccionario de fases (REM/Light/Deep/Core);
+    para eso hay que sustituir esta cadena por sumas sobre un diccionario filtrado — ver
+    `scripts/shortcuts/orvita-sleep-stages-orvita.txt`.
+    """
     return {
         "WFWorkflowActionIdentifier": "is.workflow.actions.filter.health.quantity",
         "WFWorkflowActionParameters": {
@@ -763,10 +771,10 @@ def build_actions_full(
 
     actions: list[dict] = [
         comment(
-            "Órvita · Si en Diccionario solo ves «Texto» gris (sin pastillas), borra copias del atajo («… 2», «… 3») "
-            "y reinstala el .shortcut desde orvita.app — Duplicar en Atajos rompe las variables. "
-            "Workouts: filtro inicio=hoy; si no entrenaste hoy, 0 muestras es normal (el aviso al expandir la acción no bloquea el flujo). "
-            "Token: Shortcuts/orvita_import_token.txt; observed_at yyyy-MM-dd; POST { apple_bundle }."
+            "Órvita · Si al abrir el atajo ves datos en gris y vacíos, suele ser una copia duplicada en Atajos (nombre con «2» o «3»). "
+            "Bórrala y vuelve a instalar desde Órvita en Safari. "
+            "Entrenos: si hoy no entrenaste, ver cero sesiones es normal. "
+            "La clave del iPhone se guarda sola en iCloud (carpeta Atajos del teléfono); la fecha del día se arma en el propio atajo."
         ),
         *token_actions,
         current_date(u=u_date),

@@ -1,7 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import { Activity, Dumbbell, Landmark, RefreshCw } from "lucide-react"
+import clsx from "clsx"
+import { Activity, Dumbbell, Footprints, Landmark, RefreshCw, Sparkles } from "lucide-react"
 import { Card } from "@/src/components/ui/Card"
 import { formatInstantInAgendaTz, formatLocalDateLabelEsCo, formatStoredYmdLabelEsCo } from "@/lib/agenda/localDateKey"
 import type { AppleHealthContextSignals, OperationalCapitalSnapshot } from "@/lib/operational/types"
@@ -25,23 +26,96 @@ function pressureCopy(p: OperationalCapitalSnapshot["pressure"]): { label: strin
   }
 }
 
-function healthCorrelationLine(h: AppleHealthContextSignals): string | null {
+/** Mensaje principal en lenguaje natural; el detalle con números va aparte y más pequeño. */
+function pulseUserCopy(h: AppleHealthContextSignals): { headline: string; detail: string | null } {
   const sleep = h.sleep_hours
   const hrv = h.hrv_ms
   const pulse = h.energy_index ?? h.readiness_score
+
   if (sleep != null && hrv != null) {
     const p = pulse ?? 55
+    let headline: string
     if (p >= 65) {
-      return `Sueño ${sleep.toFixed(1)} h + HRV ${hrv} ms → energía alta.`
+      headline = "Buena base para moverte: descanso y variabilidad te acompañan."
+    } else if (p >= 52) {
+      headline = "Ritmo equilibrado: puedes afrontar el día con calma."
+    } else {
+      headline = "Tu cuerpo pide ir más suave: prioriza recuperación y sueño."
     }
-    if (p < 52) {
-      return `Sueño ${sleep.toFixed(1)} h + HRV ${hrv} ms → ritmo conservador; prioriza recuperación.`
-    }
-    return `Sueño ${sleep.toFixed(1)} h + HRV ${hrv} ms → ritmo equilibrado.`
+    const detail = `~${sleep.toFixed(1)} h de sueño · variabilidad ${hrv} ms`
+    return { headline, detail }
   }
-  if (sleep != null) return `Sueño ~${sleep.toFixed(1)} h registrado en Apple para hoy.`
-  if (hrv != null) return `HRV ${hrv} ms: señal de carga autonómica para combinar con el check-in.`
-  return null
+  if (sleep != null) {
+    return {
+      headline: `Llevamos ~${sleep.toFixed(1)} h de sueño registrados para hoy.`,
+      detail: null,
+    }
+  }
+  if (hrv != null) {
+    return {
+      headline: "Ya tenemos tu variabilidad cardiaca; encaja con el check-in para afinar el foco.",
+      detail: `${hrv} ms`,
+    }
+  }
+  return {
+    headline: "Cuando lleguen sueño y variabilidad, aquí verás un resumen claro de tu día.",
+    detail: null,
+  }
+}
+
+function readinessTier(score: number | null): { label: string; style: string; showSparkle: boolean } {
+  if (score == null || !Number.isFinite(score)) {
+    return {
+      label: "Sin medición",
+      style:
+        "border-[color-mix(in_srgb,var(--color-border)_85%,transparent)] bg-[var(--color-surface-alt)] text-[var(--color-text-secondary)]",
+      showSparkle: false,
+    }
+  }
+  const s = Math.round(score)
+  if (s >= 65) {
+    return {
+      label: "Gran día",
+      style:
+        "border-[color-mix(in_srgb,var(--color-accent-health)_42%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_12%,var(--color-surface))] text-[var(--color-text-primary)]",
+      showSparkle: true,
+    }
+  }
+  if (s >= 52) {
+    return {
+      label: "En equilibrio",
+      style:
+        "border-[color-mix(in_srgb,var(--color-border)_75%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_90%,transparent)] text-[var(--color-text-secondary)]",
+      showSparkle: false,
+    }
+  }
+  return {
+    label: "Modo recuperación",
+    style:
+      "border-[color-mix(in_srgb,var(--color-accent-warning)_38%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-warning)_10%,var(--color-surface))] text-[var(--color-text-primary)]",
+    showSparkle: false,
+  }
+}
+
+function ReadinessRing({ score }: { score: number | null }) {
+  const n = score != null && Number.isFinite(score) ? Math.min(100, Math.max(0, Math.round(score))) : null
+  const deg = n != null ? (n / 100) * 360 : 0
+  return (
+    <div
+      className="relative h-[52px] w-[52px] shrink-0 rounded-full p-[3px]"
+      style={{
+        background:
+          n != null
+            ? `conic-gradient(from -90deg, var(--color-accent-health) ${deg}deg, color-mix(in srgb, var(--color-border) 50%, transparent) 0deg)`
+            : "color-mix(in srgb, var(--color-border) 55%, transparent)",
+      }}
+      aria-hidden
+    >
+      <div className="flex h-full w-full items-center justify-center rounded-full bg-[var(--color-surface)] text-[13px] font-bold tabular-nums text-[var(--color-text-primary)] shadow-[inset_0_1px_0_color-mix(in_srgb,var(--color-border)_35%,transparent)]">
+        {n ?? "—"}
+      </div>
+    </div>
+  )
 }
 
 function formatObservedAt(iso: string) {
@@ -78,15 +152,18 @@ export function StrategicDayHero({
   const showCapitalBlock = showCapital && Boolean(capital)
   if (!showCapitalBlock && !health) return null
 
-  const corr = health ? healthCorrelationLine(health) : null
+  const pulse = health ? pulseUserCopy(health) : null
+  const tier = health ? readinessTier(health.readiness_score ?? null) : null
   const shortcutBadge =
     health?.source === "apple_health_shortcut" ? (
-      <p className="m-0 mt-2 text-[10px] font-medium text-[var(--color-accent-health)]">
-        Importado vía Atajo · {formatShortcutImportDayLabel(health)}
+      <p className="m-0 mt-2 text-[10px] text-[var(--color-text-secondary)]">
+        <span className="font-medium text-[var(--color-accent-health)]">Actualizado desde tu iPhone</span>
+        {" · "}
+        {formatShortcutImportDayLabel(health)}
       </p>
     ) : health ? (
       <p className="m-0 mt-2 text-[10px] text-[var(--color-text-secondary)]">
-        Apple Health · {formatObservedAt(health.observed_at)}
+        Datos de Apple Salud · {formatObservedAt(health.observed_at)}
       </p>
     ) : null
 
@@ -95,83 +172,112 @@ export function StrategicDayHero({
       {health ? (
         <section aria-labelledby="strategic-health-hero-heading">
           <Card className="overflow-hidden p-0 shadow-[0_1px_0_color-mix(in_srgb,var(--color-border)_80%,transparent)]">
-            <div className="flex min-w-0 flex-col sm:flex-row">
-              <div
-                className="h-1 w-full shrink-0 sm:h-auto sm:w-1 sm:min-h-[8rem]"
-                style={{ background: "var(--color-accent-health)" }}
-                aria-hidden
-              />
-              <div className="flex min-w-0 flex-1 flex-col gap-4 p-4 sm:flex-row sm:items-stretch sm:justify-between sm:gap-6 sm:p-5">
-                <div className="min-w-0 flex-1 space-y-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Activity className="h-4 w-4 shrink-0 text-[var(--color-accent-health)]" aria-hidden />
+            <div className="flex min-w-0 flex-col gap-4 border-l-[3px] border-[color-mix(in_srgb,var(--color-accent-health)_48%,var(--color-border))] bg-[var(--color-surface)] p-4 sm:flex-row sm:items-stretch sm:justify-between sm:gap-6 sm:p-5">
+              <div className="min-w-0 flex-1 space-y-3">
+                <div className="flex flex-wrap items-baseline gap-2">
+                  <Activity className="h-4 w-4 shrink-0 text-[var(--color-accent-health)]" aria-hidden />
+                  <div className="min-w-0">
                     <p
                       id="strategic-health-hero-heading"
-                      className="m-0 text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-text-secondary)]"
+                      className="m-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]"
                     >
-                      Pulso del día · Apple Health
+                      Tu pulso de hoy
                     </p>
+                    <p className="m-0 mt-0.5 text-[10px] text-[var(--color-text-secondary)]">Apple Salud · vista rápida</p>
                   </div>
-                  {corr ? (
-                    <p className="m-0 text-lg font-semibold leading-snug tracking-tight text-[var(--color-text-primary)] sm:text-xl">
-                      {corr}
+                </div>
+                {pulse ? (
+                  <>
+                    <p className="m-0 text-[17px] font-semibold leading-snug tracking-tight text-[var(--color-text-primary)] sm:text-xl">
+                      {pulse.headline}
                     </p>
-                  ) : (
-                    <p className="m-0 text-sm leading-snug text-[var(--color-text-secondary)]">
-                      Datos de Apple listos; completa el check-in en{" "}
-                      <Link href="/checkin" className="font-medium text-[var(--color-accent-health)] underline-offset-2 hover:underline">
-                        Check-in
-                      </Link>{" "}
-                      para afinar el foco (misma lectura que en{" "}
-                      <Link href="/salud" className="font-medium text-[var(--color-accent-health)] underline-offset-2 hover:underline">
-                        Salud
-                      </Link>
-                      ).
-                    </p>
-                  )}
-                  <div className="grid grid-cols-3 gap-2 sm:max-w-lg">
-                    <div className="rounded-xl border border-[color-mix(in_srgb,var(--color-border)_75%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_6%,var(--color-surface-alt))] px-2 py-2 sm:px-3">
-                      <p className="m-0 text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
-                        Listo
+                    {pulse.detail ? (
+                      <p className="m-0 text-[12px] leading-snug text-[var(--color-text-secondary)]">{pulse.detail}</p>
+                    ) : null}
+                  </>
+                ) : (
+                  <p className="m-0 text-sm leading-snug text-[var(--color-text-secondary)]">
+                    Cuando conectes datos, aquí verás un resumen pensado para decidir el ritmo del día.
+                  </p>
+                )}
+
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch sm:gap-4">
+                  <div className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_5%,var(--color-surface-alt))] px-3 py-3">
+                    <ReadinessRing score={health.readiness_score ?? null} />
+                    <div className="min-w-0 flex-1">
+                      <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
+                        Disposición
                       </p>
-                      <p className="m-0 mt-0.5 text-base font-bold tabular-nums text-[var(--color-text-primary)]">
+                      <p className="m-0 mt-0.5 text-xl font-bold tabular-nums leading-none text-[var(--color-text-primary)]">
                         {health.readiness_score != null ? Math.round(health.readiness_score) : "—"}
+                        <span className="ml-0.5 text-[11px] font-semibold text-[var(--color-text-secondary)]">/100</span>
                       </p>
+                      {tier ? (
+                        <span
+                          className={clsx(
+                            "mt-1.5 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold leading-none",
+                            tier.style,
+                          )}
+                        >
+                          {tier.showSparkle ? <Sparkles className="h-3 w-3 shrink-0 opacity-90" aria-hidden /> : null}
+                          {tier.label}
+                        </span>
+                      ) : null}
                     </div>
-                    <div className="rounded-xl border border-[color-mix(in_srgb,var(--color-border)_75%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_6%,var(--color-surface-alt))] px-2 py-2 sm:px-3">
-                      <p className="m-0 text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
+                  </div>
+
+                  <div className="grid min-w-0 flex-1 grid-cols-2 gap-2 sm:max-w-xs">
+                    <div className="rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[var(--color-surface-alt)] px-3 py-2.5">
+                      <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--color-text-secondary)]">
+                        <Footprints className="h-3.5 w-3.5 shrink-0 opacity-85" aria-hidden />
                         Pasos
-                      </p>
-                      <p className="m-0 mt-0.5 text-base font-bold tabular-nums text-[var(--color-text-primary)]">
+                      </div>
+                      <p className="m-0 mt-1 text-lg font-bold tabular-nums text-[var(--color-text-primary)]">
                         {health.steps != null ? health.steps.toLocaleString("es-CO") : "—"}
                       </p>
                     </div>
-                    <div className="rounded-xl border border-[color-mix(in_srgb,var(--color-border)_75%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_6%,var(--color-surface-alt))] px-2 py-2 sm:px-3">
-                      <p className="m-0 text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
-                        Entrenos
-                      </p>
-                      <p className="m-0 mt-0.5 text-base font-bold tabular-nums text-[var(--color-text-primary)]">
+                    <div className="rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[var(--color-surface-alt)] px-3 py-2.5">
+                      <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--color-text-secondary)]">
+                        <Dumbbell className="h-3.5 w-3.5 shrink-0 opacity-85" aria-hidden />
+                        Sesiones
+                      </div>
+                      <p className="m-0 mt-1 text-lg font-bold tabular-nums text-[var(--color-text-primary)]">
                         {health.workouts_count != null ? health.workouts_count : "—"}
                       </p>
                     </div>
                   </div>
-                  {shortcutBadge}
                 </div>
-                <div className="flex shrink-0 flex-col gap-2 sm:max-w-[11rem] sm:justify-center">
-                  <Link
-                    href="/salud"
-                    className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--color-accent-health)_40%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_14%,var(--color-surface))] px-4 py-2.5 text-center text-xs font-semibold text-[var(--color-text-primary)] no-underline motion-safe:transition-opacity motion-safe:hover:opacity-90"
-                  >
-                    Ver Salud
-                  </Link>
-                  <Link
-                    href="/training"
-                    className="inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-3 py-2 text-center text-[11px] font-semibold text-[var(--color-text-secondary)] no-underline motion-safe:transition-colors motion-safe:hover:text-[var(--color-text-primary)]"
-                  >
-                    <Dumbbell className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
-                    Entrenamiento
-                  </Link>
-                </div>
+
+                {shortcutBadge}
+              </div>
+
+              <div
+                className={clsx(
+                  "flex shrink-0 flex-col gap-2 sm:w-[11rem] sm:justify-center",
+                  "max-sm:flex-row max-sm:flex-wrap max-sm:border-t max-sm:border-[color-mix(in_srgb,var(--color-border)_82%,transparent)] max-sm:pt-3",
+                )}
+              >
+                <Link
+                  href="/salud"
+                  className={clsx(
+                    "inline-flex w-full items-center justify-center text-center no-underline motion-safe:transition-opacity",
+                    "max-sm:min-h-0 max-sm:flex-1 max-sm:border-0 max-sm:bg-transparent max-sm:py-1.5 max-sm:text-[11px] max-sm:font-medium max-sm:text-[var(--color-accent-health)] max-sm:underline max-sm:underline-offset-4 max-sm:decoration-[color-mix(in_srgb,var(--color-accent-health)_40%,transparent)] max-sm:hover:opacity-85",
+                    "sm:min-h-11 sm:rounded-full sm:border sm:border-[color-mix(in_srgb,var(--color-accent-health)_38%,var(--color-border))] sm:bg-[color-mix(in_srgb,var(--color-accent-health)_12%,var(--color-surface))] sm:px-4 sm:py-2.5 sm:text-xs sm:font-semibold sm:text-[var(--color-text-primary)] sm:hover:opacity-90",
+                  )}
+                >
+                  Ver Salud
+                </Link>
+                <Link
+                  href="/training"
+                  className={clsx(
+                    "inline-flex w-full items-center justify-center gap-1.5 text-center no-underline motion-safe:transition-colors",
+                    "max-sm:min-h-0 max-sm:flex-1 max-sm:border-0 max-sm:bg-transparent max-sm:py-1.5 max-sm:text-[11px] max-sm:font-medium max-sm:text-[var(--color-text-secondary)] max-sm:underline max-sm:underline-offset-4 max-sm:hover:text-[var(--color-text-primary)]",
+                    "sm:min-h-10 sm:rounded-full sm:border sm:border-[var(--color-border)] sm:bg-[var(--color-surface-alt)] sm:px-3 sm:py-2 sm:text-[11px] sm:font-semibold sm:text-[var(--color-text-secondary)] sm:no-underline sm:hover:text-[var(--color-text-primary)]",
+                  )}
+                >
+                  <Dumbbell className="h-3.5 w-3.5 shrink-0 opacity-70 max-sm:hidden sm:inline" aria-hidden />
+                  Entrenamiento
+                </Link>
               </div>
             </div>
           </Card>

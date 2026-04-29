@@ -33,7 +33,7 @@ export function AppleHealthSyncCollapsible({ onRefresh, latest = null }: Props) 
         style={{ color: theme.textMuted }}
       >
         <span className="sm:hidden">Apple Health · {summarySyncShort}</span>
-        <span className="hidden sm:inline">Apple Health · sync y atajo</span>
+        <span className="hidden sm:inline">Apple Health · atajo y última lectura</span>
       </summary>
       <div className="space-y-3 border-t px-3 py-3" style={{ borderColor: saludHexToRgba(theme.border, 0.65) }}>
         <div
@@ -57,7 +57,7 @@ export function AppleHealthSyncCollapsible({ onRefresh, latest = null }: Props) 
               color: theme.text,
             }}
           >
-            Token en Configuración
+            Clave en Configuración
           </Link>
           <a
             href={runShortcutHref}
@@ -81,7 +81,7 @@ export function AppleHealthSyncCollapsible({ onRefresh, latest = null }: Props) 
           </button>
         </div>
         <p className="m-0 text-[10px] leading-snug" style={{ color: theme.textMuted }}>
-          El token se gestiona en Configuración; aquí solo lanzas el atajo o refrescas la lectura.
+          La clave del iPhone la creas en Configuración; aquí solo abres el atajo o refrescas lo que ya llegó.
         </p>
       </div>
     </details>

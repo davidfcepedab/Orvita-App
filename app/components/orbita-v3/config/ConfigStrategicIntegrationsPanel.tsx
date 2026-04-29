@@ -606,9 +606,9 @@ export function ConfigStrategicIntegrationsPanel({
   const showStrategicLoadError = Boolean(error && lastFailedAction === null && !loadPending)
 
   const healthClosedLine = useMemo(() => {
-    if (loadPending) return "Comprobando estado…"
-    if (!settings.health_enabled) return "Módulo apagado en el servidor"
-    if (!healthConnected) return "Sin muestras en el servidor aún"
+    if (loadPending) return "Revisando…"
+    if (!settings.health_enabled) return "Salud automática desactivada"
+    if (!healthConnected) return "Aún no hay datos del iPhone en tu cuenta"
     return `${healthSourceLabel(healthSource)} · ${formatShortSampleAgo(healthLastSync)}`
   }, [loadPending, settings.health_enabled, healthConnected, healthSource, healthLastSync])
 
@@ -629,9 +629,9 @@ export function ConfigStrategicIntegrationsPanel({
     ) : loadPending ? (
       <ConfigConnectionPill state="checking" />
     ) : !settings.health_enabled ? (
-      <ConfigConnectionPill state="disabled" disconnectedLabel="Módulo off" />
+      <ConfigConnectionPill state="disabled" disconnectedLabel="Desactivado" />
     ) : healthConnected ? (
-      <ConfigConnectionPill state="connected" connectedLabel="Con muestras" />
+      <ConfigConnectionPill state="connected" connectedLabel="Con datos" />
     ) : (
       <ConfigConnectionPill state="disconnected" disconnectedLabel="Pendiente" />
     )

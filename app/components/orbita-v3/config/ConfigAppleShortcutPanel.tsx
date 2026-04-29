@@ -140,7 +140,7 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
       setStatus("active")
       setCreatedAt(payload.created_at ?? null)
       setUsedAt(null)
-      setToast("Copia el token ahora; no volverá a mostrarse completo.")
+      setToast("Copia y guarda esta clave ahora: por seguridad no la mostraremos entera otra vez.")
       await loadStatus({ silent: true })
     } catch (e) {
       setToast(e instanceof Error ? e.message : "No se pudo generar el token")
@@ -161,7 +161,7 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
       const payload = (await res.json()) as { success?: boolean; error?: string }
       if (!res.ok || !payload.success) throw new Error(payload.error ?? "No se pudo revocar")
       setPlainOnce(null)
-      setToast("Token revocado.")
+      setToast("Clave desactivada. El atajo dejará de poder enviar datos hasta que generes una nueva.")
       await loadStatus({ silent: true })
     } catch (e) {
       setToast(e instanceof Error ? e.message : "No se pudo revocar")
@@ -174,7 +174,7 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
     if (!plainOnce) return
     try {
       await navigator.clipboard.writeText(plainOnce)
-      setToast("Token copiado.")
+      setToast("Copiado al portapapeles.")
     } catch {
       setToast("Cópialo seleccionando el texto a mano.")
     }
@@ -183,7 +183,7 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
   const copyDirectShortcutUrl = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(getOrvitaHealthShortcutFileUrl())
-      setToast("Enlace HTTPS del .shortcut copiado. Ábrelo en Safari y descarga, o pégalo en la barra de direcciones.")
+      setToast("Enlace copiado. Ábrelo en Safari en el iPhone y descarga el atajo, o pégalo en la barra de direcciones.")
     } catch {
       setToast("No se pudo copiar. Usa «Descargar archivo del atajo» o copia la URL a mano desde la guía.")
     }
@@ -191,10 +191,10 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
 
   const statusLabel =
     status === "active"
-      ? "Token configurado"
+      ? "Clave lista para el iPhone"
       : status === "revoked"
-        ? "Revocado"
-        : "No configurado"
+        ? "Clave desactivada"
+        : "Aún sin clave"
 
   return (
     <div
@@ -214,14 +214,14 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
           </div>
           <div className="min-w-0 flex-1 space-y-1">
             <p className="text-sm font-semibold" style={{ color: theme.text }}>
-              Atajo en iPhone
+              Tu atajo de Salud en el iPhone
             </p>
             <p className="text-xs leading-relaxed" style={{ color: theme.textMuted }}>
-              Instálalo una vez desde <strong className="font-medium text-inherit">Safari</strong>. Si falla, vuelve a descargarlo.
+              Instálalo <strong className="font-medium text-inherit">una sola vez</strong> desde{" "}
+              <strong className="font-medium text-inherit">Safari</strong> (en el iPhone). Si algo falla, vuelve a descargarlo desde aquí.
               {" "}
-              <strong className="font-medium text-inherit">No uses «Duplicar»</strong> en la app Atajos (atajos «… 2», «… 3»):
-              esa copia suele llegar <strong className="font-medium text-inherit">sin variables enlazadas</strong>: el bloque
-              Diccionario muestra solo «Texto» gris y el servidor recibe vacío. Borra la copia y reinstala desde Órvita.
+              En Atajos, <strong className="font-medium text-inherit">no dupliques</strong> el atajo (los que acaban en «2» o «3»): esas copias
+              a veces dejan de enviar bien los datos. Mejor bórralas y vuelve a instalar el original desde Órvita.
             </p>
           </div>
         </div>
@@ -241,7 +241,7 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
                   }}
                 >
                   <Download className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                  Instalar desde iCloud
+                  Instalar con enlace de Apple
                 </a>
               ) : null}
               <a
@@ -259,7 +259,7 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
                 }
               >
                 <Download className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                {icloudUrl ? "Instalar (archivo en Órvita)" : "Instalar atajo"}
+                {icloudUrl ? "Instalar desde Órvita" : "Instalar atajo"}
               </a>
               {moduleCard ? null : (
                 <a
@@ -267,18 +267,18 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
                   className={`${subtleCta} no-underline text-center sm:text-left flex`}
                   style={{ borderColor: theme.border, color: theme.textMuted, backgroundColor: theme.surface }}
                 >
-                  Apertura alternativa
+                  Otra forma de abrirlo
                 </a>
               )}
             </>
           ) : null}
           {isIOS ? null : (
             <p className="text-xs leading-relaxed" style={{ color: theme.textMuted }}>
-              En el iPhone, abre esta pantalla en Safari y toca <strong className="font-medium text-inherit">Descargar</strong>.
+              En el iPhone, abre esta página en <strong className="font-medium text-inherit">Safari</strong> y descarga el atajo.
               {icloudUrl ? (
                 <>
                   {" "}
-                  O pega en Safari del iPhone el{" "}
+                  También puedes usar el{" "}
                   <a
                     href={icloudUrl}
                     className="font-medium underline decoration-dotted"
@@ -286,9 +286,9 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
                     target="_blank"
                     rel="noreferrer"
                   >
-                    enlace de iCloud
-                  </a>{" "}
-                  (misma instalación, sin el archivo de la web).
+                    enlace que te da Apple
+                  </a>
+                  : instala el mismo atajo sin pasar por el archivo de la web.
                 </>
               ) : null}
             </p>
@@ -300,7 +300,7 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
             style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surface }}
           >
             <Download className="h-3.5 w-3.5" aria-hidden />
-            Descargar .shortcut
+            Descargar el atajo (archivo)
           </a>
           <a
             href={historialFileUrl}
@@ -309,14 +309,13 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
             style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surface }}
           >
             <Download className="h-3.5 w-3.5" aria-hidden />
-            Descargar histórico (15 días, v1)
+            Descargar atajo de histórico (15 días)
           </a>
           <p
             className="w-full basis-full text-[10px] leading-snug sm:text-[11px]"
             style={{ color: theme.textMuted }}
           >
-            El archivo «histórico» comparte la misma lectura Salud que el diario (día de ejecución); sirve para un segundo
-            atajo o widget. El backfill automático día a día sin incluir hoy está en roadmap (filtros por fecha en Atajos).
+            El atajo de histórico sirve si quieres un segundo botón en el iPhone para enviar varios días; el del día a día es el principal de arriba.
           </p>
           {moduleCard ? null : (
             <button
@@ -326,7 +325,7 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
               style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surface }}
             >
               <ClipboardCopy className="h-3.5 w-3.5" aria-hidden />
-              Copiar enlace
+              Copiar enlace de descarga
             </button>
           )}
           {moduleCard ? null : (
@@ -336,27 +335,24 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
               className={`${subtleCta} flex border-dashed`}
               style={{ borderColor: theme.border, color: theme.textMuted, backgroundColor: "transparent" }}
             >
-              Guía (Atajos y permisos)
+              Cómo usar el atajo y permisos
             </button>
           )}
         </div>
         {isIOS && isOrvitaShortcutImportFromHttpDev() ? (
           <p className="mt-3 text-xs leading-relaxed" style={{ color: theme.textMuted }}>
-            Estás en HTTP (desarrollo). iOS a menudo exige <strong className="font-medium text-inherit">HTTPS</strong> o
-            usa <strong className="font-medium text-inherit">Descargar archivo del atajo</strong> y abre el .shortcut desde
-            Archivos. En producción (orvita.app) el enlace «Instalar» debería abrir Atajos sin pasos extra.
+            Estás en una dirección de prueba (sin cifrado). En el iPhone, descarga el archivo del atajo y ábrelo desde{" "}
+            <strong className="font-medium text-inherit">Archivos</strong>. En la web normal de Órvita suele bastar con tocar instalar desde Safari.
           </p>
         ) : null}
         <p className="mt-3 rounded-lg border px-3 py-2 text-[11px] leading-relaxed sm:text-xs" style={{ borderColor: theme.border, color: theme.textMuted }}>
           <span className="font-semibold" style={{ color: theme.text }}>
-            Comprobar que es el atajo oficial:
+            Que sea el atajo bueno:
           </span>{" "}
-          en Atajos, el nombre debe ser exactamente{" "}
-          <strong className="font-medium text-inherit">{ORVITA_HEALTH_SHORTCUT_NAME}</strong> (sin « 2 », « 3 »). Abre el
-          bloque <strong className="font-medium text-inherit">Diccionario</strong>: cada valor debe ser una{" "}
-          <strong className="font-medium text-inherit">pastilla</strong> (p. ej. <code className="text-[10px]">observed_at</code>,{" "}
-          <code className="text-[10px]">steps_num</code>). Si solo ves «Texto» gris en todas las filas, ese no es el archivo
-          completo o es una copia duplicada; borra esos atajos y vuelve a instalar desde aquí.
+          en la app Atajos el nombre debe ser{" "}
+          <strong className="font-medium text-inherit">{ORVITA_HEALTH_SHORTCUT_NAME}</strong>, sin números raros al final. Si al
+          abrirlo ves recuadros de color en la lista de datos, va bien; si casi todo sale como texto gris vacío, no es la
+          instalación correcta: borra esa copia y vuelve a descargar desde esta página.
         </p>
       </div>
 
@@ -366,10 +362,11 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
         style={moduleCard ? undefined : { borderColor: theme.border, backgroundColor: theme.surface }}
       >
         <p className="text-xs font-semibold uppercase tracking-[0.14em]" style={{ color: theme.textMuted }}>
-          Token de importación (Atajos)
+          Clave para tu iPhone
         </p>
         <p className="mt-1.5 text-xs leading-relaxed" style={{ color: theme.textMuted }}>
-          Configura este token una sola vez en Atajos. Solo tendrás que cambiarlo si lo regeneras o revocas. El token completo solo se muestra una vez.
+          La creas aquí y la pegas una vez en el atajo del teléfono. Solo la cambias si pulsas regenerar o revocar. Cuando la
+          generamos, te la mostramos entera una sola vez.
         </p>
         <p className="mt-2 text-sm font-medium" style={{ color: theme.text }}>
           {loadingStatus ? "Cargando…" : statusLabel}
@@ -390,7 +387,7 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
             style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surfaceAlt }}
           >
             <Sparkles className="h-3.5 w-3.5" aria-hidden />
-            {minting ? "Generando…" : status === "active" ? "Regenerar" : "Generar"}
+            {minting ? "Generando…" : status === "active" ? "Generar otra clave" : "Crear clave"}
           </button>
           {status === "active" ? (
             <button
@@ -400,7 +397,7 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
               className={`${moduleCard ? chipCta : subtleCta} flex disabled:opacity-50`}
               style={{ borderColor: theme.border, color: theme.textMuted, backgroundColor: theme.surface }}
             >
-              {revoking ? "Revocando…" : "Revocar"}
+              {revoking ? "Desactivando…" : "Desactivar clave"}
             </button>
           ) : null}
           {plainOnce ? (
@@ -411,7 +408,7 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
               style={{ borderColor: theme.accent.health, color: theme.accent.health, backgroundColor: "transparent" }}
             >
               <ClipboardCopy className="h-3.5 w-3.5" aria-hidden />
-              Copiar token
+              Copiar clave
             </button>
           ) : null}
           {isIOS ? (
@@ -421,18 +418,18 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
               style={{ borderColor: theme.accent.health, color: theme.accent.health, backgroundColor: "transparent" }}
             >
               <Zap className="h-3.5 w-3.5" aria-hidden />
-              Abrir atajo
+              Abrir en Atajos
             </a>
           ) : null}
         </div>
 
         {isIOS ? (
           <p className="mt-2 text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
-            Si al tocar «Abrir atajo» aparece que el archivo no existe, el atajo en Atajos no se llama exactamente{" "}
+            Si al abrir en Atajos dice que no encuentra el atajo, revisa que en la biblioteca se llame exactamente{" "}
             <span className="font-medium" style={{ color: theme.text }}>
               {ORVITA_HEALTH_SHORTCUT_NAME}
             </span>
-            . Reinstala con «Instalar atajo» arriba o renómbralo a ese nombre; iOS exige una coincidencia exacta.
+            . Vuelve a instalar desde arriba o corrige el nombre a mano.
           </p>
         ) : null}
         {toast ? (
@@ -475,7 +472,7 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
                   className="m-0 text-sm font-semibold sm:text-base"
                   style={{ color: theme.text }}
                 >
-                  Guía: atajo en el iPhone
+                  Cómo encaja el atajo en tu día a día
                 </h2>
               </div>
               <button
@@ -491,22 +488,15 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
               className="m-0 rounded-lg border px-2.5 py-2 text-[11px] leading-relaxed"
               style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt, color: theme.text }}
             >
+              Órvita no tiene widget propio en la tienda de apps: lo habitual es añadir en la pantalla de inicio el{" "}
               <strong className="font-medium" style={{ color: theme.text }}>
-                No hay widget propio de Órvita
+                widget de Atajos
               </strong>{" "}
-              en la App Store ni en esta web: lo que puedes usar hoy es el{" "}
-              <strong className="font-medium" style={{ color: theme.text }}>
-                widget de Atajos de Apple
-              </strong>{" "}
-              (sistema) para lanzar el atajo con un toque. Un widget nativo con datos de tu cuenta iría en la{" "}
-              <strong className="font-medium" style={{ color: theme.text }}>
-                app móvil Órvita
-              </strong>{" "}
-              (en desarrollo; documentación en el repositorio: carpeta native/ios, archivo WIDGET_EXTENSION).
+              del iPhone y elegir este atajo, para lanzarlo con un toque.
             </p>
             <p className="m-0 mt-2 text-xs leading-relaxed" style={{ color: theme.textMuted }}>
-              La web no puede instalar nada en tu iPhone. El atajo envía el día a Órvita en la nube cuando lo ejecutas
-              (o desde el widget de Atajos si lo añades tú a la pantalla de inicio).
+              Esta web no instala nada sola: tú descargas el atajo y, cuando lo ejecutas, tus datos del día viajan a tu cuenta
+              en Órvita.
             </p>
             <ol className="mt-3 list-decimal space-y-2 pl-4 text-xs leading-relaxed" style={{ color: theme.text }}>
               <li>Pantalla de inicio: modo edición, luego <strong className="font-medium text-inherit">+</strong> o Añadir widget.</li>
@@ -517,15 +507,14 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
                 instala antes el .shortcut desde esta página.)
               </li>
               <li>
-                Si en Salud ves <strong className="font-medium text-inherit">(null)</strong> o «Acción desconocida»:
-                vuelve a descargar el .shortcut desde aquí, abre <strong className="font-medium text-inherit">Salud</strong> →{" "}
-                <strong className="font-medium text-inherit">Atajos</strong> y activa permisos para los tipos (pasos, ejercicio,
-                energía, HRV, FC). Reinstala el atajo con el nombre exacto.
+                Si algo sale raro en Salud o en Atajos: vuelve a descargar el atajo desde aquí, abre{" "}
+                <strong className="font-medium text-inherit">Salud</strong> → <strong className="font-medium text-inherit">Atajos</strong>{" "}
+                y deja activado lo que quieras compartir (pasos, sueño, energía, variación del pulso, etc.).
               </li>
             </ol>
             <p className="mt-3 flex items-start gap-2 text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
               <Play className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-              El widget de Atajos no inicia sesión en Órvita: solo ejecuta el atajo; tu cuenta sigue en la web.
+              El widget solo abre el atajo; no entra en tu cuenta por ti.
             </p>
             <a
               href={instructionsUrl}
@@ -534,7 +523,7 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
               className="mt-3 inline-flex text-xs font-medium underline-offset-2 hover:underline"
               style={{ color: theme.textMuted }}
             >
-              Notas técnicas (archivo)
+              Ayuda larga (archivo de texto)
             </a>
           </div>
         </div>

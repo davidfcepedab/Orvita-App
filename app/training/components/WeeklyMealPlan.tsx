@@ -346,44 +346,49 @@ export function WeeklyMealPlan({
       </div>
 
       {mealDays.length > 0 ? (
-        <div className="rounded-2xl border border-slate-100 bg-white p-3 shadow-sm">
-          <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Vista por día</p>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {mealDays.map((d, i) => {
-              const ymd = weekAnchorYmd ? weekYmdForMealDayLabel(weekAnchorYmd, d.day) : null
-              const train = ymd ? isTrainingDayYmd(trainingDays, ymd) : false
-              const active = i === selectedDayIdx
-              return (
-                <button
-                  key={`${d.day}-${i}`}
-                  type="button"
-                  onClick={() => setSelectedDayIdx(i)}
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
-                    active
-                      ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300"
-                  }`}
-                >
-                  {train ? <Dumbbell className="h-3 w-3 opacity-90" aria-hidden /> : <span className="text-[9px] opacity-80">REST</span>}
-                  {d.day}
-                </button>
-              )
-            })}
-          </div>
-          {selectedDay ? (
-            <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50/80 p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="m-0 text-[10px] font-semibold uppercase tracking-wide text-blue-600">
-                    {dayTrain ? "Día con entreno" : "Día ligero / descanso"}
-                  </p>
-                  <p className="m-0 text-lg font-bold tabular-nums text-slate-900">{selectedTargetKcal} kcal objetivo</p>
-                  <p className="m-0 text-[11px] text-slate-500">
-                    Registrado: {selectedDay.kcal} kcal · P{selectedDay.pro} · C{selectedDay.carb} · G{selectedDay.fat}
-                  </p>
-                </div>
+        <div className="space-y-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
+            <div className="min-w-0">
+              <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Vista por día</p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {mealDays.map((d, i) => {
+                  const ymd = weekAnchorYmd ? weekYmdForMealDayLabel(weekAnchorYmd, d.day) : null
+                  const train = ymd ? isTrainingDayYmd(trainingDays, ymd) : false
+                  const active = i === selectedDayIdx
+                  return (
+                    <button
+                      key={`${d.day}-${i}`}
+                      type="button"
+                      onClick={() => setSelectedDayIdx(i)}
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
+                        active
+                          ? "border-slate-900 bg-slate-900 text-white"
+                          : "border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300"
+                      }`}
+                    >
+                      {train ? <Dumbbell className="h-3 w-3 opacity-90" aria-hidden /> : <span className="text-[9px] opacity-80">REST</span>}
+                      {d.day}
+                    </button>
+                  )
+                })}
               </div>
-              <ul className="m-0 mt-3 list-none space-y-3 p-0">
+            </div>
+            {selectedDay ? (
+              <div className="w-full shrink-0 rounded-xl border border-slate-100 bg-slate-50/80 p-3 sm:w-auto sm:min-w-[min(100%,14.5rem)]">
+                <p className="m-0 text-[10px] font-semibold uppercase tracking-wide text-blue-600">
+                  {dayTrain ? "Día con entreno" : "Día ligero / descanso"}
+                </p>
+                <p className="m-0 text-lg font-bold tabular-nums text-slate-900">{selectedTargetKcal} kcal objetivo</p>
+                <p className="m-0 text-[11px] text-slate-500">
+                  Registrado: {selectedDay.kcal} kcal · P{selectedDay.pro} · C{selectedDay.carb} · G{selectedDay.fat}
+                </p>
+              </div>
+            ) : null}
+          </div>
+
+          {selectedDay ? (
+            <>
+              <ul className="m-0 list-none space-y-3 p-0">
                 {suggestedMeals.map((m) => {
                   const bullets = mealDetailBulletLines(m.detail)
                   const tone = mealSlotCardClass(m.icon)
@@ -418,10 +423,10 @@ export function WeeklyMealPlan({
                   )
                 })}
               </ul>
-              <p className="m-0 mt-2 text-[10px] leading-snug text-slate-400">
+              <p className="m-0 text-[10px] leading-snug text-slate-400">
                 Horarios y nombres son una guía; reparte tus macros reales como prefieras.
               </p>
-            </div>
+            </>
           ) : null}
         </div>
       ) : null}

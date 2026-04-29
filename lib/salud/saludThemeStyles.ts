@@ -32,6 +32,39 @@ export function saludPanelStyle(theme: OrbitaThemeSkin, surfaceAlpha = 0.92): CS
   }
 }
 
+/** Luminancia aproximada (hex #RRGGBB) para elegir texto secundario legible sobre tintes. */
+export function saludSurfaceIsLight(surfaceHex: string): boolean {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(surfaceHex.trim())
+  if (!m) return true
+  const r = parseInt(m[1], 16)
+  const g = parseInt(m[2], 16)
+  const b = parseInt(m[3], 16)
+  const y = (r * 299 + g * 587 + b * 114) / 1000
+  return y > 175
+}
+
+/**
+ * Hero “Decisión del día”: toda la tarjeta con tinte semántico + sombra suave.
+ * El texto principal sigue siendo `theme.text`; secundarios deben usar `saludDecisionCardMutedColor`.
+ */
+export function saludHeroDecisionCardStyle(theme: OrbitaThemeSkin, semanticHex: string): CSSProperties {
+  const light = saludSurfaceIsLight(theme.surface)
+  const tintPct = light ? 22 : 28
+  return {
+    background: `color-mix(in srgb, ${semanticHex} ${tintPct}%, ${theme.surface})`,
+    color: theme.text,
+    borderColor: saludHexToRgba(semanticHex, light ? 0.48 : 0.4),
+    boxShadow: light
+      ? `0 14px 44px ${saludHexToRgba(theme.bg, 0.28)}, inset 0 1px 0 ${saludHexToRgba(semanticHex, 0.22)}`
+      : `0 16px 48px rgba(0,0,0,0.4), inset 0 1px 0 ${saludHexToRgba(semanticHex, 0.2)}`,
+  }
+}
+
+/** Texto secundario legible sobre fondo tintado (evita gris claro sobre ámbar/verde suave). */
+export function saludDecisionCardMutedColor(theme: OrbitaThemeSkin): string {
+  return saludSurfaceIsLight(theme.surface) ? "#475569" : theme.textMuted
+}
+
 /** Semáforo 0–100: verde / ámbar / rojo (sin azul como estado). */
 export function saludMetricTone(_theme: OrbitaThemeSkin, value: number): string {
   if (value >= 80) return "#22c55e"

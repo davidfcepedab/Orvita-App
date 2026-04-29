@@ -158,8 +158,8 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
               Datos automáticos, con calma y precisión
             </h1>
             <p className="m-0 text-sm leading-relaxed sm:text-[15px]" style={{ color: theme.textMuted }}>
-              Los datos llegan cuando ejecutas el atajo en el iPhone (Salud no lista Órvita como app). El token lo
-              configuras en Configuración; en Salud solo ves lo que ya guardó tu cuenta.
+              Apple no muestra Órvita dentro de Salud: lo que ves aquí es lo que ya guardamos cuando ejecutas el atajo en el
+              iPhone. La clave larga la creas en Configuración y la pegas una sola vez en el teléfono.
             </p>
           </div>
 
@@ -233,10 +233,10 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
                   href={runShortcutHref}
                   className="inline-flex min-h-9 shrink-0 items-center justify-center gap-2 rounded-lg px-3.5 text-xs font-semibold text-white no-underline transition active:scale-[0.99]"
                   style={{ backgroundColor: SALUD_SEM.energy }}
-                  title="Abre el atajo en el iPhone para enviar el día"
+                  title="Abre el atajo en el iPhone y envía el resumen del día"
                 >
                   <Zap className="h-4 w-4 shrink-0 opacity-95" aria-hidden />
-                  Ejecutar atajo
+                  Enviar datos de hoy
                 </a>
                 <button
                   type="button"
@@ -248,7 +248,7 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
                     backgroundColor: "transparent",
                     color: theme.text,
                   }}
-                  title="Recarga desde Órvita lo último que envió el atajo"
+                  title="Trae a esta pantalla lo último que ya llegó a tu cuenta"
                 >
                   {loading ? "Actualizando…" : "Actualizar lectura"}
                 </button>
@@ -260,38 +260,36 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
                     backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.35),
                     color: theme.text,
                   }}
-                  title="Configurar token del Atajo en Configuración"
+                  title="Crear o cambiar la clave del atajo"
                 >
                   <Settings className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
-                  Token en Configuración
+                  Clave en Configuración
                 </Link>
               </div>
               <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: theme.textMuted }}>
-                Cómo se sincroniza (orden)
+                Tres pasos, en orden
               </p>
               <ol className="m-0 list-decimal space-y-2.5 pl-4 text-xs leading-relaxed sm:text-[13px]" style={{ color: theme.text }}>
                 <li>
-                  <strong className="font-medium text-inherit">Una vez en la web:</strong> en{" "}
+                  <strong className="font-medium text-inherit">En la web, una vez:</strong> entra en{" "}
                   <Link
                     href="/configuracion#apple-health-import-token"
                     className="font-medium underline underline-offset-2"
                     style={{ color: SALUD_SEM.energy }}
                   >
-                    Configuración → token de importación
+                    Configuración
                   </Link>
-                  , genera el token y configúralo en el atajo (cabecera{" "}
-                  <span className="rounded bg-black/[0.06] px-1 font-mono text-[11px] dark:bg-white/[0.08]">x-orvita-import-token</span>
-                  ). No caduca por tiempo; solo cambia si lo regeneras o revocas.
+                  , crea la clave y cópiala al atajo del iPhone cuando te la pida. No caduca sola; solo la cambias si pulsas
+                  generar otra o desactivar en Configuración.
                 </li>
                 <li>
-                  <strong className="font-medium text-inherit">Cuando quieras datos del día:</strong> en el iPhone, ejecuta el
-                  atajo <span className="font-medium text-inherit">{ORVITA_HEALTH_SHORTCUT_NAME}</span> (o el que instalaste con el mismo flujo).
-                  Eso envía el resumen a Órvita.
+                  <strong className="font-medium text-inherit">Cuando quieras actualizar:</strong> en el iPhone abre Atajos y ejecuta{" "}
+                  <span className="font-medium text-inherit">{ORVITA_HEALTH_SHORTCUT_NAME}</span>. Eso manda el resumen del día a tu cuenta.
                 </li>
                 <li>
                   <strong className="font-medium text-inherit">Aquí en Salud:</strong> toca{" "}
-                  <strong className="font-medium text-inherit">Actualizar lectura</strong> para traer a la pantalla lo que el servidor ya guardó.
-                  Si el chip muestra fecha vieja, suele faltar ejecutar el atajo o refrescar.
+                  <strong className="font-medium text-inherit">Actualizar lectura</strong> para ver en pantalla lo que ya guardamos. Si la fecha se ve
+                  antigua, suele faltar ejecutar el atajo o pulsar actualizar otra vez.
                 </li>
               </ol>
               <Link
@@ -304,7 +302,7 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
                 }}
               >
                 <Settings className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
-                Abrir Configuración (token y guía del atajo)
+                Ir a Configuración (clave y descarga del atajo)
               </Link>
             </div>
           </details>

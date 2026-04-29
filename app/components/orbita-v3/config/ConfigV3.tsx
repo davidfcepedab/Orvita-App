@@ -877,7 +877,7 @@ export default function ConfigV3() {
           leadingContainerStyle={{ backgroundColor: "rgba(148, 163, 184, 0.18)" }}
           leading={<Settings2 className="h-4 w-4" style={{ color: theme.textMuted }} />}
           title="Instalación y acceso"
-          description="PWA, biometría y dónde está el atajo de salud"
+          description="PWA, biometría y enlace al atajo de Salud"
         >
           <div className="space-y-2">
             <div
@@ -899,10 +899,10 @@ export default function ConfigV3() {
             <div className="px-0 py-0" data-orvita-section="shortcuts-hint">
               <div className="rounded-xl border px-3 py-2.5 sm:px-3.5 sm:py-3" style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt }}>
                 <p className="m-0 text-xs font-medium" style={{ color: theme.text }}>
-                  Atajos
+                  Atajo de Salud
                 </p>
                 <p className="m-0 mt-1 text-[12px] leading-relaxed" style={{ color: theme.textMuted }}>
-                  El atajo de importación vive en{" "}
+                  Para descargarlo y crear la clave, ve a{" "}
                   <a
                     href="#conexion-salud"
                     className="font-medium underline-offset-2 hover:underline"

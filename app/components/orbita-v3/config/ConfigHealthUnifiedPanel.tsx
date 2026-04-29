@@ -161,7 +161,7 @@ export function ConfigHealthUnifiedPanel({
     <ConfigSettingsSection
       theme={theme}
       title="Salud"
-      description="Instala el atajo en el iPhone y sincroniza Apple Health o Google Fit en un mismo bloque."
+      description="Conecta tu iPhone con Órvita: atajo de Salud y, si quieres, la nube de Apple o Google en el mismo sitio."
       icon={<HeartPulse className="h-4 w-4" aria-hidden />}
       container="card"
       listStyle="insetGrouped"
@@ -171,18 +171,14 @@ export function ConfigHealthUnifiedPanel({
         <ConfigAppleShortcutPanel theme={theme} moduleCard />
         <div className="rounded-xl border px-3 py-3 sm:px-4 sm:py-3.5" style={{ borderColor: theme.border, backgroundColor: theme.surface }}>
           <p className="text-xs font-semibold uppercase tracking-[0.12em]" style={{ color: theme.textMuted }}>
-            Permisos en Salud → Atajos
+            Permisos en la app Salud
           </p>
           <p className="mt-1 text-[11px] leading-relaxed sm:text-xs" style={{ color: theme.textMuted }}>
-            El atajo oficial envía: pasos, minutos de ejercicio, energía activa, HRV, FC en reposo y entrenamientos. El agregado automático de sueño se omitió
-            en Atajos (provocaba «Acción desconocida» en muchos dispositivos); puedes añadir sueño a mano en el flujo o en la guía. En Salud → Atajos, activa
-            lectura de lo que vayas a leer.
-            Otras métricas (peso, SpO2, presión, etc.) pueden enviarse como números extra en el JSON; hoy se guardan en metadatos, no en columnas
-            principales.
+            En <strong className="font-medium text-inherit">Salud</strong> → <strong className="font-medium text-inherit">Atajos</strong>, activa lo que quieras
+            compartir (pasos, sueño, energía, pulso en reposo, entrenos, etc.). El atajo de Órvita lee eso y lo envía a tu cuenta cuando lo ejecutas.
           </p>
           <p className="mt-2 text-[11px] leading-relaxed sm:text-xs" style={{ color: theme.textMuted }}>
-            “Acción desconocida” o un diccionario con “0 elementos” no se arregla dando más permisos: el flujo del atajo está roto o incompleto. Borra
-            copias viejas, reinstala el .shortcut desde Órvita en Safari y vuelve a probar.
+            Si el atajo se ve raro o no manda nada, suele bastar con borrar copias viejas, volver a descargarlo desde Órvita en Safari y conceder de nuevo lo que pida Salud.
           </p>
         </div>
       </div>

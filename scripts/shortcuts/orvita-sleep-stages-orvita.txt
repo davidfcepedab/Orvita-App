@@ -1,0 +1,59 @@
+Órvita · Sueño por fases (Sleep Analysis) vs atajo actual «Importar Salud»
+
+================================================================================
+QUÉ HACE HOY EL GENERADOR (orvita-importar-salud-hoy.shortcut.src.plist)
+================================================================================
+- Busca muestras de cantidad tipo «Sleep» con inicio = día de observed_at.
+- Suma la propiedad Duración de todas esas muestras → sleep_duration_seconds.
+
+Eso incluye **todas** las filas que Apple etiqueta como muestras «Sleep» en esa ventana.
+Puede mezclar en cama / despierto / fases según cómo HealthKit devuelva las muestras ese día.
+
+================================================================================
+QUÉ HACE TU ATAJO «SLEEP ANALYSIS FUNCIONAL» (lógica de la captura)
+================================================================================
+Partes de un diccionario con claves típicas:
+  In Bed | Awake | REM | Light | Deep | Core
+
+Pasos:
+1) Filtrar **claves** donde el nombre NO es «Awake» y NO es «In Bed».
+   → Quedan solo fases de sueño «real»: REM, Light, Deep, Core (nombres pueden variar con idioma).
+2) Para cada clave restante, obtener el valor en el diccionario y **sumar**.
+
+Interpretación para Órvita:
+- sleep_duration_seconds ≈ **tiempo dormido** (fases), sin contar tiempo en cama ni despierto.
+- Alineado con lo que muchos usuarios esperan como «horas dormidas».
+
+================================================================================
+VERSIÓN SIMPLIFICADA (menos pasos que Filtrar + Repetir con cada)
+================================================================================
+Si tu diccionario ya tiene **exactamente** esas claves y cada valor es un número
+(segundos o horas del día para esa fase), puedes **fijar las 4 claves** y evitar el filtro:
+
+  Obtener valor «REM»    ─┐
+  Obtener valor «Light»   ─┼→ Calcular (suma en cadena o una acción Suma de lista)
+  Obtener valor «Deep»    ─┤
+  Obtener valor «Core»    ─┘
+
+Si los valores son **arrays** (lista de intervalos), antes de sumar todo:
+  Repetir con cada lista → sumar duraciones de esa lista → luego sumar las 4 ramas.
+
+Importante: en iPhone en español, los **nombres de clave** que muestra Atajos pueden ser
+«En la cama», «Despierto», «REM», etc. Ajusta las cadenas para que coincidan con tu diccionario.
+
+================================================================================
+CÓMO ENCHUFARLO AL MISMO apple_bundle QUE ÓRVITA
+================================================================================
+Sustituye solo la cadena que alimenta la variable numérica que mapeas a
+sleep_duration_seconds (en el plist generado: sleep_duration_num).
+
+El POST sigue igual:
+  { "apple_bundle": { "observed_at": "...", "sleep_duration_seconds": <número>, ... } }
+
+Cabeceras: x-orvita-import-token, x-orvita-observed-at, x-orvita-health-source, etc.
+
+================================================================================
+HISTORIAL 15 DÍAS (orvita-salud-historial-15dias.src.plist)
+================================================================================
+Misma métrica de sueño que el import del día: si cambias la lógica arriba, regenera
+ambos plists para que el histórico y el «hoy» usen la misma definición de sueño.

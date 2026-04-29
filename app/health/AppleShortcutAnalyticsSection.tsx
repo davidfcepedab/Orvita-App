@@ -44,9 +44,7 @@ type Props = {
   loading: boolean
 }
 
-/**
- * Capa operativa / estratégica / predictiva (import Atajo) — vista canónica en /health.
- */
+/** Resumen amable de lo último que mandó el atajo del iPhone — vista en /health. */
 export function AppleShortcutAnalyticsSection({ latest, analytics, loading }: Props) {
   const sleepSec = latestToSeconds(latest)
   const sleepFmt = formatHoursMinutesFromSeconds(sleepSec)
@@ -61,16 +59,15 @@ export function AppleShortcutAnalyticsSection({ latest, analytics, loading }: Pr
       <div className="space-y-3 p-4 sm:p-6">
         <div>
           <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
-            Import Atajo: operativo, estratégico y tendencia
+            Lo que llegó desde tu iPhone
           </p>
           <p className="m-0 mt-1 max-w-prose text-pretty text-[12px] leading-relaxed text-[var(--color-text-secondary)] sm:text-[13px]">
-            Resumen del último envío y señales simples (no clínicas) frente a la semana previa, usando el mismo
-            endpoint que el atajo iOS.
+            Aquí ves el último envío del atajo y cómo se sitúa frente a tu semana anterior. Son lecturas orientativas para el día a día, no un diagnóstico médico.
           </p>
           {latest?.source === "apple_health_shortcut" && latest.observed_at ? (
             <p className="m-0 mt-2 inline-flex max-w-full items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--color-accent-health)_35%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_10%,transparent)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-primary)]">
               <span className="text-[var(--color-accent-health)]">●</span>
-              Importado vía Atajo · {formatLocalDateLabelEsCo(latest.observed_at)}
+              Actualizado desde tu iPhone · {formatLocalDateLabelEsCo(latest.observed_at)}
             </p>
           ) : null}
         </div>
@@ -79,8 +76,8 @@ export function AppleShortcutAnalyticsSection({ latest, analytics, loading }: Pr
             className="rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_50%,transparent)] p-3.5"
             style={{ minHeight: 200 }}
           >
-            <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">Operativo</p>
-            <p className="m-0 mt-1 text-[12px] text-[var(--color-text-secondary)]">Último día importado</p>
+            <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">Última lectura</p>
+            <p className="m-0 mt-1 text-[12px] text-[var(--color-text-secondary)]">Pasos, sueño, pulso y más</p>
             {loading ? (
               <p className="m-0 mt-3 text-[13px] text-[var(--color-text-secondary)]">Cargando…</p>
             ) : !latest ? (
@@ -119,8 +116,8 @@ export function AppleShortcutAnalyticsSection({ latest, analytics, loading }: Pr
             className="rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_50%,transparent)] p-3.5"
             style={{ minHeight: 200 }}
           >
-            <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">Estratégico</p>
-            <p className="m-0 mt-1 text-[12px] text-[var(--color-text-secondary)]">Recuperación y carga</p>
+            <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">Tu ritmo hoy</p>
+            <p className="m-0 mt-1 text-[12px] text-[var(--color-text-secondary)]">Energía frente al descanso</p>
             {!analytics || loading ? (
               <p className="m-0 mt-3 text-[13px] text-[var(--color-text-secondary)]">Cargando…</p>
             ) : (
@@ -132,7 +129,7 @@ export function AppleShortcutAnalyticsSection({ latest, analytics, loading }: Pr
                   Puntuación: <span className="font-semibold">{rec?.recovery_score ?? "—"}</span>
                 </p>
                 <p className="m-0 mt-1 text-[12px] text-[var(--color-text-primary)]">
-                  Carga (proxy): <span className="font-semibold">{rec?.training_load != null ? rec.training_load.proxy : "—"}</span>
+                  Carga del día (estimada): <span className="font-semibold">{rec?.training_load != null ? rec.training_load.proxy : "—"}</span>
                 </p>
                 <ul className="m-0 mt-2 list-inside list-disc space-y-1 p-0 text-[11px] leading-snug text-[var(--color-text-secondary)] sm:text-[12px]">
                   {sig?.hrv_vs_load?.text ? <li>{sig.hrv_vs_load.text}</li> : null}
@@ -147,8 +144,8 @@ export function AppleShortcutAnalyticsSection({ latest, analytics, loading }: Pr
             className="rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_50%,transparent)] p-3.5"
             style={{ minHeight: 200 }}
           >
-            <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">Predictivo</p>
-            <p className="m-0 mt-1 text-[12px] text-[var(--color-text-secondary)]">7 días vs 7 anteriores</p>
+            <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">Tendencia</p>
+            <p className="m-0 mt-1 text-[12px] text-[var(--color-text-secondary)]">Esta semana frente a la anterior</p>
             {!wk ? (
               <p className="m-0 mt-3 text-[12px] text-[var(--color-text-secondary)]">Sin historial suficiente aún.</p>
             ) : (

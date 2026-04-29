@@ -199,7 +199,9 @@ export default function HomeV3() {
                   </p>
                   {autoHealth?.source === "apple_health_shortcut" && autoHealth.observed_at ? (
                     <p className="mt-1 text-[11px]" style={{ color: theme.textMuted }}>
-                      Importado vía Atajo · {formatLocalDateLabelEsCo(autoHealth.observed_at)}
+                      <span style={{ color: theme.accent.health }}>Actualizado desde tu iPhone</span>
+                      {" · "}
+                      {formatLocalDateLabelEsCo(autoHealth.observed_at)}
                     </p>
                   ) : autoHealth?.observed_at ? (
                     <p className="mt-1 text-[11px]" style={{ color: theme.textMuted }}>
