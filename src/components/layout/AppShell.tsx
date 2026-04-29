@@ -286,15 +286,15 @@ export function AppShell({
                 {headerDateLabel}
               </time>
 
-              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 sm:gap-[var(--spacing-md)]">
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5 sm:gap-[var(--spacing-md)]">
               <NotificationsBell />
 
               <button
-                className="orbita-header-action orbita-focus-ring max-sm:min-h-12 max-sm:px-3 max-sm:py-2.5 sm:min-h-0 sm:py-1.5"
+                className="orbita-header-action orbita-focus-ring max-sm:!min-h-9 max-sm:gap-1 max-sm:px-2 max-sm:py-1 max-sm:text-[10px] max-sm:tracking-[0.1em] sm:min-h-0 sm:py-1.5"
                 onClick={cycleTheme}
                 type="button"
               >
-                <SunMoon className="h-4 w-4 sm:h-3.5 sm:w-3.5" aria-hidden />
+                <SunMoon className="h-3 w-3 sm:h-3.5 sm:w-3.5" aria-hidden />
                 Tema
               </button>
 
@@ -302,9 +302,9 @@ export function AppShell({
                 type="button"
                 onClick={handleLogout}
                 disabled={loggingOut}
-                className="orbita-header-action orbita-header-action--surface orbita-focus-ring max-sm:min-h-12 max-sm:px-3 max-sm:py-2.5 sm:min-h-0 sm:py-1.5"
+                className="orbita-header-action orbita-header-action--surface orbita-focus-ring max-sm:!min-h-9 max-sm:gap-1 max-sm:px-2 max-sm:py-1 max-sm:text-[10px] max-sm:tracking-[0.1em] sm:min-h-0 sm:py-1.5"
               >
-                <LogOut className="h-4 w-4 sm:h-3.5 sm:w-3.5" aria-hidden />
+                <LogOut className="h-3 w-3 sm:h-3.5 sm:w-3.5" aria-hidden />
                 {loggingOut ? "Saliendo..." : "Salir"}
               </button>
 
@@ -312,15 +312,15 @@ export function AppShell({
                 <button
                   type="button"
                   onClick={() => setOpen((prev) => !prev)}
-                  className="orbita-icon-button orbita-focus-ring h-14 w-14 overflow-hidden p-0 sm:h-9 sm:w-9"
+                  className="orbita-icon-button orbita-focus-ring h-16 w-16 overflow-hidden p-0 sm:h-9 sm:w-9"
                   aria-label="Menú de usuario"
                   aria-expanded={open}
                 >
                   {avatarUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={avatarUrl} alt="" className="h-full w-full object-cover" width={56} height={56} />
+                    <img src={avatarUrl} alt="" className="h-full w-full object-cover" width={64} height={64} />
                   ) : (
-                    <User className="h-5 w-5 sm:h-4 sm:w-4" aria-hidden />
+                    <User className="h-7 w-7 sm:h-4 sm:w-4" aria-hidden />
                   )}
                 </button>
                 {open && (
