@@ -72,6 +72,8 @@ Si en el diccionario o en **Obtener contenido de URL** los valores aparecen como
 
 **No duplicar el atajo en Atajos:** al tocar **Duplicar** en la biblioteca, iOS a menudo genera un atajo nuevo (nombre con «2», «3»…) cuyo **Diccionario conserva las claves pero pierde el enlace a variables**; parece que «llegó sin diccionario» aunque el bloque exista. La solución es **borrar esa copia** e **instalar de nuevo** el `.shortcut` desde `orvita.app` (o el enlace de la app), no reutilizar la duplicada.
 
+**El `.shortcut` del repositorio está completo:** el generador (`scripts/build-orvita-health-shortcut.py`) serializa cada valor del Diccionario como token con `VariableName` + `attachmentsByRange`. Los tests en `__tests__/scripts/orvitaHealthShortcutPlist.contract.test.ts` comprueban que el plist fuente sigue incluyendo esas referencias tras cada build. Si en el iPhone solo ves «Texto» gris, casi siempre es **copia duplicada** o estás abriendo un atajo distinto del instalado desde la web (nombre exacto **Orvita-Importar-Salud-Hoy**, sin sufijo).
+
 ### «No se encontraron muestras» en Workouts (tipo + inicio hoy)
 
 Al **editar** el atajo y tocar **Buscar muestras de salud** (Workouts, inicio hoy), iOS muestra una vista previa. Si **no has registrado ningún entreno con fecha de inicio en el día civil actual**, el sistema puede mostrar *No se encontraron muestras* o sugerir permisos. Eso **no impide** que el atajo completo continúe: el conteo puede ser **0** y el POST envía `workouts_count: 0` (u omite el valor según el flujo). Si sí entrenaste hoy y sigue en 0, abre **Salud → Compartir → Atajos** y confirma lectura de **Entrenamientos**; luego reinstala el atajo desde Órvita (no la copia duplicada).

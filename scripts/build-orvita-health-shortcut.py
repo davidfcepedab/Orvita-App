@@ -776,9 +776,10 @@ def build_actions_full(
 
     actions: list[dict] = [
         comment(
-            "Token iCloud Shortcuts/orvita_import_token.txt; fecha observed_at = yyyy-MM-dd; métricas *_num; "
-            "Diccionario → variable apple_bundle; "
-            "POST JSON { apple_bundle }. Derivadas training_load / recovery_score_proxy: servidor si faltan."
+            "Órvita · Si en Diccionario solo ves «Texto» gris (sin pastillas), borra copias del atajo («… 2», «… 3») "
+            "y reinstala el .shortcut desde orvita.app — Duplicar en Atajos rompe las variables. "
+            "Workouts: filtro inicio=hoy; si no entrenaste hoy, 0 muestras es normal (el aviso al expandir la acción no bloquea el flujo). "
+            "Token: Shortcuts/orvita_import_token.txt; observed_at yyyy-MM-dd; POST { apple_bundle }."
         ),
         *token_actions,
         current_date(u=u_date),

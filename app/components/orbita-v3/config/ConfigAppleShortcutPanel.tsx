@@ -347,6 +347,17 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
             Archivos. En producción (orvita.app) el enlace «Instalar» debería abrir Atajos sin pasos extra.
           </p>
         ) : null}
+        <p className="mt-3 rounded-lg border px-3 py-2 text-[11px] leading-relaxed sm:text-xs" style={{ borderColor: theme.border, color: theme.textMuted }}>
+          <span className="font-semibold" style={{ color: theme.text }}>
+            Comprobar que es el atajo oficial:
+          </span>{" "}
+          en Atajos, el nombre debe ser exactamente{" "}
+          <strong className="font-medium text-inherit">{ORVITA_HEALTH_SHORTCUT_NAME}</strong> (sin « 2 », « 3 »). Abre el
+          bloque <strong className="font-medium text-inherit">Diccionario</strong>: cada valor debe ser una{" "}
+          <strong className="font-medium text-inherit">pastilla</strong> (p. ej. <code className="text-[10px]">observed_at</code>,{" "}
+          <code className="text-[10px]">steps_num</code>). Si solo ves «Texto» gris en todas las filas, ese no es el archivo
+          completo o es una copia duplicada; borra esos atajos y vuelve a instalar desde aquí.
+        </p>
       </div>
 
       <div

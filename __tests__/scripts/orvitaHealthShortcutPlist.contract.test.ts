@@ -23,6 +23,20 @@ function assertCommonHealthShortcutXml(xml: string, workflowName: string) {
   expect(n1002).toBeGreaterThanOrEqual(12)
 }
 
+/** El Diccionario debe referenciar variables por nombre (pastillas); Set Variable usa WFVariableName. */
+function assertDictionaryVariableTokens(xml: string) {
+  const nTokenVar = (xml.match(/<key>VariableName<\/key>/g) ?? []).length
+  const nSetVar = (xml.match(/<key>WFVariableName<\/key>/g) ?? []).length
+  expect(nTokenVar + nSetVar).toBeGreaterThanOrEqual(28)
+  expect(nTokenVar).toBeGreaterThanOrEqual(14)
+  expect(xml).toContain("<string>workouts_count_num</string>")
+  expect(xml).toContain("<string>workouts_duration_seconds_num</string>")
+  expect(xml).toContain("<string>apple_bundle</string>")
+  expect(xml).toContain("<string>is.workflow.actions.dictionary</string>")
+  const attachments = xml.match(/<key>attachmentsByRange<\/key>/g) ?? []
+  expect(attachments.length).toBeGreaterThanOrEqual(16)
+}
+
 describe("orvita-importar-salud-hoy shortcut plist (contrato)", () => {
   test("plist «hoy» + «historial-15d» comparten contrato (POST, filtros, nombres)", () => {
     execSync(`python3 "${BUILDER}"`, { cwd: ROOT, stdio: "pipe" })
@@ -33,5 +47,7 @@ describe("orvita-importar-salud-hoy shortcut plist (contrato)", () => {
     assertCommonHealthShortcutXml(hoy, "Orvita-Importar-Salud-Hoy")
     assertCommonHealthShortcutXml(hist, "Orvita-Salud-Historial-15Dias")
     expect(hist).toContain("Histórico 15 días")
+    assertDictionaryVariableTokens(hoy)
+    assertDictionaryVariableTokens(hist)
   })
 })
