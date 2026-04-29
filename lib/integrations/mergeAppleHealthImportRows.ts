@@ -244,6 +244,11 @@ function rowsFromAppleBundlePayloadLegacyCoerced(bundle: Record<string, unknown>
       ? Math.min(24 * 60, Math.round(workouts_minutes))
       : undefined
 
+  const obsTrim = observed_at.trim()
+  const canonicalYmd = /^\d{4}-\d{2}-\d{2}$/.test(obsTrim)
+    ? obsTrim.slice(0, 10)
+    : `${observedAt.getUTCFullYear()}-${String(observedAt.getUTCMonth() + 1).padStart(2, "0")}-${String(observedAt.getUTCDate()).padStart(2, "0")}`
+
   return [
     {
       observed_at: observedAt.toISOString(),
@@ -258,6 +263,10 @@ function rowsFromAppleBundlePayloadLegacyCoerced(bundle: Record<string, unknown>
       apple_workout_minutes: wMinInt,
       metadata: {
         ...derived.metadata,
+        normalized_import_v1: {
+          accepted_metrics: [] as string[],
+          observed_at: canonicalYmd,
+        },
         shortcut_bundle_keys: Object.keys(bundle),
         shortcut_bundle_extras: bundleExtras ?? null,
         apple_sleep_duration_seconds: sleep_duration_seconds ?? null,

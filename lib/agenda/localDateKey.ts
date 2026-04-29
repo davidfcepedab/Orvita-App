@@ -26,18 +26,28 @@ export function agendaTodayYmd(): string {
 }
 
 /**
+ * YYYY-MM-DD “de calendario” si el string es solo fecha o medianoche UTC serializada (`Z` / `±00:00`).
+ * Evita que `2026-04-28T00:00:00+00:00` caiga en `Date.parse` + zona de agenda y cambie el día.
+ */
+export function extractStoredCalendarYmd(iso: string): string | null {
+  const t = iso.trim()
+  if (t.length < 10) return null
+  if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return t.slice(0, 10)
+  const m = t.match(/^(\d{4}-\d{2}-\d{2})T00:00:00(?:\.\d+)?(?:Z|[+-]00:?00)$/i)
+  return m ? m[1]! : null
+}
+
+/**
  * Día civil para agrupar / comparar:
  * - `YYYY-MM-DD` solo (Tasks): no usar Date.parse (en UTC− queda el día anterior).
- * - `YYYY-MM-DDT00:00:00.000Z`: mismo día que el prefijo (eventos all-day normalizados así en API).
+ * - `YYYY-MM-DDT00:00:00` + `Z` o `±00:00`: mismo día que el prefijo (timestamptz / all-day).
  * - Resto: instante → calendario local.
  */
 export function localDateKeyFromIso(iso: string | null | undefined): string | null {
   if (!iso || iso.length < 10) return null
   const trimmed = iso.trim()
-  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed
-
-  const utcMidnight = trimmed.match(/^(\d{4}-\d{2}-\d{2})T00:00:00(?:\.0+)?Z$/i)
-  if (utcMidnight) return utcMidnight[1]!
+  const stored = extractStoredCalendarYmd(trimmed)
+  if (stored) return stored
 
   const t = Date.parse(trimmed)
   if (Number.isNaN(t)) return null
@@ -99,9 +109,8 @@ function formatStoredYmdFullShortEsCo(ymd: string): string {
 export function formatLocalDateLabelEsCo(isoOrYmd: string | null | undefined): string {
   if (!isoOrYmd) return "—"
   const trimmed = isoOrYmd.trim()
-  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return formatStoredYmdLabelEsCo(trimmed)
-  const utcMidnight = trimmed.match(/^(\d{4}-\d{2}-\d{2})T00:00:00(?:\.0+)?Z$/i)
-  if (utcMidnight) return formatStoredYmdLabelEsCo(utcMidnight[1]!)
+  const storedYmd = extractStoredCalendarYmd(trimmed)
+  if (storedYmd) return formatStoredYmdLabelEsCo(storedYmd)
 
   const key =
     localDateKeyFromIso(isoOrYmd ?? "") ??
@@ -123,9 +132,8 @@ export function formatLocalDateLabelEsCo(isoOrYmd: string | null | undefined): s
 export function formatLocalDateFullShortEsCo(isoOrYmd: string | null | undefined): string {
   if (!isoOrYmd) return "—"
   const trimmed = isoOrYmd.trim()
-  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return formatStoredYmdFullShortEsCo(trimmed)
-  const utcMidnight = trimmed.match(/^(\d{4}-\d{2}-\d{2})T00:00:00(?:\.0+)?Z$/i)
-  if (utcMidnight) return formatStoredYmdFullShortEsCo(utcMidnight[1]!)
+  const storedYmd = extractStoredCalendarYmd(trimmed)
+  if (storedYmd) return formatStoredYmdFullShortEsCo(storedYmd)
 
   const key =
     localDateKeyFromIso(isoOrYmd ?? "") ??
