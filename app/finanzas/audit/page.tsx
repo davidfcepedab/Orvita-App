@@ -6,6 +6,7 @@ import { FinanceViewHeader } from "../_components/FinanceViewHeader"
 import { financeViewRootClass } from "../_components/financeChrome"
 import { Card } from "@/src/components/ui/Card"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
+import { formatInstantInAgendaTz, formatYmLongMonthYearEsCo } from "@/lib/agenda/localDateKey"
 import { financeApiGet } from "@/lib/finanzas/financeClientFetch"
 
 type AuditRow = {
@@ -16,14 +17,6 @@ type AuditRow = {
   changed_at: string
   old_data?: unknown
   new_data?: unknown
-}
-
-function formatYmLongEs(ym: string) {
-  const [ys, ms] = ym.split("-")
-  const y = Number(ys)
-  const m = Number(ms)
-  if (!ys || !ms || !Number.isFinite(y) || !Number.isFinite(m)) return ym
-  return new Date(y, m - 1, 15).toLocaleDateString("es-CO", { month: "long", year: "numeric" })
 }
 
 export default function FinanzasAuditPage() {
@@ -82,7 +75,7 @@ export default function FinanzasAuditPage() {
         title="Historial de cambios"
         subtitle={
           month
-            ? `Cambios registrados en movimientos de ${formatYmLongEs(month)}. Visible solo para tu hogar (Supabase + RLS).`
+            ? `Cambios registrados en movimientos de ${formatYmLongMonthYearEsCo(month)}. Visible solo para tu hogar (Supabase + RLS).`
             : "Elige un mes en la barra superior para filtrar el historial."
         }
       />
@@ -100,7 +93,7 @@ export default function FinanzasAuditPage() {
           <p className="mt-2 text-sm leading-relaxed text-orbita-secondary">
             Aquí aparecen altas, ediciones y borrados sobre movimientos financieros cuando la app registra el cambio en
             base de datos. Si acabas de empezar o no has editado movimientos en{" "}
-            <span className="font-medium text-orbita-primary">{month ? formatYmLongEs(month) : "este mes"}</span>, la
+            <span className="font-medium text-orbita-primary">{month ? formatYmLongMonthYearEsCo(month) : "este mes"}</span>, la
             lista puede estar vacía.
           </p>
         </Card>
@@ -120,7 +113,7 @@ export default function FinanzasAuditPage() {
               {rows.map((r) => (
                 <tr key={r.id} className="border-b border-orbita-border/60">
                   <td className="px-4 py-2.5 tabular-nums text-orbita-secondary">
-                    {new Date(r.changed_at).toLocaleString("es-CO")}
+                    {formatInstantInAgendaTz(r.changed_at)}
                   </td>
                   <td className="px-4 py-2.5 text-orbita-primary">{r.action}</td>
                   <td className="max-w-[12rem] truncate px-4 py-2.5 font-mono text-xs text-orbita-secondary">

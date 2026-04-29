@@ -1,6 +1,6 @@
 import type { TrainingMilestoneSeed } from "@/app/data/training/visualSeeds"
 import { addCalendarDaysYmd } from "@/lib/agenda/calendarMath"
-import { agendaTodayYmd } from "@/lib/agenda/localDateKey"
+import { agendaTodayYmd, formatLocalDateFullShortEsCo } from "@/lib/agenda/localDateKey"
 import type { TrainingDay } from "@/src/modules/training/types"
 
 export type WeekVolumePoint = {
@@ -74,18 +74,10 @@ export type MilestoneView = {
 }
 
 function formatEsShortYmd(ymd: string): string {
-  const parts = ymd.trim().slice(0, 10).split("-").map(Number)
-  if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) return ymd
-  const [y, m, d] = parts
-  try {
-    return new Date(Date.UTC(y!, m! - 1, d!)).toLocaleDateString("es", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    })
-  } catch {
-    return ymd
-  }
+  const key = ymd.trim().slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return ymd
+  const lbl = formatLocalDateFullShortEsCo(key)
+  return lbl === "—" ? ymd : lbl
 }
 
 /** Último día Hevy cuyo nombre coincide (todo el historial disponible). */

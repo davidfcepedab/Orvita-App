@@ -8,6 +8,7 @@ import clsx from "clsx"
 import { Bell, Check, Loader2, Radio, Trash2 } from "lucide-react"
 import { createBrowserClient } from "@/lib/supabase/browser"
 import { isAppMockMode } from "@/lib/checkins/flags"
+import { formatInstantInAgendaTz } from "@/lib/agenda/localDateKey"
 import { isPushSupported, subscribeOrvitaPush } from "@/lib/notifications/pushClient"
 
 type NotificationRow = {
@@ -404,10 +405,7 @@ export function NotificationsBell() {
                         {n.body}
                       </p>
                       <p className="mt-1 text-[10px] text-[var(--color-text-secondary)] opacity-80">
-                        {new Date(n.created_at).toLocaleString("es-CO", {
-                          dateStyle: "short",
-                          timeStyle: "short",
-                        })}
+                        {formatInstantInAgendaTz(n.created_at)}
                         {n.category ? ` · ${n.category}` : ""}
                       </p>
                     </button>

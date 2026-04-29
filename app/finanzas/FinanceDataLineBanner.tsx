@@ -1,26 +1,15 @@
 "use client"
 
 import { Card } from "@/src/components/ui/Card"
+import {
+  formatInstantInAgendaTz,
+  formatLocalDateFullShortEsCo,
+  formatYmLongMonthYearEsCo,
+} from "@/lib/agenda/localDateKey"
 import type { FinanceModuleMeta } from "@/lib/finanzas/financeModuleMeta"
 import { cn } from "@/lib/utils"
 import { financeInsetBarClass } from "./_components/financeChrome"
 import { useFinance } from "./FinanceContext"
-
-function formatYmLongEs(ym: string) {
-  const [ys, ms] = ym.split("-")
-  const y = Number(ys)
-  const m = Number(ms)
-  if (!ys || !ms || !Number.isFinite(y) || !Number.isFinite(m)) return ym
-  return new Date(y, m - 1, 15).toLocaleDateString("es-CO", { month: "long", year: "numeric" })
-}
-
-function formatDayEs(isoDay: string) {
-  if (isoDay.length < 10) return isoDay
-  const d = new Date(`${isoDay.slice(0, 10)}T12:00:00`)
-  return Number.isNaN(d.getTime())
-    ? isoDay
-    : d.toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "numeric" })
-}
 
 function formatMoney(value: number) {
   return new Intl.NumberFormat("es-CO", { maximumFractionDigits: 0 }).format(Math.round(value || 0))
@@ -71,14 +60,7 @@ export function FinanceDataLineBanner({ embedded = false }: FinanceDataLineBanne
 
   const kpiHasSignal = meta.kpiHasSignal
 
-  const updatedShort = meta.lastTransactionUpdatedAt
-    ? new Date(meta.lastTransactionUpdatedAt).toLocaleString("es-CO", {
-        day: "numeric",
-        month: "short",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : null
+  const updatedShort = meta.lastTransactionUpdatedAt ? formatInstantInAgendaTz(meta.lastTransactionUpdatedAt) : null
 
   return (
     <div className="min-w-0 space-y-2">
@@ -104,7 +86,7 @@ export function FinanceDataLineBanner({ embedded = false }: FinanceDataLineBanne
               {" "}
               <span className="text-orbita-secondary">·</span>{" "}
               <span>
-                <span className="text-orbita-secondary">Último:</span> {formatDayEs(meta.lastTransactionDate)}
+                <span className="text-orbita-secondary">Último:</span> {formatLocalDateFullShortEsCo(meta.lastTransactionDate)}
                 {updatedShort ? (
                   <span className="text-orbita-secondary">
                     {" "}
@@ -127,14 +109,14 @@ export function FinanceDataLineBanner({ embedded = false }: FinanceDataLineBanne
         <Card
           className={`min-w-0 border border-dashed border-[color-mix(in_srgb,var(--color-accent-finance)_40%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-finance)_6%,var(--color-surface))] p-3 sm:p-4 ${embedded ? "mt-1" : ""}`}
         >
-          <p className="m-0 text-sm font-semibold text-orbita-primary">Sin cifras para {formatYmLongEs(month)}</p>
+          <p className="m-0 text-sm font-semibold text-orbita-primary">Sin cifras para {formatYmLongMonthYearEsCo(month)}</p>
           <p className="mt-1 text-[11px] leading-relaxed text-orbita-secondary">
             Último mes con resumen guardado:
           </p>
           <div className="mt-2 grid gap-2 rounded-xl border border-orbita-border bg-orbita-surface px-3 py-2.5 text-sm sm:grid-cols-3">
             <div>
               <p className="text-[10px] uppercase tracking-[0.12em] text-orbita-secondary">Mes</p>
-              <p className="font-medium text-orbita-primary">{formatYmLongEs(meta.reference.month)}</p>
+              <p className="font-medium text-orbita-primary">{formatYmLongMonthYearEsCo(meta.reference.month)}</p>
             </div>
             <div>
               <p className="text-[10px] uppercase tracking-[0.12em] text-orbita-secondary">Ingresos / Gastos</p>

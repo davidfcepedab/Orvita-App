@@ -1,4 +1,5 @@
 import type { AutoHealthMetric } from "@/app/hooks/useHealthAutoMetrics"
+import { localDateKeyFromIso } from "@/lib/agenda/localDateKey"
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n))
@@ -20,12 +21,10 @@ export function vitalityScoreFromAppleRow(row: Pick<AutoHealthMetric, "sleep_hou
 export function dedupeMetricsByLocalDay(rows: AutoHealthMetric[]): AutoHealthMetric[] {
   const map = new Map<string, AutoHealthMetric>()
   for (const row of rows) {
-    let key: string
-    try {
-      key = new Date(row.observed_at).toLocaleDateString("en-CA")
-    } catch {
-      continue
-    }
+    const key =
+      localDateKeyFromIso(row.observed_at) ??
+      (typeof row.observed_at === "string" && row.observed_at.length >= 10 ? row.observed_at.slice(0, 10) : "")
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) continue
     const prev = map.get(key)
     if (!prev || new Date(row.observed_at).getTime() > new Date(prev.observed_at).getTime()) {
       map.set(key, row)

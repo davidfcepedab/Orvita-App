@@ -1,3 +1,4 @@
+import { getAgendaDisplayTimeZone } from "@/lib/agenda/agendaTimeZone"
 import type { FlowColor } from "./orbita-home-types"
 
 export function flowToneClasses(color: FlowColor) {
@@ -69,9 +70,11 @@ export function energyWindowDot(window: "alta" | "media" | "baja") {
   return "bg-slate-500"
 }
 
-export function formatBogotaDateParts(date: Date, tz = "America/Bogota") {
-  const weekday = date.toLocaleDateString("es-CO", { weekday: "long", timeZone: tz })
-  const day = date.toLocaleDateString("es-CO", { day: "2-digit", month: "long", year: "numeric", timeZone: tz })
+/** Partes de fecha para saludo inicio: usa zona de agenda (`NEXT_PUBLIC_AGENDA_DISPLAY_TZ`). */
+export function formatBogotaDateParts(date: Date, tz?: string) {
+  const zone = tz ?? getAgendaDisplayTimeZone()
+  const weekday = date.toLocaleDateString("es-CO", { weekday: "long", timeZone: zone })
+  const day = date.toLocaleDateString("es-CO", { day: "2-digit", month: "long", year: "numeric", timeZone: zone })
   return { weekday, day }
 }
 

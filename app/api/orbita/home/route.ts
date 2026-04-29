@@ -13,7 +13,13 @@ import type {
   SmartAction,
 } from "@/app/home/_lib/orbita-home-types"
 import { getOrbitaHomeMock } from "@/app/home/_lib/orbita-home-mock"
-import { agendaTodayYmd, formatLocalDateKey } from "@/lib/agenda/localDateKey"
+import { addCalendarDaysYmd } from "@/lib/agenda/calendarMath"
+import {
+  agendaTodayYmd,
+  formatAgendaYmdDayMonthShortEsCo,
+  formatAgendaYmdWeekdayShortEsCo,
+  formatLocalDateKey,
+} from "@/lib/agenda/localDateKey"
 import { getAgendaDisplayTimeZone } from "@/lib/agenda/agendaTimeZone"
 import { computeFinanceMonthState } from "@/lib/finanzas/computeFinanceMonthState"
 import { monthBounds } from "@/lib/finanzas/monthRange"
@@ -33,8 +39,8 @@ function flowColor(score: number): FlowColor {
   return "red"
 }
 
-function seedFromDateBogota(now: Date) {
-  const str = now.toLocaleDateString("en-CA", { timeZone: "America/Bogota" }) // YYYY-MM-DD
+function seedFromDateAgenda(now: Date) {
+  const str = formatLocalDateKey(now)
   let h = 2166136261
   for (let i = 0; i < str.length; i++) {
     h ^= str.charCodeAt(i)
@@ -53,21 +59,18 @@ function mulberry32(seed: number) {
 }
 
 function genPredictive30d(now: Date): PredictivePoint[] {
-  const baseStr = now.toLocaleDateString("en-CA", { timeZone: "America/Bogota" })
-  const base = new Date(`${baseStr}T00:00:00-05:00`)
+  const baseStr = formatLocalDateKey(now)
   const points: PredictivePoint[] = []
-  const rand = mulberry32(seedFromDateBogota(now))
+  const rand = mulberry32(seedFromDateAgenda(now))
 
   let timeLoad = 52 + Math.round(rand() * 20)
   let energy = 58 + Math.round(rand() * 18)
   let moneyPressure = 48 + Math.round(rand() * 26)
 
   for (let i = 0; i < 30; i++) {
-    const d = new Date(base)
-    d.setDate(base.getDate() + i)
-
-    const weekday = d.toLocaleDateString("es-CO", { weekday: "short", timeZone: "America/Bogota" })
-    const day = d.toLocaleDateString("es-CO", { day: "2-digit", month: "short", timeZone: "America/Bogota" })
+    const ymd = addCalendarDaysYmd(baseStr, i)
+    const weekday = formatAgendaYmdWeekdayShortEsCo(ymd)
+    const day = formatAgendaYmdDayMonthShortEsCo(ymd)
 
     const weekBump = /lun|jue/i.test(weekday) ? 6 : /mar|mié|mie/i.test(weekday) ? 2 : -1
     const noise = (Math.sin(i / 3) + Math.cos(i / 5)) * 1.6 + (rand() - 0.5) * 2.2
@@ -405,7 +408,7 @@ export async function GET(req: NextRequest) {
       user: {
         firstName,
         city: "Bogotá",
-        tz: "America/Bogota",
+        tz: getAgendaDisplayTimeZone(),
       },
       flow: {
         score,
@@ -441,7 +444,7 @@ export async function GET(req: NextRequest) {
         points30d,
         insights: [
           {
-            id: `i-pressure-${seedFromDateBogota(now)}`,
+            id: `i-pressure-${seedFromDateAgenda(now)}`,
             title: "Señal dominante de presión",
             body:
               openTasks > 10
@@ -450,14 +453,14 @@ export async function GET(req: NextRequest) {
             severity: "presion",
           },
           {
-            id: `i-impact-${seedFromDateBogota(now)}`,
+            id: `i-impact-${seedFromDateAgenda(now)}`,
             title: "Movimiento de alto impacto hoy",
             body:
               "Protege **1 bloque profundo** y ejecuta un cierre visible. No optimices: compra claridad.",
             severity: "oportunidad",
           },
           {
-            id: `i-risk-${seedFromDateBogota(now)}`,
+            id: `i-risk-${seedFromDateAgenda(now)}`,
             title: "Riesgo latente",
             body:
               "Si mantienes carga alta sin recuperación, el rendimiento cae de forma no lineal. Mitiga con recuperación + límites de agenda.",

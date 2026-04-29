@@ -1,5 +1,13 @@
 import { diffCalendarDaysYmd } from "@/lib/agenda/calendarMath"
-import { agendaTodayYmd, formatLocalDateLabelEsCo, localDateKeyFromIso } from "@/lib/agenda/localDateKey"
+import {
+  agendaTodayYmd,
+  formatInstantLongDateInAgendaTz,
+  formatLocalDateLabelEsCo,
+  formatLocalDateLongEsCo,
+  formatLocalDateWeekdayLongFromYmd,
+  formatTimeInAgendaTz,
+  localDateKeyFromIso,
+} from "@/lib/agenda/localDateKey"
 import type { GoogleCalendarEventDTO } from "@/lib/google/types"
 import type { UiAgendaTask } from "@/app/agenda/mapAgendaTaskToUi"
 
@@ -20,8 +28,7 @@ export function venceLine(dueDateKey: string): string {
   if (diffDays === -1) return `Vence: Ayer · ${civil}`
   if (diffDays < -1) return `Vence: Atrasada · ${civil}`
 
-  const target = new Date(y, mo, d)
-  const weekday = target.toLocaleDateString("es-CO", { weekday: "long" })
+  const weekday = formatLocalDateWeekdayLongFromYmd(key)
   if (diffDays <= 7) return `Vence: el ${weekday} · ${civil}`
   return `Vence: el ${weekday} (próx. semana) · ${civil}`
 }
@@ -43,8 +50,7 @@ export function dueMetaCompact(dueDateKey: string): string {
   if (diffDays === -1) return `Ayer · ${civil}`
   if (diffDays < -1) return `Atrasada · ${civil}`
 
-  const target = new Date(y, mo, d)
-  const weekday = target.toLocaleDateString("es-CO", { weekday: "long" })
+  const weekday = formatLocalDateWeekdayLongFromYmd(key)
   if (diffDays <= 7) return `${weekday} · ${civil}`
   return `${weekday} (próx. sem.) · ${civil}`
 }
@@ -57,7 +63,7 @@ export function calendarEventMetaCompact(ev: GoogleCalendarEventDTO): string {
   if (ev.allDay) return dueMetaCompact(k)
   const start = new Date(ev.startAt)
   if (Number.isNaN(start.getTime())) return dueMetaCompact(k)
-  const tf = start.toLocaleTimeString("es-CO", { hour: "numeric", minute: "2-digit", hour12: true })
+  const tf = formatTimeInAgendaTz(ev.startAt)
   return `${dueMetaCompact(k)} · ${tf}`
 }
 
@@ -81,13 +87,11 @@ export function calendarEventScheduleLine(ev: GoogleCalendarEventDTO): string {
   if (!ev.startAt) return "Sin horario"
   const start = new Date(ev.startAt)
   if (Number.isNaN(start.getTime())) return "Sin horario"
-  const tf = (dt: Date) =>
-    dt.toLocaleTimeString("es-CO", { hour: "numeric", minute: "2-digit", hour12: true })
   if (ev.endAt) {
     const end = new Date(ev.endAt)
-    if (!Number.isNaN(end.getTime())) return `${tf(start)} – ${tf(end)}`
+    if (!Number.isNaN(end.getTime())) return `${formatTimeInAgendaTz(ev.startAt)} – ${formatTimeInAgendaTz(ev.endAt)}`
   }
-  return `${tf(start)}`
+  return formatTimeInAgendaTz(ev.startAt)
 }
 
 /**
@@ -99,24 +103,20 @@ export function calendarEventUnifiedTimeline(ev: GoogleCalendarEventDTO): string
   if (ev.allDay) {
     const k = localDateKeyFromIso(ev.startAt) ?? ev.startAt.slice(0, 10)
     if (k.length < 10) return "Todo el día"
-    const y = Number(k.slice(0, 4))
-    const m = Number(k.slice(5, 7)) - 1
-    const d = Number(k.slice(8, 10))
-    if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return "Todo el día"
-    const dt = new Date(y, m, d)
-    const datePart = dt.toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
+    const datePart = formatLocalDateLongEsCo(k)
+    if (datePart === "—") return "Todo el día"
     return `Todo el día · ${datePart}`
   }
   const start = new Date(ev.startAt)
   if (Number.isNaN(start.getTime())) return "Sin horario"
-  const datePart = start.toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
-  const tf = (dt: Date) =>
-    dt.toLocaleTimeString("es-CO", { hour: "numeric", minute: "2-digit", hour12: true })
+  const datePart = formatInstantLongDateInAgendaTz(ev.startAt)
   if (ev.endAt) {
     const end = new Date(ev.endAt)
-    if (!Number.isNaN(end.getTime())) return `${datePart} · ${tf(start)} – ${tf(end)}`
+    if (!Number.isNaN(end.getTime())) {
+      return `${datePart} · ${formatTimeInAgendaTz(ev.startAt)} – ${formatTimeInAgendaTz(ev.endAt)}`
+    }
   }
-  return `${datePart} · ${tf(start)}`
+  return `${datePart} · ${formatTimeInAgendaTz(ev.startAt)}`
 }
 
 /** Texto "Vence: …" para eventos de calendario usando el día local de inicio. */

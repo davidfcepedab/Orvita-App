@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { Activity, Landmark, RefreshCw } from "lucide-react"
-import { formatLocalDateLabelEsCo } from "@/lib/agenda/localDateKey"
+import { formatInstantInAgendaTz, formatLocalDateLabelEsCo } from "@/lib/agenda/localDateKey"
 import type { AppleHealthContextSignals, OperationalCapitalSnapshot } from "@/lib/operational/types"
 
 function formatCop(n: number) {
@@ -184,14 +184,7 @@ export function StrategicDayHero({ capital, health, className = "" }: Props) {
                 <span>
                   Última sync bancaria:{" "}
                   <span className="text-[var(--color-text-primary)]">
-                    {capital.lastBankSyncAt
-                      ? new Date(capital.lastBankSyncAt).toLocaleString("es-CO", {
-                          day: "numeric",
-                          month: "short",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
-                      : "Sin sincronizar"}
+                    {capital.lastBankSyncAt ? formatInstantInAgendaTz(capital.lastBankSyncAt) : "Sin sincronizar"}
                   </span>
                   {capital.connectedAccounts > 0 ? (
                     <span className="text-[var(--color-text-secondary)]">

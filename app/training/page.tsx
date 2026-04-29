@@ -6,7 +6,7 @@ import { useTraining } from "@/src/modules/training/useTraining"
 import { useHealthAutoMetrics } from "@/app/hooks/useHealthAutoMetrics"
 import { appleDaySignalsFromHealthMetric } from "@/lib/health/appleHevyRelation"
 import { buildPlanVsExecution, buildTrainingReadiness, pickLastHevySession } from "@/lib/training/trainingOperationalDerivations"
-import { agendaTodayYmd } from "@/lib/agenda/localDateKey"
+import { agendaTodayYmd, formatAgendaYmdDayMonthShortEsCo, localDateKeyFromIso } from "@/lib/agenda/localDateKey"
 import { useTrainingPreferences } from "@/app/hooks/useTrainingPreferences"
 import { TrainingActionQuerySync } from "@/app/training/TrainingActionQuerySync"
 import { aggregateZoneProgress } from "@/lib/training/effectiveSets"
@@ -64,10 +64,13 @@ export default function TrainingPage() {
     return timeline
       .filter((t) => typeof t.hrv_ms === "number" && (t.hrv_ms ?? 0) > 0)
       .slice(-7)
-      .map((t) => ({
-        label: new Date(t.observed_at).toLocaleDateString("es-CO", { day: "numeric", month: "short" }),
-        hrv: t.hrv_ms as number,
-      })) as HrvPoint[]
+      .map((t) => {
+        const k = localDateKeyFromIso(t.observed_at) ?? t.observed_at.slice(0, 10)
+        return {
+          label: formatAgendaYmdDayMonthShortEsCo(k),
+          hrv: t.hrv_ms as number,
+        }
+      }) as HrvPoint[]
   }, [timeline])
   const hrvHasData = hrvRaw.length > 0
   const hrvSeries = hrvRaw

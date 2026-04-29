@@ -1,3 +1,4 @@
+import { formatInstantInAgendaTz } from "@/lib/agenda/localDateKey"
 import type { CanonicalPlLayer } from "@/lib/finanzas/canonicalMonthPl"
 
 function escapeHtml(s: string): string {
@@ -43,7 +44,7 @@ export function printMonthPlReport(monthLabel: string, layers: CanonicalPlLayer[
 </head>
 <body>
   <h1>${escapeHtml(title)}</h1>
-  <p class="sub">Periodo: ${escapeHtml(monthLabel)} · Generado ${new Date().toLocaleString("es-CO")}</p>
+  <p class="sub">Periodo: ${escapeHtml(monthLabel)} · Generado ${escapeHtml(formatInstantInAgendaTz(new Date().toISOString()))}</p>
   <table>
     <tbody>${bodyRows}</tbody>
   </table>

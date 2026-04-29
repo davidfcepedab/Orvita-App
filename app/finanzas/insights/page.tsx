@@ -7,6 +7,7 @@ import { financeViewRootClass } from "../_components/financeChrome"
 import { Card } from "@/src/components/ui/Card"
 import { FINANCE_INSIGHTS_STRAPLINE } from "@/lib/finanzas/financeModuleCopy"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
+import { formatYmLongMonthYearEsCo } from "@/lib/agenda/localDateKey"
 import { financeApiGet } from "@/lib/finanzas/financeClientFetch"
 
 interface InsightsResponse {
@@ -29,14 +30,6 @@ interface InsightsMeta {
   /** Misma base que GET meta / Resumen: gasto operativo del catálogo. */
   basis?: string
   catalogEntries?: number
-}
-
-function formatYmLongEs(ym: string) {
-  const [ys, ms] = ym.split("-")
-  const y = Number(ys)
-  const m = Number(ms)
-  if (!ys || !ms || !Number.isFinite(y) || !Number.isFinite(m)) return ym
-  return new Date(y, m - 1, 15).toLocaleDateString("es-CO", { month: "long", year: "numeric" })
 }
 
 function formatMoneyCOP(n: number) {
@@ -187,7 +180,7 @@ export default function FinanzasInsights() {
         <p className="m-0 text-sm leading-relaxed text-orbita-primary">
           Ventana de{" "}
           <span className="tabular-nums font-semibold">{meta?.months ?? 6}</span> meses corridos hasta{" "}
-          <span className="font-semibold">{formatYmLongEs(meta?.throughMonth ?? month)}</span>
+          <span className="font-semibold">{formatYmLongMonthYearEsCo(meta?.throughMonth ?? month)}</span>
           {meta?.basis === "operativo" ? (
             <>
               . Los índices usan{" "}

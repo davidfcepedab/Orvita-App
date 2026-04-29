@@ -12,7 +12,7 @@ import { rechartsTooltipContentStyle } from "@/lib/charts/rechartsShared"
 import { UI_FINANCE_DEMO_MONTH } from "@/lib/checkins/flags"
 import { financeApiGet } from "@/lib/finanzas/financeClientFetch"
 import { dayFromIso, isoDateInMonth } from "@/lib/finanzas/commitmentAnchorDate"
-import { localDateKeyFromIso } from "@/lib/agenda/localDateKey"
+import { formatLocalDateWeekdayShortDayMonthEsCo, localDateKeyFromIso } from "@/lib/agenda/localDateKey"
 import type { FlowCommitment } from "@/lib/finanzas/flowCommitmentsTypes"
 import { readFlowCommitmentsFromLocalStorage } from "@/lib/finanzas/flowCommitmentsLocal"
 import { subscriptionActiveBurn, type UserSubscription } from "@/lib/finanzas/userSubscriptionsTypes"
@@ -84,23 +84,10 @@ interface OverviewResponse {
   source?: string
 }
 
-function formatYmLongEs(ym: string) {
-  const [ys, ms] = ym.split("-")
-  const y = Number(ys)
-  const m = Number(ms)
-  if (!ys || !ms || !Number.isFinite(y) || !Number.isFinite(m)) return ym
-  return new Date(y, m - 1, 15).toLocaleDateString("es-CO", { month: "long", year: "numeric" })
-}
-
 function formatCommitmentDayEs(isoDate: string) {
   const key = localDateKeyFromIso(isoDate) ?? (isoDate.length >= 10 ? isoDate.slice(0, 10) : "")
   if (key.length < 10) return "—"
-  const y = Number(key.slice(0, 4))
-  const mo = Number(key.slice(5, 7)) - 1
-  const da = Number(key.slice(8, 10))
-  if (!Number.isFinite(y) || !Number.isFinite(mo) || !Number.isFinite(da)) return key
-  const d = new Date(y, mo, da)
-  return d.toLocaleDateString("es-CO", { weekday: "short", day: "numeric", month: "short" })
+  return formatLocalDateWeekdayShortDayMonthEsCo(key)
 }
 
 function isIncomeCommitmentRow(c: FlowCommitment) {

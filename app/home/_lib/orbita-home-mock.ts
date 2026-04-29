@@ -1,3 +1,9 @@
+import { addCalendarDaysYmd } from "@/lib/agenda/calendarMath"
+import {
+  formatAgendaYmdDayMonthShortEsCo,
+  formatAgendaYmdWeekdayShortEsCo,
+} from "@/lib/agenda/localDateKey"
+import { getAgendaDisplayTimeZone } from "@/lib/agenda/agendaTimeZone"
 import type { OrbitaHomeModel, FlowColor, PredictivePoint } from "./orbita-home-types"
 
 function clamp01(n: number) {
@@ -20,18 +26,16 @@ function formatCOP(value: number) {
 
 function genPredictive30d(): PredictivePoint[] {
   // 30 días con señal coherente: presión financiera sube, energía cae si carga de tiempo sube.
-  const base = new Date("2026-04-09T00:00:00-05:00")
+  const baseStr = "2026-04-09"
   const points: PredictivePoint[] = []
   let timeLoad = 62
   let energy = 64
   let moneyPressure = 58
 
   for (let i = 0; i < 30; i++) {
-    const d = new Date(base)
-    d.setDate(base.getDate() + i)
-
-    const weekday = d.toLocaleDateString("es-CO", { weekday: "short", timeZone: "America/Bogota" })
-    const day = d.toLocaleDateString("es-CO", { day: "2-digit", month: "short", timeZone: "America/Bogota" })
+    const ymd = addCalendarDaysYmd(baseStr, i)
+    const weekday = formatAgendaYmdWeekdayShortEsCo(ymd)
+    const day = formatAgendaYmdDayMonthShortEsCo(ymd)
 
     // Ajuste por semana: lunes/jueves suelen tener más carga.
     const weekBump = /lun|jue/i.test(weekday) ? 6 : /mar|mié|mie/i.test(weekday) ? 2 : -1
@@ -72,7 +76,7 @@ export function getOrbitaHomeMock(): OrbitaHomeModel & { formatCOP: (n: number) 
     user: {
       firstName: "David",
       city: "Bogotá",
-      tz: "America/Bogota",
+      tz: getAgendaDisplayTimeZone(),
     },
     flow: {
       score,

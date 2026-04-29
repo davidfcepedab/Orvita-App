@@ -6,6 +6,7 @@ import { useOrbitaSkin } from "@/app/contexts/AppContext"
 import type { AutoHealthMetric } from "@/app/hooks/useHealthAutoMetrics"
 import type { SaludContextSnapshot } from "@/app/salud/_hooks/useSaludContext"
 import type { ShortcutHealthAnalyticsSnapshot } from "@/lib/health/shortcutHealthAnalytics"
+import { formatAgendaYmdWeekdayShortEsCo, localDateKeyFromIso } from "@/lib/agenda/localDateKey"
 import { dedupeMetricsByLocalDay, vitalityScoreFromAppleRow } from "@/lib/health/appleTimelineDerived"
 import { SALUD_SEM } from "@/lib/salud/saludSemanticPalette"
 import { saludHexToRgba, saludPanelStyle } from "@/lib/salud/saludThemeStyles"
@@ -32,22 +33,28 @@ export function HealthCorrelationsPanel({ salud, latest, timeline, analytics, lo
     const rows = dedupeMetricsByLocalDay(
       timeline.filter((row) => row.sleep_hours != null || row.steps != null),
     ).slice(-7)
-    return rows.map((row) => ({
-      day: new Date(row.observed_at).toLocaleDateString("es-LA", { weekday: "short" }),
-      sleep: row.sleep_hours ?? null,
-      vitality: vitalityScoreFromAppleRow(row),
-    }))
+    return rows.map((row) => {
+      const k = localDateKeyFromIso(row.observed_at) ?? row.observed_at.slice(0, 10)
+      return {
+        day: formatAgendaYmdWeekdayShortEsCo(k),
+        sleep: row.sleep_hours ?? null,
+        vitality: vitalityScoreFromAppleRow(row),
+      }
+    })
   }, [timeline])
 
   const hrvVsLoadSeries = useMemo(() => {
     const rows = dedupeMetricsByLocalDay(
       timeline.filter((row) => row.hrv_ms != null || row.calories != null || row.apple_workout_minutes != null),
     ).slice(-7)
-    return rows.map((row) => ({
-      day: new Date(row.observed_at).toLocaleDateString("es-LA", { weekday: "short" }),
-      hrv: row.hrv_ms ?? null,
-      load: (row.calories ?? 0) + (row.apple_workout_minutes ?? 0),
-    }))
+    return rows.map((row) => {
+      const k = localDateKeyFromIso(row.observed_at) ?? row.observed_at.slice(0, 10)
+      return {
+        day: formatAgendaYmdWeekdayShortEsCo(k),
+        hrv: row.hrv_ms ?? null,
+        load: (row.calories ?? 0) + (row.apple_workout_minutes ?? 0),
+      }
+    })
   }, [timeline])
 
   const sleepEnergyStatus = useMemo(() => {

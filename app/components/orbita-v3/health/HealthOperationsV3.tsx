@@ -32,6 +32,7 @@ import type { AutoHealthMetric } from "@/app/hooks/useHealthAutoMetrics"
 import type { ShortcutHealthAnalyticsSnapshot } from "@/lib/health/shortcutHealthAnalytics"
 import { useHealthSupplements } from "@/app/hooks/useHealthSupplements"
 import { SupplementStackSection } from "@/app/health/SupplementStackSection"
+import { formatLocalDateWeekdayShortDayMonthEsCo, localDateKeyFromIso } from "@/lib/agenda/localDateKey"
 import { dedupeMetricsByLocalDay, vitalityScoreFromAppleRow } from "@/lib/health/appleTimelineDerived"
 import {
   clampCheckinScore0to100,
@@ -168,8 +169,9 @@ export default function HealthOperationsV3({
         recoveryRaw != null
           ? Math.max(0, Math.min(100, Math.round(recoveryRaw)))
           : Math.max(0, Math.min(100, Math.round(vitality * 0.92)))
+      const k = localDateKeyFromIso(row.observed_at) ?? row.observed_at.slice(0, 10)
       return {
-        hour: new Date(row.observed_at).toLocaleDateString("es-LA", { weekday: "short", day: "numeric" }),
+        hour: formatLocalDateWeekdayShortDayMonthEsCo(k),
         vitality,
         recovery,
       }

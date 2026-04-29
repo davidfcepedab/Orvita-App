@@ -22,6 +22,7 @@ import { buildPlCfoModel } from "@/lib/finanzas/plCfoModel"
 import type { PlCfoCatalogAggregate } from "@/lib/finanzas/plCfoCatalogAggregate"
 import type { PlOverviewMonthlyRow } from "@/lib/finanzas/plStrategicCenterFromCoherence"
 import { financePlStackClass } from "@/app/finanzas/_components/financeChrome"
+import { formatYmLongMonthYearEsCo } from "@/lib/agenda/localDateKey"
 import { cn } from "@/lib/utils"
 
 function formatCop(n: number) {
@@ -79,8 +80,7 @@ export function FinanzasPlCfoView() {
 
   const monthLabel = useMemo(() => {
     if (!month || !/^\d{4}-\d{2}$/.test(month)) return month ?? ""
-    const [y, m] = month.split("-").map(Number)
-    return new Date(y, m - 1, 1).toLocaleDateString("es-CO", { month: "long", year: "numeric" })
+    return formatYmLongMonthYearEsCo(month)
   }, [month])
 
   const model = useMemo(() => {

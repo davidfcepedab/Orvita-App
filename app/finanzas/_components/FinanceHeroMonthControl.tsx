@@ -2,16 +2,12 @@
 
 import { useMemo } from "react"
 import { CalendarDays } from "lucide-react"
+import { formatYmShortMonthYearEsCo } from "@/lib/agenda/localDateKey"
 import { cn } from "@/lib/utils"
 
 function formatMonthBadge(ym: string) {
-  const [ys, ms] = ym.split("-")
-  const y = Number(ys)
-  const m = Number(ms)
-  if (!ys || !ms || !Number.isFinite(y) || !Number.isFinite(m) || m < 1 || m > 12) return ym
-  const d = new Date(y, m - 1, 1)
-  const short = d.toLocaleDateString("es-CO", { month: "short", year: "numeric" })
-  return short.replace(/\.$/, "")
+  if (!ym || !/^\d{4}-\d{2}$/.test(ym.trim())) return ym
+  return formatYmShortMonthYearEsCo(ym.trim())
 }
 
 type FinanceHeroMonthControlProps = {

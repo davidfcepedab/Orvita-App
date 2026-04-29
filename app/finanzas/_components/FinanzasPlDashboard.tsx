@@ -23,6 +23,7 @@ import { financeApiDelete, financeApiJson } from "@/lib/finanzas/financeClientFe
 import { printMonthPlReport } from "@/lib/finanzas/printMonthPlReport"
 import { FINANCE_PL_README_EXPANDED } from "@/lib/finanzas/financeModuleCopy"
 import { financePlStackClass } from "@/app/finanzas/_components/financeChrome"
+import { formatYmLongMonthYearEsCo } from "@/lib/agenda/localDateKey"
 import { cn } from "@/lib/utils"
 
 function MoneyCell({
@@ -213,8 +214,7 @@ export function FinanzasPlDashboard({ omitStrategicHero = false }: { omitStrateg
 
   const monthLabel = useMemo(() => {
     if (!month || !/^\d{4}-\d{2}$/.test(month)) return month ?? ""
-    const [y, m] = month.split("-").map(Number)
-    return new Date(y, m - 1, 1).toLocaleDateString("es-CO", { month: "long", year: "numeric" })
+    return formatYmLongMonthYearEsCo(month)
   }, [month])
 
   const showEmaHint = useMemo(() => {

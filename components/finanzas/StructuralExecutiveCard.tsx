@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
+import { formatYmLongMonthYearEsCo } from "@/lib/agenda/localDateKey"
 import { calcularMetricasEstructurales } from "@/lib/testing/financialMetrics"
 import DonutCompact from "./DonutCompact"
 
@@ -30,10 +31,8 @@ export default function StructuralExecutiveCard({
   )
 
   const formattedMonth = useMemo(() => {
-    if (!month) return null
-    const date = new Date(`${month}-01`)
-    if (isNaN(date.getTime())) return null
-    return date.toLocaleString("es-CO", { month: "long", year: "numeric" })
+    if (!month || !/^\d{4}-\d{2}$/.test(month.trim())) return null
+    return formatYmLongMonthYearEsCo(month.trim())
   }, [month])
 
   return (

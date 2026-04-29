@@ -19,6 +19,7 @@ import type {
 } from "@/lib/training/trainingPrefsTypes"
 import type { TrainingDay } from "@/src/modules/training/types"
 import type { ChangeEvent, RefObject } from "react"
+import { formatInstantInAgendaTz } from "@/lib/agenda/localDateKey"
 import type { DeltaQuality } from "@/lib/training/trainingDashboardDerivations"
 
 export type HevyStripProps = {
@@ -157,12 +158,12 @@ export function TrainingDashboard({
             Origen: <span className="font-medium text-slate-800">{hevy.sourceLabel || HEVY_INTEGRATION_LABEL}</span>
           </p>
           {hevy.latestTrainingAt ? (
-            <p className="m-0">Último dato: {new Date(hevy.latestTrainingAt).toLocaleString("es-CO")}</p>
+            <p className="m-0">Último dato: {formatInstantInAgendaTz(hevy.latestTrainingAt)}</p>
           ) : null}
           {hevy.lastSyncAt ? (
             <p className="m-0 inline-flex items-center gap-1 text-slate-500">
               <Clock3 className="h-3 w-3" aria-hidden />
-              Sincronizado: {new Date(hevy.lastSyncAt).toLocaleString("es-CO")}
+              Sincronizado: {formatInstantInAgendaTz(hevy.lastSyncAt)}
             </p>
           ) : null}
           {hevy.showErrorHint ? <p className="m-0 text-slate-500">Aún no hay datos suficientes para estimar carga.</p> : null}

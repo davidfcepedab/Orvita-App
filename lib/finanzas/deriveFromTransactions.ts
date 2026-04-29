@@ -1,3 +1,4 @@
+import { formatLocalDateFullShortEsCo, formatLocalDateKey } from "@/lib/agenda/localDateKey"
 import type { FinanceTransaction } from "@/lib/finanzas/types"
 import { excludeReconciliationFromOperativoAnalysis } from "@/lib/finanzas/reconciliationTxFilter"
 import { monthBounds } from "@/lib/finanzas/monthRange"
@@ -76,8 +77,8 @@ export function startOfIsoWeekContaining(d: Date): Date {
 }
 
 function labelWeekRangeEs(weekStart: Date, weekEnd: Date): string {
-  const a = weekStart.toLocaleDateString("es-CO", { day: "numeric", month: "short" })
-  const b = weekEnd.toLocaleDateString("es-CO", { day: "numeric", month: "short" })
+  const a = formatLocalDateFullShortEsCo(formatLocalDateKey(weekStart))
+  const b = formatLocalDateFullShortEsCo(formatLocalDateKey(weekEnd))
   return `${a}–${b}`.replace(/\s+/g, " ").trim()
 }
 
