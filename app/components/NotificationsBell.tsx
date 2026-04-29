@@ -313,7 +313,7 @@ export function NotificationsBell() {
           type="button"
           disabled
           aria-label="Notificaciones desactivadas en modo demo"
-          className="orbita-icon-button orbita-focus-ring relative h-11 w-11 cursor-not-allowed opacity-45 sm:h-9 sm:w-9"
+          className="orbita-icon-button orbita-focus-ring relative h-14 w-14 cursor-not-allowed opacity-45 sm:h-9 sm:w-9"
         >
           <Bell size={17} strokeWidth={2} className="shrink-0" aria-hidden />
         </button>
@@ -328,7 +328,7 @@ export function NotificationsBell() {
         onClick={() => setOpen((v) => !v)}
         aria-label="Notificaciones"
         aria-expanded={open}
-        className="orbita-icon-button orbita-focus-ring relative h-11 w-11 sm:h-9 sm:w-9"
+        className="orbita-icon-button orbita-focus-ring relative h-14 w-14 sm:h-9 sm:w-9"
       >
         <Bell size={17} strokeWidth={2} className="shrink-0" aria-hidden />
         {unread > 0 ? (
