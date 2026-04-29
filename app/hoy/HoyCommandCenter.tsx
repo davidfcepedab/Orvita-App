@@ -47,6 +47,8 @@ import {
   totalMeetingMinutes,
   type PressureBand,
 } from "@/lib/hoy/commandDerivation"
+import { agendaTodayYmd } from "@/lib/agenda/localDateKey"
+import { isScheduledOnUtcDay } from "@/lib/habits/habitMetrics"
 import { StrategicDayHero } from "@/app/components/orbita-v3/strategic/StrategicDayCapitalHero"
 import type { OperationalCommandDomain, OperationalDomain, OperationalTask } from "@/lib/operational/types"
 
@@ -138,26 +140,14 @@ function PressureCell({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: index * 0.07, ease: [0.22, 1, 0.36, 1] }}
       className={[
-        "group relative flex min-w-0 flex-col gap-2.5 overflow-hidden rounded-[var(--radius-card)] border bg-[var(--color-surface)] p-3.5 motion-safe:transition-[transform,box-shadow] motion-safe:duration-300 motion-safe:hover:-translate-y-1 sm:p-4",
+        "group relative flex min-w-0 flex-col gap-2.5 overflow-hidden rounded-[var(--radius-card)] border bg-[var(--color-surface)] p-3.5 motion-safe:transition-[transform,box-shadow] motion-safe:duration-300 motion-safe:hover:-translate-y-0.5 sm:p-4",
         isWin
-          ? "border-[color-mix(in_srgb,var(--color-accent-health)_32%,var(--color-border))] shadow-[0_10px_36px_-14px_color-mix(in_srgb,var(--color-accent-health)_35%,transparent)] motion-safe:hover:shadow-[0_14px_40px_-12px_color-mix(in_srgb,var(--color-accent-health)_42%,transparent)]"
-          : "border-[color-mix(in_srgb,var(--color-border)_90%,transparent)] shadow-[0_1px_0_color-mix(in_srgb,var(--color-border)_70%,transparent)] motion-safe:hover:shadow-[var(--shadow-hover)]",
+          ? "border-[color-mix(in_srgb,var(--color-accent-health)_32%,var(--color-border))] shadow-[0_8px_28px_-14px_color-mix(in_srgb,var(--color-accent-health)_30%,transparent)] motion-safe:hover:shadow-[0_12px_32px_-12px_color-mix(in_srgb,var(--color-accent-health)_36%,transparent)]"
+          : "border-[color-mix(in_srgb,var(--color-border)_90%,transparent)] shadow-sm motion-safe:hover:shadow-[var(--shadow-hover)]",
       ].join(" ")}
       role="group"
       aria-label={`${label}: presión ${band}`}
     >
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-[3px] rounded-t-[inherit]"
-        style={{ background: color }}
-        aria-hidden
-      />
-      {isWin ? (
-        <div
-          className="pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full opacity-[0.12] motion-safe:transition-transform motion-safe:duration-500 group-hover:scale-110"
-          style={{ background: color }}
-          aria-hidden
-        />
-      ) : null}
       <div className="relative flex items-start justify-between gap-2">
         <div className="flex min-w-0 flex-1 items-center gap-2 text-[var(--color-text-primary)]">
           <span className="shrink-0 text-[var(--color-text-secondary)] opacity-85 motion-safe:transition-transform motion-safe:duration-300 group-hover:scale-110">
@@ -172,9 +162,9 @@ function PressureCell({
           {band}
         </span>
       </div>
-      <div className="relative h-2 w-full overflow-hidden rounded-full bg-[var(--color-surface-alt)] shadow-inner" aria-hidden>
+      <div className="relative h-2 w-full overflow-hidden rounded-md bg-[var(--color-surface-alt)] shadow-inner" aria-hidden>
         <motion.div
-          className="h-full rounded-full"
+          className="h-full rounded-md"
           initial={{ width: 0 }}
           animate={{ width: `${fillPct}%` }}
           transition={{ duration: 0.85, delay: 0.12 + index * 0.06, ease: [0.22, 1, 0.36, 1] }}
@@ -410,9 +400,14 @@ export default function HoyCommandCenter() {
     [ctx?.today_tasks],
   )
 
-  const habitsShown = useMemo(() => habitHookList.slice(0, 5), [habitHookList])
-  const habitsDone = habitHookList.filter((h) => h.completed).length
-  const habitsLabel = habitHookList.length ? `${habitsDone}/${habitHookList.length}` : "—"
+  const todayYmd = agendaTodayYmd()
+  const habitsDueToday = useMemo(
+    () => habitHookList.filter((h) => isScheduledOnUtcDay(h.metadata, todayYmd)),
+    [habitHookList, todayYmd],
+  )
+  const habitsShown = useMemo(() => habitsDueToday.slice(0, 5), [habitsDueToday])
+  const habitsDoneDue = habitsDueToday.filter((h) => h.completed).length
+  const habitsLabel = habitsDueToday.length ? `${habitsDoneDue}/${habitsDueToday.length}` : "—"
 
   const openTasks = (ctx?.today_tasks ?? []).filter((t) => !t.completed).length
   const [completing, setCompleting] = useState(false)
@@ -460,11 +455,6 @@ export default function HoyCommandCenter() {
       <header className="flex flex-col gap-4 border-b border-[var(--color-border)] pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <span
-              className="inline-flex h-2 w-2 shrink-0 rounded-full motion-safe:animate-pulse"
-              style={{ background: "var(--color-accent-primary)" }}
-              aria-hidden
-            />
             <SectionLabel>Centro del día</SectionLabel>
           </div>
           <h1 className="m-0 text-2xl font-semibold tracking-tight text-[var(--color-text-primary)] sm:text-[1.75rem]">
@@ -485,7 +475,7 @@ export default function HoyCommandCenter() {
                 {ctxLoading ? "…" : habitsLabel}
               </span>
               <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
-                hábitos · hoy
+                hábitos programados hoy
               </span>
             </div>
             <div className="flex flex-col gap-1">
@@ -506,52 +496,47 @@ export default function HoyCommandCenter() {
       </header>
 
       <nav aria-label="Check-in por momento del día" className="min-w-0">
-        <Card className="overflow-hidden p-0 shadow-[0_1px_0_color-mix(in_srgb,var(--color-border)_80%,transparent)]">
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="relative overflow-hidden border-b border-[color-mix(in_srgb,var(--color-border)_85%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_6%,var(--color-surface))] px-4 py-3 sm:px-5 sm:py-3.5"
-          >
-            <div
-              className="pointer-events-none absolute -left-10 -top-12 h-32 w-32 rounded-full opacity-[0.14] motion-safe:animate-pulse"
-              style={{ background: "var(--color-accent-health)" }}
-              aria-hidden
-            />
-            <div
-              className="pointer-events-none absolute -bottom-8 right-0 h-24 w-40 rounded-full opacity-[0.08]"
-              style={{ background: "var(--color-accent-primary)" }}
-              aria-hidden
-            />
-            <div className="relative flex flex-wrap items-start gap-3 sm:items-center">
+        <Card className="overflow-hidden border border-[color-mix(in_srgb,var(--color-border)_88%,transparent)] p-0 shadow-sm">
+          <div className="border-b border-[color-mix(in_srgb,var(--color-border)_85%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_5%,var(--color-surface))] px-4 py-3 sm:px-5 sm:py-3.5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex min-w-0 flex-1 items-start gap-2">
-                <motion.span
-                  className="mt-0.5 inline-flex shrink-0"
-                  aria-hidden
-                  initial={{ rotate: -8, scale: 0.92 }}
-                  animate={{ rotate: 0, scale: 1 }}
-                  transition={{ type: "spring", stiffness: 260, damping: 18, delay: 0.05 }}
-                >
-                  <Sunrise className="h-4 w-4 text-[var(--color-accent-health)]" />
-                </motion.span>
+                <Sunrise className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-accent-health)]" aria-hidden />
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <SectionLabel>Check-in del día</SectionLabel>
-                    <span className="inline-flex items-center gap-0.5 rounded-full border border-[color-mix(in_srgb,var(--color-accent-health)_28%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-surface)_88%,transparent)] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[var(--color-accent-health)]">
-                      <Target className="h-3 w-3" aria-hidden />
-                      3 pasos
+                    <span className="rounded border border-[color-mix(in_srgb,var(--color-accent-health)_35%,var(--color-border))] bg-[var(--color-surface)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[var(--color-accent-health)]">
+                      Ruta en 3
                     </span>
                   </div>
                   <p className="m-0 mt-1 text-xs leading-snug text-[var(--color-text-secondary)] [text-wrap:pretty]">
-                    Tres bloques al estilo <Link href="/salud" className="font-medium text-[var(--color-accent-health)] underline-offset-2 hover:underline">Salud</Link>. Al terminar,{" "}
-                    <span className="font-medium text-[var(--color-text-primary)]">Guardar check-in completo</span>.
+                    Completa <strong className="font-medium text-[var(--color-text-primary)]">Mañana → Día → Noche</strong> y al final{" "}
+                    <Link href="/checkin" className="font-medium text-[var(--color-accent-health)] underline-offset-2 hover:underline">
+                      guarda el check-in completo
+                    </Link>
+                    .
                   </p>
                 </div>
               </div>
+              <div
+                className="flex shrink-0 items-center gap-0.5 rounded-md border border-[color-mix(in_srgb,var(--color-border)_70%,transparent)] bg-[var(--color-surface)] px-2 py-1.5 text-[var(--color-text-secondary)]"
+                aria-hidden
+              >
+                <span className="flex h-6 w-6 items-center justify-center rounded bg-[color-mix(in_srgb,var(--color-accent-health)_14%,transparent)] text-[11px] font-bold text-[var(--color-text-primary)]">
+                  1
+                </span>
+                <ArrowRight className="h-3.5 w-3.5 shrink-0 opacity-40" />
+                <span className="flex h-6 w-6 items-center justify-center rounded bg-[var(--color-surface-alt)] text-[11px] font-bold text-[var(--color-text-primary)]">
+                  2
+                </span>
+                <ArrowRight className="h-3.5 w-3.5 shrink-0 opacity-40" />
+                <span className="flex h-6 w-6 items-center justify-center rounded bg-[var(--color-surface-alt)] text-[11px] font-bold text-[var(--color-text-primary)]">
+                  3
+                </span>
+              </div>
             </div>
-          </motion.div>
+          </div>
           <div className="p-3 sm:p-4">
-            <div className="rounded-xl bg-[var(--color-surface-alt)] p-1">
+            <div className="rounded-lg bg-[var(--color-surface-alt)] p-1">
               <motion.div
                 className="grid grid-cols-3 gap-1"
                 variants={checkinSegmentContainer}
@@ -567,10 +552,10 @@ export default function HoyCommandCenter() {
                   >
                     <Link
                       href={href}
-                      className="group flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg border border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] bg-[var(--color-surface)] px-1.5 py-2 text-center shadow-sm motion-safe:transition-[border-color,transform,box-shadow] motion-safe:active:scale-[0.98] motion-safe:hover:-translate-y-0.5 motion-safe:hover:border-[color-mix(in_srgb,var(--color-accent-health)_45%,var(--color-border))] motion-safe:hover:shadow-[0_8px_22px_-10px_color-mix(in_srgb,var(--color-accent-health)_28%,transparent)] sm:min-h-[60px] sm:px-2.5 sm:py-2.5"
+                      className="group flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-md border border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] bg-[var(--color-surface)] px-1.5 py-2 text-center motion-safe:transition-[border-color,transform,box-shadow] motion-safe:active:scale-[0.99] motion-safe:hover:border-[color-mix(in_srgb,var(--color-accent-health)_40%,var(--color-border))] motion-safe:hover:shadow-md sm:min-h-[60px] sm:px-2.5 sm:py-2.5"
                       style={{ textDecoration: "none" }}
                     >
-                      <Icon className="h-4 w-4 shrink-0 text-[var(--color-accent-health)] motion-safe:transition-transform motion-safe:duration-300 motion-safe:group-hover:scale-110" aria-hidden />
+                      <Icon className="h-4 w-4 shrink-0 text-[var(--color-accent-health)] motion-safe:transition-transform motion-safe:duration-200 motion-safe:group-hover:scale-105" aria-hidden />
                       <span className="text-[11px] font-semibold leading-tight text-[var(--color-text-primary)]">{label}</span>
                       <span className="line-clamp-2 text-[9px] leading-tight text-[var(--color-text-secondary)] sm:text-[10px]">{hint}</span>
                     </Link>
@@ -578,17 +563,14 @@ export default function HoyCommandCenter() {
                 ))}
               </motion.div>
             </div>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35, duration: 0.35 }}>
             <Link
               href="/checkin"
-              className="mt-3 flex min-h-12 w-full items-center justify-center rounded-full border border-dashed border-[color-mix(in_srgb,var(--color-accent-health)_38%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_7%,transparent)] px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--color-text-secondary)] motion-safe:transition-[border-color,transform,color,background-color] motion-safe:hover:-translate-y-0.5 motion-safe:hover:border-[color-mix(in_srgb,var(--color-accent-health)_55%,var(--color-border))] motion-safe:hover:bg-[color-mix(in_srgb,var(--color-accent-health)_11%,transparent)] motion-safe:hover:text-[var(--color-text-primary)]"
+              className="mt-3 flex min-h-11 w-full items-center justify-center rounded-md border border-[color-mix(in_srgb,var(--color-accent-health)_32%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_8%,transparent)] px-4 py-2.5 text-center text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-primary)] motion-safe:transition-[background-color,border-color] motion-safe:hover:bg-[color-mix(in_srgb,var(--color-accent-health)_14%,transparent)]"
               style={{ textDecoration: "none" }}
               title="Abrir el check-in completo en una sola vista"
             >
-              <span className="hidden min-[400px]:inline">Todo el formulario</span>
-              <span className="inline min-[400px]:hidden [text-wrap:balance]">Formulario completo</span>
+              Abrir formulario completo
             </Link>
-            </motion.div>
           </div>
         </Card>
       </nav>
@@ -599,11 +581,6 @@ export default function HoyCommandCenter() {
       <section aria-labelledby="hoy-pressure-heading" className="space-y-3">
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
-            <span
-              className="inline-flex h-2 w-2 shrink-0 rounded-full motion-safe:animate-pulse"
-              style={{ background: "var(--color-accent-warning)" }}
-              aria-hidden
-            />
             <h2 id="hoy-pressure-heading" className="m-0 flex items-center gap-1.5 text-sm font-semibold text-[var(--color-text-primary)]">
               Presión operativa
               <Sparkles className="h-3.5 w-3.5 shrink-0 text-[color-mix(in_srgb,var(--color-accent-warning)_75%,var(--color-text-secondary))]" aria-hidden />
@@ -731,11 +708,6 @@ export default function HoyCommandCenter() {
       <div className="grid grid-cols-1 gap-[var(--layout-gap)] lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
         <div className="flex min-w-0 flex-col gap-[var(--layout-gap)]">
           <Card className="group relative overflow-hidden p-5 sm:p-6">
-            <div
-              className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full opacity-[0.07] motion-safe:transition-transform motion-safe:duration-700 motion-safe:group-hover:scale-110"
-              style={{ background: primary.domain ? domainAccentVar(primary.domain) : "var(--color-accent-primary)" }}
-              aria-hidden
-            />
             <div className="relative grid gap-4">
               <div className="flex flex-wrap items-center gap-2">
                 <Sparkles className="h-4 w-4 text-[var(--color-accent-primary)]" aria-hidden />
@@ -858,14 +830,14 @@ export default function HoyCommandCenter() {
                   <div key={item.key} className="flex gap-3">
                     <div className="flex flex-col items-center gap-1 pt-0.5">
                       <span
-                        className="h-2 w-2 rounded-full motion-safe:transition-transform motion-safe:duration-300"
+                        className="h-2 w-2 shrink-0 rounded-sm motion-safe:transition-transform motion-safe:duration-300"
                         style={{
                           background: item.highlighted
                             ? "var(--color-accent-primary)"
                             : "var(--color-border)",
-                          transform: item.highlighted ? "scale(1.35)" : undefined,
+                          transform: item.highlighted ? "scale(1.15)" : undefined,
                           boxShadow: item.highlighted
-                            ? "0 0 0 4px color-mix(in srgb, var(--color-accent-primary) 22%, transparent)"
+                            ? "0 0 0 2px color-mix(in srgb, var(--color-accent-primary) 25%, transparent)"
                             : undefined,
                         }}
                       />
@@ -932,6 +904,14 @@ export default function HoyCommandCenter() {
               <SectionLabel>Hábitos clave</SectionLabel>
             </div>
             <ul className="m-0 grid list-none gap-2 p-0">
+              {habitsDueToday.length === 0 && habitHookList.length > 0 ? (
+                <li className="text-xs leading-relaxed text-[var(--color-text-secondary)]">
+                  Ningún hábito toca hoy según tu calendario.{" "}
+                  <Link href="/habitos" className="font-medium text-[var(--color-accent-primary)] underline">
+                    Ver todos
+                  </Link>
+                </li>
+              ) : null}
               {habitsShown.map((habit) => (
                 <li key={habit.id}>
                   <div
@@ -1006,7 +986,7 @@ export default function HoyCommandCenter() {
                   className="flex items-start gap-2 rounded-lg border border-[var(--color-border)]/80 bg-[var(--color-surface-alt)]/50 px-2.5 py-2"
                 >
                   <span
-                    className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
+                    className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-sm"
                     style={{ background: domainAccentVar(task.domain) }}
                     aria-hidden
                   />

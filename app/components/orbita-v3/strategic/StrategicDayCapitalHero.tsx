@@ -98,22 +98,20 @@ function readinessTier(score: number | null): { label: string; style: string; sh
   }
 }
 
-function ReadinessRing({ score }: { score: number | null }) {
+function ReadinessMeter({ score }: { score: number | null }) {
   const n = score != null && Number.isFinite(score) ? Math.min(100, Math.max(0, Math.round(score))) : null
-  const deg = n != null ? (n / 100) * 360 : 0
   return (
     <div
-      className="relative h-[52px] w-[52px] shrink-0 rounded-full p-[3px]"
-      style={{
-        background:
-          n != null
-            ? `conic-gradient(from -90deg, var(--color-accent-health) ${deg}deg, color-mix(in srgb, var(--color-border) 50%, transparent) 0deg)`
-            : "color-mix(in srgb, var(--color-border) 55%, transparent)",
-      }}
-      aria-hidden
+      className="flex w-full min-w-[72px] max-w-[120px] shrink-0 flex-col justify-center gap-0"
+      aria-label={n != null ? `Disposición aproximada ${n} de 100` : "Sin medición de disposición"}
     >
-      <div className="flex h-full w-full items-center justify-center rounded-full bg-[var(--color-surface)] text-[13px] font-bold tabular-nums text-[var(--color-text-primary)] shadow-[inset_0_1px_0_color-mix(in_srgb,var(--color-border)_35%,transparent)]">
-        {n ?? "—"}
+      <div className="h-2 w-full overflow-hidden rounded bg-[color-mix(in_srgb,var(--color-border)_45%,var(--color-surface-alt))]">
+        {n != null ? (
+          <div
+            className="h-full rounded bg-[var(--color-accent-health)] transition-[width] duration-500 ease-out"
+            style={{ width: `${n}%` }}
+          />
+        ) : null}
       </div>
     </div>
   )
@@ -174,11 +172,6 @@ export function StrategicDayHero({
         <section aria-labelledby="strategic-health-hero-heading">
           <Card className="overflow-hidden p-0 shadow-[0_1px_0_color-mix(in_srgb,var(--color-border)_80%,transparent)]">
             <div className="relative flex min-w-0 flex-col gap-4 overflow-hidden bg-[var(--color-surface)] p-4 sm:flex-row sm:items-stretch sm:justify-between sm:gap-6 sm:p-5">
-              <div
-                className="pointer-events-none absolute -right-8 -top-10 h-36 w-36 rounded-full opacity-[0.06] motion-safe:animate-pulse"
-                style={{ background: "var(--color-accent-health)" }}
-                aria-hidden
-              />
               <div className="relative z-[1] min-w-0 flex-1 space-y-3">
                 <div className="flex flex-wrap items-baseline gap-2">
                   <Activity className="h-4 w-4 shrink-0 text-[var(--color-accent-health)]" aria-hidden />
@@ -214,7 +207,7 @@ export function StrategicDayHero({
                     transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
                     className="flex min-w-0 items-center gap-2.5 rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_5%,var(--color-surface-alt))] px-2.5 py-2.5 sm:gap-3 sm:px-3 sm:py-2.5"
                   >
-                    <ReadinessRing score={health.readiness_score ?? null} />
+                    <ReadinessMeter score={health.readiness_score ?? null} />
                     <div className="min-w-0 flex-1">
                       <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
                         Disposición
@@ -226,7 +219,7 @@ export function StrategicDayHero({
                       {tier ? (
                         <span
                           className={clsx(
-                            "mt-1 inline-flex max-w-full items-center gap-1 rounded-full border px-1.5 py-0.5 text-[9px] font-semibold leading-tight sm:mt-1.5 sm:px-2 sm:text-[10px]",
+                            "mt-1 inline-flex max-w-full items-center gap-1 rounded-md border px-1.5 py-0.5 text-[9px] font-semibold leading-tight sm:mt-1.5 sm:px-2 sm:text-[10px]",
                             tier.style,
                           )}
                         >
