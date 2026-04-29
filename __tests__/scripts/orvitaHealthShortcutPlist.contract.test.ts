@@ -23,18 +23,19 @@ function assertCommonHealthShortcutXml(xml: string, workflowName: string) {
   expect(n1002).toBeGreaterThanOrEqual(12)
 }
 
-/** El Diccionario debe referenciar variables por nombre (pastillas); Set Variable usa WFVariableName. */
+/** Diccionario y cabeceras POST: variables nombradas como WFTextTokenAttachment (Type Variable + VariableName). */
 function assertDictionaryVariableTokens(xml: string) {
   const nTokenVar = (xml.match(/<key>VariableName<\/key>/g) ?? []).length
   const nSetVar = (xml.match(/<key>WFVariableName<\/key>/g) ?? []).length
   expect(nTokenVar + nSetVar).toBeGreaterThanOrEqual(28)
   expect(nTokenVar).toBeGreaterThanOrEqual(14)
+  expect((xml.match(/<string>WFTextTokenAttachment<\/string>/g) ?? []).length).toBeGreaterThanOrEqual(30)
   expect(xml).toContain("<string>workouts_count_num</string>")
   expect(xml).toContain("<string>workouts_duration_seconds_num</string>")
   expect(xml).toContain("<string>apple_bundle</string>")
   expect(xml).toContain("<string>is.workflow.actions.dictionary</string>")
-  const attachments = xml.match(/<key>attachmentsByRange<\/key>/g) ?? []
-  expect(attachments.length).toBeGreaterThanOrEqual(16)
+  expect(xml).toContain("<string>Type</string>")
+  expect(xml).toContain("<string>Variable</string>")
 }
 
 describe("orvita-importar-salud-hoy shortcut plist (contrato)", () => {

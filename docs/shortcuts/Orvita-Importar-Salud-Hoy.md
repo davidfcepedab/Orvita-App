@@ -72,7 +72,7 @@ Si en el diccionario o en **Obtener contenido de URL** los valores aparecen como
 
 **No duplicar el atajo en Atajos:** al tocar **Duplicar** en la biblioteca, iOS a menudo genera un atajo nuevo (nombre con «2», «3»…) cuyo **Diccionario conserva las claves pero pierde el enlace a variables**; parece que «llegó sin diccionario» aunque el bloque exista. La solución es **borrar esa copia** e **instalar de nuevo** el `.shortcut` desde `orvita.app` (o el enlace de la app), no reutilizar la duplicada.
 
-**El `.shortcut` del repositorio está completo:** el generador (`scripts/build-orvita-health-shortcut.py`) serializa cada valor del Diccionario como token con `VariableName` + `attachmentsByRange`. Los tests en `__tests__/scripts/orvitaHealthShortcutPlist.contract.test.ts` comprueban que el plist fuente sigue incluyendo esas referencias tras cada build. Si en el iPhone solo ves «Texto» gris, casi siempre es **copia duplicada** o estás abriendo un atajo distinto del instalado desde la web (nombre exacto **Orvita-Importar-Salud-Hoy**, sin sufijo).
+**El `.shortcut` del repositorio está completo:** el generador serializa cada valor del Diccionario (y cabeceras HTTP del POST) como **`WFTextTokenAttachment`** con `Type = Variable` y `VariableName = …` — formato que iOS importa con pastillas. Una forma antigua (`WFTextTokenString` + `attachmentsByRange`) podía mostrar «Texto» vacío tras importar. Los tests en `__tests__/scripts/orvitaHealthShortcutPlist.contract.test.ts` comprueban tokens tras cada build. Si en el iPhone solo ves «Texto» gris, suele ser **copia duplicada** o un atajo distinto del instalado desde la web (nombre exacto **Orvita-Importar-Salud-Hoy**, sin sufijo).
 
 ### «No se encontraron muestras» en Workouts (tipo + inicio hoy)
 

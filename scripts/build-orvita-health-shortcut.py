@@ -78,19 +78,18 @@ def text_token_string(attachment_uuid: str, output_name: str = "Provided Input")
     }
 
 
-def text_token_variable(variable_name: str) -> dict:
-    """Referencia a variable de atajo en Diccionario / cabeceras."""
+def wf_value_named_variable(variable_name: str) -> dict:
+    """Valor de campo WFDictionaryFieldValue cuando es solo una variable nombrada.
+
+    En importación iOS, WFTextTokenString + attachmentsByRange a veces se pierde y el valor queda «Texto» vacío.
+    Apple documenta variables nombradas como WFTextTokenAttachment (`Type` + `VariableName`).
+    """
     return {
         "Value": {
-            "attachmentsByRange": {
-                "{0, 1}": {
-                    "Type": "Variable",
-                    "VariableName": variable_name,
-                }
-            },
-            "string": "\ufffc",
+            "Type": "Variable",
+            "VariableName": variable_name,
         },
-        "WFSerializationType": "WFTextTokenString",
+        "WFSerializationType": "WFTextTokenAttachment",
     }
 
 
@@ -497,16 +496,16 @@ def build_flat_payload_items() -> list[dict]:
     """Mismo orden de claves para Diccionario y cuerpo JSON del POST (referencias a variables).
 
     WFItemType en WFDictionaryFieldValueItems (JSON / Diccionario):
-    - 0 = texto / WFTextTokenString (incluye variables que resuelven a número).
+    - 0 = texto plano (WFTextTokenString) o variable nombrada (WFTextTokenAttachment en WFValue).
     - 1 = subdiccionario (en iOS aparece como «0 elementos» si no hay hijos) — no usar para *_num.
 
-    Ver skills/erik-agens/shortcuts-skill (Get Contents of URL / WFJSONValues).
+    Variables: usar `WFTextTokenAttachment` en el valor, no string+attachments, para que iOS importe el atajo con pastillas.
     """
     items: list[dict] = [
         {
             "WFItemType": 0,
             "WFKey": text_plain("observed_at"),
-            "WFValue": {"Value": text_token_variable("observed_at"), "WFSerializationType": "WFTextTokenString"},
+            "WFValue": wf_value_named_variable("observed_at"),
         },
     ]
     for _var, payload_key in [
@@ -528,10 +527,7 @@ def build_flat_payload_items() -> list[dict]:
             {
                 "WFItemType": 0,
                 "WFKey": text_plain(payload_key),
-                "WFValue": {
-                    "Value": text_token_variable(_var),
-                    "WFSerializationType": "WFTextTokenString",
-                },
+                "WFValue": wf_value_named_variable(_var),
             }
         )
     return items
@@ -543,10 +539,7 @@ def build_post_json_apple_bundle_items() -> list[dict]:
         {
             "WFItemType": 0,
             "WFKey": text_plain("apple_bundle"),
-            "WFValue": {
-                "Value": text_token_variable("apple_bundle"),
-                "WFSerializationType": "WFTextTokenString",
-            },
+            "WFValue": wf_value_named_variable("apple_bundle"),
         }
     ]
 
@@ -591,18 +584,12 @@ def post_import(*, u_post: str, json_items: list[dict]) -> dict:
                         {
                             "WFItemType": 0,
                             "WFKey": text_plain("x-orvita-import-token"),
-                            "WFValue": {
-                                "Value": text_token_variable("import_token"),
-                                "WFSerializationType": "WFTextTokenString",
-                            },
+                            "WFValue": wf_value_named_variable("import_token"),
                         },
                         {
                             "WFItemType": 0,
                             "WFKey": text_plain("x-orvita-observed-at"),
-                            "WFValue": {
-                                "Value": text_token_variable("observed_at"),
-                                "WFSerializationType": "WFTextTokenString",
-                            },
+                            "WFValue": wf_value_named_variable("observed_at"),
                         },
                         {
                             "WFItemType": 0,
