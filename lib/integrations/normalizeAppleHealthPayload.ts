@@ -6,7 +6,43 @@ import {
   type AppleShortcutBundleInputKey,
 } from "@/lib/integrations/appleHealthBundleContract"
 
-const RESERVED_BODY_KEYS = new Set(["source", "schema_version", "import_token", "entries", "apple_bundle"])
+/**
+ * Claves solo de **respuesta** del POST import (o reintento): no son métricas.
+ * Si el atajo vuelve a mandar el JSON de Órvita (p. ej. con `syncedAt` del día siguiente en UTC),
+ * no deben acabar en el bundle plano ni pisar heurísticas.
+ */
+export const HEALTH_IMPORT_RESPONSE_ECHO_KEYS = [
+  "success",
+  "imported",
+  "syncedAt",
+  "synced_at",
+  "health_metrics_source",
+  "accepted_metrics",
+  "normalized",
+  "observed_at_inferred",
+  "received_keys",
+  "raw_payload_debug",
+  "hint",
+  "error",
+  "field_errors",
+  "orvita_fix",
+] as const
+
+const RESERVED_BODY_KEYS = new Set<string>([
+  "source",
+  "schema_version",
+  "import_token",
+  "entries",
+  "apple_bundle",
+  ...HEALTH_IMPORT_RESPONSE_ECHO_KEYS,
+])
+
+/** Quita del cuerpo o del `apple_bundle` las claves que solo vienen de la respuesta API (p. ej. `syncedAt`). */
+export function stripAppleHealthImportEchoFromRecord(o: Record<string, unknown>): void {
+  for (const k of HEALTH_IMPORT_RESPONSE_ECHO_KEYS) {
+    delete o[k]
+  }
+}
 
 /** Claves de métricas reconocidas en cuerpo plano (sin `observed_at`). */
 export const APPLE_IMPORT_METRIC_KEYS = APPLE_SHORTCUT_BUNDLE_INPUT_KEYS.filter((k) => k !== "observed_at")
@@ -345,6 +381,7 @@ export function extractHealthBundleFromBody(body: unknown): { bundle: Record<str
   const b = body as Record<string, unknown>
   const ab = coalesceAppleBundleValue(b.apple_bundle)
   if (ab) {
+    stripAppleHealthImportEchoFromRecord(ab)
     return { bundle: ab, received_keys: Object.keys(b) }
   }
   const out: Record<string, unknown> = {}

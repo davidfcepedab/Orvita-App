@@ -314,6 +314,29 @@ describe("extractHealthBundleFromBody", () => {
     expect(ab?.bundle.steps).toBe(2)
   })
 
+  test("no incluye syncedAt ni otras claves de respuesta API en el bundle", () => {
+    const flat = extractHealthBundleFromBody({
+      observed_at: "2026-04-28",
+      steps: 1,
+      syncedAt: "2026-04-29T03:23:39.510Z",
+      success: true,
+      normalized: { steps: 99 },
+    })
+    expect(flat?.bundle.observed_at).toBe("2026-04-28")
+    expect(flat?.bundle.syncedAt).toBeUndefined()
+    expect(flat?.bundle.success).toBeUndefined()
+    expect(flat?.bundle.normalized).toBeUndefined()
+    const nested = extractHealthBundleFromBody({
+      apple_bundle: {
+        observed_at: "2026-04-28",
+        steps: 2,
+        syncedAt: "2026-04-29T03:00:00.000Z",
+      },
+    })
+    expect(nested?.bundle.syncedAt).toBeUndefined()
+    expect(nested?.bundle.steps).toBe(2)
+  })
+
   test("apple_bundle como string JSON (Atajos iOS)", () => {
     const inner = {
       observed_at: "2026-04-25",

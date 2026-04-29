@@ -35,6 +35,13 @@ Nombre exacto en la biblioteca de Atajos: **Orvita-Importar-Salud-Hoy** (debe co
 
 Respuesta JSON incluye `health_metrics_source` con el valor aplicado.
 
+### `syncedAt` en la respuesta (no es el día de salud)
+
+La respuesta incluye **`syncedAt`**: instante en que el servidor guardó el import (suele ser “ya de noche” en UTC y puede caer en **fecha distinta** a `observed_at`). Sirve para auditoría / “última sync”; **no** sustituye a `observed_at` ni al diccionario `normalized.observed_at` (día de las métricas).
+
+- En el atajo: **no** reenvíes el JSON completo de la respuesta como cuerpo del siguiente POST (p. ej. fusionar respuesta + bundle). Si eso ocurre, el servidor **ignora** claves de eco (`syncedAt`, `success`, `normalized`, …) para no mezclarlas con métricas.
+- Si necesitas encadenar acciones, construye el POST solo con **`apple_bundle`** (o el cuerpo plano de métricas) + `observed_at`; copia a mano campos concretos, no el objeto respuesta entero.
+
 ## Métricas que lee el atajo generado (`build-orvita-health-shortcut.py`)
 
 Las métricas van en el **Diccionario** (variable `apple_bundle`) y el POST JSON tiene solo **`apple_bundle`** como objeto anidado. Incluye (entre otras) lecturas de Apple Health alineadas al contrato del API:

@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server"
 import type { AppleHealthImportRow } from "@/lib/integrations/appleHealth"
 import { normalizeAppleHealthRows } from "@/lib/integrations/appleHealth"
 import { rowsFromAppleBundlePayload } from "@/lib/integrations/mergeAppleHealthImportRows"
-import { extractHealthBundleFromBody, normalizeAppleHealthPayload } from "@/lib/integrations/normalizeAppleHealthPayload"
+import {
+  extractHealthBundleFromBody,
+  normalizeAppleHealthPayload,
+  stripAppleHealthImportEchoFromRecord,
+} from "@/lib/integrations/normalizeAppleHealthPayload"
 import {
   upsertAppleHealthImportRow,
   type HealthMetricsPersistedSource,
@@ -123,6 +127,7 @@ function acceptedListFromNorm(norm: ReturnType<typeof normalizeAppleHealthPayloa
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>
+    stripAppleHealthImportEchoFromRecord(body)
     applyObservedAtFromRequestHeaders(req, body)
     const topKeys = Object.keys(body)
     logImport({ event: "hit", received_keys: topKeys })
