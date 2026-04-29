@@ -2,6 +2,7 @@ import {
   buildOrvitaShortcutImportHref,
   buildOrvitaShortcutImportHrefXCallback,
   getOrvitaHealthShortcutIcloudUrl,
+  ORVITA_HEALTH_SHORTCUT_ASSET_VERSION,
 } from "@/lib/shortcuts/orvitaHealthShortcut"
 
 describe("orvitaHealthShortcut", () => {
@@ -29,7 +30,9 @@ describe("orvitaHealthShortcut", () => {
     expect(href).not.toContain("import-shortcut/?")
     const after = href.split("?url=")[1]
     expect(after).toBeDefined()
-    expect(decodeURIComponent(after!)).toBe("https://orvita.app/shortcuts/Orvita-Importar-Salud-Hoy.shortcut")
+    expect(decodeURIComponent(after!)).toBe(
+      `https://orvita.app/shortcuts/Orvita-Importar-Salud-Hoy.shortcut?v=${ORVITA_HEALTH_SHORTCUT_ASSET_VERSION}`,
+    )
   })
 
   test("x-callback import encodes the same file URL", () => {

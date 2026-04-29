@@ -4,10 +4,12 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { Apple, ClipboardCopy, Download, LayoutGrid, Play, Sparkles, Zap } from "lucide-react"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import type { OrbitaConfigTheme } from "@/app/components/orbita-v3/config/configThemeTypes"
+import { isStandaloneDisplayMode } from "@/lib/pwa/installPrompt"
 import {
   buildOrvitaRunShortcutHref,
   buildOrvitaShortcutImportHref,
   buildOrvitaShortcutImportHrefXCallback,
+  getOrvitaHealthHistorial15ShortcutDownloadFileUrl,
   getOrvitaHealthShortcutDownloadFileUrl,
   getOrvitaHealthShortcutFileUrl,
   getOrvitaHealthShortcutIcloudUrl,
@@ -97,10 +99,16 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
     return /iPad|iPhone|iPod/i.test(navigator.userAgent) || (navigator.userAgent.includes("Mac") && "ontouchend" in document)
   }, [])
 
-  const { shortcutInstallHref, shortcutInstallHrefAlt, runShortcutHref, fileUrl, instructionsUrl, icloudUrl } =
+  const [isPwaStandalone, setIsPwaStandalone] = useState(false)
+  useEffect(() => {
+    setIsPwaStandalone(isStandaloneDisplayMode())
+  }, [])
+
+  const { shortcutInstallHref, shortcutInstallHrefAlt, runShortcutHref, fileUrl, historialFileUrl, instructionsUrl, icloudUrl } =
     useMemo(() => {
       return {
         fileUrl: getOrvitaHealthShortcutDownloadFileUrl(),
+        historialFileUrl: getOrvitaHealthHistorial15ShortcutDownloadFileUrl(),
         instructionsUrl: INSTRUCCIONES,
         icloudUrl: getOrvitaHealthShortcutIcloudUrl(),
         shortcutInstallHref: buildOrvitaShortcutImportHref(),
@@ -215,7 +223,7 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
         </div>
 
         <div className="mt-2.5 flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-center">
-          {isIOS ? (
+          {isIOS && !isPwaStandalone ? (
             <>
               {icloudUrl ? (
                 <a
@@ -290,6 +298,22 @@ export function ConfigAppleShortcutPanel({ theme, moduleCard }: Props) {
             <Download className="h-3.5 w-3.5" aria-hidden />
             Descargar .shortcut
           </a>
+          <a
+            href={historialFileUrl}
+            download
+            className={`${moduleCard ? chipCta : subtleCta} no-underline flex`}
+            style={{ borderColor: theme.border, color: theme.text, backgroundColor: theme.surface }}
+          >
+            <Download className="h-3.5 w-3.5" aria-hidden />
+            Descargar histórico (15 días, v1)
+          </a>
+          <p
+            className="w-full basis-full text-[10px] leading-snug sm:text-[11px]"
+            style={{ color: theme.textMuted }}
+          >
+            El archivo «histórico» comparte la misma lectura Salud que el diario (día de ejecución); sirve para un segundo
+            atajo o widget. El backfill automático día a día sin incluir hoy está en roadmap (filtros por fecha en Atajos).
+          </p>
           {moduleCard ? null : (
             <button
               type="button"

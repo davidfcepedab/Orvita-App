@@ -12,7 +12,11 @@ ROOT = Path(__file__).resolve().parents[1]
 
 BUILDER = ROOT / "scripts/build-orvita-health-shortcut.py"
 SRC_PLIST = ROOT / "scripts/shortcuts/orvita-importar-salud-hoy.shortcut.src.plist"
+SRC_HISTORIAL = ROOT / "scripts/shortcuts/orvita-salud-historial-15dias.src.plist"
 OUT_SHORTCUT = ROOT / "public/shortcuts/Orvita-Importar-Salud-Hoy.shortcut"
+OUT_HISTORIAL = ROOT / "public/shortcuts/Orvita-Salud-Historial-15Dias.shortcut"
+TMP_UNSIGNED_HOY = "/tmp/orvita-unsigned-hoy.shortcut"
+TMP_UNSIGNED_HIST = "/tmp/orvita-unsigned-historial.shortcut"
 
 
 def run(cmd: list[str]) -> None:
@@ -22,13 +26,18 @@ def run(cmd: list[str]) -> None:
 
 def build() -> None:
     run(["python3", str(BUILDER)])
+    run(["python3", str(BUILDER), "--variant", "historial-15d"])
+    run(["plutil", "-convert", "binary1", str(SRC_PLIST), "-o", TMP_UNSIGNED_HOY])
+    run(["plutil", "-convert", "binary1", str(SRC_HISTORIAL), "-o", TMP_UNSIGNED_HIST])
     run(
         [
-            "plutil",
-            "-convert",
-            "binary1",
-            str(SRC_PLIST),
-            "-o",
+            "shortcuts",
+            "sign",
+            "--mode",
+            "anyone",
+            "--input",
+            TMP_UNSIGNED_HOY,
+            "--output",
             str(OUT_SHORTCUT),
         ]
     )
@@ -39,13 +48,15 @@ def build() -> None:
             "--mode",
             "anyone",
             "--input",
-            str(OUT_SHORTCUT),
+            TMP_UNSIGNED_HIST,
             "--output",
-            str(OUT_SHORTCUT),
+            str(OUT_HISTORIAL),
         ]
     )
     print("")
-    print("Shortcut generado:", OUT_SHORTCUT)
+    print("Shortcuts generados:")
+    print(" ", OUT_SHORTCUT)
+    print(" ", OUT_HISTORIAL)
 
 
 if __name__ == "__main__":

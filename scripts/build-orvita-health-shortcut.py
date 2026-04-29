@@ -10,7 +10,8 @@ lo soporta. Si al importar ves «Buscar muestras de Salud» con tipo (null)
 o tarjetas «Acción desconocida» en el medio, suele ser **serialización** del .shortcut, no
 permisos ni caché: prueba `--mode minimal` y/o `--omit-workout-duration-stat` (ver `--help`).
 
-Modo `full`: token → fecha ISO → por cada métrica: Buscar muestras (tipo + hoy) → Calcular (Suma/Media) o Conteo
+Modo `full`: token → fecha ISO → por cada métrica: Buscar muestras (tipo + hoy) → Calcular (Suma/Media) o Conteo.
+`--variant historial-15d`: segundo plist «Orvita-Salud-Historial-15Dias» (mismo flujo; comentario en el atajo).
 → Obtener números → Establecer variable (`*_num`) → diccionario y POST JSON **plano** (sin `apple_bundle`).
 Entrenos: conteo real y duración en segundos (suma de `Duration`) como variables distintas.
 Sueño: suma (`sleep_duration_seconds`) y conteo de sesiones **solo con inicio = hoy** (mismo filtro que pasos/HRV).
@@ -878,6 +879,35 @@ def build_actions_full(
     return actions
 
 
+HISTORIAL_15D_INTRO = (
+    "Orvita · Histórico 15 días (v1): mismo flujo técnico que «Importar Salud Hoy» (filtro Salud = día de ejecución). "
+    "Nombre distinto para instalar en paralelo. Backfill automático por cada día civil pasado (sin hoy) queda en roadmap "
+    "(Atajos: filtro por fecha variable en muestras)."
+)
+
+
+def build_actions_historial_15d_full(
+    *,
+    quantity_type_style: str,
+    omit_workout_duration_stat: bool,
+    duration_placeholders: str,
+    workout_stat_prop_ser: str,
+    legacy_token_prompt: bool,
+    legacy_workout_actions: bool,
+) -> list[dict]:
+    return [
+        comment(HISTORIAL_15D_INTRO),
+        *build_actions_full(
+            quantity_type_style=quantity_type_style,
+            omit_workout_duration_stat=omit_workout_duration_stat,
+            duration_placeholders=duration_placeholders,
+            workout_stat_prop_ser=workout_stat_prop_ser,
+            legacy_token_prompt=legacy_token_prompt,
+            legacy_workout_actions=legacy_workout_actions,
+        ),
+    ]
+
+
 def build_actions_minimal(*, quantity_type_style: str, legacy_token_prompt: bool) -> list[dict]:
     _ = quantity_type_style
     u_date = uid()
@@ -979,14 +1009,21 @@ def build_actions_minimal(*, quantity_type_style: str, legacy_token_prompt: bool
 
 def main() -> int:
     here = Path(__file__).resolve().parent
-    default_out = here / "shortcuts" / "orvita-importar-salud-hoy.shortcut.src.plist"
+    default_out_hoy = here / "shortcuts" / "orvita-importar-salud-hoy.shortcut.src.plist"
+    default_out_historial = here / "shortcuts" / "orvita-salud-historial-15dias.src.plist"
     p = argparse.ArgumentParser(description="Genera plist XML del atajo Salud (Órvita).")
     p.add_argument(
         "output",
         nargs="?",
         type=Path,
-        default=default_out,
-        help=f"Ruta de salida (default: {default_out})",
+        default=None,
+        help=f"Ruta de salida (default: {default_out_hoy} o {default_out_historial} según --variant)",
+    )
+    p.add_argument(
+        "--variant",
+        choices=("hoy", "historial-15d"),
+        default="hoy",
+        help="hoy = atajo diario; historial-15d = segundo atajo (misma lógica, otro nombre; ver comentario en plist).",
     )
     p.add_argument(
         "--mode",
@@ -1033,15 +1070,31 @@ def main() -> int:
     args = p.parse_args()
     if args.wplace == "omit" and not args.omit_workout_duration_stat:
         p.error("--workout-duration-placeholder=omit requiere --omit-workout-duration-stat")
-    wname = (
-        "Orvita-Importar-Salud-Hoy (mín.)"
-        if args.mode == "minimal"
-        else "Orvita-Importar-Salud-Hoy"
+    if args.variant == "historial-15d" and args.mode != "full":
+        p.error("--variant historial-15d solo admite --mode full")
+    out: Path = args.output or (
+        default_out_historial if args.variant == "historial-15d" else default_out_hoy
     )
+    wname: str
+    if args.variant == "historial-15d":
+        wname = "Orvita-Salud-Historial-15Dias"
+    elif args.mode == "minimal":
+        wname = "Orvita-Importar-Salud-Hoy (mín.)"
+    else:
+        wname = "Orvita-Importar-Salud-Hoy"
     if args.mode == "minimal":
         actions = build_actions_minimal(
             quantity_type_style=args.quantity_type,
             legacy_token_prompt=args.legacy_token_prompt,
+        )
+    elif args.variant == "historial-15d":
+        actions = build_actions_historial_15d_full(
+            quantity_type_style=args.quantity_type,
+            omit_workout_duration_stat=args.omit_workout_duration_stat,
+            duration_placeholders=args.wplace,
+            workout_stat_prop_ser=args.workout_agg_ser,
+            legacy_token_prompt=args.legacy_token_prompt,
+            legacy_workout_actions=args.legacy_workout_actions,
         )
     else:
         actions = build_actions_full(
@@ -1052,7 +1105,6 @@ def main() -> int:
             legacy_token_prompt=args.legacy_token_prompt,
             legacy_workout_actions=args.legacy_workout_actions,
         )
-    out: Path = args.output
     with out.open("wb") as f:
         plistlib.dump(build_root(actions, workflow_name=wname), f, fmt=plistlib.FMT_XML)
     print(out)

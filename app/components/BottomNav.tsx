@@ -85,10 +85,10 @@ function NavButton({
       type="button"
       onClick={onNavigate}
       className={clsx(
-        "orbita-focus-ring flex min-h-[48px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-[var(--radius-card)] px-0.5 transition-[color,background-color,box-shadow,transform] active:opacity-90 sm:min-h-[52px] sm:gap-1",
+        "orbita-focus-ring flex min-h-[48px] flex-col items-center justify-center gap-0.5 rounded-[var(--radius-card)] px-0.5 transition-[color,background-color,box-shadow,transform] active:opacity-90 sm:min-h-[52px] sm:gap-1",
         isCenter
-          ? "max-w-[5.75rem] shrink-0 flex-none basis-[5.25rem] sm:max-w-[6.5rem] sm:basis-[5.75rem]"
-          : "min-w-0",
+          ? "relative z-[1] w-[4.75rem] shrink-0 flex-none sm:w-[5.25rem]"
+          : "min-w-0 flex-1 basis-0",
         active ? "orbita-chrome-tab-active" : "orbita-chrome-tab-idle",
         isCenter &&
           !active &&
@@ -139,8 +139,8 @@ export default function BottomNav() {
       className="orbita-chrome-surface fixed bottom-0 left-0 right-0 z-[100] border-t border-[color-mix(in_srgb,var(--color-border)_85%,transparent)] pb-[env(safe-area-inset-bottom,0px)] shadow-nav md:hidden"
       aria-label="Navegación principal"
     >
-      <div className="orbita-bottom-nav-safe mx-auto flex max-w-[1400px] items-stretch justify-between gap-1 px-1 py-2 sm:gap-2 sm:px-3 sm:py-3">
-        <div className="flex min-w-0 flex-1 justify-end gap-0.5 sm:gap-1">
+      <div className="orbita-bottom-nav-safe mx-auto grid w-full max-w-[1400px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-end gap-x-1.5 px-2 py-2 sm:gap-x-2 sm:px-3 sm:py-3">
+        <div className="flex min-w-0 justify-end gap-0.5 sm:gap-1">
           {left.map((tab) => (
             <NavButton
               key={tab.route}
@@ -151,7 +151,7 @@ export default function BottomNav() {
           ))}
         </div>
 
-        <div className="flex shrink-0 items-stretch justify-center px-0.5 sm:px-1">
+        <div className="isolate flex justify-center px-0.5 sm:px-1">
           <NavButton
             tab={center}
             active={center.match(pathname)}
@@ -159,7 +159,7 @@ export default function BottomNav() {
           />
         </div>
 
-        <div className="flex min-w-0 flex-1 justify-start gap-0.5 sm:gap-1">
+        <div className="flex min-w-0 justify-start gap-0.5 sm:gap-1">
           {right.map((tab) => (
             <NavButton
               key={tab.route}

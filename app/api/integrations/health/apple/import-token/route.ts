@@ -92,6 +92,7 @@ export async function POST(req: NextRequest) {
       import_token: plain,
       created_at: (inserted?.created_at as string) ?? new Date().toISOString(),
       shortcut_file_url: "/shortcuts/Orvita-Importar-Salud-Hoy.shortcut",
+      shortcut_historial_15_file_url: "/shortcuts/Orvita-Salud-Historial-15Dias.shortcut",
       ...(icloud ? { shortcut_icloud_url: icloud } : {}),
       import_path: "/api/integrations/health/apple/import",
     })

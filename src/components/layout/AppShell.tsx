@@ -250,8 +250,8 @@ export function AppShell({
         }}
       >
         <div className="orbita-shell-inline orbita-header-bar mx-auto max-w-[1400px]">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-[var(--spacing-lg)]">
-            <div className="flex min-w-0 flex-col gap-1">
+          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-[var(--spacing-lg)]">
+            <div className="flex min-w-0 flex-col gap-1.5">
               <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
                 <span
                   className="h-2.5 w-2.5 shrink-0 rounded-full sm:h-[9px] sm:w-[9px]"
@@ -262,35 +262,35 @@ export function AppShell({
                   }}
                   aria-hidden
                 />
-                <h1 className="orbita-large-title m-0 max-sm:text-[1.65rem]">Órvita</h1>
+                <h1 className="orbita-large-title m-0 max-sm:text-[1.55rem]">Órvita</h1>
                 <span className="hidden text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-secondary)] sm:inline">
                   Sistema operativo estratégico
                 </span>
               </div>
-              <span className="pl-[22px] text-[15px] leading-snug tracking-[-0.01em] text-[var(--color-text-primary)] max-sm:text-base max-sm:leading-snug">
-                {pathname.startsWith("/auth") && !isAppMockMode()
-                  ? "Inicia sesión para continuar"
-                  : userName == null
-                    ? isAppMockMode()
-                      ? "Cargando…"
-                      : "…"
-                    : `Hola, ${userName}`}
-              </span>
+              <div className="flex min-w-0 flex-col gap-0.5 pl-[22px]">
+                <span className="text-[15px] font-medium leading-snug tracking-[-0.01em] text-[var(--color-text-primary)] max-sm:text-[0.9375rem] max-sm:leading-snug">
+                  {pathname.startsWith("/auth") && !isAppMockMode()
+                    ? "Inicia sesión para continuar"
+                    : userName == null
+                      ? isAppMockMode()
+                        ? "Cargando…"
+                        : "…"
+                      : `Hola, ${userName}`}
+                </span>
+                <time
+                  dateTime={agendaTodayYmd()}
+                  className="w-fit text-[11px] font-medium capitalize leading-snug text-[var(--color-text-secondary)] sm:text-xs sm:font-normal"
+                >
+                  {headerDateLabel}
+                </time>
+              </div>
             </div>
 
-            <div className="flex w-full flex-wrap items-end gap-2 max-sm:justify-between sm:w-auto sm:items-center sm:justify-end sm:gap-[var(--spacing-md)]">
-              <time
-                dateTime={agendaTodayYmd()}
-                className="min-w-0 max-sm:flex-1 max-sm:text-[12px] max-sm:font-medium shrink-0 text-[11px] capitalize text-[var(--color-text-secondary)] sm:w-auto sm:text-xs"
-              >
-                {headerDateLabel}
-              </time>
-
-              <div className="flex shrink-0 flex-wrap items-end justify-end gap-1.5 sm:items-center sm:gap-[var(--spacing-md)]">
+            <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 sm:shrink-0 sm:gap-[var(--spacing-md)]">
               <NotificationsBell />
 
               <button
-                className="orbita-header-action orbita-focus-ring max-sm:!min-h-9 max-sm:gap-1 max-sm:px-2 max-sm:py-1 max-sm:text-[10px] max-sm:tracking-[0.1em] sm:min-h-0 sm:py-1.5"
+                className="orbita-header-action orbita-focus-ring max-sm:!min-h-9 max-sm:gap-1 max-sm:px-2.5 max-sm:py-1.5 max-sm:text-[10px] max-sm:tracking-[0.08em] sm:min-h-0 sm:py-1.5"
                 onClick={cycleTheme}
                 type="button"
               >
@@ -302,7 +302,7 @@ export function AppShell({
                 type="button"
                 onClick={handleLogout}
                 disabled={loggingOut}
-                className="orbita-header-action orbita-header-action--surface orbita-focus-ring max-sm:!min-h-9 max-sm:gap-1 max-sm:px-2 max-sm:py-1 max-sm:text-[10px] max-sm:tracking-[0.1em] sm:min-h-0 sm:py-1.5"
+                className="orbita-header-action orbita-header-action--surface orbita-focus-ring max-sm:!min-h-9 max-sm:gap-1 max-sm:px-2.5 max-sm:py-1.5 max-sm:text-[10px] max-sm:tracking-[0.08em] sm:min-h-0 sm:py-1.5"
               >
                 <LogOut className="h-3 w-3 sm:h-3.5 sm:w-3.5" aria-hidden />
                 {loggingOut ? "Saliendo..." : "Salir"}
@@ -312,15 +312,15 @@ export function AppShell({
                 <button
                   type="button"
                   onClick={() => setOpen((prev) => !prev)}
-                  className="orbita-icon-button orbita-focus-ring h-16 w-16 overflow-hidden p-0 sm:h-9 sm:w-9"
+                  className="orbita-icon-button orbita-focus-ring h-11 w-11 overflow-hidden rounded-full p-0 ring-1 ring-[color-mix(in_srgb,var(--color-border)_65%,transparent)] sm:h-9 sm:w-9 sm:ring-0"
                   aria-label="Menú de usuario"
                   aria-expanded={open}
                 >
                   {avatarUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={avatarUrl} alt="" className="h-full w-full object-cover" width={64} height={64} />
+                    <img src={avatarUrl} alt="" className="h-full w-full object-cover" width={44} height={44} />
                   ) : (
-                    <User className="h-7 w-7 sm:h-4 sm:w-4" aria-hidden />
+                    <User className="h-5 w-5 sm:h-4 sm:w-4" aria-hidden />
                   )}
                 </button>
                 {open && (
@@ -365,7 +365,6 @@ export function AppShell({
                     </button>
                   </div>
                 )}
-              </div>
               </div>
             </div>
           </div>

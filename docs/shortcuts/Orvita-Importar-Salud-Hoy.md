@@ -7,10 +7,12 @@ Flujo canónico: el iPhone lee métricas de **Salud** (y entrenos), arma un JSON
 | Artefacto | Uso |
 |-----------|-----|
 | `public/shortcuts/Orvita-Importar-Salud-Hoy.shortcut` | Descarga / instalación (`shortcuts://import-shortcut?url=…`). Firmado en macOS con `shortcuts sign`. |
+| `public/shortcuts/Orvita-Salud-Historial-15Dias.shortcut` | Segundo atajo (mismo flujo que el diario, otro nombre; ver comentario en el plist). Generado con `--variant historial-15d`. |
 | `scripts/shortcuts/orvita-importar-salud-hoy.shortcut.src.plist` | Plist fuente (también regenerable). |
-| `scripts/build-orvita-health-shortcut.py` | Genera el plist: `python3 scripts/build-orvita-health-shortcut.py` |
+| `scripts/shortcuts/orvita-salud-historial-15dias.src.plist` | Plist del segundo atajo (`--variant historial-15d`). |
+| `scripts/build-orvita-health-shortcut.py` | Genera plist(es): `python3 scripts/build-orvita-health-shortcut.py` y `… --variant historial-15d`. |
 
-Nombre exacto en la biblioteca de Atajos: **Orvita-Importar-Salud-Hoy** (debe coincidir con `ORVITA_HEALTH_SHORTCUT_NAME` en `lib/shortcuts/orvitaHealthShortcut.ts`).
+Nombre exacto en la biblioteca de Atajos: **Orvita-Importar-Salud-Hoy** (debe coincidir con `ORVITA_HEALTH_SHORTCUT_NAME` en `lib/shortcuts/orvitaHealthShortcut.ts`). El histórico usa **Orvita-Salud-Historial-15Dias** (`ORVITA_HEALTH_HISTORIAL15_SHORTCUT_NAME`).
 
 ## Endpoint
 

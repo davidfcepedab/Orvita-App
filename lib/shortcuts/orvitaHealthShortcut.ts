@@ -7,10 +7,23 @@ import { siteOrigin } from "@/lib/site/origin"
  * Si en Atajos lo renombraste, el botón "Abrir atajo" de la web o un widget con el nombre antiguo fallará con
  * "el archivo no existe" hasta que reinstales el .shortcut o restaures el nombre.
  */
+/** Bust de caché en enlaces de descarga (CDN / PWA). Subir cuando cambie el binario en `public/shortcuts/`. */
+export const ORVITA_HEALTH_SHORTCUT_ASSET_VERSION = "20260429h"
+
 /** Nombre exacto en la biblioteca de Atajos (debe coincidir con «Nombre del atajo» al compartir / ejecutar). */
 export const ORVITA_HEALTH_SHORTCUT_NAME = "Orvita-Importar-Salud-Hoy"
 
 export const ORVITA_HEALTH_SHORTCUT_FILE_PATH = "/shortcuts/Orvita-Importar-Salud-Hoy.shortcut"
+
+/** Segundo atajo (mismo flujo técnico que el diario; nombre distinto para instalar en paralelo). Backfill día-a-día real en roadmap. */
+export const ORVITA_HEALTH_HISTORIAL15_SHORTCUT_NAME = "Orvita-Salud-Historial-15Dias"
+
+export const ORVITA_HEALTH_HISTORIAL15_SHORTCUT_FILE_PATH = "/shortcuts/Orvita-Salud-Historial-15Dias.shortcut"
+
+function shortcutAssetQuery(): string {
+  const v = ORVITA_HEALTH_SHORTCUT_ASSET_VERSION.trim()
+  return v ? `?v=${encodeURIComponent(v)}` : ""
+}
 
 const ICLOUD_URL_ENV = "NEXT_PUBLIC_ORVITA_HEALTH_SHORTCUT_ICLOUD_URL"
 
@@ -31,17 +44,18 @@ export function getOrvitaHealthShortcutIcloudUrl(): string | null {
  * exige origen fiable (HTTPS o misma red en pruebas).
  */
 export function getOrvitaHealthShortcutFileUrl(): string {
+  const q = shortcutAssetQuery()
   if (typeof window === "undefined") {
-    return `${siteOrigin()}${ORVITA_HEALTH_SHORTCUT_FILE_PATH}`
+    return `${siteOrigin()}${ORVITA_HEALTH_SHORTCUT_FILE_PATH}${q}`
   }
 
   const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, "")
   if (fromEnv) {
-    return `${fromEnv}${ORVITA_HEALTH_SHORTCUT_FILE_PATH}`
+    return `${fromEnv}${ORVITA_HEALTH_SHORTCUT_FILE_PATH}${q}`
   }
 
   if (window.location.protocol === "https:") {
-    return `${window.location.origin}${ORVITA_HEALTH_SHORTCUT_FILE_PATH}`
+    return `${window.location.origin}${ORVITA_HEALTH_SHORTCUT_FILE_PATH}${q}`
   }
 
   if (
@@ -49,18 +63,28 @@ export function getOrvitaHealthShortcutFileUrl(): string {
     (window.location.hostname === "localhost" ||
       /^[0-9.]+$/u.test(window.location.hostname))
   ) {
-    return `${window.location.origin}${ORVITA_HEALTH_SHORTCUT_FILE_PATH}`
+    return `${window.location.origin}${ORVITA_HEALTH_SHORTCUT_FILE_PATH}${q}`
   }
 
-  return `https://orvita.app${ORVITA_HEALTH_SHORTCUT_FILE_PATH}`
+  return `https://orvita.app${ORVITA_HEALTH_SHORTCUT_FILE_PATH}${q}`
 }
 
 /** Misma ruta, mismo build que la página abierta: para enlace de descarga directa. */
 export function getOrvitaHealthShortcutDownloadFileUrl(): string {
+  const q = shortcutAssetQuery()
   if (typeof window === "undefined") {
-    return `${siteOrigin()}${ORVITA_HEALTH_SHORTCUT_FILE_PATH}`
+    return `${siteOrigin()}${ORVITA_HEALTH_SHORTCUT_FILE_PATH}${q}`
   }
-  return `${window.location.origin}${ORVITA_HEALTH_SHORTCUT_FILE_PATH}`
+  return `${window.location.origin}${ORVITA_HEALTH_SHORTCUT_FILE_PATH}${q}`
+}
+
+/** Descarga del segundo atajo (histórico / instalación paralela). */
+export function getOrvitaHealthHistorial15ShortcutDownloadFileUrl(): string {
+  const q = shortcutAssetQuery()
+  if (typeof window === "undefined") {
+    return `${siteOrigin()}${ORVITA_HEALTH_HISTORIAL15_SHORTCUT_FILE_PATH}${q}`
+  }
+  return `${window.location.origin}${ORVITA_HEALTH_HISTORIAL15_SHORTCUT_FILE_PATH}${q}`
 }
 
 /**
