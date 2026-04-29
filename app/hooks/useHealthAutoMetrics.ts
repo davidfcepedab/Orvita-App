@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import type { ShortcutHealthAnalyticsSnapshot } from "@/lib/health/shortcutHealthAnalytics"
 
@@ -24,9 +24,11 @@ export function useHealthAutoMetrics() {
   const [timeline, setTimeline] = useState<AutoHealthMetric[]>([])
   const [analytics, setAnalytics] = useState<ShortcutHealthAnalyticsSnapshot | null>(null)
   const [loading, setLoading] = useState(true)
+  const hasLoadedOnce = useRef(false)
 
-  const refetch = useCallback(async () => {
-    setLoading(true)
+  const refetch = useCallback(async (opts?: { silent?: boolean }) => {
+    const silent = Boolean(opts?.silent && hasLoadedOnce.current)
+    if (!silent) setLoading(true)
     try {
       const headers = await browserBearerHeaders()
       const res = await fetch("/api/integrations/health/metrics", { headers, cache: "no-store" })
@@ -44,12 +46,25 @@ export function useHealthAutoMetrics() {
         setAnalytics(null)
       }
     } finally {
+      hasLoadedOnce.current = true
       setLoading(false)
     }
   }, [])
 
   useEffect(() => {
     void refetch()
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void refetch({ silent: true })
+    }
+    const onPageShow = (ev: PageTransitionEvent) => {
+      if (ev.persisted) void refetch({ silent: true })
+    }
+    document.addEventListener("visibilitychange", onVisible)
+    window.addEventListener("pageshow", onPageShow)
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible)
+      window.removeEventListener("pageshow", onPageShow)
+    }
   }, [refetch])
 
   return { latest, timeline, analytics, loading, refetch }

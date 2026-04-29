@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { isAppMockMode, UI_HEALTH_CONTEXT_ERROR } from "@/lib/checkins/flags"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import { getContext } from "@/lib/getContext"
@@ -107,16 +107,21 @@ export function useSaludContext() {
   const [habitWater, setHabitWater] = useState<HabitWaterSnapshot | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const hasLoadedOnce = useRef(false)
 
   useEffect(() => {
     let active = true
 
-    const load = async () => {
+    const load = async (opts?: { silent?: boolean }) => {
+      const silent = Boolean(opts?.silent && hasLoadedOnce.current)
+      if (!silent) setLoading(true)
+
       if (isAppMockMode()) {
         setData(MOCK_CONTEXT)
         setPrefs({})
         setError(null)
         setLoading(false)
+        hasLoadedOnce.current = true
         return
       }
 
@@ -187,6 +192,7 @@ export function useSaludContext() {
         }
       } finally {
         if (active) {
+          hasLoadedOnce.current = true
           setLoading(false)
         }
       }
@@ -194,8 +200,20 @@ export function useSaludContext() {
 
     void load()
 
+    const onVisible = () => {
+      if (document.visibilityState !== "visible" || !active) return
+      void load({ silent: true })
+    }
+    const onPageShow = (ev: PageTransitionEvent) => {
+      if (ev.persisted && active) void load({ silent: true })
+    }
+    document.addEventListener("visibilitychange", onVisible)
+    window.addEventListener("pageshow", onPageShow)
+
     return () => {
       active = false
+      document.removeEventListener("visibilitychange", onVisible)
+      window.removeEventListener("pageshow", onPageShow)
     }
   }, [])
 

@@ -121,7 +121,14 @@ export async function GET(req: NextRequest) {
       capital: capitalSnapshot,
     })
 
-    return NextResponse.json({ success: true, data: context })
+    return NextResponse.json(
+      { success: true, data: context },
+      {
+        headers: {
+          "Cache-Control": "private, no-store, max-age=0, must-revalidate",
+        },
+      },
+    )
   } catch (error: unknown) {
     const detail = error instanceof Error ? error.message : "Error desconocido"
     console.error("CONTEXT ERROR:", detail)

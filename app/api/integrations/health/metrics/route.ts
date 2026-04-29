@@ -47,12 +47,19 @@ export async function GET(req: NextRequest) {
       .filter((r): r is HealthMetricRowLike => r != null)
     const analytics = buildShortcutAnalyticsPayload(timeline, latest)
 
-    return NextResponse.json({
-      success: true,
-      latest,
-      timeline,
-      analytics,
-    })
+    return NextResponse.json(
+      {
+        success: true,
+        latest,
+        timeline,
+        analytics,
+      },
+      {
+        headers: {
+          "Cache-Control": "private, no-store, max-age=0, must-revalidate",
+        },
+      },
+    )
   } catch (error) {
     const message = error instanceof Error ? error.message : "No se pudo leer métricas de salud"
     return NextResponse.json({ success: false, error: message }, { status: 500 })

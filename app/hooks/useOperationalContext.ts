@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import type { OperationalContextData } from "@/lib/operational/types"
@@ -17,8 +17,10 @@ export function useOperationalContext() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [reloadToken, setReloadToken] = useState(0)
+  const silentNextRef = useRef(false)
 
   const refetch = useCallback(() => {
+    silentNextRef.current = false
     setReloadToken((n) => n + 1)
   }, [])
 
@@ -26,8 +28,10 @@ export function useOperationalContext() {
     let cancelled = false
 
     const run = async () => {
+      const silent = silentNextRef.current
+      silentNextRef.current = false
       try {
-        setLoading(true)
+        if (!silent) setLoading(true)
         setError(null)
         const headers = await contextHeaders()
         const ac = new AbortController()
@@ -67,9 +71,25 @@ export function useOperationalContext() {
       }
     }
 
-    run()
+    void run()
+
+    const onVisible = () => {
+      if (document.visibilityState !== "visible" || cancelled) return
+      silentNextRef.current = true
+      setReloadToken((n) => n + 1)
+    }
+    const onPageShow = (ev: PageTransitionEvent) => {
+      if (!ev.persisted || cancelled) return
+      silentNextRef.current = true
+      setReloadToken((n) => n + 1)
+    }
+    document.addEventListener("visibilitychange", onVisible)
+    window.addEventListener("pageshow", onPageShow)
+
     return () => {
       cancelled = true
+      document.removeEventListener("visibilitychange", onVisible)
+      window.removeEventListener("pageshow", onPageShow)
     }
   }, [reloadToken])
 
