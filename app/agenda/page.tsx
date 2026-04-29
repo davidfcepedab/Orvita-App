@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type FormEvent } from "react"
 import { Card } from "@/src/components/ui/Card"
-import { CalendarDays, CalendarRange, LayoutGrid, ListChecks, Plus, Search } from "lucide-react"
+import { CalendarDays, CalendarRange, ChevronDown, ChevronUp, LayoutGrid, ListChecks, Plus, Search, SlidersHorizontal } from "lucide-react"
 
 import { GoogleAgendaPanel } from "@/app/agenda/GoogleAgendaPanel"
 import { AgendaColorLegend } from "@/app/agenda/AgendaColorLegend"
@@ -231,6 +231,7 @@ export default function AgendaPage() {
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
   const [monthViewYm, setMonthViewYm] = useState(() => agendaTodayYmd().slice(0, 7))
   const [showPastAgenda, setShowPastAgenda] = useState(false)
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   const [formOpen, setFormOpen] = useState(false)
   const [formSubmitError, setFormSubmitError] = useState<string | null>(null)
   const [householdMembers, setHouseholdMembers] = useState<HouseholdMemberDTO[]>([])
@@ -245,6 +246,15 @@ export default function AgendaPage() {
     duration: 30,
     priority: "media" as "alta" | "media" | "baja",
   })
+
+  const mobileFilterCount = useMemo(() => {
+    let n = 0
+    if (tab !== "todas") n += 1
+    if (priority) n += 1
+    if (showPastAgenda) n += 1
+    if (query.trim()) n += 1
+    return n
+  }, [tab, priority, showPastAgenda, query])
 
   // Cargar miembros al entrar en la agenda (no solo al abrir el formulario): sin esto no hay
   // selector de responsable ni barra rápida en recordatorios Google.
@@ -620,63 +630,88 @@ export default function AgendaPage() {
                   />
                 </div>
               </div>
-              <div className="mt-1 flex flex-col gap-1 border-t border-[var(--color-border)] pt-1 sm:mt-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-1.5 sm:gap-y-1 sm:pt-1.5">
-                <div className="hidden min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 sm:flex">
-                  <AgendaColorLegend inline omitHeading sourcesOnly dense />
-                </div>
-                <span className="hidden h-3 w-px shrink-0 self-stretch bg-[var(--color-border)] md:block" aria-hidden />
-                <div className="flex min-w-0 flex-nowrap gap-0.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden">
-                  {tabs.map((item) => (
-                    <button
-                      key={item.key}
-                      type="button"
-                      onClick={() => setTab(item.key)}
-                      className="inline-flex min-h-7 shrink-0 items-center gap-1 rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[8.5px] sm:min-h-0 sm:px-2 sm:py-px sm:text-[9px]"
-                      style={{
-                        background: tab === item.key ? "var(--color-surface-alt)" : "transparent",
-                        color: tab === item.key ? "var(--color-text-primary)" : "var(--color-text-secondary)",
-                        boxShadow:
-                          tab === item.key ? "inset 0 0 0 1px color-mix(in srgb, var(--color-border) 80%, transparent)" : undefined,
-                      }}
-                    >
-                      {item.label}
-                      <span className="inline-block min-w-[2.25ch] text-right tabular-nums text-[9px] text-[var(--color-text-secondary)]">
-                        {countByTab(item.key)}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-                <span className="hidden h-3 w-px shrink-0 self-stretch bg-[var(--color-border)] lg:block" aria-hidden />
-                <div className="flex w-full min-w-0 flex-nowrap items-center gap-0.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:pb-0 lg:ml-auto lg:w-auto lg:justify-end [&::-webkit-scrollbar]:hidden">
+              <div className="mt-1 border-t border-[var(--color-border)] pt-1 sm:mt-1.5 sm:pt-1.5">
+                <div className="sm:hidden">
                   <button
                     type="button"
-                    onClick={() => setShowPastAgenda((v) => !v)}
-                    className="min-h-7 shrink-0 rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[8px] font-medium uppercase tracking-[0.06em] sm:min-h-0 sm:px-2 sm:py-px sm:text-[8.5px]"
-                    style={{
-                      background: showPastAgenda ? "var(--color-surface-alt)" : "transparent",
-                      color: showPastAgenda ? "var(--color-text-primary)" : "var(--color-text-secondary)",
-                    }}
-                    title="Muestra ítems con fecha anterior a hoy"
+                    onClick={() => setMobileFiltersOpen((v) => !v)}
+                    className="flex w-full items-center justify-between rounded-md border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-2.5 py-1.5 text-left"
+                    aria-expanded={mobileFiltersOpen}
+                    aria-controls="agenda-mobile-filters"
                   >
-                    {showPastAgenda ? "Ocultar pasado" : "Ver fechas anteriores"}
+                    <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-secondary)]">
+                      <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden />
+                      Filtros
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 text-[10px] text-[var(--color-text-secondary)]">
+                      {mobileFilterCount > 0 ? `${mobileFilterCount} activos` : "Sin filtros"}
+                      {mobileFiltersOpen ? <ChevronUp className="h-3.5 w-3.5" aria-hidden /> : <ChevronDown className="h-3.5 w-3.5" aria-hidden />}
+                    </span>
                   </button>
-                  {priorities.map((item) => (
+                </div>
+                <div id="agenda-mobile-filters" className={`${mobileFiltersOpen ? "mt-1.5 flex flex-col gap-1" : "hidden"} sm:mt-0 sm:flex sm:flex-col sm:gap-y-1`}>
+                  <div className="hidden min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 sm:flex">
+                    <AgendaColorLegend inline omitHeading sourcesOnly dense />
+                  </div>
+                  <span className="hidden h-3 w-px shrink-0 self-stretch bg-[var(--color-border)] md:block" aria-hidden />
+                  <div className="flex min-w-0 flex-nowrap gap-0.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden">
+                    {tabs.map((item) => (
+                      <button
+                        key={item.key}
+                        type="button"
+                        onClick={() => setTab(item.key)}
+                        className="inline-flex min-h-7 shrink-0 items-center gap-1 rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[8.5px] sm:min-h-0 sm:px-2 sm:py-px sm:text-[9px]"
+                        style={{
+                          background: tab === item.key ? "var(--color-surface-alt)" : "transparent",
+                          color: tab === item.key ? "var(--color-text-primary)" : "var(--color-text-secondary)",
+                          boxShadow:
+                            tab === item.key ? "inset 0 0 0 1px color-mix(in srgb, var(--color-border) 80%, transparent)" : undefined,
+                        }}
+                      >
+                        {item.label}
+                        <span className="inline-block min-w-[2.25ch] text-right tabular-nums text-[9px] text-[var(--color-text-secondary)]">
+                          {countByTab(item.key)}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  <span className="hidden h-3 w-px shrink-0 self-stretch bg-[var(--color-border)] lg:block" aria-hidden />
+                  <div className="flex w-full min-w-0 flex-nowrap items-center gap-0.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:pb-0 lg:ml-auto lg:w-auto lg:justify-end [&::-webkit-scrollbar]:hidden">
                     <button
-                      key={item}
                       type="button"
-                      onClick={() => setPriority(priority === item ? "" : item)}
-                      className="min-h-7 shrink-0 rounded-full px-2 py-0.5 text-[8px] uppercase tracking-[0.06em] sm:min-h-0 sm:px-2 sm:py-px sm:text-[8.5px]"
-                      style={priorityFilterControlStyle(item, priority === item)}
+                      onClick={() => setShowPastAgenda((v) => !v)}
+                      className="min-h-7 shrink-0 rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[8px] font-medium uppercase tracking-[0.06em] sm:min-h-0 sm:px-2 sm:py-px sm:text-[8.5px]"
+                      style={{
+                        background: showPastAgenda ? "var(--color-surface-alt)" : "transparent",
+                        color: showPastAgenda ? "var(--color-text-primary)" : "var(--color-text-secondary)",
+                      }}
+                      title="Muestra ítems con fecha anterior a hoy"
                     >
-                      {formatPriorityTitle(item)}
+                      {showPastAgenda ? "Ocultar pasado" : "Ver fechas anteriores"}
                     </button>
-                  ))}
+                    {priorities.map((item) => (
+                      <button
+                        key={item}
+                        type="button"
+                        onClick={() => setPriority(priority === item ? "" : item)}
+                        className="min-h-7 shrink-0 rounded-full px-2 py-0.5 text-[8px] uppercase tracking-[0.06em] sm:min-h-0 sm:px-2 sm:py-px sm:text-[8.5px]"
+                        style={priorityFilterControlStyle(item, priority === item)}
+                      >
+                        {formatPriorityTitle(item)}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
 
             <div className="rounded-lg border border-[var(--color-border)] p-0.5 sm:p-1.5" style={agendaPanelSurfaceStyle}>
-              <div className="flex flex-col gap-1 sm:flex-row sm:items-stretch sm:gap-2">
+              <div className="px-1 py-1 sm:hidden">
+                <p className="m-0 text-[9px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-secondary)]">
+                  Vista: {viewOptions.find((v) => v.key === view)?.label ?? "Lista"}
+                </p>
+              </div>
+              <div className={`${mobileFiltersOpen ? "flex" : "hidden"} flex-col gap-1 sm:flex sm:flex-row sm:items-stretch sm:gap-2`}>
                 <div
                   className="flex min-w-0 flex-1 flex-row flex-wrap gap-0.5 sm:gap-1"
                   role="tablist"

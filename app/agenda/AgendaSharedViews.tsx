@@ -1,7 +1,7 @@
 "use client"
 
 import { Fragment, useEffect, useMemo, useState } from "react"
-import { Bell, Calendar, ChevronLeft, ChevronRight, Minus, Plus } from "lucide-react"
+import { Bell, Calendar, ChevronDown, ChevronLeft, ChevronRight, Minus, Plus } from "lucide-react"
 import { Card } from "@/src/components/ui/Card"
 import type { UiAgendaTask } from "@/app/agenda/mapAgendaTaskToUi"
 import type { GoogleCalendarFeedState } from "@/app/hooks/useGoogleCalendar"
@@ -700,16 +700,58 @@ export function AgendaSharedList({
     { id: "next_week" as const, label: "Próx. semana", labelSm: "Próx.", title: "Lunes a domingo de la semana siguiente" },
     { id: "this_month" as const, label: "Mes", labelSm: "Mes", title: "Desde hoy hasta el último día del mes en curso" },
   ] satisfies { id: UnifiedListHorizonId; label: string; labelSm: string; title: string }[]
+  const [mobileHorizonOpen, setMobileHorizonOpen] = useState(false)
+  const activeHorizonTab = horizonTabs.find((tab) => tab.id === listHorizon) ?? horizonTabs[0]
 
   return (
     <div
       className={`${agendaViewStackClass} flex min-h-[min(280px,42dvh)] flex-col gap-2 sm:gap-2.5`}
       aria-label="Cronología unificada: Órvita y Google (Tasks con fecha en orden de vencimiento; sin fecha al final)"
     >
+      <div className="sm:hidden">
+        <button
+          type="button"
+          onClick={() => setMobileHorizonOpen((v) => !v)}
+          className="flex w-full items-center justify-between rounded-md border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-2.5 py-1.5 text-left"
+          aria-expanded={mobileHorizonOpen}
+          aria-controls="agenda-mobile-horizon"
+        >
+          <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-secondary)]">
+            Ventana: {activeHorizonTab.labelSm}
+          </span>
+          <ChevronDown
+            className={`h-3.5 w-3.5 text-[var(--color-text-secondary)] transition-transform ${mobileHorizonOpen ? "rotate-180" : ""}`}
+            aria-hidden
+          />
+        </button>
+        <div id="agenda-mobile-horizon" className={`${mobileHorizonOpen ? "mt-1 grid grid-cols-3 gap-1" : "hidden"}`}>
+          {horizonTabs.map((tab) => {
+            const active = listHorizon === tab.id
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                title={tab.title}
+                onClick={() => {
+                  setListHorizon(tab.id)
+                  setMobileHorizonOpen(false)
+                }}
+                className={`min-h-[28px] shrink-0 rounded-md border px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-[0.06em] transition ${
+                  active
+                    ? "border-[color-mix(in_srgb,var(--color-accent-primary)_42%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-primary)_10%,var(--color-surface))] text-[var(--color-text-primary)]"
+                    : "border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-secondary)]"
+                }`}
+              >
+                {tab.labelSm}
+              </button>
+            )
+          })}
+        </div>
+      </div>
       <div
         role="toolbar"
         aria-label="Ventana temporal de la cronología"
-        className="flex max-sm:-mx-0.5 max-sm:gap-0.5 max-sm:overflow-x-auto max-sm:px-0.5 max-sm:pb-0.5 max-sm:[-ms-overflow-style:none] max-sm:[scrollbar-width:none] max-sm:[&::-webkit-scrollbar]:hidden sm:flex-wrap sm:items-center sm:gap-1.5"
+        className="hidden sm:flex sm:flex-wrap sm:items-center sm:gap-1.5"
       >
         {horizonTabs.map((tab) => {
           const active = listHorizon === tab.id
@@ -719,14 +761,13 @@ export function AgendaSharedList({
               type="button"
               title={tab.title}
               onClick={() => setListHorizon(tab.id)}
-              className={`min-h-7 shrink-0 rounded-full border px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-[0.06em] transition max-sm:min-h-[26px] sm:px-2.5 sm:text-[10px] ${
+              className={`min-h-7 shrink-0 rounded-full border px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.06em] transition ${
                 active
                   ? "border-[color-mix(in_srgb,var(--color-accent-primary)_42%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-primary)_10%,var(--color-surface))] text-[var(--color-text-primary)]"
                   : "border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface)]"
               }`}
             >
-              <span className="sm:hidden">{tab.labelSm}</span>
-              <span className="hidden sm:inline">{tab.label}</span>
+              {tab.label}
             </button>
           )
         })}
