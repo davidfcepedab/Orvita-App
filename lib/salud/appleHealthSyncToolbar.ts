@@ -1,4 +1,5 @@
 import type { AutoHealthMetric } from "@/app/hooks/useHealthAutoMetrics"
+import { formatLocalDateLabelEsCo } from "@/lib/agenda/localDateKey"
 import { SALUD_SEM } from "@/lib/salud/saludSemanticPalette"
 import { saludHexToRgba } from "@/lib/salud/saludThemeStyles"
 
@@ -9,16 +10,14 @@ export function appleHealthSyncStale(observedAt: string | null | undefined): boo
   return Number.isFinite(ageMs) && ageMs > 36 * 60 * 60 * 1000
 }
 
+/**
+ * Etiqueta del **día de los datos** (YYYY-MM-DD / ancla mediodía UTC en DB), en zona de agenda.
+ * No muestra hora: el timestamp de `health_metrics.observed_at` no es “hora de importación”.
+ */
 export function formatAppleHealthSyncWhen(iso: string | null | undefined) {
   if (!iso) return "Aún no hay sincronización"
-  try {
-    return new Intl.DateTimeFormat("es-LA", {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(new Date(iso))
-  } catch {
-    return iso
-  }
+  const lbl = formatLocalDateLabelEsCo(iso)
+  return lbl === "—" ? iso : lbl
 }
 
 /**
@@ -90,7 +89,8 @@ export function buildAppleHealthHeroSyncLine(
       statusColor: SALUD_SEM.risk,
     }
   }
-  const when = new Intl.DateTimeFormat("es-LA", { dateStyle: "short", timeStyle: "short" }).format(new Date(latest.observed_at))
+  const dayLabel = formatLocalDateLabelEsCo(latest.observed_at)
+  const when = dayLabel === "—" ? latest.observed_at : dayLabel
   const fresh = appleHealthSyncFreshness(latest.observed_at)
   const hint = appleHealthSyncAgeHint(latest.observed_at)
   const detailCore = hint ? `${when} · ${hint}` : when

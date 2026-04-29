@@ -1,5 +1,6 @@
 "use client"
 
+import { formatLocalDateLabelEsCo } from "@/lib/agenda/localDateKey"
 import { formatHoursMinutesFromSeconds } from "@/lib/health/shortcutHealthAnalytics"
 import type { AutoHealthMetric } from "@/app/hooks/useHealthAutoMetrics"
 import type { ShortcutHealthAnalyticsSnapshot } from "@/lib/health/shortcutHealthAnalytics"
@@ -69,13 +70,7 @@ export function AppleShortcutAnalyticsSection({ latest, analytics, loading }: Pr
           {latest?.source === "apple_health_shortcut" && latest.observed_at ? (
             <p className="m-0 mt-2 inline-flex max-w-full items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--color-accent-health)_35%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_10%,transparent)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-primary)]">
               <span className="text-[var(--color-accent-health)]">●</span>
-              Importado vía Atajo ·{" "}
-              {new Date(latest.observed_at).toLocaleString("es-CO", {
-                day: "numeric",
-                month: "short",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
+              Importado vía Atajo · {formatLocalDateLabelEsCo(latest.observed_at)}
             </p>
           ) : null}
         </div>

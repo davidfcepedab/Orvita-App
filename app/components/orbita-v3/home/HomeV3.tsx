@@ -6,6 +6,7 @@ import { Activity, AlertCircle, CheckCircle2, Wind } from "lucide-react"
 import { useOperationalContext } from "@/app/hooks/useOperationalContext"
 import { StrategicDayHero } from "@/app/components/orbita-v3/strategic/StrategicDayCapitalHero"
 import { useHealthAutoMetrics } from "@/app/hooks/useHealthAutoMetrics"
+import { formatLocalDateLabelEsCo } from "@/lib/agenda/localDateKey"
 import type { OperationalHabit } from "@/lib/operational/types"
 
 export default function HomeV3() {
@@ -198,13 +199,7 @@ export default function HomeV3() {
                   </p>
                   {autoHealth?.source === "apple_health_shortcut" && autoHealth.observed_at ? (
                     <p className="mt-1 text-[11px]" style={{ color: theme.textMuted }}>
-                      Importado vía Atajo ·{" "}
-                      {new Date(autoHealth.observed_at).toLocaleString("es-CO", {
-                        day: "numeric",
-                        month: "short",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      Importado vía Atajo · {formatLocalDateLabelEsCo(autoHealth.observed_at)}
                     </p>
                   ) : autoHealth?.observed_at ? (
                     <p className="mt-1 text-[11px]" style={{ color: theme.textMuted }}>

@@ -1,3 +1,4 @@
+import { agendaTodayYmd } from "@/lib/agenda/localDateKey"
 import {
   APPLE_BUNDLE_MAPPED_KEYS,
   APPLE_SHORTCUT_BUNDLE_INPUT_KEYS,
@@ -194,8 +195,9 @@ function bundleHasPlausibleMetrics(bundle: Record<string, unknown>): boolean {
   return false
 }
 
-function observedAtUtcToday(): { iso: string; ymd: string } {
-  const ymd = new Date().toISOString().slice(0, 10)
+/** Día civil de la app (`NEXT_PUBLIC_AGENDA_DISPLAY_TZ`), no medianoche UTC — evita “mañana” en América por la noche. */
+function observedAtInferredToday(): { iso: string; ymd: string } {
+  const ymd = agendaTodayYmd()
   return parseObservedAtToIso(ymd) as { iso: string; ymd: string }
 }
 
@@ -382,7 +384,7 @@ export function normalizeAppleHealthPayload(input: unknown): NormalizeAppleHealt
   let o = firstParsedObservedFromBody(body, bundle)
   let observed_at_inferred = false
   if (!o && !strictObservedAtEnv() && bundleHasPlausibleMetrics(bundle)) {
-    o = observedAtUtcToday()
+    o = observedAtInferredToday()
     observed_at_inferred = true
   }
   if (!o) {

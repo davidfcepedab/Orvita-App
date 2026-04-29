@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { Activity, Landmark, RefreshCw } from "lucide-react"
+import { formatLocalDateLabelEsCo } from "@/lib/agenda/localDateKey"
 import type { AppleHealthContextSignals, OperationalCapitalSnapshot } from "@/lib/operational/types"
 
 function formatCop(n: number) {
@@ -43,16 +44,8 @@ function healthCorrelationLine(h: AppleHealthContextSignals): string | null {
 }
 
 function formatObservedAt(iso: string) {
-  try {
-    return new Date(iso).toLocaleString("es-CO", {
-      day: "numeric",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-    })
-  } catch {
-    return iso.slice(0, 16)
-  }
+  const lbl = formatLocalDateLabelEsCo(iso)
+  return lbl === "—" ? iso.slice(0, 16) : lbl
 }
 
 type Props = {

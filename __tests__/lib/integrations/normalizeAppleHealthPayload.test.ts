@@ -101,7 +101,7 @@ describe("normalizeAppleHealthPayload", () => {
     expect(r.observed_at).toBe("2026-04-25")
   })
 
-  test("Atajos: observed_at null pero hay métricas → día UTC hoy (inferido)", () => {
+  test("Atajos: observed_at null pero hay métricas → día civil hoy en zona agenda (inferido)", () => {
     const r = normalizeAppleHealthPayload({
       source: "x",
       schema_version: "1",

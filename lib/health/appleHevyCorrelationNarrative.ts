@@ -1,3 +1,4 @@
+import { formatLocalDateLabelEsCo } from "@/lib/agenda/localDateKey"
 import type { AppleHealthContextSignals } from "@/lib/operational/types"
 import type { TrainingDay } from "@/src/modules/training/types"
 import { describeAppleHealthVersusHevy, HEVY_INTEGRATION_LABEL } from "@/lib/health/appleHevyRelation"
@@ -31,7 +32,9 @@ export function buildAppleHevyCorrelationPromptFacts(
   if (!apple) {
     lines.push("Aún no hay una última importación desde el teléfono con Apple Salud, o no llegó a Órvita.")
   } else {
-    lines.push(`La última sincronización recibida es del ${new Date(apple.observed_at).toLocaleString("es", { dateStyle: "short", timeStyle: "short" })}.`)
+    lines.push(
+      `La última sincronización recibida corresponde al día ${formatLocalDateLabelEsCo(apple.observed_at)} (dato de salud, no hora exacta de envío).`,
+    )
     if (apple.sync_stale) {
       lines.push("Esa lectura tiene más de un día y medio; conviene volver a enviarla para que el cuadro esté al día.")
     }
