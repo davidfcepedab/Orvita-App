@@ -7,6 +7,8 @@ import { BedDouble, ChevronDown, Dumbbell, Lightbulb, MoonStar, Settings, Sparkl
 import { useOrbitaSkin } from "@/app/contexts/AppContext"
 import type { SaludContextSnapshot } from "@/app/salud/_hooks/useSaludContext"
 import type { AutoHealthMetric } from "@/app/hooks/useHealthAutoMetrics"
+import type { ShortcutHealthAnalyticsSnapshot } from "@/lib/health/shortcutHealthAnalytics"
+import { AppleShortcutAnalyticsPanels } from "@/app/health/AppleShortcutAnalyticsSection"
 import { buildOrvitaRunShortcutHref, ORVITA_HEALTH_SHORTCUT_NAME } from "@/lib/shortcuts/orvitaHealthShortcut"
 import {
   appleHealthSyncStaleFromMetric,
@@ -21,6 +23,8 @@ type Props = {
   latest: AutoHealthMetric | null
   loading: boolean
   onRefresh: () => Promise<void>
+  /** Rejilla “última lectura / ritmo / tendencia” del atajo (misma data que el antiguo bloque aparte). */
+  analytics?: ShortcutHealthAnalyticsSnapshot | null
 }
 
 function estadoChipColors(label: string): { fg: string; bg: string } {
@@ -62,7 +66,7 @@ function formatWorkoutDuration(latest: AutoHealthMetric | null): string {
   return "Sin dato"
 }
 
-export default function AppleHealthLuxurySection({ salud, latest, loading, onRefresh }: Props) {
+export default function AppleHealthLuxurySection({ salud, latest, loading, onRefresh, analytics = null }: Props) {
   const theme = useOrbitaSkin()
 
   const panel = useMemo(() => saludPanelStyle(theme, 0.9), [theme])
@@ -158,8 +162,11 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
               Datos automáticos, con calma y precisión
             </h1>
             <p className="m-0 text-sm leading-relaxed sm:text-[15px]" style={{ color: theme.textMuted }}>
-              Apple no muestra Órvita dentro de Salud: lo que ves aquí es lo que ya guardamos cuando ejecutas el atajo en el
-              iPhone. La clave larga la creas en Configuración y la pegas una sola vez en el teléfono.
+              Los datos vienen del atajo en el iPhone (no dentro de la app Salud de Apple). Crea la clave una vez en{" "}
+              <Link href="/configuracion#apple-health-import-token" className="font-medium underline underline-offset-2" style={{ color: SALUD_SEM.energy }}>
+                Configuración
+              </Link>{" "}
+              y pégala en el atajo.
             </p>
           </div>
 
@@ -426,6 +433,13 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
               </div>
             )
           })}
+        </div>
+
+        <div className="relative space-y-3 border-t pt-6" style={{ borderColor: saludHexToRgba(theme.border, 0.55) }}>
+          <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: theme.textMuted }}>
+            Desglose del envío
+          </p>
+          <AppleShortcutAnalyticsPanels latest={latest} analytics={analytics} loading={loading} />
         </div>
 
         <div

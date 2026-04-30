@@ -148,22 +148,22 @@ function layerVariant(id: string, amount: number): "default" | "muted" | "danger
 function plRowShellClass(layerId: string, keyLine: boolean): string {
   const base = "border-b border-orbita-border/40 transition-colors"
   if (layerId === "continuity_prev") {
-    return `${base} border-l-[3px] border-l-indigo-500/65 bg-indigo-500/[0.07] dark:bg-indigo-950/32`
+    return `${base} border-t-[3px] border-t-indigo-500/65 bg-indigo-500/[0.07] dark:bg-indigo-950/32`
   }
   if (layerId === "income") {
-    return `${base} border-l-[3px] border-l-emerald-500/70 bg-emerald-500/[0.07] dark:bg-emerald-950/35`
+    return `${base} border-t-[3px] border-t-emerald-500/70 bg-emerald-500/[0.07] dark:bg-emerald-950/35`
   }
   if (layerId === "expense_all") {
-    return `${base} border-l-[3px] border-l-rose-500/65 bg-rose-500/[0.06] dark:bg-rose-950/28`
+    return `${base} border-t-[3px] border-t-rose-500/65 bg-rose-500/[0.06] dark:bg-rose-950/28`
   }
   if (layerId === "net") {
-    return `${base} border-l-[3px] border-l-[color-mix(in_srgb,var(--color-accent-finance)_72%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-finance)_11%,transparent)]`
+    return `${base} border-t-[3px] border-t-[color-mix(in_srgb,var(--color-accent-finance)_72%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-finance)_11%,transparent)]`
   }
   if (layerId === "gap_kpi_struct" || layerId === "unexplained") {
-    return `${base} border-l-[3px] border-l-amber-500/60 bg-amber-500/[0.06] dark:bg-amber-950/30`
+    return `${base} border-t-[3px] border-t-amber-500/60 bg-amber-500/[0.06] dark:bg-amber-950/30`
   }
   if (layerId === "bridges") {
-    return `${base} border-l-[3px] border-l-sky-500/55 bg-sky-500/[0.05] dark:bg-sky-950/28`
+    return `${base} border-t-[3px] border-t-sky-500/55 bg-sky-500/[0.05] dark:bg-sky-950/28`
   }
   if (keyLine) {
     return `${base} bg-[color-mix(in_srgb,var(--color-accent-finance)_7%,transparent)]`
@@ -172,10 +172,10 @@ function plRowShellClass(layerId: string, keyLine: boolean): string {
 }
 
 const SECTION_HEAD_CLASS: Record<string, string> = {
-  caja: "border-l-[3px] border-l-emerald-600/55 bg-emerald-500/[0.08] dark:bg-emerald-950/40",
-  operativo: "border-l-[3px] border-l-violet-500/50 bg-violet-500/[0.07] dark:bg-violet-950/35",
-  financiero: "border-l-[3px] border-l-sky-500/50 bg-sky-500/[0.06] dark:bg-sky-950/32",
-  cierre: "border-l-[3px] border-l-amber-500/55 bg-amber-500/[0.07] dark:bg-amber-950/32",
+  caja: "border-t-[3px] border-t-emerald-600/55 bg-emerald-500/[0.08] dark:bg-emerald-950/40",
+  operativo: "border-t-[3px] border-t-violet-500/50 bg-violet-500/[0.07] dark:bg-violet-950/35",
+  financiero: "border-t-[3px] border-t-sky-500/50 bg-sky-500/[0.06] dark:bg-sky-950/32",
+  cierre: "border-t-[3px] border-t-amber-500/55 bg-amber-500/[0.07] dark:bg-amber-950/32",
 }
 
 /** Desplegables auxiliares bajo el encabezado del P&amp;L (misma piel). */

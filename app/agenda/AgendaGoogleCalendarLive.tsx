@@ -52,13 +52,27 @@ export function AgendaGoogleCalendarLive({ feed, embedded = false }: AgendaGoogl
               key={ev.id}
               style={{
                 marginBottom: "6px",
-                paddingLeft: "4px",
-                borderLeft: `3px solid ${AGENDA_COLOR.calendar}`,
+                display: "flex",
+                gap: "10px",
+                alignItems: "flex-start",
               }}
             >
-              <span style={{ fontWeight: 500 }}>{ev.summary}</span>
-              <span style={{ color: "var(--color-text-secondary)", marginLeft: "8px" }}>
-                {ev.startAt ? `${ev.startAt.slice(0, 10)}${ev.allDay ? "" : ` ${ev.startAt.slice(11, 16)}`}` : "—"}
+              <span
+                style={{
+                  marginTop: "5px",
+                  width: "7px",
+                  height: "7px",
+                  borderRadius: "999px",
+                  background: AGENDA_COLOR.calendar,
+                  flexShrink: 0,
+                }}
+                aria-hidden
+              />
+              <span className="min-w-0">
+                <span style={{ fontWeight: 500 }}>{ev.summary}</span>
+                <span style={{ color: "var(--color-text-secondary)", marginLeft: "8px" }}>
+                  {ev.startAt ? `${ev.startAt.slice(0, 10)}${ev.allDay ? "" : ` ${ev.startAt.slice(11, 16)}`}` : "—"}
+                </span>
               </span>
             </li>
           ))}
@@ -83,7 +97,7 @@ export function AgendaGoogleCalendarLive({ feed, embedded = false }: AgendaGoogl
   return (
     <Card
       className="p-0 overflow-hidden"
-      style={agendaCardSurfaceStyle(`4px solid ${AGENDA_COLOR.calendar}`)}
+      style={agendaCardSurfaceStyle(AGENDA_COLOR.calendar)}
     >
       <div style={{ padding: "var(--spacing-md)" }}>{body}</div>
     </Card>

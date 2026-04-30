@@ -21,15 +21,21 @@ export function SaludInsightSection({ brief }: Props) {
 
   return (
     <section
-      className="rounded-xl border-l-[3px] px-4 py-3 sm:px-4 sm:py-3.5"
+      className="relative overflow-hidden rounded-xl border px-4 py-3 sm:px-4 sm:py-3.5"
       style={{
         ...saludPanelStyle(theme, 0.92),
         borderColor: theme.border,
-        borderLeftColor: accent,
         boxShadow: "none",
       }}
       aria-labelledby="salud-insight-heading"
     >
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-[3px]"
+        style={{
+          background: `linear-gradient(90deg, ${accent}, color-mix(in srgb, ${accent} 35%, transparent) 42%, transparent 78%)`,
+        }}
+        aria-hidden
+      />
       <h2
         id="salud-insight-heading"
         className="m-0 text-[10px] font-semibold uppercase tracking-[0.18em]"

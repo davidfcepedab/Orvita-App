@@ -256,29 +256,50 @@ export default function CheckinPage() {
     return form.source === "sheets" && Boolean(String(form.sheet_row_id ?? "").trim())
   }, [form.source, form.sheet_row_id])
 
-  const [hevyIntegrationOk, setHevyIntegrationOk] = useState(false)
+  const [hevyCheckinGate, setHevyCheckinGate] = useState<{ serverConfigured: boolean; userLinked: boolean }>({
+    serverConfigured: false,
+    userLinked: false,
+  })
 
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      try {
-        const headers = await buildJsonHeaders()
-        const res = await fetch("/api/integrations/hevy/workouts", { cache: "no-store", headers })
-        const json = (await res.json()) as { success?: boolean; code?: string }
-        if (!cancelled) {
-          setHevyIntegrationOk(res.ok && json.success === true && json.code !== "not_configured")
-        }
-      } catch {
-        if (!cancelled) setHevyIntegrationOk(false)
+  const refreshHevyCheckinGate = useCallback(async () => {
+    try {
+      const headers = await buildJsonHeaders()
+      const res = await fetch("/api/integrations/hevy/status", { cache: "no-store", headers })
+      const json = (await res.json()) as {
+        success?: boolean
+        serverConfigured?: boolean
+        userLinked?: boolean
       }
-    })()
-    return () => {
-      cancelled = true
+      if (res.ok && json.success) {
+        setHevyCheckinGate({
+          serverConfigured: Boolean(json.serverConfigured),
+          userLinked: Boolean(json.userLinked),
+        })
+      } else {
+        setHevyCheckinGate({ serverConfigured: false, userLinked: false })
+      }
+    } catch {
+      setHevyCheckinGate({ serverConfigured: false, userLinked: false })
     }
   }, [])
 
-  /** Con Hevy activo priorizamos medidas en la app Hevy; con hoja, la hoja manda. */
-  const bodyMeasuresHevyLocked = hevyIntegrationOk && !bodyMeasuresSheetsLocked
+  useEffect(() => {
+    void refreshHevyCheckinGate()
+  }, [refreshHevyCheckinGate])
+
+  useEffect(() => {
+    const onVis = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        void refreshHevyCheckinGate()
+      }
+    }
+    document.addEventListener("visibilitychange", onVis)
+    return () => document.removeEventListener("visibilitychange", onVis)
+  }, [refreshHevyCheckinGate])
+
+  /** Hevy en servidor + usuario con enlace persistido (ver `/api/integrations/hevy/status`); con hoja, la hoja manda. */
+  const bodyMeasuresHevyLocked =
+    hevyCheckinGate.serverConfigured && hevyCheckinGate.userLinked && !bodyMeasuresSheetsLocked
   const bodyMeasuresLocked = bodyMeasuresSheetsLocked || bodyMeasuresHevyLocked
 
   useEffect(() => {
@@ -925,9 +946,9 @@ export default function CheckinPage() {
                     <Trophy className="h-4 w-4" strokeWidth={2.25} aria-hidden />
                   </span>
                   <div className="min-w-0 space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-orbita-primary">Bitácora guiada · mini misión</p>
-                    <p className="text-[11px] leading-snug text-orbita-secondary">
-                      Tres respuestas cortas cierran el círculo con sueño, ánimo y vínculos. Cada una suma al mapa del día y a patrones en el tiempo.
+                    <p className="text-xs font-semibold uppercase tracking-wide text-orbita-primary">Bitácora guiada</p>
+                    <p className="text-[12px] leading-relaxed text-orbita-primary/85 sm:text-[13px]">
+                      Tres notas breves (opcionales pero útiles) enlazan descanso, ánimo y vínculos con el resto del check-in.
                     </p>
                     <Link
                       href="/training"
@@ -939,19 +960,26 @@ export default function CheckinPage() {
                   </div>
                 </div>
                 <div
-                  className="flex shrink-0 gap-1 rounded-full border border-orbita-border/50 bg-orbita-surface-alt/80 p-1"
-                  aria-label={`Progreso de la bitácora: ${journalFilledCount} de 3`}
+                  className="flex shrink-0 items-center gap-2 rounded-full border border-orbita-border/50 bg-orbita-surface-alt/80 py-1 pl-2 pr-1"
+                  role="group"
+                  aria-label={`Bitácora: ${journalFilledCount} de 3 apartados con texto`}
+                  title="Indicador de los 3 apartados de la bitácora (rellena cada caja de texto para marcar uno como hecho)"
                 >
-                  {[0, 1, 2].map((i) => (
-                    <span
-                      key={i}
-                      className={`h-2 w-6 rounded-full transition-colors ${
-                        journalFilledCount > i
-                          ? "bg-[color-mix(in_srgb,var(--color-accent-health)_70%,var(--color-accent-agenda))] shadow-[0_0_12px_color-mix(in_srgb,var(--color-accent-health)_45%,transparent)]"
-                          : "bg-orbita-border/50"
-                      }`}
-                    />
-                  ))}
+                  <span className="text-[10px] font-bold tabular-nums text-orbita-primary sm:text-[11px]">
+                    {journalFilledCount}/3
+                  </span>
+                  <div className="flex gap-1" aria-hidden>
+                    {[0, 1, 2].map((i) => (
+                      <span
+                        key={i}
+                        className={`h-2 w-6 rounded-full transition-colors ${
+                          journalFilledCount > i
+                            ? "bg-[color-mix(in_srgb,var(--color-accent-health)_70%,var(--color-accent-agenda))] shadow-[0_0_12px_color-mix(in_srgb,var(--color-accent-health)_45%,transparent)]"
+                            : "bg-orbita-border/50"
+                        }`}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
               {journalFilledCount === 3 ? (
@@ -970,7 +998,7 @@ export default function CheckinPage() {
               )}
               <TextareaRow
                 label="1 · Momento difícil de soltar"
-                hint="¿Qué tramo del día se te pegó? Una frase basta."
+                hint="Qué tramo del día te costó soltar; con una frase basta."
                 icon={PenLine}
                 value={form.journalMomento}
                 onChange={(v) => handleChange("journalMomento", v)}
@@ -979,7 +1007,7 @@ export default function CheckinPage() {
               />
               <TextareaRow
                 label="2 · Micro gratitud"
-                hint="Algo pequeño y real, sin postureo."
+                hint="Algo pequeño y concreto que te haya ayudado hoy."
                 icon={Sparkles}
                 value={form.journalGratitud}
                 onChange={(v) => handleChange("journalGratitud", v)}
@@ -988,7 +1016,7 @@ export default function CheckinPage() {
               />
               <TextareaRow
                 label="3 · Personas importantes"
-                hint="Conecta con “Calidad de conexión” del bloque de día."
+                hint="Personas o vínculos que marcaron el día (complementa «Calidad de conexión» en el check-in de día)."
                 icon={Heart}
                 value={form.journalVinculo}
                 onChange={(v) => handleChange("journalVinculo", v)}
@@ -1019,20 +1047,36 @@ export default function CheckinPage() {
               Estos números ya vienen de tu hoja del día enlazada. Para cambiarlos, corrígelos en la hoja y vuelve a cargar el check-in; aquí los dejamos fijos para que no se mezclen versiones por error.
             </div>
           ) : null}
+          {!bodyMeasuresSheetsLocked && hevyCheckinGate.serverConfigured && !hevyCheckinGate.userLinked ? (
+            <p className="m-0 text-[11px] leading-snug text-orbita-secondary sm:text-[12px]">
+              Hevy está disponible en el servidor: enlaza tu uso en Órvita desde{" "}
+              <Link
+                href="/configuracion#acordeon-config-hevy"
+                className="font-semibold text-orbita-primary underline-offset-2 hover:underline"
+              >
+                Configuración → Hevy
+              </Link>{" "}
+              (sincronizar) o abriendo{" "}
+              <Link href="/training" className="font-semibold text-orbita-primary underline-offset-2 hover:underline">
+                Entrenamiento
+              </Link>{" "}
+              una vez; así evitamos bloquear medidas hasta confirmar el enlace.
+            </p>
+          ) : null}
           {bodyMeasuresHevyLocked ? (
             <div
               role="status"
-              className="rounded-xl border border-[color-mix(in_srgb,var(--color-accent-health)_38%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_10%,var(--color-surface))] px-3 py-2.5 text-[11px] leading-snug text-orbita-primary"
+              className="rounded-xl border border-[color-mix(in_srgb,var(--color-accent-health)_38%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_10%,var(--color-surface))] px-3 py-2.5 text-[12px] leading-snug text-orbita-primary sm:text-[13px]"
             >
               <span className="mr-1.5 inline-flex items-center gap-1 rounded-full border border-[color-mix(in_srgb,var(--color-accent-health)_45%,var(--color-border))] bg-orbita-surface-alt/90 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-orbita-primary">
                 <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-accent-health)] shadow-[0_0_8px_var(--color-accent-health)]" aria-hidden />
-                Hevy
+                Hevy activo
               </span>
-              Medidas y composición: regístralas en la app Hevy (perfil / medidas) para no duplicar aquí. Órvita sincroniza entrenos vía integración; los números corporales del check-in de hoy se leen en{" "}
+              Peso y medidas: edítalos en Hevy (perfil). Aquí solo lectura para no duplicar; al guardar el check-in se reflejan en{" "}
               <Link href="/training" className="font-semibold text-[var(--color-accent-health)] underline-offset-2 hover:underline">
-                /training
-              </Link>{" "}
-              cuando guardas el check-in con datos en la base.
+                Entrenamiento
+              </Link>
+              .
             </div>
           ) : null}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

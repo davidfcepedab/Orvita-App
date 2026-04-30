@@ -11,7 +11,6 @@ import {
   Minus,
   MoonStar,
   Sparkles,
-  Target,
   TriangleAlert,
   TrendingDown,
   TrendingUp,
@@ -181,7 +180,6 @@ export default function HealthOperationsV3({
   if (health.loading) return null
   if (health.error) return null
 
-  const appleReadiness = latest?.readiness_score ?? null
   const hydrationTarget = Math.max(health.hydrationTarget, 0.1)
   const hydrationProgress = Math.min(100, (health.hydrationCurrent / hydrationTarget) * 100)
   const dayMomentum = Math.round((hydrationProgress + supplementCompliancePct) / 2)
@@ -251,73 +249,14 @@ export default function HealthOperationsV3({
           </div>
         </div>
 
-        <div
-          className="mt-8 border-t pt-8"
-          style={{ borderColor: saludHexToRgba(theme.border, 0.65) }}
-        >
-          <div className="flex gap-3">
-            <TriangleAlert
-              className="mt-0.5 h-6 w-6 shrink-0"
-              strokeWidth={1.65}
-              style={{
-                color:
-                  appleReadiness != null && health.scoreSalud > 0 && Math.abs(appleReadiness - health.scoreSalud) >= 14
-                    ? SALUD_SEM.warn
-                    : theme.textMuted,
-              }}
-              aria-hidden
-            />
-            <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em]" style={{ color: theme.textMuted }}>
-                Apple vs check-in
-              </p>
-              <p className="mt-1.5 text-sm leading-relaxed sm:text-[15px]" style={{ color: theme.text }}>
-                {appleReadiness != null && health.scoreSalud > 0
-                  ? appleReadiness > health.scoreSalud
-                    ? `Apple te ve mejor de lo que te sientes (${appleReadiness} vs ${health.scoreSalud}).`
-                    : `Te sientes mejor de lo que marca Apple (${health.scoreSalud} vs ${appleReadiness}).`
-                  : "Aún no hay cruce completo entre Apple y check-in."}
-              </p>
-            </div>
-          </div>
-          <ul className="mt-5 list-none space-y-3 p-0 sm:space-y-4">
-            <li className="flex items-start gap-3">
-              <span
-                className="mt-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-                style={{ backgroundColor: SALUD_SEM.energy }}
-              >
-                1
-              </span>
-              <Target className="mt-1 h-6 w-6 shrink-0" strokeWidth={1.65} style={{ color: SALUD_SEM.energy }} aria-hidden />
-              <p className="m-0 min-w-0 flex-1 text-sm font-bold leading-snug sm:text-base">
-                Ajusta carga del día antes de entrenar.
-              </p>
-            </li>
-            <li className="flex items-start gap-3">
-              <span
-                className="mt-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-                style={{ backgroundColor: SALUD_SEM.recovery }}
-              >
-                2
-              </span>
-              <Droplets className="mt-1 h-6 w-6 shrink-0" strokeWidth={1.65} style={{ color: SALUD_SEM.recovery }} aria-hidden />
-              <p className="m-0 min-w-0 flex-1 text-sm font-bold leading-snug sm:text-base">
-                Cierra sueño e hidratación con intención hoy.
-              </p>
-            </li>
-          </ul>
-        </div>
-
         <div className="mt-8 border-t pt-8" style={{ borderColor: theme.border }}>
           <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.22em]" style={{ color: theme.textMuted }}>
             Tu check-in (Órvita interna)
           </p>
           <p className="mb-3 mt-1 text-[10px] leading-snug sm:text-[11px]" style={{ color: theme.textMuted }}>
-            Las tres primeras métricas son subjetivas <strong className="font-medium text-inherit">0–100</strong> del último
-            check-in. <strong className="font-medium text-inherit">Recuperación percibida</strong> hoy usa el mismo eje base
-            que salud emocional en el motor de contexto (sin campo aparte en la fila de check-in). El{" "}
-            <strong className="font-medium text-inherit">índice de energía</strong> es un compuesto interno acotado{" "}
-            <strong className="font-medium text-inherit">12–99</strong> (≈55% salud + 45% físico, redondeado).
+            Tres primeras: <strong className="font-medium text-inherit">0–100</strong> subjetivas del último check-in.
+            Recuperación percibida comparte eje con salud emocional. Índice de energía: compuesto{" "}
+            <strong className="font-medium text-inherit">12–99</strong> (≈ salud + físico).
           </p>
           <div className="grid grid-cols-1 gap-4 min-[480px]:grid-cols-2 xl:grid-cols-4">
             {[

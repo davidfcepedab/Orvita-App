@@ -123,16 +123,16 @@ function ledgerRunsFromAccounts(accounts: LedgerAccountRow[]): LedgerAccountRun[
 
 function ledgerSectionShellClass(accountClass: string): string {
   const shell =
-    "mt-3 first:mt-0 rounded-xl border border-l-[5px] px-3 py-3 shadow-sm sm:px-4 sm:py-3.5"
+    "mt-3 first:mt-0 rounded-xl border border-t-[5px] px-3 py-3 shadow-sm sm:px-4 sm:py-3.5"
   switch (accountClass) {
     case "ahorro":
-      return `${shell} border-teal-400/55 border-l-teal-600 bg-teal-100/95 text-teal-950 shadow-teal-900/10 dark:border-teal-800/80 dark:border-l-teal-400 dark:bg-teal-950/55 dark:text-teal-50 dark:shadow-black/25`
+      return `${shell} border-teal-400/55 border-t-teal-600 bg-teal-100/95 text-teal-950 shadow-teal-900/10 dark:border-teal-800/80 dark:border-t-teal-400 dark:bg-teal-950/55 dark:text-teal-50 dark:shadow-black/25`
     case "tarjeta_credito":
-      return `${shell} border-sky-400/55 border-l-sky-600 bg-sky-100/95 text-sky-950 shadow-sky-900/10 dark:border-sky-800/80 dark:border-l-sky-400 dark:bg-sky-950/50 dark:text-sky-50 dark:shadow-black/25`
+      return `${shell} border-sky-400/55 border-t-sky-600 bg-sky-100/95 text-sky-950 shadow-sky-900/10 dark:border-sky-800/80 dark:border-t-sky-400 dark:bg-sky-950/50 dark:text-sky-50 dark:shadow-black/25`
     case "credito":
-      return `${shell} border-violet-400/55 border-l-violet-600 bg-violet-100/95 text-violet-950 shadow-violet-900/10 dark:border-violet-800/80 dark:border-l-violet-400 dark:bg-violet-950/50 dark:text-violet-50 dark:shadow-black/25`
+      return `${shell} border-violet-400/55 border-t-violet-600 bg-violet-100/95 text-violet-950 shadow-violet-900/10 dark:border-violet-800/80 dark:border-t-violet-400 dark:bg-violet-950/50 dark:text-violet-50 dark:shadow-black/25`
     default:
-      return `${shell} border-orbita-border/60 border-l-orbita-primary/40 bg-orbita-surface-alt/55 text-orbita-primary dark:border-orbita-border/70 dark:bg-orbita-surface-alt/40`
+      return `${shell} border-orbita-border/60 border-t-orbita-primary/40 bg-orbita-surface-alt/55 text-orbita-primary dark:border-orbita-border/70 dark:bg-orbita-surface-alt/40`
   }
 }
 

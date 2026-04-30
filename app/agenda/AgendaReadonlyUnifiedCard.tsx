@@ -364,16 +364,16 @@ export function AgendaReadonlyUnifiedCard({
   const thinEdge = "var(--task-card-chrome-border, 0.5px solid var(--color-border))"
   const embeddedEdge = `1px solid ${chromeBorderVar}`
   const frameEmbedded = {
-    borderTop: embeddedEdge,
+    borderTop: shell.borderTop,
     borderRight: embeddedEdge,
     borderBottom: embeddedEdge,
-    borderLeft: shell.borderLeft,
+    borderLeft: embeddedEdge,
   } as const
   const frameCard = {
-    borderTop: thinEdge,
+    borderTop: shell.borderTop,
     borderRight: thinEdge,
     borderBottom: thinEdge,
-    borderLeft: shell.borderLeft,
+    borderLeft: thinEdge,
   } as const
 
   if (embedded) {

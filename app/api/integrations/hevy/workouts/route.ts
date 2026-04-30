@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
 import { isAppMockMode } from "@/lib/checkins/flags"
+import { ensureHevyUserLinkedPreference } from "@/lib/health/hevyUserLinkPreference"
 import { buildMockTrainingDays } from "@/lib/training/mockTrainingDays"
 import { fetchHevyWorkoutById, fetchHevyWorkouts, isHevyEnvConfigured } from "@/src/lib/integrations/hevy"
 import { normalizeHevyWorkout } from "@/src/modules/training/hevyNormalizer"
@@ -52,6 +53,12 @@ export async function GET(req: NextRequest) {
     const trainingDays = workouts.map((workout) => normalizeHevyWorkout(workout))
     const normalizedDetailed = enrichedWorkouts.map((workout) => normalizeHevyWorkout(extractWorkoutEntity(workout)))
     const mergedTrainingDays = mergePreferDetailed(trainingDays, normalizedDetailed)
+
+    try {
+      await ensureHevyUserLinkedPreference(auth.supabase, auth.userId)
+    } catch {
+      /* preferir entregar entrenos aunque falle el marcado de enlace */
+    }
 
     return NextResponse.json({
       success: true,

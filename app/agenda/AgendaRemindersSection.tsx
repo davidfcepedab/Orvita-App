@@ -61,12 +61,26 @@ export function AgendaRemindersSection({ feed, embedded = false }: AgendaReminde
               key={t.id}
               style={{
                 marginBottom: "6px",
-                paddingLeft: "4px",
-                borderLeft: `3px solid ${AGENDA_COLOR.reminder}`,
+                display: "flex",
+                gap: "10px",
+                alignItems: "flex-start",
               }}
             >
-              <span style={{ fontWeight: 500 }}>{t.title}</span>
-              <span style={{ color: AGENDA_COLOR.reminder, marginLeft: "8px" }}>{t.due ? t.due.slice(0, 10) : "—"}</span>
+              <span
+                style={{
+                  marginTop: "5px",
+                  width: "7px",
+                  height: "7px",
+                  borderRadius: "999px",
+                  background: AGENDA_COLOR.reminder,
+                  flexShrink: 0,
+                }}
+                aria-hidden
+              />
+              <span className="min-w-0">
+                <span style={{ fontWeight: 500 }}>{t.title}</span>
+                <span style={{ color: AGENDA_COLOR.reminder, marginLeft: "8px" }}>{t.due ? t.due.slice(0, 10) : "—"}</span>
+              </span>
             </li>
           ))}
           {upcoming.length === 0 && (
@@ -90,7 +104,7 @@ export function AgendaRemindersSection({ feed, embedded = false }: AgendaReminde
   return (
     <Card
       className="p-0 overflow-hidden"
-      style={agendaCardSurfaceStyle(`4px solid ${AGENDA_COLOR.reminder}`)}
+      style={agendaCardSurfaceStyle(AGENDA_COLOR.reminder)}
     >
       <div style={{ padding: "var(--spacing-md)" }}>{body}</div>
     </Card>

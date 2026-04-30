@@ -380,13 +380,21 @@ export function WaterHabitMissionBlock({
               {nudge ? (
                 <p
                   className={cn(
-                    "m-0 border-l-[3px] pl-3 text-[13px] leading-[1.45] text-[var(--color-text-secondary)]",
-                    "mt-3",
-                    nudge.tone === "urgent" ? "border-l-[var(--color-accent-danger)]" : "border-l-amber-500",
+                    "m-0 mt-3 flex gap-2.5 text-[13px] leading-[1.45] text-[var(--color-text-secondary)]",
                   )}
                   role="status"
                 >
-                  <span className="font-medium text-[var(--color-text-primary)]">{nudge.title}.</span> {nudge.body}
+                  <span
+                    className="mt-1.5 h-2 w-2 shrink-0 rounded-full"
+                    style={{
+                      backgroundColor:
+                        nudge.tone === "urgent" ? "var(--color-accent-danger)" : "rgb(245 158 11)",
+                    }}
+                    aria-hidden
+                  />
+                  <span className="min-w-0">
+                    <span className="font-medium text-[var(--color-text-primary)]">{nudge.title}.</span> {nudge.body}
+                  </span>
                 </p>
               ) : null}
 

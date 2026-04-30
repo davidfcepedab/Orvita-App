@@ -12,7 +12,7 @@ import type { CSSProperties } from "react"
  * ║  • --task-card-gap          gap del grid principal                        ║
  * ║  • --task-card-gap-tight    gap entre pills / filas secundarias         ║
  * ║  • --task-card-radius       border-radius contenedor embebido / mini      ║
- * ║  • --task-card-border-left  ancho borde izquierdo (tipo tarea)            ║
+ * ║  • --task-card-accent-top   grosor franja superior cromática (tipo tarea)  ║
  * ║                                                                           ║
  * ║  Tipografía                                                               ║
  * ║  • --task-card-title-size   título principal                              ║
@@ -41,7 +41,7 @@ export const TASK_CARD_ITERATION_QUERY = "taskCardDev"
 
 const BASE_VARS: Record<string, string> = {
   "--task-card-radius": "12px",
-  "--task-card-border-left": "4px",
+  "--task-card-accent-top": "3px",
   "--task-card-line-title": "1.25",
   "--task-card-line-body": "1.35",
   "--task-card-action-col-width": "min-content",

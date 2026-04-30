@@ -301,10 +301,12 @@ export function AgendaSharedKanban({
         { label: "Asignadas por Mi", items: grouped.asignada, accent: "var(--agenda-assigned)" },
       ].map((column) => (
         <div key={column.label} className={agendaKanbanColumnClass}>
-          <p
-            className={`m-0 border-l-[3px] border-solid pl-2.5 ${agendaOverlineClass.replace(/^m-0 /, "")}`}
-            style={{ borderLeftColor: column.accent }}
-          >
+          <p className={`m-0 flex items-center gap-2 ${agendaOverlineClass.replace(/^m-0 /, "")}`}>
+            <span
+              className="h-2.5 w-2.5 shrink-0 rounded-full"
+              style={{ backgroundColor: column.accent }}
+              aria-hidden
+            />
             {column.label}
           </p>
           {column.label === "Tareas Recibidas" && pendingInvites.length > 0 ? (
@@ -344,11 +346,17 @@ export function AgendaSharedKanban({
         </div>
       ))}
       <div className={agendaKanbanColumnClass}>
-        <div className="border-l-[3px] border-solid pl-2.5" style={{ borderLeftColor: "var(--agenda-personal)" }}>
+        <div className="flex items-start gap-2.5">
+          <span
+            className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--agenda-personal)]"
+            aria-hidden
+          />
+          <div className="min-w-0 flex-1">
           <p className={`m-0 ${agendaColumnHeadingClass}`}>Compartidas, personales y Google</p>
           <p className="m-0 mt-1 text-[10px] font-medium normal-case tracking-normal text-[var(--color-text-secondary)] sm:text-[11px]">
             Tareas del hogar y personales Órvita · eventos y recordatorios (solo lectura)
           </p>
+          </div>
         </div>
         {grouped.compartida.map((task) => (
           <AgendaOrvitaTaskCard

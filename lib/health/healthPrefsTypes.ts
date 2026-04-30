@@ -27,6 +27,11 @@ export type SupplementComplianceMap = Record<string, Record<string, boolean>>
 export type HealthPreferencesPayload = {
   supplements?: HealthSupplement[]
   supplementCompliance?: SupplementComplianceMap
+  /**
+   * ISO 8601: el usuario ya obtuvo datos Hevy vía Órvita (sync en Config o carga de entrenos).
+   * El check-in usa esto junto con `serverConfigured` para no asumir Hevy solo porque el API del proyecto responde.
+   */
+  hevyLinkedAt?: string | null
   /** Litros de agua registrados hoy (manual). */
   hydrationLitersToday?: number
   /** Meta litros/día (manual). */

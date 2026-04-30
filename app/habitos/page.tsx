@@ -1113,9 +1113,9 @@ export default function HabitosPage() {
                             : isSuperhabit
                               ? "color-mix(in srgb, var(--color-accent-warning) 38%, var(--color-border))"
                               : "var(--color-border)",
-                          borderWidth: isSuperhabit ? "1px 1px 1px 4px" : "1px",
+                          borderWidth: isSuperhabit ? "4px 1px 1px 1px" : "1px",
                           borderStyle: "solid",
-                          borderLeftColor: isSuperhabit
+                          borderTopColor: isSuperhabit
                             ? "color-mix(in srgb, var(--color-accent-warning) 72%, #c2410c)"
                             : undefined,
                           boxShadow: isSuperhabit

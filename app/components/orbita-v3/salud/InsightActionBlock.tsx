@@ -23,13 +23,19 @@ export function InsightActionBlock({ brief }: Props) {
 
   return (
     <section
-      className="rounded-2xl border-l-4 p-5 sm:p-6"
+      className="relative overflow-hidden rounded-2xl border p-5 sm:p-6"
       style={{
         ...saludPanelStyle(theme, 0.92),
         borderColor: theme.border,
-        borderLeftColor: accent,
       }}
     >
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-[3px]"
+        style={{
+          background: `linear-gradient(90deg, ${accent}, color-mix(in srgb, ${accent} 38%, transparent) 45%, transparent 80%)`,
+        }}
+        aria-hidden
+      />
       <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: theme.textMuted }}>
         Interpretación
       </p>

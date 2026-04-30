@@ -7,13 +7,13 @@ function mix(color: string, pct: number): string {
   return `color-mix(in srgb, ${color} ${pct}%, ${SURFACE})`
 }
 
-export type AgendaCardShell = Pick<CSSProperties, "background" | "borderLeft">
+export type AgendaCardShell = Pick<CSSProperties, "background" | "borderTop">
 
 /** Coral / terracota suave: recibidas o responsable = usuario actual. */
 function coralShell(): AgendaCardShell {
   return {
     background: mix("#fdba74", 18),
-    borderLeft: "4px solid color-mix(in srgb, #ea580c 34%, transparent)",
+    borderTop: "3px solid color-mix(in srgb, #ea580c 42%, transparent)",
   }
 }
 
@@ -25,13 +25,13 @@ export function orvitaAgendaCardShell(
   if (task.completed) {
     return {
       background: mix("#86efac", 34),
-      borderLeft: "4px solid color-mix(in srgb, #4ade80 50%, transparent)",
+      borderTop: "3px solid color-mix(in srgb, #4ade80 52%, transparent)",
     }
   }
   if (task.type === "compartida") {
     return {
       background: mix("#c4b5fd", 20),
-      borderLeft: "4px solid color-mix(in srgb, #7c3aed 40%, transparent)",
+      borderTop: "3px solid color-mix(in srgb, #7c3aed 44%, transparent)",
     }
   }
   const v = opts?.viewerUserId
@@ -40,7 +40,7 @@ export function orvitaAgendaCardShell(
   if (assignedToMe) return coralShell()
   return {
     background: mix("#a7f3d0", 15),
-    borderLeft: "4px solid color-mix(in srgb, #10b981 30%, transparent)",
+    borderTop: "3px solid color-mix(in srgb, #10b981 38%, transparent)",
   }
 }
 
@@ -54,19 +54,19 @@ export function googleAgendaCardShell(opts: {
   if (opts.completed) {
     return {
       background: mix("#86efac", 34),
-      borderLeft: "4px solid color-mix(in srgb, #4ade80 50%, transparent)",
+      borderTop: "3px solid color-mix(in srgb, #4ade80 52%, transparent)",
     }
   }
   if (opts.kind === "calendar") {
     return {
       background: mix("#ddd6fe", 22),
-      borderLeft: "4px solid color-mix(in srgb, #a78bfa 42%, transparent)",
+      borderTop: "3px solid color-mix(in srgb, #a78bfa 44%, transparent)",
     }
   }
   if (opts.assignedToViewer) return coralShell()
   return {
     background: mix("#bfdbfe", 18),
-    borderLeft: "4px solid color-mix(in srgb, #3b82f6 34%, transparent)",
+    borderTop: "3px solid color-mix(in srgb, #3b82f6 38%, transparent)",
   }
 }
 

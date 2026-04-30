@@ -9,7 +9,7 @@ test.describe("Salud — decisión diaria (smoke)", () => {
     test.setTimeout(120_000)
     await page.goto("/salud", { waitUntil: "domcontentloaded" })
 
-    const saludLandmark = page.getByRole("region", { name: "Salud — decisión, Apple Health, insight y operativo" })
+    const saludLandmark = page.getByRole("region", { name: /Salud: decisión, Apple Health e interpretación/i })
     await expect(saludLandmark).toBeVisible({ timeout: 90_000 })
     await expect(page.getByText("Decisión del día")).toBeVisible()
 
@@ -20,7 +20,7 @@ test.describe("Salud — decisión diaria (smoke)", () => {
     await expect(saludLandmark.getByText("Estratégico")).toBeVisible()
     await expect(saludLandmark.getByText("Bio-stack y combustible")).toBeVisible()
     await expect(saludLandmark.getByText("Predictivo e interpretación")).toBeVisible()
-    await expect(saludLandmark.getByRole("link", { name: /Ir a entrenamiento/i })).toBeVisible()
+    await expect(saludLandmark.getByRole("link", { name: /Entrenamiento/i })).toBeVisible()
   })
 
   test("entrada directa ?action=rest|adjust en /training limpia la URL", async ({ page }) => {

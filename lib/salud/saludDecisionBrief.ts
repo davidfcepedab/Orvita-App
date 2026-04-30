@@ -77,7 +77,7 @@ function buildExecutiveInsight(
   if (readiness.score < 64) {
     return "Estás cerca del límite de recuperación: ajusta volumen o intensidad antes de forzar."
   }
-  if (latest?.readiness_score != null && salud.scoreSalud > 0 && Math.abs(latest.readiness_score - salud.scoreSalud) >= 16) {
+  if (latest?.readiness_score != null && salud.scoreSalud > 0 && Math.abs(latest.readiness_score - salud.scoreSalud) >= 14) {
     return "Lo que marca el reloj y lo que sientes no coinciden: confía en tu cuerpo, no en forzar el plan."
   }
   return "Capacidad y señales alineadas: puedes ejecutar el plan con foco en técnica y cierre de sueño."

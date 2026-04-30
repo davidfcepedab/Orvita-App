@@ -830,8 +830,8 @@ export default function TransactionsPageClient() {
                       const isReconciliationAdjustment = isReconciliationAdjustmentDescription(tx.descripcion)
                       const rowBorder = "border-b border-orbita-border/50"
                       const rowTint = isIngreso
-                        ? "border-l-[3px] border-l-[color-mix(in_srgb,var(--color-accent-health)_58%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_6%,var(--color-surface))] hover:bg-[color-mix(in_srgb,var(--color-accent-health)_9%,var(--color-surface))]"
-                        : "border-l-[3px] border-l-[color-mix(in_srgb,var(--color-accent-danger)_52%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-danger)_5%,var(--color-surface))] hover:bg-[color-mix(in_srgb,var(--color-accent-danger)_8%,var(--color-surface))]"
+                        ? "shadow-[inset_0_2px_0_0_color-mix(in_srgb,var(--color-accent-health)_55%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_6%,var(--color-surface))] hover:bg-[color-mix(in_srgb,var(--color-accent-health)_9%,var(--color-surface))]"
+                        : "shadow-[inset_0_2px_0_0_color-mix(in_srgb,var(--color-accent-danger)_50%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-danger)_5%,var(--color-surface))] hover:bg-[color-mix(in_srgb,var(--color-accent-danger)_8%,var(--color-surface))]"
                       const editable = Boolean(supabaseEnabled && tx.id)
                       const pairOpts = pairsForRow(catalogPairs, tx.categoria, tx.subcategoria)
                       const currentPairKey = pairKey(tx.categoria, tx.subcategoria)

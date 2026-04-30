@@ -1,6 +1,5 @@
 "use client"
 
-import { formatLocalDateLabelEsCo } from "@/lib/agenda/localDateKey"
 import { formatHoursMinutesFromSeconds } from "@/lib/health/shortcutHealthAnalytics"
 import type { AutoHealthMetric } from "@/app/hooks/useHealthAutoMetrics"
 import type { ShortcutHealthAnalyticsSnapshot } from "@/lib/health/shortcutHealthAnalytics"
@@ -44,8 +43,8 @@ type Props = {
   loading: boolean
 }
 
-/** Resumen amable de lo último que mandó el atajo del iPhone — vista en /health. */
-export function AppleShortcutAnalyticsSection({ latest, analytics, loading }: Props) {
+/** Solo la rejilla de métricas (última lectura, ritmo, tendencia) — se incrusta en el panel principal de /salud. */
+export function AppleShortcutAnalyticsPanels({ latest, analytics, loading }: Props) {
   const sleepSec = latestToSeconds(latest)
   const sleepFmt = formatHoursMinutesFromSeconds(sleepSec)
   const wm = workoutMinutesFromLatest(latest)
@@ -55,23 +54,7 @@ export function AppleShortcutAnalyticsSection({ latest, analytics, loading }: Pr
   const sig = analytics?.signals
 
   return (
-    <Card className="min-w-0 border border-[color-mix(in_srgb,var(--color-border)_70%,transparent)]">
-      <div className="space-y-3 p-4 sm:p-6">
-        <div>
-          <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
-            Lo que llegó desde tu iPhone
-          </p>
-          <p className="m-0 mt-1 max-w-prose text-pretty text-[12px] leading-relaxed text-[var(--color-text-secondary)] sm:text-[13px]">
-            Aquí ves el último envío del atajo y cómo se sitúa frente a tu semana anterior. Son lecturas orientativas para el día a día, no un diagnóstico médico.
-          </p>
-          {latest?.source === "apple_health_shortcut" && latest.observed_at ? (
-            <p className="m-0 mt-2 inline-flex max-w-full items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--color-accent-health)_35%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_10%,transparent)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-primary)]">
-              <span className="text-[var(--color-accent-health)]">●</span>
-              Actualizado desde tu iPhone · {formatLocalDateLabelEsCo(latest.observed_at)}
-            </p>
-          ) : null}
-        </div>
-        <div className="grid gap-3 lg:grid-cols-3">
+    <div className="grid gap-3 lg:grid-cols-3">
           <div
             className="rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_50%,transparent)] p-3.5"
             style={{ minHeight: 200 }}
@@ -169,6 +152,21 @@ export function AppleShortcutAnalyticsSection({ latest, analytics, loading }: Pr
             )}
           </div>
         </div>
+  )
+}
+
+/**
+ * Bloque autónomo con marco (p. ej. otras rutas). En /salud se usa `AppleShortcutAnalyticsPanels` dentro del hero Apple.
+ * @deprecated Preferir incrustar `AppleShortcutAnalyticsPanels` en el panel principal para evitar duplicar copy.
+ */
+export function AppleShortcutAnalyticsSection({ latest, analytics, loading }: Props) {
+  return (
+    <Card className="min-w-0 border border-[color-mix(in_srgb,var(--color-border)_70%,transparent)]">
+      <div className="space-y-3 p-4 sm:p-6">
+        <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
+          Resumen del atajo
+        </p>
+        <AppleShortcutAnalyticsPanels latest={latest} analytics={analytics} loading={loading} />
       </div>
     </Card>
   )
