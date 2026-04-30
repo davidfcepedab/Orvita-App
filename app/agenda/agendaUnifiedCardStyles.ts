@@ -62,6 +62,18 @@ export function googleSourcePillStyle(kind: "reminder" | "calendar"): CSSPropert
 export const agendaPillBaseClass =
   "inline-flex max-w-full rounded-full px-2 py-px text-[9px] font-semibold uppercase tracking-[0.08em]"
 
+/** Botón circular secundario (editar / borrar) en tarjetas de agenda. */
+export const agendaTaskCircleActionClass =
+  "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--color-border)_62%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_94%,transparent)] text-[var(--color-text-secondary)] shadow-[0_1px_0_color-mix(in_srgb,var(--color-border)_40%,transparent)] transition-[transform,box-shadow,background-color,border-color,color] motion-safe:duration-200 hover:border-[color-mix(in_srgb,var(--color-accent-primary)_38%,var(--color-border))] hover:bg-[color-mix(in_srgb,var(--color-accent-primary)_10%,var(--color-surface))] hover:text-[var(--color-text-primary)] hover:shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-accent-primary)_22%,transparent),0_8px_20px_-12px_color-mix(in_srgb,var(--color-accent-primary)_25%,transparent)] active:scale-[0.96] disabled:pointer-events-none disabled:opacity-35"
+
+/** Texto bajo icono circular (oculto en pantallas muy estrechas). */
+export const agendaTaskCircleCaptionClass =
+  "hidden max-w-[4.25rem] truncate text-center text-[8px] font-semibold uppercase leading-tight tracking-[0.1em] text-[var(--color-text-secondary)] xs:block sm:max-w-none"
+
+/** Anillo del toggle principal (hecho / visto). */
+export const agendaTaskCheckOuterClass =
+  "inline-flex shrink-0 items-center justify-center rounded-full border-2 border-[color-mix(in_srgb,var(--color-border)_70%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_96%,transparent)] shadow-[0_1px_0_color-mix(in_srgb,var(--color-border)_35%,transparent)] transition-[transform,background-color,border-color,box-shadow] motion-safe:duration-300 hover:shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-accent-health)_28%,transparent)] disabled:opacity-45"
+
 /** Botones de filtro de prioridad (barra sticky): misma cromática que las tarjetas. */
 export function priorityFilterControlStyle(
   p: UiAgendaTask["priority"],

@@ -7,6 +7,9 @@ import type { UiAgendaTask } from "@/app/agenda/mapAgendaTaskToUi"
 import {
   agendaCardChrome,
   agendaPillBaseClass,
+  agendaTaskCheckOuterClass,
+  agendaTaskCircleActionClass,
+  agendaTaskCircleCaptionClass,
   priorityPillStyle,
   statusPillStyle,
 } from "@/app/agenda/agendaUnifiedCardStyles"
@@ -21,8 +24,10 @@ import type { TaskCardDensity } from "@/app/agenda/taskCardConfig"
 const moveBtnClass =
   "rounded-full bg-[color-mix(in_srgb,var(--color-accent-primary)_10%,transparent)] px-1.5 py-0 text-[9px] font-medium tracking-tight text-[var(--color-text-secondary)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-accent-primary)_16%,transparent)] hover:text-[var(--color-text-primary)]"
 
-const topActionBtnClass =
-  "inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--color-text-secondary)] transition-[opacity,color,background-color] hover:bg-[color-mix(in_srgb,var(--color-text-secondary)_8%,transparent)]"
+const checkSizeStyle = {
+  width: "var(--task-card-check-size, 2.35rem)",
+  height: "var(--task-card-check-size, 2.35rem)",
+} as const
 
 type Props = {
   task: UiAgendaTask
@@ -84,6 +89,9 @@ export function AgendaOrvitaTaskCard({
     task.assigneeAccepted ||
     (task.needsAcceptance && onAcceptAssignment)
   const canEditModal = Boolean(onOpenEdit && onPatchOrvita)
+  const hasSecondaryActions = Boolean(onDelete || canEditModal)
+  const hasCheckToggle = Boolean(onSaveComplete)
+  const showActionsColumn = hasSecondaryActions || hasCheckToggle
   const dueYmd = task.due?.slice(0, 10) ?? ""
   const showShiftDue =
     !done && Boolean(dueYmd) && isYmdTodayLocal(dueYmd) && Boolean(onPatchOrvita)
@@ -144,78 +152,91 @@ export function AgendaOrvitaTaskCard({
       }}
     >
       <div className="flex flex-col gap-1.5 px-3 py-2 sm:gap-2 sm:px-3 sm:py-2.5">
-        <div className="flex items-center justify-between gap-2">
-          <p className="m-0 flex min-w-0 flex-1 items-center gap-1 text-[9px] leading-tight text-[var(--color-text-secondary)] sm:text-[10px]">
-            <Clock className="h-2.5 w-2.5 shrink-0 opacity-55 sm:h-3 sm:w-3" strokeWidth={2} aria-hidden />
-            <span className="truncate">{dueMetaCompact(task.due)}</span>
-          </p>
-          {onDelete || canEditModal ? (
-            <div className="flex shrink-0 items-center gap-0.5">
-              {onDelete ? (
-                <button
-                  type="button"
-                  disabled={deleting || Boolean(deleteBusy)}
-                  onClick={() => void handleDelete()}
-                  className={`${topActionBtnClass} opacity-45 hover:opacity-100 hover:text-[var(--color-accent-danger)] disabled:opacity-25`}
-                  aria-label="Eliminar tarea"
-                  title="Eliminar"
-                >
-                  <Trash2 className="h-2.5 w-2.5" strokeWidth={2} aria-hidden />
-                </button>
-              ) : null}
-              {canEditModal ? (
-                <button
-                  type="button"
-                  className={`${topActionBtnClass} opacity-55 hover:opacity-100 hover:text-[var(--color-text-primary)]`}
-                  aria-label="Editar tarea"
-                  title="Editar"
-                  onClick={() => onOpenEdit?.(task)}
-                >
-                  <Pencil className="h-3 w-3" strokeWidth={1.75} aria-hidden />
-                </button>
-              ) : null}
+        {showActionsColumn ? (
+          <div className="flex min-w-0 gap-2.5 sm:gap-3">
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+              <p className="m-0 flex min-w-0 items-center gap-1 text-[9px] leading-tight text-[var(--color-text-secondary)] sm:text-[10px]">
+                <Clock className="h-2.5 w-2.5 shrink-0 opacity-55 sm:h-3 sm:w-3" strokeWidth={2} aria-hidden />
+                <span className="truncate">{dueMetaCompact(task.due)}</span>
+              </p>
+              <p className={`m-0 min-w-0 tracking-tight text-[var(--color-text-primary)] ${titleClass}`}>{task.title}</p>
             </div>
-          ) : null}
-        </div>
-
-        {onSaveComplete ? (
-          <div className="flex items-center justify-between gap-2">
-            <p
-              className={`m-0 min-w-0 flex-1 tracking-tight text-[var(--color-text-primary)] ${titleClass}`}
-            >
-              {task.title}
-            </p>
-            <div className="flex shrink-0 flex-col items-end gap-1">
-              <button
-                type="button"
-                role="checkbox"
-                aria-checked={done}
-                disabled={saving}
-                aria-label={done ? "Marcar como pendiente" : "Marcar como realizada"}
-                onClick={() => void toggleComplete()}
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-border)] text-[var(--agenda-assigned)] transition-[transform,background-color,border-color] duration-300 hover:border-[var(--agenda-assigned)] disabled:opacity-45"
-                style={
-                  done
-                    ? {
-                        borderColor: "color-mix(in srgb, #4ade80 70%, var(--color-border))",
-                        background: "color-mix(in srgb, #86efac 55%, transparent)",
-                      }
-                    : undefined
-                }
-              >
-                {done ? (
-                  <Check
-                    className={`h-3.5 w-3.5 text-[#15803d] ${checkPop ? "animate-agenda-check-pop" : ""}`}
-                    strokeWidth={2.75}
-                    aria-hidden
-                    onAnimationEnd={() => setCheckPop(false)}
-                  />
-                ) : null}
-              </button>
+            <div className="flex shrink-0 flex-col items-center gap-2.5 self-stretch pt-0.5">
+              {hasSecondaryActions ? (
+                <div className="flex items-start justify-center gap-2">
+                  {onDelete ? (
+                    <div className="flex flex-col items-center gap-0.5">
+                      <button
+                        type="button"
+                        disabled={deleting || Boolean(deleteBusy)}
+                        onClick={() => void handleDelete()}
+                        className={`${agendaTaskCircleActionClass} hover:!border-[color-mix(in_srgb,var(--color-accent-danger)_42%,var(--color-border))] hover:!text-[var(--color-accent-danger)]`}
+                        aria-label="Eliminar tarea"
+                        title="Eliminar"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+                      </button>
+                      <span className={agendaTaskCircleCaptionClass}>Quitar</span>
+                    </div>
+                  ) : null}
+                  {canEditModal ? (
+                    <div className="flex flex-col items-center gap-0.5">
+                      <button
+                        type="button"
+                        className={agendaTaskCircleActionClass}
+                        aria-label="Editar tarea"
+                        title="Editar"
+                        onClick={() => onOpenEdit?.(task)}
+                      >
+                        <Pencil className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
+                      </button>
+                      <span className={agendaTaskCircleCaptionClass}>Editar</span>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+              {onSaveComplete ? (
+                <div className="flex flex-col items-center gap-0.5">
+                  <button
+                    type="button"
+                    role="checkbox"
+                    aria-checked={done}
+                    disabled={saving}
+                    aria-label={done ? "Marcar como pendiente" : "Marcar como realizada"}
+                    onClick={() => void toggleComplete()}
+                    className={`${agendaTaskCheckOuterClass} text-[var(--agenda-assigned)] hover:border-[var(--agenda-assigned)]`}
+                    style={{
+                      ...checkSizeStyle,
+                      ...(done
+                        ? {
+                            borderColor: "color-mix(in srgb, #4ade80 70%, var(--color-border))",
+                            background: "color-mix(in srgb, #86efac 55%, transparent)",
+                          }
+                        : {}),
+                    }}
+                  >
+                    {done ? (
+                      <Check
+                        className={`h-4 w-4 text-[#15803d] ${checkPop ? "animate-agenda-check-pop" : ""}`}
+                        strokeWidth={2.75}
+                        aria-hidden
+                        onAnimationEnd={() => setCheckPop(false)}
+                      />
+                    ) : null}
+                  </button>
+                  <span className={agendaTaskCircleCaptionClass}>Hecho</span>
+                </div>
+              ) : null}
             </div>
           </div>
         ) : (
-          <p className={`m-0 min-w-0 tracking-tight text-[var(--color-text-primary)] ${titleClass}`}>{task.title}</p>
+          <>
+            <p className="m-0 flex min-w-0 items-center gap-1 text-[9px] leading-tight text-[var(--color-text-secondary)] sm:text-[10px]">
+              <Clock className="h-2.5 w-2.5 shrink-0 opacity-55 sm:h-3 sm:w-3" strokeWidth={2} aria-hidden />
+              <span className="truncate">{dueMetaCompact(task.due)}</span>
+            </p>
+            <p className={`m-0 min-w-0 tracking-tight text-[var(--color-text-primary)] ${titleClass}`}>{task.title}</p>
+          </>
         )}
 
         <div className="flex flex-wrap items-center gap-1">

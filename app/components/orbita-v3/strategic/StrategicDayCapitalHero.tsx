@@ -86,7 +86,7 @@ function readinessTier(score: number | null): { label: string; style: string; sh
     return {
       label: "En equilibrio",
       style:
-        "border-[color-mix(in_srgb,var(--color-border)_75%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_90%,transparent)] text-[var(--color-text-secondary)]",
+        "border-[color-mix(in_srgb,var(--color-accent-agenda)_38%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-agenda)_11%,var(--color-surface))] text-[var(--color-text-primary)]",
       showSparkle: false,
     }
   }
@@ -103,17 +103,19 @@ function ReadinessRing({ score }: { score: number | null }) {
   const deg = n != null ? (n / 100) * 360 : 0
   return (
     <div
-      className="relative h-14 w-14 shrink-0 rounded-full p-[2.5px] sm:h-[3.75rem] sm:w-[3.75rem] sm:p-[3px]"
+      className="relative shrink-0 rounded-full p-[2.5px] shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-border)_55%,transparent),0_8px_22px_-10px_color-mix(in_srgb,var(--color-accent-health)_38%,transparent)] h-[3.25rem] w-[3.25rem] sm:h-[4rem] sm:w-[4rem] sm:p-[3px]"
       style={{
         background:
           n != null
-            ? `conic-gradient(from -90deg, var(--color-accent-health) ${deg}deg, color-mix(in srgb, var(--color-border) 50%, transparent) 0deg)`
+            ? `conic-gradient(from -90deg, var(--color-accent-health) ${deg}deg, color-mix(in srgb, var(--color-border) 48%, transparent) 0deg)`
             : "color-mix(in srgb, var(--color-border) 55%, transparent)",
       }}
       aria-label={n != null ? `Disposición aproximada ${n} de 100` : "Sin medición de disposición"}
     >
-      <div className="flex h-full w-full items-center justify-center rounded-full bg-[var(--color-surface)] text-[13px] font-bold tabular-nums text-[var(--color-text-primary)] shadow-[inset_0_1px_0_color-mix(in_srgb,var(--color-border)_35%,transparent)] sm:text-[15px]">
-        {n ?? "—"}
+      <div className="flex h-full w-full items-center justify-center rounded-full bg-[var(--color-surface)] shadow-[inset_0_1px_0_color-mix(in_srgb,var(--color-border)_32%,transparent)]">
+        <span className="text-[16px] font-bold tabular-nums leading-none tracking-tight text-[var(--color-text-primary)] sm:text-[18px]">
+          {n ?? "—"}
+        </span>
       </div>
     </div>
   )
@@ -207,26 +209,32 @@ export function StrategicDayHero({
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                    className="col-span-2 flex min-h-[92px] min-w-0 items-center gap-2 rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_5%,var(--color-surface-alt))] px-2.5 py-3 sm:col-span-1 sm:h-full sm:min-h-[108px] sm:gap-3 sm:px-3 sm:py-2.5"
+                    className="col-span-2 flex min-h-[92px] min-w-0 items-center gap-3 rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_5%,var(--color-surface-alt))] px-2.5 py-3 sm:col-span-1 sm:h-full sm:min-h-[108px] sm:gap-3.5 sm:px-3 sm:py-2.5"
                   >
                     <ReadinessRing score={health.readiness_score ?? null} />
-                    <div className="min-w-0 flex-1 sm:text-left">
-                      <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
-                        Disposición
-                      </p>
-                      <p className="m-0 mt-0.5 text-lg font-bold tabular-nums leading-none text-[var(--color-text-primary)] sm:text-xl">
-                        {health.readiness_score != null ? Math.round(health.readiness_score) : "—"}
-                        <span className="ml-0.5 text-[11px] font-semibold text-[var(--color-text-secondary)]">/100</span>
-                      </p>
+                    <div className="flex min-h-0 min-w-0 flex-1 flex-col justify-center gap-1.5 sm:text-left">
+                      <div>
+                        <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
+                          Disposición
+                        </p>
+                        <p className="m-0 mt-0.5 text-[10px] leading-snug text-[var(--color-text-secondary)] sm:text-[11px]">
+                          Escala 0–100 · Apple Salud
+                        </p>
+                        <span className="sr-only">
+                          {health.readiness_score != null
+                            ? `Puntuación ${Math.round(health.readiness_score)} sobre 100`
+                            : "Sin puntuación de disposición"}
+                        </span>
+                      </div>
                       {tier ? (
                         <span
                           className={clsx(
-                            "mt-1 inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-semibold leading-tight sm:mt-1.5 sm:text-[10px]",
+                            "inline-flex w-fit max-w-full items-center gap-1 rounded-full border px-2.5 py-1 text-[9px] font-semibold leading-tight sm:text-[10px]",
                             tier.style,
                           )}
                         >
                           {tier.showSparkle ? <Sparkles className="h-3 w-3 shrink-0 opacity-90" aria-hidden /> : null}
-                          <span className="min-w-0 text-pretty">{tier.label}</span>
+                          <span className="min-w-0">{tier.label}</span>
                         </span>
                       ) : null}
                     </div>
