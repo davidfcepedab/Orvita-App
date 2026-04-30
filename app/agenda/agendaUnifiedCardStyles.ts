@@ -66,9 +66,9 @@ export const agendaPillBaseClass =
 export const agendaTaskCircleActionClass =
   "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--color-border)_62%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_94%,transparent)] text-[var(--color-text-secondary)] shadow-[0_1px_0_color-mix(in_srgb,var(--color-border)_40%,transparent)] transition-[transform,box-shadow,background-color,border-color,color] motion-safe:duration-200 hover:border-[color-mix(in_srgb,var(--color-accent-primary)_38%,var(--color-border))] hover:bg-[color-mix(in_srgb,var(--color-accent-primary)_10%,var(--color-surface))] hover:text-[var(--color-text-primary)] hover:shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-accent-primary)_22%,transparent),0_8px_20px_-12px_color-mix(in_srgb,var(--color-accent-primary)_25%,transparent)] active:scale-[0.96] disabled:pointer-events-none disabled:opacity-35"
 
-/** Texto bajo icono circular (siempre visible; ancho acotado en móvil para no desbordar). */
+/** Texto bajo el toggle principal (hecho / visto); secundarios van sin leyenda visible (icono + aria). */
 export const agendaTaskCircleCaptionClass =
-  "block max-w-[4.25rem] text-balance text-center text-[8px] font-semibold uppercase leading-tight tracking-[0.1em] text-[var(--color-text-secondary)] sm:max-w-none"
+  "hidden max-w-[4.25rem] truncate text-end text-[8px] font-semibold uppercase leading-tight tracking-[0.1em] text-[var(--color-text-secondary)] xs:block sm:max-w-none"
 
 /** Anillo del toggle principal (hecho / visto). */
 export const agendaTaskCheckOuterClass =

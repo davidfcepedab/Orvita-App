@@ -153,7 +153,7 @@ export function AgendaOrvitaTaskCard({
     >
       <div className="flex flex-col gap-1.5 px-3 py-2 sm:gap-2 sm:px-3 sm:py-2.5">
         {showActionsColumn ? (
-          <div className="flex min-w-0 gap-2.5 sm:gap-3">
+          <div className="flex min-w-0 items-start justify-between gap-2.5 sm:gap-3">
             <div className="flex min-w-0 flex-1 flex-col gap-1.5">
               <p className="m-0 flex min-w-0 items-center gap-1 text-[9px] leading-tight text-[var(--color-text-secondary)] sm:text-[10px]">
                 <Clock className="h-2.5 w-2.5 shrink-0 opacity-55 sm:h-3 sm:w-3" strokeWidth={2} aria-hidden />
@@ -161,42 +161,36 @@ export function AgendaOrvitaTaskCard({
               </p>
               <p className={`m-0 min-w-0 tracking-tight text-[var(--color-text-primary)] ${titleClass}`}>{task.title}</p>
             </div>
-            <div className="flex w-max min-w-[3rem] shrink-0 flex-col items-center gap-2.5 self-stretch pt-0.5 sm:min-w-0">
+            <div className="flex shrink-0 flex-col items-end gap-2 sm:gap-2.5 pt-0.5">
               {hasSecondaryActions ? (
-                <div className="flex flex-col items-center gap-2 sm:gap-2.5">
+                <div className="flex flex-row items-center justify-end gap-2">
                   {onDelete ? (
-                    <div className="flex flex-col items-center gap-0.5">
-                      <button
-                        type="button"
-                        disabled={deleting || Boolean(deleteBusy)}
-                        onClick={() => void handleDelete()}
-                        className={`${agendaTaskCircleActionClass} hover:!border-[color-mix(in_srgb,var(--color-accent-danger)_42%,var(--color-border))] hover:!text-[var(--color-accent-danger)]`}
-                        aria-label="Eliminar tarea"
-                        title="Eliminar"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-                      </button>
-                      <span className={agendaTaskCircleCaptionClass}>Quitar</span>
-                    </div>
+                    <button
+                      type="button"
+                      disabled={deleting || Boolean(deleteBusy)}
+                      onClick={() => void handleDelete()}
+                      className={`${agendaTaskCircleActionClass} hover:!border-[color-mix(in_srgb,var(--color-accent-danger)_42%,var(--color-border))] hover:!text-[var(--color-accent-danger)]`}
+                      aria-label="Eliminar tarea"
+                      title="Eliminar"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+                    </button>
                   ) : null}
                   {canEditModal ? (
-                    <div className="flex flex-col items-center gap-0.5">
-                      <button
-                        type="button"
-                        className={agendaTaskCircleActionClass}
-                        aria-label="Editar tarea"
-                        title="Editar"
-                        onClick={() => onOpenEdit?.(task)}
-                      >
-                        <Pencil className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
-                      </button>
-                      <span className={agendaTaskCircleCaptionClass}>Editar</span>
-                    </div>
+                    <button
+                      type="button"
+                      className={agendaTaskCircleActionClass}
+                      aria-label="Editar tarea"
+                      title="Editar"
+                      onClick={() => onOpenEdit?.(task)}
+                    >
+                      <Pencil className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
+                    </button>
                   ) : null}
                 </div>
               ) : null}
               {onSaveComplete ? (
-                <div className="flex flex-col items-center gap-0.5">
+                <div className="flex flex-col items-end gap-0.5">
                   <button
                     type="button"
                     role="checkbox"

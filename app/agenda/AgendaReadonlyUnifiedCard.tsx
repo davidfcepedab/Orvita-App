@@ -154,51 +154,45 @@ export function AgendaReadonlyUnifiedCard({
       style={{ ...varStyle, fontFamily: "var(--task-card-font-family, inherit)" }}
     >
       {showActionsColumn ? (
-        <div className="flex min-w-0 gap-2.5 sm:gap-3">
+        <div className="flex min-w-0 items-start justify-between gap-2.5 sm:gap-3">
           <div className="flex min-w-0 flex-1 flex-col gap-1.5">
             {metaRow}
             {titleBlock}
           </div>
-          <div className="flex w-max min-w-[3rem] shrink-0 flex-col items-center gap-2.5 self-stretch pt-0.5 sm:min-w-0">
+          <div className="flex shrink-0 flex-col items-end gap-2 sm:gap-2.5 pt-0.5">
             {hasSecondaryActions ? (
-              <div className="flex flex-col items-center gap-2 sm:gap-2.5">
+              <div className="flex flex-row items-center justify-end gap-2">
                 {onDelete ? (
-                  <div className="flex flex-col items-center gap-0.5">
-                    <button
-                      type="button"
-                      disabled={deleteBusy}
-                      onClick={() => void handleDeleteClick()}
-                      className={`${agendaTaskCircleActionClass} hover:!border-[color-mix(in_srgb,var(--color-accent-danger)_42%,var(--color-border))] hover:!text-[var(--color-accent-danger)]`}
-                      aria-label={
-                        googleKind === "calendar"
-                          ? "Eliminar evento también en Google Calendar"
-                          : "Eliminar tarea o recordatorio también en Google Tasks"
-                      }
-                      title={deleteBusy ? "Eliminando…" : "Eliminar"}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-                    </button>
-                    <span className={agendaTaskCircleCaptionClass}>Quitar</span>
-                  </div>
+                  <button
+                    type="button"
+                    disabled={deleteBusy}
+                    onClick={() => void handleDeleteClick()}
+                    className={`${agendaTaskCircleActionClass} hover:!border-[color-mix(in_srgb,var(--color-accent-danger)_42%,var(--color-border))] hover:!text-[var(--color-accent-danger)]`}
+                    aria-label={
+                      googleKind === "calendar"
+                        ? "Eliminar evento también en Google Calendar"
+                        : "Eliminar tarea o recordatorio también en Google Tasks"
+                    }
+                    title={deleteBusy ? "Eliminando…" : "Eliminar"}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+                  </button>
                 ) : null}
                 {onEdit ? (
-                  <div className="flex flex-col items-center gap-0.5">
-                    <button
-                      type="button"
-                      className={agendaTaskCircleActionClass}
-                      aria-label="Editar"
-                      title="Editar"
-                      onClick={onEdit}
-                    >
-                      <Pencil className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
-                    </button>
-                    <span className={agendaTaskCircleCaptionClass}>Editar</span>
-                  </div>
+                  <button
+                    type="button"
+                    className={agendaTaskCircleActionClass}
+                    aria-label="Editar"
+                    title="Editar"
+                    onClick={onEdit}
+                  >
+                    <Pencil className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
+                  </button>
                 ) : null}
               </div>
             ) : null}
             {showComplete ? (
-              <div className="flex flex-col items-center gap-0.5">
+              <div className="flex flex-col items-end gap-0.5">
                 <button
                   type="button"
                   role="checkbox"
@@ -225,7 +219,7 @@ export function AgendaReadonlyUnifiedCard({
               </div>
             ) : null}
             {showCalToggle ? (
-              <div className="flex flex-col items-center gap-0.5">
+              <div className="flex flex-col items-end gap-0.5">
                 <button
                   type="button"
                   role="checkbox"
