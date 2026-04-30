@@ -4,7 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { createBrowserClient } from "@/lib/supabase/browser"
 import { isAppMockMode, isSupabaseEnabled } from "@/lib/checkins/flags"
+import { agendaTodayYmd } from "@/lib/agenda/localDateKey"
+import type { CheckinBodyMetrics } from "@/lib/checkins/checkinPayload"
 import { defaultBodyMetricRows, defaultMealPlan, emptyBodyMetricRows, emptyMealPlan } from "@/lib/training/defaultTrainingDisplay"
+import { mergeCheckinBodyIntoDisplayRows } from "@/lib/training/mergeCheckinBodyIntoDisplayRows"
 import type { BodyMetricDisplayRow, MealDayDisplay, TrainingPreferencesPayload, VisualGoalMode } from "@/lib/training/trainingPrefsTypes"
 import { defaultVisualGoalMode } from "@/lib/training/visualGoalModeLabels"
 
@@ -105,6 +108,7 @@ export function useTrainingPreferences() {
   const notesDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [prefs, setPrefsState] = useState<TrainingPreferencesPayload>(() => buildDefaults())
+  const [checkinBodyOverlay, setCheckinBodyOverlay] = useState<CheckinBodyMetrics | null>(null)
   const [loading, setLoading] = useState(remote)
   const [error, setError] = useState<string | null>(null)
 
@@ -159,6 +163,30 @@ export function useTrainingPreferences() {
       }
       setPrefsState(merged)
       writeLocalPrefs(merged)
+
+      try {
+        const snapRes = await fetch(
+          `/api/checkin/body-snapshot?date=${encodeURIComponent(agendaTodayYmd())}`,
+          { cache: "no-store", headers },
+        )
+        const snap = (await snapRes.json()) as {
+          success?: boolean
+          body_metrics?: CheckinBodyMetrics | null
+        }
+        if (
+          snapRes.ok &&
+          snap.success &&
+          snap.body_metrics &&
+          typeof snap.body_metrics === "object" &&
+          Object.keys(snap.body_metrics).some((k) => k !== "fecha_reportada")
+        ) {
+          setCheckinBodyOverlay(snap.body_metrics)
+        } else {
+          setCheckinBodyOverlay(null)
+        }
+      } catch {
+        setCheckinBodyOverlay(null)
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Error de preferencias"
       setError(msg)
@@ -269,11 +297,14 @@ export function useTrainingPreferences() {
   )
 
   const bodyRows = useMemo(() => {
-    if (mock) {
-      return prefs.bodyMetrics && prefs.bodyMetrics.length > 0 ? prefs.bodyMetrics : defaultBodyMetricRows()
-    }
-    return prefs.bodyMetrics ?? emptyBodyMetricRows()
-  }, [mock, prefs.bodyMetrics])
+    const base =
+      mock && prefs.bodyMetrics && prefs.bodyMetrics.length > 0
+        ? prefs.bodyMetrics
+        : mock
+          ? defaultBodyMetricRows()
+          : (prefs.bodyMetrics ?? emptyBodyMetricRows())
+    return mergeCheckinBodyIntoDisplayRows(base, checkinBodyOverlay)
+  }, [mock, prefs.bodyMetrics, checkinBodyOverlay])
 
   const mealDays = useMemo(() => {
     if (mock) {

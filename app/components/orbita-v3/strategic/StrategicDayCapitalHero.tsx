@@ -103,7 +103,7 @@ function ReadinessRing({ score }: { score: number | null }) {
   const deg = n != null ? (n / 100) * 360 : 0
   return (
     <div
-      className="relative h-[52px] w-[52px] shrink-0 rounded-full p-[3px]"
+      className="relative h-14 w-14 shrink-0 rounded-full p-[2.5px] sm:h-[3.75rem] sm:w-[3.75rem] sm:p-[3px]"
       style={{
         background:
           n != null
@@ -112,7 +112,7 @@ function ReadinessRing({ score }: { score: number | null }) {
       }}
       aria-label={n != null ? `Disposición aproximada ${n} de 100` : "Sin medición de disposición"}
     >
-      <div className="flex h-full w-full items-center justify-center rounded-full bg-[var(--color-surface)] text-[13px] font-bold tabular-nums text-[var(--color-text-primary)] shadow-[inset_0_1px_0_color-mix(in_srgb,var(--color-border)_35%,transparent)]">
+      <div className="flex h-full w-full items-center justify-center rounded-full bg-[var(--color-surface)] text-[13px] font-bold tabular-nums text-[var(--color-text-primary)] shadow-[inset_0_1px_0_color-mix(in_srgb,var(--color-border)_35%,transparent)] sm:text-[15px]">
         {n ?? "—"}
       </div>
     </div>
@@ -207,7 +207,7 @@ export function StrategicDayHero({
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                    className="col-span-2 flex min-h-[92px] min-w-0 items-center gap-2.5 rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_5%,var(--color-surface-alt))] px-3 py-3 sm:col-span-1 sm:h-full sm:min-h-[108px] sm:gap-3 sm:px-3 sm:py-2.5"
+                    className="col-span-2 flex min-h-[92px] min-w-0 items-center gap-2 rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_5%,var(--color-surface-alt))] px-2.5 py-3 sm:col-span-1 sm:h-full sm:min-h-[108px] sm:gap-3 sm:px-3 sm:py-2.5"
                   >
                     <ReadinessRing score={health.readiness_score ?? null} />
                     <div className="min-w-0 flex-1 sm:text-left">
@@ -221,7 +221,7 @@ export function StrategicDayHero({
                       {tier ? (
                         <span
                           className={clsx(
-                            "mt-1 inline-flex max-w-full items-center gap-1 rounded-md border px-1.5 py-0.5 text-[9px] font-semibold leading-tight sm:mt-1.5 sm:px-2 sm:text-[10px]",
+                            "mt-1 inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-semibold leading-tight sm:mt-1.5 sm:text-[10px]",
                             tier.style,
                           )}
                         >

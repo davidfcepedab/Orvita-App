@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react"
 import { motion } from "framer-motion"
 import {
   ArrowRight,
@@ -9,6 +9,7 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
+  ListChecks,
   Loader2,
   Moon,
   Sparkles,
@@ -205,27 +206,27 @@ const CHECKIN_DAY_SEGMENTS = [
     label: "Mañana",
     hint: "Sueño · energía",
     Icon: Sunrise,
-    shell:
-      "border-[color-mix(in_srgb,var(--color-accent-warning)_48%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-warning)_10%,var(--color-surface))] motion-safe:hover:border-[color-mix(in_srgb,var(--color-accent-warning)_62%,var(--color-border))] motion-safe:hover:shadow-[0_10px_28px_-16px_color-mix(in_srgb,var(--color-accent-warning)_35%,transparent)]",
-    iconClass: "text-[var(--color-accent-warning)] motion-safe:group-hover:scale-110",
+    ring: "ring-[color-mix(in_srgb,var(--color-accent-warning)_55%,transparent)]",
+    iconClass: "text-[var(--color-accent-warning)]",
+    glow: "bg-[color-mix(in_srgb,var(--color-accent-warning)_28%,transparent)]",
   },
   {
     href: "/checkin#checkin-dia",
     label: "Día",
     hint: "Foco · cuerpo · vínculos",
     Icon: Sun,
-    shell:
-      "border-[color-mix(in_srgb,var(--color-accent-health)_45%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_9%,var(--color-surface))] motion-safe:hover:border-[color-mix(in_srgb,var(--color-accent-health)_58%,var(--color-border))] motion-safe:hover:shadow-[0_10px_28px_-16px_color-mix(in_srgb,var(--color-accent-health)_32%,transparent)]",
-    iconClass: "text-[var(--color-accent-health)] motion-safe:group-hover:scale-110",
+    ring: "ring-[color-mix(in_srgb,var(--color-accent-health)_50%,transparent)]",
+    iconClass: "text-[var(--color-accent-health)]",
+    glow: "bg-[color-mix(in_srgb,var(--color-accent-health)_25%,transparent)]",
   },
   {
     href: "/checkin#checkin-noche",
     label: "Noche",
     hint: "Cierre · medidas",
     Icon: Moon,
-    shell:
-      "border-[color-mix(in_srgb,var(--color-accent-agenda)_42%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-agenda)_9%,var(--color-surface))] motion-safe:hover:border-[color-mix(in_srgb,var(--color-accent-agenda)_55%,var(--color-border))] motion-safe:hover:shadow-[0_10px_28px_-16px_color-mix(in_srgb,var(--color-accent-agenda)_28%,transparent)]",
-    iconClass: "text-[var(--color-accent-agenda)] motion-safe:group-hover:scale-110",
+    ring: "ring-[color-mix(in_srgb,var(--color-accent-agenda)_48%,transparent)]",
+    iconClass: "text-[var(--color-accent-agenda)]",
+    glow: "bg-[color-mix(in_srgb,var(--color-accent-agenda)_22%,transparent)]",
   },
 ] as const
 
@@ -521,87 +522,96 @@ export default function HoyCommandCenter() {
       <nav aria-label="Check-in por momento del día" className="min-w-0">
         <Card className="overflow-hidden border border-[color-mix(in_srgb,var(--color-border)_88%,transparent)] p-0 shadow-sm">
           <div className="border-b border-[color-mix(in_srgb,var(--color-border)_85%,transparent)] bg-gradient-to-r from-[color-mix(in_srgb,var(--color-accent-health)_8%,var(--color-surface))] via-[color-mix(in_srgb,var(--color-accent-warning)_6%,var(--color-surface))] to-[color-mix(in_srgb,var(--color-accent-agenda)_7%,var(--color-surface))] px-4 py-3 sm:px-5 sm:py-3.5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex min-w-0 flex-1 items-start gap-2">
-                <span className="relative mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[color-mix(in_srgb,var(--color-accent-health)_30%,var(--color-border))] bg-[var(--color-surface)] shadow-sm">
+            <div className="flex flex-col gap-3">
+              <div className="flex min-w-0 items-start gap-2.5">
+                <span className="relative mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[color-mix(in_srgb,var(--color-accent-health)_28%,var(--color-border))] bg-[var(--color-surface)] shadow-sm">
                   <Sparkles className="h-4 w-4 text-[var(--color-accent-health)] motion-safe:animate-pulse" aria-hidden />
                 </span>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <SectionLabel>Check-in del día</SectionLabel>
-                    <span className="rounded-full border border-[color-mix(in_srgb,var(--color-accent-health)_38%,var(--color-border))] bg-[var(--color-surface)] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[var(--color-accent-health)]">
+                    <span className="rounded-full border border-[color-mix(in_srgb,var(--color-accent-health)_35%,var(--color-border))] bg-[var(--color-surface)] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[var(--color-accent-health)]">
                       Mini ruta
                     </span>
                   </div>
-                  <p className="m-0 mt-1 text-xs leading-snug text-[var(--color-text-secondary)] [text-wrap:pretty]">
-                    Tres toques ligeros para ordenar cabeza y cuerpo:{" "}
-                    <strong className="font-medium text-[var(--color-text-primary)]">Mañana → Día → Noche</strong>. Al cerrar,{" "}
-                    <Link href="/checkin" className="font-medium text-[var(--color-accent-health)] underline-offset-2 hover:underline">
-                      guarda el check-in completo
-                    </Link>{" "}
-                    y queda tu mapa del día.
+                  <p className="m-0 mt-1.5 max-w-prose text-[11px] leading-relaxed text-[var(--color-text-secondary)] sm:text-xs">
+                    <span className="block text-balance sm:inline">
+                      Tres pasos: <strong className="font-medium text-[var(--color-text-primary)]">Mañana</strong>,{" "}
+                      <strong className="font-medium text-[var(--color-text-primary)]">Día</strong> y{" "}
+                      <strong className="font-medium text-[var(--color-text-primary)]">Noche</strong>.
+                    </span>{" "}
+                    <span className="block text-balance sm:inline sm:pl-0.5">
+                      El formulario completo está en{" "}
+                      <Link href="/checkin" className="font-medium text-[var(--color-accent-health)] underline-offset-2 hover:underline">
+                        Check-in
+                      </Link>{" "}
+                      cuando quieras cerrar todo junto.
+                    </span>
                   </p>
                 </div>
               </div>
-              <div
-                className="flex shrink-0 items-center gap-0.5 rounded-md border border-[color-mix(in_srgb,var(--color-border)_70%,transparent)] bg-[var(--color-surface)] px-2 py-1.5 text-[var(--color-text-secondary)]"
-                aria-hidden
-              >
-                <span className="flex h-6 w-6 items-center justify-center rounded bg-[color-mix(in_srgb,var(--color-accent-health)_14%,transparent)] text-[11px] font-bold text-[var(--color-text-primary)]">
-                  1
-                </span>
-                <ArrowRight className="h-3.5 w-3.5 shrink-0 opacity-40" />
-                <span className="flex h-6 w-6 items-center justify-center rounded bg-[var(--color-surface-alt)] text-[11px] font-bold text-[var(--color-text-primary)]">
-                  2
-                </span>
-                <ArrowRight className="h-3.5 w-3.5 shrink-0 opacity-40" />
-                <span className="flex h-6 w-6 items-center justify-center rounded bg-[var(--color-surface-alt)] text-[11px] font-bold text-[var(--color-text-primary)]">
-                  3
-                </span>
+              <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2 border-t border-[color-mix(in_srgb,var(--color-border)_45%,transparent)] pt-3">
+                <div className="flex flex-wrap items-center gap-1" aria-hidden="true">
+                  {[1, 2, 3].map((step, idx) => (
+                    <Fragment key={step}>
+                      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--color-surface)] text-[10px] font-bold tabular-nums text-[var(--color-text-primary)] shadow-sm ring-1 ring-[color-mix(in_srgb,var(--color-border)_55%,transparent)]">
+                        {step}
+                      </span>
+                      {idx < 2 ? <ArrowRight className="h-3 w-3 shrink-0 text-[var(--color-text-secondary)] opacity-45" aria-hidden /> : null}
+                    </Fragment>
+                  ))}
+                </div>
+                <Link
+                  href="/checkin"
+                  className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border-0 bg-[var(--color-surface)] px-3 text-[10px] font-semibold text-[var(--color-text-primary)] shadow-sm ring-1 ring-[color-mix(in_srgb,var(--color-accent-health)_40%,var(--color-border))] transition motion-safe:hover:bg-[color-mix(in_srgb,var(--color-accent-health)_10%,var(--color-surface))] motion-safe:hover:ring-[color-mix(in_srgb,var(--color-accent-health)_55%,var(--color-border))]"
+                  style={{ textDecoration: "none" }}
+                  title="Abrir el check-in completo en una sola vista"
+                >
+                  <ListChecks className="h-3.5 w-3.5 text-[var(--color-accent-health)]" strokeWidth={2.25} aria-hidden />
+                  <span className="hidden sm:inline">Formulario completo</span>
+                  <span className="sm:hidden">Completo</span>
+                </Link>
               </div>
             </div>
           </div>
           <div className="p-3 sm:p-4">
-            <div className="rounded-lg bg-[var(--color-surface-alt)] p-1">
-              <motion.div
-                className="grid grid-cols-3 gap-1"
-                variants={checkinSegmentContainer}
-                initial="hidden"
-                animate="show"
-              >
-                {CHECKIN_DAY_SEGMENTS.map(({ href, label, hint, Icon, shell, iconClass }) => (
-                  <motion.div
-                    key={href}
-                    variants={checkinSegmentItem}
-                    transition={{ duration: 0.35, ease: "easeOut" }}
-                    whileHover={{ y: -2 }}
-                    className="min-w-0"
-                  >
-                    <Link
-                      href={href}
-                      className={`group flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg border px-1.5 py-2 text-center motion-safe:transition-[border-color,transform,box-shadow] motion-safe:active:scale-[0.99] sm:min-h-[60px] sm:px-2.5 sm:py-2.5 ${shell}`}
-                      style={{ textDecoration: "none" }}
-                    >
-                      <Icon
-                        className={`h-[18px] w-[18px] shrink-0 motion-safe:transition-transform motion-safe:duration-200 ${iconClass}`}
-                        strokeWidth={2.25}
+            <motion.div
+              className="grid grid-cols-3 gap-3 sm:gap-5"
+              variants={checkinSegmentContainer}
+              initial="hidden"
+              animate="show"
+            >
+              {CHECKIN_DAY_SEGMENTS.map(({ href, label, hint, Icon, ring, iconClass, glow }) => (
+                <motion.div
+                  key={href}
+                  variants={checkinSegmentItem}
+                  transition={{ duration: 0.35, ease: "easeOut" }}
+                  whileHover={{ y: -2 }}
+                  className="flex min-w-0 flex-col items-center"
+                >
+                  <Link href={href} className="group flex w-full flex-col items-center gap-1.5 no-underline" style={{ textDecoration: "none" }}>
+                    <span className="relative flex h-[3.75rem] w-[3.75rem] shrink-0 items-center justify-center">
+                      <motion.span
+                        className={`pointer-events-none absolute inset-[-6px] rounded-full opacity-50 blur-md ${glow}`}
+                        animate={{ opacity: [0.28, 0.5, 0.28], scale: [0.92, 1, 0.92] }}
+                        transition={{ duration: 2.6, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
                         aria-hidden
                       />
-                      <span className="text-[11px] font-semibold leading-tight text-[var(--color-text-primary)]">{label}</span>
-                      <span className="line-clamp-2 text-[9px] leading-tight text-[var(--color-text-secondary)] sm:text-[10px]">{hint}</span>
-                    </Link>
-                  </motion.div>
-                ))}
-              </motion.div>
-            </div>
-            <Link
-              href="/checkin"
-              className="mt-3 flex min-h-11 w-full items-center justify-center rounded-md border border-[color-mix(in_srgb,var(--color-accent-health)_32%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_8%,transparent)] px-4 py-2.5 text-center text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-primary)] motion-safe:transition-[background-color,border-color] motion-safe:hover:bg-[color-mix(in_srgb,var(--color-accent-health)_14%,transparent)]"
-              style={{ textDecoration: "none" }}
-              title="Abrir el check-in completo en una sola vista"
-            >
-              Abrir formulario completo
-            </Link>
+                      <motion.span
+                        className={`relative flex h-[3.25rem] w-[3.25rem] items-center justify-center rounded-full bg-[var(--color-surface)] shadow-md ring-2 ring-offset-2 ring-offset-[var(--color-surface)] ${ring} motion-safe:transition-transform motion-safe:duration-200 group-hover:scale-[1.04] group-active:scale-[0.98]`}
+                        whileTap={{ scale: 0.96 }}
+                      >
+                        <Icon className={`h-5 w-5 shrink-0 ${iconClass}`} strokeWidth={2.25} aria-hidden />
+                      </motion.span>
+                    </span>
+                    <span className="text-[10px] font-semibold tracking-tight text-[var(--color-text-primary)] sm:text-[11px]">{label}</span>
+                    <span className="max-w-[6.5rem] text-center text-[9px] leading-snug text-[var(--color-text-secondary)] [text-wrap:balance] sm:max-w-[7.5rem] sm:text-[10px]">
+                      {hint}
+                    </span>
+                  </Link>
+                </motion.div>
+              ))}
+            </motion.div>
           </div>
         </Card>
       </nav>

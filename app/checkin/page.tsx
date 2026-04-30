@@ -21,6 +21,8 @@ import {
   Sun,
   Sunrise,
   Target,
+  Trophy,
+  Zap,
 } from "lucide-react"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { createBrowserClient } from "@/lib/supabase/browser"
@@ -134,11 +136,11 @@ function viewportToHash(vp: CheckinViewport): string {
   return ""
 }
 
-const VIEWPORT_TABS: { id: CheckinViewport; label: string; hint: string }[] = [
+const VIEWPORT_TABS: { id: CheckinViewport; label: string; hint: string; shortLabel?: string }[] = [
   { id: "manana", label: "Mañana", hint: "Sueño y energía" },
   { id: "dia", label: "Día", hint: "Foco, cuerpo y vínculos" },
   { id: "noche", label: "Noche", hint: "Cierre y medidas" },
-  { id: "full", label: "Completo", hint: "Todo el formulario" },
+  { id: "full", label: "Completo", shortLabel: "Todo", hint: "Todo el formulario" },
 ]
 
 const SLIDER_MIN = 1
@@ -250,9 +252,84 @@ export default function CheckinPage() {
   const saveDisabled = !supabaseOn && !mockOn
 
   /** Medidas corporales ya traídas desde la hoja enlazada: no editar aquí para no duplicar ni pisar datos. */
-  const bodyMeasuresLocked = useMemo(() => {
+  const bodyMeasuresSheetsLocked = useMemo(() => {
     return form.source === "sheets" && Boolean(String(form.sheet_row_id ?? "").trim())
   }, [form.source, form.sheet_row_id])
+
+  const [hevyIntegrationOk, setHevyIntegrationOk] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const headers = await buildJsonHeaders()
+        const res = await fetch("/api/integrations/hevy/workouts", { cache: "no-store", headers })
+        const json = (await res.json()) as { success?: boolean; code?: string }
+        if (!cancelled) {
+          setHevyIntegrationOk(res.ok && json.success === true && json.code !== "not_configured")
+        }
+      } catch {
+        if (!cancelled) setHevyIntegrationOk(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  /** Con Hevy activo priorizamos medidas en la app Hevy; con hoja, la hoja manda. */
+  const bodyMeasuresHevyLocked = hevyIntegrationOk && !bodyMeasuresSheetsLocked
+  const bodyMeasuresLocked = bodyMeasuresSheetsLocked || bodyMeasuresHevyLocked
+
+  useEffect(() => {
+    if (!bodyMeasuresHevyLocked) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const headers = await buildJsonHeaders()
+        const res = await fetch(
+          `/api/checkin/body-snapshot?date=${encodeURIComponent(form.fecha)}`,
+          { cache: "no-store", headers },
+        )
+        const json = (await res.json()) as {
+          success?: boolean
+          reported_date?: string | null
+          body_metrics?: Record<string, unknown> | null
+        }
+        if (cancelled || !res.ok || !json.success || !json.body_metrics) return
+        if (json.reported_date !== form.fecha) return
+        const m = json.body_metrics
+        const pick = (key: keyof FormState) => {
+          const raw = m[key as string]
+          if (raw === undefined || raw === null) return undefined
+          const t = String(raw).trim()
+          return t.length ? t : undefined
+        }
+        setForm((prev) => ({
+          ...prev,
+          peso: pick("peso") ?? prev.peso,
+          pct_grasa: pick("pct_grasa") ?? prev.pct_grasa,
+          cintura: pick("cintura") ?? prev.cintura,
+          pecho: pick("pecho") ?? prev.pecho,
+          hombros: pick("hombros") ?? prev.hombros,
+          bicepsDer: pick("bicepsDer") ?? prev.bicepsDer,
+          bicepsIzq: pick("bicepsIzq") ?? prev.bicepsIzq,
+          cuadricepsDer: pick("cuadricepsDer") ?? prev.cuadricepsDer,
+          cuadricepsIzq: pick("cuadricepsIzq") ?? prev.cuadricepsIzq,
+          gluteos: pick("gluteos") ?? prev.gluteos,
+        }))
+      } catch {
+        /* ignore */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [bodyMeasuresHevyLocked, form.fecha])
+
+  const journalFilledCount = useMemo(() => {
+    return [form.journalMomento, form.journalGratitud, form.journalVinculo].filter((s) => String(s ?? "").trim().length > 0).length
+  }, [form.journalMomento, form.journalGratitud, form.journalVinculo])
 
   useEffect(() => {
     let cancelled = false
@@ -449,22 +526,24 @@ export default function CheckinPage() {
 
   return (
     <div className="relative mx-auto max-w-2xl space-y-3 px-2 pb-28 pt-1 sm:space-y-4 sm:px-0 sm:pb-32">
-      <div className="flex flex-col gap-2 border-b border-orbita-border/55 pb-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+      <div className="flex min-w-0 flex-nowrap items-center justify-between gap-2 border-b border-orbita-border/55 pb-3">
         {topStatus ? (
           <p
             role={mockOn || topStatus.tone === "danger" ? "alert" : "status"}
             title={topStatus.title}
-            className={`m-0 min-w-0 flex-1 text-[11px] leading-snug sm:text-xs ${topStatusClass}`}
+            className={`m-0 min-w-0 flex-1 truncate text-[11px] leading-snug sm:text-xs ${topStatusClass}`}
           >
-            <span className="line-clamp-2 [overflow-wrap:anywhere] sm:line-clamp-1">{topStatus.text}</span>
+            {topStatus.text}
           </p>
         ) : (
-          <p className="m-0 min-w-0 flex-1 text-[11px] text-orbita-secondary sm:text-xs">Listo para guardar en la fecha elegida.</p>
+          <p className="m-0 min-w-0 flex-1 truncate text-[11px] text-orbita-secondary sm:text-xs">
+            Listo para guardar en la fecha elegida.
+          </p>
         )}
-        <div className="flex shrink-0 items-center gap-2 sm:gap-1.5">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           <Link
             href="/hoy"
-            className="inline-flex h-8 items-center rounded-md border border-transparent px-2 text-[11px] font-medium text-orbita-secondary underline decoration-orbita-border underline-offset-4 transition hover:text-orbita-primary"
+            className="inline-flex h-8 shrink-0 items-center whitespace-nowrap rounded-md border border-transparent px-1.5 text-[11px] font-medium text-orbita-secondary underline decoration-orbita-border underline-offset-4 transition hover:text-orbita-primary sm:px-2"
           >
             ← Hoy
           </Link>
@@ -476,7 +555,7 @@ export default function CheckinPage() {
             />
           ) : null}
           <span
-            className={`hidden h-7 items-center rounded-md border px-2 text-[10px] font-medium tabular-nums sm:inline-flex ${
+            className={`hidden h-7 shrink-0 items-center rounded-md border px-2 text-[10px] font-medium tabular-nums sm:inline-flex ${
               supabaseOn
                 ? "border-orbita-border/80 bg-orbita-surface-alt/60 text-orbita-secondary"
                 : "border-orbita-border text-orbita-secondary opacity-80"
@@ -489,109 +568,129 @@ export default function CheckinPage() {
       </div>
 
       {!mockOn && supabaseOn && (
-        <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1 rounded-lg border border-orbita-border/60 bg-orbita-surface-alt/25 px-2.5 py-2 text-[11px] leading-snug text-orbita-secondary">
-          <span className="font-medium text-orbita-primary">Salud</span>
+        <div className="flex min-w-0 flex-nowrap items-center justify-between gap-2 rounded-lg border border-orbita-border/60 bg-orbita-surface-alt/25 px-2.5 py-2 text-[11px] leading-tight text-orbita-secondary">
+          <span className="shrink-0 font-medium text-orbita-primary">Salud</span>
           {appleHealthLoading ? (
-            <span>Cargando…</span>
+            <span className="shrink-0 text-orbita-secondary">Cargando…</span>
           ) : appleHealthSnap ? (
-            <span className="min-w-0 text-right [overflow-wrap:anywhere]">
-              {appleHealthSnap.observed_at?.slice(0, 10) ?? "—"} ·{" "}
-              {appleHealthSnap.steps != null ? appleHealthSnap.steps.toLocaleString("es-ES") : "—"} pasos ·{" "}
-              <Link href="/health" className="font-medium text-[var(--color-accent-health)] underline-offset-2 hover:underline">
-                Salud
+            <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+              <span className="min-w-0 truncate text-right tabular-nums text-orbita-secondary">
+                <span className="hidden sm:inline">{appleHealthSnap.observed_at?.slice(0, 10) ?? "—"} · </span>
+                {appleHealthSnap.steps != null ? appleHealthSnap.steps.toLocaleString("es-ES") : "—"} pasos
+              </span>
+              <Link
+                href="/health"
+                className="shrink-0 font-medium whitespace-nowrap text-[var(--color-accent-health)] underline-offset-2 hover:underline"
+              >
+                Abrir
               </Link>
-            </span>
+            </div>
           ) : (
-            <span className="min-w-0 text-right">
-              Sin atajo aún ·{" "}
-              <Link href="/health" className="font-medium text-[var(--color-accent-health)] underline-offset-2 hover:underline">
+            <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+              <span className="min-w-0 truncate text-right">Sin atajo aún</span>
+              <Link
+                href="/health"
+                className="shrink-0 font-medium whitespace-nowrap text-[var(--color-accent-health)] underline-offset-2 hover:underline"
+              >
                 Configurar
               </Link>
-            </span>
+            </div>
           )}
         </div>
       )}
 
-      <header className="flex flex-col gap-3 rounded-xl border border-orbita-border/80 bg-orbita-surface p-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4 sm:p-4">
+      <header className="rounded-xl border border-orbita-border/80 bg-orbita-surface p-3 sm:p-4">
         <div className="flex min-w-0 items-start gap-2.5 sm:gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-orbita-surface-alt text-[var(--color-accent-agenda)]">
             <Calendar className="h-4 w-4" strokeWidth={2} aria-hidden />
           </div>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-lg font-semibold tracking-tight text-orbita-primary sm:text-xl">Check-in diario</h1>
-            <p className="mt-0.5 text-[11px] leading-snug text-orbita-secondary sm:text-xs">
-              Misma fecha en todas las vistas; puedes guardar por partes o todo junto.
-            </p>
-            <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-              <button
-                type="button"
-                className={`${chipDay} ${
-                  form.hoy
-                    ? "border-[color-mix(in_srgb,var(--color-accent-primary)_40%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-primary)_10%,var(--color-surface))] text-orbita-primary"
-                    : "border-orbita-border/80 bg-transparent text-orbita-secondary hover:bg-orbita-surface-alt/50"
-                }`}
-                onClick={() => {
-                  handleChange("fecha", today)
-                  handleChange("hoy", true)
-                  handleChange("ayer", false)
-                }}
-              >
-                Hoy
-              </button>
-              <button
-                type="button"
-                className={`${chipDay} ${
-                  form.ayer
-                    ? "border-[color-mix(in_srgb,var(--color-accent-primary)_40%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-primary)_10%,var(--color-surface))] text-orbita-primary"
-                    : "border-orbita-border/80 bg-transparent text-orbita-secondary hover:bg-orbita-surface-alt/50"
-                }`}
-                onClick={() => {
-                  handleChange("fecha", yesterday)
-                  handleChange("ayer", true)
-                  handleChange("hoy", false)
-                }}
-              >
-                Ayer
-              </button>
+          <div className="min-w-0 flex-1 space-y-2.5">
+            <div>
+              <h1 className="text-lg font-semibold tracking-tight text-orbita-primary sm:text-xl">Check-in diario</h1>
+              <p className="mt-0.5 text-[11px] leading-snug text-orbita-secondary sm:text-xs">
+                Misma fecha en todas las vistas; puedes guardar por partes o todo junto.
+              </p>
+            </div>
+            <div className="flex min-w-0 flex-nowrap items-center gap-2 sm:gap-3">
+              <div className="flex shrink-0 items-center gap-1.5">
+                <button
+                  type="button"
+                  className={`${chipDay} ${
+                    form.hoy
+                      ? "border-[color-mix(in_srgb,var(--color-accent-primary)_40%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-primary)_10%,var(--color-surface))] text-orbita-primary"
+                      : "border-orbita-border/80 bg-transparent text-orbita-secondary hover:bg-orbita-surface-alt/50"
+                  }`}
+                  onClick={() => {
+                    handleChange("fecha", today)
+                    handleChange("hoy", true)
+                    handleChange("ayer", false)
+                  }}
+                >
+                  Hoy
+                </button>
+                <button
+                  type="button"
+                  className={`${chipDay} ${
+                    form.ayer
+                      ? "border-[color-mix(in_srgb,var(--color-accent-primary)_40%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-primary)_10%,var(--color-surface))] text-orbita-primary"
+                      : "border-orbita-border/80 bg-transparent text-orbita-secondary hover:bg-orbita-surface-alt/50"
+                  }`}
+                  onClick={() => {
+                    handleChange("fecha", yesterday)
+                    handleChange("ayer", true)
+                    handleChange("hoy", false)
+                  }}
+                >
+                  Ayer
+                </button>
+              </div>
+              <label className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
+                <span className="shrink-0 text-[10px] font-medium uppercase tracking-wide text-orbita-secondary">
+                  Fecha
+                </span>
+                <input
+                  type="date"
+                  value={form.fecha}
+                  onChange={(e) => {
+                    handleChange("fecha", e.target.value)
+                    handleChange("hoy", e.target.value === today)
+                    handleChange("ayer", false)
+                  }}
+                  className="h-9 min-w-0 w-full max-w-[11.5rem] flex-1 rounded-md border border-orbita-border bg-orbita-surface px-2 text-xs text-orbita-primary outline-none transition focus:border-[color-mix(in_srgb,var(--color-accent-primary)_38%,var(--color-border))] focus:ring-1 focus:ring-[color-mix(in_srgb,var(--color-accent-primary)_22%,transparent)] sm:max-w-[10.5rem] sm:flex-none sm:min-w-[9.25rem]"
+                  aria-label="Fecha del check-in"
+                />
+              </label>
             </div>
           </div>
         </div>
-        <label className="flex w-full min-w-0 flex-col gap-0.5 sm:w-auto sm:max-w-[11rem]">
-          <span className="text-[10px] font-medium uppercase tracking-wide text-orbita-secondary">Fecha</span>
-          <input
-            type="date"
-            value={form.fecha}
-            onChange={(e) => {
-              handleChange("fecha", e.target.value)
-              handleChange("hoy", e.target.value === today)
-              handleChange("ayer", false)
-            }}
-            className="h-9 w-full rounded-md border border-orbita-border bg-orbita-surface px-2 text-xs text-orbita-primary outline-none transition focus:border-[color-mix(in_srgb,var(--color-accent-primary)_38%,var(--color-border))] focus:ring-1 focus:ring-[color-mix(in_srgb,var(--color-accent-primary)_22%,transparent)] sm:min-w-[9.5rem]"
-            aria-label="Fecha del check-in"
-          />
-        </label>
       </header>
 
       <nav
         aria-label="Parte del formulario a mostrar"
         className="overflow-hidden rounded-lg border border-orbita-border/70 bg-orbita-surface"
       >
-        <div className="grid grid-cols-2 gap-px border-b border-orbita-border/50 bg-orbita-border/40 p-px sm:grid-cols-4">
+        <div className="flex min-w-0 flex-nowrap border-b border-orbita-border/50 bg-orbita-surface">
           {VIEWPORT_TABS.map((tab) => {
             const active = viewport === tab.id
             return (
               <button
                 key={tab.id}
                 type="button"
+                title={tab.hint}
                 onClick={() => setViewportAndUrl(tab.id)}
-                className={`flex min-h-[40px] flex-col items-center justify-center gap-0 bg-orbita-surface px-1 py-1.5 text-center transition sm:min-h-[42px] sm:px-1.5 ${
+                className={`flex min-h-[44px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 py-1.5 text-center transition sm:min-h-[46px] sm:px-1 ${
                   active
                     ? "bg-orbita-surface-alt font-medium text-orbita-primary ring-1 ring-inset ring-orbita-border/70"
                     : "text-orbita-secondary hover:bg-orbita-surface-alt/70"
                 }`}
               >
-                <span className="text-[10px] font-semibold tracking-tight sm:text-[11px]">{tab.label}</span>
-                <span className={`hidden text-[9px] leading-tight sm:line-clamp-1 sm:block ${active ? "text-orbita-primary/80" : ""}`}>
+                <span className="text-[10px] font-semibold tracking-tight sm:text-[11px]">
+                  <span className="sm:hidden">{tab.shortLabel ?? tab.label}</span>
+                  <span className="hidden sm:inline">{tab.label}</span>
+                </span>
+                <span
+                  className={`hidden w-full truncate px-0.5 text-[8px] leading-tight text-orbita-secondary sm:block sm:text-[9px] ${active ? "text-orbita-primary/75" : ""}`}
+                >
                   {tab.hint}
                 </span>
               </button>
@@ -818,43 +917,85 @@ export default function CheckinPage() {
             accentClass="accent-[var(--color-accent-finance)]"
           />
 
-          <div className="space-y-3 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt/50 p-4">
-            <div className="flex items-start gap-2">
-              <PenLine className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-accent-agenda)]" aria-hidden />
-              <div className="min-w-0 space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-wide text-orbita-primary">Bitácora guiada</p>
-                <p className="text-[11px] leading-snug text-orbita-secondary">
-                  Tres respuestas cortas enlazan lo que marcaste arriba con tu día: descanso percibido, ánimo y vínculos. Se guardan con el check-in para ver patrones después.
-                </p>
+          <div className="rounded-2xl bg-[linear-gradient(135deg,color-mix(in_srgb,var(--color-accent-agenda)_55%,transparent),color-mix(in_srgb,var(--color-accent-health)_45%,transparent),color-mix(in_srgb,var(--color-accent-warning)_40%,transparent))] p-[1px] shadow-[0_12px_40px_-18px_color-mix(in_srgb,var(--color-accent-agenda)_35%,transparent)]">
+            <div className="space-y-3 rounded-[15px] border border-orbita-border/60 bg-orbita-surface/95 p-3.5 sm:p-4">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="flex min-w-0 flex-1 items-start gap-2">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-accent-agenda)_18%,var(--color-surface-alt))] text-[var(--color-accent-agenda)] ring-2 ring-[color-mix(in_srgb,var(--color-accent-agenda)_35%,transparent)]">
+                    <Trophy className="h-4 w-4" strokeWidth={2.25} aria-hidden />
+                  </span>
+                  <div className="min-w-0 space-y-1">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-orbita-primary">Bitácora guiada · mini misión</p>
+                    <p className="text-[11px] leading-snug text-orbita-secondary">
+                      Tres respuestas cortas cierran el círculo con sueño, ánimo y vínculos. Cada una suma al mapa del día y a patrones en el tiempo.
+                    </p>
+                    <Link
+                      href="/training"
+                      className="inline-flex items-center gap-1 text-[10px] font-semibold text-[var(--color-accent-health)] underline-offset-2 hover:underline"
+                    >
+                      <Zap className="h-3 w-3 shrink-0" aria-hidden />
+                      Ver cómo entra en Entrenamiento
+                    </Link>
+                  </div>
+                </div>
+                <div
+                  className="flex shrink-0 gap-1 rounded-full border border-orbita-border/50 bg-orbita-surface-alt/80 p-1"
+                  aria-label={`Progreso de la bitácora: ${journalFilledCount} de 3`}
+                >
+                  {[0, 1, 2].map((i) => (
+                    <span
+                      key={i}
+                      className={`h-2 w-6 rounded-full transition-colors ${
+                        journalFilledCount > i
+                          ? "bg-[color-mix(in_srgb,var(--color-accent-health)_70%,var(--color-accent-agenda))] shadow-[0_0_12px_color-mix(in_srgb,var(--color-accent-health)_45%,transparent)]"
+                          : "bg-orbita-border/50"
+                      }`}
+                    />
+                  ))}
+                </div>
               </div>
+              {journalFilledCount === 3 ? (
+                <p className="m-0 flex items-center gap-1.5 rounded-lg border border-[color-mix(in_srgb,var(--color-accent-health)_35%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_10%,var(--color-surface-alt))] px-2.5 py-1.5 text-[10px] font-medium text-orbita-primary">
+                  <Sparkles className="h-3.5 w-3.5 text-[var(--color-accent-health)]" aria-hidden />
+                  ¡Listo! Bitácora completa: se guarda con el check-in y refuerza tu lectura en /training.
+                </p>
+              ) : (
+                <p className="m-0 text-[10px] leading-snug text-orbita-secondary">
+                  {journalFilledCount === 0
+                    ? "Empieza por la que te pida el cuerpo; no hay orden obligatorio."
+                    : journalFilledCount === 1
+                      ? "Buen arranque — te faltan 2 micro respuestas para el bonus del día."
+                      : "Casi: una respuesta más y desbloqueas el cierre brillante ✦"}
+                </p>
+              )}
+              <TextareaRow
+                label="1 · Momento difícil de soltar"
+                hint="¿Qué tramo del día se te pegó? Una frase basta."
+                icon={PenLine}
+                value={form.journalMomento}
+                onChange={(v) => handleChange("journalMomento", v)}
+                placeholder="Ej.: La tarde, seguí pensando en el trabajo en la cena…"
+                rows={2}
+              />
+              <TextareaRow
+                label="2 · Micro gratitud"
+                hint="Algo pequeño y real, sin postureo."
+                icon={Sparkles}
+                value={form.journalGratitud}
+                onChange={(v) => handleChange("journalGratitud", v)}
+                placeholder="Ej.: Caminar 10 minutos con mi pareja sin mirar el teléfono."
+                rows={2}
+              />
+              <TextareaRow
+                label="3 · Personas importantes"
+                hint="Conecta con “Calidad de conexión” del bloque de día."
+                icon={Heart}
+                value={form.journalVinculo}
+                onChange={(v) => handleChange("journalVinculo", v)}
+                placeholder="Ej.: Cercanía con un amigo; distancia con alguien del trabajo…"
+                rows={2}
+              />
             </div>
-            <TextareaRow
-              label="¿Qué momento del día te costó más soltar?"
-              hint="Una frase basta. Relaciónalo con energía o conexión si quieres."
-              icon={PenLine}
-              value={form.journalMomento}
-              onChange={(v) => handleChange("journalMomento", v)}
-              placeholder="Ej.: La tarde, seguí pensando en el trabajo en la cena…"
-              rows={2}
-            />
-            <TextareaRow
-              label="Algo pequeño por lo que te sientes agradecido"
-              hint="Gratitud concreta, no tiene que ser grande."
-              icon={Sparkles}
-              value={form.journalGratitud}
-              onChange={(v) => handleChange("journalGratitud", v)}
-              placeholder="Ej.: Caminar 10 minutos con mi pareja sin mirar el teléfono."
-              rows={2}
-            />
-            <TextareaRow
-              label="Cómo te sentiste con las personas importantes hoy"
-              hint="Con la misma idea que “Calidad de conexión” del bloque de día."
-              icon={Heart}
-              value={form.journalVinculo}
-              onChange={(v) => handleChange("journalVinculo", v)}
-              placeholder="Ej.: Cercanía con un amigo; distancia con alguien del trabajo…"
-              rows={2}
-            />
           </div>
         </CheckinSection>
 
@@ -867,12 +1008,31 @@ export default function CheckinPage() {
           collapsible
           defaultCollapsed
         >
-          {bodyMeasuresLocked ? (
+          {bodyMeasuresSheetsLocked ? (
             <div
               role="status"
               className="rounded-xl border border-[color-mix(in_srgb,var(--color-accent-agenda)_35%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-agenda)_8%,var(--color-surface))] px-3 py-2.5 text-[11px] leading-snug text-orbita-primary"
             >
+              <span className="mr-1.5 inline-flex items-center rounded-full border border-orbita-border/60 bg-orbita-surface-alt/90 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-orbita-secondary">
+                Hoja
+              </span>
               Estos números ya vienen de tu hoja del día enlazada. Para cambiarlos, corrígelos en la hoja y vuelve a cargar el check-in; aquí los dejamos fijos para que no se mezclen versiones por error.
+            </div>
+          ) : null}
+          {bodyMeasuresHevyLocked ? (
+            <div
+              role="status"
+              className="rounded-xl border border-[color-mix(in_srgb,var(--color-accent-health)_38%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_10%,var(--color-surface))] px-3 py-2.5 text-[11px] leading-snug text-orbita-primary"
+            >
+              <span className="mr-1.5 inline-flex items-center gap-1 rounded-full border border-[color-mix(in_srgb,var(--color-accent-health)_45%,var(--color-border))] bg-orbita-surface-alt/90 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-orbita-primary">
+                <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-accent-health)] shadow-[0_0_8px_var(--color-accent-health)]" aria-hidden />
+                Hevy
+              </span>
+              Medidas y composición: regístralas en la app Hevy (perfil / medidas) para no duplicar aquí. Órvita sincroniza entrenos vía integración; los números corporales del check-in de hoy se leen en{" "}
+              <Link href="/training" className="font-semibold text-[var(--color-accent-health)] underline-offset-2 hover:underline">
+                /training
+              </Link>{" "}
+              cuando guardas el check-in con datos en la base.
             </div>
           ) : null}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
