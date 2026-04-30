@@ -713,7 +713,7 @@ export function AgendaSharedList({
 
   return (
     <div
-      className={`${agendaViewStackClass} flex min-h-[min(280px,42dvh)] flex-col gap-2 sm:gap-2.5`}
+      className={`${agendaViewStackClass} flex min-h-0 flex-col gap-2 sm:gap-2.5`}
       aria-label="Cronología unificada: Órvita y Google (Tasks con fecha en orden de vencimiento; sin fecha al final)"
     >
       <div className="sm:hidden">
@@ -825,7 +825,7 @@ export function AgendaSharedList({
               </div>
             </div>
           ) : null}
-          <div className="flex min-h-0 min-w-0 flex-col gap-3 overflow-visible pr-0 sm:gap-4 sm:pr-0 md:max-h-[min(68dvh,820px)] md:overflow-y-auto md:overscroll-y-contain md:pr-1">
+          <div className="flex min-h-0 min-w-0 flex-col gap-3 overflow-visible pr-0 sm:gap-4 sm:pr-0 lg:max-h-[min(88dvh,900px)] lg:overflow-y-auto lg:overscroll-y-contain lg:pr-1">
             {merged.length > 0 && mergedFiltered.length === 0 ? (
               <p
                 role="status"
@@ -1131,7 +1131,7 @@ export function AgendaSharedWeek({
                     <span className="shrink-0 text-[10px] font-semibold uppercase text-[var(--agenda-personal)]">Hoy</span>
                   )}
                 </div>
-                <div className="flex max-h-[min(52dvh,28rem)] min-h-0 flex-col gap-1.5 overflow-y-auto overflow-x-hidden overscroll-y-contain px-0.5 pb-3 pr-1.5 [-webkit-overflow-scrolling:touch] lg:max-h-[min(58dvh,36rem)] lg:gap-1.5 lg:pb-3.5">
+                <div className="flex min-h-0 flex-col gap-1.5 px-0.5 pb-3 pr-1.5 max-lg:overflow-visible lg:max-h-[min(88dvh,56rem)] lg:overflow-y-auto lg:overflow-x-hidden lg:overscroll-y-contain lg:[-webkit-overflow-scrolling:touch] lg:gap-1.5 lg:pb-3.5">
                   {dayTasks.map((task) => (
                     <AgendaOrvitaMiniCard key={task.id} task={task} viewerUserId={viewerUserId} />
                   ))}
@@ -1461,7 +1461,7 @@ export function AgendaSharedMonth({
               Detalle del día
             </p>
             {selectedDay ? (
-              <div className="mt-2 grid max-h-[min(50dvh,28rem)] gap-2 overflow-y-auto pr-0.5 sm:mt-2 sm:gap-2">
+              <div className="mt-2 grid max-h-none gap-2 pr-0.5 sm:mt-2 sm:gap-2 lg:max-h-[min(80dvh,42rem)] lg:overflow-y-auto">
                 {dayDetails.length === 0 && selectedGoogleCount === 0 && (
                   <p className="m-0 text-[11px] text-[var(--color-text-secondary)] sm:text-[12px]">Sin ítems este día</p>
                 )}

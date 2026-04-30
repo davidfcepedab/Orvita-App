@@ -157,16 +157,16 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
     >
       <div className="relative flex flex-col gap-7 p-5 sm:p-7" style={{ color: theme.text }}>
         <div className="flex flex-col gap-5">
-          <div className="max-w-3xl space-y-2.5">
-            <h1 className="m-0 text-[1.55rem] font-semibold leading-tight tracking-tight sm:text-3xl">
+          <div className="max-w-3xl space-y-2">
+            <h1 className="m-0 text-[1.35rem] font-semibold leading-tight tracking-tight sm:text-[1.65rem] lg:text-2xl">
               Datos automáticos, con calma y precisión
             </h1>
-            <p className="m-0 text-sm leading-relaxed sm:text-[15px]" style={{ color: theme.textMuted }}>
-              Los datos vienen del atajo en el iPhone (no dentro de la app Salud de Apple). Crea la clave una vez en{" "}
+            <p className="m-0 max-w-prose text-[11px] leading-snug opacity-90 sm:text-xs" style={{ color: theme.textMuted }}>
+              Los datos vienen del atajo en el iPhone (no de la app Salud). Clave única en{" "}
               <Link href="/configuracion#apple-health-import-token" className="font-medium underline underline-offset-2" style={{ color: SALUD_SEM.energy }}>
                 Configuración
-              </Link>{" "}
-              y pégala en el atajo.
+              </Link>
+              ; cópiala al atajo.
             </p>
           </div>
 

@@ -78,52 +78,44 @@ export function HeroDecisionCard({ brief, syncLine }: Props) {
           </p>
         </div>
 
-        <div className="relative flex shrink-0 flex-row items-center justify-between gap-4 border-t border-[color-mix(in_srgb,var(--color-border)_45%,transparent)] pt-4 sm:flex-col sm:items-stretch sm:justify-center sm:border-t-0 sm:pl-6 sm:pt-0 sm:before:pointer-events-none sm:before:absolute sm:before:left-0 sm:before:top-2 sm:before:bottom-2 sm:before:w-px sm:before:bg-[color-mix(in_srgb,var(--color-border)_45%,transparent)] sm:before:content-[''] lg:min-w-[11.5rem] lg:pl-8">
-          <div
-            className="flex items-center gap-3 rounded-2xl border px-3 py-2.5 shadow-sm sm:flex-col sm:px-4 sm:py-3"
-            style={{
-              borderColor: saludHexToRgba(strong, 0.28),
-              backgroundColor: saludHexToRgba(theme.surface, lightSurface ? 0.55 : 0.22),
-            }}
-          >
+        <div className="relative flex shrink-0 flex-col gap-3 border-t border-[color-mix(in_srgb,var(--color-border)_45%,transparent)] pt-4 sm:border-t-0 sm:pl-6 sm:pt-0 sm:before:pointer-events-none sm:before:absolute sm:before:left-0 sm:before:top-2 sm:before:bottom-2 sm:before:w-px sm:before:bg-[color-mix(in_srgb,var(--color-border)_45%,transparent)] sm:before:content-[''] lg:min-w-[10rem] lg:flex-row lg:items-center lg:justify-end lg:gap-4 lg:pl-8">
+          <div className="flex items-center gap-2.5" aria-label={`Energía ${energy} de 100`}>
             <div
-              className="relative h-[3.25rem] w-[3.25rem] shrink-0 rounded-full p-[3px] sm:h-16 sm:w-16 sm:p-[3.5px]"
+              className="relative h-10 w-10 shrink-0 rounded-full p-[2px] sm:h-11 sm:w-11"
               style={{
-                background: `conic-gradient(from -90deg, ${strong} ${ringDeg}deg, color-mix(in srgb, var(--color-border) 42%, transparent) 0deg)`,
+                background: `conic-gradient(from -90deg, ${strong} ${ringDeg}deg, color-mix(in srgb, var(--color-border) 38%, transparent) 0deg)`,
               }}
               aria-hidden
             >
               <div
-                className="flex h-full w-full flex-col items-center justify-center rounded-full leading-none"
+                className="flex h-full w-full items-center justify-center rounded-full leading-none"
                 style={{ backgroundColor: theme.surface }}
               >
-                <span className="text-xl font-black tabular-nums sm:text-2xl" style={{ color: strong }}>
+                <span className="text-[11px] font-bold tabular-nums sm:text-xs" style={{ color: strong }}>
                   {brief.energyScore}
                 </span>
               </div>
             </div>
-            <div className="min-w-0 sm:text-center">
-              <p className="m-0 text-[9px] font-bold uppercase tracking-[0.14em]" style={{ color: muted }}>
-                Tu nivel hoy
-              </p>
-              <p className="m-0 mt-0.5 text-[11px] font-semibold leading-tight" style={{ color: theme.text }}>
-                Energía (0–100)
-              </p>
-            </div>
+            <p className="m-0 min-w-0 text-[11px] leading-snug sm:text-xs" style={{ color: muted }}>
+              <span className="font-medium" style={{ color: theme.text }}>
+                Energía
+              </span>{" "}
+              <span className="tabular-nums opacity-90">({energy}/100)</span>
+            </p>
           </div>
 
           <Link
             href="/training"
-            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border-2 px-4 py-2.5 text-center text-[11px] font-bold uppercase tracking-[0.1em] no-underline transition-[transform,opacity,box-shadow] active:scale-[0.98] sm:min-h-10 sm:text-[10px]"
+            className="inline-flex w-fit max-w-full items-center gap-1.5 self-start rounded-lg border px-3 py-2 text-[12px] font-medium no-underline transition-[opacity,transform] hover:opacity-90 active:scale-[0.99] sm:self-auto lg:shrink-0"
             style={{
-              borderColor: saludHexToRgba(strong, 0.45),
-              backgroundColor: saludHexToRgba(strong, lightSurface ? 0.14 : 0.22),
+              borderColor: saludHexToRgba(strong, 0.28),
+              backgroundColor: saludHexToRgba(strong, lightSurface ? 0.05 : 0.1),
               color: strong,
-              boxShadow: `0 6px 20px -6px ${saludHexToRgba(strong, 0.45)}`,
+              boxShadow: "none",
             }}
           >
             Entrenamiento
-            <ArrowRight className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
+            <ArrowRight className="h-3 w-3 shrink-0 opacity-80" strokeWidth={2.25} aria-hidden />
           </Link>
         </div>
       </div>

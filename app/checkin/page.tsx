@@ -524,8 +524,8 @@ export default function CheckinPage() {
     }
   }
 
-  const chipDay =
-    "inline-flex min-h-[34px] items-center justify-center rounded-md border px-3 text-[11px] font-medium transition active:scale-[0.99] sm:min-h-[32px]"
+  const chipDayBase =
+    "inline-flex h-8 min-w-[2.75rem] flex-1 items-center justify-center rounded-md px-2 text-[11px] font-medium transition sm:h-7 sm:min-w-0 sm:flex-none sm:px-2.5 sm:text-xs"
 
   const topStatus = useMemo(() => {
     if (mockOn) return { tone: "agenda" as const, text: UI_CHECKIN_BANNER_MOCK, title: UI_CHECKIN_BANNER_MOCK }
@@ -547,99 +547,108 @@ export default function CheckinPage() {
 
   return (
     <div className="relative mx-auto max-w-2xl space-y-3 px-2 pb-28 pt-1 sm:space-y-4 sm:px-0 sm:pb-32">
-      <div className="flex min-w-0 flex-nowrap items-center justify-between gap-2 border-b border-orbita-border/55 pb-3">
-        {topStatus ? (
-          <p
-            role={mockOn || topStatus.tone === "danger" ? "alert" : "status"}
-            title={topStatus.title}
-            className={`m-0 min-w-0 flex-1 truncate text-[11px] leading-snug sm:text-xs ${topStatusClass}`}
-          >
-            {topStatus.text}
-          </p>
-        ) : (
-          <p className="m-0 min-w-0 flex-1 truncate text-[11px] text-orbita-secondary sm:text-xs">
-            Listo para guardar en la fecha elegida.
-          </p>
-        )}
-        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-          <Link
-            href="/hoy"
-            className="inline-flex h-8 shrink-0 items-center whitespace-nowrap rounded-md border border-transparent px-1.5 text-[11px] font-medium text-orbita-secondary underline decoration-orbita-border underline-offset-4 transition hover:text-orbita-primary sm:px-2"
-          >
-            ← Hoy
-          </Link>
-          {supabaseOn ? (
+      <div
+        className="divide-y divide-orbita-border/55 overflow-hidden rounded-lg border border-orbita-border/60 bg-orbita-surface-alt/25"
+        aria-label="Estado del check-in y resumen de salud"
+      >
+        <div className="flex min-w-0 flex-nowrap items-center justify-between gap-2 px-2.5 py-2 text-[11px] leading-tight text-orbita-secondary">
+          {topStatus ? (
+            <p
+              role={mockOn || topStatus.tone === "danger" ? "alert" : "status"}
+              title={topStatus.title}
+              className={`m-0 min-w-0 flex-1 truncate text-[11px] leading-snug sm:text-xs ${topStatusClass}`}
+            >
+              {topStatus.text}
+            </p>
+          ) : (
+            <p className="m-0 min-w-0 flex-1 truncate text-[11px] text-orbita-secondary sm:text-xs">
+              Listo para guardar en la fecha elegida.
+            </p>
+          )}
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <Link
+              href="/hoy"
+              className="inline-flex h-8 shrink-0 items-center whitespace-nowrap rounded-md border border-transparent px-1.5 text-[11px] font-medium text-orbita-secondary underline decoration-orbita-border underline-offset-4 transition hover:text-orbita-primary sm:px-2"
+            >
+              ← Hoy
+            </Link>
+            {supabaseOn ? (
+              <span
+                className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-accent-health)] sm:hidden"
+                title="Guardado en nube activo"
+                aria-hidden
+              />
+            ) : null}
             <span
-              className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-accent-health)] sm:hidden"
-              title="Guardado en nube activo"
-              aria-hidden
-            />
-          ) : null}
-          <span
-            className={`hidden h-7 shrink-0 items-center rounded-md border px-2 text-[10px] font-medium tabular-nums sm:inline-flex ${
-              supabaseOn
-                ? "border-orbita-border/80 bg-orbita-surface-alt/60 text-orbita-secondary"
-                : "border-orbita-border text-orbita-secondary opacity-80"
-            }`}
-            title={`App: ${mockOn ? "mock" : getAppMode()} · Supabase: ${supabaseOn ? "activo" : "inactivo"}`}
-          >
-            {supabaseOn ? "Nube activa" : "Sin nube"}
-          </span>
+              className={`hidden h-7 shrink-0 items-center rounded-md border px-2 text-[10px] font-medium tabular-nums sm:inline-flex ${
+                supabaseOn
+                  ? "border-orbita-border/80 bg-orbita-surface-alt/60 text-orbita-secondary"
+                  : "border-orbita-border text-orbita-secondary opacity-80"
+              }`}
+              title={`App: ${mockOn ? "mock" : getAppMode()} · Supabase: ${supabaseOn ? "activo" : "inactivo"}`}
+            >
+              {supabaseOn ? "Nube activa" : "Sin nube"}
+            </span>
+          </div>
         </div>
+
+        {!mockOn && supabaseOn ? (
+          <div className="flex min-w-0 flex-nowrap items-center justify-between gap-2 px-2.5 py-2 text-[11px] leading-tight text-orbita-secondary">
+            <span className="shrink-0 font-medium text-orbita-primary">Salud</span>
+            {appleHealthLoading ? (
+              <span className="shrink-0 text-orbita-secondary">Cargando…</span>
+            ) : appleHealthSnap ? (
+              <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+                <span className="min-w-0 truncate text-right tabular-nums text-orbita-secondary">
+                  <span className="hidden sm:inline">{appleHealthSnap.observed_at?.slice(0, 10) ?? "—"} · </span>
+                  {appleHealthSnap.steps != null ? appleHealthSnap.steps.toLocaleString("es-ES") : "—"} pasos
+                </span>
+                <Link
+                  href="/health"
+                  className="shrink-0 font-medium whitespace-nowrap text-[var(--color-accent-health)] underline-offset-2 hover:underline"
+                >
+                  Abrir
+                </Link>
+              </div>
+            ) : (
+              <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+                <span className="min-w-0 truncate text-right">Sin atajo aún</span>
+                <Link
+                  href="/health"
+                  className="shrink-0 font-medium whitespace-nowrap text-[var(--color-accent-health)] underline-offset-2 hover:underline"
+                >
+                  Configurar
+                </Link>
+              </div>
+            )}
+          </div>
+        ) : null}
       </div>
 
-      {!mockOn && supabaseOn && (
-        <div className="flex min-w-0 flex-nowrap items-center justify-between gap-2 rounded-lg border border-orbita-border/60 bg-orbita-surface-alt/25 px-2.5 py-2 text-[11px] leading-tight text-orbita-secondary">
-          <span className="shrink-0 font-medium text-orbita-primary">Salud</span>
-          {appleHealthLoading ? (
-            <span className="shrink-0 text-orbita-secondary">Cargando…</span>
-          ) : appleHealthSnap ? (
-            <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
-              <span className="min-w-0 truncate text-right tabular-nums text-orbita-secondary">
-                <span className="hidden sm:inline">{appleHealthSnap.observed_at?.slice(0, 10) ?? "—"} · </span>
-                {appleHealthSnap.steps != null ? appleHealthSnap.steps.toLocaleString("es-ES") : "—"} pasos
-              </span>
-              <Link
-                href="/health"
-                className="shrink-0 font-medium whitespace-nowrap text-[var(--color-accent-health)] underline-offset-2 hover:underline"
-              >
-                Abrir
-              </Link>
-            </div>
-          ) : (
-            <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
-              <span className="min-w-0 truncate text-right">Sin atajo aún</span>
-              <Link
-                href="/health"
-                className="shrink-0 font-medium whitespace-nowrap text-[var(--color-accent-health)] underline-offset-2 hover:underline"
-              >
-                Configurar
-              </Link>
-            </div>
-          )}
-        </div>
-      )}
-
-      <header className="rounded-xl border border-orbita-border/80 bg-orbita-surface p-3 sm:p-4">
-        <div className="flex min-w-0 items-start gap-2.5 sm:gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-orbita-surface-alt text-[var(--color-accent-agenda)]">
-            <Calendar className="h-4 w-4" strokeWidth={2} aria-hidden />
+      <header className="rounded-lg border border-orbita-border/70 bg-orbita-surface p-2.5 sm:p-3">
+        <div className="flex min-w-0 items-start gap-2 sm:gap-2.5">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-orbita-surface-alt/80 text-[var(--color-accent-agenda)] sm:h-8 sm:w-8">
+            <Calendar className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
           </div>
-          <div className="min-w-0 flex-1 space-y-2.5">
+          <div className="min-w-0 flex-1 space-y-2">
             <div>
-              <h1 className="text-lg font-semibold tracking-tight text-orbita-primary sm:text-xl">Check-in diario</h1>
-              <p className="mt-0.5 text-[11px] leading-snug text-orbita-secondary sm:text-xs">
-                Misma fecha en todas las vistas; puedes guardar por partes o todo junto.
+              <h1 className="text-base font-semibold tracking-tight text-orbita-primary sm:text-lg">Check-in diario</h1>
+              <p className="mt-0.5 text-[10px] leading-snug text-orbita-secondary sm:text-[11px]">
+                Misma fecha en todas las vistas; guarda por partes o completo.
               </p>
             </div>
-            <div className="flex min-w-0 flex-nowrap items-center gap-2 sm:gap-3">
-              <div className="flex shrink-0 items-center gap-1.5">
+            <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-2.5">
+              <div
+                className="inline-flex w-full max-w-[11rem] rounded-md border border-orbita-border/50 bg-orbita-surface-alt/35 p-0.5 sm:w-auto sm:max-w-none"
+                role="group"
+                aria-label="Elegir día"
+              >
                 <button
                   type="button"
-                  className={`${chipDay} ${
+                  className={`${chipDayBase} ${
                     form.hoy
-                      ? "border-[color-mix(in_srgb,var(--color-accent-primary)_40%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-primary)_10%,var(--color-surface))] text-orbita-primary"
-                      : "border-orbita-border/80 bg-transparent text-orbita-secondary hover:bg-orbita-surface-alt/50"
+                      ? "bg-orbita-surface text-orbita-primary shadow-sm"
+                      : "text-orbita-secondary hover:text-orbita-primary/90"
                   }`}
                   onClick={() => {
                     handleChange("fecha", today)
@@ -651,10 +660,10 @@ export default function CheckinPage() {
                 </button>
                 <button
                   type="button"
-                  className={`${chipDay} ${
+                  className={`${chipDayBase} ${
                     form.ayer
-                      ? "border-[color-mix(in_srgb,var(--color-accent-primary)_40%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-primary)_10%,var(--color-surface))] text-orbita-primary"
-                      : "border-orbita-border/80 bg-transparent text-orbita-secondary hover:bg-orbita-surface-alt/50"
+                      ? "bg-orbita-surface text-orbita-primary shadow-sm"
+                      : "text-orbita-secondary hover:text-orbita-primary/90"
                   }`}
                   onClick={() => {
                     handleChange("fecha", yesterday)
@@ -665,8 +674,8 @@ export default function CheckinPage() {
                   Ayer
                 </button>
               </div>
-              <label className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
-                <span className="shrink-0 text-[10px] font-medium uppercase tracking-wide text-orbita-secondary">
+              <label className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+                <span className="hidden shrink-0 sm:inline sm:text-[10px] sm:font-medium sm:normal-case sm:text-orbita-secondary/90">
                   Fecha
                 </span>
                 <input
@@ -677,7 +686,7 @@ export default function CheckinPage() {
                     handleChange("hoy", e.target.value === today)
                     handleChange("ayer", false)
                   }}
-                  className="h-9 min-w-0 w-full max-w-[11.5rem] flex-1 rounded-md border border-orbita-border bg-orbita-surface px-2 text-xs text-orbita-primary outline-none transition focus:border-[color-mix(in_srgb,var(--color-accent-primary)_38%,var(--color-border))] focus:ring-1 focus:ring-[color-mix(in_srgb,var(--color-accent-primary)_22%,transparent)] sm:max-w-[10.5rem] sm:flex-none sm:min-w-[9.25rem]"
+                  className="h-8 min-w-0 w-full rounded-md border border-orbita-border/80 bg-orbita-surface px-2 text-xs text-orbita-primary outline-none transition focus:border-orbita-border focus:ring-1 focus:ring-orbita-border/40 sm:max-w-[11rem] sm:flex-1"
                   aria-label="Fecha del check-in"
                 />
               </label>
@@ -940,46 +949,49 @@ export default function CheckinPage() {
 
           <div className="rounded-2xl bg-[linear-gradient(135deg,color-mix(in_srgb,var(--color-accent-agenda)_55%,transparent),color-mix(in_srgb,var(--color-accent-health)_45%,transparent),color-mix(in_srgb,var(--color-accent-warning)_40%,transparent))] p-[1px] shadow-[0_12px_40px_-18px_color-mix(in_srgb,var(--color-accent-agenda)_35%,transparent)]">
             <div className="space-y-3 rounded-[15px] border border-orbita-border/60 bg-orbita-surface/95 p-3.5 sm:p-4">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="flex min-w-0 flex-1 items-start gap-2">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-accent-agenda)_18%,var(--color-surface-alt))] text-[var(--color-accent-agenda)] ring-2 ring-[color-mix(in_srgb,var(--color-accent-agenda)_35%,transparent)]">
-                    <Trophy className="h-4 w-4" strokeWidth={2.25} aria-hidden />
-                  </span>
-                  <div className="min-w-0 space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-orbita-primary">Bitácora guiada</p>
-                    <p className="text-[12px] leading-relaxed text-orbita-primary/85 sm:text-[13px]">
-                      Tres notas breves (opcionales pero útiles) enlazan descanso, ánimo y vínculos con el resto del check-in.
-                    </p>
-                    <Link
-                      href="/training"
-                      className="inline-flex items-center gap-1 text-[10px] font-semibold text-[var(--color-accent-health)] underline-offset-2 hover:underline"
-                    >
-                      <Zap className="h-3 w-3 shrink-0" aria-hidden />
-                      Ver cómo entra en Entrenamiento
-                    </Link>
+              {/* Grid: icon spans rows; title+pill share one row; body copy uses full text column (no pill beside it). */}
+              <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-2 gap-y-2 sm:gap-x-3 sm:gap-y-2.5">
+                <span className="row-span-2 mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center self-start rounded-full bg-[color-mix(in_srgb,var(--color-accent-agenda)_18%,var(--color-surface-alt))] text-[var(--color-accent-agenda)] ring-2 ring-[color-mix(in_srgb,var(--color-accent-agenda)_35%,transparent)]">
+                  <Trophy className="h-4 w-4" strokeWidth={2.25} aria-hidden />
+                </span>
+                <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-2 gap-y-1">
+                  <p className="m-0 min-w-0 text-xs font-semibold uppercase tracking-wide text-orbita-primary">
+                    Bitácora guiada
+                  </p>
+                  <div
+                    className="flex shrink-0 items-center gap-1.5 rounded-full border border-orbita-border/50 bg-orbita-surface-alt/80 py-0.5 pl-2 pr-1 sm:gap-2 sm:py-1 sm:pl-2.5 sm:pr-1.5"
+                    role="group"
+                    aria-label={`Bitácora: ${journalFilledCount} de 3 apartados con texto`}
+                    title="Indicador de los 3 apartados de la bitácora (rellena cada caja de texto para marcar uno como hecho)"
+                  >
+                    <span className="text-[10px] font-bold tabular-nums text-orbita-primary sm:text-[11px]">
+                      {journalFilledCount}/3
+                    </span>
+                    <div className="flex gap-0.5 sm:gap-1" aria-hidden>
+                      {[0, 1, 2].map((i) => (
+                        <span
+                          key={i}
+                          className={`h-1.5 w-5 rounded-full transition-colors sm:h-2 sm:w-6 ${
+                            journalFilledCount > i
+                              ? "bg-[color-mix(in_srgb,var(--color-accent-health)_70%,var(--color-accent-agenda))] shadow-[0_0_12px_color-mix(in_srgb,var(--color-accent-health)_45%,transparent)]"
+                              : "bg-orbita-border/50"
+                          }`}
+                        />
+                      ))}
+                    </div>
                   </div>
                 </div>
-                <div
-                  className="flex shrink-0 items-center gap-2 rounded-full border border-orbita-border/50 bg-orbita-surface-alt/80 py-1 pl-2 pr-1"
-                  role="group"
-                  aria-label={`Bitácora: ${journalFilledCount} de 3 apartados con texto`}
-                  title="Indicador de los 3 apartados de la bitácora (rellena cada caja de texto para marcar uno como hecho)"
-                >
-                  <span className="text-[10px] font-bold tabular-nums text-orbita-primary sm:text-[11px]">
-                    {journalFilledCount}/3
-                  </span>
-                  <div className="flex gap-1" aria-hidden>
-                    {[0, 1, 2].map((i) => (
-                      <span
-                        key={i}
-                        className={`h-2 w-6 rounded-full transition-colors ${
-                          journalFilledCount > i
-                            ? "bg-[color-mix(in_srgb,var(--color-accent-health)_70%,var(--color-accent-agenda))] shadow-[0_0_12px_color-mix(in_srgb,var(--color-accent-health)_45%,transparent)]"
-                            : "bg-orbita-border/50"
-                        }`}
-                      />
-                    ))}
-                  </div>
+                <div className="min-w-0 space-y-1">
+                  <p className="m-0 text-[12px] leading-relaxed text-orbita-primary/85 sm:text-[13px]">
+                    Tres notas breves (opcionales pero útiles) enlazan descanso, ánimo y vínculos con el resto del check-in.
+                  </p>
+                  <Link
+                    href="/training"
+                    className="inline-flex items-center gap-1 text-[10px] font-semibold text-[var(--color-accent-health)] underline-offset-2 hover:underline"
+                  >
+                    <Zap className="h-3 w-3 shrink-0" aria-hidden />
+                    Ver cómo entra en Entrenamiento
+                  </Link>
                 </div>
               </div>
               {journalFilledCount === 3 ? (
@@ -1029,56 +1041,66 @@ export default function CheckinPage() {
 
         <CheckinSection
           title="Medidas & Composición Corporal"
-          subtitle="Opcional — empieza cerrado para no saturar; abre si quieres revisar o editar"
+          subtitle="Opcional — avisos (Hevy / hoja) visibles aunque esté colapsado; despliega para ver y editar medidas"
           icon={Ruler}
           headerTintClass="bg-gradient-to-r from-[color-mix(in_srgb,var(--color-accent-warning)_12%,var(--color-surface))] to-[color-mix(in_srgb,var(--color-accent-danger)_8%,var(--color-background))]"
           iconBoxClass="bg-[color-mix(in_srgb,var(--color-accent-warning)_22%,var(--color-surface-alt))] text-[var(--color-accent-warning)]"
           collapsible
           defaultCollapsed
+          persistentWhenCollapsed={
+            bodyMeasuresSheetsLocked ||
+            (!bodyMeasuresSheetsLocked &&
+              hevyCheckinGate.serverConfigured &&
+              !hevyCheckinGate.userLinked) ||
+            bodyMeasuresHevyLocked ? (
+              <>
+                {bodyMeasuresSheetsLocked ? (
+                  <div
+                    role="status"
+                    className="rounded-xl border border-[color-mix(in_srgb,var(--color-accent-agenda)_35%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-agenda)_8%,var(--color-surface))] px-3 py-2.5 text-[11px] leading-snug text-orbita-primary"
+                  >
+                    <span className="mr-1.5 inline-flex items-center rounded-full border border-orbita-border/60 bg-orbita-surface-alt/90 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-orbita-secondary">
+                      Hoja
+                    </span>
+                    Estos números ya vienen de tu hoja del día enlazada. Para cambiarlos, corrígelos en la hoja y vuelve a cargar el check-in; aquí los dejamos fijos para que no se mezclen versiones por error.
+                  </div>
+                ) : null}
+                {!bodyMeasuresSheetsLocked && hevyCheckinGate.serverConfigured && !hevyCheckinGate.userLinked ? (
+                  <p className="m-0 text-[11px] leading-snug text-orbita-secondary sm:text-[12px]">
+                    Hevy está disponible en el servidor: enlaza tu uso en Órvita desde{" "}
+                    <Link
+                      href="/configuracion#acordeon-config-hevy"
+                      className="font-semibold text-orbita-primary underline-offset-2 hover:underline"
+                    >
+                      Configuración → Hevy
+                    </Link>{" "}
+                    (sincronizar) o abriendo{" "}
+                    <Link href="/training" className="font-semibold text-orbita-primary underline-offset-2 hover:underline">
+                      Entrenamiento
+                    </Link>{" "}
+                    una vez; así evitamos bloquear medidas hasta confirmar el enlace.
+                  </p>
+                ) : null}
+                {bodyMeasuresHevyLocked ? (
+                  <div
+                    role="status"
+                    className="rounded-xl border border-[color-mix(in_srgb,var(--color-accent-health)_38%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_10%,var(--color-surface))] px-3 py-2.5 text-[12px] leading-snug text-orbita-primary sm:text-[13px]"
+                  >
+                    <span className="mr-1.5 inline-flex items-center gap-1 rounded-full border border-[color-mix(in_srgb,var(--color-accent-health)_45%,var(--color-border))] bg-orbita-surface-alt/90 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-orbita-primary">
+                      <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-accent-health)] shadow-[0_0_8px_var(--color-accent-health)]" aria-hidden />
+                      Hevy activo
+                    </span>
+                    Peso y medidas: edítalos en Hevy (perfil). Aquí solo lectura para no duplicar; al guardar el check-in se reflejan en{" "}
+                    <Link href="/training" className="font-semibold text-[var(--color-accent-health)] underline-offset-2 hover:underline">
+                      Entrenamiento
+                    </Link>
+                    .
+                  </div>
+                ) : null}
+              </>
+            ) : undefined
+          }
         >
-          {bodyMeasuresSheetsLocked ? (
-            <div
-              role="status"
-              className="rounded-xl border border-[color-mix(in_srgb,var(--color-accent-agenda)_35%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-agenda)_8%,var(--color-surface))] px-3 py-2.5 text-[11px] leading-snug text-orbita-primary"
-            >
-              <span className="mr-1.5 inline-flex items-center rounded-full border border-orbita-border/60 bg-orbita-surface-alt/90 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-orbita-secondary">
-                Hoja
-              </span>
-              Estos números ya vienen de tu hoja del día enlazada. Para cambiarlos, corrígelos en la hoja y vuelve a cargar el check-in; aquí los dejamos fijos para que no se mezclen versiones por error.
-            </div>
-          ) : null}
-          {!bodyMeasuresSheetsLocked && hevyCheckinGate.serverConfigured && !hevyCheckinGate.userLinked ? (
-            <p className="m-0 text-[11px] leading-snug text-orbita-secondary sm:text-[12px]">
-              Hevy está disponible en el servidor: enlaza tu uso en Órvita desde{" "}
-              <Link
-                href="/configuracion#acordeon-config-hevy"
-                className="font-semibold text-orbita-primary underline-offset-2 hover:underline"
-              >
-                Configuración → Hevy
-              </Link>{" "}
-              (sincronizar) o abriendo{" "}
-              <Link href="/training" className="font-semibold text-orbita-primary underline-offset-2 hover:underline">
-                Entrenamiento
-              </Link>{" "}
-              una vez; así evitamos bloquear medidas hasta confirmar el enlace.
-            </p>
-          ) : null}
-          {bodyMeasuresHevyLocked ? (
-            <div
-              role="status"
-              className="rounded-xl border border-[color-mix(in_srgb,var(--color-accent-health)_38%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_10%,var(--color-surface))] px-3 py-2.5 text-[12px] leading-snug text-orbita-primary sm:text-[13px]"
-            >
-              <span className="mr-1.5 inline-flex items-center gap-1 rounded-full border border-[color-mix(in_srgb,var(--color-accent-health)_45%,var(--color-border))] bg-orbita-surface-alt/90 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-orbita-primary">
-                <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-accent-health)] shadow-[0_0_8px_var(--color-accent-health)]" aria-hidden />
-                Hevy activo
-              </span>
-              Peso y medidas: edítalos en Hevy (perfil). Aquí solo lectura para no duplicar; al guardar el check-in se reflejan en{" "}
-              <Link href="/training" className="font-semibold text-[var(--color-accent-health)] underline-offset-2 hover:underline">
-                Entrenamiento
-              </Link>
-              .
-            </div>
-          ) : null}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <NumberUnitField
               label="Peso"

@@ -796,10 +796,10 @@ export default function AgendaPage() {
           style={{ background: "var(--agenda-shell-bg)" }}
         >
           <div
-            className="flex min-h-[min(420px,55dvh)] min-w-0 flex-1 flex-col gap-4 md:gap-6"
+            className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 md:gap-6"
             aria-label="Agenda: vista activa con Órvita y Google"
           >
-            <div className="flex min-h-[min(320px,48dvh)] flex-1 flex-col">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
               {view === "columns" && (
                 <AgendaSharedKanban
                   grouped={grouped}

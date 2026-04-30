@@ -6,13 +6,8 @@ export const agendaCardChrome: CSSProperties = {
   boxShadow: "0 1px 3px rgba(15, 23, 42, 0.06)",
 }
 
-/** Acento cromático en el borde superior (sin franja lateral). */
-export function agendaCardSurfaceStyle(topAccentColor: string): CSSProperties {
-  return {
-    ...agendaCardChrome,
-    border: "1px solid var(--color-border)",
-    borderTop: `3px solid ${topAccentColor}`,
-  }
+export function agendaCardSurfaceStyle(borderLeft: string): CSSProperties {
+  return { ...agendaCardChrome, borderLeft }
 }
 
 export function priorityPillStyle(p: UiAgendaTask["priority"]): CSSProperties {

@@ -21,7 +21,7 @@ export function SaludInsightSection({ brief }: Props) {
 
   return (
     <section
-      className="relative overflow-hidden rounded-xl border px-4 py-3 sm:px-4 sm:py-3.5"
+      className="rounded-xl border px-4 py-3 sm:px-4 sm:py-3.5"
       style={{
         ...saludPanelStyle(theme, 0.92),
         borderColor: theme.border,
@@ -29,18 +29,12 @@ export function SaludInsightSection({ brief }: Props) {
       }}
       aria-labelledby="salud-insight-heading"
     >
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-[3px]"
-        style={{
-          background: `linear-gradient(90deg, ${accent}, color-mix(in srgb, ${accent} 35%, transparent) 42%, transparent 78%)`,
-        }}
-        aria-hidden
-      />
       <h2
         id="salud-insight-heading"
-        className="m-0 text-[10px] font-semibold uppercase tracking-[0.18em]"
+        className="m-0 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em]"
         style={{ color: theme.textMuted }}
       >
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: accent }} aria-hidden />
         Insight
       </h2>
       <p className="m-0 mt-2 text-sm font-semibold leading-snug sm:text-[15px]" style={{ color: theme.text }}>

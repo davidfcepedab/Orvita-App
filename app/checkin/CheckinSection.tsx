@@ -17,6 +17,11 @@ type CheckinSectionProps = {
   collapsible?: boolean
   /** Solo con `collapsible`: si true, empieza cerrado. */
   defaultCollapsed?: boolean
+  /**
+   * Solo con `collapsible`: bloque que sigue visible aunque la sección esté colapsada
+   * (p. ej. avisos Hevy / hoja antes de los campos).
+   */
+  persistentWhenCollapsed?: ReactNode
 }
 
 /**
@@ -32,8 +37,10 @@ export function CheckinSection({
   children,
   collapsible = false,
   defaultCollapsed = false,
+  persistentWhenCollapsed,
 }: CheckinSectionProps) {
   const [open, setOpen] = useState(!defaultCollapsed)
+  const hasPersistent = Boolean(collapsible && persistentWhenCollapsed)
 
   const headerInner = (
     <>
@@ -72,9 +79,18 @@ export function CheckinSection({
       ) : (
         <div className={`flex items-start gap-3 px-4 py-3.5 sm:px-5 sm:py-4 ${headerTintClass}`}>{headerInner}</div>
       )}
-      <div className={collapsible && !open ? "hidden" : "border-t border-orbita-border/90"}>
-        <div className="space-y-5 px-4 py-4 sm:px-5 sm:py-5">{children}</div>
-      </div>
+      {hasPersistent ? (
+        <div className="border-t border-orbita-border/90">
+          <div className="space-y-3 px-4 py-3 sm:px-5 sm:py-3.5">{persistentWhenCollapsed}</div>
+          <div className={!open ? "hidden" : "border-t border-orbita-border/40"}>
+            <div className="space-y-5 px-4 py-4 sm:px-5 sm:py-5">{children}</div>
+          </div>
+        </div>
+      ) : (
+        <div className={collapsible && !open ? "hidden" : "border-t border-orbita-border/90"}>
+          <div className="space-y-5 px-4 py-4 sm:px-5 sm:py-5">{children}</div>
+        </div>
+      )}
     </section>
   )
 }

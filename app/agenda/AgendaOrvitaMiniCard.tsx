@@ -45,7 +45,7 @@ export function AgendaOrvitaMiniCard({
         background: shell.background,
         borderRadius: "var(--task-card-radius)",
         border: "1px solid var(--task-card-border-color, var(--color-border))",
-        borderTop: shell.borderTop,
+        borderLeft: shell.borderLeft,
         fontFamily: "var(--task-card-font-family, inherit)",
         minHeight: "var(--task-card-min-height, unset)",
       }}
