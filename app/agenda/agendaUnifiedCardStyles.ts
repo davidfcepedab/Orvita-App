@@ -62,9 +62,9 @@ export function googleSourcePillStyle(kind: "reminder" | "calendar"): CSSPropert
 export const agendaPillBaseClass =
   "inline-flex max-w-full rounded-full px-2 py-px text-[9px] font-semibold uppercase tracking-[0.08em]"
 
-/** Botón circular secundario (editar / borrar) en tarjetas de agenda. */
+/** Icono secundario (editar / borrar): sin relleno, borde y sombra casi imperceptibles. */
 export const agendaTaskCircleActionClass =
-  "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--color-border)_62%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_94%,transparent)] text-[var(--color-text-secondary)] shadow-[0_1px_0_color-mix(in_srgb,var(--color-border)_40%,transparent)] transition-[transform,box-shadow,background-color,border-color,color] motion-safe:duration-200 hover:border-[color-mix(in_srgb,var(--color-accent-primary)_38%,var(--color-border))] hover:bg-[color-mix(in_srgb,var(--color-accent-primary)_10%,var(--color-surface))] hover:text-[var(--color-text-primary)] hover:shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-accent-primary)_22%,transparent),0_8px_20px_-12px_color-mix(in_srgb,var(--color-accent-primary)_25%,transparent)] active:scale-[0.96] disabled:pointer-events-none disabled:opacity-35"
+  "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-transparent bg-transparent text-[var(--color-text-secondary)] opacity-[0.72] shadow-none transition-[opacity,color,background-color,transform] motion-safe:duration-200 hover:border-[color-mix(in_srgb,var(--color-border)_45%,transparent)] hover:bg-[color-mix(in_srgb,var(--color-text-primary)_6%,transparent)] hover:text-[var(--color-text-primary)] hover:opacity-100 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-35 sm:h-9 sm:w-9 sm:rounded-lg"
 
 /** Texto bajo el toggle principal (hecho / visto); secundarios van sin leyenda visible (icono + aria). */
 export const agendaTaskCircleCaptionClass =

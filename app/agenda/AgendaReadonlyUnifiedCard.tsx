@@ -161,13 +161,13 @@ export function AgendaReadonlyUnifiedCard({
           </div>
           <div className="flex shrink-0 flex-col items-end gap-2 sm:gap-2.5 pt-0.5">
             {hasSecondaryActions ? (
-              <div className="flex flex-row items-center justify-end gap-2">
+              <div className="flex flex-row items-center justify-end gap-0.5 sm:gap-1">
                 {onDelete ? (
                   <button
                     type="button"
                     disabled={deleteBusy}
                     onClick={() => void handleDeleteClick()}
-                    className={`${agendaTaskCircleActionClass} hover:!border-[color-mix(in_srgb,var(--color-accent-danger)_42%,var(--color-border))] hover:!text-[var(--color-accent-danger)]`}
+                    className={`${agendaTaskCircleActionClass} hover:!border-[color-mix(in_srgb,var(--color-accent-danger)_35%,transparent)] hover:!bg-[color-mix(in_srgb,var(--color-accent-danger)_10%,transparent)] hover:!text-[var(--color-accent-danger)]`}
                     aria-label={
                       googleKind === "calendar"
                         ? "Eliminar evento también en Google Calendar"
