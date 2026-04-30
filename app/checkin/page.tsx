@@ -426,108 +426,109 @@ export default function CheckinPage() {
     }
   }
 
-  const chipBase =
-    "min-h-[40px] rounded-full border px-4 text-xs font-semibold uppercase tracking-wide transition active:scale-[0.98] sm:min-h-0 sm:py-2"
+  const chipDay =
+    "inline-flex min-h-[34px] items-center justify-center rounded-md border px-3 text-[11px] font-medium transition active:scale-[0.99] sm:min-h-[32px]"
+
+  const topStatus = useMemo(() => {
+    if (mockOn) return { tone: "agenda" as const, text: UI_CHECKIN_BANNER_MOCK, title: UI_CHECKIN_BANNER_MOCK }
+    if (!supabaseOn)
+      return { tone: "danger" as const, text: UI_CHECKIN_BANNER_NO_CLOUD, title: UI_CHECKIN_BANNER_NO_CLOUD }
+    if (preloadStatus) return { tone: "warn" as const, text: preloadStatus, title: preloadStatus }
+    if (apiNotice) return { tone: "neutral" as const, text: apiNotice, title: apiNotice }
+    return null
+  }, [mockOn, supabaseOn, preloadStatus, apiNotice])
+
+  const topStatusClass =
+    topStatus?.tone === "danger"
+      ? "text-[var(--color-accent-danger)]"
+      : topStatus?.tone === "warn"
+        ? "text-orbita-primary"
+        : topStatus?.tone === "agenda"
+          ? "text-orbita-primary"
+          : "text-orbita-secondary"
 
   return (
-    <div className="relative mx-auto max-w-2xl space-y-4 px-2 pb-28 pt-1 sm:space-y-5 sm:px-0 sm:pb-32">
-      <div className="flex items-center gap-2">
-        <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
-          {mockOn && (
-            <p
-              role="alert"
-              title={UI_CHECKIN_BANNER_MOCK}
-              className="max-w-full truncate rounded-full border border-[color-mix(in_srgb,var(--color-accent-agenda)_42%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-agenda)_12%,var(--color-surface))] px-3 py-1 text-xs text-orbita-primary"
-            >
-              {UI_CHECKIN_BANNER_MOCK}
-            </p>
-          )}
-          {!mockOn && !supabaseOn && (
-            <p
-              role="alert"
-              title={UI_CHECKIN_BANNER_NO_CLOUD}
-              className="max-w-full truncate rounded-full border border-[color-mix(in_srgb,var(--color-accent-danger)_42%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-danger)_10%,var(--color-surface))] px-3 py-1 text-xs text-orbita-primary"
-            >
-              {UI_CHECKIN_BANNER_NO_CLOUD}
-            </p>
-          )}
-          {apiNotice && (
-            <p title={apiNotice} className="max-w-full truncate rounded-full border border-orbita-border bg-orbita-surface-alt px-3 py-1 text-xs text-orbita-primary">
-              {apiNotice}
-            </p>
-          )}
-          {preloadStatus && (
-            <p
-              title={preloadStatus}
-              className="max-w-full truncate rounded-full border border-[color-mix(in_srgb,var(--color-accent-warning)_40%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-warning)_12%,var(--color-surface))] px-3 py-1 text-xs text-orbita-primary"
-            >
-              {preloadStatus}
-            </p>
-          )}
-        </div>
-        <div className="flex shrink-0 items-center gap-1.5">
+    <div className="relative mx-auto max-w-2xl space-y-3 px-2 pb-28 pt-1 sm:space-y-4 sm:px-0 sm:pb-32">
+      <div className="flex flex-col gap-2 border-b border-orbita-border/55 pb-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+        {topStatus ? (
+          <p
+            role={mockOn || topStatus.tone === "danger" ? "alert" : "status"}
+            title={topStatus.title}
+            className={`m-0 min-w-0 flex-1 text-[11px] leading-snug sm:text-xs ${topStatusClass}`}
+          >
+            <span className="line-clamp-2 [overflow-wrap:anywhere] sm:line-clamp-1">{topStatus.text}</span>
+          </p>
+        ) : (
+          <p className="m-0 min-w-0 flex-1 text-[11px] text-orbita-secondary sm:text-xs">Listo para guardar en la fecha elegida.</p>
+        )}
+        <div className="flex shrink-0 items-center gap-2 sm:gap-1.5">
           <Link
             href="/hoy"
-            className="inline-flex h-8 items-center rounded-full border border-orbita-border bg-orbita-surface px-2.5 text-[11px] font-medium text-orbita-secondary shadow-sm transition hover:bg-orbita-surface-alt"
+            className="inline-flex h-8 items-center rounded-md border border-transparent px-2 text-[11px] font-medium text-orbita-secondary underline decoration-orbita-border underline-offset-4 transition hover:text-orbita-primary"
           >
             ← Hoy
           </Link>
+          {supabaseOn ? (
+            <span
+              className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-accent-health)] sm:hidden"
+              title="Guardado en nube activo"
+              aria-hidden
+            />
+          ) : null}
           <span
-            className={`inline-flex h-8 items-center rounded-full border px-2.5 text-[10px] font-semibold uppercase tracking-wide ${
+            className={`hidden h-7 items-center rounded-md border px-2 text-[10px] font-medium tabular-nums sm:inline-flex ${
               supabaseOn
-                ? "border-[color-mix(in_srgb,var(--color-accent-health)_40%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_12%,var(--color-surface))] text-orbita-primary"
-                : "border-orbita-border bg-orbita-surface-alt text-orbita-secondary"
+                ? "border-orbita-border/80 bg-orbita-surface-alt/60 text-orbita-secondary"
+                : "border-orbita-border text-orbita-secondary opacity-80"
             }`}
-            title={`App: ${mockOn ? "mock" : getAppMode()} · Supabase check-in: ${supabaseOn ? "on" : "off"}${apiFlags ? " · sync API" : ""}`}
+            title={`App: ${mockOn ? "mock" : getAppMode()} · Supabase: ${supabaseOn ? "activo" : "inactivo"}`}
           >
-            Supabase {supabaseOn ? "ON" : "OFF"}
+            {supabaseOn ? "Nube activa" : "Sin nube"}
           </span>
         </div>
       </div>
 
       {!mockOn && supabaseOn && (
-        <div className="rounded-xl border border-orbita-border/80 bg-orbita-surface-alt/40 px-3 py-2.5 text-xs leading-relaxed text-orbita-secondary">
-          <span className="font-medium text-orbita-primary">Salud (última importación)</span>
+        <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1 rounded-lg border border-orbita-border/60 bg-orbita-surface-alt/25 px-2.5 py-2 text-[11px] leading-snug text-orbita-secondary">
+          <span className="font-medium text-orbita-primary">Salud</span>
           {appleHealthLoading ? (
-            <span className="ml-1">Cargando…</span>
+            <span>Cargando…</span>
           ) : appleHealthSnap ? (
-            <span className="ml-1">
-              Día {appleHealthSnap.observed_at?.slice(0, 10) ?? "—"} · pasos{" "}
-              {appleHealthSnap.steps != null ? appleHealthSnap.steps.toLocaleString("es-ES") : "—"} ·{" "}
-              <Link href="/health" className="font-semibold text-[var(--color-accent-health)] underline-offset-2 hover:underline">
-                Ver en Salud
+            <span className="min-w-0 text-right [overflow-wrap:anywhere]">
+              {appleHealthSnap.observed_at?.slice(0, 10) ?? "—"} ·{" "}
+              {appleHealthSnap.steps != null ? appleHealthSnap.steps.toLocaleString("es-ES") : "—"} pasos ·{" "}
+              <Link href="/health" className="font-medium text-[var(--color-accent-health)] underline-offset-2 hover:underline">
+                Salud
               </Link>
             </span>
           ) : (
-            <span className="ml-1">
-              Aún no hay datos del atajo. Configura el atajo y vincula el token en{" "}
-              <Link href="/health" className="font-semibold text-[var(--color-accent-health)] underline-offset-2 hover:underline">
-                Salud
+            <span className="min-w-0 text-right">
+              Sin atajo aún ·{" "}
+              <Link href="/health" className="font-medium text-[var(--color-accent-health)] underline-offset-2 hover:underline">
+                Configurar
               </Link>
-              .
             </span>
           )}
         </div>
       )}
 
-      {/* Cabecera página (referencia Figma) */}
-      <header className="flex flex-col gap-4 rounded-2xl border border-orbita-border/90 bg-gradient-to-br from-orbita-surface-alt to-orbita-surface p-4 shadow-card sm:flex-row sm:items-start sm:justify-between sm:p-5">
-        <div className="flex min-w-0 items-start gap-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[color-mix(in_srgb,var(--color-accent-agenda)_20%,var(--color-surface-alt))] text-[var(--color-accent-agenda)] shadow-sm">
-            <Calendar className="h-6 w-6" strokeWidth={2} aria-hidden />
+      <header className="flex flex-col gap-3 rounded-xl border border-orbita-border/80 bg-orbita-surface p-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4 sm:p-4">
+        <div className="flex min-w-0 items-start gap-2.5 sm:gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-orbita-surface-alt text-[var(--color-accent-agenda)]">
+            <Calendar className="h-4 w-4" strokeWidth={2} aria-hidden />
           </div>
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight text-orbita-primary sm:text-2xl">Check-in diario</h1>
-            <p className="mt-1 text-sm text-orbita-secondary">
-              Elige un momento o el formulario completo. Los datos se comparten entre vistas.
+          <div className="min-w-0 flex-1">
+            <h1 className="text-lg font-semibold tracking-tight text-orbita-primary sm:text-xl">Check-in diario</h1>
+            <p className="mt-0.5 text-[11px] leading-snug text-orbita-secondary sm:text-xs">
+              Misma fecha en todas las vistas; puedes guardar por partes o todo junto.
             </p>
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
               <button
                 type="button"
-                className={`${chipBase} ${
+                className={`${chipDay} ${
                   form.hoy
-                    ? "border-[color-mix(in_srgb,var(--color-accent-primary)_45%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-primary)_14%,var(--color-surface))] text-orbita-primary"
-                    : "border-orbita-border bg-orbita-surface text-orbita-secondary"
+                    ? "border-[color-mix(in_srgb,var(--color-accent-primary)_40%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-primary)_10%,var(--color-surface))] text-orbita-primary"
+                    : "border-orbita-border/80 bg-transparent text-orbita-secondary hover:bg-orbita-surface-alt/50"
                 }`}
                 onClick={() => {
                   handleChange("fecha", today)
@@ -539,10 +540,10 @@ export default function CheckinPage() {
               </button>
               <button
                 type="button"
-                className={`${chipBase} ${
+                className={`${chipDay} ${
                   form.ayer
-                    ? "border-[color-mix(in_srgb,var(--color-accent-primary)_45%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-primary)_14%,var(--color-surface))] text-orbita-primary"
-                    : "border-orbita-border bg-orbita-surface text-orbita-secondary"
+                    ? "border-[color-mix(in_srgb,var(--color-accent-primary)_40%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-primary)_10%,var(--color-surface))] text-orbita-primary"
+                    : "border-orbita-border/80 bg-transparent text-orbita-secondary hover:bg-orbita-surface-alt/50"
                 }`}
                 onClick={() => {
                   handleChange("fecha", yesterday)
@@ -555,8 +556,8 @@ export default function CheckinPage() {
             </div>
           </div>
         </div>
-        <label className="flex w-full flex-col gap-1 sm:w-auto sm:min-w-[200px]">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-orbita-secondary">Fecha</span>
+        <label className="flex w-full min-w-0 flex-col gap-0.5 sm:w-auto sm:max-w-[11rem]">
+          <span className="text-[10px] font-medium uppercase tracking-wide text-orbita-secondary">Fecha</span>
           <input
             type="date"
             value={form.fecha}
@@ -565,7 +566,7 @@ export default function CheckinPage() {
               handleChange("hoy", e.target.value === today)
               handleChange("ayer", false)
             }}
-            className="min-h-[44px] w-full rounded-xl border border-orbita-border bg-orbita-surface px-3 py-2 text-sm text-orbita-primary shadow-sm outline-none focus:border-[color-mix(in_srgb,var(--color-accent-primary)_42%,var(--color-border))] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--color-accent-primary)_28%,transparent)]"
+            className="h-9 w-full rounded-md border border-orbita-border bg-orbita-surface px-2 text-xs text-orbita-primary outline-none transition focus:border-[color-mix(in_srgb,var(--color-accent-primary)_38%,var(--color-border))] focus:ring-1 focus:ring-[color-mix(in_srgb,var(--color-accent-primary)_22%,transparent)] sm:min-w-[9.5rem]"
             aria-label="Fecha del check-in"
           />
         </label>
@@ -573,9 +574,9 @@ export default function CheckinPage() {
 
       <nav
         aria-label="Parte del formulario a mostrar"
-        className="rounded-xl border border-orbita-border/90 bg-orbita-surface/95 p-1 shadow-card ring-1 ring-orbita-border/80"
+        className="overflow-hidden rounded-lg border border-orbita-border/70 bg-orbita-surface"
       >
-        <div className="grid grid-cols-2 gap-0.5 sm:grid-cols-4 sm:gap-px sm:bg-orbita-border/50 sm:p-px">
+        <div className="grid grid-cols-2 gap-px border-b border-orbita-border/50 bg-orbita-border/40 p-px sm:grid-cols-4">
           {VIEWPORT_TABS.map((tab) => {
             const active = viewport === tab.id
             return (
@@ -583,16 +584,14 @@ export default function CheckinPage() {
                 key={tab.id}
                 type="button"
                 onClick={() => setViewportAndUrl(tab.id)}
-                className={`flex min-h-[48px] flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-2 text-center transition sm:min-h-[52px] sm:rounded-md ${
+                className={`flex min-h-[40px] flex-col items-center justify-center gap-0 bg-orbita-surface px-1 py-1.5 text-center transition sm:min-h-[42px] sm:px-1.5 ${
                   active
-                    ? "bg-[var(--color-accent-primary)] text-white shadow-sm"
-                    : "bg-orbita-surface-alt/80 text-orbita-secondary hover:bg-orbita-surface-alt sm:bg-orbita-surface"
+                    ? "bg-orbita-surface-alt font-medium text-orbita-primary ring-1 ring-inset ring-orbita-border/70"
+                    : "text-orbita-secondary hover:bg-orbita-surface-alt/70"
                 }`}
               >
-                <span className="text-[11px] font-semibold tracking-tight sm:text-xs">{tab.label}</span>
-                <span
-                  className={`hidden text-[9px] leading-tight sm:block ${active ? "text-white/85" : "text-orbita-secondary"}`}
-                >
+                <span className="text-[10px] font-semibold tracking-tight sm:text-[11px]">{tab.label}</span>
+                <span className={`hidden text-[9px] leading-tight sm:line-clamp-1 sm:block ${active ? "text-orbita-primary/80" : ""}`}>
                   {tab.hint}
                 </span>
               </button>
@@ -600,19 +599,20 @@ export default function CheckinPage() {
           })}
         </div>
         {viewport !== "full" ? (
-          <p className="m-0 border-t border-orbita-border px-3 py-2 text-center text-[11px] leading-snug text-orbita-secondary">
-            Vista reducida: enfocas un bloque a la vez. Cada guardado envía el formulario completo en memoria (mañana/día/noche siguen con los valores que ya tenías o por defecto), así puedes repartir el check-in en varios guardados el mismo día.
+          <p className="m-0 px-2.5 py-2 text-center text-[10px] leading-snug text-orbita-secondary sm:px-3 sm:text-[11px]">
+            Mismo formulario: cada guardado actualiza el registro de esta fecha.
           </p>
         ) : null}
+        <details className="border-t border-orbita-border/50 text-[10px] text-orbita-secondary open:bg-orbita-surface-alt/25">
+          <summary className="cursor-pointer list-none px-2.5 py-2 text-orbita-primary marker:content-none sm:px-3 [&::-webkit-details-marker]:hidden">
+            <span className="text-orbita-secondary">Historial del día</span>
+            <span className="ml-1 text-orbita-primary/70">· detalle</span>
+          </summary>
+          <p className="m-0 border-t border-orbita-border/35 px-2.5 pb-2.5 pt-2 leading-snug sm:px-3">
+            Varios guardados el mismo día se unen en un solo registro (último gana). Contexto y salud usan ese registro.
+          </p>
+        </details>
       </nav>
-
-      <aside
-        aria-label="Cómo se guardan los check-ins en el historial"
-        className="rounded-xl border border-orbita-border/80 bg-[color-mix(in_srgb,var(--color-surface-alt)_88%,var(--color-surface))] px-3 py-2.5 text-[11px] leading-snug text-orbita-secondary sm:px-4 sm:text-[12px]"
-      >
-        <span className="font-semibold text-orbita-primary">Historial: </span>
-        varios guardados el mismo día se fusionan en un solo registro en la nube (misma fecha del formulario): el último guardado sustituye el anterior. En contexto y salud se usa ese registro del día. Entradas antiguas sin fecha o creadas por otros flujos pueden seguir apareciendo aparte.
-      </aside>
 
       <div className="space-y-4 sm:space-y-5">
         {(viewport === "full" || viewport === "manana") && (
