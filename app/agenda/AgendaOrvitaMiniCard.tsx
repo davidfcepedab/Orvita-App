@@ -37,7 +37,7 @@ export function AgendaOrvitaMiniCard({
 
   return (
     <div
-      className="overflow-hidden"
+      className="min-w-0 max-w-full overflow-hidden"
       style={{
         ...agendaCardChrome,
         ...varStyle,
@@ -51,7 +51,7 @@ export function AgendaOrvitaMiniCard({
     >
       <TaskCardArea area="title" iterationMode={iterationMode}>
         <p
-          className="m-0 tracking-tight"
+          className="m-0 min-w-0 break-words tracking-tight [overflow-wrap:anywhere]"
           style={{
             fontSize: "var(--task-card-title-size)",
             lineHeight: "var(--task-card-line-title)",

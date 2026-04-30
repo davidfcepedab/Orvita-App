@@ -1123,7 +1123,7 @@ export function AgendaSharedWeek({
                     <span className="shrink-0 text-[10px] font-semibold uppercase text-[var(--agenda-personal)]">Hoy</span>
                   )}
                 </div>
-                <div className="flex max-h-[min(52dvh,28rem)] min-h-0 flex-col gap-1.5 overflow-y-auto pr-0.5 lg:max-h-[min(58dvh,36rem)] lg:gap-1.5">
+                <div className="flex max-h-[min(52dvh,28rem)] min-h-0 flex-col gap-1.5 overflow-y-auto overflow-x-hidden overscroll-y-contain px-0.5 pb-3 pr-1.5 [-webkit-overflow-scrolling:touch] lg:max-h-[min(58dvh,36rem)] lg:gap-1.5 lg:pb-3.5">
                   {dayTasks.map((task) => (
                     <AgendaOrvitaMiniCard key={task.id} task={task} viewerUserId={viewerUserId} />
                   ))}

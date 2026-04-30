@@ -117,12 +117,17 @@ export function AgendaReadonlyUnifiedCard({
     await onDelete()
   }
 
+  const innerPadClass =
+    variant === "compact" && embedded
+      ? "gap-1.5 px-2.5 py-2 sm:gap-2 sm:px-3 sm:py-2.5"
+      : "gap-1.5 px-3 py-2 sm:gap-2 sm:px-3 sm:py-2.5"
+
   const inner = (
     <div
-      className="flex flex-col gap-1.5 px-3 py-2 sm:gap-2 sm:px-3 sm:py-2.5"
+      className={`flex min-w-0 flex-col ${innerPadClass}`}
       style={{ ...varStyle, fontFamily: "var(--task-card-font-family, inherit)" }}
     >
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex min-w-0 items-center justify-between gap-2">
         <p className="m-0 flex min-w-0 flex-1 items-center gap-1 text-[9px] leading-tight text-[var(--color-text-secondary)] sm:text-[10px]">
           <MetaIcon className={`${iconCls} shrink-0 opacity-55`} strokeWidth={2} aria-hidden />
           <span className="truncate">{metaText}</span>
@@ -161,13 +166,15 @@ export function AgendaReadonlyUnifiedCard({
       </div>
 
       {showRightChrome ? (
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-start justify-between gap-2">
           <p
-            className={`m-0 min-w-0 flex-1 tracking-tight text-[var(--color-text-primary)] ${titleClass}`}
+            className={`m-0 min-w-0 flex-1 tracking-tight text-[var(--color-text-primary)] ${titleClass} ${
+              variant === "compact" ? "break-words pr-1 [overflow-wrap:anywhere] sm:line-clamp-2 sm:pr-0" : ""
+            }`}
           >
             {title}
           </p>
-          <div className="flex shrink-0 flex-col items-end gap-1">
+          <div className="flex shrink-0 flex-col items-end gap-1 self-start pt-0.5">
             {showComplete ? (
               <button
                 type="button"
@@ -228,7 +235,13 @@ export function AgendaReadonlyUnifiedCard({
           </div>
         </div>
       ) : (
-        <p className={`m-0 min-w-0 tracking-tight text-[var(--color-text-primary)] ${titleClass}`}>{title}</p>
+        <p
+          className={`m-0 min-w-0 tracking-tight text-[var(--color-text-primary)] ${titleClass} ${
+            variant === "compact" ? "break-words [overflow-wrap:anywhere]" : ""
+          }`}
+        >
+          {title}
+        </p>
       )}
 
       <div className="flex flex-wrap items-center gap-1">
@@ -339,7 +352,7 @@ export function AgendaReadonlyUnifiedCard({
   if (embedded) {
     return (
       <div
-        className="overflow-hidden transition-[background-color] duration-500 ease-out"
+        className="min-w-0 max-w-full overflow-hidden transition-[background-color] duration-500 ease-out"
         style={{
           ...shellStyle,
           ...frameEmbedded,
