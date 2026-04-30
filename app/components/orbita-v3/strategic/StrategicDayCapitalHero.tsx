@@ -202,15 +202,15 @@ export function StrategicDayHero({
                   </p>
                 )}
 
-                <div className="grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-2.5 sm:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_minmax(0,1fr)] sm:items-stretch sm:gap-3">
+                <div className="grid min-h-0 min-w-0 flex-1 grid-cols-2 gap-2 sm:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_minmax(0,1fr)] sm:items-stretch sm:gap-3">
                   <motion.div
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                    className="flex min-h-[100px] min-w-0 items-center gap-2.5 rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_5%,var(--color-surface-alt))] px-2.5 py-2.5 sm:h-full sm:min-h-[108px] sm:gap-3 sm:px-3 sm:py-2.5"
+                    className="col-span-2 flex min-h-[92px] min-w-0 items-center gap-2.5 rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_5%,var(--color-surface-alt))] px-3 py-3 sm:col-span-1 sm:h-full sm:min-h-[108px] sm:gap-3 sm:px-3 sm:py-2.5"
                   >
                     <ReadinessRing score={health.readiness_score ?? null} />
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 sm:text-left">
                       <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
                         Disposición
                       </p>
@@ -236,13 +236,13 @@ export function StrategicDayHero({
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.35, delay: 0.05, ease: [0.22, 1, 0.36, 1] }}
-                    className="flex min-h-[100px] min-w-0 flex-col justify-center rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[var(--color-surface-alt)] px-2.5 py-2.5 sm:h-full sm:min-h-[108px] sm:px-3 sm:py-2.5"
+                    className="flex min-h-[5.75rem] min-w-0 flex-col justify-center rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[var(--color-surface-alt)] px-2 py-3 text-center sm:h-full sm:min-h-[108px] sm:items-stretch sm:justify-center sm:px-3 sm:py-2.5 sm:text-left"
                   >
-                    <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--color-text-secondary)]">
+                    <div className="flex items-center justify-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--color-text-secondary)] sm:justify-start">
                       <Footprints className="h-3.5 w-3.5 shrink-0 opacity-85" aria-hidden />
                       Pasos
                     </div>
-                    <p className="m-0 mt-0.5 text-base font-bold tabular-nums leading-none text-[var(--color-text-primary)] sm:text-lg">
+                    <p className="m-0 mt-1 text-[15px] font-bold tabular-nums leading-none tracking-tight text-[var(--color-text-primary)] sm:mt-0.5 sm:text-lg">
                       {health.steps != null ? health.steps.toLocaleString("es-CO") : "—"}
                     </p>
                   </motion.div>
@@ -250,13 +250,13 @@ export function StrategicDayHero({
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.35, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-                    className="flex min-h-[100px] min-w-0 flex-col justify-center rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[var(--color-surface-alt)] px-2.5 py-2.5 sm:h-full sm:min-h-[108px] sm:px-3 sm:py-2.5"
+                    className="flex min-h-[5.75rem] min-w-0 flex-col justify-center rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[var(--color-surface-alt)] px-2 py-3 text-center sm:h-full sm:min-h-[108px] sm:items-stretch sm:justify-center sm:px-3 sm:py-2.5 sm:text-left"
                   >
-                    <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--color-text-secondary)]">
+                    <div className="flex items-center justify-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--color-text-secondary)] sm:justify-start">
                       <Dumbbell className="h-3.5 w-3.5 shrink-0 opacity-85" aria-hidden />
                       Sesiones
                     </div>
-                    <p className="m-0 mt-0.5 text-base font-bold tabular-nums leading-none text-[var(--color-text-primary)] sm:text-lg">
+                    <p className="m-0 mt-1 text-[15px] font-bold tabular-nums leading-none tracking-tight text-[var(--color-text-primary)] sm:mt-0.5 sm:text-lg">
                       {health.workouts_count != null ? health.workouts_count : "—"}
                     </p>
                   </motion.div>
