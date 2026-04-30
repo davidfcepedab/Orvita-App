@@ -78,8 +78,8 @@ export function HeroDecisionCard({ brief, syncLine }: Props) {
           </p>
         </div>
 
-        <div className="relative flex shrink-0 flex-col gap-3 border-t border-[color-mix(in_srgb,var(--color-border)_45%,transparent)] pt-4 sm:border-t-0 sm:pl-6 sm:pt-0 sm:before:pointer-events-none sm:before:absolute sm:before:left-0 sm:before:top-2 sm:before:bottom-2 sm:before:w-px sm:before:bg-[color-mix(in_srgb,var(--color-border)_45%,transparent)] sm:before:content-[''] lg:min-w-[10rem] lg:flex-row lg:items-center lg:justify-end lg:gap-4 lg:pl-8">
-          <div className="flex items-center gap-2.5" aria-label={`Energía ${energy} de 100`}>
+        <div className="relative flex w-full shrink-0 flex-row flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-[color-mix(in_srgb,var(--color-border)_45%,transparent)] pt-4 sm:w-auto sm:flex-nowrap sm:justify-end sm:border-t-0 sm:pl-6 sm:pt-0 sm:before:pointer-events-none sm:before:absolute sm:before:left-0 sm:before:top-2 sm:before:bottom-2 sm:before:w-px sm:before:bg-[color-mix(in_srgb,var(--color-border)_45%,transparent)] sm:before:content-[''] lg:min-w-[10rem] lg:gap-4 lg:pl-8">
+          <div className="flex min-w-0 items-center gap-2.5" aria-label={`Energía ${energy} de 100`}>
             <div
               className="relative h-10 w-10 shrink-0 rounded-full p-[2px] sm:h-11 sm:w-11"
               style={{
@@ -106,16 +106,15 @@ export function HeroDecisionCard({ brief, syncLine }: Props) {
 
           <Link
             href="/training"
-            className="inline-flex w-fit max-w-full items-center gap-1.5 self-start rounded-lg border px-3 py-2 text-[12px] font-medium no-underline transition-[opacity,transform] hover:opacity-90 active:scale-[0.99] sm:self-auto lg:shrink-0"
+            className="inline-flex shrink-0 items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium text-[var(--color-text-secondary)] no-underline transition-[color,background-color,border-color,opacity] hover:border-[color-mix(in_srgb,var(--color-border)_72%,var(--color-text-primary))] hover:bg-[color-mix(in_srgb,var(--color-surface-alt)_88%,transparent)] hover:text-[var(--color-text-primary)] active:opacity-90 sm:px-2.5 sm:py-1.5"
             style={{
-              borderColor: saludHexToRgba(strong, 0.28),
-              backgroundColor: saludHexToRgba(strong, lightSurface ? 0.05 : 0.1),
-              color: strong,
+              borderColor: saludHexToRgba(strong, 0.1),
+              backgroundColor: saludHexToRgba(strong, lightSurface ? 0.02 : 0.04),
               boxShadow: "none",
             }}
           >
             Entrenamiento
-            <ArrowRight className="h-3 w-3 shrink-0 opacity-80" strokeWidth={2.25} aria-hidden />
+            <ArrowRight className="h-2.5 w-2.5 shrink-0 opacity-55" strokeWidth={2} aria-hidden />
           </Link>
         </div>
       </div>

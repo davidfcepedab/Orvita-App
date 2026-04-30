@@ -125,22 +125,22 @@ export function SupplementStackSection({
           backgroundColor: "color-mix(in srgb, var(--color-accent-health) 7%, var(--color-surface-alt))",
         }}
       >
-        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--color-border)] pb-4">
-          <div className="flex min-w-0 flex-1 gap-3">
+        <div className="flex flex-col gap-3 border-b border-[var(--color-border)] pb-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <div className="flex min-w-0 w-full gap-3 sm:min-w-0 sm:flex-1 sm:pr-2">
             <span
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-accent-health)]/15 text-[var(--color-accent-health)]"
               aria-hidden
             >
               <Zap className="h-5 w-5" strokeWidth={2.25} />
             </span>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1 [overflow-wrap:anywhere]">
               <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-text-secondary)]">
                 Bio-stack
               </p>
-              <p className="m-0 mt-1 text-[17px] font-semibold leading-tight text-[var(--color-text-primary)]">
+              <p className="m-0 mt-1 text-[15px] font-semibold leading-snug text-[var(--color-text-primary)] sm:text-[17px] sm:leading-tight">
                 Protocolos del día ({takenAmongActive}/{activeCount})
               </p>
-              <p className="m-0 mt-1 text-[12px] text-[var(--color-text-secondary)]">
+              <p className="m-0 mt-1 max-w-prose text-[12px] leading-snug text-[var(--color-text-secondary)] sm:leading-normal">
                 {activeCount}/{supplements.length} protocolos activos en biblioteca
                 {suppLoading ? " · guardando…" : ""}
               </p>
@@ -153,7 +153,7 @@ export function SupplementStackSection({
             type="button"
             onClick={() => setEditMode(!editMode)}
             className={cn(
-              "inline-flex shrink-0 items-center gap-2 rounded-[10px] border px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] transition-colors",
+              "inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-[10px] border px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] transition-colors sm:w-auto sm:justify-start",
               editMode
                 ? "border-[var(--color-accent-health)] bg-transparent text-[var(--color-accent-health)]"
                 : "border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-secondary)]",

@@ -161,9 +161,9 @@ export function AgendaOrvitaTaskCard({
               </p>
               <p className={`m-0 min-w-0 tracking-tight text-[var(--color-text-primary)] ${titleClass}`}>{task.title}</p>
             </div>
-            <div className="flex shrink-0 flex-col items-center gap-2.5 self-stretch pt-0.5">
+            <div className="flex w-max min-w-[3rem] shrink-0 flex-col items-center gap-2.5 self-stretch pt-0.5 sm:min-w-0">
               {hasSecondaryActions ? (
-                <div className="flex items-start justify-center gap-2">
+                <div className="flex flex-col items-center gap-2 sm:gap-2.5">
                   {onDelete ? (
                     <div className="flex flex-col items-center gap-0.5">
                       <button

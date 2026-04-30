@@ -173,18 +173,18 @@ export function HealthCorrelationsPanel({ salud, latest, timeline, analytics, lo
       <p className="text-[11px] font-semibold uppercase tracking-[0.2em]" style={{ color: theme.textMuted }}>
         Correlaciones clave
       </p>
-      <h3 className="mt-2 text-xl font-semibold">Datos -&gt; interpretación -&gt; acción</h3>
-      <p className="mt-2 text-sm" style={{ color: theme.textMuted }}>
+      <h3 className="mt-2 text-lg font-semibold tracking-tight sm:text-xl">Datos -&gt; interpretación -&gt; acción</h3>
+      <p className="mt-2 max-w-3xl text-sm leading-relaxed text-pretty" style={{ color: theme.textMuted }}>
         Cuatro cruces simples para decidir el día sin saturarte con métricas.
       </p>
-      <p className="mt-1 text-xs" style={{ color: theme.textMuted }}>
+      <p className="mt-1 max-w-3xl text-xs leading-snug text-pretty" style={{ color: theme.textMuted }}>
         En línea = señal estable · Atención = revisar hoy · Desbalance = ajustar carga/descanso.
       </p>
     </>
   )
 
   const body = loading ? (
-    <p className="mt-4 text-sm" style={{ color: theme.textMuted }}>
+    <p className="mt-4 text-sm leading-relaxed" style={{ color: theme.textMuted }}>
       Preparando correlaciones…
     </p>
   ) : (
@@ -213,10 +213,10 @@ export function HealthCorrelationsPanel({ salud, latest, timeline, analytics, lo
                 {tone.label}
               </span>
             </div>
-            <p className="mt-1 text-[11px]" style={{ color: theme.textMuted }}>
+            <p className="mt-1 text-xs leading-snug" style={{ color: theme.textMuted }}>
               Fuente: {item.source}
             </p>
-            <p className="mt-2 text-sm" style={{ color: theme.textMuted }}>
+            <p className="mt-2 text-sm leading-relaxed text-pretty" style={{ color: theme.textMuted }}>
               {item.status.text}
             </p>
             {item.chart}

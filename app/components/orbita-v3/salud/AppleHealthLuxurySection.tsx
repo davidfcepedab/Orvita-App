@@ -140,6 +140,7 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
   const sleepLabel =
     latest?.sleep_hours != null ? `${Math.round(latest.sleep_hours * 10) / 10} h` : "Sin dato"
   const hrvLabel = latest?.hrv_ms != null ? `${latest.hrv_ms} ms` : "Sin dato"
+  const rhrLabel = latest?.resting_hr_bpm != null ? `${latest.resting_hr_bpm} bpm` : "Sin dato"
   const stepsLabel = latest?.steps != null ? latest.steps.toLocaleString("es-LA") : "Sin dato"
   const kcalLabel =
     latest?.calories != null ? `${Math.round(latest.calories).toLocaleString("es-LA")} kcal` : "Sin dato"
@@ -158,10 +159,10 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
       <div className="relative flex flex-col gap-7 p-5 sm:p-7" style={{ color: theme.text }}>
         <div className="flex flex-col gap-5">
           <div className="max-w-3xl space-y-2">
-            <h1 className="m-0 text-[1.35rem] font-semibold leading-tight tracking-tight sm:text-[1.65rem] lg:text-2xl">
+            <h1 className="m-0 text-xl font-semibold leading-tight tracking-tight sm:text-2xl">
               Datos automáticos, con calma y precisión
             </h1>
-            <p className="m-0 max-w-prose text-[11px] leading-snug opacity-90 sm:text-xs" style={{ color: theme.textMuted }}>
+            <p className="m-0 max-w-prose text-sm leading-relaxed text-pretty opacity-95" style={{ color: theme.textMuted }}>
               Los datos vienen del atajo en el iPhone (no de la app Salud). Clave única en{" "}
               <Link href="/configuracion#apple-health-import-token" className="font-medium underline underline-offset-2" style={{ color: SALUD_SEM.energy }}>
                 Configuración
@@ -316,12 +317,26 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
         </div>
 
         <div className="relative pt-6">
+          {/* Resumen (estado del día + puntuación) antes del titular y las acciones concretas. */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
-            <div className="min-w-0 flex-1">
+            <div className="flex shrink-0 flex-col items-start gap-3 sm:pt-1">
               <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.22em]" style={{ color: theme.textMuted }}>
                 Estado del día
               </p>
-              <h2 className="m-0 mt-2 text-lg font-semibold tracking-tight sm:text-xl" style={{ color: theme.text }}>
+              <div className="flex flex-col items-start gap-2">
+                <span className="text-4xl font-extrabold tabular-nums leading-none sm:text-5xl" style={{ color: chipSem.fg }}>
+                  {dayState.score}
+                </span>
+                <span
+                  className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.1em] sm:px-3.5 sm:py-1.5 sm:text-xs"
+                  style={{ backgroundColor: chipSem.bg, color: chipSem.fg }}
+                >
+                  {dayState.label}
+                </span>
+              </div>
+            </div>
+            <div className="min-w-0 flex-1">
+              <h2 className="m-0 text-lg font-semibold tracking-tight sm:text-xl" style={{ color: theme.text }}>
                 {dayState.title}
               </h2>
               <ol className="m-0 mt-3 list-none space-y-2.5 p-0 sm:mt-4 sm:space-y-3">
@@ -352,17 +367,6 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
                 })}
               </ol>
             </div>
-            <div className="flex shrink-0 flex-col items-end gap-2 sm:pt-1">
-              <span className="text-4xl font-extrabold tabular-nums leading-none sm:text-5xl" style={{ color: chipSem.fg }}>
-                {dayState.score}
-              </span>
-              <span
-                className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.1em] sm:px-3.5 sm:py-1.5 sm:text-xs"
-                style={{ backgroundColor: chipSem.bg, color: chipSem.fg }}
-              >
-                {dayState.label}
-              </span>
-            </div>
           </div>
         </div>
 
@@ -375,6 +379,7 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
               rows: [
                 { k: "Sueño", v: sleepLabel },
                 { k: "VFC", v: hrvLabel },
+                { k: "FC reposo", v: rhrLabel },
               ],
             },
             {
@@ -384,6 +389,7 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
               rows: [
                 { k: "Pasos", v: stepsLabel },
                 { k: "Energía activa", v: kcalLabel },
+                { k: "Entreno", v: workoutLine },
               ],
             },
             {
@@ -435,11 +441,25 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
           })}
         </div>
 
-        <div className="relative space-y-3 border-t pt-6" style={{ borderColor: saludHexToRgba(theme.border, 0.55) }}>
-          <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: theme.textMuted }}>
-            Desglose del envío
-          </p>
-          <AppleShortcutAnalyticsPanels latest={latest} analytics={analytics} loading={loading} />
+        <div className="relative space-y-4 border-t pt-6" style={{ borderColor: saludHexToRgba(theme.border, 0.45) }}>
+          <div className="space-y-1">
+            <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: theme.textMuted }}>
+              Ritmo y tendencia
+            </p>
+            {latest?.observed_at ? (
+              <p className="m-0 text-[10px] leading-snug sm:text-[11px]" style={{ color: theme.textMuted }}>
+                Misma lectura que las tarjetas de arriba · actualizado{" "}
+                <span className="font-semibold tabular-nums" style={{ color: theme.text }}>
+                  {latest.observed_at.slice(0, 10)}
+                </span>
+              </p>
+            ) : (
+              <p className="m-0 text-[10px] leading-snug sm:text-[11px]" style={{ color: theme.textMuted }}>
+                Cuando llegue un envío del atajo, verás aquí el ritmo interpretado y la tendencia semanal.
+              </p>
+            )}
+          </div>
+          <AppleShortcutAnalyticsPanels latest={latest} analytics={analytics} loading={loading} layout="luxury" />
         </div>
 
         <div

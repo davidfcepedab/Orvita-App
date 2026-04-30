@@ -41,10 +41,15 @@ type Props = {
   latest: AutoHealthMetric | null
   analytics: ShortcutHealthAnalyticsSnapshot | null
   loading: boolean
+  /**
+   * `luxury`: solo ritmo + tendencia (la snapshot numérica ya va en el grid de tarjetas arriba).
+   * `default`: tres columnas incl. lista «Última lectura».
+   */
+  layout?: "default" | "luxury"
 }
 
 /** Solo la rejilla de métricas (última lectura, ritmo, tendencia) — se incrusta en el panel principal de /salud. */
-export function AppleShortcutAnalyticsPanels({ latest, analytics, loading }: Props) {
+export function AppleShortcutAnalyticsPanels({ latest, analytics, loading, layout = "default" }: Props) {
   const sleepSec = latestToSeconds(latest)
   const sleepFmt = formatHoursMinutesFromSeconds(sleepSec)
   const wm = workoutMinutesFromLatest(latest)
@@ -53,12 +58,15 @@ export function AppleShortcutAnalyticsPanels({ latest, analytics, loading }: Pro
   const rec = analytics?.recovery
   const sig = analytics?.signals
 
+  const luxury = layout === "luxury"
+  const panelShell = luxury
+    ? "rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_38%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_82%,var(--color-surface-alt))] p-4 sm:p-5"
+    : "rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_50%,transparent)] p-3.5"
+
   return (
-    <div className="grid gap-3 lg:grid-cols-3">
-          <div
-            className="rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_50%,transparent)] p-3.5"
-            style={{ minHeight: 200 }}
-          >
+    <div className={luxury ? "grid gap-4 sm:grid-cols-2" : "grid gap-3 lg:grid-cols-3"}>
+          {!luxury ? (
+          <div className={panelShell} style={luxury ? undefined : { minHeight: 200 }}>
             <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">Última lectura</p>
             <p className="m-0 mt-1 text-[12px] text-[var(--color-text-secondary)]">Pasos, sueño, pulso y más</p>
             {loading ? (
@@ -94,11 +102,9 @@ export function AppleShortcutAnalyticsPanels({ latest, analytics, loading }: Pro
               <p className="m-0 mt-2 text-[10px] text-[var(--color-text-secondary)]">{latest.observed_at.slice(0, 10)}</p>
             ) : null}
           </div>
+          ) : null}
 
-          <div
-            className="rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_50%,transparent)] p-3.5"
-            style={{ minHeight: 200 }}
-          >
+          <div className={panelShell} style={luxury ? undefined : { minHeight: 200 }}>
             <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">Tu ritmo hoy</p>
             <p className="m-0 mt-1 text-[12px] text-[var(--color-text-secondary)]">Energía frente al descanso</p>
             {!analytics || loading ? (
@@ -123,10 +129,7 @@ export function AppleShortcutAnalyticsPanels({ latest, analytics, loading }: Pro
             )}
           </div>
 
-          <div
-            className="rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_50%,transparent)] p-3.5"
-            style={{ minHeight: 200 }}
-          >
+          <div className={panelShell} style={luxury ? undefined : { minHeight: 200 }}>
             <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">Tendencia</p>
             <p className="m-0 mt-1 text-[12px] text-[var(--color-text-secondary)]">Esta semana frente a la anterior</p>
             {!wk ? (

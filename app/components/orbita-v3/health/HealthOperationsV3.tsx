@@ -241,7 +241,7 @@ export default function HealthOperationsV3({
             </motion.div>
             <div>
               <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">Cuerpo, energía y hábitos</h2>
-              <p className="mt-2 max-w-2xl text-sm leading-relaxed" style={{ color: theme.textMuted }}>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-pretty" style={{ color: theme.textMuted }}>
                 Tu check-in del día y la lectura de Apple en un solo lugar. Si no coinciden, priorizamos descanso y
                 carga suave.
               </p>
@@ -253,7 +253,7 @@ export default function HealthOperationsV3({
           <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.22em]" style={{ color: theme.textMuted }}>
             Tu check-in (Órvita interna)
           </p>
-          <p className="mb-3 mt-1 text-[10px] leading-snug sm:text-[11px]" style={{ color: theme.textMuted }}>
+          <p className="mb-3 mt-1 text-xs leading-relaxed sm:text-sm" style={{ color: theme.textMuted }}>
             Tres primeras: <strong className="font-medium text-inherit">0–100</strong> subjetivas del último check-in.
             Recuperación percibida comparte eje con salud emocional. Índice de energía: compuesto{" "}
             <strong className="font-medium text-inherit">12–99</strong> (≈ salud + físico).
@@ -364,15 +364,15 @@ export default function HealthOperationsV3({
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em]" style={{ color: theme.textMuted }}>
             Operativo
           </p>
-          <h3 className="mt-1 text-xl font-semibold tracking-tight">Bio-stack y combustible</h3>
-          <p className="mt-1 text-sm" style={{ color: theme.textMuted }}>
+          <h3 className="mt-1 text-lg font-semibold tracking-tight sm:text-xl">Bio-stack y combustible</h3>
+          <p className="mt-1 max-w-2xl text-sm leading-relaxed text-pretty" style={{ color: theme.textMuted }}>
             Suplementos, agua y macros. El impulso resume cumplimiento del stack + hidratación.
           </p>
         </div>
 
         <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[1.2fr_0.8fr]">
           <div
-            className="min-w-0 overflow-hidden rounded-2xl"
+            className="min-w-0 rounded-2xl [overflow-wrap:anywhere]"
             style={{ backgroundColor: saludHexToRgba(SALUD_SEM.ok, 0.06) }}
           >
             <SupplementStackSection
@@ -464,7 +464,7 @@ export default function HealthOperationsV3({
                     / {health.hydrationTarget} L
                   </span>
                 </p>
-                <p className="mt-2 text-[11px] leading-snug" style={{ color: theme.textMuted }}>
+                <p className="mt-2 text-xs leading-relaxed sm:text-sm" style={{ color: theme.textMuted }}>
                   {health.hydrationFromHabit
                     ? "La barra sigue tu hábito de agua en Inicio (registros de hoy)."
                     : health.hydrationTracked
@@ -486,7 +486,7 @@ export default function HealthOperationsV3({
             </div>
 
             <div className={`${showNutrition && hasFuelMetrics ? "mt-5 space-y-4" : "hidden"}`}>
-              <p className="text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
+              <p className="text-xs leading-relaxed sm:text-sm" style={{ color: theme.textMuted }}>
                 {health.macrosFromLog
                   ? "Macros desde lo que guardaste hoy en preferencias de salud (gramos de P / C / G)."
                   : "Sin registro de macros hoy en preferencias: las barras quedan en 0 hasta que los actualices."}
@@ -528,8 +528,8 @@ export default function HealthOperationsV3({
         <p className="text-[11px] font-semibold uppercase tracking-[0.2em]" style={{ color: theme.textMuted }}>
           Predictivo e interpretación
         </p>
-        <h3 className="mt-2 text-xl font-semibold">Vitalidad vs recuperación (semana)</h3>
-        <p className="mt-2 max-w-3xl text-sm" style={{ color: theme.textMuted }}>
+        <h3 className="mt-2 text-lg font-semibold tracking-tight sm:text-xl">Vitalidad vs recuperación (semana)</h3>
+        <p className="mt-2 max-w-3xl text-sm leading-relaxed text-pretty" style={{ color: theme.textMuted }}>
           <strong className="font-semibold" style={{ color: theme.text }}>
             Vitalidad
           </strong>{" "}
@@ -540,7 +540,7 @@ export default function HealthOperationsV3({
           es el modelo Apple (HRV, sueño, movimiento). En importaciones recientes ambas pueden parecerse, pero ya no
           comparten el mismo campo duplicado.
         </p>
-        <div className="mt-2 flex flex-wrap gap-4 text-[11px]" style={{ color: theme.textMuted }}>
+        <div className="mt-2 flex flex-wrap gap-4 text-xs leading-snug sm:text-sm" style={{ color: theme.textMuted }}>
           <span className="inline-flex items-center gap-2">
             <span className="h-2 w-2 rounded-full" style={{ backgroundColor: SALUD_SEM.energy }} aria-hidden />
             Vitalidad (línea)
@@ -627,7 +627,7 @@ export default function HealthOperationsV3({
             return (
               <div key={`pred-${idx}-${action.slice(0, 24)}`} className="flex gap-3">
                 <Icon className="mt-0.5 h-6 w-6 shrink-0" strokeWidth={1.65} style={{ color: iconColor }} aria-hidden />
-                <p className="m-0 min-w-0 text-[15px] font-semibold leading-snug sm:text-base">{action}</p>
+                <p className="m-0 min-w-0 text-sm font-semibold leading-snug sm:text-base">{action}</p>
               </div>
             )
           })}
