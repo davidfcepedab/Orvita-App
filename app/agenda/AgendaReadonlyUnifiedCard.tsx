@@ -289,9 +289,9 @@ export function AgendaReadonlyUnifiedCard({
                     <Check className="h-4 w-4 animate-agenda-check-pop text-[#15803d]" strokeWidth={2.75} style={{ opacity: 0.85 }} aria-hidden />
                   ) : null}
                 </button>
-                <span className={agendaTaskToggleCaptionClass}>
-                  {doneVisual ? "Completada" : "Pendiente"}
-                </span>
+                {doneVisual ? null : (
+                  <span className={agendaTaskToggleCaptionClass}>Pendiente</span>
+                )}
               </>
             ) : null}
             {showCalToggle ? (

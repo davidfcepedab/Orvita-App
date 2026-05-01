@@ -191,17 +191,6 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
                 >
                   <Zap className="h-3.5 w-3.5 shrink-0" aria-hidden />
                 </a>
-                <span
-                  className="inline-flex min-w-0 max-w-[min(100%,18rem)] flex-1 items-center gap-1.5 rounded-md border px-2 py-0.5 text-[9px] font-medium leading-tight sm:max-w-[20rem] sm:text-[10px]"
-                  style={{
-                    borderColor: saludHexToRgba(syncChipSummary.fg, 0.22),
-                    backgroundColor: syncChipSummary.bg,
-                    color: syncChipSummary.fg,
-                  }}
-                >
-                  <span className="h-1 w-1 shrink-0 rounded-full bg-current opacity-80" aria-hidden />
-                  <span className="min-w-0 truncate">{syncChipSummary.label}</span>
-                </span>
                 <button
                   type="button"
                   onClick={(e) => {
@@ -221,6 +210,17 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
                 >
                   <RefreshCw className={`h-3.5 w-3.5 shrink-0 ${loading ? "animate-spin" : ""}`} aria-hidden />
                 </button>
+                <span
+                  className="inline-flex min-w-0 max-w-[min(100%,18rem)] flex-1 items-center gap-1.5 rounded-md border px-2 py-0.5 text-[9px] font-medium leading-tight sm:max-w-[20rem] sm:text-[10px]"
+                  style={{
+                    borderColor: saludHexToRgba(syncChipSummary.fg, 0.22),
+                    backgroundColor: syncChipSummary.bg,
+                    color: syncChipSummary.fg,
+                  }}
+                >
+                  <span className="h-1 w-1 shrink-0 rounded-full bg-current opacity-80" aria-hidden />
+                  <span className="min-w-0 truncate">{syncChipSummary.label}</span>
+                </span>
                 <span className="ml-auto inline-flex shrink-0 items-center opacity-50" style={{ color: theme.textMuted }}>
                   <span className="sr-only">Abrir detalles de sincronización</span>
                   <ChevronDown className="h-3.5 w-3.5 shrink-0" aria-hidden />

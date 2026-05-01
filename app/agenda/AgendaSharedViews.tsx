@@ -1,6 +1,6 @@
 "use client"
 
-import { Fragment, useEffect, useMemo, useState } from "react"
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react"
 import { Bell, Calendar, ChevronDown, ChevronLeft, ChevronRight, Minus, Plus } from "lucide-react"
 import { Card } from "@/src/components/ui/Card"
 import type { UiAgendaTask } from "@/app/agenda/mapAgendaTaskToUi"
@@ -42,8 +42,11 @@ import type { AgendaEditModalTarget } from "@/app/agenda/AgendaTaskEditModal"
 import { addDaysToYmd, isYmdTodayLocal } from "@/lib/agenda/agendaDueShift"
 import {
   type UnifiedListHorizonId,
+  type UnifiedTimelineBucket,
   unifiedListHorizonRange,
   unifiedRowInHorizon,
+  unifiedTimelineBucket,
+  unifiedTimelineDayChip,
   unifiedTimelineSectionTitle,
   UNIFIED_LIST_EXTENDED_DAYS_AFTER_MONTH,
 } from "@/lib/agenda/unifiedListHorizon"
@@ -118,6 +121,12 @@ function listDayDividerKey(row: MergedRow): string {
 /** Clave estable para React (instancias Google recurrentes pueden repetir `id`). */
 function listStableRowKey(row: MergedRow): string {
   return `${listDayDividerKey(row)}-${row.sortMs}`
+}
+
+function mergedRowDone(row: MergedRow, isCalendarUiDone?: (id: string) => boolean): boolean {
+  if (row.kind === "task") return row.task.completed
+  if (row.kind === "reminder") return isGoogleTaskDone(row.reminder.status)
+  return Boolean(isCalendarUiDone?.(row.event.id))
 }
 
 function linkedGoogleTaskIdsFromOrvita(tasks: UiAgendaTask[]): Set<string> {
@@ -679,17 +688,37 @@ export function AgendaSharedList({
   }, [merged, listHorizon, extendMonthHorizon])
 
   const listDayGroups = useMemo(() => {
-    type G = { bucket: string; dayKey: string | null; rows: MergedRow[] }
-    const groups: G[] = []
+    type G = {
+      bucket: string
+      dayKey: string | null
+      rows: MergedRow[]
+      timelineBucket: UnifiedTimelineBucket
+    }
+    const raw: G[] = []
     for (const row of mergedFiltered) {
       const bucket = mergedRowDayBucket(row)
       const dayKey = mergedRowDayKey(row)
-      const prev = groups[groups.length - 1]
-      if (prev && prev.bucket === bucket) prev.rows.push(row)
-      else groups.push({ bucket, dayKey, rows: [row] })
+      const timelineBucket = unifiedTimelineBucket(dayKey, todayYmd)
+      const prev = raw[raw.length - 1]
+      if (prev && prev.bucket === bucket) {
+        prev.rows.push(row)
+      } else {
+        raw.push({ bucket, dayKey, rows: [row], timelineBucket })
+      }
     }
-    return groups
-  }, [mergedFiltered])
+    const merged: G[] = []
+    for (const g of raw) {
+      const p = merged[merged.length - 1]
+      if (g.timelineBucket === "mas_adelante" && p?.timelineBucket === "mas_adelante") {
+        p.rows.push(...g.rows)
+        p.bucket = "__mas_adelante_merged__"
+        p.dayKey = null
+      } else {
+        merged.push(g)
+      }
+    }
+    return merged
+  }, [mergedFiltered, todayYmd])
 
   const horizonHint = useMemo(() => {
     const { start, end } = unifiedListHorizonRange(listHorizon, {
@@ -728,6 +757,213 @@ export function AgendaSharedList({
   ] satisfies { id: UnifiedListHorizonId; label: string; labelSm: string; title: string }[]
   const [mobileHorizonOpen, setMobileHorizonOpen] = useState(false)
   const activeHorizonTab = horizonTabs.find((tab) => tab.id === listHorizon) ?? horizonTabs[0]
+  const renderTimelineRow = (row: MergedRow): ReactNode => (
+    <Fragment key={listStableRowKey(row)}>
+      {row.kind === "task" ? (
+        <AgendaOrvitaTaskCard
+          task={row.task}
+          variant="list"
+          viewerUserId={viewerUserId}
+          onOpenEdit={onOpenAgendaEdit ? (t) => onOpenAgendaEdit({ kind: "orvita", task: t }) : undefined}
+          householdMembers={householdMembers}
+          onPatchOrvita={onPatchOrvitaTask}
+          onSaveComplete={onSaveComplete}
+          onAcceptAssignment={onAcceptAssignment}
+          onDelete={
+            onDeleteOrvitaTask
+              ? async (t) => {
+                  if (!confirm(`¿Eliminar “${t.title}” del tablero Órvita?`)) return
+                  setBusyDel(`o-${t.id}`)
+                  try {
+                    await onDeleteOrvitaTask(t)
+                  } finally {
+                    setBusyDel(null)
+                  }
+                }
+              : undefined
+          }
+          deleteBusy={busyDel === `o-${row.task.id}`}
+        />
+      ) : row.kind === "reminder" ? (
+        <AgendaReadonlyUnifiedCard
+          variant="list"
+          shell={googleAgendaCardShell({
+            kind: "reminder",
+            completed: isGoogleTaskDone(row.reminder.status),
+            assignedToViewer: Boolean(
+              viewerUserId && row.reminder.localAssigneeUserId === viewerUserId,
+            ),
+          })}
+          MetaIcon={Bell}
+          metaText={dueMetaCompact(localDateKeyFromIso(row.reminder.due) ?? "")}
+          title={row.reminder.title || "(Sin título)"}
+          googleKind="reminder"
+          kindPillLabel="Recordatorio"
+          statusLabel={isGoogleTaskDone(row.reminder.status) ? "Completada" : "Pendiente"}
+          statusKey={isGoogleTaskDone(row.reminder.status) ? "completada" : "pendiente"}
+          priorityUi={googleLocalPriorityUi(row.reminder.localPriority)}
+          assigneeSubtle={googleReminderAssigneeLabel(row.reminder, members)}
+          onEdit={
+            onOpenAgendaEdit && onGoogleReminderPatch
+              ? () => onOpenAgendaEdit({ kind: "google-reminder", task: row.reminder })
+              : undefined
+          }
+          onToggleGoogleComplete={
+            onGoogleReminderToggleComplete
+              ? () =>
+                  void (async () => {
+                    const r = row.reminder
+                    const done = isGoogleTaskDone(r.status)
+                    setBusyDel(`tc-r-${r.id}`)
+                    try {
+                      await onGoogleReminderToggleComplete(r.id, !done)
+                    } finally {
+                      setBusyDel(null)
+                    }
+                  })()
+              : undefined
+          }
+          googleCompleteBusy={busyDel === `tc-r-${row.reminder.id}`}
+          showMoveDue={Boolean(
+            onGoogleReminderPatch &&
+              (() => {
+                const y = localDateKeyFromIso(row.reminder.due) ?? ""
+                return y && isYmdTodayLocal(y) && !isGoogleTaskDone(row.reminder.status)
+              })(),
+          )}
+          onMoveTomorrow={
+            onGoogleReminderPatch
+              ? () =>
+                  void (async () => {
+                    const r = row.reminder
+                    const y = localDateKeyFromIso(r.due) ?? ""
+                    if (!y) return
+                    setBusyDel(`mv-r-${r.id}`)
+                    try {
+                      await onGoogleReminderPatch(r.id, {
+                        due: `${addDaysToYmd(y, 1)}T12:00:00.000Z`,
+                      })
+                    } finally {
+                      setBusyDel(null)
+                    }
+                  })()
+              : undefined
+          }
+          onMoveAfterTomorrow={
+            onGoogleReminderPatch
+              ? () =>
+                  void (async () => {
+                    const r = row.reminder
+                    const y = localDateKeyFromIso(r.due) ?? ""
+                    if (!y) return
+                    setBusyDel(`mv-r-${r.id}`)
+                    try {
+                      await onGoogleReminderPatch(r.id, {
+                        due: `${addDaysToYmd(y, 2)}T12:00:00.000Z`,
+                      })
+                    } finally {
+                      setBusyDel(null)
+                    }
+                  })()
+              : undefined
+          }
+          moveDueBusy={busyDel === `mv-r-${row.reminder.id}`}
+          onDelete={
+            onDeleteGoogleTask
+              ? async () => {
+                  if (!confirm("¿Eliminar esta tarea/recordatorio en Google Tasks?")) return
+                  setBusyDel(`r-${row.reminder.id}`)
+                  try {
+                    await onDeleteGoogleTask(row.reminder.id)
+                  } finally {
+                    setBusyDel(null)
+                  }
+                }
+              : undefined
+          }
+          deleteBusy={busyDel === `r-${row.reminder.id}`}
+        />
+      ) : (
+        <AgendaReadonlyUnifiedCard
+          variant="list"
+          shell={googleAgendaCardShell({
+            kind: "calendar",
+            completed: Boolean(isCalendarUiDone?.(row.event.id)),
+          })}
+          MetaIcon={Calendar}
+          metaText={calendarEventMetaCompact(row.event)}
+          title={row.event.summary || "(Sin título)"}
+          googleKind="calendar"
+          kindPillLabel={calendarEventFuenteLabel(row.event)}
+          statusLabel={isCalendarUiDone?.(row.event.id) ? "Visto" : "Agendado"}
+          statusKey={isCalendarUiDone?.(row.event.id) ? "completada" : "pendiente"}
+          priorityUi={null}
+          onEdit={onOpenAgendaEdit ? () => onOpenAgendaEdit({ kind: "google-calendar", event: row.event }) : undefined}
+          calendarUiDone={Boolean(isCalendarUiDone?.(row.event.id))}
+          onToggleCalendarUiDone={
+            toggleCalendarUiDone ? () => toggleCalendarUiDone(row.event.id) : undefined
+          }
+          onDelete={
+            onDeleteCalendarEvent
+              ? async () => {
+                  if (!confirm("¿Eliminar este evento en Google Calendar?")) return
+                  setBusyDel(`e-${row.event.id}`)
+                  try {
+                    await onDeleteCalendarEvent(row.event.id)
+                  } finally {
+                    setBusyDel(null)
+                  }
+                }
+              : undefined
+          }
+          deleteBusy={busyDel === `e-${row.event.id}`}
+        />
+      )}
+    </Fragment>
+  )
+
+  const renderMasAdelanteBlock = (rows: MergedRow[]): ReactNode => {
+    const pending = rows.filter((r) => !mergedRowDone(r, isCalendarUiDone))
+    const done = rows.filter((r) => mergedRowDone(r, isCalendarUiDone))
+
+    const withDayChips = (list: MergedRow[]) => {
+      const nodes: ReactNode[] = []
+      let lastDay: string | null = null
+      for (const row of list) {
+        const dk = mergedRowDayKey(row)
+        if (dk && dk !== lastDay) {
+          lastDay = dk
+          nodes.push(
+            <p
+              key={`mas-chip-${dk}-${nodes.length}`}
+              className="m-0 mt-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)] first:mt-0"
+            >
+              {unifiedTimelineDayChip(dk)}
+            </p>,
+          )
+        }
+        nodes.push(renderTimelineRow(row))
+      }
+      return nodes
+    }
+
+    return (
+      <>
+        <div className="flex flex-col gap-2 sm:gap-3">{withDayChips(pending)}</div>
+        {done.length > 0 ? (
+          <details className="mt-2 rounded-xl border border-[color-mix(in_srgb,var(--color-border)_65%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_40%,transparent)] px-2 py-2 sm:px-3">
+            <summary className="cursor-pointer text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--color-text-secondary)] marker:content-none [&::-webkit-details-marker]:hidden">
+              Histórico · {done.length} completado{done.length === 1 ? "" : "s"}
+            </summary>
+            <div className="mt-2 flex flex-col gap-2 border-t border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] pt-2 sm:gap-3">
+              {withDayChips(done)}
+            </div>
+          </details>
+        ) : null}
+      </>
+    )
+  }
+
 
   return (
     <div
@@ -857,7 +1093,10 @@ export function AgendaSharedList({
               </p>
             ) : null}
             {listDayGroups.map((group, gIdx) => {
-              const sectionTitle = unifiedTimelineSectionTitle(group.dayKey, todayYmd)
+              const sectionTitle =
+                group.timelineBucket === "mas_adelante"
+                  ? "Más adelante"
+                  : unifiedTimelineSectionTitle(group.dayKey, todayYmd)
               return (
                 <div key={group.bucket} className="flex min-w-0 flex-col gap-2 sm:gap-2.5">
                   <div className={`min-w-0 scroll-mt-2 ${gIdx === 0 ? "pt-0" : "pt-2"}`}>
@@ -870,170 +1109,9 @@ export function AgendaSharedList({
                     />
                   </div>
                   <div className="flex flex-col gap-2 sm:gap-3">
-                    {group.rows.map((row) => (
-                      <Fragment key={listStableRowKey(row)}>
-            {row.kind === "task" ? (
-              <AgendaOrvitaTaskCard
-                task={row.task}
-                variant="list"
-                viewerUserId={viewerUserId}
-                onOpenEdit={onOpenAgendaEdit ? (t) => onOpenAgendaEdit({ kind: "orvita", task: t }) : undefined}
-                householdMembers={householdMembers}
-                onPatchOrvita={onPatchOrvitaTask}
-                onSaveComplete={onSaveComplete}
-                onAcceptAssignment={onAcceptAssignment}
-                onDelete={
-                  onDeleteOrvitaTask
-                    ? async (t) => {
-                        if (!confirm(`¿Eliminar “${t.title}” del tablero Órvita?`)) return
-                        setBusyDel(`o-${t.id}`)
-                        try {
-                          await onDeleteOrvitaTask(t)
-                        } finally {
-                          setBusyDel(null)
-                        }
-                      }
-                    : undefined
-                }
-                deleteBusy={busyDel === `o-${row.task.id}`}
-              />
-            ) : row.kind === "reminder" ? (
-              <AgendaReadonlyUnifiedCard
-                variant="list"
-                shell={googleAgendaCardShell({
-                  kind: "reminder",
-                  completed: isGoogleTaskDone(row.reminder.status),
-                  assignedToViewer: Boolean(
-                    viewerUserId && row.reminder.localAssigneeUserId === viewerUserId,
-                  ),
-                })}
-                MetaIcon={Bell}
-                metaText={dueMetaCompact(localDateKeyFromIso(row.reminder.due) ?? "")}
-                title={row.reminder.title || "(Sin título)"}
-                googleKind="reminder"
-                kindPillLabel="Recordatorio"
-                statusLabel={isGoogleTaskDone(row.reminder.status) ? "Completada" : "Pendiente"}
-                statusKey={isGoogleTaskDone(row.reminder.status) ? "completada" : "pendiente"}
-                priorityUi={googleLocalPriorityUi(row.reminder.localPriority)}
-                assigneeSubtle={googleReminderAssigneeLabel(row.reminder, members)}
-                onEdit={
-                  onOpenAgendaEdit && onGoogleReminderPatch
-                    ? () => onOpenAgendaEdit({ kind: "google-reminder", task: row.reminder })
-                    : undefined
-                }
-                onToggleGoogleComplete={
-                  onGoogleReminderToggleComplete
-                    ? () =>
-                        void (async () => {
-                          const r = row.reminder
-                          const done = isGoogleTaskDone(r.status)
-                          setBusyDel(`tc-r-${r.id}`)
-                          try {
-                            await onGoogleReminderToggleComplete(r.id, !done)
-                          } finally {
-                            setBusyDel(null)
-                          }
-                        })()
-                    : undefined
-                }
-                googleCompleteBusy={busyDel === `tc-r-${row.reminder.id}`}
-                showMoveDue={Boolean(
-                  onGoogleReminderPatch &&
-                    (() => {
-                      const y = localDateKeyFromIso(row.reminder.due) ?? ""
-                      return y && isYmdTodayLocal(y) && !isGoogleTaskDone(row.reminder.status)
-                    })(),
-                )}
-                onMoveTomorrow={
-                  onGoogleReminderPatch
-                    ? () =>
-                        void (async () => {
-                          const r = row.reminder
-                          const y = localDateKeyFromIso(r.due) ?? ""
-                          if (!y) return
-                          setBusyDel(`mv-r-${r.id}`)
-                          try {
-                            await onGoogleReminderPatch(r.id, {
-                              due: `${addDaysToYmd(y, 1)}T12:00:00.000Z`,
-                            })
-                          } finally {
-                            setBusyDel(null)
-                          }
-                        })()
-                    : undefined
-                }
-                onMoveAfterTomorrow={
-                  onGoogleReminderPatch
-                    ? () =>
-                        void (async () => {
-                          const r = row.reminder
-                          const y = localDateKeyFromIso(r.due) ?? ""
-                          if (!y) return
-                          setBusyDel(`mv-r-${r.id}`)
-                          try {
-                            await onGoogleReminderPatch(r.id, {
-                              due: `${addDaysToYmd(y, 2)}T12:00:00.000Z`,
-                            })
-                          } finally {
-                            setBusyDel(null)
-                          }
-                        })()
-                    : undefined
-                }
-                moveDueBusy={busyDel === `mv-r-${row.reminder.id}`}
-                onDelete={
-                  onDeleteGoogleTask
-                    ? async () => {
-                        if (!confirm("¿Eliminar esta tarea/recordatorio en Google Tasks?")) return
-                        setBusyDel(`r-${row.reminder.id}`)
-                        try {
-                          await onDeleteGoogleTask(row.reminder.id)
-                        } finally {
-                          setBusyDel(null)
-                        }
-                      }
-                    : undefined
-                }
-                deleteBusy={busyDel === `r-${row.reminder.id}`}
-              />
-            ) : (
-              <AgendaReadonlyUnifiedCard
-                variant="list"
-                shell={googleAgendaCardShell({
-                  kind: "calendar",
-                  completed: Boolean(isCalendarUiDone?.(row.event.id)),
-                })}
-                MetaIcon={Calendar}
-                metaText={calendarEventMetaCompact(row.event)}
-                title={row.event.summary || "(Sin título)"}
-                googleKind="calendar"
-                kindPillLabel={calendarEventFuenteLabel(row.event)}
-                statusLabel={isCalendarUiDone?.(row.event.id) ? "Visto" : "Agendado"}
-                statusKey={isCalendarUiDone?.(row.event.id) ? "completada" : "pendiente"}
-                priorityUi={null}
-                onEdit={onOpenAgendaEdit ? () => onOpenAgendaEdit({ kind: "google-calendar", event: row.event }) : undefined}
-                calendarUiDone={Boolean(isCalendarUiDone?.(row.event.id))}
-                onToggleCalendarUiDone={
-                  toggleCalendarUiDone ? () => toggleCalendarUiDone(row.event.id) : undefined
-                }
-                onDelete={
-                  onDeleteCalendarEvent
-                    ? async () => {
-                        if (!confirm("¿Eliminar este evento en Google Calendar?")) return
-                        setBusyDel(`e-${row.event.id}`)
-                        try {
-                          await onDeleteCalendarEvent(row.event.id)
-                        } finally {
-                          setBusyDel(null)
-                        }
-                      }
-                    : undefined
-                }
-                deleteBusy={busyDel === `e-${row.event.id}`}
-              />
-            )}
-                      </Fragment>
-                    ))}
+                    {group.timelineBucket === "mas_adelante"
+                      ? renderMasAdelanteBlock(group.rows)
+                      : group.rows.map((row) => renderTimelineRow(row))}
                   </div>
                 </div>
               )

@@ -181,8 +181,8 @@ export function StrategicDayHero({
       {health ? (
         <section aria-labelledby="strategic-health-hero-heading">
           <Card className="overflow-hidden p-0 shadow-[0_1px_0_color-mix(in_srgb,var(--color-border)_80%,transparent)]">
-            <div className="relative flex min-w-0 flex-col gap-4 overflow-hidden bg-[var(--color-surface)] p-4 sm:flex-row sm:items-stretch sm:justify-between sm:gap-6 sm:p-5">
-              <div className="relative z-[1] flex min-h-0 min-w-0 flex-1 flex-col space-y-3 sm:min-h-[108px]">
+            <div className="relative flex min-w-0 flex-col gap-4 overflow-hidden bg-[var(--color-surface)] p-4 sm:gap-5 sm:p-5">
+              <div className="relative z-[1] flex min-h-0 min-w-0 flex-col space-y-3">
                 <div className="flex flex-wrap items-baseline gap-2">
                   <Activity className="h-4 w-4 shrink-0 text-[var(--color-accent-health)]" aria-hidden />
                   <div className="min-w-0">
@@ -209,7 +209,9 @@ export function StrategicDayHero({
                     Cuando conectes datos, aquí verás un resumen pensado para decidir el ritmo del día.
                   </p>
                 )}
+              </div>
 
+              <div className="relative z-[1] flex min-h-0 min-w-0 flex-col gap-3 sm:flex-row sm:items-stretch sm:gap-6">
                 <div className="grid min-h-0 min-w-0 flex-1 grid-cols-2 gap-2 sm:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_minmax(0,1fr)] sm:items-stretch sm:gap-3">
                   <motion.div
                     initial={{ opacity: 0, y: 8 }}
@@ -276,24 +278,24 @@ export function StrategicDayHero({
                   </motion.div>
                 </div>
 
-                {shortcutBadge}
+                <div
+                  className={clsx(
+                    "flex min-h-0 shrink-0 flex-col gap-2 self-stretch sm:w-[11rem] sm:justify-center sm:gap-2",
+                    "max-sm:flex-row max-sm:flex-wrap max-sm:border-t max-sm:border-[color-mix(in_srgb,var(--color-border)_82%,transparent)] max-sm:pt-3",
+                  )}
+                >
+                  <Link href="/salud" className={verSaludLinkClass}>
+                    <Heart className={healthCtaHeartIconClass} aria-hidden />
+                    Ver Salud
+                  </Link>
+                  <Link href="/training" className={entrenamientoLinkClass}>
+                    <Dumbbell className={`${healthCtaDumbbellIconClass} max-sm:hidden sm:inline`} aria-hidden />
+                    Entrenamiento
+                  </Link>
+                </div>
               </div>
 
-              <div
-                className={clsx(
-                  "relative z-[1] flex min-h-0 shrink-0 flex-col gap-2 self-stretch sm:w-[11rem] sm:min-h-[108px] sm:justify-center sm:gap-2",
-                  "max-sm:flex-row max-sm:flex-wrap max-sm:border-t max-sm:border-[color-mix(in_srgb,var(--color-border)_82%,transparent)] max-sm:pt-3",
-                )}
-              >
-                <Link href="/salud" className={verSaludLinkClass}>
-                  <Heart className={healthCtaHeartIconClass} aria-hidden />
-                  Ver Salud
-                </Link>
-                <Link href="/training" className={entrenamientoLinkClass}>
-                  <Dumbbell className={`${healthCtaDumbbellIconClass} max-sm:hidden sm:inline`} aria-hidden />
-                  Entrenamiento
-                </Link>
-              </div>
+              {shortcutBadge}
             </div>
           </Card>
         </section>

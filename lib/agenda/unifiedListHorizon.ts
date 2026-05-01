@@ -86,6 +86,52 @@ export function ymdLexInRange(k: string, start: string, end: string): boolean {
   return k >= start && k <= end
 }
 
+export type UnifiedTimelineBucket =
+  | "sin_dia"
+  | "hoy"
+  | "manana"
+  | "esta_semana"
+  | "prox_semana"
+  | "este_mes"
+  | "mas_adelante"
+
+/** Clasificación estable para fusionar secciones y estilos de cronología. */
+export function unifiedTimelineBucket(dayKey: string | null, todayYmd: string): UnifiedTimelineBucket {
+  if (!dayKey || dayKey === "__sin_fecha__") return "sin_dia"
+  const key = dayKey.trim().slice(0, 10)
+  if (key === todayYmd) return "hoy"
+  const tom = addDaysToYmd(todayYmd, 1)
+  if (key === tom) return "manana"
+  const mon = mondayOfCalendarWeekContainingYmd(todayYmd)
+  const sun = addDaysToYmd(mon, 6)
+  if (key >= mon && key <= sun && key > tom) return "esta_semana"
+  const monN = addDaysToYmd(sun, 1)
+  const sunN = addDaysToYmd(monN, 6)
+  if (key >= monN && key <= sunN) return "prox_semana"
+  const [yt, mt] = todayYmd.split("-").map(Number)
+  const [yk, mk] = key.split("-").map(Number)
+  if (yk === yt && mk === mt) return "este_mes"
+  return "mas_adelante"
+}
+
+/** Etiqueta corta para sub-bloques dentro de «Más adelante» (varios días). */
+export function unifiedTimelineDayChip(dayKey: string): string {
+  const tz = getAgendaDisplayTimeZone()
+  const [y, m, d] = dayKey.trim().slice(0, 10).split("-").map(Number)
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return dayKey
+  const civilNoonUtc = new Date(Date.UTC(y, m - 1, d, 12, 0, 0))
+  try {
+    return new Intl.DateTimeFormat("es-CO", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      timeZone: tz,
+    }).format(civilNoonUtc)
+  } catch {
+    return dayKey
+  }
+}
+
 /** Títulos de bloque para separadores visuales (cronología unificada). */
 export function unifiedTimelineSectionTitle(dayKey: string | null, todayYmd: string): string {
   if (!dayKey || dayKey === "__sin_fecha__") return "Sin día en calendario"
