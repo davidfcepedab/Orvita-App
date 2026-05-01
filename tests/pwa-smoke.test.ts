@@ -45,7 +45,7 @@ test.describe("Órvita PWA smoke", () => {
         contentType: "application/json",
         body: JSON.stringify({
           success: true,
-          data: { habits: [{ id: "h1", name: "Hidratación Estratégica", completed: false }], summary: { total: 1, completed: 0 } },
+          data: { habits: [{ id: "h1", name: "Hidratación", completed: false }], summary: { total: 1, completed: 0 } },
         }),
       })
     })

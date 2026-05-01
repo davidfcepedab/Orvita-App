@@ -10,7 +10,7 @@ comment on column public.habit_completions.water_ml is
 insert into public.operational_habits (user_id, name, completed, domain, metadata)
 select
   u.id,
-  'Hidratación Estratégica',
+  'Hidratación',
   false,
   'salud',
   jsonb_build_object(

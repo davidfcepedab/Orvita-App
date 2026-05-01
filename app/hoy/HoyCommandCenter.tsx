@@ -54,6 +54,11 @@ import {
   groupHabitsByDaypart,
   type HabitTimeBlockId,
 } from "@/lib/habits/habitStackGroups"
+import {
+  formatWaterMlEs,
+  goalMlFromHabitMetadata,
+  isWaterTrackingHabit,
+} from "@/lib/habits/waterTrackingHelpers"
 import { StrategicDayHero } from "@/app/components/orbita-v3/strategic/StrategicDayCapitalHero"
 import type {
   HabitWithMetrics,
@@ -117,6 +122,80 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
     <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-text-secondary)]">
       {children}
     </p>
+  )
+}
+
+/** Progreso de hoy alineado con `/habitos`: agua = ml/meta; resto = binario según `completed_today`. */
+function habitTodayProgressUi(habit: HabitWithMetrics): {
+  pct: number
+  isWater: boolean
+  ariaLabel: string
+  caption?: string
+} {
+  const meta = habit.metadata
+  if (isWaterTrackingHabit(meta)) {
+    const goalMl = goalMlFromHabitMetadata(meta)
+    const todayMl = habit.water_today_ml ?? 0
+    const pct = goalMl > 0 ? Math.min(100, Math.round((todayMl / goalMl) * 100)) : 0
+    return {
+      pct,
+      isWater: true,
+      ariaLabel: `Progreso de hidratación hoy: ${formatWaterMlEs(todayMl)} de ${formatWaterMlEs(goalMl)}, ${pct} por ciento`,
+      caption: `${formatWaterMlEs(todayMl)} / ${formatWaterMlEs(goalMl)} ml`,
+    }
+  }
+  const pct = habit.metrics.completed_today ? 100 : 0
+  return {
+    pct,
+    isWater: false,
+    ariaLabel: habit.metrics.completed_today
+      ? `${habit.name}: completado hoy`
+      : `${habit.name}: pendiente hoy`,
+  }
+}
+
+function HoyHabitProgressBar({
+  pct,
+  isWater,
+  ariaLabel,
+  caption,
+}: {
+  pct: number
+  isWater: boolean
+  ariaLabel: string
+  caption?: string
+}) {
+  const fillStyle: CSSProperties =
+    pct <= 0
+      ? { background: "transparent" }
+      : isWater
+        ? {
+            background:
+              "linear-gradient(90deg, color-mix(in srgb, #22d3ee 88%, var(--color-accent-health)), #0891b2)",
+          }
+        : { background: "var(--color-accent-health)" }
+
+  return (
+    <div className="mt-1.5 min-w-0 w-full">
+      <div
+        className="h-1.5 w-full overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--color-border)_52%,transparent)]"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={pct}
+        aria-label={ariaLabel}
+      >
+        <div
+          className="h-full max-w-full rounded-full motion-safe:transition-[width] motion-safe:duration-300 motion-reduce:transition-none"
+          style={{ width: `${pct}%`, ...fillStyle }}
+        />
+      </div>
+      {caption ? (
+        <p className="m-0 mt-1 truncate text-[9px] tabular-nums leading-tight text-[var(--color-text-secondary)]">
+          {caption}
+        </p>
+      ) : null}
+    </div>
   )
 }
 
@@ -1021,59 +1100,70 @@ export default function HoyCommandCenter() {
                 const surface = HOY_DAYPART_SURFACE[blockId]
                 const Icon = meta.Icon
                 const plainBlock = blockId === "sin_hora"
-                const renderRow = (habit: HabitWithMetrics) => (
-                  <div
-                    key={habit.id}
-                    className={`flex min-w-0 items-center justify-between gap-2 border-b border-[color-mix(in_srgb,var(--color-border)_45%,transparent)] py-2 last:border-b-0 ${
-                      habit.metrics.completed_today ? "opacity-[0.92]" : ""
-                    }`}
-                  >
-                    <span
-                      className={`min-w-0 flex-1 truncate text-sm font-medium ${
-                        habit.metrics.completed_today
-                          ? "text-[color-mix(in_srgb,var(--color-text-primary)_78%,var(--color-text-secondary))]"
-                          : "text-[var(--color-text-primary)]"
+                const renderRow = (habit: HabitWithMetrics) => {
+                  const progress = habitTodayProgressUi(habit)
+                  return (
+                    <div
+                      key={habit.id}
+                      className={`min-w-0 border-b border-[color-mix(in_srgb,var(--color-border)_45%,transparent)] py-2 last:border-b-0 ${
+                        habit.metrics.completed_today ? "opacity-[0.92]" : ""
                       }`}
                     >
-                      {habit.name}
-                    </span>
-                    <button
-                      type="button"
-                      disabled={(!persistenceEnabled && !mock) || togglingId === habit.id}
-                      aria-label={
-                        habit.metrics.completed_today
-                          ? `Desmarcar «${habit.name}» para hoy`
-                          : `Marcar «${habit.name}» como hecho hoy`
-                      }
-                      title={habit.metrics.completed_today ? "Desmarcar hoy" : "Hecho hoy"}
-                      onClick={async () => {
-                        const r = await toggleCompleteToday(habit.id)
-                        if (!r.ok) return
-                        if (r.streakCelebration) enqueueStreakCelebrations([r.streakCelebration])
-                        void refetchCtx()
-                      }}
-                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-[color-mix(in_srgb,var(--color-border)_65%,transparent)] bg-transparent text-[var(--color-text-secondary)] shadow-none transition-[border-color,background-color,color] motion-safe:duration-200 disabled:opacity-45 hover:border-[color-mix(in_srgb,var(--color-accent-health)_35%,var(--color-border))]"
-                      style={
-                        habit.metrics.completed_today
-                          ? {
-                              borderColor: "color-mix(in srgb, var(--color-accent-health) 42%, var(--color-border))",
-                              background:
-                                "color-mix(in srgb, var(--color-accent-health) 11%, transparent)",
-                              color: "var(--color-accent-health)",
-                            }
-                          : undefined
-                      }
-                    >
-                      {togglingId === habit.id ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
-                      ) : habit.metrics.completed_today ? (
-                        <Check className="h-3.5 w-3.5" strokeWidth={2.75} aria-hidden />
-                      ) : (
-                        <span className="block h-2 w-2 rounded-full bg-[color-mix(in_srgb,var(--color-border)_90%,transparent)]" aria-hidden />
-                      )}
-                    </button>
-                  </div>
-                )
+                      <div className="flex min-w-0 items-start justify-between gap-2">
+                        <span
+                          className={`min-w-0 flex-1 truncate text-sm font-medium ${
+                            habit.metrics.completed_today
+                              ? "text-[color-mix(in_srgb,var(--color-text-primary)_78%,var(--color-text-secondary))]"
+                              : "text-[var(--color-text-primary)]"
+                          }`}
+                        >
+                          {habit.name}
+                        </span>
+                        <button
+                          type="button"
+                          disabled={(!persistenceEnabled && !mock) || togglingId === habit.id}
+                          aria-label={
+                            habit.metrics.completed_today
+                              ? `Desmarcar «${habit.name}» para hoy`
+                              : `Marcar «${habit.name}» como hecho hoy`
+                          }
+                          title={habit.metrics.completed_today ? "Desmarcar hoy" : "Hecho hoy"}
+                          onClick={async () => {
+                            const r = await toggleCompleteToday(habit.id)
+                            if (!r.ok) return
+                            if (r.streakCelebration) enqueueStreakCelebrations([r.streakCelebration])
+                            void refetchCtx()
+                          }}
+                          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-[color-mix(in_srgb,var(--color-border)_65%,transparent)] bg-transparent text-[var(--color-text-secondary)] shadow-none transition-[border-color,background-color,color] motion-safe:duration-200 disabled:opacity-45 hover:border-[color-mix(in_srgb,var(--color-accent-health)_35%,var(--color-border))]"
+                          style={
+                            habit.metrics.completed_today
+                              ? {
+                                  borderColor: "color-mix(in srgb, var(--color-accent-health) 42%, var(--color-border))",
+                                  background:
+                                    "color-mix(in srgb, var(--color-accent-health) 11%, transparent)",
+                                  color: "var(--color-accent-health)",
+                                }
+                              : undefined
+                          }
+                        >
+                          {togglingId === habit.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                          ) : habit.metrics.completed_today ? (
+                            <Check className="h-3.5 w-3.5" strokeWidth={2.75} aria-hidden />
+                          ) : (
+                            <span className="block h-2 w-2 rounded-full bg-[color-mix(in_srgb,var(--color-border)_90%,transparent)]" aria-hidden />
+                          )}
+                        </button>
+                      </div>
+                      <HoyHabitProgressBar
+                        pct={progress.pct}
+                        isWater={progress.isWater}
+                        ariaLabel={progress.ariaLabel}
+                        caption={progress.caption}
+                      />
+                    </div>
+                  )
+                }
                 return (
                   <div
                     key={blockId}

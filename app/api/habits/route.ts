@@ -42,7 +42,7 @@ async function ensureDefaultWaterHabit(
 
   const { error: insErr } = await supabase.from("operational_habits").insert({
     user_id: userId,
-    name: "Hidratación Estratégica",
+    name: "Hidratación",
     completed: false,
     domain: "salud",
     metadata: DEFAULT_WATER_HABIT_METADATA,

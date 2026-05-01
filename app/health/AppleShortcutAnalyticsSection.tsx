@@ -48,6 +48,22 @@ function magnitudePhrase(absPct: number | null): string {
   return "cambio marcado"
 }
 
+/** Claves alineadas con cada tarjeta de tendencia (copy educativo fijo). */
+type TrendGuideKey = "sleep" | "hrv" | "resting_hr" | "training" | "steps"
+
+const TREND_METRIC_GUIDE: Record<TrendGuideKey, string> = {
+  sleep:
+    "Qué miramos: horas de sueño por noche en media. Más sueño suele apoyar recuperación y estado de ánimo; una bajada marcada puede pedir revisar horarios y rutinas nocturnas.",
+  hrv:
+    "Qué miramos: variabilidad entre latidos (HRV / VFC). Suele reflejar equilibrio entre estrés y descanso; subir suele ser buena señal si no hay fatiga extrema ni síntomas raros.",
+  resting_hr:
+    "Qué miramos: pulsaciones en reposo. Valores más bajos suelen ir con mejor forma física; un repunte brusco puede indicar fatiga, deshidratación o estar incubando algo.",
+  training:
+    "Qué miramos: minutos totales de entreno en cada ventana de 7 días. Ayuda a ver si la carga sube o baja; más minutos no siempre es mejor si falta recuperación.",
+  steps:
+    "Qué miramos: pasos medios por día. Miden movimiento ligero cotidiano (distinto del entreno intenso) y sirven como base de actividad general.",
+}
+
 function DualCompareBars({
   leftLabel,
   rightLabel,
@@ -67,7 +83,7 @@ function DualCompareBars({
   return (
     <div className="mt-1.5 space-y-1.5">
       <div className="space-y-0.5">
-        <div className="flex items-center justify-between gap-2 text-[9px] leading-tight text-[var(--color-text-secondary)]">
+        <div className="flex items-center justify-between gap-2 text-[10px] leading-tight text-[var(--color-text-secondary)]">
           <span className="min-w-0">{leftLabel}</span>
           <span className="shrink-0 font-semibold tabular-nums text-[var(--color-text-primary)]">{format(leftVal)}</span>
         </div>
@@ -79,7 +95,7 @@ function DualCompareBars({
         </div>
       </div>
       <div className="space-y-0.5">
-        <div className="flex items-center justify-between gap-2 text-[9px] leading-tight text-[var(--color-text-secondary)]">
+        <div className="flex items-center justify-between gap-2 text-[10px] leading-tight text-[var(--color-text-secondary)]">
           <span className="min-w-0">{rightLabel}</span>
           <span className="shrink-0 font-semibold tabular-nums text-[var(--color-accent-health)]">{format(rightVal)}</span>
         </div>
@@ -146,13 +162,16 @@ function deltaExplanation(
   const sign = d === 0 ? "" : d > 0 ? "+" : "−"
   const body = `${sign}${Math.abs(d).toFixed(decimals)} ${unit} vs semana anterior`
   const pctPart =
-    pct != null && Number.isFinite(pct) ? ` · ${pct >= 0 ? "+" : ""}${pct.toFixed(0)}%` : ""
-  return `${body}${pctPart} (${mag}).`
+    pct != null && Number.isFinite(pct)
+      ? ` (${pct >= 0 ? "+" : ""}${pct.toFixed(0)}% respecto al promedio de la semana previa)`
+      : ""
+  return `${body}${pctPart}. Magnitud: ${mag}.`
 }
 
 function LuxuryTrendMetric({
   label,
   trendKey,
+  guideKey,
   weekly,
   recent,
   prev,
@@ -166,6 +185,7 @@ function LuxuryTrendMetric({
     WeeklySnap,
     "sleep_trend" | "hrv_trend" | "resting_hr_trend" | "training_trend" | "steps_trend"
   >
+  guideKey: TrendGuideKey
   weekly: WeeklySnap
   recent: number | null
   prev: number | null
@@ -176,11 +196,12 @@ function LuxuryTrendMetric({
 }) {
   const trend = String(weekly[trendKey] ?? "sin dato")
   const explain = deltaExplanation(recent, prev, unit, decimals)
+  const guide = TREND_METRIC_GUIDE[guideKey]
   const bars =
     recent != null && prev != null && trend !== "sin dato" ? (
       <DualCompareBars
-        leftLabel="Semana anterior · media"
-        rightLabel="Últimos 7 días · media"
+        leftLabel="Promedio semana anterior (7 días)"
+        rightLabel="Últimos 7 días (media diaria)"
         leftVal={prev}
         rightVal={recent}
         format={format}
@@ -188,18 +209,21 @@ function LuxuryTrendMetric({
     ) : null
 
   return (
-    <li className="list-none rounded-lg border border-[color-mix(in_srgb,var(--color-border)_38%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_55%,transparent)] p-2.5 sm:p-3">
+    <li className="list-none rounded-xl border border-[color-mix(in_srgb,var(--color-border)_42%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_58%,transparent)] p-3 sm:p-3.5">
       <div className="flex flex-wrap items-start justify-between gap-2 gap-y-1">
         <p className="m-0 text-[11px] font-semibold leading-tight text-[var(--color-text-primary)] sm:text-[12px]">{label}</p>
         <TrendDirectionPill trend={trend} goodWhenUp={goodWhenUp} />
       </div>
       {explain ? (
-        <p className="m-0 mt-1.5 text-[10px] leading-snug text-[var(--color-text-secondary)] sm:text-[11px]">{explain}</p>
+        <p className="m-0 mt-2 text-[11px] leading-relaxed text-[var(--color-text-primary)] sm:text-[12px]">{explain}</p>
       ) : (
-        <p className="m-0 mt-1.5 text-[10px] text-[var(--color-text-secondary)] sm:text-[11px]">
+        <p className="m-0 mt-2 text-[11px] leading-relaxed text-[var(--color-text-secondary)] sm:text-[12px]">
           Aún no hay dos ventanas de 7 días con datos para comparar.
         </p>
       )}
+      <p className="m-0 mt-2 border-l-2 border-[color-mix(in_srgb,var(--color-accent-health)_38%,var(--color-border))] pl-2.5 text-[10px] leading-snug text-[var(--color-text-secondary)] sm:text-[11px]">
+        {guide}
+      </p>
       {bars}
     </li>
   )
@@ -212,10 +236,11 @@ function LuxuryWeeklyTrendBlock({ weekly }: { weekly: WeeklySnap }) {
   const trainPrevMin = wp != null ? wp / 60 : null
 
   return (
-    <ul className="m-0 mt-2.5 grid list-none gap-2 p-0 sm:grid-cols-2 sm:gap-2.5">
+    <ul className="m-0 mt-3 grid list-none gap-3 p-0 lg:grid-cols-2 lg:gap-3.5">
       <LuxuryTrendMetric
         label="Sueño (media diaria)"
         trendKey="sleep_trend"
+        guideKey="sleep"
         weekly={weekly}
         recent={weekly.sleep_hours_avg_recent}
         prev={weekly.sleep_hours_avg_prev}
@@ -227,6 +252,7 @@ function LuxuryWeeklyTrendBlock({ weekly }: { weekly: WeeklySnap }) {
       <LuxuryTrendMetric
         label="HRV (media diaria)"
         trendKey="hrv_trend"
+        guideKey="hrv"
         weekly={weekly}
         recent={weekly.hrv_ms_avg_recent}
         prev={weekly.hrv_ms_avg_prev}
@@ -238,6 +264,7 @@ function LuxuryWeeklyTrendBlock({ weekly }: { weekly: WeeklySnap }) {
       <LuxuryTrendMetric
         label="FC en reposo (media diaria)"
         trendKey="resting_hr_trend"
+        guideKey="resting_hr"
         weekly={weekly}
         recent={weekly.resting_hr_bpm_avg_recent}
         prev={weekly.resting_hr_bpm_avg_prev}
@@ -249,6 +276,7 @@ function LuxuryWeeklyTrendBlock({ weekly }: { weekly: WeeklySnap }) {
       <LuxuryTrendMetric
         label="Entreno (min totales en la ventana)"
         trendKey="training_trend"
+        guideKey="training"
         weekly={weekly}
         recent={trainRecentMin}
         prev={trainPrevMin}
@@ -260,6 +288,7 @@ function LuxuryWeeklyTrendBlock({ weekly }: { weekly: WeeklySnap }) {
       <LuxuryTrendMetric
         label="Pasos (media diaria)"
         trendKey="steps_trend"
+        guideKey="steps"
         weekly={weekly}
         recent={weekly.steps_avg_recent}
         prev={weekly.steps_avg_prev}
@@ -268,13 +297,14 @@ function LuxuryWeeklyTrendBlock({ weekly }: { weekly: WeeklySnap }) {
         unit="pasos"
         goodWhenUp
       />
-      <li className="sm:col-span-2">
-        <p className="m-0 text-[9px] leading-snug text-[var(--color-text-secondary)] sm:text-[10px]">
-          Ventanas: últimos{" "}
-          <span className="font-medium text-[var(--color-text-primary)]">{weekly.current_window_n}</span> días con lectura
-          frente a los{" "}
-          <span className="font-medium text-[var(--color-text-primary)]">{weekly.previous_window_n}</span> anteriores
-          (promedios diarios sobre días con dato).
+      <li className="lg:col-span-2">
+        <p className="m-0 text-[10px] leading-relaxed text-[var(--color-text-secondary)] sm:text-[11px]">
+          <span className="font-semibold text-[var(--color-text-primary)]">Cómo leer el bloque:</span> comparamos dos ventanas
+          de 7 días (promedio solo en días con dato). «Últimos 7 días» son los{" "}
+          <span className="font-medium tabular-nums text-[var(--color-text-primary)]">{weekly.current_window_n}</span> más
+          recientes frente a los{" "}
+          <span className="font-medium tabular-nums text-[var(--color-text-primary)]">{weekly.previous_window_n}</span>{" "}
+          anteriores. La magnitud resume qué tan grande es el cambio porcentual respecto a tu semana previa.
         </p>
       </li>
     </ul>
@@ -311,7 +341,7 @@ export function AppleShortcutAnalyticsPanels({ latest, analytics, loading, layou
     <div
       className={
         luxury
-          ? "grid gap-4 sm:grid-cols-2 sm:items-start lg:gap-5"
+          ? "grid gap-5 lg:grid-cols-2 lg:items-start lg:gap-6"
           : "grid gap-3 lg:grid-cols-3"
       }
     >
@@ -384,7 +414,9 @@ export function AppleShortcutAnalyticsPanels({ latest, analytics, loading, layou
 
       <div className={clsx(panelShell, luxury && "min-h-0 self-start")} style={luxury ? undefined : { minHeight: 200 }}>
         <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">Tendencia</p>
-        <p className="m-0 mt-1 text-[12px] text-[var(--color-text-secondary)]">Esta semana frente a la anterior</p>
+        <p className="m-0 mt-1 text-[12px] text-[var(--color-text-secondary)]">
+          Esta semana frente a la anterior · número + interpretación breve por métrica
+        </p>
         {!wk ? (
           <p className="m-0 mt-3 text-[12px] text-[var(--color-text-secondary)]">Sin historial suficiente aún.</p>
         ) : (

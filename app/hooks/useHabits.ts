@@ -96,7 +96,7 @@ function mockHabitRows(): MockHabitRow[] {
     { id: "mock-1", name: "Dormir antes de las 11", domain: "fisico", metadata: m1 },
     { id: "mock-2", name: "Movilidad y respiración", domain: "salud", metadata: m2 },
     { id: "mock-3", name: "Revisión financiera de 10 minutos", domain: "profesional", metadata: m3 },
-    { id: "mock-4", name: "Hidratación Estratégica", domain: "salud", metadata: m4 },
+    { id: "mock-4", name: "Hidratación", domain: "salud", metadata: m4 },
   ]
 }
 

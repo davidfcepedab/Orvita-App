@@ -557,18 +557,18 @@ export default function HabitosPage() {
         </div>
 
         <div
-          className="flex min-w-0 flex-col gap-2 border-t border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] pt-3"
+          className="flex min-w-0 flex-col gap-2 border-t border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] pt-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4"
           role="tablist"
           aria-label="Vista de hábitos: resumen o stack"
         >
-          <div className="grid min-w-0 grid-cols-2 gap-1 sm:flex sm:gap-1">
+          <div className="grid min-w-0 grid-cols-2 gap-1 sm:flex sm:gap-1 lg:flex-initial lg:shrink-0">
             <button
               type="button"
               role="tab"
               aria-selected={shellView === "resumen"}
               title="Métricas y briefing de consistencia"
               onClick={() => setShellView("resumen")}
-              className={`orbita-focus-ring inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg px-2 text-[10px] font-semibold uppercase tracking-[0.1em] transition-colors sm:flex-1 sm:px-3 sm:text-[11px] ${
+              className={`orbita-focus-ring inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg px-2 text-[10px] font-semibold uppercase tracking-[0.1em] transition-colors sm:flex-1 sm:px-3 sm:text-[11px] lg:min-w-[7rem] lg:flex-initial ${
                 shellView === "resumen"
                   ? "bg-[var(--color-surface)] text-[var(--color-text-primary)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--color-border)_65%,transparent)]"
                   : "bg-transparent text-[var(--color-text-secondary)] hover:bg-[color-mix(in_srgb,var(--color-surface)_55%,transparent)]"
@@ -583,7 +583,7 @@ export default function HabitosPage() {
               aria-selected={shellView === "stack"}
               title="Marcar y ordenar por mañana, tarde o noche"
               onClick={() => setShellView("stack")}
-              className={`orbita-focus-ring inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg px-2 text-[10px] font-semibold uppercase tracking-[0.1em] transition-colors sm:flex-1 sm:px-3 sm:text-[11px] ${
+              className={`orbita-focus-ring inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg px-2 text-[10px] font-semibold uppercase tracking-[0.1em] transition-colors sm:flex-1 sm:px-3 sm:text-[11px] lg:min-w-[7rem] lg:flex-initial ${
                 shellView === "stack"
                   ? "bg-[var(--color-surface)] text-[var(--color-text-primary)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--color-border)_65%,transparent)]"
                   : "bg-transparent text-[var(--color-text-secondary)] hover:bg-[color-mix(in_srgb,var(--color-surface)_55%,transparent)]"
@@ -595,8 +595,8 @@ export default function HabitosPage() {
           </div>
 
           {shellView === "stack" ? (
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-              <p className="m-0 text-[10px] uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
+            <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 lg:min-w-0 lg:flex-1 lg:flex-row lg:items-center lg:justify-end lg:gap-4">
+              <p className="m-0 shrink-0 text-[10px] uppercase tracking-[0.12em] text-[var(--color-text-secondary)] lg:text-right">
                 Stack actual
               </p>
               <button
@@ -606,7 +606,7 @@ export default function HabitosPage() {
                 title="Registrar el mismo día para todos los hábitos (viaje, olvido)"
                 aria-expanded={backfillOpen}
                 aria-label="Registrar completado en otro día para todos los hábitos"
-                className="inline-flex min-h-9 w-full shrink-0 items-center justify-center gap-1.5 rounded-lg border border-[color-mix(in_srgb,var(--color-border)_75%,transparent)] bg-[var(--color-surface)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--color-text-primary)] transition-opacity sm:w-auto sm:justify-center disabled:cursor-not-allowed disabled:opacity-45"
+                className="inline-flex min-h-9 w-full shrink-0 items-center justify-center gap-1.5 rounded-lg border border-[color-mix(in_srgb,var(--color-border)_75%,transparent)] bg-[var(--color-surface)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--color-text-primary)] transition-opacity sm:w-auto sm:justify-center lg:w-auto disabled:cursor-not-allowed disabled:opacity-45"
               >
                 <CalendarPlus className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
                 Otro día (todos)
