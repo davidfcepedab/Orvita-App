@@ -6,6 +6,8 @@ import type { ShortcutHealthAnalyticsSnapshot } from "@/lib/health/shortcutHealt
 
 export type AutoHealthMetric = {
   observed_at: string
+  /** Cuándo Órvita insertó esta fila (recepción en servidor). */
+  created_at?: string | null
   sleep_hours: number | null
   hrv_ms: number | null
   readiness_score: number | null

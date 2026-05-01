@@ -45,8 +45,8 @@ import {
   type UnifiedTimelineBucket,
   unifiedListHorizonRange,
   unifiedRowInHorizon,
+  unifiedMergedMasAdelanteHeading,
   unifiedTimelineBucket,
-  unifiedTimelineDayChip,
   unifiedTimelineSectionTitle,
   UNIFIED_LIST_EXTENDED_DAYS_AFTER_MONTH,
 } from "@/lib/agenda/unifiedListHorizon"
@@ -926,37 +926,18 @@ export function AgendaSharedList({
     const pending = rows.filter((r) => !mergedRowDone(r, isCalendarUiDone))
     const done = rows.filter((r) => mergedRowDone(r, isCalendarUiDone))
 
-    const withDayChips = (list: MergedRow[]) => {
-      const nodes: ReactNode[] = []
-      let lastDay: string | null = null
-      for (const row of list) {
-        const dk = mergedRowDayKey(row)
-        if (dk && dk !== lastDay) {
-          lastDay = dk
-          nodes.push(
-            <p
-              key={`mas-chip-${dk}-${nodes.length}`}
-              className="m-0 mt-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)] first:mt-0"
-            >
-              {unifiedTimelineDayChip(dk)}
-            </p>,
-          )
-        }
-        nodes.push(renderTimelineRow(row))
-      }
-      return nodes
-    }
+    const renderRows = (list: MergedRow[]) => list.map((row) => renderTimelineRow(row))
 
     return (
       <>
-        <div className="flex flex-col gap-2 sm:gap-3">{withDayChips(pending)}</div>
+        <div className="flex flex-col gap-2 sm:gap-3">{renderRows(pending)}</div>
         {done.length > 0 ? (
           <details className="mt-2 rounded-xl border border-[color-mix(in_srgb,var(--color-border)_65%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_40%,transparent)] px-2 py-2 sm:px-3">
             <summary className="cursor-pointer text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--color-text-secondary)] marker:content-none [&::-webkit-details-marker]:hidden">
               Histórico · {done.length} completado{done.length === 1 ? "" : "s"}
             </summary>
             <div className="mt-2 flex flex-col gap-2 border-t border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] pt-2 sm:gap-3">
-              {withDayChips(done)}
+              {renderRows(done)}
             </div>
           </details>
         ) : null}
@@ -1095,7 +1076,10 @@ export function AgendaSharedList({
             {listDayGroups.map((group, gIdx) => {
               const sectionTitle =
                 group.timelineBucket === "mas_adelante"
-                  ? "Más adelante"
+                  ? unifiedMergedMasAdelanteHeading(
+                      group.rows.map((r) => mergedRowDayKey(r)),
+                      todayYmd,
+                    )
                   : unifiedTimelineSectionTitle(group.dayKey, todayYmd)
               return (
                 <div key={group.bucket} className="flex min-w-0 flex-col gap-2 sm:gap-2.5">

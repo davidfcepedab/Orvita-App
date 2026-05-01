@@ -114,24 +114,6 @@ export function unifiedTimelineBucket(dayKey: string | null, todayYmd: string): 
   return "mas_adelante"
 }
 
-/** Etiqueta corta para sub-bloques dentro de «Más adelante» (varios días). */
-export function unifiedTimelineDayChip(dayKey: string): string {
-  const tz = getAgendaDisplayTimeZone()
-  const [y, m, d] = dayKey.trim().slice(0, 10).split("-").map(Number)
-  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return dayKey
-  const civilNoonUtc = new Date(Date.UTC(y, m - 1, d, 12, 0, 0))
-  try {
-    return new Intl.DateTimeFormat("es-CO", {
-      weekday: "short",
-      day: "numeric",
-      month: "short",
-      timeZone: tz,
-    }).format(civilNoonUtc)
-  } catch {
-    return dayKey
-  }
-}
-
 /** Títulos de bloque para separadores visuales (cronología unificada). */
 export function unifiedTimelineSectionTitle(dayKey: string | null, todayYmd: string): string {
   if (!dayKey || dayKey === "__sin_fecha__") return "Sin día en calendario"
@@ -191,7 +173,32 @@ export function unifiedTimelineSectionTitle(dayKey: string | null, todayYmd: str
   const [yk, mk] = dayKey.split("-").map(Number)
   if (yk === yt && mk === mt) return `Este mes · ${longDay}`
 
-  return `Más adelante · ${longDay}`
+  /** Fuera del mes en curso u otro marco: ya no usar «más adelante» si el día civil ya pasó. */
+  if (dayKey < todayYmd) return `Fecha pasada · ${longDay}`
+  return `Próximas fechas · ${longDay}`
+}
+
+/**
+ * Título del bloque fusionado (varios días `mas_adelante`): evita «más adelante» cuando todo es pasado o todo futuro.
+ */
+export function unifiedMergedMasAdelanteHeading(dayKeys: Array<string | null | undefined>, todayYmd: string): string {
+  const keys = dayKeys
+    .map((k) => (typeof k === "string" ? k.trim().slice(0, 10) : ""))
+    .filter((k) => k && k !== "__sin_fecha__")
+  if (keys.length === 0) return "Otras fechas"
+
+  let hasPast = false
+  let hasFuture = false
+  let hasToday = false
+  for (const k of keys) {
+    if (k < todayYmd) hasPast = true
+    else if (k > todayYmd) hasFuture = true
+    else hasToday = true
+  }
+
+  if (hasPast && !hasFuture && !hasToday) return "En fechas ya pasadas"
+  if (!hasPast && (hasFuture || hasToday)) return "Próximas fechas"
+  return "Varias fechas en el calendario"
 }
 
 export function unifiedRowInHorizon(

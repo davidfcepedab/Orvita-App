@@ -20,6 +20,7 @@ import { ConfigAccordion } from "@/app/components/orbita-v3/config/ConfigAccordi
 import { ConfigConnectionPill } from "@/app/components/orbita-v3/config/ConfigConnectionPill"
 import { ConfigHealthUnifiedPanel } from "@/app/components/orbita-v3/config/ConfigHealthUnifiedPanel"
 import { designTokens } from "@/src/theme/design-tokens"
+import { formatCompactAgoEs } from "@/lib/time/formatRelativeSyncAgo"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { createBrowserClient } from "@/lib/supabase/browser"
 import Link from "next/link"
@@ -455,6 +456,22 @@ export default function ConfigV3() {
     }
   }
 
+  const googleAccordionDescription = useMemo(() => {
+    const base = "Calendario y tareas con la misma cuenta"
+    if (googleConnected && googleLastSyncAt) {
+      return `${base} · última sincronización ${formatCompactAgoEs(googleLastSyncAt)}`
+    }
+    return base
+  }, [googleConnected, googleLastSyncAt])
+
+  const hevyAccordionDescription = useMemo(() => {
+    const base = "Rutina y entrenamientos en Órvita"
+    if (hevyConnected && hevyLastSyncAt) {
+      return `${base} · última sincronización ${formatCompactAgoEs(hevyLastSyncAt)}`
+    }
+    return base
+  }, [hevyConnected, hevyLastSyncAt])
+
   const handleUploadFamilyPhoto = async (file: File) => {
     try {
       setFamilyPhotoError(null)
@@ -742,7 +759,7 @@ export default function ConfigV3() {
             leadingContainerStyle={{ backgroundColor: "rgba(59, 130, 246, 0.1)" }}
             leading={<CalendarDays className="h-4 w-4" style={{ color: theme.accent.agenda }} />}
             title="Google"
-            description="Calendario y tareas con la misma cuenta"
+            description={googleAccordionDescription}
             trailing={
               <ConfigConnectionPill
                 state={
@@ -793,7 +810,7 @@ export default function ConfigV3() {
             leadingContainerStyle={{ backgroundColor: "rgba(148, 163, 184, 0.18)" }}
             leading={<Dumbbell className="h-4 w-4" style={{ color: theme.textMuted }} />}
             title="Hevy"
-            description="Rutina y entrenamientos en Órvita"
+            description={hevyAccordionDescription}
             trailing={
               <ConfigConnectionPill
                 state={

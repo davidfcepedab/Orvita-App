@@ -5,12 +5,8 @@ import clsx from "clsx"
 import { motion } from "framer-motion"
 import { Activity, Dumbbell, Footprints, Heart, Landmark, RefreshCw, Sparkles } from "lucide-react"
 import { Card } from "@/src/components/ui/Card"
-import {
-  entrenamientoLinkClass,
-  healthCtaDumbbellIconClass,
-  healthCtaHeartIconClass,
-  verSaludLinkClass,
-} from "@/lib/salud/healthCtaLinkClasses"
+import { entrenamientoLinkClass, healthCtaDumbbellIconClass, verSaludLinkClass } from "@/lib/salud/healthCtaLinkClasses"
+import { cn } from "@/lib/utils"
 import { formatInstantInAgendaTz, formatLocalDateLabelEsCo, formatStoredYmdLabelEsCo } from "@/lib/agenda/localDateKey"
 import type { AppleHealthContextSignals, OperationalCapitalSnapshot } from "@/lib/operational/types"
 
@@ -284,12 +280,24 @@ export function StrategicDayHero({
                     "max-sm:flex-row max-sm:flex-wrap max-sm:border-t max-sm:border-[color-mix(in_srgb,var(--color-border)_82%,transparent)] max-sm:pt-3",
                   )}
                 >
-                  <Link href="/salud" className={verSaludLinkClass}>
-                    <Heart className={healthCtaHeartIconClass} aria-hidden />
+                  <Link
+                    href="/salud"
+                    className={cn(
+                      verSaludLinkClass,
+                      "max-sm:py-1 max-sm:text-[10px] max-sm:font-medium sm:px-3 sm:py-2 sm:text-[10px] sm:font-semibold sm:leading-snug sm:tracking-tight",
+                    )}
+                  >
+                    <Heart className="h-3 w-3 shrink-0 text-[var(--color-accent-health)]" aria-hidden />
                     Ver Salud
                   </Link>
-                  <Link href="/training" className={entrenamientoLinkClass}>
-                    <Dumbbell className={`${healthCtaDumbbellIconClass} max-sm:hidden sm:inline`} aria-hidden />
+                  <Link
+                    href="/training"
+                    className={cn(
+                      entrenamientoLinkClass,
+                      "max-sm:py-1 max-sm:text-[10px] max-sm:font-medium sm:px-2.5 sm:py-2 sm:text-[10px] sm:font-semibold sm:leading-snug sm:tracking-tight",
+                    )}
+                  >
+                    <Dumbbell className={cn(healthCtaDumbbellIconClass, "h-3 w-3 max-sm:hidden sm:inline")} aria-hidden />
                     Entrenamiento
                   </Link>
                 </div>

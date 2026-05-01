@@ -7,23 +7,10 @@ import { ConfigConnectionPill } from "@/app/components/orbita-v3/config/ConfigCo
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import type { OrbitaConfigTheme } from "@/app/components/orbita-v3/config/configThemeTypes"
 import { configConnectionActionClass, configSettingsSectionKickerClass } from "@/lib/config/configSettingsUi"
-import { formatRelativeSyncAgo } from "@/lib/time/formatRelativeSyncAgo"
+import { formatCompactAgoEs, formatRelativeSyncAgo } from "@/lib/time/formatRelativeSyncAgo"
 
-/** Relativo breve para una línea bajo el título "Salud" (muestra / import, no solo "sync" servidor). */
-function formatShortSampleAgo(iso: string | null | undefined): string {
-  if (!iso) return "sin fecha"
-  const t = new Date(iso).getTime()
-  if (Number.isNaN(t)) return "sin fecha"
-  const diff = Date.now() - t
-  if (diff < 0) return "reciente"
-  const min = Math.floor(diff / 60_000)
-  if (min < 1) return "hace un momento"
-  if (min < 60) return `hace ${min} min`
-  const hrs = Math.floor(min / 60)
-  if (hrs < 48) return `hace ${hrs} h`
-  const days = Math.floor(hrs / 24)
-  return `hace ${days} d`
-}
+const SALUD_ACCORDION_TAGLINE = "Atajo iPhone e importación automática"
+const FINANZAS_ACCORDION_TAGLINE = "Banca en Colombia, Nequi, avisos"
 
 function healthSourceLabel(source: string | null | undefined) {
   if (source === "apple_health_export") return "Apple"
@@ -88,7 +75,10 @@ export function ConfigStrategicIntegrationsPanel({
 }) {
   const [settings, setSettings] = useState<IntegrationSettings>(defaultSettings)
   const [healthConnected, setHealthConnected] = useState(false)
+  /** Ancla del día de la muestra (observed_at). */
   const [healthLastSync, setHealthLastSync] = useState<string | null>(null)
+  /** Última vez que Órvita guardó salud en cuenta (created_at más reciente). */
+  const [healthLastIngestedAt, setHealthLastIngestedAt] = useState<string | null>(null)
   const [healthSource, setHealthSource] = useState<string | null>(null)
   const [bankAccounts, setBankAccounts] = useState<BankingAccount[]>([])
   const [bankLastSync, setBankLastSync] = useState<string | null>(null)
@@ -117,10 +107,12 @@ export function ConfigStrategicIntegrationsPanel({
 
     const healthPayload = (await healthRes.json()) as {
       success?: boolean
-      latest?: { observed_at?: string | null; source?: string | null } | null
+      latest?: { observed_at?: string | null; source?: string | null; created_at?: string | null } | null
+      lastIngestedAt?: string | null
     }
     setHealthConnected(Boolean(healthPayload.success && healthPayload.latest))
     setHealthLastSync(healthPayload.latest?.observed_at ?? null)
+    setHealthLastIngestedAt(healthPayload.lastIngestedAt ?? healthPayload.latest?.created_at ?? null)
     setHealthSource(healthPayload.latest?.source ?? null)
 
     const bankingPayload = (await bankingRes.json()) as {
@@ -179,7 +171,9 @@ export function ConfigStrategicIntegrationsPanel({
       }
       if (!res.ok || !payload.success) throw new Error(payload.error ?? "No se pudo sincronizar salud")
       setHealthConnected(true)
-      setHealthLastSync(payload.syncedAt ?? new Date().toISOString())
+      const synced = payload.syncedAt ?? new Date().toISOString()
+      setHealthLastSync(synced)
+      setHealthLastIngestedAt(synced)
       setHealthSource(payload.source ?? healthSource)
       setNotice(
         payload.connectionLabel ??
@@ -452,7 +446,7 @@ export function ConfigStrategicIntegrationsPanel({
         </div>
         <p className="mt-2.5 text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
           {healthLastSync
-            ? `Origen: ${healthSourceLabel(healthSource)} · ${formatShortSampleAgo(healthLastSync)} (muestra).`
+            ? `Última recepción en Órvita ${healthLastIngestedAt ? formatCompactAgoEs(healthLastIngestedAt) : "sin fecha"} · muestra del día ${formatCompactAgoEs(healthLastSync)} (${healthSourceLabel(healthSource)}).`
             : "Sin filas aún. Usa el atajo o los botones de arriba."}
         </p>
       </div>
@@ -516,7 +510,7 @@ export function ConfigStrategicIntegrationsPanel({
           </div>
           <p className="mt-2 text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
             {healthLastSync
-              ? `Origen: ${healthSourceLabel(healthSource)} · ${formatShortSampleAgo(healthLastSync)}.`
+              ? `Última recepción en Órvita ${healthLastIngestedAt ? formatCompactAgoEs(healthLastIngestedAt) : "sin fecha"} · muestra ${formatCompactAgoEs(healthLastSync)} (${healthSourceLabel(healthSource)}).`
               : "Sin muestras todavía. Usa el atajo y luego sincroniza."}
           </p>
         </div>
@@ -606,11 +600,23 @@ export function ConfigStrategicIntegrationsPanel({
   const showStrategicLoadError = Boolean(error && lastFailedAction === null && !loadPending)
 
   const healthClosedLine = useMemo(() => {
-    if (loadPending) return "Revisando…"
-    if (!settings.health_enabled) return "Salud automática desactivada"
-    if (!healthConnected) return "Aún no hay datos del iPhone en tu cuenta"
-    return `${healthSourceLabel(healthSource)} · ${formatShortSampleAgo(healthLastSync)}`
-  }, [loadPending, settings.health_enabled, healthConnected, healthSource, healthLastSync])
+    if (loadPending) return `${SALUD_ACCORDION_TAGLINE} · comprobando…`
+    if (!settings.health_enabled) return `${SALUD_ACCORDION_TAGLINE} · módulo desactivado`
+    if (!healthConnected) return `${SALUD_ACCORDION_TAGLINE} · sin datos en cuenta`
+    const recv = healthLastIngestedAt ? formatCompactAgoEs(healthLastIngestedAt) : null
+    const origin = healthSourceLabel(healthSource)
+    const originTail = origin !== "—" ? ` · ${origin}` : ""
+    return recv
+      ? `${SALUD_ACCORDION_TAGLINE} · última recepción en Órvita ${recv}${originTail}`
+      : `${SALUD_ACCORDION_TAGLINE} · recepción sin fecha`
+  }, [loadPending, settings.health_enabled, healthConnected, healthSource, healthLastIngestedAt])
+
+  const finanzasClosedLine = useMemo(() => {
+    if (loadPending) return `${FINANZAS_ACCORDION_TAGLINE} · comprobando…`
+    if (!settings.banking_enabled) return `${FINANZAS_ACCORDION_TAGLINE} · banca desactivada`
+    const tail = bankLastSync ? formatCompactAgoEs(bankLastSync) : null
+    return tail ? `${FINANZAS_ACCORDION_TAGLINE} · última sync ${tail}` : FINANZAS_ACCORDION_TAGLINE
+  }, [loadPending, settings.banking_enabled, bankLastSync])
 
   const finanzasPill =
     error && (lastFailedAction === "banking" || showStrategicLoadError) ? (
@@ -645,7 +651,7 @@ export function ConfigStrategicIntegrationsPanel({
           leadingContainerStyle={{ backgroundColor: "rgba(56, 189, 248, 0.14)" }}
           leading={<Landmark className="h-4 w-4" style={{ color: theme.accent.finance }} />}
           title="Finanzas"
-          description="Banca en Colombia, Nequi, avisos"
+          description={finanzasClosedLine}
           trailing={finanzasPill}
         >
           <div className="flex flex-col gap-0">

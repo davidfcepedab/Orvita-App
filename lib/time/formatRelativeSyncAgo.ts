@@ -1,3 +1,22 @@
+/**
+ * Tiempo relativo compacto para subtítulos en línea (tras punto medio): «hace 22 h», «hace 5 min».
+ * No incluye prefijo largo tipo «Última sincronización».
+ */
+export function formatCompactAgoEs(iso: string | null | undefined): string {
+  if (!iso) return "sin fecha"
+  const t = new Date(iso).getTime()
+  if (Number.isNaN(t)) return "sin fecha"
+  const diff = Date.now() - t
+  if (diff < 0) return "ahora mismo"
+  const min = Math.floor(diff / 60_000)
+  if (min < 1) return "hace un momento"
+  if (min < 60) return `hace ${min} min`
+  const hrs = Math.floor(min / 60)
+  if (hrs < 48) return `hace ${hrs} h`
+  const days = Math.floor(hrs / 24)
+  return `hace ${days} d`
+}
+
 /** Texto fijo para pie de integraciones en Configuración (es-ES). */
 export function formatRelativeSyncAgo(iso: string | null | undefined): string {
   if (!iso) return "Última sincronización: nunca sincronizado"

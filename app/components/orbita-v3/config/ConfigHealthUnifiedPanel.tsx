@@ -6,7 +6,7 @@ import { ConfigSettingsSection } from "@/app/components/orbita-v3/config/ConfigS
 import type { OrbitaThemeSkin } from "@/app/contexts/AppContext"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import { configConnectionActionClass } from "@/lib/config/configSettingsUi"
-import { formatRelativeSyncAgo } from "@/lib/time/formatRelativeSyncAgo"
+import { formatCompactAgoEs } from "@/lib/time/formatRelativeSyncAgo"
 import { ConfigAppleShortcutPanel } from "./ConfigAppleShortcutPanel"
 
 type IntegrationSettings = {
@@ -29,7 +29,9 @@ export function ConfigHealthUnifiedPanel({
 }) {
   const [settings, setSettings] = useState<IntegrationSettings>(defaultSettings)
   const [healthConnected, setHealthConnected] = useState(false)
+  /** observed_at de la fila más reciente (ancla del día). */
   const [healthLastSync, setHealthLastSync] = useState<string | null>(null)
+  const [healthLastIngestedAt, setHealthLastIngestedAt] = useState<string | null>(null)
   const [healthSource, setHealthSource] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -50,10 +52,12 @@ export function ConfigHealthUnifiedPanel({
 
     const healthPayload = (await healthRes.json()) as {
       success?: boolean
-      latest?: { observed_at?: string | null; source?: string | null } | null
+      latest?: { observed_at?: string | null; source?: string | null; created_at?: string | null } | null
+      lastIngestedAt?: string | null
     }
     setHealthConnected(Boolean(healthPayload.success && healthPayload.latest))
     setHealthLastSync(healthPayload.latest?.observed_at ?? null)
+    setHealthLastIngestedAt(healthPayload.lastIngestedAt ?? healthPayload.latest?.created_at ?? null)
     setHealthSource(healthPayload.latest?.source ?? null)
   }, [])
 
@@ -93,7 +97,9 @@ export function ConfigHealthUnifiedPanel({
       const payload = (await res.json()) as { success?: boolean; syncedAt?: string; source?: string; error?: string; connectionLabel?: string }
       if (!res.ok || !payload.success) throw new Error(payload.error ?? "No se pudo sincronizar salud")
       setHealthConnected(true)
-      setHealthLastSync(payload.syncedAt ?? new Date().toISOString())
+      const synced = payload.syncedAt ?? new Date().toISOString()
+      setHealthLastSync(synced)
+      setHealthLastIngestedAt(synced)
       setHealthSource(payload.source ?? healthSource)
       setNotice(payload.connectionLabel ?? (payload.source === "apple_health_export" ? "Conectado vía Apple Health." : "Conectado vía Google Fit."))
     } catch (e) {
@@ -255,7 +261,8 @@ export function ConfigHealthUnifiedPanel({
         <div className="flex items-center gap-2 text-[11px]" style={{ color: theme.textMuted }}>
           {healthConnected && <CheckCircle2 className="h-4 w-4 shrink-0" style={{ color: theme.accent.health }} aria-label="Conectado" />}
           <span>
-            {formatRelativeSyncAgo(healthLastSync)} ·{" "}
+            Última recepción en Órvita ·{" "}
+            {healthLastIngestedAt ? formatCompactAgoEs(healthLastIngestedAt) : "sin datos"} ·{" "}
             {healthSource === "apple_health_export" ? "Apple" : healthSource === "google_fit" ? "Google Fit" : "Sin datos"}
           </span>
         </div>

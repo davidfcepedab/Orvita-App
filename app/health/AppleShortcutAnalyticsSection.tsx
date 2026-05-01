@@ -306,7 +306,13 @@ export function AppleShortcutAnalyticsPanels({ latest, analytics, loading, layou
     : "rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_50%,transparent)] p-3.5"
 
   return (
-    <div className={luxury ? "grid gap-4 sm:grid-cols-2" : "grid gap-3 lg:grid-cols-3"}>
+    <div
+      className={
+        luxury
+          ? "grid gap-4 sm:grid-cols-2 sm:items-start lg:gap-5"
+          : "grid gap-3 lg:grid-cols-3"
+      }
+    >
       {!luxury ? (
         <div className={panelShell} style={luxury ? undefined : { minHeight: 200 }}>
           <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">Última lectura</p>
@@ -346,7 +352,10 @@ export function AppleShortcutAnalyticsPanels({ latest, analytics, loading, layou
         </div>
       ) : null}
 
-      <div className={panelShell} style={luxury ? undefined : { minHeight: 200 }}>
+      <div
+        className={clsx(panelShell, luxury && "min-h-0 self-start")}
+        style={luxury ? undefined : { minHeight: 200 }}
+      >
         <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">Tu ritmo hoy</p>
         <p className="m-0 mt-1 text-[12px] text-[var(--color-text-secondary)]">Energía frente al descanso</p>
         {!analytics || loading ? (
@@ -371,7 +380,14 @@ export function AppleShortcutAnalyticsPanels({ latest, analytics, loading, layou
         )}
       </div>
 
-      <div className={panelShell} style={luxury ? undefined : { minHeight: 200 }}>
+      <div
+        className={clsx(
+          panelShell,
+          luxury &&
+            "min-h-0 self-start sm:max-h-[min(68vh,620px)] sm:overflow-y-auto sm:overscroll-y-contain sm:pr-1",
+        )}
+        style={luxury ? undefined : { minHeight: 200 }}
+      >
         <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">Tendencia</p>
         <p className="m-0 mt-1 text-[12px] text-[var(--color-text-secondary)]">Esta semana frente a la anterior</p>
         {!wk ? (
