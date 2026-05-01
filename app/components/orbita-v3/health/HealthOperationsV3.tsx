@@ -540,6 +540,11 @@ export default function HealthOperationsV3({
           es el modelo Apple (HRV, sueño, movimiento). En importaciones recientes ambas pueden parecerse, pero ya no
           comparten el mismo campo duplicado.
         </p>
+        <p className="mt-3 max-w-3xl text-xs leading-relaxed text-pretty" style={{ color: theme.textMuted }}>
+          El bloque <strong className="font-semibold" style={{ color: theme.text }}>Ritmo y tendencia</strong> (Apple Health
+          más arriba en esta página) muestra la lectura del atajo y la tendencia semanal; aquí unimos esas señales con la
+          curva de vitalidad y recuperación de ÓRVITA.
+        </p>
         <div className="mt-2 flex flex-wrap gap-4 text-xs leading-snug sm:text-sm" style={{ color: theme.textMuted }}>
           <span className="inline-flex items-center gap-2">
             <span className="h-2 w-2 rounded-full" style={{ backgroundColor: SALUD_SEM.energy }} aria-hidden />

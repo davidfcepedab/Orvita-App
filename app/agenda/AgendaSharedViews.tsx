@@ -539,7 +539,7 @@ export function AgendaSharedKanban({
                 title={row.event.summary || "(Sin título)"}
                 googleKind="calendar"
                 kindPillLabel={calendarEventFuenteLabel(row.event)}
-                statusLabel={isCalendarUiDone?.(row.event.id) ? "Visto" : "Pendiente"}
+                statusLabel={isCalendarUiDone?.(row.event.id) ? "Visto" : "Agendado"}
                 statusKey={isCalendarUiDone?.(row.event.id) ? "completada" : "pendiente"}
                 priorityUi={null}
                 onEdit={onOpenAgendaEdit ? () => onOpenAgendaEdit({ kind: "google-calendar", event: row.event }) : undefined}
@@ -995,7 +995,7 @@ export function AgendaSharedList({
                 title={row.event.summary || "(Sin título)"}
                 googleKind="calendar"
                 kindPillLabel={calendarEventFuenteLabel(row.event)}
-                statusLabel={isCalendarUiDone?.(row.event.id) ? "Visto" : "Pendiente"}
+                statusLabel={isCalendarUiDone?.(row.event.id) ? "Visto" : "Agendado"}
                 statusKey={isCalendarUiDone?.(row.event.id) ? "completada" : "pendiente"}
                 priorityUi={null}
                 onEdit={onOpenAgendaEdit ? () => onOpenAgendaEdit({ kind: "google-calendar", event: row.event }) : undefined}
@@ -1213,7 +1213,7 @@ export function AgendaSharedWeek({
                       title={ev.summary || "(Evento)"}
                       googleKind="calendar"
                       kindPillLabel={calendarEventFuenteLabel(ev)}
-                      statusLabel={isCalendarUiDone?.(ev.id) ? "Visto" : "Pendiente"}
+                      statusLabel={isCalendarUiDone?.(ev.id) ? "Visto" : "Agendado"}
                       statusKey={isCalendarUiDone?.(ev.id) ? "completada" : "pendiente"}
                       priorityUi={null}
                       onEdit={onOpenAgendaEdit ? () => onOpenAgendaEdit({ kind: "google-calendar", event: ev }) : undefined}
@@ -1564,7 +1564,7 @@ export function AgendaSharedMonth({
                     title={ev.summary || "(Evento)"}
                     googleKind="calendar"
                     kindPillLabel={calendarEventFuenteLabel(ev)}
-                    statusLabel={isCalendarUiDone?.(ev.id) ? "Visto" : "Pendiente"}
+                    statusLabel={isCalendarUiDone?.(ev.id) ? "Visto" : "Agendado"}
                     statusKey={isCalendarUiDone?.(ev.id) ? "completada" : "pendiente"}
                     priorityUi={null}
                     onEdit={onOpenAgendaEdit ? () => onOpenAgendaEdit({ kind: "google-calendar", event: ev }) : undefined}

@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react"
+import { Fragment, useCallback, useEffect, useMemo, useState, type CSSProperties } from "react"
 import { motion } from "framer-motion"
 import {
   ArrowRight,
@@ -9,12 +9,14 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
+  Clock,
   ListChecks,
   Loader2,
   Moon,
   Sparkles,
   Sun,
   Sunrise,
+  Sunset,
   Target,
   TrendingDown,
   TrendingUp,
@@ -49,8 +51,18 @@ import {
   type PressureBand,
 } from "@/lib/hoy/commandDerivation"
 import { isScheduledOnUtcDay } from "@/lib/habits/habitMetrics"
+import {
+  groupHabitsByDaypart,
+  orderedDaypartBlocks,
+  type HabitTimeBlockId,
+} from "@/lib/habits/habitStackGroups"
 import { StrategicDayHero } from "@/app/components/orbita-v3/strategic/StrategicDayCapitalHero"
-import type { OperationalCommandDomain, OperationalDomain, OperationalTask } from "@/lib/operational/types"
+import type {
+  HabitWithMetrics,
+  OperationalCommandDomain,
+  OperationalDomain,
+  OperationalTask,
+} from "@/lib/operational/types"
 
 function operationalDomainLabelEs(domain: OperationalDomain): string {
   switch (domain) {
@@ -242,6 +254,55 @@ const checkinSegmentItem = {
   show: { opacity: 1, y: 0 },
 }
 
+/** Alineado con `/habitos` (STACK_BLOCK_*): mismo orden visual por momento del día. */
+const HOY_DAYPART_META: Record<
+  HabitTimeBlockId,
+  { title: string; subtitle: string; Icon: typeof Sun }
+> = {
+  manana: { title: "Mañana", subtitle: "Antes de 12:00", Icon: Sun },
+  tarde: { title: "Tarde", subtitle: "12:00 – 17:59", Icon: Sunset },
+  noche: { title: "Noche", subtitle: "A partir de 18:00", Icon: Moon },
+  sin_hora: { title: "Sin hora", subtitle: "Trigger u hora flexible", Icon: Clock },
+}
+
+const HOY_DAYPART_SURFACE: Record<
+  HabitTimeBlockId,
+  { section: CSSProperties; iconWrap: string; iconClass: string }
+> = {
+  manana: {
+    section: {
+      background: "color-mix(in srgb, #FBBF24 12%, var(--color-surface))",
+      borderColor: "color-mix(in srgb, #F59E0B 30%, var(--color-border))",
+    },
+    iconWrap: "bg-[color-mix(in_srgb,#F59E0B_18%,transparent)]",
+    iconClass: "text-amber-600 dark:text-amber-400",
+  },
+  tarde: {
+    section: {
+      background: "color-mix(in srgb, var(--color-accent-warning) 11%, var(--color-surface))",
+      borderColor: "color-mix(in srgb, var(--color-accent-warning) 28%, var(--color-border))",
+    },
+    iconWrap: "bg-[color-mix(in_srgb,var(--color-accent-warning)_18%,transparent)]",
+    iconClass: "text-orange-600 dark:text-orange-400",
+  },
+  noche: {
+    section: {
+      background: "color-mix(in srgb, #7c3aed 12%, var(--color-surface))",
+      borderColor: "color-mix(in srgb, #7c3aed 26%, var(--color-border))",
+    },
+    iconWrap: "bg-[color-mix(in_srgb,#7c3aed_18%,transparent)]",
+    iconClass: "text-violet-600 dark:text-violet-300",
+  },
+  sin_hora: {
+    section: {
+      background: "color-mix(in srgb, var(--color-text-secondary) 7%, var(--color-surface))",
+      borderColor: "color-mix(in srgb, var(--color-text-secondary) 20%, var(--color-border))",
+    },
+    iconWrap: "bg-[color-mix(in_srgb,var(--color-text-secondary)_12%,transparent)]",
+    iconClass: "text-[var(--color-text-secondary)]",
+  },
+}
+
 export default function HoyCommandCenter() {
   const { data: ctx, loading: ctxLoading, error: ctxError, refetch: refetchCtx } = useOperationalContext()
   const { data: finance, loading: finLoading, error: finError, month: financeMonth } = useFinanceMonthSummary()
@@ -429,7 +490,7 @@ export default function HoyCommandCenter() {
     () => habitHookList.filter((h) => isScheduledOnUtcDay(h.metadata, todayYmd)),
     [habitHookList, todayYmd],
   )
-  const habitsShown = useMemo(() => habitsDueToday.slice(0, 5), [habitsDueToday])
+  const habitsByDaypart = useMemo(() => groupHabitsByDaypart(habitsDueToday), [habitsDueToday])
   const habitsDoneDue = habitsDueToday.filter((h) => h.metrics.completed_today).length
   const habitsLabel = habitsDueToday.length ? `${habitsDoneDue}/${habitsDueToday.length}` : "—"
 
@@ -944,18 +1005,34 @@ export default function HoyCommandCenter() {
               <Target className="h-4 w-4 text-[var(--color-accent-health)]" aria-hidden />
               <SectionLabel>Hábitos clave</SectionLabel>
             </div>
-            <ul className="m-0 grid list-none gap-2 p-0">
+            <div className="flex flex-col gap-3">
               {habitsDueToday.length === 0 && habitHookList.length > 0 ? (
-                <li className="text-xs leading-relaxed text-[var(--color-text-secondary)]">
+                <p className="m-0 text-xs leading-relaxed text-[var(--color-text-secondary)]">
                   Ningún hábito toca hoy según tu calendario.{" "}
                   <Link href="/habitos" className="font-medium text-[var(--color-accent-primary)] underline">
                     Ver todos
                   </Link>
-                </li>
+                </p>
               ) : null}
-              {habitsShown.map((habit) => (
-                <li key={habit.id}>
+              {habitHookList.length === 0 ? (
+                <p className="m-0 text-xs text-[var(--color-text-secondary)]">
+                  Sin hábitos cargados.{" "}
+                  <Link href="/habitos" className="font-medium text-[var(--color-accent-primary)] underline">
+                    Configurar
+                  </Link>
+                </p>
+              ) : null}
+              {orderedDaypartBlocks().map((blockId) => {
+                const list = habitsByDaypart.get(blockId) ?? []
+                if (list.length === 0) return null
+                const pending = list.filter((h) => !h.metrics.completed_today)
+                const done = list.filter((h) => h.metrics.completed_today)
+                const meta = HOY_DAYPART_META[blockId]
+                const surface = HOY_DAYPART_SURFACE[blockId]
+                const Icon = meta.Icon
+                const renderRow = (habit: HabitWithMetrics) => (
                   <div
+                    key={habit.id}
                     className={`flex min-w-0 items-center justify-between gap-2 rounded-lg border px-2 py-2 ${
                       habit.metrics.completed_today
                         ? "border-[color-mix(in_srgb,var(--color-accent-health)_42%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_10%,var(--color-surface-alt))]"
@@ -967,9 +1044,7 @@ export default function HoyCommandCenter() {
                     </span>
                     <button
                       type="button"
-                      disabled={
-                        (!persistenceEnabled && !mock) || togglingId === habit.id
-                      }
+                      disabled={(!persistenceEnabled && !mock) || togglingId === habit.id}
                       onClick={async () => {
                         const r = await toggleCompleteToday(habit.id)
                         if (!r.ok) return
@@ -997,19 +1072,52 @@ export default function HoyCommandCenter() {
                       {habit.metrics.completed_today ? "Quitar" : "Hecho"}
                     </button>
                   </div>
-                </li>
-              ))}
-              {habitHookList.length === 0 ? (
-                <li className="text-xs text-[var(--color-text-secondary)]">
-                  Sin hábitos cargados.{" "}
-                  <Link href="/habitos" className="font-medium text-[var(--color-accent-primary)] underline">
-                    Configurar
-                  </Link>
-                </li>
-              ) : null}
-            </ul>
+                )
+                return (
+                  <div
+                    key={blockId}
+                    className="overflow-hidden rounded-xl border"
+                    style={surface.section}
+                  >
+                    <div className="flex items-center gap-2 border-b border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] px-2.5 py-2">
+                      <span
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${surface.iconWrap}`}
+                      >
+                        <Icon className={`h-4 w-4 ${surface.iconClass}`} aria-hidden />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="m-0 text-[11px] font-semibold text-[var(--color-text-primary)]">
+                          {meta.title}
+                        </p>
+                        <p className="m-0 text-[10px] leading-snug text-[var(--color-text-secondary)]">
+                          {meta.subtitle}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="space-y-3 p-2.5">
+                      {pending.length > 0 ? (
+                        <div>
+                          <p className="m-0 mb-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
+                            Pendientes
+                          </p>
+                          <div className="grid gap-2">{pending.map(renderRow)}</div>
+                        </div>
+                      ) : null}
+                      {done.length > 0 ? (
+                        <div>
+                          <p className="m-0 mb-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--color-accent-health)]">
+                            Hechas
+                          </p>
+                          <div className="grid gap-2">{done.map(renderRow)}</div>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
             {habitHookList.length > 0 ? (
-              <p className="m-0 mt-2 text-center text-[10px] text-[var(--color-text-secondary)]">
+              <p className="m-0 mt-3 text-center text-[10px] text-[var(--color-text-secondary)]">
                 <Link href="/habitos" className="font-medium text-[var(--color-accent-primary)] underline">
                   Ver todos en Hábitos
                 </Link>
