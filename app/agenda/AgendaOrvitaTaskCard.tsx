@@ -248,9 +248,9 @@ export function AgendaOrvitaTaskCard({
                   />
                 ) : null}
               </button>
-              <span className={agendaTaskToggleCaptionClass}>
-                {completedEffective ? "Completada" : "Pendiente"}
-              </span>
+              {completedEffective ? (
+                <span className={agendaTaskToggleCaptionClass}>Completada</span>
+              ) : null}
             </div>
           ) : null}
         </div>

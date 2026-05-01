@@ -65,25 +65,25 @@ function DualCompareBars({
   const lPct = Math.min(100, (leftVal / max) * 100)
   const rPct = Math.min(100, (rightVal / max) * 100)
   return (
-    <div className="mt-2.5 space-y-2.5">
-      <div className="space-y-1">
-        <div className="flex items-center justify-between gap-2 text-[10px] leading-tight text-[var(--color-text-secondary)]">
+    <div className="mt-1.5 space-y-1.5">
+      <div className="space-y-0.5">
+        <div className="flex items-center justify-between gap-2 text-[9px] leading-tight text-[var(--color-text-secondary)]">
           <span className="min-w-0">{leftLabel}</span>
           <span className="shrink-0 font-semibold tabular-nums text-[var(--color-text-primary)]">{format(leftVal)}</span>
         </div>
-        <div className="h-2 w-full overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--color-border)_48%,transparent)]">
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--color-border)_48%,transparent)]">
           <div
             className="h-full rounded-full bg-[color-mix(in_srgb,var(--color-text-secondary)_42%,transparent)]"
             style={{ width: `${lPct}%` }}
           />
         </div>
       </div>
-      <div className="space-y-1">
-        <div className="flex items-center justify-between gap-2 text-[10px] leading-tight text-[var(--color-text-secondary)]">
+      <div className="space-y-0.5">
+        <div className="flex items-center justify-between gap-2 text-[9px] leading-tight text-[var(--color-text-secondary)]">
           <span className="min-w-0">{rightLabel}</span>
           <span className="shrink-0 font-semibold tabular-nums text-[var(--color-accent-health)]">{format(rightVal)}</span>
         </div>
-        <div className="h-2 w-full overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--color-border)_48%,transparent)]">
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--color-border)_48%,transparent)]">
           <div className="h-full rounded-full bg-[var(--color-accent-health)]" style={{ width: `${rPct}%` }} />
         </div>
       </div>
@@ -146,8 +146,8 @@ function deltaExplanation(
   const sign = d === 0 ? "" : d > 0 ? "+" : "−"
   const body = `${sign}${Math.abs(d).toFixed(decimals)} ${unit} vs semana anterior`
   const pctPart =
-    pct != null && Number.isFinite(pct) ? ` (${pct >= 0 ? "+" : ""}${pct.toFixed(0)}% respecto al promedio previo)` : ""
-  return `${body}${pctPart}. Magnitud: ${mag}.`
+    pct != null && Number.isFinite(pct) ? ` · ${pct >= 0 ? "+" : ""}${pct.toFixed(0)}%` : ""
+  return `${body}${pctPart} (${mag}).`
 }
 
 function LuxuryTrendMetric({
@@ -179,8 +179,8 @@ function LuxuryTrendMetric({
   const bars =
     recent != null && prev != null && trend !== "sin dato" ? (
       <DualCompareBars
-        leftLabel="Promedio semana anterior (7 días)"
-        rightLabel="Últimos 7 días"
+        leftLabel="Semana anterior · media"
+        rightLabel="Últimos 7 días · media"
         leftVal={prev}
         rightVal={recent}
         format={format}
@@ -188,15 +188,17 @@ function LuxuryTrendMetric({
     ) : null
 
   return (
-    <li className="list-none rounded-xl border border-[color-mix(in_srgb,var(--color-border)_42%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_60%,transparent)] p-3 sm:p-3.5">
-      <div className="flex flex-wrap items-start justify-between gap-2 gap-y-1.5">
-        <p className="m-0 text-[12px] font-semibold text-[var(--color-text-primary)]">{label}</p>
+    <li className="list-none rounded-lg border border-[color-mix(in_srgb,var(--color-border)_38%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_55%,transparent)] p-2.5 sm:p-3">
+      <div className="flex flex-wrap items-start justify-between gap-2 gap-y-1">
+        <p className="m-0 text-[11px] font-semibold leading-tight text-[var(--color-text-primary)] sm:text-[12px]">{label}</p>
         <TrendDirectionPill trend={trend} goodWhenUp={goodWhenUp} />
       </div>
       {explain ? (
-        <p className="m-0 mt-2 text-[11px] leading-snug text-[var(--color-text-secondary)] sm:text-[12px]">{explain}</p>
+        <p className="m-0 mt-1.5 text-[10px] leading-snug text-[var(--color-text-secondary)] sm:text-[11px]">{explain}</p>
       ) : (
-        <p className="m-0 mt-2 text-[11px] text-[var(--color-text-secondary)]">Aún no hay dos ventanas de 7 días con datos para comparar.</p>
+        <p className="m-0 mt-1.5 text-[10px] text-[var(--color-text-secondary)] sm:text-[11px]">
+          Aún no hay dos ventanas de 7 días con datos para comparar.
+        </p>
       )}
       {bars}
     </li>
@@ -210,7 +212,7 @@ function LuxuryWeeklyTrendBlock({ weekly }: { weekly: WeeklySnap }) {
   const trainPrevMin = wp != null ? wp / 60 : null
 
   return (
-    <ul className="m-0 mt-3 grid list-none gap-3 p-0 sm:grid-cols-2 sm:gap-3.5">
+    <ul className="m-0 mt-2.5 grid list-none gap-2 p-0 sm:grid-cols-2 sm:gap-2.5">
       <LuxuryTrendMetric
         label="Sueño (media diaria)"
         trendKey="sleep_trend"
@@ -267,7 +269,7 @@ function LuxuryWeeklyTrendBlock({ weekly }: { weekly: WeeklySnap }) {
         goodWhenUp
       />
       <li className="sm:col-span-2">
-        <p className="m-0 text-[10px] leading-snug text-[var(--color-text-secondary)]">
+        <p className="m-0 text-[9px] leading-snug text-[var(--color-text-secondary)] sm:text-[10px]">
           Ventanas: últimos{" "}
           <span className="font-medium text-[var(--color-text-primary)]">{weekly.current_window_n}</span> días con lectura
           frente a los{" "}
@@ -302,7 +304,7 @@ export function AppleShortcutAnalyticsPanels({ latest, analytics, loading, layou
 
   const luxury = layout === "luxury"
   const panelShell = luxury
-    ? "rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_38%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_82%,var(--color-surface-alt))] p-4 sm:p-5"
+    ? "rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_38%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_82%,var(--color-surface-alt))] p-3.5 sm:p-4"
     : "rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_50%,transparent)] p-3.5"
 
   return (
@@ -380,14 +382,7 @@ export function AppleShortcutAnalyticsPanels({ latest, analytics, loading, layou
         )}
       </div>
 
-      <div
-        className={clsx(
-          panelShell,
-          luxury &&
-            "min-h-0 self-start sm:max-h-[min(68vh,620px)] sm:overflow-y-auto sm:overscroll-y-contain sm:pr-1",
-        )}
-        style={luxury ? undefined : { minHeight: 200 }}
-      >
+      <div className={clsx(panelShell, luxury && "min-h-0 self-start")} style={luxury ? undefined : { minHeight: 200 }}>
         <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">Tendencia</p>
         <p className="m-0 mt-1 text-[12px] text-[var(--color-text-secondary)]">Esta semana frente a la anterior</p>
         {!wk ? (

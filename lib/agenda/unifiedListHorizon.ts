@@ -196,7 +196,7 @@ export function unifiedMergedMasAdelanteHeading(dayKeys: Array<string | null | u
     else hasToday = true
   }
 
-  if (hasPast && !hasFuture && !hasToday) return "En fechas ya pasadas"
+  if (hasPast && !hasFuture && !hasToday) return "De todo el hogar"
   if (!hasPast && (hasFuture || hasToday)) return "Próximas fechas"
   return "Varias fechas en el calendario"
 }

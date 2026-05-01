@@ -8,7 +8,6 @@ import {
   agendaCardChrome,
   agendaTaskCheckOuterClass,
   agendaTaskSubtleIconActionClass,
-  agendaTaskToggleCaptionClass,
   agendaTaskToggleColumnClass,
 } from "@/app/agenda/agendaUnifiedCardStyles"
 import {
@@ -266,33 +265,28 @@ export function AgendaReadonlyUnifiedCard({
         {showToggleRow ? (
           <div className={agendaTaskToggleColumnClass}>
             {showComplete ? (
-              <>
-                <button
-                  type="button"
-                  role="checkbox"
-                  aria-checked={doneVisual}
-                  disabled={googleCompleteBusy}
-                  aria-label={doneVisual ? "Marcar como pendiente" : "Marcar como realizada"}
-                  onClick={() => onToggleGoogleComplete?.()}
-                  className={`${agendaTaskCheckOuterClass} text-[var(--agenda-reminder)] hover:border-[var(--agenda-reminder)]`}
-                  style={{
-                    ...checkSizeStyle,
-                    ...(doneVisual
-                      ? {
-                          borderColor: "color-mix(in srgb, #34d399 42%, var(--color-border))",
-                          background: "color-mix(in srgb, #d1fae5 52%, var(--color-surface))",
-                        }
-                      : {}),
-                  }}
-                >
-                  {doneVisual ? (
-                    <Check className="h-4 w-4 animate-agenda-check-pop text-[#15803d]" strokeWidth={2.75} style={{ opacity: 0.85 }} aria-hidden />
-                  ) : null}
-                </button>
-                {doneVisual ? null : (
-                  <span className={agendaTaskToggleCaptionClass}>Pendiente</span>
-                )}
-              </>
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked={doneVisual}
+                disabled={googleCompleteBusy}
+                aria-label={doneVisual ? "Marcar como pendiente" : "Marcar como realizada"}
+                onClick={() => onToggleGoogleComplete?.()}
+                className={`${agendaTaskCheckOuterClass} text-[var(--agenda-reminder)] hover:border-[var(--agenda-reminder)]`}
+                style={{
+                  ...checkSizeStyle,
+                  ...(doneVisual
+                    ? {
+                        borderColor: "color-mix(in srgb, #34d399 42%, var(--color-border))",
+                        background: "color-mix(in srgb, #d1fae5 52%, var(--color-surface))",
+                      }
+                    : {}),
+                }}
+              >
+                {doneVisual ? (
+                  <Check className="h-4 w-4 animate-agenda-check-pop text-[#15803d]" strokeWidth={2.75} style={{ opacity: 0.85 }} aria-hidden />
+                ) : null}
+              </button>
             ) : null}
             {showCalToggle ? (
               <>

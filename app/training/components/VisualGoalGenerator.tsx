@@ -157,18 +157,18 @@ export function VisualGoalGenerator({
             value={descDraft}
             onChange={(e) => setDescDraft(e.target.value)}
             onBlur={() => onVisualPrefsChange({ visualGoalDescription: descDraft.trim() })}
-            rows={3}
-            className="mt-1.5 w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
+            rows={2}
+            className="mt-1 w-full resize-y rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
             placeholder="Ej. cuerpo atlético, % grasa objetivo, estilo de vida…"
           />
-          <p className="m-0 mt-1.5 text-[10px] leading-snug text-slate-500">
-            Este texto guía la imagen de referencia y tu plan. Una sola fuente: edítalo aquí.
+          <p className="m-0 mt-1 text-[10px] leading-snug text-slate-500">
+            Guía la imagen y el plan; una sola fuente aquí.
           </p>
         </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div>
-            <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">Prioridad</p>
-            <div className="mt-1.5 flex flex-wrap gap-1.5">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:items-start sm:gap-x-4 sm:gap-y-2">
+          <div className="min-w-0">
+            <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Prioridad</p>
+            <div className="mt-1 flex flex-wrap gap-1.5">
               {priorityOptions.map((o) => (
                 <button
                   key={o.id}
@@ -184,16 +184,16 @@ export function VisualGoalGenerator({
                 </button>
               ))}
             </div>
-            <div className="mt-3 min-w-0">
+            <div className="mt-2 min-w-0">
               <label htmlFor={selectId} className="block min-w-0">
-                <span className="mb-1 block text-[11px] font-medium leading-normal tracking-normal text-slate-500">
+                <span className="mb-0.5 block text-[10px] font-medium leading-tight text-slate-500 sm:text-[11px]">
                   Tipo de objetivo
                 </span>
                 <select
                   id={selectId}
                   value={visualGoalMode}
                   onChange={(e) => onVisualPrefsChange({ visualGoalMode: e.target.value as VisualGoalMode })}
-                  className="w-full min-w-0 rounded-lg border border-slate-200/90 bg-slate-50/60 py-1.5 pl-2.5 pr-8 text-xs font-medium text-slate-700 shadow-none transition-colors hover:bg-slate-50 hover:border-slate-300/90 focus:border-slate-300 focus:bg-white focus:outline-none focus:ring-1 focus:ring-slate-200/80"
+                  className="w-full min-w-0 rounded-md border border-slate-200/90 bg-slate-50/60 py-1 pl-2.5 pr-7 text-xs font-medium text-slate-700 shadow-none transition-colors hover:bg-slate-50 hover:border-slate-300/90 focus:border-slate-300 focus:bg-white focus:outline-none focus:ring-1 focus:ring-slate-200/80"
                 >
                   {VISUAL_GOAL_MODE_OPTIONS.map((o) => (
                     <option key={o.id} value={o.id}>
@@ -203,24 +203,24 @@ export function VisualGoalGenerator({
                 </select>
               </label>
             </div>
-            {modeMeta ? <p className="m-0 mt-1.5 text-[11px] leading-snug text-slate-500">{modeMeta.short}</p> : null}
+            {modeMeta ? <p className="m-0 mt-1 text-[10px] leading-snug text-slate-500 sm:text-[11px]">{modeMeta.short}</p> : null}
           </div>
-          <div>
-            <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">Meta temporal</p>
+          <div className="min-w-0">
+            <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Meta temporal</p>
             <input
               type="month"
               value={deadlineYm ?? ""}
               onChange={(e) => onVisualPrefsChange({ visualGoalDeadlineYm: e.target.value })}
-              className="mt-1.5 w-full max-w-[14rem] rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              className="mt-1 w-full max-w-[14rem] rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
             />
             {deadlineYm ? (
-              <p className="m-0 mt-1 text-[11px] leading-snug text-slate-600">
+              <p className="m-0 mt-1 text-[10px] leading-snug text-slate-600 sm:text-[11px]">
                 <span className="font-semibold text-slate-800">{_deadline ?? deadlineYm}</span>
-                <span className="text-slate-500"> · guardado como </span>
-                <span className="font-mono text-[10px] text-slate-500">{deadlineYm}</span>
+                <span className="text-slate-500"> · </span>
+                <span className="tabular-nums text-slate-500">{deadlineYm}</span>
               </p>
             ) : (
-              <p className="m-0 mt-1 text-[11px] text-slate-500">Sin fecha objetivo (elige mes/año arriba).</p>
+              <p className="m-0 mt-1 text-[10px] text-slate-500 sm:text-[11px]">Elige mes/año.</p>
             )}
           </div>
         </div>
@@ -247,10 +247,10 @@ export function VisualGoalGenerator({
               aria-hidden
             />
           </summary>
-          <div className="space-y-3 border-t border-slate-100/90 px-4 pb-4 pt-1">{goalSettingsInner("m")}</div>
+          <div className="space-y-2.5 border-t border-slate-100/90 px-4 pb-3.5 pt-1">{goalSettingsInner("m")}</div>
         </details>
       </div>
-      <div className="hidden space-y-3 rounded-2xl border border-slate-100 bg-slate-50/60 p-4 md:block">{goalSettingsInner("d")}</div>
+      <div className="hidden space-y-2.5 rounded-2xl border border-slate-100 bg-slate-50/60 p-3.5 md:block">{goalSettingsInner("d")}</div>
 
       <div className="mt-6 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">

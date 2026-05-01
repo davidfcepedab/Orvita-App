@@ -932,11 +932,11 @@ export function AgendaSharedList({
       <>
         <div className="flex flex-col gap-2 sm:gap-3">{renderRows(pending)}</div>
         {done.length > 0 ? (
-          <details className="mt-2 rounded-xl border border-[color-mix(in_srgb,var(--color-border)_65%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_40%,transparent)] px-2 py-2 sm:px-3">
-            <summary className="cursor-pointer text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--color-text-secondary)] marker:content-none [&::-webkit-details-marker]:hidden">
-              Histórico · {done.length} completado{done.length === 1 ? "" : "s"}
+          <details className="group mt-2 rounded-lg border border-[color-mix(in_srgb,var(--color-border)_42%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_28%,transparent)] px-2 py-1 sm:py-1.5">
+            <summary className="cursor-pointer list-none text-[9px] font-medium uppercase tracking-[0.12em] text-[var(--color-text-secondary)] opacity-[0.92] marker:content-none [&::-webkit-details-marker]:hidden">
+              Histórico · {done.length}
             </summary>
-            <div className="mt-2 flex flex-col gap-2 border-t border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] pt-2 sm:gap-3">
+            <div className="mt-1.5 flex flex-col gap-2 border-t border-[color-mix(in_srgb,var(--color-border)_38%,transparent)] pt-1.5 sm:gap-2.5">
               {renderRows(done)}
             </div>
           </details>
