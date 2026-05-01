@@ -5,6 +5,12 @@ import clsx from "clsx"
 import { motion } from "framer-motion"
 import { Activity, Dumbbell, Footprints, Heart, Landmark, RefreshCw, Sparkles } from "lucide-react"
 import { Card } from "@/src/components/ui/Card"
+import {
+  entrenamientoLinkClass,
+  healthCtaDumbbellIconClass,
+  healthCtaHeartIconClass,
+  verSaludLinkClass,
+} from "@/lib/salud/healthCtaLinkClasses"
 import { formatInstantInAgendaTz, formatLocalDateLabelEsCo, formatStoredYmdLabelEsCo } from "@/lib/agenda/localDateKey"
 import type { AppleHealthContextSignals, OperationalCapitalSnapshot } from "@/lib/operational/types"
 
@@ -275,30 +281,16 @@ export function StrategicDayHero({
 
               <div
                 className={clsx(
-                  "relative z-[1] flex min-h-0 shrink-0 flex-col gap-2 self-stretch sm:w-[11rem] sm:justify-between",
+                  "relative z-[1] flex min-h-0 shrink-0 flex-col gap-2 self-stretch sm:w-[11rem] sm:min-h-[108px] sm:justify-center sm:gap-2",
                   "max-sm:flex-row max-sm:flex-wrap max-sm:border-t max-sm:border-[color-mix(in_srgb,var(--color-border)_82%,transparent)] max-sm:pt-3",
                 )}
               >
-                <Link
-                  href="/salud"
-                  className={clsx(
-                    "inline-flex w-full flex-1 items-center justify-center gap-1.5 text-center no-underline motion-safe:transition-opacity",
-                    "max-sm:min-h-0 max-sm:flex-1 max-sm:border-0 max-sm:bg-transparent max-sm:py-1.5 max-sm:text-[11px] max-sm:font-medium max-sm:text-[var(--color-accent-health)] max-sm:underline max-sm:underline-offset-4 max-sm:decoration-[color-mix(in_srgb,var(--color-accent-health)_40%,transparent)] max-sm:hover:opacity-85",
-                    "sm:min-h-0 sm:flex-1 sm:rounded-xl sm:border sm:border-[color-mix(in_srgb,var(--color-accent-health)_38%,var(--color-border))] sm:bg-[color-mix(in_srgb,var(--color-accent-health)_12%,var(--color-surface))] sm:px-4 sm:py-3 sm:text-xs sm:font-semibold sm:text-[var(--color-text-primary)] sm:hover:opacity-90",
-                  )}
-                >
-                  <Heart className="h-3.5 w-3.5 shrink-0 opacity-85" aria-hidden />
+                <Link href="/salud" className={verSaludLinkClass}>
+                  <Heart className={healthCtaHeartIconClass} aria-hidden />
                   Ver Salud
                 </Link>
-                <Link
-                  href="/training"
-                  className={clsx(
-                    "inline-flex w-full flex-1 items-center justify-center gap-1.5 text-center no-underline motion-safe:transition-colors",
-                    "max-sm:min-h-0 max-sm:flex-1 max-sm:border-0 max-sm:bg-transparent max-sm:py-1.5 max-sm:text-[11px] max-sm:font-medium max-sm:text-[var(--color-text-secondary)] max-sm:underline max-sm:underline-offset-4 max-sm:hover:text-[var(--color-text-primary)]",
-                    "sm:min-h-0 sm:flex-1 sm:rounded-xl sm:border sm:border-[var(--color-border)] sm:bg-[var(--color-surface-alt)] sm:px-3 sm:py-3 sm:text-[11px] sm:font-semibold sm:text-[var(--color-text-secondary)] sm:no-underline sm:hover:text-[var(--color-text-primary)]",
-                  )}
-                >
-                  <Dumbbell className="h-3.5 w-3.5 shrink-0 opacity-70 max-sm:hidden sm:inline" aria-hidden />
+                <Link href="/training" className={entrenamientoLinkClass}>
+                  <Dumbbell className={`${healthCtaDumbbellIconClass} max-sm:hidden sm:inline`} aria-hidden />
                   Entrenamiento
                 </Link>
               </div>

@@ -6,6 +6,7 @@ import { useOrbitaSkin } from "@/app/contexts/AppContext"
 import type { SaludDecisionBrief } from "@/lib/salud/saludDecisionBrief"
 import { SALUD_SEM } from "@/lib/salud/saludSemanticPalette"
 import { saludHexToRgba, saludPanelStyle } from "@/lib/salud/saludThemeStyles"
+import { entrenamientoCtaCompactClass, healthCtaDumbbellIconClass } from "@/lib/salud/healthCtaLinkClasses"
 
 type Props = {
   brief: SaludDecisionBrief
@@ -56,10 +57,9 @@ export function InsightActionBlock({ brief }: Props) {
         </p>
         <Link
           href="/training"
-          className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg px-4 text-xs font-semibold no-underline"
-          style={{ backgroundColor: theme.text, color: theme.bg }}
+          className={`${entrenamientoCtaCompactClass} min-h-10 px-4 text-xs`}
         >
-          <Dumbbell className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          <Dumbbell className={healthCtaDumbbellIconClass} aria-hidden />
           Ir a Entrenamiento
         </Link>
       </div>

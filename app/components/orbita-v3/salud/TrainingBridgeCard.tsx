@@ -1,11 +1,13 @@
 "use client"
 
 import Link from "next/link"
+import { Dumbbell } from "lucide-react"
 import { useOrbitaSkin } from "@/app/contexts/AppContext"
 import type { SaludDecisionBrief } from "@/lib/salud/saludDecisionBrief"
 import type { PlanVsExecution } from "@/lib/training/trainingOperationalDerivations"
 import { SALUD_SEM } from "@/lib/salud/saludSemanticPalette"
 import { saludPanelStyle } from "@/lib/salud/saludThemeStyles"
+import { entrenamientoCtaCompactClass, healthCtaDumbbellIconClass } from "@/lib/salud/healthCtaLinkClasses"
 
 type Props = {
   brief: SaludDecisionBrief
@@ -35,7 +37,8 @@ export function TrainingBridgeCard({ brief, plan, hasHevy }: Props) {
       <p className="m-0 mt-2 text-xs leading-snug" style={{ color: theme.textMuted }}>
         {plan.suggestion}
       </p>
-      <Link href="/training" className="m-0 mt-4 inline-flex text-xs font-semibold no-underline" style={{ color: theme.textMuted }}>
+      <Link href="/training" className={`m-0 mt-4 inline-flex ${entrenamientoCtaCompactClass} py-2 text-xs`}>
+        <Dumbbell className={healthCtaDumbbellIconClass} aria-hidden />
         Ver recomendación en entrenamiento
       </Link>
     </section>

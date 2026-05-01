@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { ArrowRight, Sparkles } from "lucide-react"
+import { Dumbbell, Sparkles } from "lucide-react"
 import { useOrbitaSkin } from "@/app/contexts/AppContext"
 import type { SaludDecisionBrief } from "@/lib/salud/saludDecisionBrief"
 import type { AppleHeroSyncLine } from "@/lib/salud/appleHealthSyncToolbar"
@@ -10,8 +10,8 @@ import {
   saludDecisionCardMutedColor,
   saludHeroDecisionCardStyle,
   saludHexToRgba,
-  saludSurfaceIsLight,
 } from "@/lib/salud/saludThemeStyles"
+import { entrenamientoCtaCompactClass, healthCtaDumbbellIconClass } from "@/lib/salud/healthCtaLinkClasses"
 
 type Props = {
   brief: SaludDecisionBrief
@@ -45,7 +45,6 @@ export function HeroDecisionCard({ brief, syncLine }: Props) {
   const muted = saludDecisionCardMutedColor(theme)
   const energy = Math.min(100, Math.max(0, Math.round(brief.energyScore)))
   const ringDeg = (energy / 100) * 360
-  const lightSurface = saludSurfaceIsLight(theme.surface)
 
   return (
     <section
@@ -104,17 +103,9 @@ export function HeroDecisionCard({ brief, syncLine }: Props) {
             </p>
           </div>
 
-          <Link
-            href="/training"
-            className="inline-flex shrink-0 items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium text-[var(--color-text-secondary)] no-underline transition-[color,background-color,border-color,opacity] hover:border-[color-mix(in_srgb,var(--color-border)_72%,var(--color-text-primary))] hover:bg-[color-mix(in_srgb,var(--color-surface-alt)_88%,transparent)] hover:text-[var(--color-text-primary)] active:opacity-90 sm:px-2.5 sm:py-1.5"
-            style={{
-              borderColor: saludHexToRgba(strong, 0.1),
-              backgroundColor: saludHexToRgba(strong, lightSurface ? 0.02 : 0.04),
-              boxShadow: "none",
-            }}
-          >
+          <Link href="/training" className={entrenamientoCtaCompactClass}>
+            <Dumbbell className={healthCtaDumbbellIconClass} strokeWidth={2} aria-hidden />
             Entrenamiento
-            <ArrowRight className="h-2.5 w-2.5 shrink-0 opacity-55" strokeWidth={2} aria-hidden />
           </Link>
         </div>
       </div>
