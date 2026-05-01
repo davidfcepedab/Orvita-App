@@ -80,6 +80,18 @@ function mergedRowDayKey(row: MergedRow): string | null {
   return calendarEventLocalDayKey(row.event)
 }
 
+/** Ventana temporal lista: compartidas hogar con día pasado cuentan como sin día (visibles en cualquier pestaña salvo «Mañana»). */
+function mergedRowHorizonDayKey(row: MergedRow): string | null {
+  if (row.kind !== "task") return mergedRowDayKey(row)
+  const t = row.task
+  const k = mergedRowDayKey(row)
+  if (t.type !== "compartida") return k
+  if (k == null) return null
+  const todayYmd = agendaTodayYmd()
+  if (k < todayYmd) return null
+  return k
+}
+
 function mergedKindOrder(kind: MergedRow["kind"]) {
   if (kind === "task") return 0
   if (kind === "reminder") return 1
@@ -153,6 +165,7 @@ function buildMergedTimeline(
   if (!hideBeforeToday) return rows
   const todayYmd = agendaTodayYmd()
   return rows.filter((row) => {
+    if (row.kind === "task" && row.task.type === "compartida") return true
     const k = mergedRowDayKey(row)
     if (k == null) return true
     return k >= todayYmd
@@ -661,7 +674,7 @@ export function AgendaSharedList({
   const todayYmd = agendaTodayYmd()
   const mergedFiltered = useMemo(() => {
     return merged.filter((row) =>
-      unifiedRowInHorizon(mergedRowDayKey(row), listHorizon, extendMonthHorizon),
+      unifiedRowInHorizon(mergedRowHorizonDayKey(row), listHorizon, extendMonthHorizon),
     )
   }, [merged, listHorizon, extendMonthHorizon])
 
@@ -1154,9 +1167,9 @@ export function AgendaSharedWeek({
       </Card>
       {weekUndated.length > 0 ? (
         <Card className={`${agendaCardPadClass} border-dashed border-[color-mix(in_srgb,var(--color-border)_85%,transparent)]`}>
-          <p className={agendaOverlineClass}>Sin fecha de vencimiento</p>
+          <p className={agendaOverlineClass}>Sin rejilla o fuera de la semana</p>
           <p className="m-0 mt-1 text-[11px] leading-snug text-[var(--color-text-secondary)] sm:text-[12px]">
-            Asigna un día para ubicarlas en el calendario. Siguen contando en tus totales de la semana.
+            Incluye compartidas hogar con fecha fuera de esta semana. El resto: asigna día para ubicarlas en la rejilla.
           </p>
           <div className="mt-2 flex min-w-0 flex-col gap-2">
             {weekUndated.map((task) => (
@@ -1529,7 +1542,7 @@ export function AgendaSharedMonth({
                 Sin día en calendario ({undatedTasks.length})
               </p>
               <p className="m-0 mt-1 text-[10px] leading-snug text-[var(--color-text-secondary)]">
-                No tienen fecha; no se marcan en el grid. Edita la tarea para asignar día.
+                Sin día en el grid, fuera de este mes civil o compartidas hogar con fecha en otro mes.
               </p>
               <div className="mt-2 flex max-h-40 flex-col gap-1.5 overflow-y-auto pr-0.5">
                 {undatedTasks.map((task) => (

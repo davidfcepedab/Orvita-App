@@ -143,7 +143,17 @@ export function AgendaReadonlyUnifiedCard({
   const metaRow = (
     <p className="m-0 flex min-w-0 items-center gap-1 text-[9px] leading-tight text-[var(--color-text-secondary)] sm:text-[10px]">
       <MetaIcon className={`${iconCls} shrink-0 opacity-55`} strokeWidth={2} aria-hidden />
-      <span className="truncate">{metaText}</span>
+      <span className="min-w-0 truncate">{metaText}</span>
+      {assigneeSubtle ? (
+        <>
+          <span className="shrink-0 opacity-50" aria-hidden>
+            |
+          </span>
+          <span className="min-w-0 truncate font-medium text-[var(--color-text-primary)] opacity-90">
+            {assigneeSubtle}
+          </span>
+        </>
+      ) : null}
     </p>
   )
 
@@ -269,14 +279,14 @@ export function AgendaReadonlyUnifiedCard({
                     ...checkSizeStyle,
                     ...(doneVisual
                       ? {
-                          borderColor: "color-mix(in srgb, #4ade80 70%, var(--color-border))",
-                          background: "color-mix(in srgb, #86efac 55%, transparent)",
+                          borderColor: "color-mix(in srgb, #34d399 42%, var(--color-border))",
+                          background: "color-mix(in srgb, #d1fae5 52%, var(--color-surface))",
                         }
                       : {}),
                   }}
                 >
                   {doneVisual ? (
-                    <Check className="h-4 w-4 animate-agenda-check-pop text-[#15803d]" strokeWidth={2.75} aria-hidden />
+                    <Check className="h-4 w-4 animate-agenda-check-pop text-[#15803d]" strokeWidth={2.75} style={{ opacity: 0.85 }} aria-hidden />
                   ) : null}
                 </button>
                 <span className={agendaTaskToggleCaptionClass}>
@@ -297,19 +307,16 @@ export function AgendaReadonlyUnifiedCard({
                     ...checkSizeStyle,
                     ...(calendarUiDone
                       ? {
-                          borderColor: "color-mix(in srgb, #4ade80 70%, var(--color-border))",
-                          background: "color-mix(in srgb, #86efac 55%, transparent)",
+                          borderColor: "color-mix(in srgb, #34d399 42%, var(--color-border))",
+                          background: "color-mix(in srgb, #d1fae5 52%, var(--color-surface))",
                         }
                       : {}),
                   }}
                 >
                   {calendarUiDone ? (
-                    <Check className="h-4 w-4 animate-agenda-check-pop text-[#15803d]" strokeWidth={2.75} aria-hidden />
+                    <Check className="h-4 w-4 animate-agenda-check-pop text-[#15803d]" strokeWidth={2.75} style={{ opacity: 0.85 }} aria-hidden />
                   ) : null}
                 </button>
-                {calendarUiDone ? (
-                  <span className={agendaTaskToggleCaptionClass}>Visto</span>
-                ) : null}
               </>
             ) : null}
           </div>
@@ -339,12 +346,6 @@ export function AgendaReadonlyUnifiedCard({
             </button>
           ) : null}
         </div>
-      ) : null}
-
-      {assigneeSubtle ? (
-        <p className="m-0 truncate text-[9px] leading-snug text-[var(--color-text-secondary)] opacity-90 sm:text-[10px]">
-          {assigneeSubtle}
-        </p>
       ) : null}
     </div>
   )

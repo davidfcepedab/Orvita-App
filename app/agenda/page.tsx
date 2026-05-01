@@ -346,11 +346,17 @@ export default function AgendaPage() {
       const dueYmd = dueTrim.length >= 10 ? dueTrim.slice(0, 10) : ""
       /** Columnas: mes natural actual; las tareas sin fecha siguen visibles (backlog). */
       const dateOkColumns =
-        !dueYmd || dueYmd.length < 10 ? true : dueYmd.slice(0, 7) === currentYm
+        !dueYmd || dueYmd.length < 10
+          ? true
+          : task.type === "compartida" || dueYmd.slice(0, 7) === currentYm
       const dateOk =
         view === "columns"
           ? dateOkColumns
-          : showPastAgenda || !dueTrim || dueTrim.length < 10 || dueYmd >= todayYmd
+          : showPastAgenda ||
+            task.type === "compartida" ||
+            !dueTrim ||
+            dueTrim.length < 10 ||
+            dueYmd >= todayYmd
       return tabMatch && priorityMatch && queryMatch && dateOk
     })
   }, [tab, priority, deferredQuery, tasks, showPastAgenda, view])
@@ -388,16 +394,7 @@ export default function AgendaPage() {
     personal: filtered.filter((task) => task.type === "personal"),
   }), [filtered])
 
-  const weekUndated = useMemo(
-    () =>
-      filtered.filter((t) => {
-        const d = t.due?.trim() ?? ""
-        return d.length < 10
-      }),
-    [filtered],
-  )
-
-  const { weekDays, weekMap } = useMemo(() => {
+  const { weekDays, weekMap, weekUndated } = useMemo(() => {
     const fullWeek = getWeekDays(new Date())
     const days = weekScope === "work" ? fullWeek.slice(0, 5) : fullWeek
     const map: Record<string, typeof tasks> = {}
@@ -411,7 +408,26 @@ export default function AgendaPage() {
       const bucket = map[key]
       if (bucket) bucket.push(task)
     })
-    return { weekDays: days, weekMap: map }
+    const weekKeys = new Set(days.map((d) => formatDateKey(d)))
+    const shortDue = filtered.filter((t) => {
+      const d = t.due?.trim() ?? ""
+      return d.length < 10
+    })
+    const compartidaOutsideWeek = filtered.filter((t) => {
+      if (t.type !== "compartida") return false
+      const d = t.due?.trim() ?? ""
+      if (d.length < 10) return false
+      return !weekKeys.has(d.slice(0, 10))
+    })
+    const seen = new Set(shortDue.map((t) => t.id))
+    const undated: typeof tasks = [...shortDue]
+    for (const t of compartidaOutsideWeek) {
+      if (!seen.has(t.id)) {
+        seen.add(t.id)
+        undated.push(t)
+      }
+    }
+    return { weekDays: days, weekMap: map, weekUndated: undated }
   }, [filtered, weekScope])
 
   const totalWeeklyTasks =
@@ -447,6 +463,31 @@ export default function AgendaPage() {
     const hours = Math.round(filtered.reduce((acc, t) => acc + t.duration, 0) / 60)
     return { total, completed, hours }
   }, [filtered])
+
+  const monthUndatedTasks = useMemo(() => {
+    const ym = monthViewYm.trim().slice(0, 7)
+    const shortDue = filtered.filter((t) => {
+      const d = t.due?.trim() ?? ""
+      return d.length < 10
+    })
+    const outsideGrid = !/^\d{4}-\d{2}$/.test(ym)
+      ? []
+      : filtered.filter((t) => {
+          if (t.type !== "compartida") return false
+          const d = t.due?.trim() ?? ""
+          if (d.length < 10) return false
+          return d.slice(0, 7) !== ym
+        })
+    const seen = new Set(shortDue.map((t) => t.id))
+    const out = [...shortDue]
+    for (const t of outsideGrid) {
+      if (!seen.has(t.id)) {
+        seen.add(t.id)
+        out.push(t)
+      }
+    }
+    return out
+  }, [filtered, monthViewYm])
 
   const dayDetails = selectedDay ? filtered.filter((t) => t.due === selectedDay) : []
 
@@ -929,7 +970,7 @@ export default function AgendaPage() {
                   monthLabel={monthLabel}
                   monthSummary={monthSummary}
                   tasks={filtered}
-                  undatedTasks={weekUndated}
+                  undatedTasks={monthUndatedTasks}
                   selectedDay={selectedDay}
                   onSelectDay={setSelectedDay}
                   dayDetails={dayDetails}

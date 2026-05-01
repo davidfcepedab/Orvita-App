@@ -24,8 +24,8 @@ export function orvitaAgendaCardShell(
 ): AgendaCardShell {
   if (task.completed) {
     return {
-      background: mix("#86efac", 34),
-      borderLeft: "4px solid color-mix(in srgb, #4ade80 50%, transparent)",
+      background: mix("#d1fae5", 26),
+      borderLeft: "4px solid color-mix(in srgb, #6ee7b7 42%, transparent)",
     }
   }
   if (task.type === "compartida") {
@@ -53,8 +53,8 @@ export function googleAgendaCardShell(opts: {
 }): AgendaCardShell {
   if (opts.completed) {
     return {
-      background: mix("#86efac", 34),
-      borderLeft: "4px solid color-mix(in srgb, #4ade80 50%, transparent)",
+      background: mix("#d1fae5", 26),
+      borderLeft: "4px solid color-mix(in srgb, #6ee7b7 42%, transparent)",
     }
   }
   if (opts.kind === "calendar") {
