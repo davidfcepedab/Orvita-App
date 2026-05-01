@@ -430,7 +430,7 @@ export default function HoyCommandCenter() {
     [habitHookList, todayYmd],
   )
   const habitsShown = useMemo(() => habitsDueToday.slice(0, 5), [habitsDueToday])
-  const habitsDoneDue = habitsDueToday.filter((h) => h.completed).length
+  const habitsDoneDue = habitsDueToday.filter((h) => h.metrics.completed_today).length
   const habitsLabel = habitsDueToday.length ? `${habitsDoneDue}/${habitsDueToday.length}` : "—"
 
   const openTasks = (ctx?.today_tasks ?? []).filter((t) => !t.completed).length
@@ -957,7 +957,7 @@ export default function HoyCommandCenter() {
                 <li key={habit.id}>
                   <div
                     className={`flex min-w-0 items-center justify-between gap-2 rounded-lg border px-2 py-2 ${
-                      habit.completed
+                      habit.metrics.completed_today
                         ? "border-[color-mix(in_srgb,var(--color-accent-health)_42%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_10%,var(--color-surface-alt))]"
                         : "border-[color-mix(in_srgb,var(--color-border)_85%,transparent)] bg-[var(--color-surface-alt)]"
                     }`}
@@ -978,13 +978,15 @@ export default function HoyCommandCenter() {
                       }}
                       className="inline-flex shrink-0 items-center gap-1 rounded-md border px-2 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] disabled:opacity-45"
                       style={{
-                        borderColor: habit.completed
+                        borderColor: habit.metrics.completed_today
                           ? "color-mix(in srgb, var(--color-accent-health) 45%, transparent)"
                           : "var(--color-border)",
-                        background: habit.completed
+                        background: habit.metrics.completed_today
                           ? "color-mix(in srgb, var(--color-accent-health) 12%, transparent)"
                           : "var(--color-surface)",
-                        color: habit.completed ? "var(--color-accent-health)" : "var(--color-text-secondary)",
+                        color: habit.metrics.completed_today
+                          ? "var(--color-accent-health)"
+                          : "var(--color-text-secondary)",
                       }}
                     >
                       {togglingId === habit.id ? (
@@ -992,7 +994,7 @@ export default function HoyCommandCenter() {
                       ) : (
                         <Check className="h-3 w-3" strokeWidth={2.5} aria-hidden />
                       )}
-                      {habit.completed ? "Quitar" : "Hecho"}
+                      {habit.metrics.completed_today ? "Quitar" : "Hecho"}
                     </button>
                   </div>
                 </li>

@@ -25,8 +25,8 @@ const moveBtnClass =
   "rounded-full bg-[color-mix(in_srgb,var(--color-accent-primary)_10%,transparent)] px-1.5 py-0 text-[9px] font-medium tracking-tight text-[var(--color-text-secondary)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-accent-primary)_16%,transparent)] hover:text-[var(--color-text-primary)]"
 
 const checkSizeStyle = {
-  width: "var(--task-card-check-size, 2.35rem)",
-  height: "var(--task-card-check-size, 2.35rem)",
+  width: "var(--task-card-check-size, 2.5rem)",
+  height: "var(--task-card-check-size, 2.5rem)",
 } as const
 
 type Props = {

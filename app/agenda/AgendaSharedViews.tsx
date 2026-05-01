@@ -713,7 +713,7 @@ export function AgendaSharedList({
 
   return (
     <div
-      className={`${agendaViewStackClass} flex min-h-0 flex-col gap-2 sm:gap-2.5`}
+      className={`${agendaViewStackClass} flex min-h-0 flex-col gap-2 sm:gap-2.5 lg:gap-2`}
       aria-label="Cronología unificada: Órvita y Google (Tasks con fecha en orden de vencimiento; sin fecha al final)"
     >
       <div className="sm:hidden">
@@ -759,7 +759,7 @@ export function AgendaSharedList({
       <div
         role="toolbar"
         aria-label="Ventana temporal de la cronología"
-        className="hidden sm:flex sm:flex-wrap sm:items-center sm:gap-1.5"
+        className="hidden sm:flex sm:flex-wrap sm:items-center sm:gap-1.5 lg:gap-1"
       >
         {horizonTabs.map((tab) => {
           const active = listHorizon === tab.id
@@ -769,18 +769,19 @@ export function AgendaSharedList({
               type="button"
               title={tab.title}
               onClick={() => setListHorizon(tab.id)}
-              className={`min-h-7 shrink-0 rounded-full border px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.06em] transition ${
+              className={`min-h-7 shrink-0 rounded-full border px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.06em] transition sm:shadow-none lg:min-h-[26px] lg:rounded-md lg:border-0 lg:border-b-2 lg:border-transparent lg:bg-transparent lg:px-2 lg:py-1 lg:text-[9px] lg:font-normal lg:tracking-[0.02em] lg:normal-case ${
                 active
-                  ? "border-[color-mix(in_srgb,var(--color-accent-primary)_42%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-primary)_10%,var(--color-surface))] text-[var(--color-text-primary)]"
-                  : "border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface)]"
+                  ? "border-[color-mix(in_srgb,var(--color-accent-primary)_42%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-primary)_10%,var(--color-surface))] text-[var(--color-text-primary)] lg:border-b-[color-mix(in_srgb,var(--color-accent-primary)_58%,transparent)] lg:bg-transparent lg:text-[var(--color-text-primary)] lg:shadow-none"
+                  : "border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface)] lg:bg-transparent lg:text-[color-mix(in_srgb,var(--color-text-secondary)_92%,transparent)] lg:hover:border-b-[color-mix(in_srgb,var(--color-border)_42%,transparent)] lg:hover:bg-[color-mix(in_srgb,var(--color-text-primary)_4%,transparent)]"
               }`}
             >
-              {tab.label}
+              <span className="lg:hidden">{tab.label}</span>
+              <span className="hidden lg:inline">{tab.labelSm}</span>
             </button>
           )
         })}
       </div>
-      <p className="m-0 hidden text-[10px] leading-snug text-[var(--color-text-secondary)] sm:block">{horizonHint}</p>
+      <p className="m-0 hidden text-[10px] leading-snug text-[var(--color-text-secondary)] sm:block lg:text-[9px] lg:leading-tight">{horizonHint}</p>
 
       {merged.length === 0 && pendingInvites.length === 0 ? (
         <div
@@ -825,7 +826,7 @@ export function AgendaSharedList({
               </div>
             </div>
           ) : null}
-          <div className="flex min-h-0 min-w-0 flex-col gap-3 overflow-visible pr-0 sm:gap-4 sm:pr-0 lg:max-h-[min(88dvh,900px)] lg:overflow-y-auto lg:overscroll-y-contain lg:pr-1">
+          <div className="flex min-h-0 min-w-0 flex-col gap-3 overflow-visible pr-0 sm:gap-4 sm:pr-0 lg:gap-3 lg:max-h-[min(88dvh,900px)] lg:overflow-y-auto lg:overscroll-y-contain lg:pr-1">
             {merged.length > 0 && mergedFiltered.length === 0 ? (
               <p
                 role="status"
@@ -1056,6 +1057,8 @@ export function AgendaSharedList({
 export function AgendaSharedWeek({
   weekDays,
   weekMap,
+  weekScope,
+  onWeekScopeChange,
   totalWeeklyTasks,
   totalWeeklyCompleted,
   totalWeeklyPending,
@@ -1073,6 +1076,8 @@ export function AgendaSharedWeek({
 }: {
   weekDays: Date[]
   weekMap: Record<string, UiAgendaTask[]>
+  weekScope: "work" | "full"
+  onWeekScopeChange: (scope: "work" | "full") => void
   totalWeeklyTasks: number
   totalWeeklyCompleted: number
   totalWeeklyPending: number
@@ -1085,13 +1090,51 @@ export function AgendaSharedWeek({
 } & Partial<AgendaCardBridge>) {
   const [busyDel, setBusyDel] = useState<string | null>(null)
   const members = householdMembers ?? []
+  const weekAriaScope = weekScope === "work" ? "lunes a viernes" : "siete días"
   return (
-    <div className={agendaSectionStackClass} aria-label="Semana: Órvita y Google por día">
+    <div
+      className={`${agendaSectionStackClass} min-h-0 flex-1`}
+      aria-label={`Semana: Órvita y Google por día (${weekAriaScope})`}
+    >
       <Card className={agendaCardPadClass}>
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-3">
-          <div className="min-w-0">
-            <p className={agendaOverlineClass}>Semana operativa</p>
-            <p className={agendaSectionTitleClass}>Órvita + eventos y recordatorios Google por día</p>
+          <div className="flex min-w-0 flex-1 flex-col gap-2 sm:gap-2.5">
+            <div className="flex min-w-0 flex-wrap items-end gap-2 sm:gap-3">
+              <div className="min-w-0 flex-1">
+                <p className={agendaOverlineClass}>Semana operativa</p>
+                <p className={agendaSectionTitleClass}>Órvita + eventos y recordatorios Google por día</p>
+              </div>
+              <div
+                className="inline-flex shrink-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] p-0.5 shadow-sm"
+                role="group"
+                aria-label="Rango de la semana en pantalla"
+              >
+                <button
+                  type="button"
+                  aria-pressed={weekScope === "work"}
+                  onClick={() => onWeekScopeChange("work")}
+                  className={`rounded-md px-2.5 py-1 text-[10px] font-medium transition sm:px-3 sm:text-[11px] ${
+                    weekScope === "work"
+                      ? "bg-[var(--color-surface)] text-[var(--color-text-primary)] shadow-sm ring-1 ring-[color-mix(in_srgb,var(--color-border)_80%,transparent)]"
+                      : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+                  }`}
+                >
+                  Lun–vie
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={weekScope === "full"}
+                  onClick={() => onWeekScopeChange("full")}
+                  className={`rounded-md px-2.5 py-1 text-[10px] font-medium transition sm:px-3 sm:text-[11px] ${
+                    weekScope === "full"
+                      ? "bg-[var(--color-surface)] text-[var(--color-text-primary)] shadow-sm ring-1 ring-[color-mix(in_srgb,var(--color-border)_80%,transparent)]"
+                      : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+                  }`}
+                >
+                  7 días
+                </button>
+              </div>
+            </div>
           </div>
           <div className={agendaMetaRowClass}>
             <span>Total tareas: {totalWeeklyTasks}</span>
@@ -1101,7 +1144,7 @@ export function AgendaSharedWeek({
           </div>
         </div>
       </Card>
-      <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-stretch lg:gap-2.5 xl:gap-3">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 lg:max-h-[min(84dvh,56rem)] lg:flex-row lg:items-stretch lg:gap-2.5 lg:overflow-hidden xl:gap-3">
         {weekDays.map((day) => {
           const key = formatDateKey(day)
           const isToday = key === agendaTodayYmd()
@@ -1111,14 +1154,14 @@ export function AgendaSharedWeek({
           return (
             <Card
               key={key}
-              className="min-h-0 min-w-0 w-full p-3 lg:flex-1 lg:min-w-0"
+              className="flex min-h-0 min-w-0 w-full flex-col overflow-hidden p-3 lg:min-h-0 lg:flex-1"
               style={{
                 borderColor: isToday ? "color-mix(in srgb, var(--agenda-personal) 45%, var(--color-border))" : "var(--color-border)",
                 background: isToday ? "color-mix(in srgb, var(--agenda-personal) 8%, var(--color-surface))" : "var(--color-surface)",
               }}
             >
-              <div className="flex min-h-0 flex-col gap-2.5">
-                <div className="flex items-start justify-between gap-2">
+              <div className="flex min-h-0 flex-1 flex-col gap-2.5">
+                <div className="flex shrink-0 items-start justify-between gap-2">
                   <div className="grid min-w-0 gap-0.5">
                     <span className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-secondary)] sm:text-[11px]">
                       {formatDayLabel(day)}
@@ -1131,7 +1174,7 @@ export function AgendaSharedWeek({
                     <span className="shrink-0 text-[10px] font-semibold uppercase text-[var(--agenda-personal)]">Hoy</span>
                   )}
                 </div>
-                <div className="flex min-h-0 flex-col gap-1.5 px-0.5 pb-3 pr-1.5 max-lg:overflow-visible lg:max-h-[min(88dvh,56rem)] lg:overflow-y-auto lg:overflow-x-hidden lg:overscroll-y-contain lg:[-webkit-overflow-scrolling:touch] lg:gap-1.5 lg:pb-3.5">
+                <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto overflow-x-hidden overscroll-y-contain px-0.5 pb-2 pr-1 [-webkit-overflow-scrolling:touch] lg:min-h-0 lg:gap-1.5 lg:pb-2">
                   {dayTasks.map((task) => (
                     <AgendaOrvitaMiniCard key={task.id} task={task} viewerUserId={viewerUserId} />
                   ))}

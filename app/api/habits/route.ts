@@ -134,7 +134,12 @@ export async function GET(req: NextRequest) {
       const water_today_ml = isWaterTrackingHabit(habit.metadata)
         ? waterMlForDay(rawRows, todayIso)
         : undefined
-      return { ...habit, metrics, ...(water_today_ml !== undefined ? { water_today_ml } : {}) }
+      return {
+        ...habit,
+        completed: metrics.completed_today,
+        metrics,
+        ...(water_today_ml !== undefined ? { water_today_ml } : {}),
+      }
     })
 
     const summary = aggregateHabitsSummary(habits.map((h) => h.metrics))

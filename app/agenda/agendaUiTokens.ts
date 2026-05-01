@@ -4,7 +4,7 @@
  */
 
 /** Contenedor de vista completa (columna principal). */
-export const agendaViewStackClass = "grid min-w-0 gap-3 sm:gap-4"
+export const agendaViewStackClass = "grid min-w-0 gap-3 sm:gap-4 lg:gap-3"
 
 /** Rejilla kanban (columnas responsive). */
 export const agendaKanbanGridClass =

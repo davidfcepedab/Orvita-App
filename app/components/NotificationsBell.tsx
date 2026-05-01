@@ -432,70 +432,76 @@ export function NotificationsBell() {
             )}
           </div>
 
-          <div className="space-y-2 border-t border-[color-mix(in_srgb,var(--color-border)_80%,transparent)] bg-[var(--color-surface-alt)]/40 px-3 py-2.5">
-            <p className="m-0 text-[10px] leading-snug text-[var(--color-text-secondary)]">
-              <strong className="font-semibold text-[var(--color-text-primary)]">Safari iOS:</strong> añade Órvita a la
-              pantalla de inicio para recibir Web Push (
+          <div className="space-y-1 border-t border-[color-mix(in_srgb,var(--color-border)_80%,transparent)] bg-[var(--color-surface-alt)]/40 px-2.5 py-2">
+            <p className="m-0 text-[9px] leading-tight text-[var(--color-text-secondary)] [text-wrap:pretty]">
+              <span className="font-semibold text-[var(--color-text-primary)]">Safari (iOS):</span> añade Órvita a inicio
+              para Web Push.{" "}
               <a
                 href="https://webkit.org/blog/13878/web-push-for-web-apps-on-ios-and-ipados/"
                 target="_blank"
                 rel="noreferrer"
                 className="text-[var(--color-accent-primary)] underline-offset-2 hover:underline"
               >
-                WebKit
+                Notas WebKit
               </a>
-              ).
             </p>
-            <div className="flex flex-wrap gap-2">
-              {isPushSupported() && vapidPublic ? (
+            <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+              <div className="flex flex-wrap items-center gap-1">
+                {isPushSupported() && vapidPublic ? (
+                  <button
+                    type="button"
+                    disabled={pushBusy || pushSubscribed === true}
+                    onClick={() => void onEnablePush()}
+                    title={
+                      pushSubscribed === true
+                        ? "Este navegador ya tiene suscripción push activa"
+                        : "Solicitar permiso y registrar este dispositivo"
+                    }
+                    className={clsx(
+                      "inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium disabled:opacity-60",
+                      pushSubscribed === true
+                        ? "cursor-default border border-[color-mix(in_srgb,var(--color-accent-health)_28%,transparent)] bg-[var(--color-accent-health)] text-white shadow-sm"
+                        : "border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-primary)]",
+                    )}
+                  >
+                    {pushBusy ? (
+                      <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+                    ) : pushSubscribed === true ? (
+                      <Check className="h-3 w-3 shrink-0" strokeWidth={2.5} aria-hidden />
+                    ) : (
+                      <Radio className="h-3 w-3 shrink-0" aria-hidden />
+                    )}
+                    {pushSubscribed === true ? "Push activo" : "Activar push"}
+                  </button>
+                ) : null}
                 <button
                   type="button"
-                  disabled={pushBusy || pushSubscribed === true}
-                  onClick={() => void onEnablePush()}
-                  title={
-                    pushSubscribed === true
-                      ? "Este navegador ya tiene suscripción push activa"
-                      : "Solicitar permiso y registrar este dispositivo"
-                  }
-                  className={clsx(
-                    "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold disabled:opacity-60",
-                    pushSubscribed === true
-                      ? "cursor-default border border-[color-mix(in_srgb,var(--color-accent-health)_28%,transparent)] bg-[var(--color-accent-health)] text-white shadow-sm"
-                      : "border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-primary)]",
-                  )}
+                  disabled={pushBusy}
+                  onClick={() => void onSelfTest()}
+                  className="inline-flex items-center gap-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-[10px] font-medium text-[var(--color-text-primary)] disabled:opacity-60"
                 >
-                  {pushBusy ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
-                  ) : pushSubscribed === true ? (
-                    <Check className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
-                  ) : (
-                    <Radio className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                  )}
-                  {pushSubscribed === true ? "Push activo en este dispositivo" : "Activar push en este dispositivo"}
+                  Probar alerta
                 </button>
-              ) : null}
-              <button
-                type="button"
-                disabled={pushBusy}
-                onClick={() => void onSelfTest()}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--color-text-primary)] disabled:opacity-60"
+              </div>
+              <Link
+                href="/configuracion"
+                className="shrink-0 text-[10px] font-medium text-[var(--color-accent-primary)] hover:underline"
+                onClick={() => setOpen(false)}
               >
-                Probar alerta
-              </button>
+                Ajustes
+              </Link>
             </div>
             {!vapidPublic ? (
-              <p className="m-0 text-[10px] text-[var(--color-accent-warning)]">
-                Configura VAPID en el servidor para habilitar push (ver docs/NOTIFICATIONS.md).
+              <p
+                className="m-0 text-[9px] leading-tight text-[var(--color-accent-warning)]"
+                title="Ver docs/NOTIFICATIONS.md en el repositorio"
+              >
+                Push requiere VAPID en servidor.
               </p>
             ) : null}
-            {pushHint ? <p className="m-0 text-[10px] text-[var(--color-text-secondary)]">{pushHint}</p> : null}
-            <Link
-              href="/configuracion"
-              className="inline-block text-[11px] font-medium text-[var(--color-accent-primary)] hover:underline"
-              onClick={() => setOpen(false)}
-            >
-              Configuración
-            </Link>
+            {pushHint ? (
+              <p className="m-0 text-[9px] leading-tight text-[var(--color-text-secondary)]">{pushHint}</p>
+            ) : null}
           </div>
             </div>,
             document.body,

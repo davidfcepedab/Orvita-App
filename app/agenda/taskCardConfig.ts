@@ -45,7 +45,7 @@ const BASE_VARS: Record<string, string> = {
   "--task-card-line-title": "1.25",
   "--task-card-line-body": "1.35",
   "--task-card-action-col-width": "min-content",
-  "--task-card-check-size": "28px",
+  "--task-card-check-size": "40px",
 }
 
 const DENSITY_VARS: Record<TaskCardDensity, Record<string, string>> = {
@@ -81,7 +81,7 @@ const DENSITY_VARS: Record<TaskCardDensity, Record<string, string>> = {
     "--task-card-fuente-size": "9px",
     "--task-card-action-size": "9px",
     "--task-card-icon-meta": "10px",
-    "--task-card-check-size": "24px",
+    "--task-card-check-size": "32px",
   },
 }
 

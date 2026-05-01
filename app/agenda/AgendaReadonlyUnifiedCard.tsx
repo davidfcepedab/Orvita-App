@@ -33,8 +33,8 @@ const moveBtnClass =
   "rounded-full bg-[color-mix(in_srgb,var(--color-accent-primary)_10%,transparent)] px-1.5 py-0 text-[9px] font-medium tracking-tight text-[var(--color-text-secondary)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-accent-primary)_16%,transparent)] hover:text-[var(--color-text-primary)]"
 
 const checkSizeStyle = {
-  width: "var(--task-card-check-size, 2.35rem)",
-  height: "var(--task-card-check-size, 2.35rem)",
+  width: "var(--task-card-check-size, 2.5rem)",
+  height: "var(--task-card-check-size, 2.5rem)",
 } as const
 
 type Props = {
@@ -112,10 +112,10 @@ export function AgendaReadonlyUnifiedCard({
   const showComplete =
     googleKind === "reminder" && Boolean(onToggleGoogleComplete)
   const showCalToggle = googleKind === "calendar" && Boolean(onToggleCalendarUiDone)
-  const showRightChrome =
-    showComplete || showCalToggle || (showCornerBadge && variant !== "compact")
+  const showToggleRow = showComplete || showCalToggle
   const hasSecondaryActions = Boolean(onDelete || onEdit)
-  const showActionsColumn = hasSecondaryActions || showRightChrome
+  /** Cabecera partida: solo edición / insignia; el check va en fila con las pastillas. */
+  const showTopSplit = hasSecondaryActions || (showCornerBadge && variant !== "compact")
   const doneVisual =
     googleKind === "reminder"
       ? statusKey.includes("complet")
@@ -153,7 +153,7 @@ export function AgendaReadonlyUnifiedCard({
       className={`flex min-w-0 flex-col ${innerPadClass}`}
       style={{ ...varStyle, fontFamily: "var(--task-card-font-family, inherit)" }}
     >
-      {showActionsColumn ? (
+      {showTopSplit ? (
         <div className="flex min-w-0 items-start justify-between gap-2.5 sm:gap-3">
           <div className="flex min-w-0 flex-1 flex-col gap-1.5">
             {metaRow}
@@ -191,59 +191,6 @@ export function AgendaReadonlyUnifiedCard({
                 ) : null}
               </div>
             ) : null}
-            {showComplete ? (
-              <div className="flex flex-col items-end gap-0.5">
-                <button
-                  type="button"
-                  role="checkbox"
-                  aria-checked={doneVisual}
-                  disabled={googleCompleteBusy}
-                  aria-label={doneVisual ? "Marcar como pendiente" : "Marcar como realizada"}
-                  onClick={() => onToggleGoogleComplete?.()}
-                  className={`${agendaTaskCheckOuterClass} text-[var(--agenda-reminder)] hover:border-[var(--agenda-reminder)]`}
-                  style={{
-                    ...checkSizeStyle,
-                    ...(doneVisual
-                      ? {
-                          borderColor: "color-mix(in srgb, #4ade80 70%, var(--color-border))",
-                          background: "color-mix(in srgb, #86efac 55%, transparent)",
-                        }
-                      : {}),
-                  }}
-                >
-                  {doneVisual ? (
-                    <Check className="h-4 w-4 animate-agenda-check-pop text-[#15803d]" strokeWidth={2.75} aria-hidden />
-                  ) : null}
-                </button>
-                <span className={agendaTaskCircleCaptionClass}>Listo</span>
-              </div>
-            ) : null}
-            {showCalToggle ? (
-              <div className="flex flex-col items-end gap-0.5">
-                <button
-                  type="button"
-                  role="checkbox"
-                  aria-checked={calendarUiDone}
-                  aria-label={calendarUiDone ? "Quitar marca de visto" : "Marcar como visto"}
-                  onClick={() => onToggleCalendarUiDone?.()}
-                  className={`${agendaTaskCheckOuterClass} text-[var(--agenda-calendar)] hover:border-[var(--agenda-calendar)]`}
-                  style={{
-                    ...checkSizeStyle,
-                    ...(calendarUiDone
-                      ? {
-                          borderColor: "color-mix(in srgb, #4ade80 70%, var(--color-border))",
-                          background: "color-mix(in srgb, #86efac 55%, transparent)",
-                        }
-                      : {}),
-                  }}
-                >
-                  {calendarUiDone ? (
-                    <Check className="h-4 w-4 animate-agenda-check-pop text-[#15803d]" strokeWidth={2.75} aria-hidden />
-                  ) : null}
-                </button>
-                <span className={agendaTaskCircleCaptionClass}>Visto</span>
-              </div>
-            ) : null}
             {showCornerBadge && variant !== "compact" ? (
               <div
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[8px] font-bold text-white ring-2 ring-white/25"
@@ -265,51 +212,112 @@ export function AgendaReadonlyUnifiedCard({
         </>
       )}
 
-      <div className="flex flex-wrap items-center gap-1">
-        <span
-          className={agendaPillBaseClass}
-          style={{
-            ...googleSourcePillStyle(googleKind),
-            fontSize: "var(--task-card-pill-size, 9px)",
-          }}
-        >
-          {kindPillLabel}
-        </span>
-        <span
-          className="text-[var(--color-text-secondary)]"
-          style={{ fontSize: "var(--task-card-pill-size, 9px)" }}
-          aria-hidden
-        >
-          |
-        </span>
-        <span
-          className={agendaPillBaseClass}
-          style={{
-            ...statusPillStyle(statusKey),
-            fontSize: "var(--task-card-pill-size, 9px)",
-          }}
-        >
-          {statusLabel}
-        </span>
-        {priorityUi ? (
-          <>
-            <span
-              className="text-[var(--color-text-secondary)]"
-              style={{ fontSize: "var(--task-card-pill-size, 9px)" }}
-              aria-hidden
-            >
-              |
-            </span>
-            <span
-              className={agendaPillBaseClass}
-              style={{
-                ...priorityPillStyle(priorityUi),
-                fontSize: "var(--task-card-pill-size, 9px)",
-              }}
-            >
-              {formatPriorityTitle(priorityUi)}
-            </span>
-          </>
+      <div
+        className={`flex min-w-0 items-center gap-2 sm:gap-3 ${showToggleRow ? "justify-between" : ""}`}
+      >
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+          <span
+            className={agendaPillBaseClass}
+            style={{
+              ...googleSourcePillStyle(googleKind),
+              fontSize: "var(--task-card-pill-size, 9px)",
+            }}
+          >
+            {kindPillLabel}
+          </span>
+          <span
+            className="text-[var(--color-text-secondary)]"
+            style={{ fontSize: "var(--task-card-pill-size, 9px)" }}
+            aria-hidden
+          >
+            |
+          </span>
+          <span
+            className={agendaPillBaseClass}
+            style={{
+              ...statusPillStyle(statusKey),
+              fontSize: "var(--task-card-pill-size, 9px)",
+            }}
+          >
+            {statusLabel}
+          </span>
+          {priorityUi ? (
+            <>
+              <span
+                className="text-[var(--color-text-secondary)]"
+                style={{ fontSize: "var(--task-card-pill-size, 9px)" }}
+                aria-hidden
+              >
+                |
+              </span>
+              <span
+                className={agendaPillBaseClass}
+                style={{
+                  ...priorityPillStyle(priorityUi),
+                  fontSize: "var(--task-card-pill-size, 9px)",
+                }}
+              >
+                {formatPriorityTitle(priorityUi)}
+              </span>
+            </>
+          ) : null}
+        </div>
+        {showToggleRow ? (
+          <div className="flex shrink-0 flex-col items-end gap-0.5 self-center">
+            {showComplete ? (
+              <>
+                <button
+                  type="button"
+                  role="checkbox"
+                  aria-checked={doneVisual}
+                  disabled={googleCompleteBusy}
+                  aria-label={doneVisual ? "Marcar como pendiente" : "Marcar como realizada"}
+                  onClick={() => onToggleGoogleComplete?.()}
+                  className={`${agendaTaskCheckOuterClass} text-[var(--agenda-reminder)] hover:border-[var(--agenda-reminder)]`}
+                  style={{
+                    ...checkSizeStyle,
+                    ...(doneVisual
+                      ? {
+                          borderColor: "color-mix(in srgb, #4ade80 70%, var(--color-border))",
+                          background: "color-mix(in srgb, #86efac 55%, transparent)",
+                        }
+                      : {}),
+                  }}
+                >
+                  {doneVisual ? (
+                    <Check className="h-5 w-5 animate-agenda-check-pop text-[#15803d]" strokeWidth={2.75} aria-hidden />
+                  ) : null}
+                </button>
+                <span className={agendaTaskCircleCaptionClass}>Listo</span>
+              </>
+            ) : null}
+            {showCalToggle ? (
+              <>
+                <button
+                  type="button"
+                  role="checkbox"
+                  aria-checked={calendarUiDone}
+                  aria-label={calendarUiDone ? "Quitar marca de visto" : "Marcar como visto"}
+                  onClick={() => onToggleCalendarUiDone?.()}
+                  className={`${agendaTaskCheckOuterClass} text-[var(--agenda-calendar)] hover:border-[var(--agenda-calendar)]`}
+                  style={{
+                    ...checkSizeStyle,
+                    ...(calendarUiDone
+                      ? {
+                          borderColor: "color-mix(in srgb, #4ade80 70%, var(--color-border))",
+                          background: "color-mix(in srgb, #86efac 55%, transparent)",
+                        }
+                      : {}),
+                  }}
+                >
+                  {calendarUiDone ? (
+                    <Check className="h-5 w-5 animate-agenda-check-pop text-[#15803d]" strokeWidth={2.75} aria-hidden />
+                  ) : null}
+                </button>
+                <span className={agendaTaskCircleCaptionClass}>Visto</span>
+              </>
+            ) : null}
+          </div>
         ) : null}
       </div>
 
