@@ -9,6 +9,7 @@ import {
   agendaTaskCheckOuterClass,
   agendaTaskSubtleIconActionClass,
   agendaTaskToggleCaptionClass,
+  agendaTaskToggleColumnClass,
 } from "@/app/agenda/agendaUnifiedCardStyles"
 import {
   agendaPillBaseClass,
@@ -201,13 +202,59 @@ export function AgendaReadonlyUnifiedCard({
         {row1Right}
       </div>
 
-      <div className="flex min-w-0 items-start justify-between gap-2.5 sm:gap-3">
-        <div className="min-w-0 flex-1">{titleBlock}</div>
+      <div className="flex min-w-0 items-start gap-2.5 sm:gap-3">
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+          {titleBlock}
+          <div className="flex min-w-0 flex-wrap items-center gap-1">
+            <span
+              className={agendaPillBaseClass}
+              style={{
+                ...googleSourcePillStyle(googleKind),
+                fontSize: "var(--task-card-pill-size, 9px)",
+              }}
+            >
+              {kindPillLabel}
+            </span>
+            <span
+              className="text-[var(--color-text-secondary)]"
+              style={{ fontSize: "var(--task-card-pill-size, 9px)" }}
+              aria-hidden
+            >
+              |
+            </span>
+            <span
+              className={agendaPillBaseClass}
+              style={{
+                ...statusPillStyle(statusKey),
+                fontSize: "var(--task-card-pill-size, 9px)",
+              }}
+            >
+              {statusLabel}
+            </span>
+            {priorityUi ? (
+              <>
+                <span
+                  className="text-[var(--color-text-secondary)]"
+                  style={{ fontSize: "var(--task-card-pill-size, 9px)" }}
+                  aria-hidden
+                >
+                  |
+                </span>
+                <span
+                  className={agendaPillBaseClass}
+                  style={{
+                    ...priorityPillStyle(priorityUi),
+                    fontSize: "var(--task-card-pill-size, 9px)",
+                  }}
+                >
+                  {formatPriorityTitle(priorityUi)}
+                </span>
+              </>
+            ) : null}
+          </div>
+        </div>
         {showToggleRow ? (
-          <div
-            className="flex w-[var(--task-card-check-size,2.5rem)] shrink-0 flex-col items-center gap-1"
-            style={{ minWidth: "var(--task-card-check-size, 2.5rem)" }}
-          >
+          <div className={agendaTaskToggleColumnClass}>
             {showComplete ? (
               <>
                 <button
@@ -266,54 +313,6 @@ export function AgendaReadonlyUnifiedCard({
               </>
             ) : null}
           </div>
-        ) : null}
-      </div>
-
-      <div className="flex min-w-0 flex-wrap items-center gap-1">
-        <span
-          className={agendaPillBaseClass}
-          style={{
-            ...googleSourcePillStyle(googleKind),
-            fontSize: "var(--task-card-pill-size, 9px)",
-          }}
-        >
-          {kindPillLabel}
-        </span>
-        <span
-          className="text-[var(--color-text-secondary)]"
-          style={{ fontSize: "var(--task-card-pill-size, 9px)" }}
-          aria-hidden
-        >
-          |
-        </span>
-        <span
-          className={agendaPillBaseClass}
-          style={{
-            ...statusPillStyle(statusKey),
-            fontSize: "var(--task-card-pill-size, 9px)",
-          }}
-        >
-          {statusLabel}
-        </span>
-        {priorityUi ? (
-          <>
-            <span
-              className="text-[var(--color-text-secondary)]"
-              style={{ fontSize: "var(--task-card-pill-size, 9px)" }}
-              aria-hidden
-            >
-              |
-            </span>
-            <span
-              className={agendaPillBaseClass}
-              style={{
-                ...priorityPillStyle(priorityUi),
-                fontSize: "var(--task-card-pill-size, 9px)",
-              }}
-            >
-              {formatPriorityTitle(priorityUi)}
-            </span>
-          </>
         ) : null}
       </div>
 

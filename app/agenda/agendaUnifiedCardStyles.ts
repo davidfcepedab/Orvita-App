@@ -74,9 +74,16 @@ export const agendaTaskSubtleIconActionClass =
 export const agendaTaskCircleCaptionClass =
   "hidden max-w-[4.25rem] truncate text-end text-[8px] font-semibold uppercase leading-tight tracking-[0.1em] text-[var(--color-text-secondary)] xs:block sm:max-w-none"
 
-/** Leyenda bajo el anillo de completado, centrada respecto al botón (columna fija --task-card-check-size). */
+/**
+ * Columna del checkbox: ancho mínimo del anillo + hasta ~11rem para la leyenda
+ * (sin truncate; «Completada» / «Pendiente» pueden partir en varias líneas).
+ */
+export const agendaTaskToggleColumnClass =
+  "flex min-w-[var(--task-card-check-size,2.5rem)] max-w-[min(11rem,calc(46vw-1rem))] shrink-0 flex-col items-center gap-1 self-center"
+
+/** Leyenda bajo el anillo; texto completo visible, centrado, con salto de línea si hace falta. */
 export const agendaTaskToggleCaptionClass =
-  "hidden w-full min-w-0 max-w-[5rem] truncate text-center text-[8px] font-semibold uppercase leading-tight tracking-[0.1em] text-[var(--color-text-secondary)] xs:block sm:max-w-none"
+  "block w-full max-w-full px-0.5 text-center text-[8px] font-semibold uppercase leading-snug tracking-[0.08em] text-[var(--color-text-secondary)] whitespace-normal break-words [overflow-wrap:anywhere] sm:text-[9px]"
 
 /** Anillo del toggle principal (hecho / visto). */
 export const agendaTaskCheckOuterClass =

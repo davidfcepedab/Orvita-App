@@ -10,6 +10,7 @@ import {
   agendaTaskCheckOuterClass,
   agendaTaskSubtleIconActionClass,
   agendaTaskToggleCaptionClass,
+  agendaTaskToggleColumnClass,
   priorityPillStyle,
   statusPillStyle,
 } from "@/app/agenda/agendaUnifiedCardStyles"
@@ -187,13 +188,39 @@ export function AgendaOrvitaTaskCard({
           ) : null}
         </div>
 
-        <div className="flex min-w-0 items-start justify-between gap-2.5 sm:gap-3">
-          <p className={`m-0 min-w-0 flex-1 tracking-tight text-[var(--color-text-primary)] ${titleClass}`}>{task.title}</p>
+        <div className="flex min-w-0 items-start gap-2.5 sm:gap-3">
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <p className={`m-0 min-w-0 tracking-tight text-[var(--color-text-primary)] ${titleClass}`}>{task.title}</p>
+            <div className="flex flex-wrap items-center gap-1">
+              <span
+                className={agendaPillBaseClass}
+                style={{
+                  ...priorityPillStyle(task.priority),
+                  fontSize: "var(--task-card-pill-size, 9px)",
+                }}
+              >
+                {formatPriorityTitle(task.priority)}
+              </span>
+              <span
+                className="text-[var(--color-text-secondary)]"
+                style={{ fontSize: "var(--task-card-pill-size, 9px)" }}
+                aria-hidden
+              >
+                |
+              </span>
+              <span
+                className={agendaPillBaseClass}
+                style={{
+                  ...statusPillStyle(statusKey),
+                  fontSize: "var(--task-card-pill-size, 9px)",
+                }}
+              >
+                {statusTitle}
+              </span>
+            </div>
+          </div>
           {hasCheckToggle ? (
-            <div
-              className="flex w-[var(--task-card-check-size,2.5rem)] shrink-0 flex-col items-center gap-1"
-              style={{ minWidth: "var(--task-card-check-size, 2.5rem)" }}
-            >
+            <div className={agendaTaskToggleColumnClass}>
               <button
                 type="button"
                 role="checkbox"
@@ -226,34 +253,6 @@ export function AgendaOrvitaTaskCard({
               </span>
             </div>
           ) : null}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-1">
-          <span
-            className={agendaPillBaseClass}
-            style={{
-              ...priorityPillStyle(task.priority),
-              fontSize: "var(--task-card-pill-size, 9px)",
-            }}
-          >
-            {formatPriorityTitle(task.priority)}
-          </span>
-          <span
-            className="text-[var(--color-text-secondary)]"
-            style={{ fontSize: "var(--task-card-pill-size, 9px)" }}
-            aria-hidden
-          >
-            |
-          </span>
-          <span
-            className={agendaPillBaseClass}
-            style={{
-              ...statusPillStyle(statusKey),
-              fontSize: "var(--task-card-pill-size, 9px)",
-            }}
-          >
-            {statusTitle}
-          </span>
         </div>
 
         {showShiftDue ? (
