@@ -24,13 +24,14 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
+  /** Misma fuente que `app/icon.png` y manifest: logos generados desde `public/brand/orvita-logo-on-light-bg.png`. */
   icons: {
     icon: [
       { url: "/pwa/icon-192.png", type: "image/png", sizes: "192x192" },
       { url: "/pwa/icon-512.png", type: "image/png", sizes: "512x512" },
     ],
     apple: [{ url: "/pwa/icon-192.png", type: "image/png", sizes: "192x192" }],
-    shortcut: ["/pwa/icon-192.png"],
+    shortcut: "/pwa/icon-192.png",
   },
 }
 

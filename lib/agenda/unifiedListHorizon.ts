@@ -42,6 +42,14 @@ function endOfCalendarMonthYmd(ymd: string): string {
   return `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`
 }
 
+/** Primer día civil del mes de `ymd` (zona agenda implícita en la cadena Y-M-D). */
+function firstDayOfMonthYmd(ymd: string): string {
+  const key = ymd.trim().slice(0, 10)
+  const [y, m] = key.split("-").map(Number)
+  if (!Number.isFinite(y) || !Number.isFinite(m)) return agendaTodayYmd()
+  return `${y}-${String(m).padStart(2, "0")}-01`
+}
+
 export type HorizonRange = { start: string; end: string }
 
 /**
@@ -60,7 +68,8 @@ export function unifiedListHorizonRange(
   }
   const mon = mondayOfCalendarWeekContainingYmd(t)
   const sun = addDaysToYmd(mon, 6)
-  if (id === "this_week") return { start: t, end: sun }
+  /** Semana calendario completa (lun–dom): incluye días ya pasados al revisar el historial de la semana. */
+  if (id === "this_week") return { start: mon, end: sun }
   const monNext = addDaysToYmd(sun, 1)
   const sunNext = addDaysToYmd(monNext, 6)
   if (id === "next_week") return { start: monNext, end: sunNext }
@@ -69,7 +78,8 @@ export function unifiedListHorizonRange(
   if (id === "this_month" && opts.extendedAfterMonth) {
     end = addDaysToYmd(endM, UNIFIED_LIST_EXTENDED_DAYS_AFTER_MONTH)
   }
-  return { start: t, end }
+  /** Mes natural: desde el día 1 hasta fin de mes (+ extensión opcional), no solo desde hoy. */
+  return { start: firstDayOfMonthYmd(t), end }
 }
 
 export function ymdLexInRange(k: string, start: string, end: string): boolean {

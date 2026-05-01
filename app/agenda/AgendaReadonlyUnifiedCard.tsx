@@ -288,7 +288,9 @@ export function AgendaReadonlyUnifiedCard({
                     <Check className="h-5 w-5 animate-agenda-check-pop text-[#15803d]" strokeWidth={2.75} aria-hidden />
                   ) : null}
                 </button>
-                <span className={agendaTaskCircleCaptionClass}>Listo</span>
+                <span className={agendaTaskCircleCaptionClass}>
+                  {doneVisual ? "Completada" : "Pendiente"}
+                </span>
               </>
             ) : null}
             {showCalToggle ? (
@@ -314,7 +316,9 @@ export function AgendaReadonlyUnifiedCard({
                     <Check className="h-5 w-5 animate-agenda-check-pop text-[#15803d]" strokeWidth={2.75} aria-hidden />
                   ) : null}
                 </button>
-                <span className={agendaTaskCircleCaptionClass}>Visto</span>
+                <span className={agendaTaskCircleCaptionClass}>
+                  {calendarUiDone ? "Visto" : "Pendiente"}
+                </span>
               </>
             ) : null}
           </div>

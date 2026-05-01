@@ -82,8 +82,10 @@ export function AgendaOrvitaTaskCard({
 
   const effective: UiAgendaTask = { ...task, completed: done }
   const shell = orvitaAgendaCardShell(effective, { viewerUserId })
-  const statusKey = task.status.toLowerCase()
-  const statusTitle = formatStatusTitle(task.status)
+  /** Alinear pastillas con el checkbox (evita «Pendiente» mientras el toggle ya muestra hecho). */
+  const completedEffective = done || task.completed
+  const statusKey = completedEffective ? "completada" : task.status.toLowerCase()
+  const statusTitle = completedEffective ? "Completada" : formatStatusTitle(task.status)
   const showAssignRow =
     task.assigneePendingAccept ||
     task.assigneeAccepted ||
@@ -218,7 +220,9 @@ export function AgendaOrvitaTaskCard({
                       />
                     ) : null}
                   </button>
-                  <span className={agendaTaskCircleCaptionClass}>Hecho</span>
+                  <span className={agendaTaskCircleCaptionClass}>
+                    {completedEffective ? "Completada" : "Pendiente"}
+                  </span>
                 </div>
               ) : null}
             </div>

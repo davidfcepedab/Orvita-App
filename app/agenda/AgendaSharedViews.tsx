@@ -539,7 +539,7 @@ export function AgendaSharedKanban({
                 title={row.event.summary || "(Sin título)"}
                 googleKind="calendar"
                 kindPillLabel={calendarEventFuenteLabel(row.event)}
-                statusLabel={isCalendarUiDone?.(row.event.id) ? "Listo" : "Pendiente"}
+                statusLabel={isCalendarUiDone?.(row.event.id) ? "Visto" : "Pendiente"}
                 statusKey={isCalendarUiDone?.(row.event.id) ? "completada" : "pendiente"}
                 priorityUi={null}
                 onEdit={onOpenAgendaEdit ? () => onOpenAgendaEdit({ kind: "google-calendar", event: row.event }) : undefined}
@@ -704,7 +704,12 @@ export function AgendaSharedList({
   const horizonTabs = [
     { id: "today" as const, label: "Hoy", labelSm: "Hoy", title: "Solo ítems con fecha de hoy" },
     { id: "tomorrow" as const, label: "Mañana", labelSm: "Mañ.", title: "Solo el día siguiente" },
-    { id: "this_week" as const, label: "Semana", labelSm: "Sem.", title: "Desde hoy hasta el domingo de esta semana (lunes–domingo)" },
+    {
+      id: "this_week" as const,
+      label: "Semana",
+      labelSm: "Sem.",
+      title: "Lunes a domingo de la semana en curso (incluye días ya pasados)",
+    },
     { id: "next_week" as const, label: "Próx. semana", labelSm: "Próx.", title: "Lunes a domingo de la semana siguiente" },
     { id: "this_month" as const, label: "Mes", labelSm: "Mes", title: "Desde hoy hasta el último día del mes en curso" },
   ] satisfies { id: UnifiedListHorizonId; label: string; labelSm: string; title: string }[]
@@ -990,7 +995,7 @@ export function AgendaSharedList({
                 title={row.event.summary || "(Sin título)"}
                 googleKind="calendar"
                 kindPillLabel={calendarEventFuenteLabel(row.event)}
-                statusLabel={isCalendarUiDone?.(row.event.id) ? "Listo" : "Pendiente"}
+                statusLabel={isCalendarUiDone?.(row.event.id) ? "Visto" : "Pendiente"}
                 statusKey={isCalendarUiDone?.(row.event.id) ? "completada" : "pendiente"}
                 priorityUi={null}
                 onEdit={onOpenAgendaEdit ? () => onOpenAgendaEdit({ kind: "google-calendar", event: row.event }) : undefined}
@@ -1208,7 +1213,7 @@ export function AgendaSharedWeek({
                       title={ev.summary || "(Evento)"}
                       googleKind="calendar"
                       kindPillLabel={calendarEventFuenteLabel(ev)}
-                      statusLabel={isCalendarUiDone?.(ev.id) ? "Listo" : "Pendiente"}
+                      statusLabel={isCalendarUiDone?.(ev.id) ? "Visto" : "Pendiente"}
                       statusKey={isCalendarUiDone?.(ev.id) ? "completada" : "pendiente"}
                       priorityUi={null}
                       onEdit={onOpenAgendaEdit ? () => onOpenAgendaEdit({ kind: "google-calendar", event: ev }) : undefined}
@@ -1559,7 +1564,7 @@ export function AgendaSharedMonth({
                     title={ev.summary || "(Evento)"}
                     googleKind="calendar"
                     kindPillLabel={calendarEventFuenteLabel(ev)}
-                    statusLabel={isCalendarUiDone?.(ev.id) ? "Listo" : "Pendiente"}
+                    statusLabel={isCalendarUiDone?.(ev.id) ? "Visto" : "Pendiente"}
                     statusKey={isCalendarUiDone?.(ev.id) ? "completada" : "pendiente"}
                     priorityUi={null}
                     onEdit={onOpenAgendaEdit ? () => onOpenAgendaEdit({ kind: "google-calendar", event: ev }) : undefined}
