@@ -66,9 +66,17 @@ export const agendaPillBaseClass =
 export const agendaTaskCircleActionClass =
   "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-transparent bg-transparent text-[var(--color-text-secondary)] opacity-[0.72] shadow-none transition-[opacity,color,background-color,transform] motion-safe:duration-200 hover:border-[color-mix(in_srgb,var(--color-border)_45%,transparent)] hover:bg-[color-mix(in_srgb,var(--color-text-primary)_6%,transparent)] hover:text-[var(--color-text-primary)] hover:opacity-100 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-35 sm:h-9 sm:w-9 sm:rounded-lg"
 
+/** Edición / borrar en la fila de fecha: menos peso visual que el toggle principal. */
+export const agendaTaskSubtleIconActionClass =
+  `${agendaTaskCircleActionClass} !h-7 !w-7 !opacity-55 hover:!opacity-100 sm:!h-8 sm:!w-8`
+
 /** Texto bajo el toggle principal (hecho / visto); secundarios van sin leyenda visible (icono + aria). */
 export const agendaTaskCircleCaptionClass =
   "hidden max-w-[4.25rem] truncate text-end text-[8px] font-semibold uppercase leading-tight tracking-[0.1em] text-[var(--color-text-secondary)] xs:block sm:max-w-none"
+
+/** Leyenda bajo el anillo de completado, centrada respecto al botón (columna fija --task-card-check-size). */
+export const agendaTaskToggleCaptionClass =
+  "hidden w-full min-w-0 max-w-[5rem] truncate text-center text-[8px] font-semibold uppercase leading-tight tracking-[0.1em] text-[var(--color-text-secondary)] xs:block sm:max-w-none"
 
 /** Anillo del toggle principal (hecho / visto). */
 export const agendaTaskCheckOuterClass =

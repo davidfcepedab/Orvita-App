@@ -7,8 +7,8 @@ import type { AgendaCardShell } from "@/app/agenda/agendaCardChrome"
 import {
   agendaCardChrome,
   agendaTaskCheckOuterClass,
-  agendaTaskCircleActionClass,
-  agendaTaskCircleCaptionClass,
+  agendaTaskSubtleIconActionClass,
+  agendaTaskToggleCaptionClass,
 } from "@/app/agenda/agendaUnifiedCardStyles"
 import {
   agendaPillBaseClass,
@@ -114,8 +114,6 @@ export function AgendaReadonlyUnifiedCard({
   const showCalToggle = googleKind === "calendar" && Boolean(onToggleCalendarUiDone)
   const showToggleRow = showComplete || showCalToggle
   const hasSecondaryActions = Boolean(onDelete || onEdit)
-  /** Cabecera partida: solo edición / insignia; el check va en fila con las pastillas. */
-  const showTopSplit = hasSecondaryActions || (showCornerBadge && variant !== "compact")
   const doneVisual =
     googleKind === "reminder"
       ? statusKey.includes("complet")
@@ -148,122 +146,68 @@ export function AgendaReadonlyUnifiedCard({
     </p>
   )
 
+  const row1Right =
+    hasSecondaryActions || (showCornerBadge && variant !== "compact") ? (
+      <div className="flex shrink-0 items-center gap-0.5 sm:gap-0.5">
+        {onDelete ? (
+          <button
+            type="button"
+            disabled={deleteBusy}
+            onClick={() => void handleDeleteClick()}
+            className={`${agendaTaskSubtleIconActionClass} hover:!border-[color-mix(in_srgb,var(--color-accent-danger)_35%,transparent)] hover:!bg-[color-mix(in_srgb,var(--color-accent-danger)_10%,transparent)] hover:!text-[var(--color-accent-danger)]`}
+            aria-label={
+              googleKind === "calendar"
+                ? "Eliminar evento también en Google Calendar"
+                : "Eliminar tarea o recordatorio también en Google Tasks"
+            }
+            title={deleteBusy ? "Eliminando…" : "Eliminar"}
+          >
+            <Trash2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" strokeWidth={2} aria-hidden />
+          </button>
+        ) : null}
+        {onEdit ? (
+          <button
+            type="button"
+            className={agendaTaskSubtleIconActionClass}
+            aria-label="Editar"
+            title="Editar"
+            onClick={onEdit}
+          >
+            <Pencil className="h-3 w-3 sm:h-3.5 sm:w-3.5" strokeWidth={1.75} aria-hidden />
+          </button>
+        ) : null}
+        {showCornerBadge && variant !== "compact" ? (
+          <div
+            className="ml-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[7px] font-bold text-white ring-2 ring-white/20 sm:h-8 sm:w-8 sm:text-[8px]"
+            style={{
+              background: `color-mix(in srgb, ${badgeColorVar} 78%, #0f172a)`,
+              boxShadow: `0 0 0 2px color-mix(in srgb, ${badgeColorVar} 28%, transparent)`,
+            }}
+            aria-hidden
+          >
+            {badgeLetter}
+          </div>
+        ) : null}
+      </div>
+    ) : null
+
   const inner = (
     <div
       className={`flex min-w-0 flex-col ${innerPadClass}`}
       style={{ ...varStyle, fontFamily: "var(--task-card-font-family, inherit)" }}
     >
-      {showTopSplit ? (
-        <div className="flex min-w-0 items-start justify-between gap-2.5 sm:gap-3">
-          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-            {metaRow}
-            {titleBlock}
-          </div>
-          <div className="flex shrink-0 flex-col items-end gap-2 sm:gap-2.5 pt-0.5">
-            {hasSecondaryActions ? (
-              <div className="flex flex-row items-center justify-end gap-0.5 sm:gap-1">
-                {onDelete ? (
-                  <button
-                    type="button"
-                    disabled={deleteBusy}
-                    onClick={() => void handleDeleteClick()}
-                    className={`${agendaTaskCircleActionClass} hover:!border-[color-mix(in_srgb,var(--color-accent-danger)_35%,transparent)] hover:!bg-[color-mix(in_srgb,var(--color-accent-danger)_10%,transparent)] hover:!text-[var(--color-accent-danger)]`}
-                    aria-label={
-                      googleKind === "calendar"
-                        ? "Eliminar evento también en Google Calendar"
-                        : "Eliminar tarea o recordatorio también en Google Tasks"
-                    }
-                    title={deleteBusy ? "Eliminando…" : "Eliminar"}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-                  </button>
-                ) : null}
-                {onEdit ? (
-                  <button
-                    type="button"
-                    className={agendaTaskCircleActionClass}
-                    aria-label="Editar"
-                    title="Editar"
-                    onClick={onEdit}
-                  >
-                    <Pencil className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
-                  </button>
-                ) : null}
-              </div>
-            ) : null}
-            {showCornerBadge && variant !== "compact" ? (
-              <div
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[8px] font-bold text-white ring-2 ring-white/25"
-                style={{
-                  background: `color-mix(in srgb, ${badgeColorVar} 78%, #0f172a)`,
-                  boxShadow: `0 0 0 2px color-mix(in srgb, ${badgeColorVar} 28%, transparent)`,
-                }}
-                aria-hidden
-              >
-                {badgeLetter}
-              </div>
-            ) : null}
-          </div>
-        </div>
-      ) : (
-        <>
-          {metaRow}
-          {titleBlock}
-        </>
-      )}
+      <div className="flex min-w-0 items-start justify-between gap-2 sm:gap-2.5">
+        <div className="min-w-0 flex-1">{metaRow}</div>
+        {row1Right}
+      </div>
 
-      <div
-        className={`flex min-w-0 items-center gap-2 sm:gap-3 ${showToggleRow ? "justify-between" : ""}`}
-      >
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
-          <span
-            className={agendaPillBaseClass}
-            style={{
-              ...googleSourcePillStyle(googleKind),
-              fontSize: "var(--task-card-pill-size, 9px)",
-            }}
-          >
-            {kindPillLabel}
-          </span>
-          <span
-            className="text-[var(--color-text-secondary)]"
-            style={{ fontSize: "var(--task-card-pill-size, 9px)" }}
-            aria-hidden
-          >
-            |
-          </span>
-          <span
-            className={agendaPillBaseClass}
-            style={{
-              ...statusPillStyle(statusKey),
-              fontSize: "var(--task-card-pill-size, 9px)",
-            }}
-          >
-            {statusLabel}
-          </span>
-          {priorityUi ? (
-            <>
-              <span
-                className="text-[var(--color-text-secondary)]"
-                style={{ fontSize: "var(--task-card-pill-size, 9px)" }}
-                aria-hidden
-              >
-                |
-              </span>
-              <span
-                className={agendaPillBaseClass}
-                style={{
-                  ...priorityPillStyle(priorityUi),
-                  fontSize: "var(--task-card-pill-size, 9px)",
-                }}
-              >
-                {formatPriorityTitle(priorityUi)}
-              </span>
-            </>
-          ) : null}
-        </div>
+      <div className="flex min-w-0 items-start justify-between gap-2.5 sm:gap-3">
+        <div className="min-w-0 flex-1">{titleBlock}</div>
         {showToggleRow ? (
-          <div className="flex shrink-0 flex-col items-end gap-0.5 self-center">
+          <div
+            className="flex w-[var(--task-card-check-size,2.5rem)] shrink-0 flex-col items-center gap-1"
+            style={{ minWidth: "var(--task-card-check-size, 2.5rem)" }}
+          >
             {showComplete ? (
               <>
                 <button
@@ -285,10 +229,10 @@ export function AgendaReadonlyUnifiedCard({
                   }}
                 >
                   {doneVisual ? (
-                    <Check className="h-5 w-5 animate-agenda-check-pop text-[#15803d]" strokeWidth={2.75} aria-hidden />
+                    <Check className="h-4 w-4 animate-agenda-check-pop text-[#15803d]" strokeWidth={2.75} aria-hidden />
                   ) : null}
                 </button>
-                <span className={agendaTaskCircleCaptionClass}>
+                <span className={agendaTaskToggleCaptionClass}>
                   {doneVisual ? "Completada" : "Pendiente"}
                 </span>
               </>
@@ -313,15 +257,63 @@ export function AgendaReadonlyUnifiedCard({
                   }}
                 >
                   {calendarUiDone ? (
-                    <Check className="h-5 w-5 animate-agenda-check-pop text-[#15803d]" strokeWidth={2.75} aria-hidden />
+                    <Check className="h-4 w-4 animate-agenda-check-pop text-[#15803d]" strokeWidth={2.75} aria-hidden />
                   ) : null}
                 </button>
-                <span className={agendaTaskCircleCaptionClass}>
+                <span className={agendaTaskToggleCaptionClass}>
                   {calendarUiDone ? "Visto" : "Pendiente"}
                 </span>
               </>
             ) : null}
           </div>
+        ) : null}
+      </div>
+
+      <div className="flex min-w-0 flex-wrap items-center gap-1">
+        <span
+          className={agendaPillBaseClass}
+          style={{
+            ...googleSourcePillStyle(googleKind),
+            fontSize: "var(--task-card-pill-size, 9px)",
+          }}
+        >
+          {kindPillLabel}
+        </span>
+        <span
+          className="text-[var(--color-text-secondary)]"
+          style={{ fontSize: "var(--task-card-pill-size, 9px)" }}
+          aria-hidden
+        >
+          |
+        </span>
+        <span
+          className={agendaPillBaseClass}
+          style={{
+            ...statusPillStyle(statusKey),
+            fontSize: "var(--task-card-pill-size, 9px)",
+          }}
+        >
+          {statusLabel}
+        </span>
+        {priorityUi ? (
+          <>
+            <span
+              className="text-[var(--color-text-secondary)]"
+              style={{ fontSize: "var(--task-card-pill-size, 9px)" }}
+              aria-hidden
+            >
+              |
+            </span>
+            <span
+              className={agendaPillBaseClass}
+              style={{
+                ...priorityPillStyle(priorityUi),
+                fontSize: "var(--task-card-pill-size, 9px)",
+              }}
+            >
+              {formatPriorityTitle(priorityUi)}
+            </span>
+          </>
         ) : null}
       </div>
 
