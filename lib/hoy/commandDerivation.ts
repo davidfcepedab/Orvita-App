@@ -169,15 +169,26 @@ export function totalMeetingMinutes(
   return Math.round(sum)
 }
 
-/** Presión de agenda: más minutos en reuniones = más carga de tiempo. */
+/**
+ * Ventana civil de día “disponible” para la métrica de tiempo (alineada con jornada ~7:00–21:00).
+ * El % de barra = reuniones / esa ventana (no un techo fijo de 5 h).
+ */
+const AVAILABLE_DAY_MINUTES_7_TO_21 = 14 * 60
+
+/**
+ * Presión de agenda: % del día disponible (≈7:00–21:00) ocupado por reuniones del calendario.
+ * Umbrales sobre ese porcentaje: bajo (menos del 25%), moderado (25–49%), alto (50% o más).
+ */
 export function timePressureFromMeetings(meetingMinutes: number): {
   band: PressureBand
   fillPct: number
   hint: string
 } {
-  const fillPct = Math.min(100, Math.round((meetingMinutes / 300) * 100))
+  const rawPct =
+    (meetingMinutes / AVAILABLE_DAY_MINUTES_7_TO_21) * 100
+  const fillPct = Math.min(100, Math.round(Number.isFinite(rawPct) ? rawPct : 0))
   const band: PressureBand =
-    fillPct < 30 ? "bajo" : fillPct < 65 ? "moderado" : "alto"
+    fillPct < 25 ? "bajo" : fillPct < 50 ? "moderado" : "alto"
   const hint =
     band === "bajo"
       ? "Espacio para trabajo profundo."

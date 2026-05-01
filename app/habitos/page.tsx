@@ -524,33 +524,97 @@ export default function HabitosPage() {
         <p style={{ margin: 0, fontSize: "13px", color: "var(--color-text-secondary)" }}>Cargando hábitos…</p>
       )}
 
-      <header className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
-        <div className="min-w-0 flex-1 space-y-1.5 sm:space-y-2 sm:pr-2">
-          <h1 className="m-0 text-[1.375rem] font-medium leading-tight tracking-tight text-[var(--color-text-primary)] sm:text-[28px]">
-            Sistema de Hábitos
-          </h1>
-          <p className="m-0 max-w-prose text-[13px] leading-snug text-[var(--color-text-secondary)]">
-            Consistencia, tendencias y riesgo de ruptura. «Otro día» aplica la misma fecha a todos los hábitos del
-            stack (viaje u olvido).
-          </p>
-          <p className="m-0 max-w-prose text-[12px] leading-snug text-[var(--color-text-secondary)]">
-            {greeting}. Tu mayor racha actual en el stack es de {summary.current_streak_max} días.
-          </p>
+      <div className="flex min-w-0 flex-col gap-3 rounded-xl border border-[color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_35%,var(--color-surface))] p-3 sm:gap-3.5 sm:p-4">
+        <div className="flex min-w-0 flex-col gap-2.5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <div className="min-w-0 flex-1 space-y-1 sm:space-y-1.5">
+            <h1 className="m-0 text-[1.25rem] font-semibold leading-tight tracking-tight text-[var(--color-text-primary)] sm:text-[1.35rem]">
+              Sistema de Hábitos
+            </h1>
+            <p className="m-0 max-w-[52ch] text-[11px] leading-snug text-[var(--color-text-secondary)] sm:text-[12px]">
+              Consistencia y riesgo de ruptura. «Otro día» registra la misma fecha para todo el stack.
+            </p>
+            <p className="m-0 text-[10px] leading-snug text-[var(--color-text-secondary)] sm:text-[11px]">
+              <span className="text-[var(--color-text-primary)]">{greeting}</span>
+              <span aria-hidden className="mx-1.5 text-[var(--color-border)]">
+                ·
+              </span>
+              Racha máx. <span className="tabular-nums font-medium text-[var(--color-text-primary)]">{summary.current_streak_max}</span> d
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={!persistenceEnabled && !mock}
+            onClick={() => {
+              setEditing(null)
+              setForm(emptyHabitModalForm())
+              setFormOpen(true)
+            }}
+            className="inline-flex h-10 w-full shrink-0 items-center justify-center gap-1.5 rounded-lg border border-[color-mix(in_srgb,var(--color-accent-health)_35%,transparent)] bg-[var(--color-accent-health)] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-opacity sm:h-9 sm:w-auto sm:self-start sm:px-3 sm:py-2 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Plus size={14} className="shrink-0" aria-hidden />
+            Nuevo hábito
+          </button>
         </div>
-        <button
-          type="button"
-          disabled={!persistenceEnabled && !mock}
-          onClick={() => {
-            setEditing(null)
-            setForm(emptyHabitModalForm())
-            setFormOpen(true)
-          }}
-          className="inline-flex h-11 w-full shrink-0 items-center justify-center gap-2 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-accent-health)] px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.12em] text-white transition-opacity sm:h-auto sm:w-auto sm:justify-center sm:self-start sm:px-3.5 sm:py-2 disabled:cursor-not-allowed disabled:opacity-50"
+
+        <div
+          className="flex min-w-0 flex-col gap-2 border-t border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] pt-3"
+          role="tablist"
+          aria-label="Vista de hábitos: resumen o stack"
         >
-          <Plus size={14} className="shrink-0" aria-hidden />
-          Nuevo hábito
-        </button>
-      </header>
+          <div className="grid min-w-0 grid-cols-2 gap-1 sm:flex sm:gap-1">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={shellView === "resumen"}
+              title="Métricas y briefing de consistencia"
+              onClick={() => setShellView("resumen")}
+              className={`orbita-focus-ring inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg px-2 text-[10px] font-semibold uppercase tracking-[0.1em] transition-colors sm:flex-1 sm:px-3 sm:text-[11px] ${
+                shellView === "resumen"
+                  ? "bg-[var(--color-surface)] text-[var(--color-text-primary)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--color-border)_65%,transparent)]"
+                  : "bg-transparent text-[var(--color-text-secondary)] hover:bg-[color-mix(in_srgb,var(--color-surface)_55%,transparent)]"
+              }`}
+            >
+              <List className="h-3.5 w-3.5 shrink-0 opacity-90" aria-hidden />
+              Resumen
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={shellView === "stack"}
+              title="Marcar y ordenar por mañana, tarde o noche"
+              onClick={() => setShellView("stack")}
+              className={`orbita-focus-ring inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg px-2 text-[10px] font-semibold uppercase tracking-[0.1em] transition-colors sm:flex-1 sm:px-3 sm:text-[11px] ${
+                shellView === "stack"
+                  ? "bg-[var(--color-surface)] text-[var(--color-text-primary)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--color-border)_65%,transparent)]"
+                  : "bg-transparent text-[var(--color-text-secondary)] hover:bg-[color-mix(in_srgb,var(--color-surface)_55%,transparent)]"
+              }`}
+            >
+              <LayoutGrid className="h-3.5 w-3.5 shrink-0 opacity-90" aria-hidden />
+              Stack
+            </button>
+          </div>
+
+          {shellView === "stack" ? (
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+              <p className="m-0 text-[10px] uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
+                Stack actual
+              </p>
+              <button
+                type="button"
+                disabled={(!persistenceEnabled && !mock) || loading || habits.length === 0}
+                onClick={openGlobalBackfill}
+                title="Registrar el mismo día para todos los hábitos (viaje, olvido)"
+                aria-expanded={backfillOpen}
+                aria-label="Registrar completado en otro día para todos los hábitos"
+                className="inline-flex min-h-9 w-full shrink-0 items-center justify-center gap-1.5 rounded-lg border border-[color-mix(in_srgb,var(--color-border)_75%,transparent)] bg-[var(--color-surface)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--color-text-primary)] transition-opacity sm:w-auto sm:justify-center disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                <CalendarPlus className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
+                Otro día (todos)
+              </button>
+            </div>
+          ) : null}
+        </div>
+      </div>
 
       {showStackReminder ? (
         <div
@@ -574,48 +638,6 @@ export default function HabitosPage() {
           </button>
         </div>
       ) : null}
-
-      <div
-        className="flex min-w-0 flex-col gap-2 rounded-xl border border-[color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_40%,var(--color-surface))] p-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:p-1.5"
-        role="tablist"
-        aria-label="Vista de hábitos: resumen o stack"
-      >
-        <div className="grid min-w-0 grid-cols-2 gap-1 sm:flex sm:flex-1 sm:gap-1">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={shellView === "resumen"}
-            onClick={() => setShellView("resumen")}
-            className={`orbita-focus-ring inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-2 text-[11px] font-semibold uppercase tracking-[0.1em] transition-colors sm:min-h-9 sm:flex-1 sm:px-3 sm:text-xs ${
-              shellView === "resumen"
-                ? "bg-[var(--color-surface)] text-[var(--color-text-primary)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--color-border)_70%,transparent),0_1px_3px_rgba(15,23,42,0.06)]"
-                : "bg-transparent text-[var(--color-text-secondary)] hover:bg-[color-mix(in_srgb,var(--color-surface)_65%,transparent)]"
-            }`}
-          >
-            <List className="h-3.5 w-3.5 shrink-0 opacity-90" aria-hidden />
-            Resumen
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={shellView === "stack"}
-            onClick={() => setShellView("stack")}
-            className={`orbita-focus-ring inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-2 text-[11px] font-semibold uppercase tracking-[0.1em] transition-colors sm:min-h-9 sm:flex-1 sm:px-3 sm:text-xs ${
-              shellView === "stack"
-                ? "bg-[var(--color-surface)] text-[var(--color-text-primary)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--color-border)_70%,transparent),0_1px_3px_rgba(15,23,42,0.06)]"
-                : "bg-transparent text-[var(--color-text-secondary)] hover:bg-[color-mix(in_srgb,var(--color-surface)_65%,transparent)]"
-            }`}
-          >
-            <LayoutGrid className="h-3.5 w-3.5 shrink-0 opacity-90" aria-hidden />
-            Stack
-          </button>
-        </div>
-        <p className="m-0 px-2 pb-1 text-center text-[10px] leading-snug text-[var(--color-text-secondary)] sm:pb-0 sm:text-left sm:text-[11px]">
-          {shellView === "resumen"
-            ? "Métricas, briefing y roster. Cambia a Stack para marcar y editar por momento del día."
-            : "Acciones por mañana / tarde / noche. Resumen agrupa KPIs y lectura de consistencia."}
-        </p>
-      </div>
 
       {shellView === "resumen" ? (
         <div
@@ -947,24 +969,6 @@ export default function HabitosPage() {
         style={{ display: "grid", gap: "var(--spacing-md)" }}
         className="outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--color-accent-health)_45%,transparent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-background)]"
       >
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-          <p className="m-0 shrink-0 text-[12px] uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
-            Stack actual
-          </p>
-          <button
-            type="button"
-            disabled={(!persistenceEnabled && !mock) || loading || habits.length === 0}
-            onClick={openGlobalBackfill}
-            title="Registrar el mismo día para todos los hábitos (viaje, olvido)"
-            aria-expanded={backfillOpen}
-            aria-label="Registrar completado en otro día para todos los hábitos"
-            className="inline-flex min-h-9 w-full shrink-0 items-center justify-center gap-1.5 rounded-lg border border-[color-mix(in_srgb,var(--color-border)_80%,transparent)] bg-[var(--color-surface-alt)] px-3 py-2 text-left text-xs font-medium text-[var(--color-text-secondary)] transition-opacity sm:w-auto sm:justify-center disabled:cursor-not-allowed disabled:opacity-45"
-          >
-            <CalendarPlus className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
-            Otro día (todos)
-          </button>
-        </div>
-
         {backfillOpen ? (
           <div
             className="flex flex-col gap-2 rounded-[12px] border border-[color-mix(in_srgb,var(--color-border)_70%,transparent)] bg-[var(--color-surface-alt)] p-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-3 sm:p-4"

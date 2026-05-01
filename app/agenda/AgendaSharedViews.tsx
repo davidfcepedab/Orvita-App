@@ -1057,6 +1057,7 @@ export function AgendaSharedList({
 export function AgendaSharedWeek({
   weekDays,
   weekMap,
+  weekUndated = [],
   weekScope,
   onWeekScopeChange,
   totalWeeklyTasks,
@@ -1076,6 +1077,8 @@ export function AgendaSharedWeek({
 }: {
   weekDays: Date[]
   weekMap: Record<string, UiAgendaTask[]>
+  /** Órvita sin `due` válido: no caben en columnas de día pero siguen siendo pendientes. */
+  weekUndated?: UiAgendaTask[]
   weekScope: "work" | "full"
   onWeekScopeChange: (scope: "work" | "full") => void
   totalWeeklyTasks: number
@@ -1144,6 +1147,19 @@ export function AgendaSharedWeek({
           </div>
         </div>
       </Card>
+      {weekUndated.length > 0 ? (
+        <Card className={`${agendaCardPadClass} border-dashed border-[color-mix(in_srgb,var(--color-border)_85%,transparent)]`}>
+          <p className={agendaOverlineClass}>Sin fecha de vencimiento</p>
+          <p className="m-0 mt-1 text-[11px] leading-snug text-[var(--color-text-secondary)] sm:text-[12px]">
+            Asigna un día para ubicarlas en el calendario. Siguen contando en tus totales de la semana.
+          </p>
+          <div className="mt-2 flex min-w-0 flex-col gap-2">
+            {weekUndated.map((task) => (
+              <AgendaOrvitaMiniCard key={`undated-${task.id}`} task={task} viewerUserId={viewerUserId} />
+            ))}
+          </div>
+        </Card>
+      ) : null}
       <div className="flex min-h-0 flex-1 flex-col gap-3 lg:max-h-[min(84dvh,56rem)] lg:flex-row lg:items-stretch lg:gap-2.5 lg:overflow-hidden xl:gap-3">
         {weekDays.map((day) => {
           const key = formatDateKey(day)
@@ -1305,6 +1321,7 @@ export function AgendaSharedMonth({
   monthLabel,
   monthSummary,
   tasks,
+  undatedTasks = [],
   selectedDay,
   onSelectDay,
   dayDetails,
@@ -1327,6 +1344,8 @@ export function AgendaSharedMonth({
   monthLabel: string
   monthSummary: { total: number; completed: number; hours: number }
   tasks: UiAgendaTask[]
+  /** Tareas Órvita sin día: no aparecen en celdas del mes. */
+  undatedTasks?: UiAgendaTask[]
   selectedDay: string | null
   onSelectDay: (day: string | null) => void
   dayDetails: UiAgendaTask[]
@@ -1499,6 +1518,21 @@ export function AgendaSharedMonth({
               }}
             />
           </div>
+          {undatedTasks.length > 0 ? (
+            <div className="rounded-lg border border-dashed border-[color-mix(in_srgb,var(--color-border)_80%,transparent)] bg-[var(--color-surface-alt)]/50 px-2.5 py-2">
+              <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--color-text-secondary)]">
+                Sin día en calendario ({undatedTasks.length})
+              </p>
+              <p className="m-0 mt-1 text-[10px] leading-snug text-[var(--color-text-secondary)]">
+                No tienen fecha; no se marcan en el grid. Edita la tarea para asignar día.
+              </p>
+              <div className="mt-2 flex max-h-40 flex-col gap-1.5 overflow-y-auto pr-0.5">
+                {undatedTasks.map((task) => (
+                  <AgendaOrvitaMiniCard key={`m-undated-${task.id}`} task={task} viewerUserId={viewerUserId} />
+                ))}
+              </div>
+            </div>
+          ) : null}
           <div className="mt-1 min-w-0 sm:mt-0">
             <p className="m-0 text-[10px] uppercase tracking-[0.12em] text-[var(--color-text-secondary)] sm:text-[11px]">
               Detalle del día

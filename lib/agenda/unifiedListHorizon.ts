@@ -144,8 +144,9 @@ export function unifiedRowInHorizon(
   extendedAfterMonth: boolean,
 ): boolean {
   const { start, end } = unifiedListHorizonRange(horizon, { extendedAfterMonth })
+  /** Sin día: visibles en cualquier ventana salvo «Mañana» (no sabemos si cae mañana). Incluidas en «Hoy». */
   if (dayKey == null || dayKey === "__sin_fecha__") {
-    return horizon !== "today" && horizon !== "tomorrow"
+    return horizon !== "tomorrow"
   }
   return ymdLexInRange(dayKey, start, end)
 }

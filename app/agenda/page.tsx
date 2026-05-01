@@ -342,11 +342,15 @@ export default function AgendaPage() {
       const tabMatch = tab === "todas" || task.type === tab
       const priorityMatch = !priority || task.priority === priority
       const queryMatch = !q || task.title.toLowerCase().includes(q)
-      const dueYmd = task.due && task.due.length >= 10 ? task.due.slice(0, 10) : ""
+      const dueTrim = task.due?.trim() ?? ""
+      const dueYmd = dueTrim.length >= 10 ? dueTrim.slice(0, 10) : ""
+      /** Columnas: mes natural actual; las tareas sin fecha siguen visibles (backlog). */
+      const dateOkColumns =
+        !dueYmd || dueYmd.length < 10 ? true : dueYmd.slice(0, 7) === currentYm
       const dateOk =
         view === "columns"
-          ? dueYmd.length === 10 && dueYmd.slice(0, 7) === currentYm
-          : showPastAgenda || !task.due || task.due.length < 10 || dueYmd >= todayYmd
+          ? dateOkColumns
+          : showPastAgenda || !dueTrim || dueTrim.length < 10 || dueYmd >= todayYmd
       return tabMatch && priorityMatch && queryMatch && dateOk
     })
   }, [tab, priority, deferredQuery, tasks, showPastAgenda, view])
@@ -384,6 +388,15 @@ export default function AgendaPage() {
     personal: filtered.filter((task) => task.type === "personal"),
   }), [filtered])
 
+  const weekUndated = useMemo(
+    () =>
+      filtered.filter((t) => {
+        const d = t.due?.trim() ?? ""
+        return d.length < 10
+      }),
+    [filtered],
+  )
+
   const { weekDays, weekMap } = useMemo(() => {
     const fullWeek = getWeekDays(new Date())
     const days = weekScope === "work" ? fullWeek.slice(0, 5) : fullWeek
@@ -392,20 +405,27 @@ export default function AgendaPage() {
       map[formatDateKey(day)] = []
     })
     filtered.forEach((task) => {
-      if (task.due && map[task.due]) map[task.due].push(task)
+      const dk = task.due?.trim() ?? ""
+      if (dk.length < 10) return
+      const key = dk.slice(0, 10)
+      const bucket = map[key]
+      if (bucket) bucket.push(task)
     })
     return { weekDays: days, weekMap: map }
   }, [filtered, weekScope])
 
-  const totalWeeklyTasks = weekDays.reduce((acc, day) => acc + (weekMap[formatDateKey(day)]?.length ?? 0), 0)
-  const totalWeeklyMinutes = weekDays.reduce(
-    (acc, day) => acc + (weekMap[formatDateKey(day)]?.reduce((sum, t) => sum + t.duration, 0) ?? 0),
-    0
-  )
-  const totalWeeklyCompleted = weekDays.reduce(
-    (acc, day) => acc + (weekMap[formatDateKey(day)]?.filter((t) => t.completed).length ?? 0),
-    0
-  )
+  const totalWeeklyTasks =
+    weekDays.reduce((acc, day) => acc + (weekMap[formatDateKey(day)]?.length ?? 0), 0) + weekUndated.length
+  const totalWeeklyMinutes =
+    weekDays.reduce(
+      (acc, day) => acc + (weekMap[formatDateKey(day)]?.reduce((sum, t) => sum + t.duration, 0) ?? 0),
+      0,
+    ) + weekUndated.reduce((sum, t) => sum + t.duration, 0)
+  const totalWeeklyCompleted =
+    weekDays.reduce(
+      (acc, day) => acc + (weekMap[formatDateKey(day)]?.filter((t) => t.completed).length ?? 0),
+      0,
+    ) + weekUndated.filter((t) => t.completed).length
   const totalWeeklyPending = totalWeeklyTasks - totalWeeklyCompleted
 
   const monthGrid = useMemo(() => buildMonthGridFromYm(monthViewYm), [monthViewYm])
@@ -882,6 +902,7 @@ export default function AgendaPage() {
                 <AgendaSharedWeek
                   weekDays={weekDays}
                   weekMap={weekMap}
+                  weekUndated={weekUndated}
                   weekScope={weekScope}
                   onWeekScopeChange={setWeekScope}
                   totalWeeklyTasks={totalWeeklyTasks}
@@ -908,6 +929,7 @@ export default function AgendaPage() {
                   monthLabel={monthLabel}
                   monthSummary={monthSummary}
                   tasks={filtered}
+                  undatedTasks={weekUndated}
                   selectedDay={selectedDay}
                   onSelectDay={setSelectedDay}
                   dayDetails={dayDetails}

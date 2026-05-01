@@ -3,7 +3,7 @@
 import { useMemo } from "react"
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { BedDouble, ChevronDown, Dumbbell, Lightbulb, MoonStar, Settings, Sparkles, Zap } from "lucide-react"
+import { BedDouble, ChevronDown, Dumbbell, Lightbulb, MoonStar, RefreshCw, Settings, Sparkles, Zap } from "lucide-react"
 import { useOrbitaSkin } from "@/app/contexts/AppContext"
 import type { SaludContextSnapshot } from "@/app/salud/_hooks/useSaludContext"
 import type { AutoHealthMetric } from "@/app/hooks/useHealthAutoMetrics"
@@ -202,6 +202,25 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
                   <span className="h-1 w-1 shrink-0 rounded-full bg-current opacity-80" aria-hidden />
                   <span className="min-w-0 truncate">{syncChipSummary.label}</span>
                 </span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    void onRefresh()
+                  }}
+                  disabled={loading}
+                  className="orbita-focus-ring inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
+                  style={{
+                    borderColor: saludHexToRgba(theme.border, 0.75),
+                    backgroundColor: saludHexToRgba(theme.surfaceAlt, 0.45),
+                    color: theme.text,
+                  }}
+                  title={loading ? "Actualizando…" : "Actualizar lectura (últimos datos en cuenta)"}
+                  aria-label={loading ? "Actualizando lectura" : "Actualizar lectura"}
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 shrink-0 ${loading ? "animate-spin" : ""}`} aria-hidden />
+                </button>
                 <span className="ml-auto inline-flex shrink-0 items-center opacity-50" style={{ color: theme.textMuted }}>
                   <span className="sr-only">Abrir detalles de sincronización</span>
                   <ChevronDown className="h-3.5 w-3.5 shrink-0" aria-hidden />
