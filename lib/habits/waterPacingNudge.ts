@@ -55,7 +55,7 @@ export function buildWaterPacingNudge(todayMl: number, goalMl: number): WaterPac
     return {
       tone: "urgent",
       title: "Último tramo del día",
-      body: `Aún faltan unos ${formatWaterMlEs(remaining)} ml para la meta. Cada botellita cuenta: repartí lo que puedas antes de cerrar el día.`,
+      body: `Aún faltan unos ${formatWaterMlEs(remaining)} ml para la meta. Cada botellita cuenta: reparte lo que puedas antes de cerrar el día.`,
     }
   }
 
@@ -63,7 +63,7 @@ export function buildWaterPacingNudge(todayMl: number, goalMl: number): WaterPac
     return {
       tone: "warn",
       title: "Ritmo por debajo de la meta",
-      body: `Llevas ${formatWaterMlEs(todayMl)} ml de ${formatWaterMlEs(goalMl)} ml. Te faltan unos ${formatWaterMlEs(remaining)} ml y el día se acorta: sumá una botellita o un vaso extra.`,
+      body: `Llevas ${formatWaterMlEs(todayMl)} ml de ${formatWaterMlEs(goalMl)} ml. Te faltan unos ${formatWaterMlEs(remaining)} ml y el día se acorta: agrega una botellita o un vaso extra.`,
     }
   }
 

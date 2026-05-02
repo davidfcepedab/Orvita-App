@@ -331,13 +331,13 @@ export function SupplementStackSection({
 
             <p className="text-[10px] leading-snug text-[var(--color-text-secondary)]">
               Usa <span className="font-semibold">Añadir protocolo</span> para nuevas filas; el icono de papelera elimina
-              una entrada (si borras todas, se restauran los protocolos por defecto). En lectura, pulsa cada tarjeta para
+              una entrada (si borras todas, se restauran los protocolos por defecto). En lectura, toca cada tarjeta para
               marcar si ya lo tomaste hoy. Sincronización con tu perfil si Supabase está activo.
             </p>
           </div>
         ) : actives.length === 0 ? (
           <p className="m-0 text-[13px] text-[var(--color-text-secondary)]">
-            No hay protocolos activos. Pulsa <span className="font-semibold">Editar</span> para activar entradas de tu
+            No hay protocolos activos. Toca <span className="font-semibold">Editar</span> para activar entradas de tu
             biblioteca.
           </p>
         ) : (

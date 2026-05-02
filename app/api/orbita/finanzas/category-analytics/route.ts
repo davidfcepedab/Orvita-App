@@ -50,6 +50,7 @@ export async function GET(req: NextRequest) {
         txs,
         anchorMonth: monthParam,
         scopeOperational: true,
+        catalog: [],
         params: {
           momAlertPct: Number.isFinite(momAlertPct) ? momAlertPct : 15,
           antShareMin: Number.isFinite(antShare) ? antShare : 0.035,
@@ -85,6 +86,7 @@ export async function GET(req: NextRequest) {
       txs,
       anchorMonth: monthParam,
       scopeOperational: true,
+      catalog,
       params: {
         momAlertPct: Number.isFinite(momAlertPct) ? momAlertPct : 15,
         antShareMin: Number.isFinite(antShare) ? antShare : 0.035,

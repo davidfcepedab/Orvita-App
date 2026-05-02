@@ -220,7 +220,7 @@ export function HabitFormModal({
               </DialogTitle>
               <DialogDescription className="text-left text-[13px] leading-relaxed">
                 {form.isWaterTracking && editing
-                  ? "Solo podés ajustar meta, botellita y vaso. Nombre, dominio y ritmo los fija Órvita para que el seguimiento de ml sea coherente."
+                  ? "Solo puedes ajustar meta, botellita y vaso. Nombre, dominio y ritmo los fija Órvita para que el seguimiento de ml sea coherente."
                   : editing
                     ? "Ajusta la intención y la métrica para que el seguimiento siga alineado con tu operativa."
                     : "Un hábito claro —con disparador y éxito medible— es más fácil de defender cuando el día se pone denso."}
@@ -338,7 +338,7 @@ export function HabitFormModal({
                     </div>
                     <p id="water-profile-calc-hint" className="text-[10px] leading-snug text-[var(--color-text-secondary)]">
                       Aplica <span className="font-medium text-[var(--color-text-primary)]">peso (kg) × 32 ml</span> y
-                      rellena la meta (entre 1200 y 5000 ml sugerido; podés ajustarla después dentro de 500–8000 ml).
+                      rellena la meta (entre 1200 y 5000 ml sugerido; puedes ajustarla después dentro de 500–8000 ml).
                     </p>
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2">
@@ -355,7 +355,7 @@ export function HabitFormModal({
                         aria-describedby="water-bottle-hint"
                       />
                       <p id="water-bottle-hint" className="text-[10px] leading-snug text-[var(--color-text-secondary)]">
-                        «+1 Botellita» en la tarjeta suma <span className="font-medium tabular-nums text-[var(--color-text-primary)]">{form.waterBottleMl || "—"}</span> ml por pulsación.
+                        «+1 Botellita» en la tarjeta suma <span className="font-medium tabular-nums text-[var(--color-text-primary)]">{form.waterBottleMl || "—"}</span> ml en cada toque.
                       </p>
                       <div className="flex flex-wrap gap-1.5">
                         {([500, 750, 1000] as const).map((n) => (

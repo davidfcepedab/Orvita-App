@@ -701,21 +701,21 @@ export function FinanzasPlDashboard({ omitStrategicHero = false }: { omitStrateg
       >
         <div className="border-b border-orbita-border/55 bg-[color-mix(in_srgb,var(--color-surface-alt)_38%,var(--color-surface))]">
           <div className="px-3 py-3 sm:px-5 sm:py-4">
-            <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-              <div className="min-w-0 flex-1">
-                <div className="flex w-full min-w-0 flex-wrap items-start gap-x-2 gap-y-1.5 max-sm:justify-between sm:items-center sm:justify-start">
-                  <p
-                    id="pl-partidas-heading"
-                    className="m-0 min-w-0 flex-1 text-[10px] font-bold uppercase tracking-[0.14em] text-orbita-secondary max-sm:pr-1 sm:flex-none"
-                  >
-                    Partidas del mes
-                  </p>
-                  <PlKpiSourcePill source={financeMeta?.kpiSource} label={`Fuente: ${kpiSourceLabel}`} />
-                </div>
+            <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+              <div className="min-w-0 flex-1 pr-1">
+                <p
+                  id="pl-partidas-heading"
+                  className="m-0 text-[10px] font-bold uppercase tracking-[0.14em] text-orbita-secondary"
+                >
+                  Partidas del mes
+                </p>
                 <p className="mt-1.5 w-full min-w-0 max-w-full text-pretty text-[10px] leading-relaxed text-orbita-muted [overflow-wrap:anywhere] sm:text-[11px]">
                   Montos del mes en COP por bloques: fondo en totales y saldos; el resto es detalle. Pasa el cursor sobre
                   la línea punteada para ver definiciones.
                 </p>
+              </div>
+              <div className="flex shrink-0 justify-end sm:pt-0.5">
+                <PlKpiSourcePill source={financeMeta?.kpiSource} label={`Fuente: ${kpiSourceLabel}`} />
               </div>
             </div>
           </div>
@@ -826,27 +826,40 @@ export function FinanzasPlDashboard({ omitStrategicHero = false }: { omitStrateg
         ) : null}
       </Card>
 
-      <Card id="pl-puentes-card" className="border-orbita-border/80 p-2.5 sm:p-3">
-        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-          <h3 className="min-w-0 text-[10px] font-bold uppercase tracking-[0.12em] text-orbita-primary sm:text-[11px]">
-            Ajustes (puentes)
-          </h3>
-          {/* Sin puentes: pill ámbar (aviso visible); no cambiar a neutros. */}
-          {c.bridgeEntries.length === 0 ? (
-            <span
-              className="inline-flex shrink-0 items-center rounded-full border border-amber-500/45 bg-amber-100 px-2 py-0.5 text-[9px] font-semibold text-amber-950 dark:border-amber-500/40 dark:bg-amber-950/55 dark:text-amber-50 sm:text-[10px]"
-              role="status"
-            >
-              Sin ajustes · mes
-            </span>
-          ) : null}
+      <Card id="pl-puentes-card" className="min-w-0 overflow-hidden border-orbita-border/80 p-0">
+        {/* Título + copy a la izquierda; chip de estado fijo arriba a la derecha */}
+        <div className="flex items-start justify-between gap-x-3 gap-y-2 border-b border-orbita-border/55 px-3 py-2 sm:px-4">
+          <div className="min-w-0 flex-1 space-y-0.5 pr-1">
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.12em] text-orbita-primary sm:text-[11px]">
+              Puentes
+            </h3>
+            <p className="m-0 text-[10px] leading-snug text-orbita-muted sm:text-[11px]">
+              Ajustes opcionales entre KPI del resumen y categorías.
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            {c.bridgeEntries.length === 0 ? (
+              <span
+                className="inline-flex items-center rounded-full border border-amber-500/45 bg-amber-100 px-2 py-0.5 text-[9px] font-semibold text-amber-950 dark:border-amber-500/40 dark:bg-amber-950/55 dark:text-amber-50 sm:text-[10px]"
+                role="status"
+              >
+                Sin ajustes
+              </span>
+            ) : (
+              <span className="inline-flex items-center rounded-full border border-emerald-500/35 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-semibold text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-100 sm:text-[10px]">
+                {c.bridgeEntries.length} activo{c.bridgeEntries.length === 1 ? "" : "s"}
+              </span>
+            )}
+            {!syncOn ? (
+              <span className="max-w-[14rem] text-right text-[9px] leading-tight text-orbita-muted sm:text-[10px]">
+                Solo lectura — activa Supabase para añadir.
+              </span>
+            ) : null}
+          </div>
         </div>
-        <p className="mt-0.5 text-[10px] leading-tight text-orbita-muted sm:leading-snug">
-          Cuadra diferencias entre el resumen y tus categorías.
-        </p>
 
         {c.bridgeEntries.length > 0 ? (
-          <ul className="mt-2 space-y-1">
+          <ul className="space-y-1 border-b border-orbita-border/40 px-3 py-2 sm:px-4">
             {c.bridgeEntries.map((e) => (
               <li
                 key={e.id}
@@ -877,65 +890,65 @@ export function FinanzasPlDashboard({ omitStrategicHero = false }: { omitStrateg
         ) : null}
 
         {syncOn ? (
-          <details className="group mt-2 rounded-md border border-dashed border-orbita-border/65 bg-orbita-surface-alt/12">
-            <summary className="cursor-pointer list-none px-2.5 py-1.5 text-[11px] font-semibold text-orbita-primary [&::-webkit-details-marker]:hidden">
-              <span className="inline-flex w-full items-center justify-between gap-2">
-                Añadir ajuste
-                <span className="text-orbita-secondary transition group-open:rotate-90">›</span>
+          <details className="group border-b border-orbita-border/55">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 bg-orbita-surface-alt/35 px-3 py-2 sm:px-4 [&::-webkit-details-marker]:hidden">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">
+                Añadir puente
               </span>
+              <ChevronDown
+                className="h-4 w-4 shrink-0 text-orbita-secondary transition-transform duration-200 group-open:rotate-180"
+                aria-hidden
+              />
             </summary>
-            <form onSubmit={onSubmitBridge} className="space-y-2 border-t border-orbita-border/40 px-2.5 pb-2.5 pt-2">
-              <p className="text-[9px] leading-snug text-orbita-muted sm:text-[10px]">
-                Monto y etiqueta. «Cuadre con categorías» reduce la diferencia pendiente.
-              </p>
-              <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-3 border-t border-orbita-border/45 p-3 sm:p-4">
+              <form onSubmit={onSubmitBridge} className="space-y-2">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <label className="grid gap-1 text-[10px] font-medium text-orbita-secondary sm:text-xs">
+                    Monto (COP)
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={amountStr}
+                      onChange={(e) => setAmountStr(e.target.value)}
+                      className="min-h-9 rounded-md border border-orbita-border bg-orbita-surface px-2.5 py-1.5 text-xs sm:text-sm"
+                      placeholder="250000"
+                      autoComplete="off"
+                    />
+                  </label>
+                  <label className="grid gap-1 text-[10px] font-medium text-orbita-secondary sm:text-xs">
+                    Tipo
+                    <select
+                      value={bridgeKind}
+                      onChange={(e) => setBridgeKind(e.target.value as "kpi_structural" | "other")}
+                      className="min-h-9 rounded-md border border-orbita-border bg-orbita-surface px-2.5 py-1.5 text-xs sm:text-sm"
+                    >
+                      <option value="kpi_structural">Cuadre con categorías</option>
+                      <option value="other">Otro</option>
+                    </select>
+                  </label>
+                </div>
                 <label className="grid gap-1 text-[10px] font-medium text-orbita-secondary sm:text-xs">
-                  Monto (COP)
+                  Etiqueta
                   <input
                     type="text"
-                    inputMode="numeric"
-                    value={amountStr}
-                    onChange={(e) => setAmountStr(e.target.value)}
+                    value={label}
+                    onChange={(e) => setLabel(e.target.value)}
                     className="min-h-9 rounded-md border border-orbita-border bg-orbita-surface px-2.5 py-1.5 text-xs sm:text-sm"
-                    placeholder="250000"
-                    autoComplete="off"
+                    placeholder="Ej. Timing nómina vs categoría"
                   />
                 </label>
-                <label className="grid gap-1 text-[10px] font-medium text-orbita-secondary sm:text-xs">
-                  Tipo
-                  <select
-                    value={bridgeKind}
-                    onChange={(e) => setBridgeKind(e.target.value as "kpi_structural" | "other")}
-                    className="min-h-9 rounded-md border border-orbita-border bg-orbita-surface px-2.5 py-1.5 text-xs sm:text-sm"
-                  >
-                    <option value="kpi_structural">Cuadre con categorías</option>
-                    <option value="other">Otro</option>
-                  </select>
-                </label>
-              </div>
-              <label className="grid gap-1 text-[10px] font-medium text-orbita-secondary sm:text-xs">
-                Etiqueta
-                <input
-                  type="text"
-                  value={label}
-                  onChange={(e) => setLabel(e.target.value)}
-                  className="min-h-9 rounded-md border border-orbita-border bg-orbita-surface px-2.5 py-1.5 text-xs sm:text-sm"
-                  placeholder="Ej. Timing nómina vs categoría"
-                />
-              </label>
-              {formError ? <p className="text-xs text-orbita-accent-danger">{formError}</p> : null}
-              <button
-                type="submit"
-                disabled={submitting}
-                className="min-h-9 w-full rounded-md bg-orbita-primary px-3 text-xs font-semibold text-white disabled:opacity-50 sm:w-auto sm:text-sm"
-              >
-                {submitting ? "Guardando…" : "Guardar"}
-              </button>
-            </form>
+                {formError ? <p className="text-xs text-orbita-accent-danger">{formError}</p> : null}
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="min-h-9 w-full rounded-md bg-orbita-primary px-3 text-xs font-semibold text-white disabled:opacity-50 sm:w-auto sm:text-sm"
+                >
+                  {submitting ? "Guardando…" : "Guardar"}
+                </button>
+              </form>
+            </div>
           </details>
-        ) : (
-          <p className="mt-2 text-[10px] text-orbita-muted">Activa Supabase para guardar ajustes.</p>
-        )}
+        ) : null}
       </Card>
     </div>
   )

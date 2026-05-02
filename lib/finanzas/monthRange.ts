@@ -9,6 +9,23 @@ export function ledgerRollupRangeStart(month: string): string {
   return `${Math.max(2010, y - 12)}-01-01`
 }
 
+/** Suma meses civiles a `YYYY-MM` (para ventanas rolling). */
+export function addCalendarMonths(ym: string, delta: number): string {
+  const [ys, ms] = ym.split("-").map(Number)
+  if (!ys || !ms) return ym
+  const d = new Date(ys, ms - 1 + delta, 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+}
+
+/** Últimos `n` meses civiles terminando en `anchorYm` (inclusive). Ej. n=6 → 6 meses hasta el ancla. */
+export function lastNMonthsInclusive(anchorYm: string, n: number): string[] {
+  const months: string[] = []
+  for (let k = n - 1; k >= 0; k--) {
+    months.push(addCalendarMonths(anchorYm, -k))
+  }
+  return months
+}
+
 /** `month` = YYYY-MM (mes civil 1–12). */
 export function monthBounds(month: string) {
   const [ys, ms] = month.split("-")

@@ -1,12 +1,13 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, type CSSProperties } from "react"
 import {
   CartesianGrid,
   Legend,
   Line,
   LineChart,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -20,6 +21,7 @@ import {
   ArrowUpRight,
   ChevronRight,
   Flame,
+  Gauge,
   Layers2,
   Lightbulb,
   Percent,
@@ -61,6 +63,18 @@ function formatCompact(n: number) {
   if (v >= 1000) return `${Math.round(v / 1000)}k`
   return String(Math.round(v))
 }
+
+/** Misma cadencia que el gráfico de evolución en Capital (Resumen). */
+const TREND_CHART_ANIM = {
+  duration: 480,
+  easing: "ease-out" as const,
+  beginFlujo: 60,
+  beginIngresos: 110,
+} as const
+
+/** Márgenes: aire para leyenda/ticks y para no pegar el trazo al panel sombreado. */
+const TREND_CHART_MARGIN = { top: 18, right: 14, left: 8, bottom: 32 } as const
+const TREND_X_AXIS_HEIGHT = 24
 
 function plCfoActionPriorityMeta(priority: "alta" | "media") {
   if (priority === "alta") {
@@ -254,6 +268,145 @@ type PlCfoPayload = {
   catalog?: PlCfoCatalogAggregate
   flowEvolution?: { rollingYear?: PlOverviewMonthlyRow[] }
   headline?: { savingsRate?: number; runway?: number; net?: number }
+}
+
+/** KPIs de periodo alineados con «Lectura estratégica»: mismo ritmo que Radar / drivers. */
+function PlCfoPeriodStatusBanner({
+  healthLabel,
+  savingsRatePct,
+  runwayMonths,
+}: {
+  healthLabel: string
+  savingsRatePct: number
+  runwayMonths: number
+}) {
+  const reducedMotion = useReducedMotion()
+  const savingsBarW = Math.min(100, Math.max(0, savingsRatePct))
+  /** Escala visual: ~5× meses ≈ barra llena (solo lectura, no escala contable). */
+  const runwayBarW = Math.min(100, Math.max(10, runwayMonths * 20))
+
+  const runwayTone =
+    runwayMonths < 0.75
+      ? "danger"
+      : runwayMonths < 2
+        ? "warning"
+        : "finance"
+
+  const runwayBarClass =
+    runwayTone === "danger"
+      ? "bg-[linear-gradient(90deg,var(--color-accent-danger),color-mix(in_srgb,var(--color-accent-danger)_55%,var(--color-accent-warning)))]"
+      : runwayTone === "warning"
+        ? "bg-[linear-gradient(90deg,var(--color-accent-warning),color-mix(in_srgb,var(--color-accent-finance)_40%,var(--color-accent-warning)))]"
+        : "bg-[linear-gradient(90deg,var(--color-accent-finance),color-mix(in_srgb,var(--color-accent-health)_35%,var(--color-accent-finance)))]"
+
+  const runwayValueClass =
+    runwayTone === "danger"
+      ? "text-[var(--color-accent-danger)]"
+      : runwayTone === "warning"
+        ? "text-[var(--color-accent-warning)]"
+        : "text-[var(--color-accent-finance)]"
+
+  const runwayFloatBg =
+    runwayTone === "danger"
+      ? "bg-[color-mix(in_srgb,var(--color-accent-danger)_11%,color-mix(in_srgb,var(--color-surface-alt)_42%,var(--color-surface)))]"
+      : runwayTone === "warning"
+        ? "bg-[color-mix(in_srgb,var(--color-accent-warning)_11%,color-mix(in_srgb,var(--color-surface-alt)_42%,var(--color-surface)))]"
+        : "bg-[color-mix(in_srgb,var(--color-accent-finance)_10%,color-mix(in_srgb,var(--color-surface-alt)_42%,var(--color-surface)))]"
+
+  /** KPIs sin borde: volumen por sombra + tinte suave (aspecto “flotante”). */
+  const kpiFloatShell =
+    "relative flex min-h-0 flex-col rounded-xl border-0 p-2.5 shadow-[0_14px_38px_-20px_color-mix(in_srgb,var(--color-text-primary)_16%,transparent)] sm:rounded-2xl sm:p-3"
+
+  return (
+    <motion.div
+      initial={reducedMotion ? undefined : { opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+      className="relative overflow-hidden rounded-2xl border border-orbita-border/75 bg-[color-mix(in_srgb,var(--color-surface-alt)_46%,var(--color-surface))] p-3 shadow-[var(--shadow-card)] sm:rounded-3xl sm:p-4"
+    >
+      {!reducedMotion ? (
+        <motion.div
+          aria-hidden
+          className="pointer-events-none absolute -right-14 -top-24 h-52 w-52 rounded-full bg-[color-mix(in_srgb,var(--color-accent-finance)_20%,transparent)] blur-3xl"
+          animate={{ opacity: [0.07, 0.14, 0.09], scale: [1, 1.04, 1] }}
+          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+        />
+      ) : null}
+      <div className="relative flex flex-col gap-3.5 sm:gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
+        <div className="min-w-0 flex-1 lg:flex lg:flex-col lg:justify-center lg:py-0.5">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span
+              className={cn(
+                financeHeroChipBaseClass,
+                "border-[color-mix(in_srgb,var(--color-accent-finance)_38%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-finance)_11%,var(--color-surface))] py-0.5 text-[9px] font-semibold text-[var(--color-accent-finance)] sm:text-[10px]",
+              )}
+            >
+              <Target className="h-2.5 w-2.5 shrink-0 sm:h-3 sm:w-3" aria-hidden strokeWidth={2.5} />
+              Estado del periodo
+            </span>
+          </div>
+          <p className="mt-1.5 text-pretty text-sm font-bold leading-snug text-orbita-primary sm:mt-2 sm:text-base [overflow-wrap:anywhere]">
+            {healthLabel}
+          </p>
+          <p className="mt-0.5 max-w-[42rem] text-pretty text-[10px] leading-snug text-orbita-muted sm:text-[11px] [overflow-wrap:anywhere]">
+            Misma señal que el score de salud; dos lecturas tácticas antes del radar.
+          </p>
+        </div>
+
+        <div className="grid min-w-0 shrink-0 grid-cols-2 gap-2.5 sm:gap-3 lg:min-w-[min(100%,24rem)] lg:max-w-[26rem] lg:gap-3.5">
+          <div
+            className={cn(
+              kpiFloatShell,
+              "bg-[color-mix(in_srgb,var(--color-accent-health)_13%,color-mix(in_srgb,var(--color-surface-alt)_44%,var(--color-surface)))]",
+            )}
+          >
+            <span className={cn(financeCardMicroLabelClass, "flex items-center gap-1 text-[9px] sm:text-[10px]")}>
+              <Percent className="h-3 w-3 shrink-0 text-[var(--color-accent-health)] sm:h-3.5 sm:w-3.5" strokeWidth={2.5} aria-hidden />
+              Ahorro
+            </span>
+            <p className="mt-1 text-[1.35rem] font-bold tabular-nums leading-none tracking-tight text-[var(--color-accent-health)] sm:mt-1.5 sm:text-[1.55rem]">
+              {savingsRatePct.toFixed(1)}
+              <span className="text-base font-semibold sm:text-lg">%</span>
+            </p>
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--color-text-primary)_7%,transparent)] sm:h-2">
+              <motion.div
+                className="h-full rounded-full bg-[linear-gradient(90deg,var(--color-accent-health),color-mix(in_srgb,var(--color-accent-finance)_45%,var(--color-accent-health)))]"
+                initial={reducedMotion ? { width: `${savingsBarW}%` } : { width: 0 }}
+                animate={{ width: `${savingsBarW}%` }}
+                transition={
+                  reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 120, damping: 22, delay: 0.08 }
+                }
+              />
+            </div>
+          </div>
+
+          <div className={cn(kpiFloatShell, runwayFloatBg)}>
+            <span className={cn(financeCardMicroLabelClass, "flex items-center gap-1 text-[9px] sm:text-[10px]")}>
+              <Gauge className="h-3 w-3 shrink-0 text-orbita-secondary opacity-90 sm:h-3.5 sm:w-3.5" strokeWidth={2.25} aria-hidden />
+              Runway
+            </span>
+            <p className={cn("mt-1 text-[1.35rem] font-bold tabular-nums leading-none tracking-tight sm:mt-1.5 sm:text-[1.55rem]", runwayValueClass)}>
+              {runwayMonths.toFixed(1)}
+              <span className="text-base font-semibold sm:text-lg">×</span>
+            </p>
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--color-text-primary)_7%,transparent)] sm:h-2">
+              <motion.div
+                className={cn("h-full rounded-full", runwayBarClass)}
+                initial={reducedMotion ? { width: `${runwayBarW}%` } : { width: 0 }}
+                animate={{ width: `${runwayBarW}%` }}
+                transition={
+                  reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 120, damping: 22, delay: 0.14 }
+                }
+              />
+            </div>
+            <p className={cn(financeCardHintClass, "mt-1.5 text-[9px] leading-tight text-orbita-muted sm:text-[10px]")}>
+              Meses de holgura vs. gasto
+            </p>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  )
 }
 
 export function FinanzasPlCfoView() {
@@ -461,39 +614,28 @@ export function FinanzasPlCfoView() {
         </div>
       </section>
 
-      <section aria-labelledby="pl-cfo-strategic-heading" className="min-w-0">
+      <section aria-labelledby="pl-cfo-strategic-heading" className="min-w-0 space-y-4">
         <h2 id="pl-cfo-strategic-heading" className={financeSectionEyebrowClass}>
           Lectura estratégica
         </h2>
-        <div className="mt-3 grid gap-3 sm:gap-4 md:grid-cols-3 md:items-stretch">
+        <PlCfoPeriodStatusBanner
+          healthLabel={healthLabel}
+          savingsRatePct={metrics.savingsRatePct}
+          runwayMonths={metrics.runwayMonths}
+        />
+        <div className="grid gap-3 sm:gap-4 md:grid-cols-3 md:items-stretch">
           {strategicInsights.map((ins, idx) => (
             <StrategicInsightCard key={ins.id} ins={ins} index={idx} />
           ))}
         </div>
       </section>
 
-      {/* Salud financiera · sin duplicar el score (ya está arriba) */}
-      <section className="grid w-full min-w-0 gap-4 min-[400px]:gap-5 lg:grid-cols-[minmax(0,min(100%,22rem))_1fr] lg:items-start">
-        <Card className="min-w-0 w-full border-orbita-border/75 bg-[color-mix(in_srgb,var(--color-surface-alt)_38%,var(--color-surface))] p-4 sm:p-5">
-          <p className={financeSectionEyebrowClass}>Estado del periodo</p>
-          <p className="mt-2 text-pretty text-sm font-semibold leading-snug text-orbita-primary [overflow-wrap:anywhere]">{healthLabel}</p>
-          <p className="mt-1 text-pretty text-[11px] leading-relaxed text-orbita-muted [overflow-wrap:anywhere]">
-            Derivado del mismo score de salud del bloque superior.
-          </p>
-          <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
-            <div className="rounded-lg border border-orbita-border/60 bg-orbita-surface/70 p-2">
-              <p className="text-orbita-muted">Ahorro</p>
-              <p className="font-bold tabular-nums text-emerald-700 dark:text-emerald-300">{metrics.savingsRatePct.toFixed(1)}%</p>
-            </div>
-            <div className="rounded-lg border border-orbita-border/60 bg-orbita-surface/70 p-2">
-              <p className="text-orbita-muted">Runway</p>
-              <p className="font-bold tabular-nums text-violet-700 dark:text-violet-300">{metrics.runwayMonths.toFixed(1)}x</p>
-            </div>
-          </div>
-        </Card>
-        <div className="min-w-0 space-y-4">
-          <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+      {/* Desglose operativo (full width: estado del periodo pasó a Lectura estratégica) */}
+      <section aria-label="Desglose operativo del mes" className="min-w-0">
+        <div className="min-w-0 space-y-3">
+          <div className="grid min-w-0 gap-3 sm:grid-cols-2 sm:gap-3">
             <BreakdownCard
+              tone="income"
               title="Ingresos"
               subtitle={
                 usesCatalogIncomeSplit
@@ -503,6 +645,7 @@ export function FinanzasPlCfoView() {
               rows={incomeBreakdown}
             />
             <BreakdownCard
+              tone="expense"
               title="Gastos — drivers"
               subtitle={
                 usesCatalogExpenseDrivers
@@ -514,6 +657,7 @@ export function FinanzasPlCfoView() {
           </div>
           {topExpenseCategories && topExpenseCategories.length > 0 ? (
             <BreakdownCard
+              tone="categories"
               title="Categorías con más gasto"
               subtitle="Campo categoría del movimiento; % sobre total de gastos operativos del mes."
               rows={topExpenseCategories}
@@ -522,38 +666,105 @@ export function FinanzasPlCfoView() {
         </div>
       </section>
 
-      {/* Tendencia */}
+      {/* Tendencia — mismo contenedor y escala de altura que Evolución de flujo (Resumen) */}
       <section aria-labelledby="pl-cfo-trend-heading" className="min-w-0">
         <h2 id="pl-cfo-trend-heading" className={financeSectionEyebrowClass}>
           Tendencia (rentabilidad)
         </h2>
-        <Card className="mt-3 border-orbita-border/75 p-3 sm:p-4">
-          {trendData && trendData.length >= 2 ? (
-            <div className="h-[220px] w-full min-w-0 min-[400px]:h-[248px] sm:h-[260px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={trendData.map((r) => ({ ...r }))}
-                  margin={{ top: 8, right: 4, left: 0, bottom: 8 }}
-                  className="min-w-0"
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" opacity={0.55} vertical={false} />
-                  <XAxis dataKey="month" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
-                  <YAxis width={42} tickFormatter={formatCompact} tick={{ fontSize: 10 }} />
-                  <Tooltip
-                    contentStyle={rechartsTooltipContentStyle}
-                    formatter={(v) => formatCop(tooltipNumber(v))}
-                  />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <Line type="monotone" dataKey="flujo" name="Flujo neto" stroke="var(--color-accent-finance)" strokeWidth={2.5} dot={false} />
-                  <Line type="monotone" dataKey="ingresos" name="Ingresos" stroke="var(--color-accent-health)" strokeWidth={2} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
+        <Card className="mt-3 min-w-0 overflow-x-clip rounded-[22px] border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] px-3 pb-5 pt-4 shadow-[var(--shadow-card)] sm:rounded-3xl sm:p-7">
+          <div className="grid min-w-0 max-w-full gap-3">
+            <div className="min-w-0 max-w-full">
+              <p className={financeCardMicroLabelClass}>Serie desde el resumen</p>
+              <p className={cn(financeSectionIntroClass, "mt-0.5 text-orbita-muted")}>
+                Flujo neto e ingresos en COP; misma lógica visual que el gráfico de Capital (Resumen).
+              </p>
             </div>
-          ) : (
-            <p className="py-10 text-center text-sm text-orbita-secondary">
-              Necesitas al menos dos meses en la serie del Resumen para ver tendencia.
-            </p>
-          )}
+            {trendData && trendData.length >= 2 ? (
+              <div className="min-w-0 max-w-full">
+                <div className="relative h-[248px] w-full max-w-full min-w-0 min-[400px]:h-[260px] sm:h-[272px]">
+                  <div className="absolute inset-0 min-w-0 max-w-full px-0">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart
+                        data={trendData.map((r) => ({ ...r }))}
+                        margin={TREND_CHART_MARGIN}
+                        className="min-w-0"
+                      >
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke="var(--color-border)"
+                          opacity={0.85}
+                          vertical={false}
+                        />
+                        <XAxis
+                          dataKey="month"
+                          tick={{
+                            fontSize: 9,
+                            fill: "var(--color-text-secondary)",
+                            style: { fontVariantNumeric: "tabular-nums" },
+                          }}
+                          stroke="var(--color-border)"
+                          interval="preserveStartEnd"
+                          angle={0}
+                          textAnchor="middle"
+                          height={TREND_X_AXIS_HEIGHT}
+                          tickMargin={6}
+                          minTickGap={14}
+                        />
+                        <YAxis
+                          width={36}
+                          tickFormatter={formatCompact}
+                          tick={{
+                            fontSize: 9,
+                            fill: "var(--color-text-secondary)",
+                          }}
+                          stroke="var(--color-border)"
+                        />
+                        <Tooltip
+                          contentStyle={rechartsTooltipContentStyle}
+                          formatter={(value, name) => [
+                            formatCop(tooltipNumber(value)),
+                            name === "Ingresos" || name === "Flujo neto" ? name : String(name ?? ""),
+                          ]}
+                        />
+                        <Legend wrapperStyle={{ fontSize: 10, paddingTop: 8 }} />
+                        <ReferenceLine y={0} stroke="var(--color-border)" strokeDasharray="4 4" />
+                        <Line
+                          type="monotone"
+                          dataKey="flujo"
+                          name="Flujo neto"
+                          stroke="var(--color-accent-finance)"
+                          strokeWidth={2.5}
+                          dot={false}
+                          activeDot={{ r: 4, strokeWidth: 1, stroke: "var(--color-surface)" }}
+                          isAnimationActive
+                          animationDuration={TREND_CHART_ANIM.duration}
+                          animationEasing={TREND_CHART_ANIM.easing}
+                          animationBegin={TREND_CHART_ANIM.beginFlujo}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="ingresos"
+                          name="Ingresos"
+                          stroke="var(--color-accent-health)"
+                          strokeWidth={2}
+                          dot={false}
+                          activeDot={{ r: 4, strokeWidth: 1, stroke: "var(--color-surface)" }}
+                          isAnimationActive
+                          animationDuration={TREND_CHART_ANIM.duration}
+                          animationEasing={TREND_CHART_ANIM.easing}
+                          animationBegin={TREND_CHART_ANIM.beginIngresos}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="py-8 text-center text-[13px] text-orbita-secondary sm:py-10 sm:text-sm">
+                Necesitas al menos dos meses en la serie del Resumen para ver tendencia.
+              </p>
+            )}
+          </div>
         </Card>
       </section>
 
@@ -805,30 +1016,76 @@ function BreakdownCard({
   title,
   subtitle,
   rows,
+  tone = "neutral",
 }: {
   title: string
   subtitle: string
   rows: { label: string; amount: number; pctOfTotal: number }[]
+  tone?: "income" | "expense" | "categories" | "neutral"
 }) {
+  const titleClass =
+    tone === "income"
+      ? "text-emerald-800 dark:text-emerald-200"
+      : tone === "expense"
+        ? "text-rose-800 dark:text-rose-200"
+        : "text-orbita-primary"
+
+  const cardSurface: CSSProperties =
+    tone === "income"
+      ? {
+          background: "linear-gradient(160deg, rgba(16, 185, 129, 0.09), transparent)",
+          borderColor: "color-mix(in srgb, rgb(16, 185, 129) 22%, var(--color-border))",
+        }
+      : tone === "expense"
+        ? {
+            background: "linear-gradient(160deg, rgba(244, 63, 94, 0.08), transparent)",
+            borderColor: "color-mix(in srgb, rgb(244, 63, 94) 20%, var(--color-border))",
+          }
+        : tone === "categories"
+          ? {
+              background:
+                "linear-gradient(155deg, color-mix(in srgb, var(--color-surface-alt) 48%, var(--color-surface)) 0%, var(--color-surface) 52%, color-mix(in srgb, var(--color-text-primary) 5%, var(--color-surface)) 100%)",
+              borderColor: "color-mix(in srgb, var(--color-border) 82%, var(--color-text-primary))",
+            }
+          : {}
+
+  const barFill: CSSProperties =
+    tone === "expense"
+      ? { background: "linear-gradient(90deg, rgb(244, 63, 94), #fb7185)" }
+      : tone === "income"
+        ? { background: "linear-gradient(90deg, var(--color-accent-health), #34d399)" }
+        : {
+            background:
+              "linear-gradient(90deg, color-mix(in srgb, var(--color-accent-finance) 85%, var(--color-border)), color-mix(in srgb, var(--color-text-secondary) 35%, var(--color-surface-alt)))",
+          }
+
   return (
-    <Card className="min-w-0 border-orbita-border/75 p-4">
-      <p className="text-sm font-semibold leading-snug text-orbita-primary">{title}</p>
-      <p className="mt-1 text-[11px] leading-relaxed text-orbita-muted">{subtitle}</p>
-      <ul className="mt-3 space-y-2.5">
+    <Card className="min-w-0 p-3 sm:p-3.5" style={cardSurface}>
+      <div className="space-y-0.5">
+        <p className={cn("text-[13px] font-semibold leading-tight", titleClass)}>{title}</p>
+        <p className="text-[10px] leading-snug text-orbita-muted">{subtitle}</p>
+      </div>
+      <ul className="mt-2 space-y-2">
         {rows.map((r) => (
-          <li key={r.label} className="border-b border-orbita-border/40 pb-2 last:border-0 last:pb-0">
-            <div className="flex items-baseline justify-between gap-3">
-              <span className="min-w-0 text-sm text-orbita-secondary">{r.label}</span>
+          <li key={r.label} className="border-b border-orbita-border/35 pb-2 last:border-0 last:pb-0">
+            <div className="flex items-start justify-between gap-2 sm:gap-3">
+              <span className="min-w-0 text-[11px] leading-snug text-orbita-secondary">{r.label}</span>
               <span className="shrink-0 text-right">
-                <span className="block text-sm font-semibold tabular-nums text-orbita-primary">${formatCop(r.amount)}</span>
-                <span className="text-[11px] tabular-nums text-orbita-muted">{r.pctOfTotal.toFixed(0)}%</span>
+                <span className="block text-[12px] font-semibold tabular-nums text-orbita-primary">
+                  ${formatCop(r.amount)}
+                </span>
               </span>
             </div>
-            <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-orbita-surface-alt/80">
-              <div
-                className="h-full rounded-full bg-[linear-gradient(90deg,var(--color-accent-finance),#34d399)]"
-                style={{ width: `${Math.max(3, Math.min(100, r.pctOfTotal))}%` }}
-              />
+            <div className="mt-1 flex min-w-0 items-center gap-2">
+              <div className="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-orbita-surface-alt/80">
+                <div
+                  className="h-full rounded-full"
+                  style={{ ...barFill, width: `${Math.max(3, Math.min(100, r.pctOfTotal))}%` }}
+                />
+              </div>
+              <span className="w-9 shrink-0 text-right text-[10px] tabular-nums text-orbita-muted sm:w-10">
+                {r.pctOfTotal.toFixed(0)}%
+              </span>
             </div>
           </li>
         ))}

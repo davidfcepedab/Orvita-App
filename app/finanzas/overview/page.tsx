@@ -5,9 +5,26 @@ import type { CSSProperties } from "react"
 import { useEffect, useRef, useState } from "react"
 import { useFinance } from "../FinanceContext"
 import { motion } from "framer-motion"
-import { ChevronDown, TrendingDown, TrendingUp, Zap } from "lucide-react"
+import {
+  ArrowRight,
+  ChevronDown,
+  CircleCheck,
+  Sparkles,
+  Target,
+  TrendingDown,
+  TrendingUp,
+  Zap,
+} from "lucide-react"
 import { CapitalOverviewStrategicDeck } from "../_components/CapitalOverviewStrategicDeck"
-import { financeSubnavTabClass } from "../_components/financeChrome"
+import {
+  financeCardMicroLabelClass,
+  financeHeroChipBaseClass,
+  financeNeutralChipClass,
+  financeNoticeChipClass,
+  financeRaisedPanelClass,
+  financeSectionIntroClass,
+  financeSubnavTabClass,
+} from "../_components/financeChrome"
 import { Card } from "@/src/components/ui/Card"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { rechartsTooltipContentStyle } from "@/lib/charts/rechartsShared"
@@ -163,7 +180,7 @@ function FlowChartNetFillGradient() {
   return (
     <defs>
       <linearGradient id="orbita-flow-fill-flujo" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="5%" stopColor={FLOW_NET_GRADIENT_HEX} stopOpacity={0.22} />
+        <stop offset="5%" stopColor={FLOW_NET_GRADIENT_HEX} stopOpacity={0.3} />
         <stop offset="95%" stopColor={FLOW_NET_GRADIENT_HEX} stopOpacity={0} />
       </linearGradient>
     </defs>
@@ -535,6 +552,84 @@ export default function FinanzasOverview() {
     .filter((c) => isIncomeCommitmentRow(c))
     .reduce((a, c) => a + c.amount, 0)
   const commitmentsNetMonthly = commitmentsInTotal - commitmentsOutTotal
+
+  /** % del ingreso del mes absorbido por suscripciones registradas (gamificación / lectura rápida). */
+  const subscriptionBurnPct =
+    income > 0.5 && managedTotal > 0 ? Math.min(100, Math.round((managedTotal / Math.max(income, 1)) * 100)) : null
+
+  const subscriptionPulse = (() => {
+    if (managedActive.length > 0) {
+      const driftOk =
+        subs.length === 0 ||
+        managedTotal < 1 ||
+        Math.abs(subsTotal - managedTotal) / Math.max(managedTotal, 1) <= 0.25
+      return {
+        chip: driftOk ? "Lista en línea" : "Revisar coincidencia",
+        chipClass: driftOk
+          ? cn(
+              financeHeroChipBaseClass,
+              "border-emerald-500/35 bg-emerald-500/12 text-emerald-950 dark:border-emerald-500/30 dark:bg-emerald-950/35 dark:text-emerald-100",
+            )
+          : cn(financeNoticeChipClass, "normal-case tracking-normal"),
+        hint: driftOk
+          ? subs.length > 0
+            ? "Patrones del mes y tu lista van en la misma dirección."
+            : "Recurrencias registradas: revisa Movimientos si aparece algo nuevo."
+          : "Los patrones del mes difieren de tu lista: conviene contrastar en Cuentas.",
+        Icon: driftOk ? CircleCheck : Zap,
+      } as const
+    }
+    if (subs.length > 0) {
+      return {
+        chip: "Bonus · patrones",
+        chipClass: cn(financeNoticeChipClass, "normal-case tracking-normal"),
+        hint: `Detectamos ~$${formatMoney(subsTotal)} en gastos tipo recurrente: si lo consolidas en Cuentas, sumas puntos de claridad.`,
+        Icon: Zap,
+      } as const
+    }
+    return {
+      chip: "Nivel 1 · mapa vacío",
+      chipClass: cn(financeNeutralChipClass, "border-dashed"),
+      hint: "Registra membresías y apps para ver cuánto pesan sobre tu ingreso.",
+      Icon: Sparkles,
+    } as const
+  })()
+
+  const commitmentPulse = (() => {
+    if (commitmentsSorted.length > 0) {
+      const netPositive = commitmentsNetMonthly >= 0
+      return {
+        chip: netPositive ? "Calendario favorable" : "Salidas a vigilar",
+        chipClass: netPositive
+          ? cn(
+              financeHeroChipBaseClass,
+              "border-emerald-500/35 bg-emerald-500/12 text-emerald-950 dark:border-emerald-500/30 dark:bg-emerald-950/35 dark:text-emerald-100",
+            )
+          : cn(
+              financeHeroChipBaseClass,
+              "border-amber-500/35 bg-amber-500/12 text-amber-950 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-50",
+            ),
+        hint: netPositive
+          ? "Tus entradas programadas cubren o superan las salidas en este mes."
+          : "Las salidas superan lo ingresado en el simulador: ajusta fechas o montos en Cuentas.",
+        Icon: netPositive ? CircleCheck : Target,
+      } as const
+    }
+    if (obls.length > 0) {
+      return {
+        chip: `${obls.length} sugerencia${obls.length === 1 ? "" : "s"}`,
+        chipClass: cn(financeNoticeChipClass, "normal-case tracking-normal"),
+        hint: "Movimientos detectaron cargos fijos: pásalos al simulador y ganas más previsión.",
+        Icon: Zap,
+      } as const
+    }
+    return {
+      chip: "Simulador en blanco",
+      chipClass: cn(financeNeutralChipClass, "border-dashed"),
+      hint: "Suma arriendo, cuotas y cobros esperados para anticipar choques de liquidez.",
+      Icon: Target,
+    } as const
+  })()
 
   const kpiHasSignal =
     finance?.financeMeta?.kpiHasSignal ?? (income > 0.5 || expense > 0.5)
@@ -1017,237 +1112,406 @@ export default function FinanzasOverview() {
         </div>
       </Card>
 
-      <div className="grid min-w-0 max-w-full grid-cols-1 gap-5 md:grid-cols-2 lg:gap-6">
-        <Card
-          className="relative min-w-0 overflow-hidden rounded-[22px] p-0 sm:rounded-3xl"
-          style={{
-            background:
-              "linear-gradient(165deg, color-mix(in srgb, var(--color-surface-alt) 58%, var(--color-surface)) 0%, var(--color-surface) 38%, var(--color-surface) 100%)",
-            border: "0.5px solid color-mix(in srgb, var(--color-border) 78%, transparent)",
-            boxShadow:
-              "0 4px 22px color-mix(in srgb, var(--color-text-primary) 6%, transparent), inset 0 1px 0 color-mix(in srgb, #fff 8%, transparent)",
-          }}
-        >
-          <div
-            className="h-1 w-full bg-gradient-to-r from-[color-mix(in_srgb,var(--color-accent-health)_55%,transparent)] via-[color-mix(in_srgb,var(--color-accent-finance)_38%,transparent)] to-[color-mix(in_srgb,var(--color-accent-health)_18%,transparent)]"
-            aria-hidden
-          />
-          <div className="grid min-w-0 max-w-full gap-4 p-5 sm:gap-5 sm:p-6">
-            <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-orbita-secondary">
-                  Suscripciones registradas
-                </p>
-                <p className="mt-1 text-[11px] leading-snug text-orbita-secondary">
-                  Misma lista que en Capital → Cuentas (suscripciones recurrentes).
+      <div className="grid min-w-0 max-w-full grid-cols-1 gap-4 md:grid-cols-2 md:gap-5 lg:gap-6">
+        <Card className={cn(financeRaisedPanelClass, "min-w-0 overflow-hidden p-0")}>
+          <div className="grid min-w-0 max-w-full gap-3 p-4 sm:gap-3.5 sm:p-5">
+            <div className="flex min-w-0 items-start justify-between gap-3">
+              <div className="min-w-0 flex-1 pr-1">
+                <p className={financeCardMicroLabelClass}>Suscripciones</p>
+                <p className={cn(financeSectionIntroClass, "mt-0.5 text-orbita-secondary")}>
+                  Lista recurrente (Capital → Cuentas).
                 </p>
               </div>
-              <Link
-                href="/finanzas/cuentas#capital-suscripciones"
-                className="shrink-0 rounded-full border border-orbita-border/45 bg-[color-mix(in_srgb,var(--color-text-primary)_4%,transparent)] px-2.5 py-1 text-[11px] font-medium text-orbita-primary transition hover:border-orbita-border/70 hover:bg-[color-mix(in_srgb,var(--color-text-primary)_7%,transparent)]"
-                prefetch={false}
-              >
-                Editar
-              </Link>
+              <div className="flex shrink-0 flex-col items-end gap-1">
+                {(() => {
+                  const Icon = subscriptionPulse.Icon
+                  return (
+                    <span className={cn(subscriptionPulse.chipClass, "inline-flex items-center gap-1.5")}>
+                      <Icon className="h-3 w-3 shrink-0 opacity-90" aria-hidden strokeWidth={2.25} />
+                      {subscriptionPulse.chip}
+                    </span>
+                  )
+                })()}
+                <Link
+                  href="/finanzas/cuentas#capital-suscripciones"
+                  className="inline-flex items-center gap-1 text-[10px] font-semibold text-[var(--color-accent-finance)] underline-offset-4 transition hover:underline"
+                  prefetch={false}
+                >
+                  Editar
+                  <ArrowRight className="h-3 w-3 opacity-80" aria-hidden />
+                </Link>
+              </div>
             </div>
+            <p className="text-[11px] leading-snug text-orbita-secondary [text-wrap:pretty]">{subscriptionPulse.hint}</p>
 
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-orbita-border/45 bg-[color-mix(in_srgb,var(--color-surface-alt)_42%,transparent)] px-3 py-2.5 shadow-[inset_0_1px_0_color-mix(in_srgb,#fff_10%,transparent)] backdrop-blur-[2px] sm:px-3.5">
-              <div className="min-w-0">
-                <p className="text-[10px] uppercase tracking-[0.14em] text-orbita-secondary">Total mensual</p>
-                <p className="mt-0.5 text-[11px] text-orbita-secondary">
-                  {managedActive.length === 0 ? "Sin ítems" : `${managedActive.length} activa${managedActive.length === 1 ? "" : "s"}`}
+            <div className="space-y-2 border-b border-orbita-border/45 pb-2">
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="text-[10px] leading-tight text-orbita-muted">
+                  Total mensual
+                  <span className="mt-0.5 block tabular-nums text-orbita-secondary">
+                    {managedActive.length === 0 ? "0 activas" : `${managedActive.length} activa${managedActive.length === 1 ? "" : "s"}`}
+                  </span>
                 </p>
+                <span className="shrink-0 tabular-nums text-lg font-semibold tracking-tight text-orbita-primary">
+                  ${formatMoney(managedTotal)}
+                </span>
               </div>
-              <span className="shrink-0 tabular-nums text-lg font-semibold tracking-tight text-orbita-primary">
-                ${formatMoney(managedTotal)}
-              </span>
+              {subscriptionBurnPct != null ? (
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between gap-2 text-[9px] font-semibold uppercase tracking-[0.1em] text-orbita-muted">
+                    <span>Peso sobre ingreso del mes</span>
+                    <span className="tabular-nums text-orbita-secondary">{subscriptionBurnPct}%</span>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-orbita-surface-alt/90 ring-1 ring-orbita-border/30">
+                    <div
+                      className="h-full rounded-full bg-[linear-gradient(90deg,var(--color-accent-finance),var(--color-accent-health))]"
+                      style={{ width: `${subscriptionBurnPct}%` }}
+                    />
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             {managedActive.length === 0 ? (
-              <p className="text-sm text-orbita-secondary">No hay suscripciones activas en tu registro.</p>
-            ) : (
-              <details className="group rounded-2xl border border-orbita-border/50 bg-[color-mix(in_srgb,var(--color-surface-alt)_28%,transparent)]">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-sm font-medium text-orbita-primary transition-colors hover:bg-[color-mix(in_srgb,var(--color-text-primary)_4%,transparent)] [&::-webkit-details-marker]:hidden">
-                  <span className="flex min-w-0 items-center gap-2">
-                    <ChevronDown
-                      className="h-4 w-4 shrink-0 text-orbita-secondary transition-transform duration-200 group-open:rotate-180"
-                      aria-hidden
-                    />
-                    Ver lista
-                  </span>
-                  <span className="shrink-0 text-[11px] tabular-nums text-orbita-secondary">{managedActive.length} ítems</span>
-                </summary>
-                <div className="space-y-1.5 border-t border-orbita-border/40 px-3 pb-3 pt-2">
-                  {managedActive.map((s) => (
-                    <div
-                      key={s.id}
-                      className="flex min-w-0 items-start justify-between gap-2 rounded-xl border border-orbita-border/35 bg-[color-mix(in_srgb,var(--color-text-primary)_3.5%,transparent)] px-2.5 py-2 transition hover:border-orbita-border/55 hover:bg-[color-mix(in_srgb,var(--color-text-primary)_5.5%,transparent)]"
-                    >
-                      <span className="min-w-0 break-words text-sm font-medium leading-snug text-orbita-primary">
-                        {s.name}
-                      </span>
-                      <span className="shrink-0 tabular-nums text-xs text-orbita-secondary">${formatMoney(s.amount_monthly)}</span>
+              subs.length > 0 ? (
+                <div className="rounded-xl border border-amber-500/40 bg-amber-500/[0.07] px-3 py-3.5 sm:px-4 dark:bg-amber-950/20">
+                  <div className="flex gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 ring-1 ring-amber-500/25 dark:bg-amber-950/40">
+                      <Zap className="h-5 w-5 text-amber-700 dark:text-amber-300" aria-hidden />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-orbita-primary">Patrones listos para consolidar</p>
+                      <p className="mt-1 text-[11px] leading-snug text-orbita-secondary">
+                        Hay ~{formatMoney(subsTotal)} COP en movimientos tipo suscripción. Pasa la lista a Cuentas y el total mensual queda cerrado.
+                      </p>
+                      <Link
+                        href="/finanzas/cuentas#capital-suscripciones"
+                        className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-amber-800 underline-offset-4 hover:underline dark:text-amber-200"
+                        prefetch={false}
+                      >
+                        Registrar ahora
+                        <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+                      </Link>
                     </div>
-                  ))}
+                  </div>
                 </div>
-              </details>
+              ) : (
+                <div className="rounded-xl border border-[color-mix(in_srgb,var(--color-accent-finance)_28%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-finance)_9%,var(--color-surface))] px-3 py-3.5 sm:px-4">
+                  <div className="flex gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[color-mix(in_srgb,var(--color-accent-finance)_14%,var(--color-surface))] ring-1 ring-orbita-border/40">
+                      <Sparkles className="h-5 w-5 text-[var(--color-accent-finance)]" aria-hidden />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-orbita-primary">Empieza tu mapa recurrente</p>
+                      <p className="mt-1 text-[11px] leading-snug text-orbita-secondary">
+                        Aún no hay ítems registrados. Agrega streaming, apps y membresías para medir cuánto pesa lo fijo sobre tu mes.
+                      </p>
+                      <Link
+                        href="/finanzas/cuentas#capital-suscripciones"
+                        className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--color-accent-finance)] underline-offset-4 hover:underline"
+                        prefetch={false}
+                      >
+                        Ir a suscripciones
+                        <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              )
+            ) : (
+              <div className="-mx-0.5 max-h-[13rem] min-w-0 overflow-x-auto overflow-y-auto overscroll-contain rounded-lg border border-orbita-border/40">
+                <table className="w-full min-w-[min(100%,220px)] border-collapse text-left text-[11px] leading-snug">
+                  <thead>
+                    <tr className="border-b border-orbita-border/50 bg-orbita-surface-alt/50">
+                      <th scope="col" className={cn(financeCardMicroLabelClass, "px-2.5 py-1.5 font-semibold sm:px-3")}>
+                        Servicio
+                      </th>
+                      <th
+                        scope="col"
+                        className={cn(financeCardMicroLabelClass, "px-2.5 py-1.5 text-right font-semibold sm:px-3")}
+                      >
+                        / mes
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {managedActive.map((s, idx) => (
+                      <tr
+                        key={s.id}
+                        className={cn(
+                          "border-b border-orbita-border/35 transition-colors last:border-b-0 hover:bg-orbita-surface-alt/35",
+                          idx % 2 === 1 ? "bg-orbita-surface-alt/12" : "",
+                        )}
+                      >
+                        <td className="max-w-[11rem] px-2.5 py-1.5 font-medium text-orbita-primary sm:max-w-none sm:px-3">
+                          <span className="line-clamp-2">{s.name}</span>
+                        </td>
+                        <td className="whitespace-nowrap px-2.5 py-1.5 text-right tabular-nums text-orbita-secondary sm:px-3">
+                          ${formatMoney(s.amount_monthly)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
 
-            <details className="rounded-2xl border border-orbita-border/45 bg-[color-mix(in_srgb,var(--color-surface-alt)_22%,transparent)] px-3 py-2 text-xs text-orbita-secondary backdrop-blur-[1px]">
-              <summary className="cursor-pointer list-none font-medium text-orbita-primary [&::-webkit-details-marker]:hidden">
-                Patrones en movimientos (operativo, mes)
+            <details className="group border-t border-orbita-border/35 pt-2">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary [&::-webkit-details-marker]:hidden">
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <ChevronDown
+                    className="h-3 w-3 shrink-0 transition-transform duration-200 group-open:rotate-180"
+                    aria-hidden
+                  />
+                  Patrones en movimientos
+                </span>
+                {subs.length > 0 ? (
+                  <span className="shrink-0 rounded-full border border-orbita-border/55 bg-orbita-surface-alt/90 px-1.5 py-0.5 text-[9px] font-bold tabular-nums text-orbita-primary">
+                    {subs.length}
+                  </span>
+                ) : null}
               </summary>
-              <p className="mt-2 text-[11px] leading-snug">
-                Heurística sobre transacciones del mes (no reemplaza tu lista registrada).
-              </p>
+              <p className={cn(financeSectionIntroClass, "mt-1.5 text-orbita-muted")}>Heurística del mes (no sustituye tu lista).</p>
               {subs.length === 0 ? (
-                <p className="mt-2 text-[11px]">Sin coincidencias tipo suscripción / SaaS.</p>
+                <p className="mt-1.5 text-[11px] text-orbita-muted">Sin coincidencias tipo suscripción.</p>
               ) : (
-                <ul className="mt-2 space-y-1.5">
-                  {subs.map((item) => (
-                    <li
-                      key={item.name}
-                      className="flex justify-between gap-2 rounded-lg border border-orbita-border/30 bg-[color-mix(in_srgb,var(--color-text-primary)_3%,transparent)] px-2 py-1.5 tabular-nums"
-                    >
-                      <span className="min-w-0 break-words">{item.name}</span>
-                      <span>${formatMoney(item.amount)}</span>
-                    </li>
-                  ))}
-                </ul>
+                <div className="mt-2 max-h-[9rem] overflow-y-auto rounded-md border border-orbita-border/35">
+                  <table className="w-full border-collapse text-[11px]">
+                    <tbody>
+                      {subs.map((item) => (
+                        <tr key={item.name} className="border-b border-orbita-border/30 last:border-b-0">
+                          <td className="max-w-[60%] px-2 py-1 text-orbita-primary">
+                            <span className="line-clamp-2">{item.name}</span>
+                          </td>
+                          <td className="px-2 py-1 text-right tabular-nums text-orbita-secondary">${formatMoney(item.amount)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
-              <p className="mt-2 border-t border-orbita-border/40 pt-2 text-[11px]">
-                Subtotal heurístico: ${formatMoney(subsTotal)}
+              <p className="mt-2 text-[10px] tabular-nums text-orbita-muted">
+                Subtotal heurístico · ${formatMoney(subsTotal)}
               </p>
             </details>
           </div>
         </Card>
 
-        <Card
-          className="relative min-w-0 overflow-hidden rounded-[22px] p-0 sm:rounded-3xl"
-          style={{
-            background:
-              "linear-gradient(165deg, color-mix(in srgb, var(--color-surface-alt) 58%, var(--color-surface)) 0%, var(--color-surface) 38%, var(--color-surface) 100%)",
-            border: "0.5px solid color-mix(in srgb, var(--color-border) 78%, transparent)",
-            boxShadow:
-              "0 4px 22px color-mix(in srgb, var(--color-text-primary) 6%, transparent), inset 0 1px 0 color-mix(in srgb, #fff 8%, transparent)",
-          }}
-        >
-          <div
-            className="h-1 w-full bg-gradient-to-r from-[color-mix(in_srgb,var(--color-accent-finance)_48%,transparent)] via-[color-mix(in_srgb,var(--color-accent-health)_28%,transparent)] to-[color-mix(in_srgb,var(--color-accent-finance)_15%,transparent)]"
-            aria-hidden
-          />
-          <div className="grid min-w-0 max-w-full gap-4 p-5 sm:gap-5 sm:p-6">
-            <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-orbita-secondary">
-                  Compromisos (lista corta)
-                </p>
-                <p className="mt-1 text-[11px] leading-snug text-orbita-secondary">
-                  {supabaseEnabled
-                    ? "Misma lista que el simulador en Capital → Cuentas (guardada por hogar)."
-                    : "Sincronizado con el simulador en Capital → Cuentas (este navegador)."}
+        <Card className={cn(financeRaisedPanelClass, "min-w-0 overflow-hidden p-0")}>
+          <div className="grid min-w-0 max-w-full gap-3 p-4 sm:gap-3.5 sm:p-5">
+            <div className="flex min-w-0 items-start justify-between gap-3">
+              <div className="min-w-0 flex-1 pr-1">
+                <p className={financeCardMicroLabelClass}>Compromisos</p>
+                <p className={cn(financeSectionIntroClass, "mt-0.5 text-orbita-secondary")}>
+                  {supabaseEnabled ? "Simulador en Cuentas (hogar)." : "Simulador en Cuentas (este dispositivo)."}
                 </p>
               </div>
-              <Link
-                href="/finanzas/cuentas#capital-compromisos"
-                className="shrink-0 rounded-full border border-orbita-border/45 bg-[color-mix(in_srgb,var(--color-text-primary)_4%,transparent)] px-2.5 py-1 text-[11px] font-medium text-orbita-primary transition hover:border-orbita-border/70 hover:bg-[color-mix(in_srgb,var(--color-text-primary)_7%,transparent)]"
-                prefetch={false}
-              >
-                Editar
-              </Link>
+              <div className="flex shrink-0 flex-col items-end gap-1">
+                {(() => {
+                  const Icon = commitmentPulse.Icon
+                  return (
+                    <span className={cn(commitmentPulse.chipClass, "inline-flex items-center gap-1.5")}>
+                      <Icon className="h-3 w-3 shrink-0 opacity-90" aria-hidden strokeWidth={2.25} />
+                      {commitmentPulse.chip}
+                    </span>
+                  )
+                })()}
+                <Link
+                  href="/finanzas/cuentas#capital-compromisos"
+                  className="inline-flex items-center gap-1 text-[10px] font-semibold text-[var(--color-accent-finance)] underline-offset-4 transition hover:underline"
+                  prefetch={false}
+                >
+                  Editar
+                  <ArrowRight className="h-3 w-3 opacity-80" aria-hidden />
+                </Link>
+              </div>
             </div>
+            <p className="text-[11px] leading-snug text-orbita-secondary [text-wrap:pretty]">{commitmentPulse.hint}</p>
 
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-orbita-border/45 bg-[color-mix(in_srgb,var(--color-surface-alt)_42%,transparent)] px-3 py-2.5 shadow-[inset_0_1px_0_color-mix(in_srgb,#fff_10%,transparent)] backdrop-blur-[2px] sm:px-3.5">
-              <div className="min-w-0">
-                <p className="text-[10px] uppercase tracking-[0.14em] text-orbita-secondary">Impacto neto (mes)</p>
-                <p className="mt-0.5 text-[11px] text-orbita-secondary">
-                  {commitmentsSorted.length === 0
-                    ? "Sin ítems"
-                    : `Salidas ${formatMoney(commitmentsOutTotal)} · Entradas ${formatMoney(commitmentsInTotal)}`}
+            <div className="space-y-2 border-b border-orbita-border/45 pb-2">
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="text-[10px] leading-tight text-orbita-muted">
+                  Impacto neto (mes)
+                  <span className="mt-0.5 block text-[11px] tabular-nums text-orbita-secondary">
+                    {commitmentsSorted.length === 0
+                      ? "—"
+                      : `−${formatMoney(commitmentsOutTotal)} · +${formatMoney(commitmentsInTotal)}`}
+                  </span>
                 </p>
+                <span
+                  className={cn(
+                    "shrink-0 tabular-nums text-lg font-semibold tracking-tight",
+                    commitmentsSorted.length === 0
+                      ? "text-orbita-muted"
+                      : commitmentsNetMonthly >= 0
+                        ? "text-[var(--color-accent-health)]"
+                        : "text-[var(--color-accent-danger)]",
+                  )}
+                >
+                  {commitmentsSorted.length === 0
+                    ? "—"
+                    : `${commitmentsNetMonthly >= 0 ? "+" : ""}$${formatMoney(commitmentsNetMonthly)}`}
+                </span>
               </div>
-              <span
-                className={`shrink-0 tabular-nums text-lg font-semibold tracking-tight ${
-                  commitmentsNetMonthly >= 0 ? "text-emerald-700" : "text-orbita-primary"
-                }`}
-              >
-                {commitmentsSorted.length === 0
-                  ? "—"
-                  : `${commitmentsNetMonthly >= 0 ? "+" : ""}$${formatMoney(commitmentsNetMonthly)}`}
-              </span>
+              {commitmentsSorted.length > 0 ? (
+                <p className="text-[10px] font-medium leading-snug text-orbita-muted">
+                  {commitmentsNetMonthly >= 0 ? (
+                    <span className="text-[var(--color-accent-health)]">Siguiente paso: </span>
+                  ) : (
+                    <span className="text-[var(--color-accent-warning)]">Atención: </span>
+                  )}
+                  {commitmentsNetMonthly >= 0
+                    ? "Mantén las fechas en Cuentas para que el mes no te sorprenda."
+                    : "Revisa qué salida mover o qué ingreso adelantar en el simulador."}
+                </p>
+              ) : null}
             </div>
 
             {commitmentsSorted.length === 0 ? (
-              <p className="text-sm text-orbita-secondary">Aún no hay compromisos guardados.</p>
-            ) : (
-              <details className="group rounded-2xl border border-orbita-border/50 bg-[color-mix(in_srgb,var(--color-surface-alt)_28%,transparent)]">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-sm font-medium text-orbita-primary transition-colors hover:bg-[color-mix(in_srgb,var(--color-text-primary)_4%,transparent)] [&::-webkit-details-marker]:hidden">
-                  <span className="flex min-w-0 items-center gap-2">
-                    <ChevronDown
-                      className="h-4 w-4 shrink-0 text-orbita-secondary transition-transform duration-200 group-open:rotate-180"
-                      aria-hidden
-                    />
-                    Ver lista
-                  </span>
-                  <span className="shrink-0 text-[11px] tabular-nums text-orbita-secondary">
-                    {commitmentsSorted.length} ítems
-                  </span>
-                </summary>
-                <div className="space-y-1.5 border-t border-orbita-border/40 px-3 pb-3 pt-2">
-                  {commitmentsSorted.map((c) => {
-                    const inc = isIncomeCommitmentRow(c)
-                    return (
-                      <div
-                        key={c.id}
-                        className="flex min-w-0 items-start justify-between gap-2 rounded-xl border border-orbita-border/35 bg-[color-mix(in_srgb,var(--color-text-primary)_3.5%,transparent)] px-2.5 py-2 transition hover:border-orbita-border/55 hover:bg-[color-mix(in_srgb,var(--color-text-primary)_5.5%,transparent)]"
+              obls.length > 0 ? (
+                <div className="rounded-xl border border-amber-500/40 bg-amber-500/[0.07] px-3 py-3.5 sm:px-4 dark:bg-amber-950/20">
+                  <div className="flex gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 ring-1 ring-amber-500/25 dark:bg-amber-950/40">
+                      <Zap className="h-5 w-5 text-amber-700 dark:text-amber-300" aria-hidden />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-orbita-primary">
+                        {obls.length} cargo{obls.length === 1 ? "" : "s"} sugerido{obls.length === 1 ? "" : "s"}
+                      </p>
+                      <p className="mt-1 text-[11px] leading-snug text-orbita-secondary">
+                        Movimientos marcan gastos fijos que aún no están en tu simulador. Cópialos y sumas previsión sin adivinar.
+                      </p>
+                      <Link
+                        href="/finanzas/cuentas#capital-compromisos"
+                        className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-amber-800 underline-offset-4 hover:underline dark:text-amber-200"
+                        prefetch={false}
                       >
-                        <div className="min-w-0">
-                          <p className="break-words text-sm font-medium leading-snug text-orbita-primary">
-                            {c.category?.trim() || c.title}
-                          </p>
-                          {c.category?.trim() && c.title.trim().toLowerCase() !== c.category.trim().toLowerCase() ? (
-                            <p className="text-[11px] text-orbita-secondary">{c.title}</p>
-                          ) : null}
-                          <p className="text-[11px] text-orbita-secondary">
-                            Día {c.dueDay ?? "—"} · {formatCommitmentDayEs(c.date)}
-                          </p>
-                        </div>
-                        <span
-                          className={`shrink-0 tabular-nums text-xs font-medium ${inc ? "text-emerald-700" : "text-orbita-primary"}`}
-                        >
-                          {inc ? "+" : "-"}${formatMoney(c.amount)}
-                        </span>
-                      </div>
-                    )
-                  })}
+                        Abrir simulador
+                        <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+                      </Link>
+                    </div>
+                  </div>
                 </div>
-              </details>
+              ) : (
+                <div className="rounded-xl border border-[color-mix(in_srgb,var(--color-accent-finance)_28%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-finance)_9%,var(--color-surface))] px-3 py-3.5 sm:px-4">
+                  <div className="flex gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[color-mix(in_srgb,var(--color-accent-finance)_14%,var(--color-surface))] ring-1 ring-orbita-border/40">
+                      <Target className="h-5 w-5 text-[var(--color-accent-finance)]" aria-hidden />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-orbita-primary">Arma tu calendario de caja</p>
+                      <p className="mt-1 text-[11px] leading-snug text-orbita-secondary">
+                        Carga arriendo, cuotas, colegiatura o cobros esperados: verás el impacto neto del mes antes de que pase.
+                      </p>
+                      <Link
+                        href="/finanzas/cuentas#capital-compromisos"
+                        className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--color-accent-finance)] underline-offset-4 hover:underline"
+                        prefetch={false}
+                      >
+                        Configurar compromisos
+                        <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              )
+            ) : (
+              <div className="-mx-0.5 max-h-[13rem] min-w-0 overflow-x-auto overflow-y-auto overscroll-contain rounded-lg border border-orbita-border/40">
+                <table className="w-full min-w-[280px] border-collapse text-left text-[11px] leading-snug">
+                  <thead>
+                    <tr className="border-b border-orbita-border/50 bg-orbita-surface-alt/50">
+                      <th scope="col" className={cn(financeCardMicroLabelClass, "px-2 py-1.5 font-semibold sm:px-2.5")}>
+                        Concepto
+                      </th>
+                      <th scope="col" className={cn(financeCardMicroLabelClass, "px-2 py-1.5 font-semibold sm:px-2.5")}>
+                        Vence
+                      </th>
+                      <th
+                        scope="col"
+                        className={cn(financeCardMicroLabelClass, "px-2 py-1.5 text-right font-semibold sm:px-2.5")}
+                      >
+                        Monto
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {commitmentsSorted.map((c, idx) => {
+                      const inc = isIncomeCommitmentRow(c)
+                      const label = c.category?.trim() || c.title
+                      const sub =
+                        c.category?.trim() && c.title.trim().toLowerCase() !== c.category.trim().toLowerCase()
+                          ? c.title
+                          : null
+                      return (
+                        <tr
+                          key={c.id}
+                          className={cn(
+                            "border-b border-orbita-border/35 transition-colors last:border-b-0 hover:bg-orbita-surface-alt/35",
+                            idx % 2 === 1 ? "bg-orbita-surface-alt/12" : "",
+                          )}
+                        >
+                          <td className="max-w-[10rem] px-2 py-1.5 align-top sm:max-w-[14rem] sm:px-2.5">
+                            <span className="line-clamp-2 font-medium text-orbita-primary">{label}</span>
+                            {sub ? <span className="mt-0.5 block line-clamp-1 text-[10px] text-orbita-muted">{sub}</span> : null}
+                          </td>
+                          <td className="whitespace-nowrap px-2 py-1.5 align-top tabular-nums text-orbita-secondary sm:px-2.5">
+                            <span className="block">{c.dueDay ?? "—"}</span>
+                            <span className="block text-[10px] text-orbita-muted">{formatCommitmentDayEs(c.date)}</span>
+                          </td>
+                          <td
+                            className={cn(
+                              "whitespace-nowrap px-2 py-1.5 text-right align-top tabular-nums text-xs font-semibold sm:px-2.5",
+                              inc ? "text-[var(--color-accent-health)]" : "text-orbita-primary",
+                            )}
+                          >
+                            {inc ? "+" : "−"}${formatMoney(c.amount)}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )}
 
-            <details className="rounded-2xl border border-orbita-border/45 bg-[color-mix(in_srgb,var(--color-surface-alt)_22%,transparent)] px-3 py-2 text-xs text-orbita-secondary backdrop-blur-[1px]">
-              <summary className="cursor-pointer list-none font-medium text-orbita-primary [&::-webkit-details-marker]:hidden">
-                Sugerencias desde movimientos (operativo)
+            <details className="group border-t border-orbita-border/35 pt-2">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary [&::-webkit-details-marker]:hidden">
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <ChevronDown
+                    className="h-3 w-3 shrink-0 transition-transform duration-200 group-open:rotate-180"
+                    aria-hidden
+                  />
+                  Sugerencias desde movimientos
+                </span>
+                {obls.length > 0 ? (
+                  <span className="shrink-0 rounded-full border border-orbita-border/55 bg-orbita-surface-alt/90 px-1.5 py-0.5 text-[9px] font-bold tabular-nums text-orbita-primary">
+                    {obls.length}
+                  </span>
+                ) : null}
               </summary>
-              <p className="mt-2 text-[11px] leading-snug">
-                Cargos fijos detectados por categoría o texto; útil si aún no los copiaste a la lista.
+              <p className={cn(financeSectionIntroClass, "mt-1.5 text-orbita-muted")}>
+                Cargos fijos detectados; útil antes de copiar a la lista.
               </p>
               {obls.length === 0 ? (
-                <p className="mt-2 text-[11px]">Sin sugerencias este mes.</p>
+                <p className="mt-1.5 text-[11px] text-orbita-muted">Sin sugerencias este mes.</p>
               ) : (
-                <ul className="mt-2 space-y-1.5">
-                  {obls.map((item) => (
-                    <li
-                      key={item.name + item.due}
-                      className="flex justify-between gap-2 rounded-lg border border-orbita-border/30 bg-[color-mix(in_srgb,var(--color-text-primary)_3%,transparent)] px-2 py-1.5 tabular-nums"
-                    >
-                      <span className="min-w-0 break-words">{item.name}</span>
-                      <span>${formatMoney(item.amount)}</span>
-                    </li>
-                  ))}
-                </ul>
+                <div className="mt-2 max-h-[9rem] overflow-y-auto rounded-md border border-orbita-border/35">
+                  <table className="w-full border-collapse text-[11px]">
+                    <tbody>
+                      {obls.map((item) => (
+                        <tr key={item.name + item.due} className="border-b border-orbita-border/30 last:border-b-0">
+                          <td className="max-w-[60%] px-2 py-1 text-orbita-primary">
+                            <span className="line-clamp-2">{item.name}</span>
+                          </td>
+                          <td className="px-2 py-1 text-right tabular-nums text-orbita-secondary">${formatMoney(item.amount)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
-              <p className="mt-2 border-t border-orbita-border/40 pt-2 text-[11px]">
-                Subtotal sugerido: ${formatMoney(oblsTotal)}
+              <p className="mt-2 text-[10px] tabular-nums text-orbita-muted">
+                Subtotal sugerido · ${formatMoney(oblsTotal)}
               </p>
             </details>
           </div>

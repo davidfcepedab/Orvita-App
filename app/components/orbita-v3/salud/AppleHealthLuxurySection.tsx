@@ -306,7 +306,7 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
                   >
                     Configuración
                   </Link>
-                  , crea la clave y cópiala al atajo del iPhone cuando te la pida. No caduca sola; solo la cambias si pulsas
+                  , crea la clave y cópiala al atajo del iPhone cuando te la pida. No caduca sola; solo la cambias si presionas
                   generar otra o desactivar en Configuración.
                 </li>
                 <li>
@@ -316,7 +316,7 @@ export default function AppleHealthLuxurySection({ salud, latest, loading, onRef
                 <li>
                   <strong className="font-medium text-inherit">Aquí en Salud:</strong> toca{" "}
                   <strong className="font-medium text-inherit">Actualizar lectura</strong> para ver en pantalla lo que ya guardamos. Si la fecha se ve
-                  antigua, suele faltar ejecutar el atajo o pulsar actualizar otra vez.
+                  antigua, suele faltar ejecutar el atajo o presionar actualizar otra vez.
                 </li>
               </ol>
               <Link

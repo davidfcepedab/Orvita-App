@@ -55,7 +55,7 @@ function FinanzasLayoutContent({
   const { month, setMonth } = finance
 
   return (
-    <div className="orbita-page-stack mx-auto min-w-0 w-full max-w-[min(76rem,calc(100vw-1.5rem))] space-y-3 sm:space-y-4">
+    <div className="orbita-page-stack mx-auto min-w-0 w-full max-w-[min(76rem,calc(100vw-1.5rem))] space-y-2 sm:space-y-3">
       <Card
         className={cn(
           "min-w-0 overflow-hidden rounded-2xl border-[color-mix(in_srgb,var(--color-border)_34%,transparent)] sm:rounded-[22px]",
@@ -117,7 +117,7 @@ function FinanzasLayoutContent({
         </div>
       </Card>
 
-      <div className="min-w-0 space-y-5 sm:space-y-6 lg:space-y-7">{children}</div>
+      <div className="min-w-0 space-y-4 sm:space-y-5 lg:space-y-6">{children}</div>
     </div>
   )
 }

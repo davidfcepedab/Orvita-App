@@ -1,6 +1,11 @@
 import type { FinanceTransaction } from "@/lib/finanzas/types"
 import { expenseAmount, incomeAmount, netCashFlow } from "@/lib/finanzas/calculations/txMath"
 import { monthBounds } from "@/lib/finanzas/monthRange"
+import type { FinanceSubcategoryCatalogEntry } from "@/lib/finanzas/subcategoryCatalog"
+import {
+  computeStructuralOperativoFromRows,
+  isModuloFinancieroStructuralCategory,
+} from "@/lib/finanzas/structuralOperativoTotals"
 
 export function shiftMonthYm(ym: string, delta: number): string {
   const [y, m] = ym.split("-").map(Number)
@@ -66,6 +71,18 @@ export type CategoryGrowthRow = {
   yoyPct: number | null
   severity: "ok" | "watch" | "alert"
   forecastNext3: number[]
+}
+
+/** Sugerencias sobre gastos fijos (estructura) vs ingresos. */
+export type FixedStructuralGuidance = {
+  headline: string
+  fixedMonthlyCop: number
+  incomeMonthlyCop: number
+  ratioFixedToIncome: number | null
+  /** Diagnóstico único: cifras + lectura (sin duplicar la franja de KPI aparte). */
+  diagnosis: string
+  /** Siguientes pasos concretos (se muestran como “siguiente paso” vs el diagnóstico). */
+  actions: string[]
 }
 
 export type AntExpenseRow = {
@@ -174,13 +191,6 @@ function losWeekdaysPhrase(wd: number): string {
   return `los ${name}`
 }
 
-function monthTitleEs(ym: string): string {
-  const [y, m] = ym.split("-").map(Number)
-  if (!Number.isFinite(y) || !Number.isFinite(m)) return ym
-  const d = new Date(y, m - 1, 1)
-  return new Intl.DateTimeFormat("es-CO", { month: "long", year: "numeric" }).format(d)
-}
-
 function monthChartLabel(ym: string): string {
   const [y, m] = ym.split("-").map(Number)
   if (!Number.isFinite(y) || !Number.isFinite(m)) return ym
@@ -274,6 +284,89 @@ export type BuildCategoryAnalyticsInput = {
   params?: Partial<CategoryAnalyticsParams>
   /** Marca el payload como análisis solo operativo (sin módulo finanzas). */
   scopeOperational?: boolean
+  /**
+   * Catálogo del hogar: si está definido, la tabla de crecimiento usa solo categorías **variables**
+   * (misma tubería que Categorías operativo). Si se omite, se mantiene el agregado histórico por nombre de categoría.
+   */
+  catalog?: FinanceSubcategoryCatalogEntry[]
+}
+
+function expenseByStructuralVariableCategory(
+  monthTxs: FinanceTransaction[],
+  catalog: FinanceSubcategoryCatalogEntry[],
+): Map<string, number> {
+  const { splitCategories } = computeStructuralOperativoFromRows(monthTxs, [], catalog)
+  const m = new Map<string, number>()
+  for (const c of splitCategories) {
+    if (isModuloFinancieroStructuralCategory(c)) continue
+    if (c.type !== "variable") continue
+    m.set(c.name, Math.abs(c.total))
+  }
+  return m
+}
+
+function buildFixedStructuralGuidance(opts: {
+  anchorTxs: FinanceTransaction[]
+  catalog: FinanceSubcategoryCatalogEntry[]
+  totalIncomeAnchor: number
+  netAnchor: number
+}): FixedStructuralGuidance | null {
+  const { splitCategories } = computeStructuralOperativoFromRows(opts.anchorTxs, [], opts.catalog)
+  const fixedCats = splitCategories.filter((c) => c.type === "fixed" && !isModuloFinancieroStructuralCategory(c))
+  if (fixedCats.length === 0) return null
+
+  const fixedMonthlyCop = fixedCats.reduce((s, c) => s + Math.abs(c.total), 0)
+  const income = opts.totalIncomeAnchor
+  const ratio = income > 1e-6 ? fixedMonthlyCop / income : null
+
+  const sorted = [...fixedCats].sort((a, b) => Math.abs(b.total) - Math.abs(a.total))
+  const top = sorted[0]
+
+  const ratioPct = ratio != null ? Math.round(ratio * 100) : null
+  let diagnosis: string
+  if (ratio != null && ratioPct != null) {
+    const strip = `$${copShort(fixedMonthlyCop)} en fijos · $${copShort(income)} ingresos · ~${ratioPct}% del ingreso en fijos.`
+    if (ratio >= 0.58) {
+      diagnosis = `${strip} Margen muy justo: conviene revisar arriendo, cuotas largas o seguros que puedas renegociar.`
+    } else if (ratio >= 0.42) {
+      diagnosis = `${strip} Colchón limitado para gasto variable y emergencias.`
+    } else {
+      diagnosis = `${strip} Relación manejable si mantienes margen para imprevistos.`
+    }
+  } else {
+    diagnosis =
+      income > 1e-6
+        ? `Fijos $${copShort(fixedMonthlyCop)} · ingresos $${copShort(income)} (sin ratio estable este mes).`
+        : `Gastos fijos $${copShort(fixedMonthlyCop)}.`
+  }
+
+  const actions: string[] = []
+  if (top) {
+    if (/vivienda|arriend|rent|hipotec|housing|hogar/i.test(top.name)) {
+      actions.push(
+        `Siguiente paso: explorar opciones de vivienda más económicas si aplica; «${top.name}» concentra ~$${copShort(Math.abs(top.total))}.`,
+      )
+    } else {
+      actions.push(
+        `Siguiente paso: revisar planes y deducciones en «${top.name}» (~$${copShort(Math.abs(top.total))}).`,
+      )
+    }
+  }
+
+  if (opts.netAnchor < 0 && ratio != null && ratio > 0.4) {
+    actions.push(
+      `Liquidez: flujo neto negativo + fijos altos → valorá ingreso extra o bajar recurrentes antes de solo recortar variable.`,
+    )
+  }
+
+  return {
+    headline: "Gastos fijos y estructura",
+    fixedMonthlyCop,
+    incomeMonthlyCop: income,
+    ratioFixedToIncome: ratio,
+    diagnosis,
+    actions,
+  }
 }
 
 export function buildCategoryAnalyticsPayload(input: BuildCategoryAnalyticsInput) {
@@ -315,18 +408,28 @@ export function buildCategoryAnalyticsPayload(input: BuildCategoryAnalyticsInput
   const prevCat = expenseByCategory(prevTxs)
   const yoyCat = expenseByCategory(yoyTxs)
 
+  const catalog = input.catalog
+  const growthCur =
+    catalog != null ? expenseByStructuralVariableCategory(anchorTxs, catalog) : curCat
+  const growthPrev =
+    catalog != null ? expenseByStructuralVariableCategory(prevTxs, catalog) : prevCat
+  const growthYoy =
+    catalog != null ? expenseByStructuralVariableCategory(yoyTxs, catalog) : yoyCat
+
   const fastGrowing: CategoryGrowthRow[] = []
-  for (const [category, expenseCurrent] of curCat) {
+  for (const [category, expenseCurrent] of growthCur) {
     if (expenseCurrent < 1) continue
-    const expensePrev = prevCat.get(category) ?? 0
-    const expenseYoy = yoyCat.get(category) ?? 0
+    const expensePrev = growthPrev.get(category) ?? 0
+    const expenseYoy = growthYoy.get(category) ?? 0
     const momPct = pctChange(expenseCurrent, expensePrev)
     const yoyPct = pctChange(expenseCurrent, expenseYoy)
 
     const hist: number[] = []
     const tail = months.slice(-6)
     for (const ym of tail) {
-      const em = expenseByCategory(byMonth.get(ym) ?? [])
+      const txsMonth = byMonth.get(ym) ?? []
+      const em =
+        catalog != null ? expenseByStructuralVariableCategory(txsMonth, catalog) : expenseByCategory(txsMonth)
       hist.push(em.get(category) ?? 0)
     }
     const forecastNext3 = forecastNext3Linear(hist)
@@ -476,8 +579,8 @@ export function buildCategoryAnalyticsPayload(input: BuildCategoryAnalyticsInput
     insights.push({
       id: "growth-top",
       impact: sev,
-      title: `Presión: «${r.category}» +${(r.momPct ?? 0).toFixed(0)}% MoM`,
-      body: `Esta categoría acelera frente al mes anterior. Conviene revisar sustitutos, tope en Presupuestos o negociar recurrentes.`,
+      title: `Presión (variable): «${r.category}» +${(r.momPct ?? 0).toFixed(0)}% mes a mes`,
+      body: `Esta categoría variable acelera frente al mes anterior. Conviene revisar hábitos asociados, un tope en Presupuestos o sustitutos más baratos.`,
       savingsMonthly: r.expenseCurrent * 0.08,
       savingsAnnual: r.expenseCurrent * 0.08 * 12,
       ctaHref: `/finanzas/transactions?month=${encodeURIComponent(anchor)}&category=${encodeURIComponent(r.category)}&tipo=gasto`,
@@ -550,11 +653,52 @@ export function buildCategoryAnalyticsPayload(input: BuildCategoryAnalyticsInput
     } & Record<`c${number}`, number>
   })
 
+  const topOperativeCategoryTrendPointsShare = trendMonthSlice.map((ym) => {
+    const monthTxs = byMonth.get(ym) ?? []
+    const totalE = expenseTotal(monthTxs)
+    const em = expenseByCategory(monthTxs)
+    const row: Record<string, string | number> = {
+      monthKey: ym,
+      monthLabel: monthChartLabel(ym),
+    }
+    for (let i = 0; i < topCategoryNamesForTrend.length; i += 1) {
+      const abs = em.get(topCategoryNamesForTrend[i]!) ?? 0
+      row[`c${i}`] = totalE > 1e-9 ? (abs / totalE) * 100 : 0
+    }
+    return row as {
+      monthKey: string
+      monthLabel: string
+    } & Record<`c${number}`, number>
+  })
+
+  const trendShareSummary = topCategoryNamesForTrend.map((label, i) => {
+    const key = `c${i}` as const
+    const series = topOperativeCategoryTrendPointsShare.map((row) => Number(row[key]) || 0)
+    const anchorRow = topOperativeCategoryTrendPointsShare.find((r) => r.monthKey === anchor)
+    const shareAnchorPct = anchorRow ? Number(anchorRow[key]) || 0 : series[series.length - 1] ?? 0
+    const minPct = series.length ? Math.min(...series) : 0
+    const maxPct = series.length ? Math.max(...series) : 0
+    return {
+      label,
+      shareAnchorPct,
+      minPct,
+      maxPct,
+      rangePp: maxPct - minPct,
+    }
+  })
+
   const MIN_CAT_FOR_WEEKDAY = 80_000
   const MIN_WEEKDAY_SHARE = 0.22
-  const monthTitle = monthTitleEs(anchor)
-  const monthTitleSentence =
-    monthTitle.length > 0 ? monthTitle.charAt(0).toUpperCase() + monthTitle.slice(1) : monthTitle
+
+  const fixedStructuralGuidance =
+    catalog != null
+      ? buildFixedStructuralGuidance({
+          anchorTxs,
+          catalog,
+          totalIncomeAnchor,
+          netAnchor,
+        })
+      : null
 
   const weekdayOperativeInsights: { text: string; category: string; weekday: number }[] = []
   for (const category of topCategoryNamesForTrend) {
@@ -574,9 +718,10 @@ export function buildCategoryAnalyticsPayload(input: BuildCategoryAnalyticsInput
     const subShareOfPeak = sub && peakAmt > 1e-6 ? sub.amount / peakAmt : 0
     const subClause =
       sub && subShareOfPeak >= 0.42
-        ? ` En ese día, buena parte cae en «${sub.sub}» ($${copShort(sub.amount)}).`
+        ? ` Ese día buena parte es «${sub.sub}» ($${copShort(sub.amount)}).`
         : ""
-    const text = `${monthTitleSentence}: ${losWeekdaysPhrase(peakWd)} concentran ~${(share * 100).toFixed(0)}% del gasto operativo de «${category}» ($${copShort(peakAmt)} de $${copShort(total)}).${subClause}`
+    const pct = (share * 100).toFixed(0)
+    const text = `«${category}» concentra ${losWeekdaysPhrase(peakWd)} ~${pct}% del gasto operativo ($${copShort(peakAmt)} de $${copShort(total)}).${subClause}`
     weekdayOperativeInsights.push({ text, category, weekday: peakWd })
   }
 
@@ -615,8 +760,11 @@ export function buildCategoryAnalyticsPayload(input: BuildCategoryAnalyticsInput
     topOperativeCategoryTrend: {
       keys: topOperativeCategoryTrendKeys,
       points: topOperativeCategoryTrendPoints,
+      pointsShare: topOperativeCategoryTrendPointsShare,
+      trendShareSummary,
     },
     weekdayOperativeInsights,
+    fixedStructuralGuidance,
   }
 }
 

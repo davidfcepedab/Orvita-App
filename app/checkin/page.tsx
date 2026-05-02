@@ -1014,7 +1014,7 @@ export default function CheckinPage() {
                 icon={PenLine}
                 value={form.journalMomento}
                 onChange={(v) => handleChange("journalMomento", v)}
-                placeholder="Ej.: La tarde, seguí pensando en el trabajo en la cena…"
+                placeholder="Ej.: La tarde, seguías pensando en el trabajo en la cena…"
                 rows={2}
               />
               <TextareaRow

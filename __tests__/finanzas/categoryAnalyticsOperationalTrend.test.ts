@@ -43,8 +43,14 @@ describe("buildCategoryAnalyticsPayload operativo trend + weekday", () => {
 
     expect(payload.topOperativeCategoryTrend.keys.length).toBeGreaterThan(0)
     expect(payload.topOperativeCategoryTrend.points.length).toBeGreaterThan(0)
+    expect(payload.topOperativeCategoryTrend.pointsShare.length).toBe(payload.topOperativeCategoryTrend.points.length)
+    expect(payload.topOperativeCategoryTrend.trendShareSummary.length).toBe(payload.topOperativeCategoryTrend.keys.length)
     const first = payload.topOperativeCategoryTrend.points[0]!
     expect(first.monthKey).toMatch(/^\d{4}-\d{2}$/)
+    const shareFirst = payload.topOperativeCategoryTrend.pointsShare[0]!
+    expect(shareFirst.monthKey).toBe(first.monthKey)
+    expect(Number(shareFirst.c0)).toBeGreaterThanOrEqual(0)
+    expect(Number(shareFirst.c0)).toBeLessThanOrEqual(100)
 
     const wd = payload.weekdayOperativeInsights.find((w) => w.category === "Domicilios")
     expect(wd).toBeDefined()

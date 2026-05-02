@@ -101,7 +101,7 @@ export type AppleHealthContextSignals = {
   workout_minutes: number | null
   /** Frecuencia cardíaca en reposo (Apple / metadatos del import), si vino en el paquete. */
   resting_hr_bpm: number | null
-  /** true si la última muestra tiene más de ~36 h (convén reimportar). */
+  /** true si la última muestra tiene más de ~36 h (conviene reimportar). */
   sync_stale: boolean
   /** Instantánea numérica canónica (`metadata.health_signals`) alineada con `appleHealthBundleContract`. */
   health_signals: Record<string, number> | null

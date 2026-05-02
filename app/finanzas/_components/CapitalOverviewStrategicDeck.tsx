@@ -80,11 +80,18 @@ export function CapitalOverviewStrategicDeck({ monthDisplay, snapshot, formatMon
     <div className="min-w-0 space-y-4 sm:space-y-5 lg:space-y-6">
       {/* 1 · Estado del juego financiero */}
       <section
-        className="relative overflow-hidden rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_62%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_56%,var(--color-surface))] p-4 shadow-[var(--shadow-card)] sm:rounded-[22px] sm:p-5 lg:p-6"
+        className={cn(
+          "relative overflow-hidden rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_55%,transparent)]",
+          "bg-[linear-gradient(148deg,color-mix(in_srgb,var(--color-accent-finance)_22%,var(--color-surface))_0%,color-mix(in_srgb,var(--color-surface-alt)_64%,var(--color-surface))_48%,var(--color-surface)_100%)]",
+          "p-4 shadow-[var(--shadow-card)]",
+          "dark:border-[color-mix(in_srgb,var(--color-border)_42%,transparent)]",
+          "dark:bg-[linear-gradient(148deg,color-mix(in_srgb,var(--color-accent-finance)_12%,var(--color-surface))_0%,color-mix(in_srgb,var(--color-surface-alt)_45%,var(--color-surface))_55%,var(--color-surface)_100%)]",
+          "sm:rounded-[22px] sm:p-5 lg:p-6",
+        )}
         aria-labelledby="capital-game-state-title"
       >
         <div
-          className="pointer-events-none absolute -right-12 -top-16 h-40 w-40 rounded-full bg-[radial-gradient(circle,color-mix(in_srgb,var(--color-accent-finance)_16%,transparent)_0%,transparent_72%)]"
+          className="pointer-events-none absolute -right-12 -top-16 h-44 w-44 rounded-full bg-[radial-gradient(circle,color-mix(in_srgb,var(--color-accent-finance)_26%,transparent)_0%,transparent_70%)] dark:bg-[radial-gradient(circle,color-mix(in_srgb,var(--color-accent-finance)_18%,transparent)_0%,transparent_72%)]"
           aria-hidden
         />
         <div className="relative grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:gap-8 lg:items-center">
@@ -177,7 +184,7 @@ export function CapitalOverviewStrategicDeck({ monthDisplay, snapshot, formatMon
             ) : null}
           </div>
 
-          <div className="min-w-0 space-y-3 rounded-xl border border-[color-mix(in_srgb,var(--color-border)_42%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_62%,transparent)] p-3.5 sm:p-4">
+          <div className="min-w-0 space-y-3 rounded-xl border-2 border-[color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_76%,var(--color-surface-alt))] p-3.5 shadow-[inset_0_1px_0_0_color-mix(in_srgb,var(--color-text-primary)_6%,transparent)] sm:p-4 dark:bg-[color-mix(in_srgb,var(--color-surface)_55%,transparent)]">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="m-0 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">

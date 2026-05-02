@@ -665,7 +665,7 @@ export async function connectBankingColombia(input: {
   const accountRows = await fetchBelvoAccounts(env.base, env.clientId, env.clientSecret, linkId)
   if (accountRows.length === 0) {
     throw new Error(
-      "Belvo no devolvió cuentas para este link. Si usaste el widget, espera unos segundos y pulsa «Sincronizar ahora».",
+      "Belvo no devolvió cuentas para este link. Si usaste el widget, espera unos segundos y presiona «Sincronizar ahora».",
     )
   }
 

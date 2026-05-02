@@ -1069,7 +1069,7 @@ export function AgendaSharedList({
               >
                 Nada cae en esta ventana temporal. Prueba otra pestaña arriba
                 {listHorizon === "this_month" && !extendMonthHorizon
-                  ? ", o pulsa «+» para ampliar más allá del mes."
+                  ? ", o presiona «+» para ampliar más allá del mes."
                   : "."}
               </p>
             ) : null}

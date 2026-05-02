@@ -19,19 +19,16 @@ import {
 import { Card } from "@/src/components/ui/Card"
 import { useFinance } from "../FinanceContext"
 import { ConnectedBankAccountsCard } from "../_components/ConnectedBankAccountsCard"
-import { FinanceViewHeader } from "../_components/FinanceViewHeader"
-import { FINANCE_CUENTAS_HEADER_SUBTITLE } from "@/lib/finanzas/financeModuleCopy"
 import {
   financeAuxDisclosureBodyClass,
   financeAuxDisclosureSummaryClass,
-  financeModuleContentStackClass,
-  financeModulePageBodyClass,
-  financePlStackClass,
+  financeCardMicroLabelClass,
+  financeModuleSectionHeadingClass,
   financeSectionEyebrowClass,
   financeSectionIntroClass,
 } from "../_components/financeChrome"
 import { useLedgerAccounts, type LedgerAccountRow } from "../useLedgerAccounts"
-import { messageForHttpError } from "@/lib/api/friendlyHttpError"
+import { AUTH_REQUIRED_MESSAGE, messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { financeApiDelete, financeApiGet, financeApiJson } from "@/lib/finanzas/financeClientFetch"
 import {
   cardUsesLedgerCatalogRow,
@@ -367,9 +364,9 @@ function StatKpiCard({
   return (
     <Card className={`relative overflow-hidden p-6 sm:p-8 ${arcticPanel}`}>
       <div className="absolute right-4 top-4 text-orbita-secondary">{icon}</div>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-orbita-secondary">{title}</p>
-      <p className="mt-3 text-2xl font-semibold tracking-tight text-orbita-primary sm:text-[26px]">{value}</p>
-      <div className="mt-2 text-sm text-orbita-secondary">{sub}</div>
+      <p className={financeCardMicroLabelClass}>{title}</p>
+      <p className="mt-3 text-xl font-semibold tabular-nums tracking-tight text-orbita-primary sm:text-2xl">{value}</p>
+      <div className={cn("mt-2 text-[11px] leading-relaxed text-orbita-secondary sm:text-xs")}>{sub}</div>
       {warning ? (
         <div className="absolute bottom-4 right-4 rounded-full bg-[color-mix(in_srgb,var(--color-accent-warning)_18%,var(--color-surface-alt))] p-1.5 text-[var(--color-accent-warning)]">
           <TrendingDown className="h-4 w-4" aria-hidden />
@@ -569,17 +566,17 @@ function CreditPlasticCard({
             title="Cómo se atribuyen movimientos a esta tarjeta: FK en BD, columna Cuenta igual al catálogo, o últimos 4 del catálogo en la descripción."
           >
             {linkSummary!.matchedCount === 0
-              ? "Sin movimientos enlazados hasta fin de mes: en Movimientos usa finance_account_id (mismo UUID que orbita_finance_accounts.id), o igualá la columna Cuenta al label del catálogo, o últimos 4 en la descripción."
+              ? "Sin movimientos enlazados hasta fin de mes: en Movimientos usa finance_account_id (mismo UUID que orbita_finance_accounts.id), o iguala la columna Cuenta al label del catálogo, o últimos 4 en la descripción."
               : formatTcMovementLinkLine(linkSummary!)}
           </p>
         ) : null}
         {card.conciliacionPendiente ? (
           <p
             className="mt-2 max-w-[95%] rounded-lg border border-amber-300/35 bg-black/25 px-2 py-1.5 text-[10px] font-medium leading-snug text-amber-50/95"
-            title="En «Tus saldos en el banco» puedes anotar a mano el disponible o saldo real (sin conexión con el banco)."
+            title="En el registro manual de saldos podés anotar el disponible o el saldo que ves en la app (sin conexión con el banco)."
           >
-            Hay una diferencia notable con los movimientos. Usa{" "}
-            <strong className="font-semibold">Registrar cifra</strong> en «Tus saldos en el banco», más arriba.
+            Hay una diferencia notable con los movimientos. Usá{" "}
+            <strong className="font-semibold">Cargar cifra</strong> en el registro manual de saldos, más arriba.
           </p>
         ) : null}
       </div>
@@ -726,7 +723,7 @@ function AutoFieldHint({ ledgerLinked }: { ledgerLinked?: boolean }) {
   return (
     <p className="mt-1 text-[10px] leading-snug text-orbita-secondary">
       {ledgerLinked
-        ? "Viene del catálogo y movimientos. Para ajustar el saldo usa Registrar cifra en «Tus saldos en el banco»."
+        ? "Viene del catálogo y movimientos. Para ajustar el saldo usá Cargar cifra en el registro manual de saldos."
         : "Automático a partir de movimientos del mes y del listado de cuentas."}
     </p>
   )
@@ -798,7 +795,7 @@ function LedgerRowReconcileMeta({ a }: { a: LedgerAccountRow }) {
         )
       ) : (
         <p className="text-orbita-muted">
-          <span className="font-medium text-orbita-primary">Registrar cifra (manual)</span> para escribir el disponible o
+          <span className="font-medium text-orbita-primary">Cargar cifra</span> para escribir el disponible o
           saldo que ves en tu app o extracto; se genera el ajuste hasta cuadrar (Δ → 0). Sin conexión automática al banco.
         </p>
       )}
@@ -1676,106 +1673,83 @@ export default function CuentasClient() {
 
   return (
     <>
-    <div className={cn(financePlStackClass, financeModulePageBodyClass, financeModuleContentStackClass, "pb-10")}>
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-start justify-between gap-2 sm:gap-3">
-          <div className="min-w-0 flex-1">
-            <FinanceViewHeader
-              kicker="Balance"
-              title="Cuentas y exposición"
-              subtitle={FINANCE_CUENTAS_HEADER_SUBTITLE}
-              action={
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCuentasReorderMode((v) => {
-                      const next = !v
-                      if (!next) setDraggingCuentasSectionIdx(null)
-                      return next
-                    })
-                  }}
-                  className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] transition ${
-                    cuentasReorderMode
-                      ? "border-orbita-primary bg-orbita-primary text-white shadow-sm"
-                      : "border-orbita-border/70 bg-transparent text-orbita-secondary/80 hover:border-orbita-border hover:text-orbita-primary"
-                  }`}
-                  aria-pressed={cuentasReorderMode}
-                  title="Reordenar bloques de esta página"
-                >
-                  {cuentasReorderMode ? "Listo" : "Orden"}
-                </button>
-              }
-            />
-            {cuentasReorderMode ? (
-              <div
-                className="mt-3 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt/55 p-3 text-sm shadow-sm sm:mt-4 sm:p-4"
-                role="region"
-                aria-label="Modo reordenar bloques"
-              >
-                <p className="m-0 text-xs leading-relaxed text-orbita-secondary">
-                  <span className="font-medium text-orbita-primary">Periodo:</span>{" "}
-                  <span className="tabular-nums">{month ? month : "—"}</span>
-                  {" · "}
-                  Arrastra ⋮⋮ para ordenar (guardado en este dispositivo).
-                </p>
-              </div>
-            ) : null}
+    <div className="w-full min-w-0 max-w-full space-y-4 pb-6 sm:space-y-5 lg:space-y-6 sm:pb-8">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-end">
+        {cuentasReorderMode ? (
+          <div
+            className="rounded-lg border border-orbita-border/70 bg-orbita-surface-alt/50 px-3 py-2 text-[11px] leading-relaxed text-orbita-secondary sm:min-w-0 sm:flex-1"
+            role="region"
+            aria-label="Modo reordenar bloques"
+          >
+            Mes <span className="tabular-nums font-medium text-orbita-primary">{month ?? "—"}</span>: arrastrá los bloques
+            con ⋮⋮; el orden se guarda solo en este equipo.
           </div>
-        </div>
-        {notice ? <p className="mt-2 text-xs text-orbita-secondary">{notice}</p> : null}
+        ) : null}
+        <button
+          type="button"
+          onClick={() => {
+            setCuentasReorderMode((v) => {
+              const next = !v
+              if (!next) setDraggingCuentasSectionIdx(null)
+              return next
+            })
+          }}
+          className={cn(
+            "shrink-0 rounded-lg border px-2.5 py-1.5 text-[11px] font-medium transition",
+            cuentasReorderMode
+              ? "border-orbita-primary bg-orbita-primary text-white"
+              : "border-orbita-border/70 text-orbita-secondary hover:border-orbita-primary/35 hover:text-orbita-primary",
+          )}
+          aria-pressed={cuentasReorderMode}
+          title="Cambiar el orden de los bloques de abajo"
+        >
+          {cuentasReorderMode ? "Listo" : "Orden"}
+        </button>
       </div>
 
-      <section className="space-y-2 rounded-xl border border-orbita-border/50 bg-orbita-surface-alt/30 px-3 py-2.5 sm:px-4 sm:py-3" aria-label="Lectura rápida">
-        <h2 className={financeSectionEyebrowClass}>Cómo leer esta página</h2>
-        <p className={cn(financeSectionIntroClass, "mt-0 text-orbita-secondary")}>
-          Indicadores primero; despliega <span className="font-medium text-orbita-primary">Tus saldos en el banco</span>{" "}
-          solo cuando vayas a cuadrar con extracto. Usa <span className="font-medium text-orbita-primary">Orden</span>{" "}
-          para reorganizar bloques (se guarda en el dispositivo).
+      {notice && notice !== AUTH_REQUIRED_MESSAGE ? (
+        <p
+          className="mt-3 rounded-lg border border-orbita-border/55 bg-orbita-surface-alt/45 px-3 py-2 text-[11px] leading-snug text-orbita-secondary"
+          role="status"
+        >
+          {notice}
         </p>
-      </section>
+      ) : null}
 
-      <div className="min-w-0">
-        <ConnectedBankAccountsCard />
-      </div>
-
-      {supabaseEnabled && (ledgerLoading || ledgerAccounts.length > 0 || ledgerError) ? (
-        <details className={`group overflow-hidden ${arcticPanel}`}>
+      <section className="mt-3 sm:mt-4" aria-label="Conexión y saldos">
+        <details
+          className="group overflow-hidden rounded-xl border border-[color-mix(in_srgb,var(--color-border)_50%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_28%,var(--color-surface))] shadow-sm"
+          open
+        >
           <summary
             className={cn(
               financeAuxDisclosureSummaryClass,
-              "min-h-[44px] rounded-t-[var(--radius-card)] px-3 py-2.5 transition-colors hover:bg-[color-mix(in_srgb,var(--color-text-primary)_4%,transparent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--color-accent-finance)_45%,var(--color-border))] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)] sm:px-4",
+              "items-center gap-2 px-3 py-2 sm:gap-2.5 sm:px-3.5 sm:py-2",
             )}
           >
             <ChevronDown
-              className="h-4 w-4 shrink-0 text-orbita-secondary transition-transform duration-200 group-open:rotate-180"
+              className="h-3.5 w-3.5 shrink-0 text-orbita-secondary transition-transform duration-200 group-open:rotate-180 sm:h-4 sm:w-4"
               aria-hidden
             />
-            <div className="min-w-0 flex-1 text-left">
-              <h2 className={financeSectionEyebrowClass}>Tus saldos en el banco</h2>
-              <p className={cn(financeSectionIntroClass, "mt-0.5 text-[10px] sm:text-[11px]")}>
-                {ledgerAccounts.length > 0
-                  ? `${ledgerAccounts.length} cuenta${ledgerAccounts.length === 1 ? "" : "s"} · anota lo que ves en extracto o app (sin conexión con el banco)`
-                  : "Cuando importes movimientos, podrás anotar aquí los saldos para cuadrarlos con Órvita"}
+            <div className="min-w-0 flex-1 space-y-0 text-left">
+              <p className={financeCardMicroLabelClass}>Cuentas · banco y extracto</p>
+              <p className={cn(financeModuleSectionHeadingClass, "!mt-0.5 !text-[13px] !leading-tight sm:!text-[0.95rem]")}>
+                Conexión y saldos
               </p>
             </div>
           </summary>
-          <div className={cn(financeAuxDisclosureBodyClass, "px-3 pb-3 pt-2.5 sm:px-4 sm:pb-4")}>
-            <div className="rounded-lg border border-orbita-border/45 bg-orbita-surface-alt/30 px-2.5 py-2 sm:px-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-orbita-secondary">Cómo funciona</p>
-              <ol className="mt-1.5 list-inside list-decimal space-y-1 text-[10px] leading-relaxed text-orbita-secondary marker:text-orbita-secondary/90">
-                <li>
-                  Cuentas desde importación (columna <span className="font-medium text-orbita-primary">Cuenta</span>).
-                </li>
-                <li>
-                  <span className="font-medium text-orbita-primary">Tarjeta</span>: disponible hoy ·{" "}
-                  <span className="font-medium text-orbita-primary">Ahorro</span>: saldo en cuenta.
-                </li>
-                <li>
-                  <span className="font-medium text-orbita-primary">Ajustes</span> cuadran con tu extracto; no cambian el
-                  resumen de ingresos y gastos ni las categorías del mapa.
-                </li>
-              </ol>
-            </div>
+          <div className={cn(financeAuxDisclosureBodyClass, "px-0 pt-0")}>
+            <div className="space-y-0 px-3 pb-3 pt-0.5 sm:px-3.5">
+              <ConnectedBankAccountsCard embedded />
+
+              {supabaseEnabled && (ledgerLoading || ledgerAccounts.length > 0 || ledgerError) ? (
+                <div className="mt-3 border-t border-orbita-border/45 pt-3">
+                  <p className={financeCardMicroLabelClass}>Registro manual de saldos</p>
+                  <p className={cn(financeSectionIntroClass, "!mt-1 text-orbita-secondary")}>
+                    {ledgerAccounts.length > 0
+                      ? `${ledgerAccounts.length} cuenta${ledgerAccounts.length === 1 ? "" : "s"}: mismo monto que ves en extracto o app (no es saldo en vivo del banco).`
+                      : "Aparecen cuando importás movimientos y usás la columna «Cuenta»."}
+                  </p>
             {ledgerReorderMessage ? (
               <p
                 className="mt-2 rounded-lg border border-emerald-200/80 bg-emerald-50/90 px-3 py-2 text-xs font-medium text-emerald-900"
@@ -1791,8 +1765,8 @@ export default function CuentasClient() {
               <p className="mt-3 text-sm text-orbita-secondary">Cargando lista de cuentas…</p>
             ) : null}
             {!ledgerLoading && ledgerAccounts.length === 0 && !ledgerError ? (
-              <p className="mt-3 text-sm text-orbita-secondary">
-                Aún no hay cuentas. Aparecerán aquí cuando importes movimientos con columna Cuenta.
+              <p className="mt-3 text-[11px] text-orbita-secondary sm:text-sm">
+                Todavía no hay cuentas: aparecen cuando importás movimientos y elegís columna «Cuenta».
               </p>
             ) : null}
             {ledgerAccounts.length > 0 ? (
@@ -1853,9 +1827,9 @@ export default function CuentasClient() {
                                 onClick={() => void reconcileLedgerAccount(a)}
                                 disabled={ledgerReconcileBusyId === a.id}
                                 title="Disponible (tarjeta) o saldo (ahorro) según veas en tu app o extracto. Sin conexión con el banco."
-                                className="inline-flex min-h-[32px] items-center rounded-lg border border-[color-mix(in_srgb,var(--color-accent-finance)_35%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-finance)_9%,var(--color-surface))] px-2.5 py-1 text-xs font-medium text-orbita-primary shadow-sm transition hover:bg-[color-mix(in_srgb,var(--color-accent-finance)_14%,var(--color-surface))] disabled:cursor-not-allowed disabled:opacity-60"
+                                className="inline-flex min-h-[28px] items-center rounded-md border border-orbita-border/65 px-2 py-1 text-[11px] font-medium text-orbita-primary transition hover:bg-orbita-surface-alt/80 disabled:cursor-not-allowed disabled:opacity-50"
                               >
-                                {ledgerReconcileBusyId === a.id ? "Aplicando…" : "Registrar cifra"}
+                                {ledgerReconcileBusyId === a.id ? "Guardando…" : "Cargar cifra"}
                               </button>
                             </div>
                           </div>
@@ -1866,9 +1840,12 @@ export default function CuentasClient() {
                 ))}
               </div>
             ) : null}
+                </div>
+              ) : null}
+            </div>
           </div>
         </details>
-      ) : null}
+      </section>
 
       {!kpis ? (
         <div className={`rounded-[20px] p-4 text-center text-sm text-orbita-secondary sm:p-8 ${arcticPanel}`}>
@@ -1929,7 +1906,7 @@ export default function CuentasClient() {
                         <span className="block space-y-1">
                           <span>{kpis.creditoUsoPromedioPct}% uso promedio (tarjetas)</span>
                           <span className="block text-[10px] font-normal leading-snug text-orbita-muted">
-                            Por tarjeta: movimientos del mes + disponible anotado en «Tus saldos en el banco».
+                            Por tarjeta: movimientos del mes más el disponible que anotaste en el registro manual de saldos.
                           </span>
                         </span>
                       }
@@ -1948,9 +1925,7 @@ export default function CuentasClient() {
                 return chrome(
                   <section className="space-y-4">
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
-                        Cuentas de ahorro
-                      </h2>
+                      <h2 className={financeModuleSectionHeadingClass}>Cuentas de ahorro</h2>
                       <button
                         type="button"
                         onClick={openAddSavings}
@@ -1971,9 +1946,7 @@ export default function CuentasClient() {
                 return chrome(
                   <section className="space-y-4">
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
-                        Tarjetas de crédito
-                      </h2>
+                      <h2 className={financeModuleSectionHeadingClass}>Tarjetas de crédito</h2>
                       <button
                         type="button"
                         onClick={openAddCredit}
@@ -2023,9 +1996,7 @@ export default function CuentasClient() {
                 return chrome(
                   <section className="space-y-4">
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
-                        Créditos estructurales
-                      </h2>
+                      <h2 className={financeModuleSectionHeadingClass}>Créditos estructurales</h2>
                       <button
                         type="button"
                         onClick={openAddLoan}
@@ -2469,7 +2440,7 @@ export default function CuentasClient() {
             <p className="rounded-xl border border-orbita-border/70 bg-orbita-surface-alt/35 px-3 py-2.5 text-xs leading-relaxed text-orbita-secondary sm:col-span-2">
               Deuda, cupo y salud % salen del <strong className="text-orbita-primary">catálogo</strong> y movimientos. Para
               alinear con la cifra que ves en tu app o extracto usa{" "}
-              <strong className="text-orbita-primary">Registrar cifra (manual)</strong> en la fila de esta cuenta en la lista
+              <strong className="text-orbita-primary">Cargar cifra</strong> en la fila de esta cuenta en la lista
               inferior (entrada manual; no se sobrescriben aquí).
             </p>
           ) : null}

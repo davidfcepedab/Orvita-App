@@ -29,6 +29,12 @@ export const financeModulePageBodyClass =
 export const financeSectionEyebrowClass =
   "text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary sm:text-[11px]"
 
+/**
+ * Título de bloque en vistas Capital (cuenta atrás del eyebrow; mismo peso que misión cards).
+ */
+export const financeModuleSectionHeadingClass =
+  "text-[15px] font-bold leading-snug tracking-tight text-orbita-primary sm:text-[1.05rem]"
+
 /** Texto introductorio bajo un rótulo de sección (CFO, detalle P+L). */
 export const financeSectionIntroClass =
   "mt-1 w-full min-w-0 max-w-full text-pretty text-[11px] leading-relaxed text-orbita-muted [overflow-wrap:anywhere] sm:text-xs"

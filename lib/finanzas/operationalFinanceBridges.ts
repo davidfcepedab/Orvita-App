@@ -73,7 +73,7 @@ export function operationalDriverForLabel(name: string): OperationalDriverProfil
   }
   return {
     driver:
-      "Gasto operativo ligado a decisiones repetidas (qué compras, cuándo y con qué frecuencia) más que al número aislado.",
+      "Decisiones repetidas de gasto (qué, cuándo, con qué frecuencia), más que el monto suelto.",
     agendaLevers:
       "Revisión semanal de 15–20 min en Órbita: categoría → movimientos → una decisión de ajuste para la semana siguiente.",
     habitKeywords: ["rutina", "enfoque", "energía", "descanso"],
@@ -94,13 +94,13 @@ export function correlateHabitsWithLabel(label: string, habits: HabitRef[]): { m
     const op = operationalDriverForLabel(label)
     if (op.habitKeywords.some((k) => hn.includes(k))) matched.push(h.name)
   }
-  const uniq = [...new Set(matched)].slice(0, 4)
+  const uniq = [...new Set(matched)].slice(0, 3)
   return {
     matched: uniq,
     line:
       uniq.length > 0
-        ? `Hábitos con eco nominal: ${uniq.join(", ")}. Si la frecuencia de esos hábitos subió este mes, puede explicar parte del gasto.`
-        : "Sin eco directo con nombres de hábitos: revisa agenda (eventos recurrentes) y triggers de compra (horario, fatiga).",
+        ? `Encaje con hábitos: ${uniq.join(", ")}.`
+        : "Sin encaje por nombre: revisa agenda y horarios típicos de compra.",
   }
 }
 
@@ -118,13 +118,15 @@ export function operationalCauseForAnt(category: string, subcategory: string): s
 export function narrativeForGrowth(category: string, momPct: number | null, habits: HabitRef[]): string {
   const op = operationalDriverForLabel(category)
   const corr = correlateHabitsWithLabel(category, habits)
+  const driverOne =
+    op.driver.length > 96 ? `${op.driver.slice(0, 93).trimEnd()}…` : op.driver
   const spike =
     momPct != null && momPct >= 15
-      ? ` El incremento fuerte (MoM) suele ir detrás de un cambio de rutina, más salidas o menos planificación.`
+      ? ` Pico mes vs mes: revisar rutina y salidas.`
       : momPct != null && momPct > 0
-        ? ` Ligero aumento: conviene vigilar si se consolida en el hábito de gasto.`
+        ? ` Subida leve: vigilar si se mantiene.`
         : ""
-  return `${op.driver} ${spike} ${corr.line}`
+  return `${driverOne}${spike} ${corr.line}`
 }
 
 export function timeReliefHeuristicMonthlyHours(savingsMonthlyCop: number): number {

@@ -8,7 +8,8 @@ import {
   splitStructuralCategoriesByCatalogExpenseType,
 } from "@/lib/finanzas/deriveFromTransactions"
 import { mockTransactionsForMonth } from "@/lib/finanzas/mockFinancePayloads"
-import { monthBounds } from "@/lib/finanzas/monthRange"
+import { computeRollingSixMonthByBudgetKey } from "@/lib/finanzas/categoryRollingSixMonth"
+import { monthBounds, lastNMonthsInclusive } from "@/lib/finanzas/monthRange"
 import {
   fetchHouseholdSubcategoryCatalogRows,
   fetchSubcategoryCatalogMerged,
@@ -33,13 +34,19 @@ export async function GET(req: NextRequest) {
     const { startStr, endStr, prevStartStr, prevEndStr } = bounds
 
     if (isAppMockMode()) {
-      const all = mockTransactionsForMonth(month)
-      const current = all.filter((r) => r.date >= startStr && r.date <= endStr)
-      const previous = all.filter((r) => r.date >= prevStartStr && r.date <= prevEndStr)
+      const monthsWin = lastNMonthsInclusive(month, 6)
+      const allSix = monthsWin.flatMap((ym) => mockTransactionsForMonth(ym))
+      const current = allSix.filter((r) => r.date >= startStr && r.date <= endStr)
+      const previous = allSix.filter((r) => r.date >= prevStartStr && r.date <= prevEndStr)
       const base = buildStructuralCategories(current, previous)
       const { structuralCategories: withCat } = attachCatalogToStructuralCategories(base.structuralCategories, [])
       const structuralCategories = splitStructuralCategoriesByCatalogExpenseType(withCat)
       const totals = recomputeStructuralTotals(structuralCategories)
+      const rollingSixMonthByBudgetKey = computeRollingSixMonthByBudgetKey({
+        anchorMonth: month,
+        transactions: allSix,
+        catalog: [],
+      })
       return NextResponse.json({
         success: true,
         source: "mock",
@@ -49,6 +56,7 @@ export async function GET(req: NextRequest) {
           structuralCategories,
           subcategoryCatalog: [],
           unknownSubcategories: [],
+          rollingSixMonthByBudgetKey,
         },
       })
     }
@@ -64,6 +72,7 @@ export async function GET(req: NextRequest) {
           totalStructural: 0,
           subcategoryCatalog: [],
           unknownSubcategories: [],
+          rollingSixMonthByBudgetKey: {},
         },
       })
     }
@@ -76,7 +85,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Usuario sin hogar asignado" }, { status: 403 })
     }
 
-    const rangeRows = await getTransactionsByRange(auth.supabase, prevStartStr, endStr)
+    const monthsWin = lastNMonthsInclusive(month, 6)
+    const rangeStartRolling = monthBounds(monthsWin[0])!.startStr
+    const rangeRows = await getTransactionsByRange(auth.supabase, rangeStartRolling, endStr)
     const current = rangeRows.filter((r) => r.date >= startStr && r.date <= endStr)
     const previous = rangeRows.filter((r) => r.date >= prevStartStr && r.date <= prevEndStr)
 
@@ -95,6 +106,11 @@ export async function GET(req: NextRequest) {
     )
     const structuralCategories = splitStructuralCategoriesByCatalogExpenseType(withCatalog)
     const { totalFixed, totalVariable, totalStructural } = recomputeStructuralTotals(structuralCategories)
+    const rollingSixMonthByBudgetKey = computeRollingSixMonthByBudgetKey({
+      anchorMonth: month,
+      transactions: rangeRows,
+      catalog,
+    })
     const data = {
       ...base,
       totalFixed,
@@ -103,6 +119,7 @@ export async function GET(req: NextRequest) {
       structuralCategories,
       subcategoryCatalog: householdCatalog,
       unknownSubcategories,
+      rollingSixMonthByBudgetKey,
     }
     return NextResponse.json({ success: true, data })
   } catch (error: unknown) {

@@ -17,7 +17,7 @@ export const FINANCE_PL_README_EXPANDED =
 
 /** Cabecera de la página Cuentas (no repetir el párrafo largo del callout). */
 export const FINANCE_CUENTAS_HEADER_SUBTITLE =
-  "Indicadores arriba; más abajo despliega «Tus saldos en el banco» para anotar lo que ves en extracto o app y cuadrarlo con Órvita."
+  "Indicadores arriba; más abajo abrís el bloque de conexión y saldos para anotar lo que ves en extracto o app y cuadrarlo con Órvita."
 
 /** Perspectivas: misma base operativa que Resumen / meta del mes (catálogo + sin ajustes de conciliación). */
 export const FINANCE_INSIGHTS_STRAPLINE =

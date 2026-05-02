@@ -114,7 +114,7 @@ Misma lógica: **cada Live Activity responde a una pregunta única**; no dos act
 
 ### 2.4 **Modo pareja — Handoff**
 
-- **Qué hace:** “Llego en X min” o “Te toca recoger”; visible solo entre vosotros, revocable.
+- **Qué hace:** “Llego en X min” o “Te toca recoger”; visible solo entre ustedes (pareja/hogar), revocable.
 - **Pilares:** Tiempo, flujo doméstico.
 - **Presión / flujo:** Menos mensajes duplicados; extiende Ventana Compartida al tiempo real.
 - **Trigger:** Shortcut “Salgo”, geofence o confirmación manual.
