@@ -3,12 +3,25 @@
 import { useEffect, useState } from "react"
 import { useFinance } from "../FinanceContext"
 import { FinanceViewHeader } from "../_components/FinanceViewHeader"
-import { financeViewRootClass } from "../_components/financeChrome"
+import {
+  financeCardHintClass,
+  financeCardMicroLabelClass,
+  financeHeroChipBaseClass,
+  financeKpiCardClass,
+  financeModuleContentStackClass,
+  financeModulePageBodyClass,
+  financeNeutralChipClass,
+  financeNoticeChipClass,
+  financePlStackClass,
+  financeSectionEyebrowClass,
+  financeSectionIntroClass,
+} from "../_components/financeChrome"
 import { Card } from "@/src/components/ui/Card"
 import { FINANCE_INSIGHTS_STRAPLINE } from "@/lib/finanzas/financeModuleCopy"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { formatYmLongMonthYearEsCo } from "@/lib/agenda/localDateKey"
 import { financeApiGet } from "@/lib/finanzas/financeClientFetch"
+import { cn } from "@/lib/utils"
 
 interface InsightsResponse {
   score?: number
@@ -109,7 +122,14 @@ export default function FinanzasInsights() {
 
   if (loading) {
     return (
-      <div className="p-6 text-center text-orbita-secondary">
+      <div
+        className={cn(
+          financePlStackClass,
+          financeModulePageBodyClass,
+          financeModuleContentStackClass,
+          "py-8 text-center text-orbita-secondary sm:py-10",
+        )}
+      >
         <p>Cargando perspectivas...</p>
       </div>
     )
@@ -117,45 +137,69 @@ export default function FinanzasInsights() {
 
   if (error) {
     return (
-      <div
-        className="rounded-[var(--radius-card)] border p-4"
-        style={{
-          background: "color-mix(in srgb, var(--color-accent-danger) 10%, var(--color-surface))",
-          borderColor: "color-mix(in srgb, var(--color-accent-danger) 32%, var(--color-border))",
-          color: "var(--color-accent-danger)",
-        }}
-      >
-        <p className="font-semibold">Error al cargar perspectivas</p>
-        <p className="mt-1 text-sm opacity-90">{error}</p>
+      <div className={cn(financePlStackClass, financeModulePageBodyClass, financeModuleContentStackClass)}>
+        <div
+          className="rounded-[var(--radius-card)] border p-4"
+          style={{
+            background: "color-mix(in srgb, var(--color-accent-danger) 10%, var(--color-surface))",
+            borderColor: "color-mix(in srgb, var(--color-accent-danger) 32%, var(--color-border))",
+            color: "var(--color-accent-danger)",
+          }}
+        >
+          <p className="font-semibold">Error al cargar perspectivas</p>
+          <p className="mt-1 text-sm opacity-90">{error}</p>
+        </div>
       </div>
     )
   }
 
   if (!data) {
     return (
-      <div className="space-y-2 p-6 text-center text-orbita-secondary">
+      <div
+        className={cn(
+          financePlStackClass,
+          financeModulePageBodyClass,
+          financeModuleContentStackClass,
+          "py-8 text-center text-orbita-secondary sm:py-10",
+        )}
+      >
         <p>Sin datos de análisis para este periodo.</p>
-        {notice && <p className="text-xs text-orbita-secondary">{notice}</p>}
+        {notice ? <p className="mt-2 text-xs text-orbita-secondary">{notice}</p> : null}
       </div>
     )
   }
 
   const { score, insight, stability, prediction } = data
 
-  const stabilityColor = {
-    green: "text-emerald-600",
-    yellow: "text-amber-600",
-    red: "text-rose-600",
-  }
+  const stabilityTone = {
+    green: {
+      text: "text-[var(--color-accent-health)]",
+      badge:
+        "border-[color-mix(in_srgb,var(--color-accent-health)_42%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_12%,var(--color-surface))] text-emerald-950 dark:text-emerald-100",
+    },
+    yellow: {
+      text: "text-[var(--color-accent-warning)]",
+      badge:
+        "border-amber-500/35 bg-amber-500/10 text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-50",
+    },
+    red: {
+      text: "text-[var(--color-accent-danger)]",
+      badge:
+        "border-[color-mix(in_srgb,var(--color-accent-danger)_38%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-danger)_10%,var(--color-surface))] text-[var(--color-accent-danger)]",
+    },
+  } as const
 
-  const stabilityBg = {
-    green: "bg-emerald-50 border-emerald-200",
-    yellow: "bg-amber-50 border-amber-200",
-    red: "bg-rose-50 border-rose-200",
-  }
+  const scoreTone =
+    score !== undefined
+      ? score >= 70
+        ? stabilityTone.green.text
+        : score >= 40
+          ? stabilityTone.yellow.text
+          : stabilityTone.red.text
+      : ""
 
   return (
-    <div className={financeViewRootClass}>
+    <div className={cn(financePlStackClass, financeModulePageBodyClass, financeModuleContentStackClass)}>
       <FinanceViewHeader
         kicker="Perspectivas"
         title="Lectura de tu flujo"
@@ -163,191 +207,215 @@ export default function FinanzasInsights() {
         action={
           <div className="flex flex-wrap items-center justify-end gap-2">
             {source === "mock" ? (
-              <span className="rounded-full border border-orbita-border bg-orbita-surface-alt px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-orbita-secondary">
-                Demo
-              </span>
+              <span className={financeNeutralChipClass}>Demo</span>
             ) : null}
-            {notice ? (
-              <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-900">
-                {notice}
-              </span>
-            ) : null}
+            {notice ? <span className={financeNoticeChipClass}>{notice}</span> : null}
           </div>
         }
       />
 
-      <Card className="border border-orbita-border/80 bg-[color-mix(in_srgb,var(--color-accent-finance)_6%,var(--color-surface))] p-3 sm:p-4">
-        <p className="m-0 text-sm leading-relaxed text-orbita-primary">
-          Ventana de{" "}
-          <span className="tabular-nums font-semibold">{meta?.months ?? 6}</span> meses corridos hasta{" "}
-          <span className="font-semibold">{formatYmLongMonthYearEsCo(meta?.throughMonth ?? month)}</span>
-          {meta?.basis === "operativo" ? (
-            <>
-              . Los índices usan{" "}
-              <span className="font-semibold">flujo operativo</span> (ingresos menos gasto catalogado como operativo, sin
-              ajustes de conciliación), la misma base que la franja «Datos» del mes en el encabezado del módulo y el
-              Resumen.
-            </>
-          ) : (
-            <>.</>
-          )}{" "}
-          Score y estabilidad ponderan ahorro vs ingresos y la volatilidad de ese flujo mes a mes.
-        </p>
-      </Card>
+      <section className="space-y-2" aria-label="Contexto del análisis">
+        <h2 className={financeSectionEyebrowClass}>Contexto del análisis</h2>
+        <Card className={cn(financeKpiCardClass, "border-[color-mix(in_srgb,var(--color-accent-finance)_22%,var(--color-border))] p-3 sm:p-4")}>
+          <p className={cn(financeSectionIntroClass, "mt-0 text-orbita-primary sm:text-[13px]")}>
+            Ventana de{" "}
+            <span className="tabular-nums font-semibold text-orbita-primary">{meta?.months ?? 6}</span> meses hasta{" "}
+            <span className="font-semibold">{formatYmLongMonthYearEsCo(meta?.throughMonth ?? month)}</span>
+            {meta?.basis === "operativo" ? (
+              <>
+                . Índices sobre <span className="font-semibold">flujo operativo</span> (misma base que Datos en el hero y
+                Resumen / P&amp;L).
+              </>
+            ) : (
+              <>.</>
+            )}{" "}
+            Score y estabilidad combinan ahorro frente a ingresos y la volatilidad mes a mes.
+          </p>
+        </Card>
+      </section>
 
-      <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-[1.15fr_1fr]">
-        <div className="grid gap-3 sm:gap-4">
-          {score !== undefined && (
-            <Card hover className="p-3 sm:p-5">
-              <div className="grid gap-2 text-center">
-                <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">
-                  Salud financiera (índice)
-                </p>
-                <p
-                  className={`text-4xl font-semibold tabular-nums sm:text-5xl ${
-                    score >= 70
-                      ? "text-emerald-600"
-                      : score >= 40
-                      ? "text-amber-600"
-                      : "text-rose-600"
-                  }`}
-                >
-                  {Math.round(score)}
-                </p>
-                <p className="text-xs text-orbita-secondary">Escala 0–100 · mezcla ahorro/volatilidad</p>
-              </div>
-            </Card>
-          )}
+      <section aria-labelledby="insights-kpi-heading" className="space-y-3">
+        <h2 id="insights-kpi-heading" className={financeSectionEyebrowClass}>
+          Índices y estabilidad
+        </h2>
+        <p className={financeSectionIntroClass}>Números grandes para lectura rápida; el detalle técnico queda en tarjetas inferiores.</p>
 
-          <Card hover className="p-3 sm:p-5">
-            <div className="grid gap-3">
-              <div>
-                <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Estabilidad del flujo</p>
-                <p className="mt-1 text-[11px] leading-snug text-orbita-secondary">
-                  Un solo número resume qué tan predecible es tu caja en el historial analizado.
-                </p>
-              </div>
-              {stability ? (
-                <>
-                  <div className="flex flex-wrap items-end justify-between gap-2">
-                    <p
-                      className={`text-3xl font-semibold tabular-nums ${
-                        stability.status === "green"
-                          ? "text-emerald-600"
-                          : stability.status === "yellow"
-                          ? "text-amber-600"
-                          : "text-rose-600"
-                      }`}
-                    >
-                      {Math.round(stability.stabilityIndex)}
-                    </p>
-                    <span
-                      className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.16em] ${stabilityBg[stability.status]} ${stabilityColor[stability.status]}`}
-                    >
-                      {stability.status === "green"
-                        ? "estable"
-                        : stability.status === "yellow"
-                        ? "presión"
-                        : "riesgo"}
-                    </span>
+        <div className="grid grid-cols-1 gap-4 sm:gap-5 lg:grid-cols-[1.15fr_1fr]">
+          <div className="grid gap-4 sm:gap-5">
+            {score !== undefined && (
+              <Card hover className={cn(financeKpiCardClass, "p-4 sm:p-5")}>
+                <div className="grid gap-2 text-center sm:text-left">
+                  <p className={financeCardMicroLabelClass}>Salud financiera (índice)</p>
+                  <p className={cn("text-4xl font-bold tabular-nums sm:text-5xl", scoreTone)}>{Math.round(score)}</p>
+                  <div className="mx-auto mt-1 h-1.5 w-full max-w-[14rem] rounded-full bg-orbita-surface-alt/90 ring-1 ring-orbita-border/40 sm:mx-0">
+                    <div
+                      className="h-full rounded-full bg-[linear-gradient(90deg,var(--color-accent-finance),var(--color-accent-health))] transition-all"
+                      style={{ width: `${Math.min(100, Math.max(4, score))}%` }}
+                    />
                   </div>
-                  <div className="grid gap-2.5 text-xs">
-                    <div className="flex items-start justify-between gap-2 border-b border-orbita-border/50 pb-2">
-                      <span className="text-orbita-secondary">Operativo (cobertura de gastos)</span>
-                      <span className="shrink-0 tabular-nums font-semibold text-orbita-primary">
-                        {Math.round(stability.scoreOperativo)}
-                      </span>
-                    </div>
-                    <div className="flex items-start justify-between gap-2 border-b border-orbita-border/50 pb-2">
-                      <span className="text-orbita-secondary">Liquidez (flujo vs ingresos)</span>
-                      <span className="shrink-0 tabular-nums font-semibold text-orbita-primary">
-                        {Math.round(stability.scoreLiquidez)}
-                      </span>
-                    </div>
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="text-orbita-secondary">Riesgo (inverso a estabilidad)</span>
-                      <span className="shrink-0 tabular-nums font-semibold text-orbita-primary">
-                        {Math.round(stability.scoreRiesgo)}
-                      </span>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <p className="text-sm text-orbita-secondary">Sin datos</p>
-              )}
-            </div>
-          </Card>
-        </div>
+                  <p className={financeCardHintClass}>Escala 0–100 · ahorro y volatilidad del flujo operativo</p>
+                </div>
+              </Card>
+            )}
 
-        <div className="grid gap-3 sm:gap-4">
-          {insight && (
-            <Card hover className="p-3 sm:p-5">
-              <div className="grid gap-3">
-                <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Qué destacaría el sistema</p>
-                <p className="break-words text-sm font-medium leading-relaxed text-orbita-primary">{insight.message}</p>
-                {insight.all && insight.all.length > 1 && (
-                  <ul className="mt-2 space-y-1 text-xs text-orbita-secondary">
-                    {insight.all.slice(1).map((msg, i) => (
-                      <li key={i}>• {msg}</li>
-                    ))}
-                  </ul>
-                )}
-                <span
-                  className={`mt-2 inline-flex w-fit rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.16em] ${
-                    insight.type === "alert"
-                      ? "border-rose-200 bg-rose-50 text-rose-700"
-                      : "border-sky-200 bg-sky-50 text-sky-700"
-                  }`}
-                >
-                  {insight.type === "alert" ? "Riesgo activo" : "Señal positiva"}
-                </span>
-              </div>
-            </Card>
-          )}
-
-          {prediction?.projection && (
-            <Card hover className="p-3 sm:p-5">
+            <Card hover className={cn(financeKpiCardClass, "p-4 sm:p-5")}>
               <div className="grid gap-3">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Proyección simple (3 meses)</p>
-                  <p className="mt-1 text-[11px] leading-snug text-orbita-secondary">
-                    Suma el flujo operativo medio de la ventana; referencia de tendencia, no saldo bancario ni cierre
-                    contable.
+                  <p className={financeCardMicroLabelClass}>Estabilidad del flujo</p>
+                  <p className={financeCardHintClass}>
+                    Resume qué tan predecible es tu caja en la ventana analizada (modelo interno).
                   </p>
                 </div>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
-                  {prediction.projection.slice(0, 3).map((p, i) => (
-                    <div key={i} className="rounded-xl border border-orbita-border/60 bg-orbita-surface-alt/80 px-3 py-3 text-center">
-                      <p className="text-xs font-medium text-orbita-secondary">{p.month}</p>
-                      <p className="mt-2 text-sm font-semibold tabular-nums text-orbita-primary">
-                        ${formatMoneyCOP(p.projectedBalance)} COP
+                {stability ? (
+                  <>
+                    <div className="flex flex-wrap items-end justify-between gap-2">
+                      <p
+                        className={cn(
+                          "text-3xl font-bold tabular-nums",
+                          stability.status === "green"
+                            ? stabilityTone.green.text
+                            : stability.status === "yellow"
+                              ? stabilityTone.yellow.text
+                              : stabilityTone.red.text,
+                        )}
+                      >
+                        {Math.round(stability.stabilityIndex)}
                       </p>
+                      <span
+                        className={cn(
+                          financeHeroChipBaseClass,
+                          "px-3 py-1 text-[10px] uppercase tracking-[0.14em]",
+                          stability.status === "green"
+                            ? stabilityTone.green.badge
+                            : stability.status === "yellow"
+                              ? stabilityTone.yellow.badge
+                              : stabilityTone.red.badge,
+                        )}
+                      >
+                        {stability.status === "green"
+                          ? "Estable"
+                          : stability.status === "yellow"
+                            ? "Presión"
+                            : "Riesgo"}
+                      </span>
                     </div>
-                  ))}
-                </div>
+                    <div className="grid gap-2.5 text-[11px] sm:text-xs">
+                      <div className="flex items-start justify-between gap-2 border-b border-orbita-border/45 pb-2">
+                        <span className="text-orbita-muted">Operativo (cobertura)</span>
+                        <span className="shrink-0 tabular-nums font-semibold text-orbita-primary">
+                          {Math.round(stability.scoreOperativo)}
+                        </span>
+                      </div>
+                      <div className="flex items-start justify-between gap-2 border-b border-orbita-border/45 pb-2">
+                        <span className="text-orbita-muted">Liquidez (flujo vs ingresos)</span>
+                        <span className="shrink-0 tabular-nums font-semibold text-orbita-primary">
+                          {Math.round(stability.scoreLiquidez)}
+                        </span>
+                      </div>
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-orbita-muted">Riesgo (inverso a estabilidad)</span>
+                        <span className="shrink-0 tabular-nums font-semibold text-orbita-primary">
+                          {Math.round(stability.scoreRiesgo)}
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm text-orbita-secondary">Sin datos</p>
+                )}
               </div>
             </Card>
-          )}
-        </div>
-      </div>
+          </div>
 
-      <Card className="p-3 sm:p-5">
-        <div className="grid gap-2">
-          <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Resumen en una línea</p>
-          <p className="text-sm leading-relaxed text-orbita-primary">
-            {insight?.message ??
-              "Sin mensaje automático: revisa que haya movimientos en el periodo y que Supabase esté activo."}
-          </p>
-          <div className="flex flex-wrap gap-2 pt-1 text-[11px] text-orbita-secondary">
-            <span className="rounded-full border border-orbita-border bg-orbita-surface-alt px-3 py-1">
-              Estado: {stability?.status === "green" ? "favorable" : stability?.status === "yellow" ? "atención" : stability?.status === "red" ? "crítico" : "—"}
-            </span>
-            <span className="rounded-full border border-orbita-border bg-orbita-surface-alt px-3 py-1">
-              Índice {score != null ? Math.round(score) : "—"}/100
-            </span>
+          <div className="grid gap-4 sm:gap-5">
+            {insight ? (
+              <Card hover className={cn(financeKpiCardClass, "p-4 sm:p-5")}>
+                <div className="grid gap-3">
+                  <p className={financeCardMicroLabelClass}>Señal del sistema</p>
+                  <p className="text-pretty text-sm font-semibold leading-relaxed text-orbita-primary [overflow-wrap:anywhere]">
+                    {insight.message}
+                  </p>
+                  {insight.all && insight.all.length > 1 ? (
+                    <ul className="mt-1 space-y-1.5 text-[11px] leading-relaxed text-orbita-muted sm:text-xs">
+                      {insight.all.slice(1).map((msg, i) => (
+                        <li key={i} className="flex gap-2">
+                          <span className="text-[var(--color-accent-finance)]" aria-hidden>
+                            ·
+                          </span>
+                          <span>{msg}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  <span
+                    className={cn(
+                      financeHeroChipBaseClass,
+                      "mt-1 w-fit px-3 py-1 text-[10px] uppercase tracking-[0.14em]",
+                      insight.type === "alert"
+                        ? stabilityTone.red.badge
+                        : "border-[color-mix(in_srgb,var(--color-accent-finance)_38%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-finance)_10%,var(--color-surface))] text-[var(--color-accent-finance)]",
+                    )}
+                  >
+                    {insight.type === "alert" ? "Riesgo activo" : "Señal positiva"}
+                  </span>
+                </div>
+              </Card>
+            ) : null}
+
+            {prediction?.projection ? (
+              <Card hover className={cn(financeKpiCardClass, "p-4 sm:p-5")}>
+                <div className="grid gap-3">
+                  <div>
+                    <p className={financeCardMicroLabelClass}>Proyección simple (3 meses)</p>
+                    <p className={financeCardHintClass}>
+                      Tendencia a partir del flujo operativo medio; no es saldo bancario ni cierre contable.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
+                    {prediction.projection.slice(0, 3).map((p, i) => (
+                      <div
+                        key={i}
+                        className="rounded-xl border border-orbita-border/55 bg-orbita-surface/80 px-3 py-3 text-center shadow-sm"
+                      >
+                        <p className="text-[11px] font-medium text-orbita-muted">{p.month}</p>
+                        <p className="mt-2 text-sm font-bold tabular-nums text-orbita-primary">
+                          ${formatMoneyCOP(p.projectedBalance)}{" "}
+                          <span className="text-[10px] font-semibold text-orbita-muted">COP</span>
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </Card>
+            ) : null}
           </div>
         </div>
-      </Card>
+      </section>
+
+      <section aria-labelledby="insights-recap-heading" className="space-y-2">
+        <h2 id="insights-recap-heading" className={financeSectionEyebrowClass}>
+          Próxima lectura
+        </h2>
+        <Card className={cn(financeKpiCardClass, "border-l-[3px] border-l-[color-mix(in_srgb,var(--color-accent-finance)_55%,var(--color-border))] p-4 sm:p-5")}>
+          <p className="text-pretty text-sm font-medium leading-relaxed text-orbita-primary [overflow-wrap:anywhere]">
+            {insight?.message ??
+              "Sin mensaje automático: revisa movimientos en el periodo y que la sincronización esté activa."}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <span className={financeNeutralChipClass}>
+              Estado:{" "}
+              {stability?.status === "green"
+                ? "Favorable"
+                : stability?.status === "yellow"
+                  ? "Atención"
+                  : stability?.status === "red"
+                    ? "Crítico"
+                    : "—"}
+            </span>
+            <span className={financeNeutralChipClass}>Índice {score != null ? Math.round(score) : "—"}/100</span>
+          </div>
+        </Card>
+      </section>
     </div>
   )
 }

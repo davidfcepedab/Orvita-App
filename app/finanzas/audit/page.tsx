@@ -3,11 +3,19 @@
 import { useEffect, useState } from "react"
 import { useFinance } from "../FinanceContext"
 import { FinanceViewHeader } from "../_components/FinanceViewHeader"
-import { financeViewRootClass } from "../_components/financeChrome"
+import {
+  financeCardMicroLabelClass,
+  financeModuleContentStackClass,
+  financeModulePageBodyClass,
+  financePlStackClass,
+  financeSectionEyebrowClass,
+  financeSectionIntroClass,
+} from "../_components/financeChrome"
 import { Card } from "@/src/components/ui/Card"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { formatInstantInAgendaTz, formatYmLongMonthYearEsCo } from "@/lib/agenda/localDateKey"
 import { financeApiGet } from "@/lib/finanzas/financeClientFetch"
+import { cn } from "@/lib/utils"
 
 type AuditRow = {
   id: string
@@ -69,7 +77,7 @@ export default function FinanzasAuditPage() {
   }
 
   return (
-    <div className={financeViewRootClass}>
+    <div className={cn(financePlStackClass, financeModulePageBodyClass, financeModuleContentStackClass)}>
       <FinanceViewHeader
         kicker="Trazabilidad"
         title="Historial de cambios"
@@ -80,7 +88,15 @@ export default function FinanzasAuditPage() {
         }
       />
 
-      {loading && <p className="text-sm text-orbita-secondary">Cargando eventos…</p>}
+      <section className="space-y-2" aria-label="Sobre el historial">
+        <h2 className={financeSectionEyebrowClass}>Trazabilidad en tu hogar</h2>
+        <p className={financeSectionIntroClass}>
+          Listado técnico de altas, ediciones y borrados registrados en base de datos. Úsalo para auditar quién cambió
+          qué; el detalle de montos sigue viviendo en Movimientos.
+        </p>
+      </section>
+
+      {loading && <p className="text-[11px] text-orbita-muted sm:text-sm">Cargando eventos…</p>}
       {error && (
         <Card className="border border-red-200 p-4 text-sm text-red-600">
           {error}
@@ -100,29 +116,41 @@ export default function FinanzasAuditPage() {
       )}
 
       {!loading && rows.length > 0 && (
-        <Card className="min-w-0 overflow-x-auto p-0">
-          <table className="w-full min-w-[36rem] text-left text-sm">
-            <thead>
-              <tr className="border-b border-orbita-border text-xs uppercase tracking-wide text-orbita-secondary">
-                <th className="px-4 py-3">Cuándo</th>
-                <th className="px-4 py-3">Acción</th>
-                <th className="px-4 py-3">Transacción</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id} className="border-b border-orbita-border/60">
-                  <td className="px-4 py-2.5 tabular-nums text-orbita-secondary">
-                    {formatInstantInAgendaTz(r.changed_at)}
-                  </td>
-                  <td className="px-4 py-2.5 text-orbita-primary">{r.action}</td>
-                  <td className="max-w-[12rem] truncate px-4 py-2.5 font-mono text-xs text-orbita-secondary">
-                    {r.transaction_id ?? "—"}
-                  </td>
+        <Card className="min-w-0 overflow-hidden border-orbita-border/75 bg-[color-mix(in_srgb,var(--color-surface-alt)_28%,var(--color-surface))] p-0 shadow-[var(--shadow-card)]">
+          <div className="border-b border-orbita-border/50 px-4 py-3 sm:px-5">
+            <p className={financeCardMicroLabelClass}>Eventos del periodo</p>
+            <p className="mt-1 text-[11px] leading-snug text-orbita-muted">Orden cronológico inverso en la tabla (más reciente arriba).</p>
+          </div>
+          <div className="touch-pan-x overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
+            <table className="w-full min-w-[36rem] border-collapse text-left text-[11px] leading-snug sm:text-sm">
+              <thead>
+                <tr className="border-b border-orbita-border/60 bg-orbita-surface-alt/45">
+                  <th className={cn(financeCardMicroLabelClass, "px-4 py-2.5 text-left font-semibold sm:px-5")}>
+                    Cuándo
+                  </th>
+                  <th className={cn(financeCardMicroLabelClass, "px-4 py-2.5 text-left font-semibold sm:px-5")}>
+                    Acción
+                  </th>
+                  <th className={cn(financeCardMicroLabelClass, "px-4 py-2.5 text-left font-semibold sm:px-5")}>
+                    Transacción
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.id} className="border-b border-orbita-border/40 odd:bg-orbita-surface-alt/15">
+                    <td className="px-4 py-2.5 tabular-nums text-orbita-muted sm:px-5">
+                      {formatInstantInAgendaTz(r.changed_at)}
+                    </td>
+                    <td className="px-4 py-2.5 font-medium text-orbita-primary sm:px-5">{r.action}</td>
+                    <td className="max-w-[12rem] truncate px-4 py-2.5 font-mono text-[10px] text-orbita-secondary sm:px-5 sm:text-xs">
+                      {r.transaction_id ?? "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Card>
       )}
     </div>

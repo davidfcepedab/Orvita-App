@@ -4,7 +4,18 @@ import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react
 import { ChevronDown } from "lucide-react"
 import { useFinance } from "../FinanceContext"
 import { FinanceViewHeader } from "../_components/FinanceViewHeader"
-import { financeViewRootClass } from "../_components/financeChrome"
+import {
+  financeCardMicroLabelClass,
+  financeHeroChipBaseClass,
+  financeInlineSegmentRailClass,
+  financeModuleContentStackClass,
+  financeModulePageBodyClass,
+  financeNoticeChipClass,
+  financePlStackClass,
+  financeSectionEyebrowClass,
+  financeSectionIntroClass,
+  financeSubnavTabClass,
+} from "../_components/financeChrome"
 import { useRouter } from "next/navigation"
 import { Card } from "@/src/components/ui/Card"
 import { isModuloFinancieroStructuralCategory } from "@/lib/finanzas/structuralOperativoTotals"
@@ -26,6 +37,7 @@ import { isAppMockMode, isSupabaseEnabled } from "@/lib/checkins/flags"
 import { financeApiGet, financeApiJson } from "@/lib/finanzas/financeClientFetch"
 import type { FinanceSubcategoryCatalogRow } from "@/lib/finanzas/subcategoryCatalog"
 import { CategoryAnalysisPanels } from "./_components/CategoryAnalysisPanels"
+import { cn } from "@/lib/utils"
 
 interface Subcategory {
   name: string
@@ -617,7 +629,7 @@ export default function FinanzasCategories() {
   }
 
   return (
-    <div className={financeViewRootClass}>
+    <div className={cn(financePlStackClass, financeModulePageBodyClass, financeModuleContentStackClass)}>
       <FinanceViewHeader
         kicker={
           viewMode === "operativa"
@@ -642,50 +654,71 @@ export default function FinanzasCategories() {
         }
         action={
           notice ? (
-            <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-800">
+            <span className={financeNoticeChipClass} role="status">
               {notice}
             </span>
           ) : null
         }
       />
 
-      <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        {viewMode === "operativa" ? (
-          <label className="grid min-w-0 max-w-full gap-1.5 sm:max-w-md sm:flex-1">
-            <span className="text-[11px] uppercase tracking-[0.14em] text-orbita-secondary">Buscar categoría o subcategoría</span>
-            <input
-              type="search"
-              value={categoryQuery}
-              onChange={(e) => setCategoryQuery(e.target.value)}
-              placeholder="Ej. Hogar, Mercado…"
-              className="min-h-11 w-full rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface px-3 py-2 text-sm text-orbita-primary"
-              aria-label="Filtrar categorías"
-            />
-          </label>
-        ) : (
-          <div className="min-w-0 flex-1 text-[11px] leading-snug text-orbita-secondary sm:max-w-xl">
-            Usa el mes global (arriba) para anclar el análisis. Los enlaces abren Movimientos filtrados.
-          </div>
-        )}
-        <div className="flex flex-wrap gap-2">
-          {(["operativa", "estrategica", "predictiva"] as const).map((mode) => (
-            <button
-              key={mode}
-              onClick={() => setViewMode(mode)}
-              className={`min-h-11 rounded-full border px-4 py-2 text-[11px] uppercase tracking-[0.16em] transition sm:min-h-0 ${
-                viewMode === mode
-                  ? "border-orbita-border bg-orbita-surface text-orbita-primary shadow-card"
-                  : "border-transparent bg-orbita-surface-alt text-orbita-secondary hover:text-orbita-primary"
-              }`}
-            >
-              {mode === "operativa" && "Operativa"}
-              {mode === "estrategica" && "Estratégica"}
-              {mode === "predictiva" && "Predictiva"}
-            </button>
-          ))}
+      <section className="space-y-3" aria-label="Vista y filtros">
+        <div>
+          <h2 className={financeSectionEyebrowClass}>Vista y filtros</h2>
+          <p className={financeSectionIntroClass}>
+            Cambia el modo para ver mapa operativo, análisis o lectura predictiva. El mes lo controla el hero de Capital.
+          </p>
         </div>
-        <span className="text-xs text-orbita-secondary sm:shrink-0">Lectura mensual</span>
-      </div>
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+          {viewMode === "operativa" ? (
+            <label className="grid min-w-0 max-w-full gap-1.5 sm:max-w-md sm:flex-1">
+              <span className={financeCardMicroLabelClass}>Buscar categoría o subcategoría</span>
+              <input
+                type="search"
+                value={categoryQuery}
+                onChange={(e) => setCategoryQuery(e.target.value)}
+                placeholder="Ej. Hogar, Mercado…"
+                className="min-h-11 w-full rounded-[var(--radius-button)] border border-orbita-border/80 bg-orbita-surface px-3 py-2 text-sm text-orbita-primary shadow-sm outline-none ring-offset-2 transition focus-visible:border-[color-mix(in_srgb,var(--color-accent-finance)_45%,var(--color-border))] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--color-accent-finance)_28%,transparent)]"
+                aria-label="Filtrar categorías"
+              />
+            </label>
+          ) : (
+            <p className="min-w-0 flex-1 text-pretty text-[11px] leading-relaxed text-orbita-muted sm:max-w-xl sm:text-xs">
+              Los enlaces de análisis abren Movimientos con filtro; úsame para bajar al detalle sin perder el mes
+              seleccionado.
+            </p>
+          )}
+          <div
+            className={financeInlineSegmentRailClass}
+            role="tablist"
+            aria-label="Modo de vista de categorías"
+          >
+            {(["operativa", "estrategica", "predictiva"] as const).map((mode) => {
+              const active = viewMode === mode
+              const label =
+                mode === "operativa" ? "Operativa" : mode === "estrategica" ? "Estratégica" : "Predictiva"
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setViewMode(mode)}
+                  className={cn(financeSubnavTabClass(active, { subtle: true }), "min-h-9 flex-1 sm:min-h-8 sm:flex-none")}
+                >
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+        <p className="m-0">
+          <span
+            className={cn(financeHeroChipBaseClass, "border-orbita-border/55 bg-orbita-surface-alt/60 text-orbita-secondary")}
+          >
+            Lectura mensual
+          </span>
+        </p>
+      </section>
 
       {viewMode === "estrategica" && (
         <CategoryAnalysisPanels mode="estrategica" budgetRevision={budgetRevision} />

@@ -18,9 +18,18 @@ import {
 } from "lucide-react"
 import { Card } from "@/src/components/ui/Card"
 import { useFinance } from "../FinanceContext"
+import { ConnectedBankAccountsCard } from "../_components/ConnectedBankAccountsCard"
 import { FinanceViewHeader } from "../_components/FinanceViewHeader"
 import { FINANCE_CUENTAS_HEADER_SUBTITLE } from "@/lib/finanzas/financeModuleCopy"
-import { financeViewRootClass } from "../_components/financeChrome"
+import {
+  financeAuxDisclosureBodyClass,
+  financeAuxDisclosureSummaryClass,
+  financeModuleContentStackClass,
+  financeModulePageBodyClass,
+  financePlStackClass,
+  financeSectionEyebrowClass,
+  financeSectionIntroClass,
+} from "../_components/financeChrome"
 import { useLedgerAccounts, type LedgerAccountRow } from "../useLedgerAccounts"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { financeApiDelete, financeApiGet, financeApiJson } from "@/lib/finanzas/financeClientFetch"
@@ -50,6 +59,7 @@ import type { TcMovementLinkSummary } from "@/lib/finanzas/ledgerTcLinkSummaries
 import { SubscriptionsBurnSection } from "./SubscriptionsBurnSection"
 import { CashFlowSimulatorSection } from "./CashFlowSimulatorSection"
 import { CuentasModalShell } from "./CuentasModalShell"
+import { cn } from "@/lib/utils"
 import { arcticPanel, formatMoney, formatShortMillions } from "./cuentasFormat"
 
 const supabaseEnabled = process.env.NEXT_PUBLIC_SUPABASE_ENABLED === "true"
@@ -1665,7 +1675,8 @@ export default function CuentasClient() {
   }
 
   return (
-    <div className={`${financeViewRootClass} pb-10`}>
+    <>
+    <div className={cn(financePlStackClass, financeModulePageBodyClass, financeModuleContentStackClass, "pb-10")}>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-start justify-between gap-2 sm:gap-3">
           <div className="min-w-0 flex-1">
@@ -1714,25 +1725,41 @@ export default function CuentasClient() {
         {notice ? <p className="mt-2 text-xs text-orbita-secondary">{notice}</p> : null}
       </div>
 
+      <section className="space-y-2 rounded-xl border border-orbita-border/50 bg-orbita-surface-alt/30 px-3 py-2.5 sm:px-4 sm:py-3" aria-label="Lectura rápida">
+        <h2 className={financeSectionEyebrowClass}>Cómo leer esta página</h2>
+        <p className={cn(financeSectionIntroClass, "mt-0 text-orbita-secondary")}>
+          Indicadores primero; despliega <span className="font-medium text-orbita-primary">Tus saldos en el banco</span>{" "}
+          solo cuando vayas a cuadrar con extracto. Usa <span className="font-medium text-orbita-primary">Orden</span>{" "}
+          para reorganizar bloques (se guarda en el dispositivo).
+        </p>
+      </section>
+
+      <div className="min-w-0">
+        <ConnectedBankAccountsCard />
+      </div>
+
       {supabaseEnabled && (ledgerLoading || ledgerAccounts.length > 0 || ledgerError) ? (
-        <details className={`group mt-3 sm:mt-4 ${arcticPanel}`}>
-          <summary className="flex min-h-[44px] cursor-pointer list-none items-center gap-3 rounded-t-[var(--radius-card)] px-3 py-2.5 transition-colors hover:bg-[color-mix(in_srgb,var(--color-text-primary)_4%,transparent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--color-accent-finance)_45%,var(--color-border))] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)] sm:px-4 [&::-webkit-details-marker]:hidden">
+        <details className={`group overflow-hidden ${arcticPanel}`}>
+          <summary
+            className={cn(
+              financeAuxDisclosureSummaryClass,
+              "min-h-[44px] rounded-t-[var(--radius-card)] px-3 py-2.5 transition-colors hover:bg-[color-mix(in_srgb,var(--color-text-primary)_4%,transparent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--color-accent-finance)_45%,var(--color-border))] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)] sm:px-4",
+            )}
+          >
             <ChevronDown
               className="h-4 w-4 shrink-0 text-orbita-secondary transition-transform duration-200 group-open:rotate-180"
               aria-hidden
             />
             <div className="min-w-0 flex-1 text-left">
-              <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">
-                Tus saldos en el banco
-              </h2>
-              <p className="mt-0.5 text-[10px] leading-snug text-orbita-secondary">
+              <h2 className={financeSectionEyebrowClass}>Tus saldos en el banco</h2>
+              <p className={cn(financeSectionIntroClass, "mt-0.5 text-[10px] sm:text-[11px]")}>
                 {ledgerAccounts.length > 0
                   ? `${ledgerAccounts.length} cuenta${ledgerAccounts.length === 1 ? "" : "s"} · anota lo que ves en extracto o app (sin conexión con el banco)`
                   : "Cuando importes movimientos, podrás anotar aquí los saldos para cuadrarlos con Órvita"}
               </p>
             </div>
           </summary>
-          <div className="border-t border-orbita-border/80 px-3 pb-3 pt-2.5 sm:px-4 sm:pb-4">
+          <div className={cn(financeAuxDisclosureBodyClass, "px-3 pb-3 pt-2.5 sm:px-4 sm:pb-4")}>
             <div className="rounded-lg border border-orbita-border/45 bg-orbita-surface-alt/30 px-2.5 py-2 sm:px-3">
               <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-orbita-secondary">Cómo funciona</p>
               <ol className="mt-1.5 list-inside list-decimal space-y-1 text-[10px] leading-relaxed text-orbita-secondary marker:text-orbita-secondary/90">
@@ -2027,6 +2054,8 @@ export default function CuentasClient() {
           })}
         </>
       )}
+
+    </div>
 
       <CuentasModalShell
         open={modal === "paydate" && !!activeLoan}
@@ -2719,6 +2748,6 @@ export default function CuentasClient() {
           </button>
         </div>
       </CuentasModalShell>
-    </div>
+    </>
   )
 }

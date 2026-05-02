@@ -10,8 +10,6 @@ export type FlowEvolutionRow = {
   flujo: number
 }
 
-const MONTH_SHORT = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
-
 export function addMonthsYm(ym: string, delta: number): string {
   const [y0, m0] = ym.split("-").map(Number)
   if (!y0 || !m0 || m0 < 1 || m0 > 12) return ym
@@ -82,10 +80,11 @@ export function rollingYearMonths(endYm: string): string[] {
   return eachMonthInclusive(start, endYm)
 }
 
+/** Etiqueta compacta para series mensuales (gráfico / tabla): año 2 dígitos | mes 2 dígitos */
 function labelMonth(ym: string): string {
   const [y, m] = ym.split("-").map(Number)
-  const name = MONTH_SHORT[m - 1] ?? ym
-  return `${name} '${String(y).slice(-2)}`
+  if (!y || !m || m < 1 || m > 12) return ym
+  return `${String(y).slice(-2)}|${String(m).padStart(2, "0")}`
 }
 
 export function buildMonthlyFlowBuckets(

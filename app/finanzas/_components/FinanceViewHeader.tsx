@@ -1,6 +1,8 @@
 "use client"
 
 import type { ReactNode } from "react"
+import { financeSectionIntroClass } from "@/app/finanzas/_components/financeChrome"
+import { cn } from "@/lib/utils"
 
 type Props = {
   kicker: string
@@ -38,9 +40,7 @@ export function FinanceViewHeader({ kicker, title, subtitle, titleAs = "h2", tit
         >
           {title}
         </TitleTag>
-        {subtitle ? (
-          <p className="mt-0.5 hidden max-w-prose text-xs leading-snug text-orbita-secondary sm:block">{subtitle}</p>
-        ) : null}
+        {subtitle ? <p className={cn(financeSectionIntroClass, "max-w-prose")}>{subtitle}</p> : null}
       </div>
       {action ? <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">{action}</div> : null}
     </div>

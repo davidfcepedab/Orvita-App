@@ -2,10 +2,16 @@ import type { MonthFinanceCoherence } from "@/lib/finanzas/monthFinanceCoherence
 import type { PlCfoCatalogAggregate } from "@/lib/finanzas/plCfoCatalogAggregate"
 import type { PlOverviewMonthlyRow } from "@/lib/finanzas/plStrategicCenterFromCoherence"
 
+/** Un bloque de lectura dentro del insight: etiqueta corta opcional + texto interpretativo. */
+export type PlCfoInsightBlock = {
+  label?: string
+  text: string
+}
+
 export type PlCfoStrategicInsight = {
   id: string
   title: string
-  body: string
+  body: PlCfoInsightBlock[]
   variant: "neutral" | "attention" | "positive"
 }
 
@@ -120,21 +126,45 @@ export function buildPlCfoModel(
       expenseMomPct != null && incomeMomPct != null && expenseMomPct > incomeMomPct + 2
     const incomeSplitNote =
       useCatalogIncomeSplit && income > 0.5
-        ? ` Ingresos del mes: ~${((catalog!.incomeRecurringEst / income) * 100).toFixed(0)}% en subcategorías que también ingresaron el mes anterior (proxy de recurrencia).`
-        : " Clasificación ingresos recurrentes vs únicos fina requiere etiquetado explícito en movimientos."
+        ? `Ingresos del mes: ~${((catalog!.incomeRecurringEst / income) * 100).toFixed(0)}% en subcategorías que también ingresaron el mes anterior (proxy de recurrencia).`
+        : "Clasificación ingresos recurrentes vs únicos fina requiere etiquetado explícito en movimientos."
     strategicInsights.push({
       id: "drivers",
       title: "Drivers del mes",
-      body: expGrowingFaster && expenseMomPct != null && incomeMomPct != null
-        ? `El gasto operativo aceleró más que los ingresos (gasto ${expenseMomPct.toFixed(1)}% vs ingresos ${incomeMomPct.toFixed(1)}% vs mes anterior en la ventana móvil). Prioriza recortar variables o revisar categorías con mayor peso.`
-        : `Ingresos ${incomeMomPct != null ? `${incomeMomPct >= 0 ? "+" : ""}${incomeMomPct.toFixed(1)}%` : "—"} y gasto operativo ${expenseMomPct != null ? `${expenseMomPct >= 0 ? "+" : ""}${expenseMomPct.toFixed(1)}%` : "—"} vs el mes previo de la serie.${incomeSplitNote}`,
+      body:
+        expGrowingFaster && expenseMomPct != null && incomeMomPct != null
+          ? [
+              {
+                label: "Lectura de la serie",
+                text: `El gasto operativo aceleró más que los ingresos (gasto ${expenseMomPct.toFixed(1)}% vs ingresos ${incomeMomPct.toFixed(1)}% vs mes anterior en la ventana móvil).`,
+              },
+              {
+                label: "Qué priorizar",
+                text: "Recorta gasto variable reversible o revisa categorías con mayor peso antes de asumir que el ritmo de ingresos compensará sola la diferencia.",
+              },
+            ]
+          : [
+              {
+                label: "Variación vs mes previo",
+                text: `Ingresos ${incomeMomPct != null ? `${incomeMomPct >= 0 ? "+" : ""}${incomeMomPct.toFixed(1)}%` : "—"} y gasto operativo ${expenseMomPct != null ? `${expenseMomPct >= 0 ? "+" : ""}${expenseMomPct.toFixed(1)}%` : "—"} respecto al mes anterior dentro de la ventana móvil del Resumen.`,
+              },
+              {
+                label: "Recurrencia de ingresos",
+                text: incomeSplitNote,
+              },
+            ],
       variant: expGrowingFaster ? "attention" : "neutral",
     })
   } else {
     strategicInsights.push({
       id: "drivers",
       title: "Drivers del mes",
-      body: "Activa la conexión y asegura movimientos en el mes para comparar variaciones con la ventana de 12 meses del Resumen.",
+      body: [
+        {
+          label: "Sin serie comparable",
+          text: "Activa la conexión y registra movimientos en el mes seleccionado. Así podremos calcular variaciones de ingresos y gasto operativo frente al mes anterior y contextualizarlas en la ventana de 12 meses del Resumen.",
+        },
+      ],
       variant: "neutral",
     })
   }
@@ -147,27 +177,68 @@ export function buildPlCfoModel(
     title: "Márgenes",
     body:
       netMarginDelta != null
-        ? `Margen neto (flujo/ingresos) ${netMarginPct.toFixed(1)}%, ${netMarginDelta >= 0 ? "mejora" : "deterioro"} de ${Math.abs(netMarginDelta).toFixed(1)} pp vs el punto anterior de la serie. Margen operativo aprox. ${operatingMarginPct.toFixed(1)}% (ingresos − gasto KPI / ingresos).`
-        : `Margen neto ${netMarginPct.toFixed(1)}%. Margen operativo aprox. ${operatingMarginPct.toFixed(1)}%.`,
+        ? [
+            {
+              label: "Margen neto (flujo ÷ ingresos)",
+              text: `Quedó en ${netMarginPct.toFixed(1)}% (${netMarginDelta >= 0 ? "mejora" : "deterioro"} de ${Math.abs(netMarginDelta).toFixed(1)} puntos porcentuales vs el mes previo de la serie).`,
+            },
+            {
+              label: "Margen operativo (aprox.)",
+              text: `(Ingresos − gasto operativo KPI) ÷ ingresos del mes: ${operatingMarginPct.toFixed(1)}%.`,
+            },
+          ]
+        : [
+            {
+              label: "Margen neto",
+              text: `El flujo neto del mes representa el ${netMarginPct.toFixed(1)}% de los ingresos (ingresos − gastos relevantes según el mapa del mes).`,
+            },
+            {
+              label: "Margen operativo (aprox.)",
+              text: `(Ingresos − gasto operativo KPI) ÷ ingresos: ${operatingMarginPct.toFixed(1)}%.`,
+            },
+          ],
     variant: netMarginDelta != null && netMarginDelta < -2 ? "attention" : netMarginDelta != null && netMarginDelta > 1 ? "positive" : "neutral",
   })
 
   const fixedShare = structural > 0.5 ? Math.min(1, Math.max(0, 0.55)) : 0.5
   const variableShare = 1 - fixedShare
-  const pressureBody = (() => {
+  const pressureBody: PlCfoInsightBlock[] = (() => {
     if (useCatalogExpense && catalog) {
       const b = catalog.expenseByExpenseType
       const t = catTotal
       const pct = (x: number) => (t > 0.5 ? (x / t) * 100 : 0)
       const unmatchedPct = pct(b.sin_catalogo)
-      const unmatchedNote =
-        unmatchedPct >= 20
-          ? ` Atención: ${unmatchedPct.toFixed(0)}% del gasto quedó sin match de catálogo; conviene normalizar subcategorías o completar catálogo para lectura más confiable.`
-          : ""
-      return `Catálogo (gasto operativo analizado): fijo ${(b.fijo / 1000).toFixed(0)}k (${pct(b.fijo).toFixed(0)}%), variable ${(b.variable / 1000).toFixed(0)}k (${pct(b.variable).toFixed(0)}%), módulo finanzas ${(b.modulo_finanzas / 1000).toFixed(0)}k, sin fila de catálogo ${(b.sin_catalogo / 1000).toFixed(0)}k. Gasto operativo KPI ${(opex / 1000).toFixed(0)}k; brecha sin explicar entre KPI y mapa: ${(Math.abs(c.unexplainedKpiStructural) / 1000).toFixed(1)}k.`
-        + unmatchedNote
+      const blocks: PlCfoInsightBlock[] = [
+        {
+          label: "Mix por tipo (catálogo)",
+          text: `Sobre el gasto operativo analizado en catálogo: fijo ${(b.fijo / 1000).toFixed(0)}k (${pct(b.fijo).toFixed(0)}%), variable ${(b.variable / 1000).toFixed(0)}k (${pct(b.variable).toFixed(0)}%), módulo finanzas ${(b.modulo_finanzas / 1000).toFixed(0)}k, sin fila de catálogo ${(b.sin_catalogo / 1000).toFixed(0)}k.`,
+        },
+        {
+          label: "Cuadre KPI ↔ mapa",
+          text: `Gasto operativo KPI ${(opex / 1000).toFixed(0)}k; diferencia sin explicar entre ese KPI y el mapa de categorías: ${(Math.abs(c.unexplainedKpiStructural) / 1000).toFixed(1)}k.`,
+        },
+      ]
+      if (unmatchedPct >= 20) {
+        blocks.push({
+          text: `Atención: ${unmatchedPct.toFixed(0)}% del gasto quedó sin match de catálogo; conviene normalizar subcategorías o completar catálogo para lectura más confiable.`,
+        })
+      }
+      return blocks
     }
-    return `Gasto operativo KPI ${(opex / 1000).toFixed(0)}k COP; mapa operativo ${(structural / 1000).toFixed(0)}k. Reparto aprox. mapa: ~${Math.round(fixedShare * 100)}% comprometido / ~${Math.round(variableShare * 100)}% variable (estimación sobre total mapa). Brecha sin explicar: ${(Math.abs(c.unexplainedKpiStructural) / 1000).toFixed(1)}k.`
+    return [
+      {
+        label: "Totales operativos",
+        text: `Gasto operativo KPI ${(opex / 1000).toFixed(0)}k COP (regla del tablero) y total operativo en mapa de categorías ${(structural / 1000).toFixed(0)}k.`,
+      },
+      {
+        label: "Reparto estimado en mapa",
+        text: `Sobre el total mapa, reparto orientativo ~${Math.round(fixedShare * 100)}% comprometido / ~${Math.round(variableShare * 100)}% variable (aproximación; no sustituye el detalle por categoría).`,
+      },
+      {
+        label: "Brecha sin explicar",
+        text: `Diferencia residual entre KPI y mapa que sigue sin descomponer en esta vista: ${(Math.abs(c.unexplainedKpiStructural) / 1000).toFixed(1)}k.`,
+      },
+    ]
   })()
   strategicInsights.push({
     id: "pressure",

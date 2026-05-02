@@ -21,6 +21,12 @@ import {
   Treemap,
 } from "recharts"
 import { useFinance } from "../../FinanceContext"
+import {
+  financeCardMicroLabelClass,
+  financeKpiCardClass,
+  financeNoticeChipClass,
+  financeSectionIntroClass,
+} from "../../_components/financeChrome"
 import { Card } from "@/src/components/ui/Card"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { rechartsTooltipContentStyle } from "@/lib/charts/rechartsShared"
@@ -28,6 +34,7 @@ import type { CategoryAnalyticsPayload, StrategicInsight } from "@/lib/finanzas/
 import { loadMonthBudgets } from "@/lib/finanzas/categoryBudgetStorage"
 import { financeApiGet } from "@/lib/finanzas/financeClientFetch"
 import type { HabitRef } from "@/lib/finanzas/operationalFinanceBridges"
+import { cn } from "@/lib/utils"
 import {
   buildGrowthOperationalRows,
   buildPieWithDrivers,
@@ -55,8 +62,8 @@ function formatCop(n: number) {
 
 function momTone(mom: number | null, alert: number) {
   if (mom == null || !Number.isFinite(mom)) return "text-orbita-secondary"
-  if (mom >= alert) return "text-rose-600 font-semibold"
-  if (mom >= alert * 0.55) return "text-amber-700 font-medium"
+  if (mom >= alert) return "font-semibold text-[var(--color-accent-danger)]"
+  if (mom >= alert * 0.55) return "font-medium text-[var(--color-accent-warning)]"
   return "text-orbita-primary"
 }
 
@@ -71,8 +78,8 @@ function InsightCard({ insight }: { insight: EnrichedStrategicInsight | Strategi
   return (
     <div className={`rounded-xl border px-3 py-2.5 ${border}`}>
       <div className="flex flex-wrap items-center justify-between gap-1">
-        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-orbita-secondary">{insight.impact}</p>
-        <div className="flex flex-wrap items-center gap-2 text-[10px] tabular-nums text-emerald-800">
+        <p className={financeCardMicroLabelClass}>{insight.impact}</p>
+        <div className="flex flex-wrap items-center gap-2 text-[10px] tabular-nums text-[var(--color-accent-health)]">
           {insight.savingsMonthly != null ? <span>~${formatCop(insight.savingsMonthly)}/mes</span> : null}
           {insight.savingsAnnual != null ? (
             <span className="text-orbita-secondary">· ${formatCop(insight.savingsAnnual)}/año</span>
@@ -80,7 +87,7 @@ function InsightCard({ insight }: { insight: EnrichedStrategicInsight | Strategi
         </div>
       </div>
       <p className="mt-1 text-sm font-semibold leading-snug text-orbita-primary">{insight.title}</p>
-      <p className="mt-1 text-[11px] leading-relaxed text-orbita-secondary">{insight.body}</p>
+      <p className={cn(financeSectionIntroClass, "mt-1 text-orbita-secondary")}>{insight.body}</p>
       {enriched.rootCauseOperational ? (
         <p className="mt-2 border-t border-orbita-border/50 pt-2 text-[10px] leading-relaxed text-orbita-primary">
           <span className="font-semibold text-orbita-secondary">Causa operativa: </span>
@@ -321,7 +328,9 @@ export function CategoryAnalysisPanels({
   return (
     <div className="space-y-4">
       {notice ? (
-        <p className="text-center text-[11px] text-amber-800 dark:text-amber-200">{notice}</p>
+        <div className="flex justify-center">
+          <span className={financeNoticeChipClass}>{notice}</span>
+        </div>
       ) : null}
 
       {data.params.scopeOperational ? (
@@ -333,9 +342,7 @@ export function CategoryAnalysisPanels({
 
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
         <label className="grid max-w-xs gap-1">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
-            Umbral alerta MoM (%)
-          </span>
+          <span className={financeCardMicroLabelClass}>Umbral alerta MoM (%)</span>
           <input
             type="range"
             min={8}
@@ -349,31 +356,31 @@ export function CategoryAnalysisPanels({
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="p-3 sm:p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">Gasto (mes)</p>
+        <Card className={cn(financeKpiCardClass, "border shadow-[var(--shadow-card)]", "p-3 sm:p-4")}>
+          <p className={financeCardMicroLabelClass}>Gasto (mes)</p>
           <p className="mt-1 text-2xl font-semibold tabular-nums text-orbita-primary">${formatCop(data.kpis.totalExpenseAnchor)}</p>
         </Card>
-        <Card className="p-3 sm:p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">vs mes anterior</p>
+        <Card className={cn(financeKpiCardClass, "border shadow-[var(--shadow-card)]", "p-3 sm:p-4")}>
+          <p className={financeCardMicroLabelClass}>vs mes anterior</p>
           <p
             className={`mt-1 text-2xl font-semibold tabular-nums ${
-              (data.kpis.vsPrevExpensePct ?? 0) > 5 ? "text-rose-600" : "text-orbita-primary"
+              (data.kpis.vsPrevExpensePct ?? 0) > 5 ? "text-[var(--color-accent-danger)]" : "text-orbita-primary"
             }`}
           >
             {data.kpis.vsPrevExpensePct == null ? "—" : `${data.kpis.vsPrevExpensePct >= 0 ? "+" : ""}${data.kpis.vsPrevExpensePct.toFixed(1)}%`}
           </p>
         </Card>
-        <Card className="p-3 sm:p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">vs prom. 6 meses</p>
+        <Card className={cn(financeKpiCardClass, "border shadow-[var(--shadow-card)]", "p-3 sm:p-4")}>
+          <p className={financeCardMicroLabelClass}>vs prom. 6 meses</p>
           <p className="mt-1 text-2xl font-semibold tabular-nums text-orbita-primary">
             {data.kpis.vsAvg6ExpensePct == null ? "—" : `${data.kpis.vsAvg6ExpensePct >= 0 ? "+" : ""}${data.kpis.vsAvg6ExpensePct.toFixed(1)}%`}
           </p>
         </Card>
-        <Card className="p-3 sm:p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">Flujo neto (mes)</p>
+        <Card className={cn(financeKpiCardClass, "border shadow-[var(--shadow-card)]", "p-3 sm:p-4")}>
+          <p className={financeCardMicroLabelClass}>Flujo neto (mes)</p>
           <p
             className={`mt-1 text-2xl font-semibold tabular-nums ${
-              data.kpis.netAnchor >= 0 ? "text-emerald-700" : "text-rose-600"
+              data.kpis.netAnchor >= 0 ? "text-[var(--color-accent-health)]" : "text-[var(--color-accent-danger)]"
             }`}
           >
             {data.kpis.netAnchor >= 0 ? "+" : ""}${formatCop(data.kpis.netAnchor)}

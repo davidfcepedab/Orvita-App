@@ -178,7 +178,7 @@ export function ConnectedBankAccountsCard() {
   const pressureActive = typeof monthlyNet === "number" && monthlyNet < 0
 
   return (
-    <Card className="min-w-0 border-[color-mix(in_srgb,var(--color-border)_75%,transparent)] p-4 sm:p-5">
+    <Card className="min-w-0 rounded-[22px] border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] p-5 shadow-[var(--shadow-card)] sm:rounded-3xl sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-[11px] uppercase tracking-[0.14em] text-orbita-secondary">Capital · Integraciones</p>

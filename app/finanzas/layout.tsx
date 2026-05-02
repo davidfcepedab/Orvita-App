@@ -1,18 +1,39 @@
 "use client"
 
+import type { LucideIcon } from "lucide-react"
+import {
+  BarChart3,
+  Brain,
+  FileSearch,
+  Landmark,
+  LayoutDashboard,
+  Layers,
+  ListTree,
+} from "lucide-react"
 import { ReactNode } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { FinanceProvider, useFinance } from "./FinanceContext"
 import {
-  financeModuleHeroClass,
-  financeModuleSubnavClass,
-  financeModuleSubnavStyle,
+  financeModuleHeroTaglineClass,
+  financeModuleSubnavEmbeddedClass,
+  financeModuleSubnavEmbeddedStyle,
+  financeSectionEyebrowClass,
   financeSubnavTabClass,
 } from "./_components/financeChrome"
-import { FinanceDataLineBanner } from "./FinanceDataLineBanner"
+import { FinanceDataLineBanner, FinanceLedgerAlerts } from "./FinanceDataLineBanner"
 import { FinanceHeroMonthControl } from "./_components/FinanceHeroMonthControl"
 import { Card } from "@/src/components/ui/Card"
 import { cn } from "@/lib/utils"
+
+const FINANCE_MODULE_TABS: readonly { name: string; path: string; Icon: LucideIcon }[] = [
+  { name: "Resumen", path: "/finanzas/overview", Icon: LayoutDashboard },
+  { name: "P&L", path: "/finanzas/pl", Icon: BarChart3 },
+  { name: "Movimientos", path: "/finanzas/transactions", Icon: ListTree },
+  { name: "Categorías", path: "/finanzas/categories", Icon: Layers },
+  { name: "Cuentas", path: "/finanzas/cuentas", Icon: Landmark },
+  { name: "Perspectivas", path: "/finanzas/insights", Icon: Brain },
+  { name: "Auditoría", path: "/finanzas/audit", Icon: FileSearch },
+]
 
 function FinanzasLayoutContent({
   children,
@@ -33,62 +54,70 @@ function FinanzasLayoutContent({
 
   const { month, setMonth } = finance
 
-  const tabs = [
-    { name: "Resumen", path: "/finanzas/overview" },
-    { name: "P&L", path: "/finanzas/pl" },
-    { name: "Movimientos", path: "/finanzas/transactions" },
-    { name: "Categorías", path: "/finanzas/categories" },
-    { name: "Cuentas", path: "/finanzas/cuentas" },
-    { name: "Perspectivas", path: "/finanzas/insights" },
-    { name: "Auditoría", path: "/finanzas/audit" },
-  ] as const
-
   return (
-    <div className="min-w-0 max-w-full space-y-2.5 sm:space-y-3">
+    <div className="orbita-page-stack mx-auto min-w-0 w-full max-w-[min(76rem,calc(100vw-1.5rem))] space-y-3 sm:space-y-4">
       <Card
         className={cn(
-          financeModuleHeroClass,
+          "min-w-0 overflow-hidden rounded-2xl border-[color-mix(in_srgb,var(--color-border)_34%,transparent)] sm:rounded-[22px]",
           "max-sm:pr-[max(0.75rem,env(safe-area-inset-right,0px))]",
         )}
+        style={{
+          background: "color-mix(in srgb, var(--color-surface) 96%, var(--color-surface-alt))",
+          borderColor: "color-mix(in srgb, var(--color-border) 42%, transparent)",
+          boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 6px rgba(15, 23, 42, 0.03)",
+        }}
       >
-        <div className="flex min-w-0 flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-          <div className="min-w-0 max-w-full">
-            <h1 className="orbita-large-title m-0 break-words text-orbita-primary">Capital operativo</h1>
-            <p className="mt-0.5 max-w-prose text-[11px] leading-snug text-orbita-secondary [overflow-wrap:anywhere] sm:text-xs sm:leading-snug">
-              Un mismo mes para todo el módulo: elige el periodo aquí; cada pestaña muestra el detalle de esa fecha.
-            </p>
+        <div className="flex min-w-0 flex-row items-start justify-between gap-3 px-3 pb-3 pt-3 sm:items-center sm:gap-4 sm:px-4 sm:pb-3 sm:pt-3.5">
+          <div className="min-w-0 max-w-full flex-1 space-y-0.5 pr-2">
+            <p className={cn("m-0 text-orbita-secondary/90", financeSectionEyebrowClass)}>ORVITA · Capital</p>
+            <h1 className="m-0 text-base font-semibold leading-snug tracking-tight text-orbita-primary sm:text-lg">
+              Capital operativo
+            </h1>
+            <p className={financeModuleHeroTaglineClass}>Un mes para todas las pestañas.</p>
           </div>
           <FinanceHeroMonthControl month={month} onChange={setMonth} />
         </div>
-        <FinanceDataLineBanner embedded />
+
+        <FinanceDataLineBanner embedded footerRail />
+
+        <FinanceLedgerAlerts embedded />
+
+        <div
+          className={financeModuleSubnavEmbeddedClass}
+          style={financeModuleSubnavEmbeddedStyle}
+          role="tablist"
+          aria-label="Secciones de finanzas"
+        >
+          {FINANCE_MODULE_TABS.map((tab) => {
+            const active = pathname === tab.path || pathname.startsWith(`${tab.path}/`)
+            const TabIcon = tab.Icon
+
+            return (
+              <button
+                key={tab.path}
+                type="button"
+                onClick={() => router.push(tab.path)}
+                className={financeSubnavTabClass(active, { subtle: true })}
+                aria-current={active ? "page" : undefined}
+                role="tab"
+                aria-selected={active}
+              >
+                <TabIcon
+                  className={cn(
+                    "h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5",
+                    active ? "text-[var(--color-accent-finance)]" : "text-orbita-secondary/65",
+                  )}
+                  strokeWidth={2}
+                  aria-hidden
+                />
+                <span className="min-w-0 truncate">{tab.name}</span>
+              </button>
+            )
+          })}
+        </div>
       </Card>
 
-      <div
-        className={financeModuleSubnavClass}
-        style={financeModuleSubnavStyle}
-        role="tablist"
-        aria-label="Secciones de finanzas"
-      >
-        {tabs.map((tab) => {
-          const active = pathname === tab.path || pathname.startsWith(`${tab.path}/`)
-
-          return (
-            <button
-              key={tab.path}
-              type="button"
-              onClick={() => router.push(tab.path)}
-              className={`${financeSubnavTabClass(active)} whitespace-nowrap`}
-              aria-current={active ? "page" : undefined}
-              role="tab"
-              aria-selected={active}
-            >
-              {tab.name}
-            </button>
-          )
-        })}
-      </div>
-
-      <div className="min-w-0 space-y-3 sm:space-y-4">{children}</div>
+      <div className="min-w-0 space-y-5 sm:space-y-6 lg:space-y-7">{children}</div>
     </div>
   )
 }

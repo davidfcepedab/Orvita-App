@@ -2,9 +2,14 @@
 
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { motion, useReducedMotion } from "framer-motion"
 import { useFinance } from "../FinanceContext"
-import { FinanceViewHeader } from "../_components/FinanceViewHeader"
-import { financeViewRootClass } from "../_components/financeChrome"
+import {
+  financeCardMicroLabelClass,
+  financeHeroChipBaseClass,
+  financeSectionEyebrowClass,
+  financeViewRootClass,
+} from "../_components/financeChrome"
 import { useLedgerAccounts } from "../useLedgerAccounts"
 import { Card } from "@/src/components/ui/Card"
 import {
@@ -16,7 +21,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/src/components/ui/dialog"
-import { ChevronDown } from "lucide-react"
+import { ChevronDown, ListOrdered, Sparkles, TrendingDown, TrendingUp, Wallet } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import type { FinanceSubcategoryCatalogRow } from "@/lib/finanzas/subcategoryCatalog"
 import { financeApiDelete, financeApiGet, financeApiJson } from "@/lib/finanzas/financeClientFetch"
@@ -81,6 +87,17 @@ const txSelectGhost =
   "w-full max-w-full cursor-pointer rounded-md border border-orbita-border/35 bg-[color-mix(in_srgb,var(--color-text-primary)_4%,transparent)] py-1 pl-1.5 pr-6 text-[10px] font-medium text-orbita-primary shadow-none outline-none transition-[border-color,background-color] hover:bg-[color-mix(in_srgb,var(--color-text-primary)_8%,transparent)] focus:border-orbita-border/70 focus:bg-[color-mix(in_srgb,var(--color-surface-alt)_65%,transparent)] sm:text-[11px]"
 const txSelectTipo =
   "w-full max-w-full cursor-pointer rounded-md border border-orbita-border/35 bg-[color-mix(in_srgb,var(--color-text-primary)_4%,transparent)] py-0.5 pl-1 pr-5 text-[9px] font-semibold uppercase tracking-wide shadow-none outline-none transition hover:bg-[color-mix(in_srgb,var(--color-text-primary)_8%,transparent)] focus:border-orbita-border/70 sm:text-[10px]"
+/** Selectores en filas móviles de movimientos: altura mínima táctil, menos padding vertical */
+const txSelectMobileDense =
+  "min-h-7 py-0 leading-tight [&>option]:text-[10px]"
+
+/** Barra de filtros Movimientos: una fila, selects bajos y discretos */
+const txFilterBarSelect =
+  "min-h-7 h-7 min-w-0 cursor-pointer rounded-md border border-orbita-border/40 bg-[color-mix(in_srgb,var(--color-surface-alt)_40%,var(--color-surface))] px-2 py-0 pr-7 text-[11px] font-medium leading-none text-orbita-primary shadow-none outline-none transition-[border-color,background-color] hover:border-orbita-border/60 hover:bg-orbita-surface focus-visible:border-orbita-border/75 focus-visible:ring-1 focus-visible:ring-[color-mix(in_srgb,var(--color-accent-finance)_28%,transparent)] disabled:cursor-not-allowed disabled:opacity-50"
+
+/** Pie KPI Movimientos: móvil en rejilla (icono | etiqueta | métrica a la derecha); sm+ fila flex */
+const txStatCellShell =
+  "min-w-0 py-2 motion-safe:transition-[transform] motion-safe:duration-200 sm:px-4 sm:py-1.5 motion-safe:hover:-translate-y-px motion-reduce:transform-none max-sm:grid max-sm:grid-cols-[2rem_minmax(0,1fr)_auto] max-sm:gap-x-2 max-sm:items-center sm:flex sm:items-start sm:gap-2.5"
 
 interface Transaction {
   id?: string
@@ -155,6 +172,17 @@ export default function TransactionsPageClient() {
       : tipoParamRaw === "gasto" || tipoParamRaw === "expense"
         ? "gasto"
         : ""
+
+  const catalogCategories = useMemo(() => {
+    const s = new Set<string>()
+    for (const r of catalogRows) {
+      const c = r.category?.trim()
+      if (c) s.add(c)
+    }
+    const cur = category.trim()
+    if (cur) s.add(cur)
+    return [...s].sort((a, b) => a.localeCompare(b, "es"))
+  }, [catalogRows, category])
 
   const { accounts: ledgerAccounts } = useLedgerAccounts({ enabled: supabaseEnabled })
 
@@ -408,6 +436,16 @@ export default function TransactionsPageClient() {
     router.replace(qs ? `/finanzas/transactions?${qs}` : "/finanzas/transactions")
   }
 
+  const setCategoryFilter = (cat: string) => {
+    const p = new URLSearchParams(searchParams.toString())
+    const next = cat.trim()
+    if (next) p.set("category", next)
+    else p.delete("category")
+    p.delete("subcategory")
+    const qs = p.toString()
+    router.replace(qs ? `/finanzas/transactions?${qs}` : "/finanzas/transactions")
+  }
+
   const downloadCsv = (filename: string, text: string) => {
     const blob = new Blob([text], { type: "text/csv;charset=utf-8" })
     const url = URL.createObjectURL(blob)
@@ -528,6 +566,40 @@ export default function TransactionsPageClient() {
   const contentError = periodReady && error
   const contentReady = periodReady && !loading && !error && data !== null
 
+  const reduceMotion = useReducedMotion()
+  const deltaBarPct = useMemo(() => {
+    const absDelta = Math.abs(deltaValue)
+    const base = Math.max(Math.abs(previousSubtotal), Math.abs(subtotal), 1)
+    return Math.min(100, Math.round((absDelta / base) * 100))
+  }, [deltaValue, previousSubtotal, subtotal])
+
+  const statMotionContainer = useMemo(
+    () => ({
+      hidden: {},
+      show: { transition: { staggerChildren: reduceMotion ? 0 : 0.07 } },
+    }),
+    [reduceMotion],
+  )
+  const statMotionItem = useMemo(
+    () => ({
+      hidden: reduceMotion ? {} : { opacity: 0, y: 10, scale: 0.98 },
+      show: reduceMotion
+        ? {}
+        : {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            transition: { type: "spring" as const, stiffness: 420, damping: 30 },
+          },
+    }),
+    [reduceMotion],
+  )
+
+  const selectedAccountLabel = useMemo(() => {
+    if (!financeAccountId) return null
+    return ledgerAccounts.find((a) => a.id === financeAccountId)?.label ?? null
+  }, [financeAccountId, ledgerAccounts])
+
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev)
@@ -556,33 +628,91 @@ export default function TransactionsPageClient() {
 
   return (
     <div className={financeViewRootClass}>
-      <FinanceViewHeader
-        kicker="Ledger"
-        title="Movimientos"
-        subtitle="Filtra por cuenta y tipo; importación y exportación van al final de la página."
-      />
-
-      <Card className="min-w-0 overflow-hidden p-0">
-        <div className="border-b border-orbita-border/70 bg-orbita-surface-alt/35 px-3 py-1.5 sm:px-4">
-          <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.13em] text-orbita-secondary">
-            Filtros del periodo
-          </p>
+      <Card className="group/card min-w-0 overflow-hidden p-0 transition-[box-shadow] duration-300 hover:shadow-[0_8px_28px_rgba(15,23,42,0.09)] motion-reduce:transition-none">
+        <div className="flex flex-wrap items-start justify-between gap-2 border-b border-orbita-border/70 bg-orbita-surface-alt/35 px-3 py-2 sm:items-center sm:px-4">
+          <div className="min-w-0 flex-1">
+            <p className={cn("m-0", financeSectionEyebrowClass)}>Movimientos</p>
+            <p className="mt-0.5 text-[11px] tabular-nums text-orbita-muted">
+              Periodo{" "}
+              <span className="font-medium text-orbita-secondary">{month || "—"}</span>
+            </p>
+          </div>
+          <div className="flex max-w-full flex-wrap justify-end gap-1.5">
+            {contentReady && transactions.length > 0 ? (
+              <span
+                className={cn(
+                  financeHeroChipBaseClass,
+                  "border-[color-mix(in_srgb,var(--color-accent-finance)_38%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-finance)_14%,var(--color-surface))] text-orbita-primary shadow-[0_1px_0_color-mix(in_srgb,#fff_40%,transparent)]",
+                )}
+              >
+                <Sparkles className="h-3 w-3 shrink-0 opacity-85" aria-hidden />
+                Lista viva
+              </span>
+            ) : null}
+            {tipoFilterUrl === "ingreso" ? (
+              <span
+                className={cn(
+                  financeHeroChipBaseClass,
+                  "border-emerald-500/35 bg-emerald-500/12 text-emerald-800 dark:text-emerald-200",
+                )}
+              >
+                Solo ingresos
+              </span>
+            ) : tipoFilterUrl === "gasto" ? (
+              <span
+                className={cn(
+                  financeHeroChipBaseClass,
+                  "border-rose-500/35 bg-rose-500/10 text-rose-800 dark:text-rose-200",
+                )}
+              >
+                Solo gastos
+              </span>
+            ) : null}
+            {selectedAccountLabel ? (
+              <span
+                className={cn(
+                  financeHeroChipBaseClass,
+                  "max-w-[12rem] truncate border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_55%,var(--color-surface))] text-orbita-primary",
+                )}
+                title={selectedAccountLabel}
+              >
+                {selectedAccountLabel}
+              </span>
+            ) : null}
+            {category.trim() ? (
+              <span
+                className={cn(
+                  financeHeroChipBaseClass,
+                  "max-w-[14rem] truncate border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_55%,var(--color-surface))] text-orbita-primary",
+                )}
+                title={category.trim()}
+              >
+                {category.trim()}
+              </span>
+            ) : null}
+          </div>
         </div>
-        <div className="grid gap-2 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3">
+
+        <div className="min-w-0 px-3 py-1.5 sm:px-4 sm:py-2">
           <div
-            className={`grid min-w-0 grid-cols-1 items-end gap-2 sm:gap-3 ${supabaseEnabled ? "sm:grid-cols-2" : "sm:grid-cols-1"}`}
+            className={cn(
+              "grid min-w-0 gap-2 sm:flex sm:flex-nowrap sm:items-center sm:gap-3 sm:overflow-x-auto sm:overscroll-x-contain sm:[-webkit-overflow-scrolling:touch]",
+              supabaseEnabled ? "grid-cols-2" : "grid-cols-1",
+            )}
           >
             {supabaseEnabled ? (
-              <label className="grid min-w-0 gap-1">
-                <span className="text-[10px] uppercase tracking-[0.12em] text-orbita-secondary">Cuenta</span>
+              <label className="flex min-w-0 items-center gap-1.5 sm:flex-[1.25] sm:gap-2">
+                <span className="shrink-0 text-[9px] font-semibold uppercase tracking-[0.11em] text-orbita-secondary">
+                  Cuenta
+                </span>
                 <select
                   value={financeAccountId}
                   onChange={(e) => setFinanceAccountId(e.target.value)}
-                  disabled={contentLoading}
-                  className="min-h-10 w-full min-w-0 rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface px-2.5 py-1.5 text-xs text-orbita-primary disabled:cursor-wait disabled:opacity-60 sm:text-sm"
+                  disabled={contentLoading || !periodReady}
+                  className={cn(txFilterBarSelect, "w-full min-w-0 sm:max-w-none")}
                   aria-label="Filtrar por cuenta"
                 >
-                  <option value="">Todas las cuentas</option>
+                  <option value="">Todas</option>
                   {ledgerAccounts.map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.label}
@@ -591,13 +721,34 @@ export default function TransactionsPageClient() {
                 </select>
               </label>
             ) : null}
-            <label className="grid min-w-0 gap-1">
-              <span className="text-[10px] uppercase tracking-[0.12em] text-orbita-secondary">Tipo de movimiento</span>
+            <label className="hidden min-w-0 flex-1 items-center gap-2 sm:flex">
+              <span className="shrink-0 text-[9px] font-semibold uppercase tracking-[0.11em] text-orbita-secondary">
+                Categoría
+              </span>
+              <select
+                value={category}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                disabled={contentLoading || !periodReady}
+                className={cn(txFilterBarSelect, "min-w-[7rem] w-full max-w-[15rem]")}
+                aria-label="Filtrar por categoría"
+              >
+                <option value="">Todas</option>
+                {catalogCategories.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex min-w-0 items-center gap-1.5 sm:shrink-0 sm:flex-none sm:gap-2">
+              <span className="shrink-0 text-[9px] font-semibold uppercase tracking-[0.11em] text-orbita-secondary">
+                Tipo
+              </span>
               <select
                 value={tipoFilterUrl}
                 onChange={(e) => setTipoFilter(e.target.value as "" | "ingreso" | "gasto")}
-                disabled={contentLoading}
-                className="min-h-10 w-full max-w-full rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface px-2.5 py-1.5 text-xs text-orbita-primary disabled:cursor-wait disabled:opacity-60 sm:text-sm"
+                disabled={contentLoading || !periodReady}
+                className={cn(txFilterBarSelect, "w-full min-w-0 sm:w-36")}
                 aria-label="Filtrar por ingreso o gasto"
               >
                 <option value="">Todos</option>
@@ -606,6 +757,238 @@ export default function TransactionsPageClient() {
               </select>
             </label>
           </div>
+          {category.trim() ? (
+            <div className="mt-2 flex min-w-0 items-center gap-2 sm:hidden">
+              <span
+                className={cn(
+                  financeHeroChipBaseClass,
+                  "min-w-0 max-w-[70%] truncate border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_55%,var(--color-surface))] text-orbita-primary",
+                )}
+                title={category.trim()}
+              >
+                {category.trim()}
+              </span>
+              <button
+                type="button"
+                className="shrink-0 text-[10px] font-semibold text-orbita-secondary underline decoration-orbita-border underline-offset-2"
+                onClick={() => setCategoryFilter("")}
+              >
+                Quitar filtro
+              </button>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="border-t border-orbita-border/65 bg-[color-mix(in_srgb,var(--color-surface-alt)_30%,var(--color-surface))] px-3 py-2.5 sm:px-4 sm:py-3">
+          {contentError ? (
+            <div
+              className="rounded-xl border px-3 py-2.5 sm:px-4"
+              style={{
+                background: "color-mix(in srgb, var(--color-accent-danger) 10%, var(--color-surface))",
+                borderColor: "color-mix(in srgb, var(--color-accent-danger) 32%, var(--color-border))",
+                color: "var(--color-accent-danger)",
+              }}
+              role="alert"
+            >
+              <p className="m-0 text-[11px] font-semibold sm:text-xs">Error al cargar movimientos</p>
+              <p className="mt-1 text-[10px] opacity-95 [text-wrap:pretty] sm:text-[11px]">{error}</p>
+            </div>
+          ) : contentLoading ? (
+            <div
+              className="grid min-w-0 grid-cols-1 divide-y divide-orbita-border/45 sm:grid-cols-3 sm:divide-x sm:divide-y-0"
+              aria-busy="true"
+              aria-label="Cargando resumen del periodo"
+            >
+              {[0, 1, 2].map((k) => (
+                <div
+                  key={k}
+                  className={cn(
+                    txStatCellShell,
+                    "animate-pulse max-sm:grid-rows-[auto_auto] max-sm:gap-y-1",
+                  )}
+                >
+                  <div className="h-8 w-8 shrink-0 rounded-full bg-orbita-border/55 max-sm:row-start-1 max-sm:self-center" />
+                  <div className="max-sm:contents sm:min-w-0 sm:flex-1 sm:space-y-2 sm:pt-0.5">
+                    <div className="h-2 w-16 rounded bg-orbita-border/65 max-sm:col-start-2 max-sm:row-start-1 max-sm:self-center" />
+                    <div className="h-5 w-[4.5rem] rounded bg-orbita-border/55 max-sm:col-start-3 max-sm:row-start-1 max-sm:justify-self-end max-sm:self-center sm:w-24" />
+                    <div className="h-1.5 w-16 rounded bg-orbita-border/45 max-sm:col-start-3 max-sm:row-start-2 max-sm:justify-self-end sm:w-20" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : contentReady ? (
+            <motion.div
+              className="grid min-w-0 grid-cols-1 divide-y divide-orbita-border/45 sm:grid-cols-3 sm:divide-x sm:divide-y-0"
+              variants={statMotionContainer}
+              initial="hidden"
+              animate="show"
+              key={`${month}-${financeAccountId}-${tipoFilterUrl}-${category}-${subtotal}-${deltaValue}-${transactions.length}`}
+            >
+              <motion.div
+                variants={statMotionItem}
+                className={cn(txStatCellShell, "max-sm:grid-rows-[auto_auto] max-sm:gap-y-0.5")}
+              >
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-accent-finance)_14%,transparent)] text-[color-mix(in_srgb,var(--color-accent-finance)_90%,var(--color-text-primary))] shadow-[0_2px_8px_rgba(15,23,42,0.06)] ring-1 ring-[color-mix(in_srgb,var(--color-accent-finance)_22%,transparent)] max-sm:row-start-1 max-sm:self-center">
+                  <Wallet className="h-3.5 w-3.5" aria-hidden />
+                </span>
+                <div className="min-w-0 max-sm:contents sm:flex-1">
+                  <p
+                    className={cn(
+                      financeCardMicroLabelClass,
+                      "max-sm:col-start-2 max-sm:row-start-1 max-sm:self-center max-sm:pr-1",
+                    )}
+                  >
+                    Balance neto
+                  </p>
+                  <p
+                    className={cn(
+                      "mt-0.5 break-words text-lg font-semibold tabular-nums text-orbita-primary sm:text-xl",
+                      "max-sm:col-start-3 max-sm:row-start-1 max-sm:mt-0 max-sm:self-center max-sm:text-right max-sm:leading-none",
+                    )}
+                  >
+                    ${Math.abs(subtotal).toLocaleString("es-CO", {
+                      maximumFractionDigits: 0,
+                    })}
+                  </p>
+                  <p
+                    className={cn(
+                      "mt-0.5 text-[10px] text-orbita-muted",
+                      "max-sm:col-start-3 max-sm:row-start-2 max-sm:mt-0 max-sm:text-right max-sm:leading-tight sm:text-left",
+                    )}
+                  >
+                    Suma filtrada del mes
+                  </p>
+                </div>
+              </motion.div>
+
+              <motion.div
+                variants={statMotionItem}
+                className={cn(txStatCellShell, "max-sm:grid-rows-[auto_auto] max-sm:gap-y-1")}
+              >
+                <span
+                  className={cn(
+                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-full shadow-[0_2px_8px_rgba(15,23,42,0.06)] ring-1 max-sm:row-start-1 max-sm:self-center",
+                    deltaValue >= 0
+                      ? "bg-emerald-500/12 text-emerald-600 ring-emerald-500/22 dark:text-emerald-400"
+                      : "bg-rose-500/12 text-rose-600 ring-rose-500/22 dark:text-rose-400",
+                  )}
+                >
+                  {deltaValue >= 0 ? (
+                    <TrendingUp className="h-3.5 w-3.5" aria-hidden />
+                  ) : (
+                    <TrendingDown className="h-3.5 w-3.5" aria-hidden />
+                  )}
+                </span>
+                <div className="min-w-0 max-sm:contents sm:flex-1">
+                  <p
+                    className={cn(
+                      financeCardMicroLabelClass,
+                      "max-sm:col-start-2 max-sm:row-start-1 max-sm:self-center max-sm:pr-1",
+                    )}
+                  >
+                    vs mes anterior
+                  </p>
+                  <p
+                    className={cn(
+                      "mt-0.5 break-words text-lg font-semibold tabular-nums sm:text-xl",
+                      "max-sm:col-start-3 max-sm:row-start-1 max-sm:mt-0 max-sm:self-center max-sm:text-right max-sm:leading-none",
+                      deltaValue >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400",
+                    )}
+                  >
+                    {deltaValue >= 0 ? "+" : "-"}$
+                    {Math.abs(deltaValue).toLocaleString("es-CO", {
+                      maximumFractionDigits: 0,
+                    })}
+                  </p>
+                  <div
+                    className={cn(
+                      "mt-2 h-1 overflow-hidden rounded-full bg-orbita-border/40",
+                      "max-sm:col-span-2 max-sm:col-start-2 max-sm:row-start-2 max-sm:mt-0 sm:col-auto sm:row-auto",
+                    )}
+                    aria-hidden
+                  >
+                    <motion.div
+                      className={cn(
+                        "h-full rounded-full",
+                        deltaValue >= 0
+                          ? "bg-[color-mix(in_srgb,var(--color-accent-health)_85%,transparent)]"
+                          : "bg-[color-mix(in_srgb,var(--color-accent-danger)_80%,transparent)]",
+                      )}
+                      initial={reduceMotion ? false : { width: "0%" }}
+                      animate={{ width: `${deltaBarPct}%` }}
+                      transition={{
+                        duration: reduceMotion ? 0 : 0.5,
+                        ease: [0.22, 1, 0.36, 1],
+                      }}
+                    />
+                  </div>
+                </div>
+              </motion.div>
+
+              <motion.div
+                variants={statMotionItem}
+                className={cn(txStatCellShell, "max-sm:grid-rows-[auto_auto_auto] max-sm:gap-y-0.5")}
+              >
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-surface-alt)_65%,var(--color-surface))] text-orbita-primary shadow-[0_2px_8px_rgba(15,23,42,0.06)] ring-1 ring-orbita-border/35 max-sm:row-start-1 max-sm:self-center">
+                  <ListOrdered className="h-3.5 w-3.5" aria-hidden />
+                </span>
+                <div className="min-w-0 max-sm:contents sm:flex-1">
+                  <p
+                    className={cn(
+                      financeCardMicroLabelClass,
+                      "max-sm:col-start-2 max-sm:row-start-1 max-sm:self-center max-sm:pr-1",
+                    )}
+                  >
+                    Registros
+                  </p>
+                  <p
+                    className={cn(
+                      "mt-0.5 text-lg font-semibold tabular-nums text-orbita-primary sm:text-xl",
+                      "max-sm:col-start-3 max-sm:row-start-1 max-sm:mt-0 max-sm:self-center max-sm:text-right max-sm:leading-none",
+                    )}
+                  >
+                    {transactions.length}
+                  </p>
+                  <p
+                    className={cn(
+                      "mt-0.5 text-[10px] text-orbita-muted",
+                      "max-sm:col-start-3 max-sm:row-start-2 max-sm:mt-0 max-sm:text-right max-sm:leading-tight sm:text-left",
+                    )}
+                  >
+                    Filas en esta vista
+                  </p>
+                  <div
+                    className={cn(
+                      "mt-2 flex gap-1.5",
+                      "max-sm:col-span-2 max-sm:col-start-2 max-sm:row-start-3 max-sm:mt-0 max-sm:justify-end sm:col-auto sm:row-auto",
+                    )}
+                    aria-hidden
+                  >
+                    {[1, 5, 15].map((tier) => (
+                      <span
+                        key={tier}
+                        className={cn(
+                          "h-1.5 w-1.5 rounded-full transition-colors duration-300",
+                          transactions.length >= tier
+                            ? "bg-[color-mix(in_srgb,var(--color-accent-finance)_72%,transparent)]"
+                            : "bg-orbita-border/55",
+                        )}
+                        title={`${tier}+`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          ) : periodReady ? (
+            <p className="m-0 text-center text-[11px] leading-relaxed text-orbita-secondary sm:text-xs">
+              No hay datos para este periodo todavía.
+            </p>
+          ) : (
+            <p className="m-0 text-center text-[11px] leading-relaxed text-orbita-secondary sm:text-xs">
+              Elige un mes en Capital para cargar movimientos e importar o exportar al final de la página.
+            </p>
+          )}
         </div>
       </Card>
 
@@ -667,79 +1050,8 @@ export default function TransactionsPageClient() {
         <div className="p-6 text-center text-orbita-secondary">
           <p>No hay movimientos disponibles</p>
         </div>
-      ) : contentError ? (
-        <div
-          className="rounded-[var(--radius-card)] border p-4"
-          style={{
-            background: "color-mix(in srgb, var(--color-accent-danger) 10%, var(--color-surface))",
-            borderColor: "color-mix(in srgb, var(--color-accent-danger) 32%, var(--color-border))",
-            color: "var(--color-accent-danger)",
-          }}
-        >
-          <p className="font-semibold">Error al cargar movimientos</p>
-          <p className="mt-1 text-sm opacity-90">{error}</p>
-        </div>
-      ) : contentLoading ? (
-        <div className="space-y-4">
-          <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
-            {[0, 1, 2].map((k) => (
-              <Card
-                key={k}
-                hover
-                className={`min-w-0 animate-pulse p-4 sm:p-6 ${k === 2 ? "sm:col-span-2 xl:col-span-1" : ""}`}
-              >
-                <div className="h-3 w-24 rounded bg-orbita-border" />
-                <div className="mt-3 h-8 w-32 rounded bg-orbita-border" />
-              </Card>
-            ))}
-          </div>
-          <div className="p-6 text-center text-orbita-secondary">
-            <p>Cargando movimientos...</p>
-          </div>
-        </div>
-      ) : !contentReady ? (
-        <div className="p-6 text-center text-orbita-secondary">
-          <p>No hay movimientos disponibles</p>
-        </div>
-      ) : (
+      ) : contentReady ? (
         <>
-          <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
-            <Card hover className="min-w-0 p-4 sm:p-6">
-              <div className="grid min-w-0 gap-1.5 sm:gap-2">
-                <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Total movimientos</p>
-                <p className="break-words text-xl font-semibold tabular-nums text-orbita-primary sm:text-2xl">
-                  ${Math.abs(subtotal).toLocaleString("es-CO", {
-                    maximumFractionDigits: 0,
-                  })}
-                </p>
-                <p className="text-[11px] text-orbita-secondary sm:text-xs">Balance del periodo</p>
-              </div>
-            </Card>
-            <Card hover className="min-w-0 p-4 sm:p-6">
-              <div className="grid min-w-0 gap-1.5 sm:gap-2">
-                <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Variación mensual</p>
-                <p
-                  className={`break-words text-xl font-semibold tabular-nums sm:text-2xl ${deltaValue >= 0 ? "text-emerald-600" : "text-rose-600"}`}
-                >
-                  {deltaValue >= 0 ? "+" : "-"}$
-                  {Math.abs(deltaValue).toLocaleString("es-CO", {
-                    maximumFractionDigits: 0,
-                  })}
-                </p>
-                <p className="text-[11px] text-orbita-secondary sm:text-xs">vs mes anterior</p>
-              </div>
-            </Card>
-            <Card hover className="min-w-0 p-4 sm:p-6 sm:col-span-2 xl:col-span-1">
-              <div className="grid min-w-0 gap-1.5 sm:gap-2">
-                <p className="text-xs uppercase tracking-[0.14em] text-orbita-secondary">Transacciones</p>
-                <p className="text-xl font-semibold tabular-nums text-orbita-primary sm:text-2xl">
-                  {transactions.length}
-                </p>
-                <p className="text-[11px] text-orbita-secondary sm:text-xs">Total del periodo</p>
-              </div>
-            </Card>
-          </div>
-
           {transactions.length === 0 ? (
             <div className="p-6 text-center text-orbita-secondary">
               <p>No hay movimientos para esta selección</p>
@@ -763,7 +1075,158 @@ export default function TransactionsPageClient() {
                   </button>
                 </div>
               ) : null}
-              <div className="max-h-[min(70vh,56rem)] min-w-0 overflow-auto overscroll-contain [-webkit-overflow-scrolling:touch] touch-pan-x touch-pan-y">
+              <div
+                className="sm:hidden max-h-[min(70vh,56rem)] min-w-0 divide-y divide-orbita-border/60 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
+                role="feed"
+                aria-label="Movimientos del periodo"
+              >
+                {transactions.map((tx, idx) => {
+                  const catLine = [tx.categoria, tx.subcategoria].filter(Boolean).join(" · ")
+                  const tipoResolved =
+                    tx.tipo ?? (tx.monto > 0 ? ("income" as const) : ("expense" as const))
+                  const tipoLabel = tipoResolved === "income" ? "Ingreso" : "Gasto"
+                  const montoStr = `$${Math.abs(tx.monto).toLocaleString("es-CO", {
+                    maximumFractionDigits: 0,
+                  })}`
+                  const isIngreso = tipoResolved === "income"
+                  const isReconciliationAdjustment = isReconciliationAdjustmentDescription(tx.descripcion)
+                  const mobileTint = isIngreso
+                    ? "shadow-[inset_0_1px_0_0_color-mix(in_srgb,var(--color-accent-health)_55%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_5%,var(--color-surface))]"
+                    : "shadow-[inset_0_1px_0_0_color-mix(in_srgb,var(--color-accent-danger)_50%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-danger)_4%,var(--color-surface))]"
+                  const editable = Boolean(supabaseEnabled && tx.id)
+                  const pairOpts = pairsForRow(catalogPairs, tx.categoria, tx.subcategoria)
+                  const currentPairKey = pairKey(tx.categoria, tx.subcategoria)
+
+                  return (
+                    <article
+                      key={tx.id ?? `m-${idx}`}
+                      className={cn("min-w-0 px-2 py-1.5", mobileTint)}
+                    >
+                      <div className="flex items-start gap-1.5">
+                        {supabaseEnabled && tx.id && isReconciliationAdjustment ? (
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(tx.id)}
+                            onChange={() => toggleSelect(tx.id!)}
+                            className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-orbita-border"
+                            aria-label={`Seleccionar ajuste ${tx.descripcion?.slice(0, 40) ?? ""}`}
+                          />
+                        ) : null}
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0">
+                                <span className="shrink-0 text-[10px] font-semibold tabular-nums text-orbita-primary">
+                                  {tx.fecha}
+                                </span>
+                                {!editable ? (
+                                  <span
+                                    className={cn(
+                                      "inline-flex shrink-0 rounded px-1 py-px text-[9px] font-semibold uppercase tracking-wide",
+                                      isIngreso
+                                        ? "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300"
+                                        : "bg-rose-500/12 text-rose-700 dark:text-rose-300",
+                                    )}
+                                  >
+                                    {tipoLabel}
+                                  </span>
+                                ) : null}
+                                <span className="min-w-0 truncate text-[9px] leading-tight text-orbita-secondary">
+                                  <span className="text-orbita-muted">· </span>
+                                  {tx.cuenta?.trim() ? tx.cuenta : "—"}
+                                </span>
+                              </div>
+                            </div>
+                            <p className="shrink-0 pt-px text-right text-[11px] font-semibold tabular-nums leading-none text-orbita-primary">
+                              {montoStr}
+                            </p>
+                          </div>
+                          {editable ? (
+                            <div className="grid min-w-0 grid-cols-2 gap-1">
+                              <select
+                                aria-label="Tipo de movimiento"
+                                className={cn(txSelectTipo, txSelectMobileDense, "max-w-full")}
+                                value={tipoResolved}
+                                onChange={(e) => {
+                                  const t = e.target.value as "income" | "expense"
+                                  const abs = Math.abs(tx.monto)
+                                  setTxRows((rs) =>
+                                    rs.map((r) =>
+                                      r.id === tx.id ? { ...r, tipo: t, monto: t === "income" ? abs : -abs } : r,
+                                    ),
+                                  )
+                                  schedulePatch(tx.id!, { type: t })
+                                }}
+                              >
+                                <option value="income">Ingreso</option>
+                                <option value="expense">Gasto</option>
+                              </select>
+                              {pairOpts.length === 0 ? (
+                                <span className="flex min-h-7 items-center text-[9px] text-orbita-secondary">
+                                  Sin catálogo
+                                </span>
+                              ) : (
+                                <select
+                                  aria-label="Subcategoría (define la categoría)"
+                                  className={cn(txSelectGhost, txSelectMobileDense, "max-w-full")}
+                                  value={
+                                    pairOpts.some((p) => pairKey(p.category, p.subcategory) === currentPairKey)
+                                      ? currentPairKey
+                                      : pairKey(pairOpts[0]!.category, pairOpts[0]!.subcategory)
+                                  }
+                                  onChange={(e) => {
+                                    const v = e.target.value
+                                    const i = v.indexOf(CAT_SUB_SEP)
+                                    const newCat = i >= 0 ? v.slice(0, i).trim() : ""
+                                    const newSub = i >= 0 ? v.slice(i + CAT_SUB_SEP.length).trim() : ""
+                                    setTxRows((rs) =>
+                                      rs.map((r) =>
+                                        r.id === tx.id ? { ...r, categoria: newCat, subcategoria: newSub } : r,
+                                      ),
+                                    )
+                                    schedulePatch(tx.id!, {
+                                      category: newCat,
+                                      subcategory: newSub || null,
+                                    })
+                                  }}
+                                >
+                                  {pairOpts.map((p) => {
+                                    const pk = pairKey(p.category, p.subcategory)
+                                    return (
+                                      <option key={pk} value={pk}>
+                                        {p.subcategory} · {p.category}
+                                      </option>
+                                    )
+                                  })}
+                                </select>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="truncate text-[10px] leading-tight text-orbita-primary">{catLine}</p>
+                          )}
+                          <p className="line-clamp-1 text-[10px] leading-tight text-orbita-secondary [overflow-wrap:anywhere]">
+                            {tx.descripcion}
+                          </p>
+                          {supabaseEnabled && tx.id && isReconciliationAdjustment ? (
+                            <div className="flex justify-end pt-0.5">
+                              <button
+                                type="button"
+                                disabled={deletingId === tx.id}
+                                aria-busy={deletingId === tx.id}
+                                onClick={() => void deleteReconciliationTx(tx)}
+                                className="text-[10px] font-semibold text-rose-600 transition-opacity enabled:hover:opacity-80 disabled:cursor-wait disabled:opacity-50"
+                              >
+                                {deletingId === tx.id ? "…" : "Eliminar ajuste"}
+                              </button>
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+                    </article>
+                  )
+                })}
+              </div>
+              <div className="hidden max-h-[min(70vh,56rem)] min-w-0 overflow-auto overscroll-contain [-webkit-overflow-scrolling:touch] touch-pan-x touch-pan-y sm:block">
                 <table className="w-full min-w-[680px] table-fixed border-collapse text-left text-[10px] sm:text-[11px]">
                   <colgroup>
                     {supabaseEnabled ? <col style={{ width: "2.25rem" }} /> : null}
@@ -1081,7 +1544,11 @@ export default function TransactionsPageClient() {
             </details>
           </Card>
         </>
-      )}
+      ) : periodReady && !contentReady && !contentLoading && !contentError ? (
+        <div className="p-6 text-center text-orbita-secondary">
+          <p>No hay movimientos disponibles</p>
+        </div>
+      ) : null}
     </div>
   )
 }

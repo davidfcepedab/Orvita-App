@@ -4,6 +4,7 @@ import { FormEvent, Fragment, useMemo, useState } from "react"
 import {
   ArrowDownRight,
   ArrowUpRight,
+  Check,
   CheckCircle2,
   ChevronDown,
   CircleAlert,
@@ -26,6 +27,69 @@ import { financePlStackClass } from "@/app/finanzas/_components/financeChrome"
 import { formatYmLongMonthYearEsCo } from "@/lib/agenda/localDateKey"
 import { cn } from "@/lib/utils"
 
+/** Texto corto para el chip en vista estrecha (evita competir con el título de sección). */
+function plKpiSourceShortLabel(source: "transactions" | "snapshot" | "empty" | null | undefined): string {
+  if (source === "transactions") return "Movs · auto"
+  if (source === "snapshot") return "Snapshot"
+  return "Sin fuente"
+}
+
+/** Misma piel que ConfigConnectionPill: estado según fuente KPI del mes. */
+function PlKpiSourcePill({
+  source,
+  label,
+  className,
+}: {
+  source: "transactions" | "snapshot" | "empty" | null | undefined
+  label: string
+  className?: string
+}) {
+  const short = plKpiSourceShortLabel(source)
+  const base =
+    "inline-flex min-w-0 max-w-full shrink-0 items-center justify-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold leading-none text-center sm:min-w-[6.75rem] sm:px-2.5 sm:py-1 sm:text-[11px] sm:max-w-[min(100%,22rem)]"
+  const text = (
+    <>
+      <span className="min-w-0 whitespace-nowrap sm:hidden">{short}</span>
+      <span className="hidden min-w-0 [overflow-wrap:anywhere] sm:inline">{label}</span>
+    </>
+  )
+  if (source === "transactions") {
+    return (
+      <span
+        className={cn(base, className)}
+        style={{ backgroundColor: "rgba(16, 185, 129, 0.12)", color: "rgb(4, 120, 87)" }}
+        title={label}
+        aria-label={label}
+      >
+        <Check className="h-2.5 w-2.5 shrink-0 sm:h-3 sm:w-3" strokeWidth={2.5} aria-hidden />
+        {text}
+      </span>
+    )
+  }
+  if (source === "snapshot") {
+    return (
+      <span
+        className={cn(base, className)}
+        style={{ backgroundColor: "rgba(251, 191, 36, 0.2)", color: "rgb(180, 83, 9)" }}
+        title={label}
+        aria-label={label}
+      >
+        {text}
+      </span>
+    )
+  }
+  return (
+    <span
+      className={cn(base, className)}
+      style={{ backgroundColor: "rgba(148, 163, 184, 0.15)", color: "#94a3b8" }}
+      title={label}
+      aria-label={label}
+    >
+      {text}
+    </span>
+  )
+}
+
 function MoneyCell({
   value,
   variant = "default",
@@ -44,7 +108,11 @@ function MoneyCell({
           : abs < 1
             ? "text-orbita-muted"
             : "text-orbita-primary"
-  return <span className={`tabular-nums font-semibold ${tone}`}>${formatMoney(value)}</span>
+  return (
+    <span className={cn("tabular-nums text-[10px] font-semibold leading-snug sm:text-[11px]", tone)}>
+      ${formatMoney(value)}
+    </span>
+  )
 }
 
 const PL_GROUPS: {
@@ -101,14 +169,12 @@ function PlLayerRows({ layers }: { layers: CanonicalPlLayer[] }) {
           <tr key={layer.id} className={plRowShellClass(layer.id, keyLine)}>
             <td className={`min-w-0 py-2 pr-2 align-top ${pad}`}>
               <span
-                className={[
-                  keyLine ? "font-semibold text-orbita-primary" : "text-orbita-secondary",
-                  layer.hint
-                    ? "cursor-help border-b border-dotted border-orbita-border/70 decoration-orbita-border/60"
-                    : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
+                className={cn(
+                  "text-[10px] leading-snug [overflow-wrap:anywhere]",
+                  keyLine ? "font-semibold text-orbita-primary" : "font-normal text-orbita-secondary",
+                  layer.hint &&
+                    "cursor-help border-b border-dotted border-orbita-border/70 decoration-orbita-border/60",
+                )}
                 title={layer.hint}
               >
                 {layer.label}
@@ -148,7 +214,7 @@ function layerVariant(id: string, amount: number): "default" | "muted" | "danger
 function plRowShellClass(layerId: string, keyLine: boolean): string {
   const base = "border-b border-orbita-border/40 transition-colors"
   if (layerId === "continuity_prev") {
-    return `${base} border-t-[3px] border-t-indigo-500/65 bg-indigo-500/[0.07] dark:bg-indigo-950/32`
+    return `${base} border-t-[3px] border-t-sky-600/70 bg-sky-500/[0.09] dark:bg-sky-950/38`
   }
   if (layerId === "income") {
     return `${base} border-t-[3px] border-t-emerald-500/70 bg-emerald-500/[0.07] dark:bg-emerald-950/35`
@@ -171,10 +237,15 @@ function plRowShellClass(layerId: string, keyLine: boolean): string {
   return `${base} bg-orbita-surface-alt/[0.2]`
 }
 
+/** Cabeceras de bloque: neutras; el significado lo dan número + título (el color queda en filas clave). */
+const PL_SECTION_HEAD_NEUTRAL =
+  "border-t border-orbita-border/65 bg-[color-mix(in_srgb,var(--color-surface-alt)_40%,var(--color-surface))] dark:bg-orbita-surface-alt/22"
+
 const SECTION_HEAD_CLASS: Record<string, string> = {
-  caja: "border-t-[3px] border-t-emerald-600/55 bg-emerald-500/[0.08] dark:bg-emerald-950/40",
-  operativo: "border-t-[3px] border-t-violet-500/50 bg-violet-500/[0.07] dark:bg-violet-950/35",
-  financiero: "border-t-[3px] border-t-sky-500/50 bg-sky-500/[0.06] dark:bg-sky-950/32",
+  caja: PL_SECTION_HEAD_NEUTRAL,
+  operativo: PL_SECTION_HEAD_NEUTRAL,
+  financiero: PL_SECTION_HEAD_NEUTRAL,
+  /** Conciliación: ligera señal ámbar (bloque analítico / revisión). */
   cierre: "border-t-[3px] border-t-amber-500/55 bg-amber-500/[0.07] dark:bg-amber-950/32",
 }
 
@@ -625,101 +696,74 @@ export function FinanzasPlDashboard({ omitStrategicHero = false }: { omitStrateg
 
       <Card
         id="pl-partidas-table"
-        className="overflow-hidden border-orbita-border/85 bg-[radial-gradient(120%_90%_at_100%_0%,rgba(16,185,129,0.09),transparent_55%),radial-gradient(110%_80%_at_0%_0%,rgba(99,102,241,0.09),transparent_55%),var(--color-surface)] shadow-[var(--shadow-card)]"
+        className="overflow-hidden border-orbita-border/80 bg-[var(--color-surface)] shadow-[var(--shadow-card)]"
         aria-labelledby="pl-partidas-heading"
       >
-        <div className="border-b border-orbita-border/65 bg-[color-mix(in_srgb,var(--color-surface-alt)_45%,var(--color-surface))]">
-          <div className="flex flex-wrap items-start justify-between gap-2 px-4 py-2.5 sm:px-5">
-            <div className="min-w-0">
-              <p id="pl-partidas-heading" className="text-[10px] font-bold uppercase tracking-[0.14em] text-orbita-secondary">
-                Partidas del mes
-              </p>
-              <p className="mt-0.5 text-[10px] text-orbita-muted">Importes en COP. Tooltip en textos truncados.</p>
-              <p className="mt-1 text-[10px] text-orbita-muted">
-                Fuente: <span className="font-medium text-orbita-secondary">{kpiSourceLabel}</span>
-                {financeMeta?.transactionsInSelectedMonth != null ? (
-                  <>
-                    {" "}
-                    · <span className="font-medium text-orbita-secondary">{financeMeta.transactionsInSelectedMonth}</span>{" "}
-                    movimientos en el mes
-                  </>
-                ) : null}
-              </p>
+        <div className="border-b border-orbita-border/55 bg-[color-mix(in_srgb,var(--color-surface-alt)_38%,var(--color-surface))]">
+          <div className="px-3 py-3 sm:px-5 sm:py-4">
+            <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+              <div className="min-w-0 flex-1">
+                <div className="flex w-full min-w-0 flex-wrap items-start gap-x-2 gap-y-1.5 max-sm:justify-between sm:items-center sm:justify-start">
+                  <p
+                    id="pl-partidas-heading"
+                    className="m-0 min-w-0 flex-1 text-[10px] font-bold uppercase tracking-[0.14em] text-orbita-secondary max-sm:pr-1 sm:flex-none"
+                  >
+                    Partidas del mes
+                  </p>
+                  <PlKpiSourcePill source={financeMeta?.kpiSource} label={`Fuente: ${kpiSourceLabel}`} />
+                </div>
+                <p className="mt-1.5 w-full min-w-0 max-w-full text-pretty text-[10px] leading-relaxed text-orbita-muted [overflow-wrap:anywhere] sm:text-[11px]">
+                  Montos del mes en COP por bloques: fondo en totales y saldos; el resto es detalle. Pasa el cursor sobre
+                  la línea punteada para ver definiciones.
+                </p>
+              </div>
             </div>
-            <details className="text-[10px] text-orbita-secondary">
-              <summary className="cursor-pointer font-medium text-orbita-primary">Leyenda</summary>
-              <p className="mt-1 max-w-xs text-orbita-muted">
-                Índigo continuidad · verde/rojo ingreso-egreso · violeta/cielo operación-financiero · ámbar/azul brechas-puentes.
-              </p>
-            </details>
-          </div>
-          <div
-            className="border-t border-orbita-border/50 bg-[color-mix(in_srgb,var(--color-surface-alt)_32%,var(--color-surface))] px-4 py-2 sm:px-5"
-            role="region"
-            aria-label="Resumen del periodo en el P&L"
-          >
-            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-[11px]">
-              <span className="text-orbita-secondary">
-                Mes en análisis:{" "}
-                <span className="font-semibold capitalize text-orbita-primary">{monthLabel}</span>
-              </span>
-              <span className="tabular-nums text-orbita-secondary">
-                Flujo neto (mes):{" "}
-                <span
-                  className={
-                    c.netCashFlow >= 0
-                      ? "font-semibold text-[color-mix(in_srgb,var(--color-accent-finance)_88%,var(--color-text-primary))]"
-                      : "font-semibold text-orbita-accent-danger"
-                  }
-                >
-                  ${formatMoney(c.netCashFlow)}
-                </span>
-              </span>
-            </div>
-            <p className="mt-1 text-[10px] leading-snug text-orbita-muted">
-              Tendencia: ver{" "}
-              <Link
-                href="/finanzas/overview"
-                className="font-medium text-orbita-primary underline-offset-2 hover:underline"
-              >
-                Resumen → Evolución
-              </Link>{" "}
-              con «Año móvil» o «Semestre».
-            </p>
           </div>
         </div>
 
         <div className="touch-pan-x overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
-          <table className="table-fixed w-full min-w-[min(100%,520px)] border-collapse text-left text-sm">
+          <table className="table-fixed w-full min-w-[min(100%,520px)] border-collapse text-left text-[10px] leading-snug">
             <caption className="sr-only">
-              Estado de resultados del mes: partidas en la primera columna, importes en COP en la segunda.
+              Estado de resultados del mes: concepto en la primera columna; importe del mes en pesos colombianos en la segunda.
             </caption>
             <colgroup>
-              <col style={{ width: "50%" }} />
-              <col style={{ width: "50%" }} />
+              <col style={{ width: "58%" }} />
+              <col style={{ width: "42%" }} />
             </colgroup>
             <thead>
-              <tr className="border-b border-orbita-border/60 bg-orbita-surface-alt/40 text-[11px] uppercase tracking-wide text-orbita-secondary">
-                <th scope="col" className="w-1/2 px-4 py-2 font-semibold sm:px-5">
-                  Partida
+              <tr className="border-b border-orbita-border/60 bg-orbita-surface-alt/40 text-[10px] uppercase tracking-[0.14em] text-orbita-secondary">
+                <th scope="col" className="px-4 py-2.5 text-left font-semibold sm:px-5">
+                  Concepto / partida
                 </th>
-                <th scope="col" className="w-1/2 px-4 py-2 text-right font-semibold tabular-nums sm:px-5">
-                  COP
+                <th scope="col" className="px-4 py-2.5 text-right font-semibold tabular-nums sm:px-5">
+                  <abbr title="Pesos colombianos — importe del mes" className="cursor-help no-underline decoration-transparent">
+                    Importe (COP)
+                  </abbr>
                 </th>
               </tr>
             </thead>
             <tbody>
-              {plMainGroups.map((g) => {
+              {plMainGroups.map((g, blockIndex) => {
                 const rows = layersForGroup(c.plLayers, g.layerIds)
                 const headClass = SECTION_HEAD_CLASS[g.id] ?? "bg-orbita-surface-alt/50"
                 return (
                   <Fragment key={g.id}>
                     <tr className={`border-b border-orbita-border/50 ${headClass}`}>
-                      <td colSpan={2} className="px-4 py-1.5 sm:px-5">
-                        <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-orbita-primary">{g.title}</p>
-                        {g.subtitle ? (
-                          <p className="mt-0.5 max-w-prose text-[10px] leading-snug text-orbita-muted">{g.subtitle}</p>
-                        ) : null}
+                      <td colSpan={2} className="px-4 py-2 sm:px-5">
+                        <div className="flex flex-wrap items-start gap-2.5">
+                          <span
+                            className="mt-0.5 inline-flex h-6 min-w-[1.375rem] shrink-0 items-center justify-center rounded-md bg-orbita-surface/85 px-1.5 text-[10px] font-bold tabular-nums text-orbita-primary shadow-sm ring-1 ring-orbita-border/55"
+                            aria-hidden
+                          >
+                            {blockIndex + 1}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-orbita-primary">{g.title}</p>
+                            {g.subtitle ? (
+                              <p className="mt-1 max-w-prose text-[10px] leading-relaxed text-orbita-muted">{g.subtitle}</p>
+                            ) : null}
+                          </div>
+                        </div>
                       </td>
                     </tr>
                     <PlLayerRows layers={rows} />
@@ -733,32 +777,41 @@ export function FinanzasPlDashboard({ omitStrategicHero = false }: { omitStrateg
         {plConciliationGroup ? (
           <details className="group border-t border-orbita-border/60 bg-orbita-surface-alt/15">
             <summary className="flex cursor-pointer list-none items-start justify-between gap-3 px-4 py-3.5 sm:px-5 [&::-webkit-details-marker]:hidden">
-              <div className="min-w-0 text-left">
-                <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-orbita-primary">
-                  {plConciliationGroup.title}
-                </p>
-                {plConciliationGroup.subtitle ? (
-                  <p className="mt-1 max-w-prose text-[10px] leading-snug text-orbita-muted">{plConciliationGroup.subtitle}</p>
-                ) : null}
+              <div className="flex min-w-0 flex-1 items-start gap-2.5 text-left">
+                <span
+                  className="mt-0.5 inline-flex h-6 min-w-[1.375rem] shrink-0 items-center justify-center rounded-md bg-orbita-surface/85 px-1.5 text-[10px] font-bold tabular-nums text-orbita-primary shadow-sm ring-1 ring-orbita-border/55"
+                  aria-hidden
+                >
+                  4
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-orbita-primary">
+                    {plConciliationGroup.title}
+                  </p>
+                  {plConciliationGroup.subtitle ? (
+                    <p className="mt-1 max-w-prose text-[10px] leading-relaxed text-orbita-muted">{plConciliationGroup.subtitle}</p>
+                  ) : null}
+                </div>
               </div>
               <ChevronDown className="mt-0.5 h-4 w-4 shrink-0 text-orbita-secondary transition group-open:rotate-180" aria-hidden />
             </summary>
             <div className="border-t border-orbita-border/50 px-4 pb-3 pt-2 sm:px-5">
               {showEmaHint ? (
                 <div
-                  className="mb-3 flex gap-2.5 rounded-lg border border-sky-400/30 bg-sky-500/[0.07] p-3 text-[11px] dark:border-sky-500/25 dark:bg-sky-950/35"
+                  className="mb-2 flex gap-2 rounded-md border border-orbita-border/55 bg-orbita-surface-alt/25 p-2.5 text-[10px] leading-snug text-orbita-secondary"
                   role="status"
                 >
-                  <ArrowDownRight className="mt-0.5 h-4 w-4 shrink-0 text-sky-600 dark:text-sky-300" aria-hidden />
-                  <p className="leading-snug text-orbita-secondary dark:text-sky-100/90">
-                    <span className="font-semibold text-orbita-primary dark:text-sky-50">EMA (referencia):</span> brecha típica{" "}
-                    <span className="tabular-nums font-semibold">${formatMoney(c.hintEmaAbsGap ?? 0)}</span> · este mes{" "}
-                    <span className="tabular-nums font-semibold">${formatMoney(c.unexplainedKpiStructural)}</span>
+                  <ArrowDownRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-orbita-muted" aria-hidden />
+                  <p>
+                    <span className="font-semibold text-orbita-primary">Referencia habitual:</span>{" "}
+                    <span className="tabular-nums">${formatMoney(c.hintEmaAbsGap ?? 0)}</span>
+                    {" · "}este mes:{" "}
+                    <span className="tabular-nums font-medium">${formatMoney(c.unexplainedKpiStructural)}</span>
                   </p>
                 </div>
               ) : null}
               <div className="touch-pan-x overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
-                <table className="table-fixed w-full min-w-[min(100%,520px)] border-collapse text-left text-sm">
+                <table className="table-fixed w-full min-w-[min(100%,520px)] border-collapse text-left text-[10px] leading-snug">
                   <colgroup>
                     <col style={{ width: "50%" }} />
                     <col style={{ width: "50%" }} />
@@ -773,105 +826,115 @@ export function FinanzasPlDashboard({ omitStrategicHero = false }: { omitStrateg
         ) : null}
       </Card>
 
-      <Card id="pl-puentes-card" className="border-orbita-border/80 bg-[linear-gradient(165deg,color-mix(in_srgb,var(--color-accent-finance)_10%,transparent),transparent)] p-4 sm:p-6">
-        <h3 className="text-sm font-bold text-orbita-primary">Puentes de conciliación</h3>
-        <p className="mt-1 text-xs leading-relaxed text-orbita-secondary">
-          Ajustes explícitos de la brecha KPI vs mapa. Opcional: el modelo usa el historial (EMA) como referencia.
+      <Card id="pl-puentes-card" className="border-orbita-border/80 p-2.5 sm:p-3">
+        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+          <h3 className="min-w-0 text-[10px] font-bold uppercase tracking-[0.12em] text-orbita-primary sm:text-[11px]">
+            Ajustes (puentes)
+          </h3>
+          {/* Sin puentes: pill ámbar (aviso visible); no cambiar a neutros. */}
+          {c.bridgeEntries.length === 0 ? (
+            <span
+              className="inline-flex shrink-0 items-center rounded-full border border-amber-500/45 bg-amber-100 px-2 py-0.5 text-[9px] font-semibold text-amber-950 dark:border-amber-500/40 dark:bg-amber-950/55 dark:text-amber-50 sm:text-[10px]"
+              role="status"
+            >
+              Sin ajustes · mes
+            </span>
+          ) : null}
+        </div>
+        <p className="mt-0.5 text-[10px] leading-tight text-orbita-muted sm:leading-snug">
+          Cuadra diferencias entre el resumen y tus categorías.
         </p>
 
         {c.bridgeEntries.length > 0 ? (
-          <ul className="mt-4 space-y-2">
+          <ul className="mt-2 space-y-1">
             {c.bridgeEntries.map((e) => (
               <li
                 key={e.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-orbita-border/60 bg-orbita-surface-alt/35 px-3 py-2.5"
+                className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-orbita-border/50 bg-orbita-surface-alt/25 px-2.5 py-1.5"
               >
-                <div>
-                  <p className="font-medium text-orbita-primary">{e.label || "Puente"}</p>
-                  <p className="text-[10px] text-orbita-muted">
-                    {e.bridge_kind === "kpi_structural" ? "Brecha KPI vs mapa" : "Otro"}
+                <div className="min-w-0">
+                  <p className="text-[13px] font-medium leading-tight text-orbita-primary">{e.label || "Ajuste"}</p>
+                  <p className="text-[9px] text-orbita-muted sm:text-[10px]">
+                    {e.bridge_kind === "kpi_structural" ? "Cuadre con categorías" : "Otro"}
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <MoneyCell value={e.amount_cop} />
                   {syncOn ? (
                     <button
                       type="button"
                       onClick={() => onDeleteBridge(e.id)}
-                      className="rounded-lg p-1.5 text-orbita-muted hover:bg-orbita-surface hover:text-orbita-accent-danger"
+                      className="rounded-md p-1 text-orbita-muted hover:bg-orbita-surface hover:text-orbita-accent-danger"
                       aria-label="Eliminar puente"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   ) : null}
                 </div>
               </li>
             ))}
           </ul>
-        ) : (
-          <p className="mt-3 text-sm text-orbita-muted">Sin puentes registrados en este mes.</p>
-        )}
+        ) : null}
 
         {syncOn ? (
-          <details className="group mt-5 rounded-xl border border-dashed border-orbita-border/75 bg-orbita-surface-alt/20">
-            <summary className="cursor-pointer list-none px-4 py-3 text-sm font-semibold text-orbita-primary [&::-webkit-details-marker]:hidden">
+          <details className="group mt-2 rounded-md border border-dashed border-orbita-border/65 bg-orbita-surface-alt/12">
+            <summary className="cursor-pointer list-none px-2.5 py-1.5 text-[11px] font-semibold text-orbita-primary [&::-webkit-details-marker]:hidden">
               <span className="inline-flex w-full items-center justify-between gap-2">
-                Registrar nuevo puente
+                Añadir ajuste
                 <span className="text-orbita-secondary transition group-open:rotate-90">›</span>
               </span>
             </summary>
-            <form onSubmit={onSubmitBridge} className="space-y-3 border-t border-orbita-border/50 px-4 pb-4 pt-3">
-              <p className="text-xs leading-relaxed text-orbita-secondary">
-                Indica monto y etiqueta (p. ej. timing de nómina vs categoría). Tipo «Brecha KPI vs mapa» descuenta de la
-                brecha pendiente.
+            <form onSubmit={onSubmitBridge} className="space-y-2 border-t border-orbita-border/40 px-2.5 pb-2.5 pt-2">
+              <p className="text-[9px] leading-snug text-orbita-muted sm:text-[10px]">
+                Monto y etiqueta. «Cuadre con categorías» reduce la diferencia pendiente.
               </p>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="grid gap-1.5 text-xs font-medium text-orbita-secondary">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <label className="grid gap-1 text-[10px] font-medium text-orbita-secondary sm:text-xs">
                   Monto (COP)
                   <input
                     type="text"
                     inputMode="numeric"
                     value={amountStr}
                     onChange={(e) => setAmountStr(e.target.value)}
-                    className="min-h-11 rounded-lg border border-orbita-border bg-orbita-surface px-3 py-2 text-sm"
+                    className="min-h-9 rounded-md border border-orbita-border bg-orbita-surface px-2.5 py-1.5 text-xs sm:text-sm"
                     placeholder="250000"
                     autoComplete="off"
                   />
                 </label>
-                <label className="grid gap-1.5 text-xs font-medium text-orbita-secondary">
+                <label className="grid gap-1 text-[10px] font-medium text-orbita-secondary sm:text-xs">
                   Tipo
                   <select
                     value={bridgeKind}
                     onChange={(e) => setBridgeKind(e.target.value as "kpi_structural" | "other")}
-                    className="min-h-11 rounded-lg border border-orbita-border bg-orbita-surface px-3 py-2 text-sm"
+                    className="min-h-9 rounded-md border border-orbita-border bg-orbita-surface px-2.5 py-1.5 text-xs sm:text-sm"
                   >
-                    <option value="kpi_structural">Brecha KPI vs mapa</option>
+                    <option value="kpi_structural">Cuadre con categorías</option>
                     <option value="other">Otro</option>
                   </select>
                 </label>
               </div>
-              <label className="grid gap-1.5 text-xs font-medium text-orbita-secondary">
+              <label className="grid gap-1 text-[10px] font-medium text-orbita-secondary sm:text-xs">
                 Etiqueta
                 <input
                   type="text"
                   value={label}
                   onChange={(e) => setLabel(e.target.value)}
-                  className="min-h-11 rounded-lg border border-orbita-border bg-orbita-surface px-3 py-2 text-sm"
+                  className="min-h-9 rounded-md border border-orbita-border bg-orbita-surface px-2.5 py-1.5 text-xs sm:text-sm"
                   placeholder="Ej. Timing nómina vs categoría"
                 />
               </label>
-              {formError ? <p className="text-sm text-orbita-accent-danger">{formError}</p> : null}
+              {formError ? <p className="text-xs text-orbita-accent-danger">{formError}</p> : null}
               <button
                 type="submit"
                 disabled={submitting}
-                className="min-h-11 rounded-lg bg-orbita-primary px-4 text-sm font-semibold text-white disabled:opacity-50"
+                className="min-h-9 w-full rounded-md bg-orbita-primary px-3 text-xs font-semibold text-white disabled:opacity-50 sm:w-auto sm:text-sm"
               >
-                {submitting ? "Guardando…" : "Guardar puente"}
+                {submitting ? "Guardando…" : "Guardar"}
               </button>
             </form>
           </details>
         ) : (
-          <p className="mt-3 text-xs text-orbita-muted">Activa Supabase para guardar puentes.</p>
+          <p className="mt-2 text-[10px] text-orbita-muted">Activa Supabase para guardar ajustes.</p>
         )}
       </Card>
     </div>

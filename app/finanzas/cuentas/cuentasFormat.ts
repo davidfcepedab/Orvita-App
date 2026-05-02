@@ -1,3 +1,5 @@
+import { financeRaisedPanelClass } from "../_components/financeChrome"
+
 export function formatMoney(value: number) {
   return new Intl.NumberFormat("es-CO", { maximumFractionDigits: 0 }).format(Math.round(value || 0))
 }
@@ -8,5 +10,5 @@ export function formatShortMillions(value: number) {
   return formatMoney(value)
 }
 
-export const arcticPanel =
-  "rounded-[var(--radius-card)] border-[0.5px] border-orbita-border/90 bg-orbita-surface shadow-card"
+/** Alias histórico: misma piel que {@link financeRaisedPanelClass} (Capital / P&L). */
+export const arcticPanel = financeRaisedPanelClass
