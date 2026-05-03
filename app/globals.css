@@ -433,6 +433,43 @@ body.orbita-app-root {
   animation-duration: 2.1s;
 }
 
+/* Misión flexible: icono de llama según racha (tier + pulso suave) */
+@keyframes orbita-streak-flame-ember {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, #fb923c 0%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 14px 3px color-mix(in srgb, #fb923c 32%, transparent);
+  }
+}
+
+@keyframes orbita-streak-flame-legend {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0 color-mix(in srgb, #c9a962 0%, transparent),
+      inset 0 0 0 0 transparent;
+    filter: brightness(1);
+  }
+  50% {
+    box-shadow:
+      0 0 18px 4px color-mix(in srgb, #c9a962 38%, transparent),
+      inset 0 1px 0 color-mix(in srgb, #ffffff 12%, transparent);
+    filter: brightness(1.07);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .orbita-streak-flame-ember {
+    animation: orbita-streak-flame-ember 2.85s ease-in-out infinite;
+  }
+
+  .orbita-streak-flame-legend {
+    animation: orbita-streak-flame-legend 2.25s ease-in-out infinite;
+  }
+}
+
 /* prefers-reduced-motion: menos animación global (accesibilidad; sin capa nativa) */
 @media (prefers-reduced-motion: reduce) {
   .orbita-flex-progress-shimmer::after {
@@ -454,6 +491,13 @@ body.orbita-app-root {
 
   .orbita-flex-fill-sheen {
     animation: none;
+  }
+
+  .orbita-streak-flame-ember,
+  .orbita-streak-flame-legend {
+    animation: none !important;
+    box-shadow: none;
+    filter: none;
   }
 
   .gradient-animate {

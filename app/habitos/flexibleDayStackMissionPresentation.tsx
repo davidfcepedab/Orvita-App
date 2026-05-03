@@ -16,8 +16,102 @@ import {
   isWaterTrackingHabit,
 } from "@/lib/habits/waterTrackingHelpers"
 import type { HabitMetadata, HabitWithMetrics, OperationalDomain } from "@/lib/operational/types"
+import type { HabitWeekDayMark } from "@/lib/habits/habitMetrics"
 import { cn } from "@/lib/utils"
 import { SuperHabitEmblem, type SuperHabitMark } from "@/app/habitos/SuperHabitEmblem"
+
+const WEEK_DAYS = ["L", "M", "X", "J", "V", "S", "D"] as const
+
+function weekMarksNormalized(habit: HabitWithMetrics): HabitWeekDayMark[] {
+  const w = habit.metrics.week_marks
+  if (Array.isArray(w) && w.length === 7) return w
+  return Array.from({ length: 7 }, () => "off" as HabitWeekDayMark)
+}
+
+function MissionWeekStrip({ habit }: { habit: HabitWithMetrics }) {
+  const marks = weekMarksNormalized(habit)
+  return (
+    <div
+      role="group"
+      aria-label="Esta semana: L a D"
+      className="grid w-max max-w-full shrink-0 touch-manipulation [grid-template-columns:repeat(7,15px)] gap-x-0.5 gap-y-0.5 sm:[grid-template-columns:repeat(7,18px)] sm:gap-x-1 sm:gap-y-0.5"
+    >
+      {WEEK_DAYS.map((day) => (
+        <div
+          key={`${habit.id}-wl-${day}`}
+          className="select-none text-center text-[8px] font-semibold uppercase leading-none text-[color-mix(in_srgb,var(--color-text-secondary)_65%,var(--color-text-primary))] sm:text-[9px]"
+        >
+          {day}
+        </div>
+      ))}
+      {WEEK_DAYS.map((day, i) => {
+        const mark = marks[i]
+        const done = mark === "done"
+        const missed = mark === "missed"
+        const aria =
+          mark === "done" ? `${day}: hecho` : mark === "missed" ? `${day}: pendiente` : `${day}: sin marca`
+        return (
+          <div key={`${habit.id}-wm-${day}`} className="flex h-4 w-full items-center justify-center sm:h-[18px]" aria-label={aria}>
+            {done ? (
+              <span className="block h-[6px] w-[6px] shrink-0 rounded-full bg-[color-mix(in_srgb,var(--color-accent-health)_88%,#14532d)] shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-accent-health)_22%,transparent)]" />
+            ) : missed ? (
+              <span className="block h-[5px] w-[5px] shrink-0 rounded-full border border-[color-mix(in_srgb,var(--color-text-secondary)_38%,transparent)] bg-transparent" />
+            ) : (
+              <span className="block h-[4px] w-[4px] shrink-0 rounded-full bg-[color-mix(in_srgb,var(--color-border)_70%,transparent)]" />
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+type StreakFlameTier = 0 | 1 | 2 | 3 | 4 | 5
+
+/** Tier del token de llama: escala con días consecutivos; súper hábito suma +5 días “virtuales” al tier. */
+function streakFlameTier(currentStreak: number, isSuperHabit: boolean): StreakFlameTier {
+  const boosted = currentStreak + (isSuperHabit ? 5 : 0)
+  if (boosted >= 60) return 5
+  if (boosted >= 30) return 4
+  if (boosted >= 14) return 3
+  if (boosted >= 7) return 2
+  if (boosted >= 1) return 1
+  return 0
+}
+
+function streakFlameSlotClasses(tier: StreakFlameTier): { wrap: string; icon: string; motion: string } {
+  const motion = tier >= 5 ? "orbita-streak-flame-legend" : tier >= 3 ? "orbita-streak-flame-ember" : ""
+
+  const table: Record<StreakFlameTier, { wrap: string; icon: string }> = {
+    0: {
+      wrap: "bg-[color-mix(in_srgb,var(--color-text-secondary)_10%,var(--color-surface))] ring-1 ring-[color-mix(in_srgb,var(--color-border)_78%,transparent)]",
+      icon: "text-[color-mix(in_srgb,var(--color-text-secondary)_88%,var(--color-text-primary))]",
+    },
+    1: {
+      wrap: "bg-[color-mix(in_srgb,#a855f7_14%,transparent)] ring-1 ring-[color-mix(in_srgb,#a855f7_30%,transparent)]",
+      icon: "text-violet-600 dark:text-violet-300",
+    },
+    2: {
+      wrap: "bg-[color-mix(in_srgb,#fbbf24_14%,transparent)] ring-1 ring-[color-mix(in_srgb,#f59e0b_36%,transparent)]",
+      icon: "text-amber-600 dark:text-amber-400",
+    },
+    3: {
+      wrap: "bg-[color-mix(in_srgb,#f97316_18%,transparent)] ring-1 ring-[color-mix(in_srgb,#ea580c_34%,transparent)]",
+      icon: "text-orange-600 dark:text-orange-400",
+    },
+    4: {
+      wrap: "bg-[linear-gradient(145deg,color-mix(in_srgb,#a855f7_22%,transparent),color-mix(in_srgb,#fb923c_16%,transparent))] ring-1 ring-[color-mix(in_srgb,#a855f7_36%,transparent)]",
+      icon: "text-violet-700 dark:text-orange-300",
+    },
+    5: {
+      wrap: "bg-[linear-gradient(155deg,color-mix(in_srgb,#f4ead8_42%,var(--color-surface)),color-mix(in_srgb,#c9a962_26%,transparent),color-mix(in_srgb,#a855f7_10%,transparent))] ring-1 ring-[color-mix(in_srgb,#c9a962_46%,transparent)] dark:bg-[linear-gradient(155deg,color-mix(in_srgb,#3f3a33_92%,var(--color-surface)),color-mix(in_srgb,#8b7340_28%,transparent))]",
+      icon: "text-[#92400e] dark:text-[#f4ead8]",
+    },
+  }
+
+  const row = table[tier]
+  return { wrap: row.wrap, icon: row.icon, motion }
+}
 
 export type MissionPresentationVariant = "mission-compact" | "mission-spacious"
 
@@ -213,9 +307,12 @@ export function FlexibleDayStackMissionPresentation({
       {superHero ? (
         <SuperHabitEmblem
           mark={emblemMark}
-          size={isCompact ? "md" : "lg"}
+          size={isCompact && emblemMark !== "shield" ? "md" : isCompact ? "lg" : "lg"}
           withCrownFill={emblemMark === "crown"}
-          className="text-[#3f2f1b] dark:text-[#f4ead8]"
+          className={cn(
+            "text-[#3f2f1b] dark:text-[#f4ead8]",
+            emblemMark === "shield" && isCompact && "-translate-y-px",
+          )}
         />
       ) : isWaterTrackingHabit(primary.metadata) ? (
         <Droplets className={cn("text-violet-700 dark:text-violet-300", isCompact ? "h-[18px] w-[18px]" : "h-5 w-5")} strokeWidth={2} />
@@ -224,6 +321,70 @@ export function FlexibleDayStackMissionPresentation({
       )}
     </div>
   )
+
+  const headerStatusBadges = (compact: boolean) => {
+    const countSpan = !single ? (
+      <span
+        className={cn(
+          "inline-flex items-center rounded-full bg-[color-mix(in_srgb,#a855f7_12%,var(--color-surface))] font-semibold uppercase tracking-wide text-violet-800 ring-1 ring-[color-mix(in_srgb,#a855f7_28%,transparent)] dark:text-violet-200",
+          compact ? "px-1.5 py-px text-[8px] tracking-wide" : "px-2.5 py-1 text-[10px]",
+        )}
+      >
+        {doneTodayCount}/{habits.length} hoy
+      </span>
+    ) : null
+
+    const hechoSpan =
+      single && primary.metrics.completed_today ? (
+        <span
+          className={cn(
+            "inline-flex items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--color-accent-health)_14%,var(--color-surface))] font-semibold uppercase tracking-wide text-[var(--color-accent-health)] ring-1 ring-[color-mix(in_srgb,var(--color-accent-health)_25%,transparent)]",
+            compact ? "gap-0.5 px-2 py-0.5 text-[9px]" : "px-2.5 py-1 text-[10px]",
+          )}
+        >
+          <CheckCircle2 className={cn("shrink-0", compact ? "h-2.5 w-2.5" : "h-3 w-3")} strokeWidth={2} aria-hidden />
+          Hecho hoy
+        </span>
+      ) : null
+
+    const superSpan = superHero ? (
+      <span
+        className={cn(
+          "inline-flex items-center justify-center rounded-md bg-gradient-to-r from-[#ebe4d4] via-[#c9a962] to-[#7a6239] font-black uppercase text-[#2a2418] shadow-sm ring-1 ring-[color-mix(in_srgb,#c9a962_48%,transparent)] dark:from-[#44403c] dark:via-[#8b7340] dark:to-[#c9a962] dark:text-[#faf8f5]",
+          compact ? "px-1.5 py-px text-[7px] tracking-[0.1em] sm:text-[8px] sm:tracking-[0.12em]" : "px-2 py-0.5 text-[9px] tracking-[0.16em]",
+        )}
+      >
+        Súper hábito
+      </span>
+    ) : null
+
+    const streakFallback =
+      single && !primary.metrics.completed_today && !superHero ? (
+        <span
+          className={cn(
+            "inline-flex items-center gap-1 rounded-full border border-[color-mix(in_srgb,#a855f7_26%,transparent)] bg-[color-mix(in_srgb,#a855f7_8%,var(--color-surface))] font-semibold tabular-nums text-[var(--color-text-primary)] ring-1 ring-[color-mix(in_srgb,#a855f7_18%,transparent)]",
+            compact ? "gap-0.5 px-1.5 py-0.5 text-[9px]" : "px-2 py-1 text-[10px]",
+          )}
+        >
+          <Flame
+            className={cn("shrink-0 text-violet-500 dark:text-violet-300", compact ? "h-2.5 w-2.5" : "h-3 w-3")}
+            strokeWidth={2}
+            aria-hidden
+          />
+          <span>{primary.metrics.current_streak}</span>
+          <span className="font-medium normal-case text-[var(--color-text-secondary)]">días</span>
+        </span>
+      ) : null
+
+    return (
+      <div className={cn("flex shrink-0 flex-col items-end", compact ? "gap-0.5" : "gap-1")}>
+        {countSpan}
+        {hechoSpan}
+        {superSpan}
+        {streakFallback}
+      </div>
+    )
+  }
 
   return (
     <section
@@ -263,21 +424,17 @@ export function FlexibleDayStackMissionPresentation({
               </p>
               <h2
                 id="flex-stack-heading"
-                className="m-0 truncate text-[15px] font-bold leading-tight tracking-[-0.02em] text-[var(--color-text-primary)] sm:text-[16px]"
+                className={cn(
+                  "m-0 truncate text-[15px] font-bold leading-tight tracking-[-0.02em] sm:text-[16px]",
+                  single && superHero
+                    ? "bg-gradient-to-r from-violet-700 via-fuchsia-600 to-emerald-600 bg-clip-text text-transparent dark:from-violet-200 dark:via-fuchsia-300 dark:to-emerald-300"
+                    : "text-[var(--color-text-primary)]",
+                )}
               >
                 {single ? primary.name : `Misión flexible · ${habits.length} hábitos`}
               </h2>
-              {!single ? (
-                <p className="m-0 text-[11px] text-[var(--color-text-secondary)]">
-                  {doneTodayCount}/{habits.length} hechos hoy
-                </p>
-              ) : null}
             </div>
-            <div className="flex shrink-0 items-center gap-1.5 rounded-xl border border-[color-mix(in_srgb,#fb923c_35%,transparent)] bg-[color-mix(in_srgb,#f97316_10%,transparent)] px-2.5 py-1.5">
-              <Flame className="h-4 w-4 shrink-0 text-orange-500" strokeWidth={2.25} aria-hidden />
-              <span className="text-sm font-bold tabular-nums text-[var(--color-text-primary)]">{primary.metrics.current_streak}</span>
-              <span className="text-[10px] font-medium text-[var(--color-text-secondary)]">días</span>
-            </div>
+            <div className="flex w-full shrink-0 justify-end sm:w-auto">{headerStatusBadges(true)}</div>
           </>
         ) : (
           <>
@@ -285,12 +442,6 @@ export function FlexibleDayStackMissionPresentation({
               {headerIcon}
               <div className="min-w-0 flex-1 space-y-1.5">
                 <div className="flex flex-wrap items-center gap-2">
-                  {superHero ? (
-                    <span className="inline-flex items-center gap-1 rounded-md bg-gradient-to-r from-[#ebe4d4] via-[#c9a962] to-[#7a6239] px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.16em] text-[#2a2418] shadow-sm ring-1 ring-[color-mix(in_srgb,#c9a962_48%,transparent)] dark:from-[#44403c] dark:via-[#8b7340] dark:to-[#c9a962] dark:text-[#faf8f5]">
-                      <SuperHabitEmblem mark={emblemMark} size="xs" className="shrink-0 text-[#2a2418] dark:text-[#faf8f5]" />
-                      Súper hábito
-                    </span>
-                  ) : null}
                   <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-[color-mix(in_srgb,var(--color-text-secondary)_88%,#7c3aed)] dark:text-violet-200/90">
                     Durante el día
                   </p>
@@ -322,17 +473,7 @@ export function FlexibleDayStackMissionPresentation({
               </div>
             </div>
             <div className="flex w-full shrink-0 flex-wrap items-center justify-between gap-2 sm:ml-auto sm:w-auto sm:flex-col sm:items-end">
-              {single && primary.metrics.completed_today ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--color-accent-health)_14%,var(--color-surface))] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-accent-health)] ring-1 ring-[color-mix(in_srgb,var(--color-accent-health)_25%,transparent)]">
-                  <CheckCircle2 className="h-3 w-3 shrink-0" strokeWidth={2} aria-hidden />
-                  Hecho hoy
-                </span>
-              ) : null}
-              {!single ? (
-                <span className="inline-flex items-center rounded-full bg-[color-mix(in_srgb,#a855f7_12%,var(--color-surface))] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-violet-800 ring-1 ring-[color-mix(in_srgb,#a855f7_28%,transparent)] dark:text-violet-200">
-                  {doneTodayCount}/{habits.length} hoy
-                </span>
-              ) : null}
+              {headerStatusBadges(false)}
             </div>
           </>
         )}
@@ -381,6 +522,8 @@ export function FlexibleDayStackMissionPresentation({
           const intention = habit.metadata?.intention?.trim()
           const freq = habit.metadata?.frequency ?? "diario"
           const streakDays = habit.metrics.current_streak
+          const flameTier = streakFlameTier(streakDays, isSuper)
+          const flameSlot = streakFlameSlotClasses(flameTier)
           const reward = isSuper ? superhabitStreakRewardMessage(streakDays) : null
           const domain = domainLabels[habit.domain] ?? habit.domain
           const showProgressBar = habitShowsTodayProgressBar(progressUi)
@@ -466,51 +609,74 @@ export function FlexibleDayStackMissionPresentation({
                 </div>
               ) : null}
 
-              <div
-                className={cn(
-                  "mt-2 flex flex-wrap items-center gap-3",
-                  isCompact ? "justify-between" : "justify-between gap-4 sm:items-end",
-                )}
-              >
-                <div className="flex min-w-0 items-center gap-2">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[color-mix(in_srgb,#fb923c_16%,transparent)] ring-1 ring-[color-mix(in_srgb,#fb923c_35%,transparent)]">
-                    <Flame className="h-4 w-4 text-orange-500" strokeWidth={2.25} aria-hidden />
+              <div className="mt-2 flex min-w-0 flex-wrap items-end gap-x-2 gap-y-1.5 sm:gap-x-3 sm:gap-y-0">
+                <div className="order-1 flex min-w-0 shrink-0 items-end gap-2 sm:gap-3">
+                  <div
+                    className={cn(
+                      "relative z-0 flex h-9 w-9 shrink-0 items-center justify-center self-end overflow-hidden rounded-xl transition-[background-color,box-shadow,filter] duration-500 ease-out",
+                      flameSlot.wrap,
+                      flameSlot.motion,
+                    )}
+                    title={`Racha actual: ${streakDays} ${streakDays === 1 ? "día" : "días"} consecutivos`}
+                  >
+                    <Flame className={cn("relative z-[1] h-4 w-4", flameSlot.icon)} strokeWidth={2.25} aria-hidden />
                   </div>
-                  <div>
-                    <p className="m-0 text-lg font-bold tabular-nums leading-none text-[var(--color-text-primary)] sm:text-xl">
-                      {streakDays}
-                    </p>
-                    <p className="m-0 text-[10px] font-medium text-[var(--color-text-secondary)] sm:text-[11px]">
-                      días de racha
-                    </p>
-                  </div>
-                  {!isCompact && single ? (
-                    <div className="ml-auto hidden min-w-0 text-right sm:block sm:pl-6">
-                      <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
-                        Tu mejor racha
+                  <div className="flex min-w-0 items-end gap-2.5 sm:gap-4">
+                    <div className="flex min-w-0 flex-col items-start gap-0.5">
+                      <p className="m-0 text-lg font-bold tabular-nums leading-none text-[var(--color-text-primary)] sm:text-xl">
+                        {streakDays}
                       </p>
-                      <p className="m-0 text-sm font-bold tabular-nums text-[color-mix(in_srgb,#7c3aed_90%,var(--color-text-primary))] dark:text-violet-300">
-                        {habit.metrics.best_streak} días
+                      <p className="m-0 text-[10px] font-medium leading-none text-[var(--color-text-secondary)] sm:text-[11px]">
+                        días de racha
                       </p>
                     </div>
-                  ) : null}
+                    {single ? (
+                      <div
+                        className={cn(
+                          "flex min-w-0 flex-col gap-0.5 border-l border-[color-mix(in_srgb,var(--color-border)_80%,transparent)] pl-2.5 sm:pl-4",
+                          isCompact ? "items-start" : "items-end text-right",
+                        )}
+                      >
+                        <p
+                          className={cn(
+                            "m-0 font-bold tabular-nums leading-none text-[color-mix(in_srgb,#7c3aed_90%,var(--color-text-primary))] dark:text-violet-300",
+                            isCompact ? "text-base sm:text-lg" : "text-lg sm:text-[1.35rem]",
+                          )}
+                        >
+                          {habit.metrics.best_streak} días
+                        </p>
+                        <p className="m-0 text-[10px] font-semibold uppercase leading-none tracking-[0.1em] text-[var(--color-text-secondary)] sm:tracking-[0.12em]">
+                          Tu mejor racha
+                        </p>
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
 
-                <div className="ml-auto flex items-center gap-2">
+                <div className="order-2 ml-auto flex shrink-0 items-center gap-2 sm:order-3 sm:ml-0">
                   <button
                     type="button"
                     disabled={!persistenceEnabled && !mock}
                     onClick={() => onEdit(habit)}
                     className={cn(
-                      "rounded-full border border-[color-mix(in_srgb,var(--color-border)_70%,transparent)] bg-[var(--color-surface)] p-2 text-[var(--color-text-secondary)] transition hover:border-[color-mix(in_srgb,var(--color-accent-health)_35%,transparent)] hover:text-[var(--color-accent-health)] disabled:opacity-40",
-                      isCompact && "p-1.5",
+                      isCompact
+                        ? "min-h-0 rounded-md border-0 bg-transparent px-1 py-0.5 text-left text-[11px] font-medium text-[var(--color-text-secondary)] transition hover:text-[var(--color-text-primary)] disabled:opacity-40"
+                        : "rounded-full border border-[color-mix(in_srgb,var(--color-border)_70%,transparent)] bg-[var(--color-surface)] p-2 text-[var(--color-text-secondary)] transition hover:border-[color-mix(in_srgb,var(--color-accent-health)_35%,transparent)] hover:text-[var(--color-accent-health)] disabled:opacity-40",
                     )}
                     aria-label="Editar hábito"
                     title="Editar"
                   >
-                    <Pencil className="h-4 w-4 opacity-90" aria-hidden />
+                    {isCompact ? (
+                      "Editar"
+                    ) : (
+                      <Pencil className="h-4 w-4 opacity-90" aria-hidden />
+                    )}
                   </button>
                   {isCompact || !showProgressBar || !single ? renderToggle(habit) : null}
+                </div>
+
+                <div className="order-3 flex w-full basis-full justify-center pt-0.5 sm:order-2 sm:w-auto sm:basis-0 sm:flex-1 sm:justify-center sm:pt-0">
+                  <MissionWeekStrip habit={habit} />
                 </div>
               </div>
 
@@ -518,18 +684,27 @@ export function FlexibleDayStackMissionPresentation({
                 <div className="mt-3">{renderToggle(habit, { wide: true })}</div>
               ) : null}
 
-              {(intention && !single) || metricLine || reward ? (
-                <div className={cn("mt-2 space-y-1", isCompact && "text-[11px]")}>
+              {(intention && !single) || metricLine || (reward && !single) ? (
+                <div
+                  className={cn(
+                    "space-y-0.5",
+                    isCompact
+                      ? "mt-3 text-[10px] leading-snug text-[color-mix(in_srgb,var(--color-text-secondary)_95%,var(--color-text-primary))] sm:mt-3.5"
+                      : "mt-4 text-[10.5px] leading-snug text-[color-mix(in_srgb,var(--color-text-secondary)_92%,var(--color-text-primary))] sm:text-[11px]",
+                  )}
+                >
                   {intention && !single ? (
-                    <p className="m-0 text-[11px] leading-snug text-[var(--color-text-secondary)]">{intention}</p>
+                    <p className="m-0 leading-snug text-[var(--color-text-secondary)]">{intention}</p>
                   ) : null}
                   {metricLine ? (
-                    <p className="m-0 flex items-start gap-1.5 text-[11px] text-[var(--color-text-secondary)]">
-                      <Target className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--color-accent-health)]" aria-hidden />
-                      <span>{metricLine}</span>
+                    <p className="m-0 flex items-start gap-1 text-[inherit]">
+                      <Target className="mt-0.5 h-3 w-3 shrink-0 text-[color-mix(in_srgb,var(--color-accent-health)_75%,var(--color-text-secondary))] sm:h-3.5 sm:w-3.5" aria-hidden />
+                      <span className="min-w-0">{metricLine}</span>
                     </p>
                   ) : null}
-                  {reward ? <p className="m-0 text-[11px] text-[var(--color-accent-health)]">{reward}</p> : null}
+                  {reward && !single ? (
+                    <p className="m-0 text-[inherit] text-[color-mix(in_srgb,var(--color-accent-health)_92%,var(--color-text-secondary))]">{reward}</p>
+                  ) : null}
                 </div>
               ) : null}
 

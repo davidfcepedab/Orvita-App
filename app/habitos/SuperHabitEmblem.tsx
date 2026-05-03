@@ -4,7 +4,7 @@ import { Award, Crown, Gem, ShieldCheck } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 /**
- * Cuatro marcas visuales para súper hábito (elige una en producto o en el laboratorio).
+ * Cuatro marcas visuales para súper hábito (producto pasa `mark` desde el stack / misión flexible).
  * - crown: referencia clásica
  * - gem: joya / premium
  * - award: logro distintivo
@@ -44,7 +44,7 @@ export function SuperHabitEmblem({ mark, className, size = "md", withCrownFill }
     return <Award className={cn(sc, className)} strokeWidth={2} aria-hidden />
   }
   if (mark === "shield") {
-    return <ShieldCheck className={cn(sc, className)} strokeWidth={2} aria-hidden />
+    return <ShieldCheck className={cn(sc, className)} strokeWidth={2.25} aria-hidden />
   }
   return (
     <Crown

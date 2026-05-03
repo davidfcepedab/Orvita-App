@@ -21,7 +21,7 @@ import {
   superRingClass,
 } from "@/lib/habits/superHabitLuxuryTheme"
 
-/** `orbita` = tarjeta actual. Las otras dos son prototipos tipo Figma (ver laboratorio `?flexLab=1`). */
+/** `orbita` = tarjeta legacy ancha. `mission-compact` = misión flexible final (stack intradía). */
 export type FlexibleMissionCardVariant = "orbita" | "mission-compact" | "mission-spacious"
 
 type Props = {
@@ -60,7 +60,7 @@ export function FlexibleDayStackSection({
 }: Props) {
   if (habits.length === 0) return null
 
-  const emblemMark: SuperHabitMark = superHabitMark ?? "crown"
+  const emblemMark: SuperHabitMark = superHabitMark ?? "shield"
   const doneTodayCount = habits.filter((h) => h.metrics.completed_today).length
   const single = habits.length === 1
   const primary = habits[0]!
