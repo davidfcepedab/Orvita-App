@@ -180,7 +180,8 @@ function FlowChartNetFillGradient() {
   return (
     <defs>
       <linearGradient id="orbita-flow-fill-flujo" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="5%" stopColor={FLOW_NET_GRADIENT_HEX} stopOpacity={0.3} />
+        <stop offset="0%" stopColor={FLOW_NET_GRADIENT_HEX} stopOpacity={0.52} />
+        <stop offset="18%" stopColor={FLOW_NET_GRADIENT_HEX} stopOpacity={0.28} />
         <stop offset="95%" stopColor={FLOW_NET_GRADIENT_HEX} stopOpacity={0} />
       </linearGradient>
     </defs>

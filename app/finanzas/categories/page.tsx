@@ -292,6 +292,37 @@ function BudgetUseMeter({
   )
 }
 
+/** Subcategoría: sin mini-barra; solo saldo vs tope del mes en COP. */
+function SubBudgetMonthLedger({
+  spentAbs,
+  capCop,
+}: {
+  spentAbs: number
+  capCop: number | null | undefined
+}) {
+  if (capCop == null || !Number.isFinite(capCop) || capCop <= 0) return null
+  const diff = spentAbs - capCop
+  const fmt = (n: number) => `$${Math.round(Math.abs(n)).toLocaleString("es-CO")}`
+  if (diff <= 0) {
+    return (
+      <p
+        className="m-0 mt-0.5 text-right text-[8px] font-semibold tabular-nums leading-tight text-emerald-800 dark:text-emerald-300/95"
+        title="Gasto del mes vs tope en esta fila"
+      >
+        Quedan {fmt(-diff)} del tope
+      </p>
+    )
+  }
+  return (
+    <p
+      className="m-0 mt-0.5 text-right text-[8px] font-semibold tabular-nums leading-tight text-rose-800 dark:text-rose-300/95"
+      title="Gasto del mes vs tope en esta fila"
+    >
+      +{fmt(diff)} sobre tope
+    </p>
+  )
+}
+
 function OperativaCategoryCard({
   cat,
   onViewMovements,
@@ -1618,11 +1649,9 @@ export default function FinanzasCategories() {
                                     <span className="tabular-nums text-[11px] text-orbita-secondary sm:text-xs">
                                       ${Math.abs(sub.total).toLocaleString("es-CO", { maximumFractionDigits: 0 })}
                                     </span>
-                                    <BudgetUseMeter
-                                      type={cat.type}
-                                      pct={sub.budgetUsedPercent}
-                                      status={sub.budgetStatus}
-                                      subtle
+                                    <SubBudgetMonthLedger
+                                      spentAbs={Math.abs(sub.total)}
+                                      capCop={budgetDraft.subcategory[sk]}
                                     />
                                   </div>
                                 </td>

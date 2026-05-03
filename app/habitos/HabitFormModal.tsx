@@ -51,6 +51,8 @@ export type HabitModalFormValues = {
   waterGoalMl: string
   waterGlassMl: string
   bodyWeightKg: string
+  /** Varias respuestas Sí/No en el día (roadmap: push + checkpoints). */
+  intradaySiNoProgress: boolean
 }
 
 export const HABIT_MODAL_DEFAULT_VALUES: HabitModalFormValues = {
@@ -69,6 +71,7 @@ export const HABIT_MODAL_DEFAULT_VALUES: HabitModalFormValues = {
   waterGoalMl: String(DEFAULT_WATER_GOAL_ML),
   waterGlassMl: String(DEFAULT_WATER_GLASS_ML),
   bodyWeightKg: "",
+  intradaySiNoProgress: false,
 }
 
 export function emptyHabitModalForm(domain: OperationalDomain = "salud"): HabitModalFormValues {
@@ -99,6 +102,7 @@ export function habitToModalValues(habit: HabitWithMetrics): HabitModalFormValue
     waterGoalMl: m?.water_goal_ml != null ? String(m.water_goal_ml) : String(DEFAULT_WATER_GOAL_ML),
     waterGlassMl: m?.water_glass_ml != null ? String(m.water_glass_ml) : String(DEFAULT_WATER_GLASS_ML),
     bodyWeightKg: m?.body_weight_kg != null ? String(m.body_weight_kg) : "",
+    intradaySiNoProgress: Boolean(m?.intraday_si_no_progress),
   }
 }
 
@@ -495,6 +499,24 @@ export function HabitFormModal({
                       />
                     </div>
                   </div>
+                  {form.successMetricType === "si_no" ? (
+                    <div className="flex items-start gap-3 rounded-xl border border-[color-mix(in_srgb,var(--color-accent-primary)_35%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-primary)_5%,var(--color-surface))] p-3">
+                      <Checkbox
+                        id="habit-intraday-si-no"
+                        checked={form.intradaySiNoProgress}
+                        onCheckedChange={(v) => setForm((p) => ({ ...p, intradaySiNoProgress: v === true }))}
+                      />
+                      <div className="min-w-0 space-y-1">
+                        <Label htmlFor="habit-intraday-si-no" className="cursor-pointer text-sm font-medium leading-snug">
+                          Progreso durante el día (varios chequeos)
+                        </Label>
+                        <p className="m-0 text-[11px] leading-snug text-[var(--color-text-secondary)]">
+                          Para hábitos con impulsos repetidos (p. ej. fumar): más adelante, varios Sí/No en el día y avisos;
+                          el marcado único en Órvita sigue siendo la base hasta activar esa capa.
+                        </p>
+                      </div>
+                    </div>
+                  ) : null}
                   <div className="grid gap-4 sm:grid-cols-2 sm:items-end">
                     <div className="space-y-2">
                       <Label htmlFor="habit-frequency">Frecuencia</Label>

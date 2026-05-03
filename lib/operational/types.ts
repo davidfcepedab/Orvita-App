@@ -50,6 +50,11 @@ export type HabitMetadata = {
   estimated_session_minutes?: number
   /** Disparador u horario preferido (texto libre) */
   trigger_or_time?: string
+  /**
+   * Hábito tipo sí/no con varios chequeos en el día (p. ej. impulsos).
+   * La UI de checkpoints / push queda enlazada en siguientes iteraciones.
+   */
+  intraday_si_no_progress?: boolean
 }
 
 export interface OperationalTask {

@@ -1064,7 +1064,7 @@ export function CategoryAnalysisPanels({
                             <td className="whitespace-nowrap px-2 py-2.5 align-middle sm:px-3">
                               <span
                                 className={cn(
-                                  "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide",
+                                  "inline-flex min-w-[5.75rem] justify-center items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide",
                                   sev.chipClass,
                                 )}
                               >
@@ -1326,13 +1326,12 @@ export function CategoryAnalysisPanels({
                         <th className="px-2 py-2 text-right font-semibold sm:px-3">Tend.</th>
                         <th className="px-2 py-2 text-right font-semibold sm:px-3">Impacto / mes</th>
                         <th className="min-w-[10rem] px-2 py-2 font-semibold sm:px-3">Posible causa</th>
-                        <th className="px-2 py-2 sm:px-3" />
                       </tr>
                     </thead>
                     <tbody>
                       {strategicAlerts.length === 0 ? (
                         <tr>
-                          <td colSpan={9} className="px-3 py-4 text-center text-orbita-secondary">
+                          <td colSpan={8} className="px-3 py-4 text-center text-orbita-secondary">
                             Por ahora no hay alertas con estos datos. Define topes en Presupuestos (vista Operativa) para ver
                             avisos de desvío.
                           </td>
@@ -1343,11 +1342,21 @@ export function CategoryAnalysisPanels({
                             <td className="whitespace-nowrap px-2 py-1.5 text-orbita-secondary sm:px-3">
                               {alertKindLabel(a.kind)}
                             </td>
-                            <td className="px-2 py-1.5 sm:px-3">
-                              <span className="font-medium text-orbita-primary">{a.title}</span>
-                              {a.subtitle ? (
-                                <span className="mt-0.5 block text-[10px] text-orbita-secondary">{a.subtitle}</span>
-                              ) : null}
+                            <td className="max-w-[16rem] px-2 py-1.5 sm:max-w-[20rem] sm:px-3">
+                              <div className="flex flex-col items-center text-center sm:items-start sm:text-left">
+                                <span className="font-medium text-orbita-primary">{a.title}</span>
+                                {a.subtitle ? (
+                                  <span className="mt-0.5 block text-[10px] text-orbita-secondary">{a.subtitle}</span>
+                                ) : null}
+                                {a.ctaHref ? (
+                                  <Link
+                                    href={a.ctaHref}
+                                    className="mt-1.5 rounded-md px-1.5 py-0.5 text-[10px] font-medium normal-case tracking-normal text-orbita-secondary underline-offset-2 transition-colors hover:bg-orbita-surface-alt/80 hover:text-[var(--color-accent-finance)] hover:underline"
+                                  >
+                                    {a.ctaLabel ?? "Ver movimientos"}
+                                  </Link>
+                                ) : null}
+                              </div>
                             </td>
                             <td className="px-2 py-1.5 text-right tabular-nums sm:px-3">${formatCop(a.amountCop)}</td>
                             <td className="px-2 py-1.5 text-right tabular-nums text-orbita-secondary sm:px-3">
@@ -1362,16 +1371,6 @@ export function CategoryAnalysisPanels({
                             </td>
                             <td className="max-w-[14rem] px-2 py-1.5 text-orbita-secondary sm:px-3" title={a.operationalCause}>
                               <span className="line-clamp-3">{a.operationalCause}</span>
-                            </td>
-                            <td className="px-2 py-1.5 sm:px-3">
-                              {a.ctaHref ? (
-                                <Link
-                                  href={a.ctaHref}
-                                  className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-accent-finance)] underline-offset-4 hover:underline"
-                                >
-                                  {a.ctaLabel ?? "Abrir"}
-                                </Link>
-                              ) : null}
                             </td>
                           </tr>
                         ))
@@ -1392,14 +1391,14 @@ export function CategoryAnalysisPanels({
                     Treemap
                   </span>
                 </div>
-                <div className="rounded-xl border border-[color-mix(in_srgb,var(--color-border)_38%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_94%,var(--color-surface-alt))] p-1.5 shadow-[inset_0_1px_0_0_color-mix(in_srgb,var(--color-text-primary)_4%,transparent)] sm:p-2">
-                  <div className="h-56 w-full sm:h-60">
+                <div className="-mx-1 rounded-xl border border-[color-mix(in_srgb,var(--color-border)_38%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_94%,var(--color-surface-alt))] p-0 shadow-[inset_0_1px_0_0_color-mix(in_srgb,var(--color-text-primary)_4%,transparent)] sm:mx-0 sm:p-1">
+                  <div className="h-[min(22rem,52vh)] w-full min-h-[14rem] sm:h-64">
                     {alertTreemapData.length > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
                         <Treemap
                           data={alertTreemapData}
                           dataKey="size"
-                          aspectRatio={4 / 3}
+                          aspectRatio={16 / 9}
                           stroke="var(--color-border)"
                           isAnimationActive={false}
                         >
@@ -1422,6 +1421,19 @@ export function CategoryAnalysisPanels({
                         Todavía no hay datos para este mapa.
                       </div>
                     )}
+                    {alertTreemapData.length > 0 ? (
+                      <ul className="m-0 mt-2 list-none space-y-1 border-t border-[color-mix(in_srgb,var(--color-border)_38%,transparent)] px-2 pb-2 pt-2 text-[10px] leading-snug text-orbita-secondary sm:columns-2 sm:gap-x-4">
+                        {alertTreemapData.slice(0, 10).map((d, i) => (
+                          <li key={`${d.idx}-${i}`} className="break-inside-avoid">
+                            <span className="font-semibold text-orbita-primary">{d.name}</span>
+                            <span className="tabular-nums text-orbita-muted">
+                              {" "}
+                              · ${Math.round(d.size).toLocaleString("es-CO")}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
                   </div>
                 </div>
               </div>

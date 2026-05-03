@@ -39,6 +39,7 @@ import {
 } from "@/lib/google/googleCalendarSyncThrottle"
 import { getAgendaDisplayTimeZone } from "@/lib/agenda/agendaTimeZone"
 import { agendaTodayYmd, localDateKeyFromIso } from "@/lib/agenda/localDateKey"
+import { readCheckinSegmentsDone, type CheckinSegmentKey } from "@/lib/checkin/checkinSegmentLocal"
 import { isGoogleTaskDone } from "@/lib/agenda/googleTasksUpcoming"
 import {
   bandColor,
@@ -291,6 +292,7 @@ const IMPACT_LINKS = [
 
 const CHECKIN_DAY_SEGMENTS = [
   {
+    id: "manana" as CheckinSegmentKey,
     href: "/checkin#checkin-manana",
     label: "Mañana",
     hint: "Sueño · energía",
@@ -298,8 +300,11 @@ const CHECKIN_DAY_SEGMENTS = [
     ring: "ring-[color-mix(in_srgb,var(--color-accent-warning)_55%,transparent)]",
     iconClass: "text-[var(--color-accent-warning)]",
     glow: "bg-[color-mix(in_srgb,var(--color-accent-warning)_28%,transparent)]",
+    fillClass:
+      "border-[color-mix(in_srgb,var(--color-accent-warning)_55%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-warning)_82%,#0f172a)] shadow-[0_0_28px_color-mix(in_srgb,var(--color-accent-warning)_42%,transparent)]",
   },
   {
+    id: "dia" as CheckinSegmentKey,
     href: "/checkin#checkin-dia",
     label: "Día",
     hint: "Foco · cuerpo · vínculos",
@@ -307,8 +312,11 @@ const CHECKIN_DAY_SEGMENTS = [
     ring: "ring-[color-mix(in_srgb,var(--color-accent-health)_50%,transparent)]",
     iconClass: "text-[var(--color-accent-health)]",
     glow: "bg-[color-mix(in_srgb,var(--color-accent-health)_25%,transparent)]",
+    fillClass:
+      "border-[color-mix(in_srgb,var(--color-accent-health)_50%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_78%,#0f172a)] shadow-[0_0_28px_color-mix(in_srgb,var(--color-accent-health)_38%,transparent)]",
   },
   {
+    id: "noche" as CheckinSegmentKey,
     href: "/checkin#checkin-noche",
     label: "Noche",
     hint: "Cierre · medidas",
@@ -316,6 +324,8 @@ const CHECKIN_DAY_SEGMENTS = [
     ring: "ring-[color-mix(in_srgb,var(--color-accent-agenda)_48%,transparent)]",
     iconClass: "text-[var(--color-accent-agenda)]",
     glow: "bg-[color-mix(in_srgb,var(--color-accent-agenda)_22%,transparent)]",
+    fillClass:
+      "border-[color-mix(in_srgb,var(--color-accent-agenda)_50%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-agenda)_72%,#0f172a)] shadow-[0_0_28px_color-mix(in_srgb,var(--color-accent-agenda)_35%,transparent)]",
   },
 ] as const
 
@@ -434,6 +444,25 @@ export default function HoyCommandCenter() {
 
   const [timelineNow, setTimelineNow] = useState(() => Date.now())
   const [googleTasksAsideOpen, setGoogleTasksAsideOpen] = useState(false)
+  const [checkinSegments, setCheckinSegments] = useState<Partial<Record<CheckinSegmentKey, boolean>>>(() =>
+    typeof window === "undefined" ? {} : readCheckinSegmentsDone(agendaTodayYmd()),
+  )
+
+  useEffect(() => {
+    const day = agendaTodayYmd()
+    const sync = () => setCheckinSegments(readCheckinSegmentsDone(day))
+    sync()
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === `orbita.checkin.segments.${day}`) sync()
+    }
+    const onCustom = () => sync()
+    window.addEventListener("storage", onStorage)
+    window.addEventListener("orbita-checkin-segments", onCustom as EventListener)
+    return () => {
+      window.removeEventListener("storage", onStorage)
+      window.removeEventListener("orbita-checkin-segments", onCustom as EventListener)
+    }
+  }, [])
   useEffect(() => {
     const id = window.setInterval(() => setTimelineNow(Date.now()), 60_000)
     return () => window.clearInterval(id)
@@ -719,7 +748,9 @@ export default function HoyCommandCenter() {
               initial="hidden"
               animate="show"
             >
-              {CHECKIN_DAY_SEGMENTS.map(({ href, label, hint, Icon, ring, iconClass, glow }) => (
+              {CHECKIN_DAY_SEGMENTS.map(({ id, href, label, hint, Icon, ring, iconClass, glow, fillClass }) => {
+                const done = Boolean(checkinSegments[id])
+                return (
                 <motion.div
                   key={href}
                   variants={checkinSegmentItem}
@@ -729,17 +760,30 @@ export default function HoyCommandCenter() {
                 >
                   <Link href={href} className="group flex w-full flex-col items-center gap-1.5 no-underline" style={{ textDecoration: "none" }}>
                     <span className="relative flex h-[3.75rem] w-[3.75rem] shrink-0 items-center justify-center">
+                      {!done ? (
+                        <motion.span
+                          className={`pointer-events-none absolute inset-[-6px] rounded-full opacity-50 blur-md ${glow}`}
+                          animate={{ opacity: [0.28, 0.5, 0.28], scale: [0.92, 1, 0.92] }}
+                          transition={{ duration: 2.6, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
+                          aria-hidden
+                        />
+                      ) : (
+                        <span
+                          className={`pointer-events-none absolute inset-[-8px] rounded-full bg-[radial-gradient(circle_at_50%_30%,rgba(255,255,255,0.55)_0%,transparent_62%)] opacity-90 blur-md motion-safe:animate-pulse`}
+                          aria-hidden
+                        />
+                      )}
                       <motion.span
-                        className={`pointer-events-none absolute inset-[-6px] rounded-full opacity-50 blur-md ${glow}`}
-                        animate={{ opacity: [0.28, 0.5, 0.28], scale: [0.92, 1, 0.92] }}
-                        transition={{ duration: 2.6, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
-                        aria-hidden
-                      />
-                      <motion.span
-                        className={`relative flex h-[3.25rem] w-[3.25rem] items-center justify-center rounded-full bg-[var(--color-surface)] shadow-md ring-2 ring-offset-2 ring-offset-[var(--color-surface)] ${ring} motion-safe:transition-transform motion-safe:duration-200 group-hover:scale-[1.04] group-active:scale-[0.98]`}
+                        className={`relative flex h-[3.25rem] w-[3.25rem] items-center justify-center rounded-full shadow-md ring-2 ring-offset-2 ring-offset-[var(--color-surface)] motion-safe:transition-transform motion-safe:duration-200 group-hover:scale-[1.04] group-active:scale-[0.98] ${
+                          done ? `${fillClass} ring-white/35` : `bg-[var(--color-surface)] ${ring}`
+                        }`}
                         whileTap={{ scale: 0.96 }}
                       >
-                        <Icon className={`h-5 w-5 shrink-0 ${iconClass}`} strokeWidth={2.25} aria-hidden />
+                        <Icon
+                          className={`h-5 w-5 shrink-0 ${done ? "text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]" : iconClass}`}
+                          strokeWidth={2.25}
+                          aria-hidden
+                        />
                       </motion.span>
                     </span>
                     <span className="text-[10px] font-semibold tracking-tight text-[var(--color-text-primary)] sm:text-[11px]">{label}</span>
@@ -748,7 +792,8 @@ export default function HoyCommandCenter() {
                     </span>
                   </Link>
                 </motion.div>
-              ))}
+                )
+              })}
             </motion.div>
           </div>
         </Card>
@@ -1155,12 +1200,14 @@ export default function HoyCommandCenter() {
                           )}
                         </button>
                       </div>
-                      <HoyHabitProgressBar
-                        pct={progress.pct}
-                        isWater={progress.isWater}
-                        ariaLabel={progress.ariaLabel}
-                        caption={progress.caption}
-                      />
+                      {progress.isWater ? (
+                        <HoyHabitProgressBar
+                          pct={progress.pct}
+                          isWater
+                          ariaLabel={progress.ariaLabel}
+                          caption={progress.caption}
+                        />
+                      ) : null}
                     </div>
                   )
                 }

@@ -45,6 +45,7 @@ import {
 } from "./CheckinFields"
 import { CheckinSection } from "./CheckinSection"
 import { agendaTodayYmd } from "@/lib/agenda/localDateKey"
+import { markCheckinSegmentSaved } from "@/lib/checkin/checkinSegmentLocal"
 import { addDaysIso } from "@/lib/habits/habitMetrics"
 import { buildOfflineSnapshotFromCheckinForm, saveOfflineCheckinSnapshot } from "@/lib/pwa/offlineSnapshot"
 import { markPushValueDeliveredForPrompt } from "@/lib/notifications/pushClient"
@@ -512,6 +513,9 @@ export default function CheckinPage() {
       if (json.flags) setApiFlags(json.flags)
       saveOfflineCheckinSnapshot(buildOfflineSnapshotFromCheckinForm(form))
       markPushValueDeliveredForPrompt()
+      const dayYmd =
+        typeof form.fecha === "string" && /^\d{4}-\d{2}-\d{2}$/.test(form.fecha) ? form.fecha : agendaTodayYmd()
+      markCheckinSegmentSaved(dayYmd, viewport)
       setSavePhase("success")
       if (saveSuccessTimerRef.current) clearTimeout(saveSuccessTimerRef.current)
       saveSuccessTimerRef.current = setTimeout(() => {

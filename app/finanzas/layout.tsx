@@ -117,7 +117,7 @@ function FinanzasLayoutContent({
         </div>
       </Card>
 
-      <div className="min-w-0 space-y-4 sm:space-y-5 lg:space-y-6">{children}</div>
+      <div className="min-w-0 touch-pan-y space-y-4 sm:space-y-5 lg:space-y-6">{children}</div>
     </div>
   )
 }

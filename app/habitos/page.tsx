@@ -439,6 +439,11 @@ export default function HabitosPage() {
     if (sessionMins > 0) metadata.estimated_session_minutes = sessionMins
     const trigger = form.triggerOrTime.trim()
     if (trigger) metadata.trigger_or_time = trigger
+    if (form.successMetricType === "si_no" && form.intradaySiNoProgress) {
+      metadata.intraday_si_no_progress = true
+    } else {
+      delete metadata.intraday_si_no_progress
+    }
 
     if (editing) {
       const r = await updateHabit(editing.id, {
