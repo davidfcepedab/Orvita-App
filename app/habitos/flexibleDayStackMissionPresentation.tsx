@@ -28,18 +28,33 @@ function weekMarksNormalized(habit: HabitWithMetrics): HabitWeekDayMark[] {
   return Array.from({ length: 7 }, () => "off" as HabitWeekDayMark)
 }
 
-function MissionWeekStrip({ habit }: { habit: HabitWithMetrics }) {
+function MissionWeekStrip({
+  habit,
+  prominentMobile,
+}: {
+  habit: HabitWithMetrics
+  /** Tarjeta mission-compact en móvil: columnas y puntos un poco más grandes, alineados a la derecha. */
+  prominentMobile?: boolean
+}) {
   const marks = weekMarksNormalized(habit)
   return (
     <div
       role="group"
       aria-label="Esta semana: L a D"
-      className="grid w-max max-w-full shrink-0 touch-manipulation [grid-template-columns:repeat(7,15px)] gap-x-0.5 gap-y-0.5 sm:[grid-template-columns:repeat(7,18px)] sm:gap-x-1 sm:gap-y-0.5"
+      className={cn(
+        "grid w-max max-w-[min(100%,calc(100vw-8rem))] shrink-0 touch-manipulation gap-y-0.5 sm:max-w-full sm:gap-y-0.5",
+        prominentMobile
+          ? "[grid-template-columns:repeat(7,17px)] gap-x-1 sm:[grid-template-columns:repeat(7,18px)] sm:gap-x-1"
+          : "[grid-template-columns:repeat(7,15px)] gap-x-0.5 sm:[grid-template-columns:repeat(7,18px)] sm:gap-x-1",
+      )}
     >
       {WEEK_DAYS.map((day) => (
         <div
           key={`${habit.id}-wl-${day}`}
-          className="select-none text-center text-[8px] font-semibold uppercase leading-none text-[color-mix(in_srgb,var(--color-text-secondary)_65%,var(--color-text-primary))] sm:text-[9px]"
+          className={cn(
+            "select-none text-center font-semibold uppercase leading-none text-[color-mix(in_srgb,var(--color-text-secondary)_65%,var(--color-text-primary))] sm:text-[9px]",
+            prominentMobile ? "text-[9px]" : "text-[8px]",
+          )}
         >
           {day}
         </div>
@@ -51,13 +66,35 @@ function MissionWeekStrip({ habit }: { habit: HabitWithMetrics }) {
         const aria =
           mark === "done" ? `${day}: hecho` : mark === "missed" ? `${day}: pendiente` : `${day}: sin marca`
         return (
-          <div key={`${habit.id}-wm-${day}`} className="flex h-4 w-full items-center justify-center sm:h-[18px]" aria-label={aria}>
+          <div
+            key={`${habit.id}-wm-${day}`}
+            className={cn(
+              "flex w-full items-center justify-center",
+              prominentMobile ? "h-[18px] sm:h-[18px]" : "h-4 sm:h-[18px]",
+            )}
+            aria-label={aria}
+          >
             {done ? (
-              <span className="block h-[6px] w-[6px] shrink-0 rounded-full bg-[color-mix(in_srgb,var(--color-accent-health)_88%,#14532d)] shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-accent-health)_22%,transparent)]" />
+              <span
+                className={cn(
+                  "block shrink-0 rounded-full bg-[color-mix(in_srgb,var(--color-accent-health)_88%,#14532d)] shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-accent-health)_22%,transparent)]",
+                  prominentMobile ? "h-[7px] w-[7px]" : "h-[6px] w-[6px]",
+                )}
+              />
             ) : missed ? (
-              <span className="block h-[5px] w-[5px] shrink-0 rounded-full border border-[color-mix(in_srgb,var(--color-text-secondary)_38%,transparent)] bg-transparent" />
+              <span
+                className={cn(
+                  "block shrink-0 rounded-full border border-[color-mix(in_srgb,var(--color-text-secondary)_38%,transparent)] bg-transparent",
+                  prominentMobile ? "h-[6px] w-[6px]" : "h-[5px] w-[5px]",
+                )}
+              />
             ) : (
-              <span className="block h-[4px] w-[4px] shrink-0 rounded-full bg-[color-mix(in_srgb,var(--color-border)_70%,transparent)]" />
+              <span
+                className={cn(
+                  "block shrink-0 rounded-full bg-[color-mix(in_srgb,var(--color-border)_70%,transparent)]",
+                  prominentMobile ? "h-[5px] w-[5px]" : "h-[4px] w-[4px]",
+                )}
+              />
             )}
           </div>
         )
@@ -337,24 +374,30 @@ export function FlexibleDayStackMissionPresentation({
     const hechoSpan =
       single && primary.metrics.completed_today ? (
         <span
+          aria-label="Hecho hoy"
           className={cn(
-            "inline-flex items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--color-accent-health)_14%,var(--color-surface))] font-semibold uppercase tracking-wide text-[var(--color-accent-health)] ring-1 ring-[color-mix(in_srgb,var(--color-accent-health)_25%,transparent)]",
-            compact ? "gap-0.5 px-2 py-0.5 text-[9px]" : "px-2.5 py-1 text-[10px]",
+            "inline-flex shrink-0 items-center rounded-full bg-[color-mix(in_srgb,var(--color-accent-health)_14%,var(--color-surface))] font-semibold uppercase tracking-wide text-[var(--color-accent-health)] ring-1 ring-[color-mix(in_srgb,var(--color-accent-health)_25%,transparent)]",
+            compact
+              ? "gap-0 p-1.5 sm:gap-1 sm:px-2 sm:py-0.5 sm:text-[9px]"
+              : "gap-1 px-2.5 py-1 text-[10px]",
           )}
+          title="Hecho hoy"
         >
-          <CheckCircle2 className={cn("shrink-0", compact ? "h-2.5 w-2.5" : "h-3 w-3")} strokeWidth={2} aria-hidden />
-          Hecho hoy
+          <CheckCircle2 className={cn("shrink-0", compact ? "h-3.5 w-3.5 sm:h-2.5 sm:w-2.5" : "h-3 w-3")} strokeWidth={2} aria-hidden />
+          <span className={compact ? "hidden sm:inline" : undefined}>Hecho hoy</span>
         </span>
       ) : null
 
     const superSpan = superHero ? (
       <span
         className={cn(
-          "inline-flex items-center justify-center rounded-md bg-gradient-to-r from-[#ebe4d4] via-[#c9a962] to-[#7a6239] font-black uppercase text-[#2a2418] shadow-sm ring-1 ring-[color-mix(in_srgb,#c9a962_48%,transparent)] dark:from-[#44403c] dark:via-[#8b7340] dark:to-[#c9a962] dark:text-[#faf8f5]",
-          compact ? "px-1.5 py-px text-[7px] tracking-[0.1em] sm:text-[8px] sm:tracking-[0.12em]" : "px-2 py-0.5 text-[9px] tracking-[0.16em]",
+          "inline-flex max-w-full shrink-0 items-center justify-center whitespace-nowrap rounded-md bg-gradient-to-r from-[#ebe4d4] via-[#c9a962] to-[#7a6239] font-black uppercase text-[#2a2418] shadow-sm ring-1 ring-[color-mix(in_srgb,#c9a962_48%,transparent)] dark:from-[#44403c] dark:via-[#8b7340] dark:to-[#c9a962] dark:text-[#faf8f5]",
+          compact ? "px-2 py-1 text-[8px] tracking-[0.08em] sm:px-1.5 sm:py-px sm:text-[8px] sm:tracking-[0.12em]" : "px-2 py-0.5 text-[9px] tracking-[0.16em]",
         )}
+        title="Súper hábito"
       >
-        Súper hábito
+        <span className="sm:hidden">Súper</span>
+        <span className="hidden sm:inline">Súper hábito</span>
       </span>
     ) : null
 
@@ -377,7 +420,12 @@ export function FlexibleDayStackMissionPresentation({
       ) : null
 
     return (
-      <div className={cn("flex shrink-0 flex-col items-end", compact ? "gap-0.5" : "gap-1")}>
+      <div
+        className={cn(
+          "flex shrink-0 items-center justify-end",
+          compact ? "flex-row flex-nowrap gap-1" : "flex-col items-end gap-1",
+        )}
+      >
         {countSpan}
         {hechoSpan}
         {superSpan}
@@ -411,21 +459,24 @@ export function FlexibleDayStackMissionPresentation({
 
       <header
         className={cn(
-          "relative flex gap-3 border-b border-[color-mix(in_srgb,#a855f7_26%,var(--color-border))] pb-3 sm:gap-4",
-          isCompact ? "items-center" : "flex-col sm:flex-row sm:items-start",
+          "relative border-b border-[color-mix(in_srgb,#a855f7_26%,var(--color-border))] pb-3",
+          isCompact
+            ? "grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 sm:gap-x-4"
+            : "flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4",
         )}
       >
         {isCompact ? (
           <>
             {headerIcon}
-            <div className="min-w-0 flex-1 space-y-0.5">
+            <div className="min-w-0 space-y-0.5 pt-0.5">
               <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-[color-mix(in_srgb,var(--color-text-secondary)_88%,#7c3aed)] dark:text-violet-200/90">
                 Durante el día
               </p>
               <h2
                 id="flex-stack-heading"
                 className={cn(
-                  "m-0 truncate text-[15px] font-bold leading-tight tracking-[-0.02em] sm:text-[16px]",
+                  "m-0 text-[15px] font-bold leading-tight tracking-[-0.02em] sm:text-[16px]",
+                  "line-clamp-2 [overflow-wrap:anywhere] sm:line-clamp-none",
                   single && superHero
                     ? "bg-gradient-to-r from-violet-700 via-fuchsia-600 to-emerald-600 bg-clip-text text-transparent dark:from-violet-200 dark:via-fuchsia-300 dark:to-emerald-300"
                     : "text-[var(--color-text-primary)]",
@@ -434,7 +485,7 @@ export function FlexibleDayStackMissionPresentation({
                 {single ? primary.name : `Misión flexible · ${habits.length} hábitos`}
               </h2>
             </div>
-            <div className="flex w-full shrink-0 justify-end sm:w-auto">{headerStatusBadges(true)}</div>
+            <div className="flex shrink-0 justify-self-end pt-0.5">{headerStatusBadges(true)}</div>
           </>
         ) : (
           <>
@@ -609,8 +660,20 @@ export function FlexibleDayStackMissionPresentation({
                 </div>
               ) : null}
 
-              <div className="mt-2 flex min-w-0 flex-wrap items-end gap-x-2 gap-y-1.5 sm:gap-x-3 sm:gap-y-0">
-                <div className="order-1 flex min-w-0 shrink-0 items-end gap-2 sm:gap-3">
+              <div
+                className={cn(
+                  "mt-2 flex min-w-0 items-end gap-x-2 sm:gap-x-3",
+                  isCompact
+                    ? "flex-nowrap justify-between gap-y-0"
+                    : "flex-wrap gap-y-1.5 sm:gap-y-0",
+                )}
+              >
+                <div
+                  className={cn(
+                    "order-1 flex min-w-0 items-end gap-2 sm:gap-3",
+                    isCompact ? "min-w-0 flex-1" : "shrink-0",
+                  )}
+                >
                   <div
                     className={cn(
                       "relative z-0 flex h-9 w-9 shrink-0 items-center justify-center self-end overflow-hidden rounded-xl transition-[background-color,box-shadow,filter] duration-500 ease-out",
@@ -621,19 +684,24 @@ export function FlexibleDayStackMissionPresentation({
                   >
                     <Flame className={cn("relative z-[1] h-4 w-4", flameSlot.icon)} strokeWidth={2.25} aria-hidden />
                   </div>
-                  <div className="flex min-w-0 items-end gap-2.5 sm:gap-4">
+                  <div
+                    className={cn(
+                      "flex min-w-0 flex-1 items-end gap-2.5 sm:gap-4",
+                      isCompact && "flex-wrap content-end gap-y-2",
+                    )}
+                  >
                     <div className="flex min-w-0 flex-col items-start gap-0.5">
                       <p className="m-0 text-lg font-bold tabular-nums leading-none text-[var(--color-text-primary)] sm:text-xl">
                         {streakDays}
                       </p>
-                      <p className="m-0 text-[10px] font-medium leading-none text-[var(--color-text-secondary)] sm:text-[11px]">
+                      <p className="m-0 whitespace-normal text-[10px] font-medium leading-snug text-[var(--color-text-secondary)] sm:text-[11px] sm:leading-none">
                         días de racha
                       </p>
                     </div>
                     {single ? (
                       <div
                         className={cn(
-                          "flex min-w-0 flex-col gap-0.5 border-l border-[color-mix(in_srgb,var(--color-border)_80%,transparent)] pl-2.5 sm:pl-4",
+                          "flex min-w-0 flex-col gap-0.5 border-l border-[color-mix(in_srgb,var(--color-border)_80%,transparent)] pl-2.5 sm:min-w-0 sm:pl-4",
                           isCompact ? "items-start" : "items-end text-right",
                         )}
                       >
@@ -645,15 +713,26 @@ export function FlexibleDayStackMissionPresentation({
                         >
                           {habit.metrics.best_streak} días
                         </p>
-                        <p className="m-0 text-[10px] font-semibold uppercase leading-none tracking-[0.1em] text-[var(--color-text-secondary)] sm:tracking-[0.12em]">
-                          Tu mejor racha
+                        <p
+                          className={cn(
+                            "m-0 max-w-[11rem] font-semibold uppercase leading-snug text-[var(--color-text-secondary)] sm:max-w-none sm:leading-none sm:tracking-[0.12em]",
+                            isCompact ? "text-[9px] tracking-[0.06em] sm:text-[10px] sm:tracking-[0.1em]" : "text-[10px] tracking-[0.1em]",
+                          )}
+                        >
+                          <span className="sm:hidden">Mejor racha</span>
+                          <span className="hidden sm:inline">Tu mejor racha</span>
                         </p>
                       </div>
                     ) : null}
                   </div>
                 </div>
 
-                <div className="order-2 ml-auto flex shrink-0 items-center gap-2 sm:order-3 sm:ml-0">
+                <div
+                  className={cn(
+                    "order-2 flex shrink-0 items-end gap-1.5 sm:gap-2",
+                    isCompact ? "justify-end" : "ml-auto sm:order-3 sm:ml-0",
+                  )}
+                >
                   <button
                     type="button"
                     disabled={!persistenceEnabled && !mock}
@@ -675,30 +754,57 @@ export function FlexibleDayStackMissionPresentation({
                   {isCompact || !showProgressBar || !single ? renderToggle(habit) : null}
                 </div>
 
-                <div className="order-3 flex w-full basis-full justify-center pt-0.5 sm:order-2 sm:w-auto sm:basis-0 sm:flex-1 sm:justify-center sm:pt-0">
-                  <MissionWeekStrip habit={habit} />
-                </div>
+                {!isCompact ? (
+                  <div className="order-3 flex w-full basis-full justify-center pt-0.5 sm:order-2 sm:w-auto sm:basis-0 sm:flex-1 sm:justify-center sm:pt-0">
+                    <MissionWeekStrip habit={habit} />
+                  </div>
+                ) : null}
               </div>
+
+              {isCompact ? (
+                <div
+                  className={cn(
+                    "mt-2 flex w-full min-w-0 items-end gap-2 border-t border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] pt-2",
+                    !metricLine && "justify-end",
+                  )}
+                >
+                  {metricLine ? (
+                    <p className="m-0 flex min-w-0 flex-1 items-end gap-1 text-[10px] leading-snug text-[color-mix(in_srgb,var(--color-text-secondary)_95%,var(--color-text-primary))]">
+                      <Target
+                        className="mb-px h-3 w-3 shrink-0 text-[color-mix(in_srgb,var(--color-accent-health)_75%,var(--color-text-secondary))] sm:h-3.5 sm:w-3.5"
+                        aria-hidden
+                      />
+                      <span className="min-w-0">{metricLine}</span>
+                    </p>
+                  ) : null}
+                  <div className="shrink-0">
+                    <MissionWeekStrip habit={habit} prominentMobile />
+                  </div>
+                </div>
+              ) : null}
 
               {!isCompact && single && showProgressBar ? (
                 <div className="mt-3">{renderToggle(habit, { wide: true })}</div>
               ) : null}
 
-              {(intention && !single) || metricLine || (reward && !single) ? (
+              {(intention && !single) || (metricLine && !isCompact) || (reward && !single) ? (
                 <div
                   className={cn(
                     "space-y-0.5",
                     isCompact
-                      ? "mt-3 text-[10px] leading-snug text-[color-mix(in_srgb,var(--color-text-secondary)_95%,var(--color-text-primary))] sm:mt-3.5"
+                      ? "mt-2 text-[10px] leading-snug text-[color-mix(in_srgb,var(--color-text-secondary)_95%,var(--color-text-primary))] sm:mt-3.5"
                       : "mt-4 text-[10.5px] leading-snug text-[color-mix(in_srgb,var(--color-text-secondary)_92%,var(--color-text-primary))] sm:text-[11px]",
                   )}
                 >
                   {intention && !single ? (
                     <p className="m-0 leading-snug text-[var(--color-text-secondary)]">{intention}</p>
                   ) : null}
-                  {metricLine ? (
+                  {metricLine && !isCompact ? (
                     <p className="m-0 flex items-start gap-1 text-[inherit]">
-                      <Target className="mt-0.5 h-3 w-3 shrink-0 text-[color-mix(in_srgb,var(--color-accent-health)_75%,var(--color-text-secondary))] sm:h-3.5 sm:w-3.5" aria-hidden />
+                      <Target
+                        className="mt-0.5 h-3 w-3 shrink-0 text-[color-mix(in_srgb,var(--color-accent-health)_75%,var(--color-text-secondary))] sm:h-3.5 sm:w-3.5"
+                        aria-hidden
+                      />
                       <span className="min-w-0">{metricLine}</span>
                     </p>
                   ) : null}

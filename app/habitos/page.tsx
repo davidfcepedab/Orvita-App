@@ -96,7 +96,11 @@ const STACK_BLOCK_META: Record<
   manana: { title: "Mañana", subtitle: "Antes de 12:00", Icon: Sun },
   tarde: { title: "Tarde", subtitle: "12:00 – 17:59", Icon: Sunset },
   noche: { title: "Noche", subtitle: "A partir de 18:00", Icon: Moon },
-  sin_hora: { title: "Sin hora definida", subtitle: "Añade trigger u hora para ordenar el bloque", Icon: Clock },
+  sin_hora: {
+    title: "Sin hora definida",
+    subtitle: "Indica hora o momento del día en el hábito para ordenarlo aquí",
+    Icon: Clock,
+  },
 }
 
 /** Fondos suaves alusivos al momento del día (compatibles con tema claro/oscuro). */
@@ -135,6 +139,70 @@ const STACK_BLOCK_SURFACE: Record<
     },
     iconWrap: "bg-[color-mix(in_srgb,var(--color-text-secondary)_12%,transparent)]",
     iconClass: "text-[var(--color-text-secondary)]",
+  },
+}
+
+/**
+ * Tarjetas de hábitos con hora (mañana/tarde/noche): mismo matiz que la sección,
+ * sombra suave tipo «empotrada». Los superhábitos mantienen el degradado sin franja superior fuerte.
+ */
+const TIMED_STACK_HABIT_CARD: Record<
+  Exclude<HabitTimeBlockId, "sin_hora">,
+  { stackGap: string; normal: CSSProperties; super: CSSProperties }
+> = {
+  manana: {
+    stackGap: "6px",
+    normal: {
+      background: "color-mix(in srgb, #FBBF24 9%, var(--color-surface))",
+      borderWidth: 0,
+      borderStyle: "none",
+      borderColor: "transparent",
+      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.07)",
+    },
+    super: {
+      background:
+        "linear-gradient(165deg, color-mix(in srgb, #FBBF24 14%, color-mix(in srgb, var(--color-accent-warning) 12%, var(--color-surface))) 0%, color-mix(in srgb, #F59E0B 9%, var(--color-surface)) 46%, color-mix(in srgb, #FBBF24 5%, var(--color-surface)) 100%)",
+      borderWidth: 0,
+      borderStyle: "none",
+      borderColor: "transparent",
+      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08)",
+    },
+  },
+  tarde: {
+    stackGap: "6px",
+    normal: {
+      background: "color-mix(in srgb, var(--color-accent-warning) 8%, var(--color-surface))",
+      borderWidth: 0,
+      borderStyle: "none",
+      borderColor: "transparent",
+      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
+    },
+    super: {
+      background:
+        "linear-gradient(165deg, color-mix(in srgb, var(--color-accent-warning) 18%, var(--color-surface)) 0%, color-mix(in srgb, #ea580c 8%, var(--color-surface)) 48%, var(--color-surface) 100%)",
+      borderWidth: 0,
+      borderStyle: "none",
+      borderColor: "transparent",
+      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.07)",
+    },
+  },
+  noche: {
+    stackGap: "6px",
+    normal: {
+      background: "color-mix(in srgb, #7c3aed 8%, var(--color-surface))",
+      borderWidth: 0,
+      borderStyle: "none",
+      borderColor: "transparent",
+      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
+    },
+    super: {
+      background:
+        "linear-gradient(165deg, color-mix(in srgb, #7c3aed 16%, var(--color-surface)) 0%, color-mix(in srgb, #a855f7 10%, var(--color-surface)) 48%, color-mix(in srgb, #15803d 6%, var(--color-surface)) 100%)",
+      borderWidth: 0,
+      borderStyle: "none",
+      borderColor: "transparent",
+      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.07)",
+    },
   },
 }
 
@@ -1125,15 +1193,26 @@ export default function HabitosPage() {
                     <p className="m-0 mt-0.5 text-[12px] leading-snug text-[var(--color-text-secondary)]">{meta.subtitle}</p>
                   </div>
                 </div>
-                <div style={{ display: "grid", gap: "var(--spacing-sm)" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap:
+                      blockId !== "sin_hora"
+                        ? TIMED_STACK_HABIT_CARD[blockId as Exclude<HabitTimeBlockId, "sin_hora">].stackGap
+                        : "var(--spacing-sm)",
+                    width: "100%",
+                    minWidth: 0,
+                  }}
+                >
                   {blockHabits.length === 0 ? (
                     <p
                       className="m-0 rounded-[10px] border border-dashed border-[color-mix(in_srgb,var(--color-border)_80%,transparent)] bg-[var(--color-surface-alt)] px-3 py-2.5 text-[12px] leading-snug text-[var(--color-text-secondary)]"
                       role="status"
                     >
                       {blockId === "sin_hora"
-                        ? "Ningún hábito sin hora: todos tienen una hora reconocible en «Trigger / hora», o aún no hay hábitos en el stack."
-                        : "Ningún hábito en este tramo. Al editar el hábito, escribe una hora en «Trigger / hora» (por ejemplo 08:00 o las 19) para que aparezca aquí."}
+                        ? "Ningún hábito sin hora: todos tienen ya una hora clara en el hábito, o aún no hay hábitos en este bloque."
+                        : "Ningún hábito en este tramo. Editá el hábito y escribí una hora en «Hora o momento del día» (por ejemplo 08:00 o «las 19») para que aparezca aquí."}
                     </p>
                   ) : null}
                   {blockHabits.map((habit, habitIdx) => {
@@ -1149,37 +1228,64 @@ export default function HabitosPage() {
                     const sessionMins = habit.metadata?.estimated_session_minutes
                     const metricLine = habitMetricLine(habit.metadata)
 
+                    const timedBlend =
+                      blockId !== "sin_hora"
+                        ? TIMED_STACK_HABIT_CARD[blockId as Exclude<HabitTimeBlockId, "sin_hora">]
+                        : null
+                    const atRiskBorder = "color-mix(in srgb, var(--color-accent-danger) 40%, var(--color-border))"
+                    const sinHoraCardStyle: CSSProperties = {
+                      background: isSuperhabit
+                        ? "linear-gradient(165deg, color-mix(in srgb, var(--color-accent-warning) 16%, var(--color-surface)) 0%, color-mix(in srgb, #F59E0B 7%, var(--color-surface)) 48%, var(--color-surface) 100%)"
+                        : "var(--color-surface)",
+                      borderColor: habit.metrics.at_risk
+                        ? atRiskBorder
+                        : isSuperhabit
+                          ? "color-mix(in srgb, var(--color-accent-warning) 38%, var(--color-border))"
+                          : "var(--color-border)",
+                      borderWidth: "1px",
+                      borderStyle: "solid",
+                      boxShadow: isSuperhabit
+                        ? "0 6px 22px color-mix(in srgb, var(--color-accent-warning) 14%, transparent), inset 0 1px 0 rgba(255,255,255,0.06)"
+                        : "0 4px 14px rgba(15, 23, 42, 0.07)",
+                    }
+                    const timedCardStyle: CSSProperties | undefined = timedBlend
+                      ? {
+                          ...(isSuperhabit ? timedBlend.super : timedBlend.normal),
+                        }
+                      : undefined
+
                     return (
                       <Card
                         key={habit.id}
                         hover
-                        className={`group/habit motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1 motion-safe:fill-mode-both motion-safe:duration-500 hover:-translate-y-0.5 ${
-                          isSuperhabit
-                            ? "relative overflow-hidden ring-1 ring-[color-mix(in_srgb,var(--color-accent-warning)_42%,transparent)] motion-safe:hover:ring-[color-mix(in_srgb,var(--color-accent-warning)_55%,transparent)]"
-                            : ""
+                        shadow={timedBlend ? "none" : undefined}
+                        hoverShadow={timedBlend ? "none" : undefined}
+                        className={`group/habit w-full min-w-0 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1 motion-safe:fill-mode-both motion-safe:duration-500 ${
+                          timedBlend
+                            ? "rounded-[10px] hover:translate-y-0"
+                            : "hover:-translate-y-0.5"
+                        } ${
+                          habit.metrics.at_risk
+                            ? "ring-1 ring-[color-mix(in_srgb,var(--color-accent-danger)_42%,transparent)] motion-safe:hover:ring-[color-mix(in_srgb,var(--color-accent-danger)_52%,transparent)]"
+                            : isSuperhabit && !timedBlend
+                              ? "relative overflow-hidden ring-1 ring-[color-mix(in_srgb,var(--color-accent-warning)_42%,transparent)] motion-safe:hover:ring-[color-mix(in_srgb,var(--color-accent-warning)_55%,transparent)]"
+                              : ""
                         }`}
                         style={{
                           animationDelay: `${Math.min(idx, 14) * 42}ms`,
-                          background: isSuperhabit
-                            ? "linear-gradient(165deg, color-mix(in srgb, var(--color-accent-warning) 16%, var(--color-surface)) 0%, color-mix(in srgb, #F59E0B 7%, var(--color-surface)) 48%, var(--color-surface) 100%)"
-                            : "var(--color-surface)",
-                          borderColor: habit.metrics.at_risk
-                            ? "color-mix(in srgb, var(--color-accent-danger) 40%, var(--color-border))"
-                            : isSuperhabit
-                              ? "color-mix(in srgb, var(--color-accent-warning) 38%, var(--color-border))"
-                              : "var(--color-border)",
-                          borderWidth: isSuperhabit ? "4px 1px 1px 1px" : "1px",
-                          borderStyle: "solid",
-                          borderTopColor: isSuperhabit
-                            ? "color-mix(in srgb, var(--color-accent-warning) 72%, #c2410c)"
-                            : undefined,
-                          boxShadow: isSuperhabit
-                            ? "0 6px 22px color-mix(in srgb, var(--color-accent-warning) 14%, transparent), 0 1px 0 color-mix(in srgb, var(--color-accent-warning) 22%, transparent) inset"
-                            : "0 4px 14px rgba(15, 23, 42, 0.07)",
+                          ...(timedCardStyle ?? sinHoraCardStyle),
                         }}
                       >
-                        <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:gap-3 sm:px-3 sm:py-2.5">
-                          <div className="min-w-0 space-y-1 px-3 pt-3 sm:max-w-[min(100%,22rem)] sm:flex-none sm:px-0 sm:pt-0">
+                        <div
+                          className={`flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:gap-3 sm:py-2.5 ${
+                            timedBlend ? "px-0 pt-3 sm:px-3" : "sm:px-3"
+                          }`}
+                        >
+                          <div
+                            className={`min-w-0 space-y-1 pt-3 sm:max-w-[min(100%,22rem)] sm:flex-none sm:pt-0 ${
+                              timedBlend ? "px-0 sm:px-0" : "px-3 sm:px-0"
+                            }`}
+                          >
                             {isSuperhabit && (
                               <span
                                 className="inline-flex items-center gap-1.5 shadow-sm"
@@ -1286,9 +1392,18 @@ export default function HabitosPage() {
                             )}
                           </div>
 
-                          <div className="mx-3 h-px shrink-0 bg-[var(--color-border)] sm:hidden" aria-hidden />
+                          <div
+                            className={`h-px shrink-0 bg-[var(--color-border)] sm:hidden ${
+                              timedBlend ? "mx-0" : "mx-3"
+                            }`}
+                            aria-hidden
+                          />
 
-                          <div className="flex w-full flex-row items-center justify-between gap-3 px-3 pb-3 sm:ml-auto sm:w-auto sm:shrink-0 sm:justify-end sm:gap-2.5 sm:px-0 sm:pb-0">
+                          <div
+                            className={`flex w-full flex-row items-center justify-between gap-3 pb-3 sm:ml-auto sm:w-auto sm:shrink-0 sm:justify-end sm:gap-2.5 sm:px-0 sm:pb-0 ${
+                              timedBlend ? "px-0" : "px-3"
+                            }`}
+                          >
                             <div
                               role="group"
                               aria-label="Estado de la semana: letras L a D y marcas debajo"

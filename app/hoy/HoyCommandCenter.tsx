@@ -1,9 +1,6 @@
 "use client"
 
-/**
- * Rutina de bienestar (varios hábitos agrupados): mock listo en
- * `app/hoy/wellnessRoutinePreviewMock.ts` → `WELLNESS_ROUTINE_PREVIEW_HABITS_FOR_HOY` para cuando integremos ese bloque en /hoy.
- */
+/** Aside «Rutina y hábitos clave»: hábitos que tocan hoy, agrupados por hora o momento definido en cada uno. */
 import Link from "next/link"
 import {
   Fragment,
@@ -28,7 +25,6 @@ import {
   Sun,
   Sunrise,
   Sunset,
-  Target,
   TrendingDown,
   TrendingUp,
   Trophy,
@@ -66,6 +62,7 @@ import {
   groupHabitsByDaypart,
   type HabitTimeBlockId,
 } from "@/lib/habits/habitStackGroups"
+import { isScheduledOnUtcDay } from "@/lib/habits/habitMetrics"
 import { HabitTodayProgressBar } from "@/app/components/habits/HabitTodayProgressBar"
 import {
   habitShowsTodayProgressBar,
@@ -289,45 +286,73 @@ const HOY_DAYPART_META: Record<
   sin_hora: { title: "Durante el día", subtitle: "Flexible · sin hora fija", Icon: Clock },
 }
 
-const HOY_DAYPART_SURFACE: Record<
-  HabitTimeBlockId,
-  { section: CSSProperties; iconWrap: string; iconClass: string }
-> = {
+const HOY_DAYPART_SURFACE: Record<HabitTimeBlockId, { iconWrap: string; iconClass: string }> = {
   manana: {
-    section: {
-      background: "color-mix(in srgb, #FBBF24 12%, var(--color-surface))",
-      borderColor: "color-mix(in srgb, #F59E0B 30%, var(--color-border))",
-    },
     iconWrap: "bg-[color-mix(in_srgb,#F59E0B_18%,transparent)]",
     iconClass: "text-amber-600 dark:text-amber-400",
   },
   tarde: {
-    section: {
-      background: "color-mix(in srgb, var(--color-accent-warning) 11%, var(--color-surface))",
-      borderColor: "color-mix(in srgb, var(--color-accent-warning) 28%, var(--color-border))",
-    },
     iconWrap: "bg-[color-mix(in_srgb,var(--color-accent-warning)_18%,transparent)]",
     iconClass: "text-orange-600 dark:text-orange-400",
   },
   noche: {
-    section: {
-      background: "color-mix(in srgb, #7c3aed 12%, var(--color-surface))",
-      borderColor: "color-mix(in srgb, #7c3aed 26%, var(--color-border))",
-    },
     iconWrap: "bg-[color-mix(in_srgb,#7c3aed_18%,transparent)]",
     iconClass: "text-violet-600 dark:text-violet-300",
   },
   sin_hora: {
-    section: {
-      background: "transparent",
-      borderColor: "color-mix(in srgb, var(--color-border) 72%, transparent)",
-    },
-    iconWrap: "bg-transparent",
-    iconClass: "text-[var(--color-text-secondary)]",
+    iconWrap: "bg-[color-mix(in_srgb,#7c3aed_14%,transparent)]",
+    iconClass: "text-violet-600 dark:text-violet-300",
   },
 }
 
-/** Bloque «durante el día» primero y sin tinte; resto sigue mañana→tarde→noche. */
+/**
+ * Fondo de la tarjeta completa: degradado continuo (violeta → salud → ámbar → superficie)
+ * para fundir cabecera y franjas sin bandas blancas; las secciones encajan encima con el mismo matiz.
+ */
+const HOY_RUTINA_ASIDE_OUTER: CSSProperties = {
+  background:
+    "linear-gradient(165deg, color-mix(in srgb, #7c3aed 10%, var(--color-surface)) 0%, color-mix(in srgb, var(--color-accent-health) 8%, var(--color-surface)) 28%, var(--color-surface) 52%, color-mix(in srgb, #FBBF24 9%, var(--color-surface)) 82%, color-mix(in srgb, #F59E0B 5%, var(--color-surface)) 100%)",
+  border: "1px solid color-mix(in srgb, #a855f7 20%, color-mix(in srgb, var(--color-border) 55%, transparent))",
+  borderRadius: "var(--radius-card)",
+  boxShadow:
+    "inset 0 1px 0 rgba(255,255,255,0.08), 0 2px 16px color-mix(in srgb, #7c3aed 9%, transparent)",
+}
+
+/**
+ * Solo degradado por franja (sin marco propio): queda integrado dentro del Card exterior.
+ */
+const HOY_DAYPART_SEGMENT_SHELL: Record<HabitTimeBlockId, CSSProperties> = {
+  sin_hora: {
+    background:
+      "linear-gradient(155deg, color-mix(in srgb, #7c3aed 11%, var(--color-surface)) 0%, var(--color-surface) 40%, color-mix(in srgb, var(--color-accent-health) 10%, var(--color-surface)) 100%)",
+    border: "none",
+    borderRadius: 0,
+    boxShadow: "none",
+  },
+  manana: {
+    background:
+      "linear-gradient(152deg, color-mix(in srgb, #FBBF24 13%, var(--color-surface)) 0%, var(--color-surface) 46%, color-mix(in srgb, #F59E0B 9%, var(--color-surface)) 100%)",
+    border: "none",
+    borderRadius: 0,
+    boxShadow: "none",
+  },
+  tarde: {
+    background:
+      "linear-gradient(152deg, color-mix(in srgb, var(--color-accent-warning) 12%, var(--color-surface)) 0%, var(--color-surface) 48%, color-mix(in srgb, #ea580c 8%, var(--color-surface)) 100%)",
+    border: "none",
+    borderRadius: 0,
+    boxShadow: "none",
+  },
+  noche: {
+    background:
+      "linear-gradient(155deg, color-mix(in srgb, #5b21b6 9%, var(--color-surface)) 0%, var(--color-surface) 44%, color-mix(in srgb, #a855f7 11%, var(--color-surface)) 100%)",
+    border: "none",
+    borderRadius: 0,
+    boxShadow: "none",
+  },
+}
+
+/** «Durante el día» primero; después mañana → tarde → noche (degradado por franja en el aside). */
 function hoyDaypartAsideOrder(): HabitTimeBlockId[] {
   return ["sin_hora", "manana", "tarde", "noche"]
 }
@@ -533,7 +558,85 @@ export default function HoyCommandCenter() {
     [ctx?.today_tasks],
   )
 
-  const habitsByDaypart = useMemo(() => groupHabitsByDaypart(habitHookList), [habitHookList])
+  const habitsScheduledToday = useMemo(() => {
+    const ymd = agendaTodayYmd()
+    return habitHookList.filter((h) => isScheduledOnUtcDay(h.metadata, ymd))
+  }, [habitHookList])
+
+  const habitsByDaypartAside = useMemo(
+    () => groupHabitsByDaypart(habitsScheduledToday),
+    [habitsScheduledToday],
+  )
+
+  const renderAsideHabitRow = useCallback(
+    (habit: HabitWithMetrics) => {
+      const progress = habitTodayProgressUi(habit)
+      return (
+        <div
+          key={habit.id}
+          className={`min-w-0 border-b border-[color-mix(in_srgb,var(--color-border)_45%,transparent)] py-2 last:border-b-0 ${
+            habit.metrics.completed_today ? "opacity-[0.92]" : ""
+          }`}
+        >
+          <div className="flex min-w-0 items-center justify-between gap-2">
+            <span
+              className={`min-w-0 flex-1 truncate text-sm font-medium leading-snug ${
+                habit.metrics.completed_today
+                  ? "text-[color-mix(in_srgb,var(--color-text-primary)_78%,var(--color-text-secondary))]"
+                  : "text-[var(--color-text-primary)]"
+              }`}
+            >
+              {habit.name}
+            </span>
+            <button
+              type="button"
+              disabled={(!persistenceEnabled && !mock) || togglingId === habit.id}
+              aria-label={
+                habit.metrics.completed_today
+                  ? `Desmarcar «${habit.name}» para hoy`
+                  : `Marcar «${habit.name}» como hecho hoy`
+              }
+              title={habit.metrics.completed_today ? "Desmarcar hoy" : "Hecho hoy"}
+              onClick={async () => {
+                const r = await toggleCompleteToday(habit.id)
+                if (!r.ok) return
+                if (r.streakCelebration) enqueueStreakCelebrations([r.streakCelebration])
+                void refetchCtx()
+              }}
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-[color-mix(in_srgb,var(--color-border)_65%,transparent)] bg-transparent text-[var(--color-text-secondary)] shadow-none transition-[border-color,background-color,color] motion-safe:duration-200 disabled:opacity-45 hover:border-[color-mix(in_srgb,var(--color-accent-health)_35%,var(--color-border))]"
+              style={
+                habit.metrics.completed_today
+                  ? {
+                      borderColor: "color-mix(in srgb, var(--color-accent-health) 42%, var(--color-border))",
+                      background: "color-mix(in srgb, var(--color-accent-health) 11%, transparent)",
+                      color: "var(--color-accent-health)",
+                    }
+                  : undefined
+              }
+            >
+              {togglingId === habit.id ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+              ) : habit.metrics.completed_today ? (
+                <Check className="h-3.5 w-3.5" strokeWidth={2.75} aria-hidden />
+              ) : (
+                <span className="block h-2 w-2 rounded-full bg-[color-mix(in_srgb,var(--color-border)_90%,transparent)]" aria-hidden />
+              )}
+            </button>
+          </div>
+          {habitShowsTodayProgressBar(progress) ? (
+            <HabitTodayProgressBar
+              pct={progress.pct}
+              kind={progress.kind}
+              ariaLabel={progress.ariaLabel}
+              caption={progress.caption}
+            />
+          ) : null}
+        </div>
+      )
+    },
+    [enqueueStreakCelebrations, mock, persistenceEnabled, refetchCtx, togglingId, toggleCompleteToday],
+  )
+
   const habitsDoneAll = habitHookList.filter((h) => h.metrics.completed_today).length
   const habitsLabel = habitHookList.length ? `${habitsDoneAll}/${habitHookList.length}` : "—"
 
@@ -1068,152 +1171,101 @@ export default function HoyCommandCenter() {
             </div>
           </Card>
 
-          <Card className="p-4">
-            <div className="mb-3 flex items-center gap-2">
-              <Target className="h-4 w-4 text-[var(--color-accent-health)]" aria-hidden />
-              <SectionLabel>Hábitos clave</SectionLabel>
-            </div>
-            <div className="flex flex-col gap-3">
-              {habitHookList.length === 0 ? (
-                <p className="m-0 text-xs text-[var(--color-text-secondary)]">
-                  Sin hábitos cargados.{" "}
+          <Card
+            className="flex flex-col gap-0 overflow-hidden p-4 sm:p-5"
+            hover={false}
+            shadow="none"
+            hoverShadow="none"
+            style={HOY_RUTINA_ASIDE_OUTER}
+          >
+            <div className="flex items-start gap-2 border-b border-[color-mix(in_srgb,var(--color-border)_48%,transparent)] pb-3">
+              <ListChecks className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-accent-health)]" aria-hidden />
+              <div className="min-w-0">
+                <SectionLabel>Rutina y hábitos clave</SectionLabel>
+                <p className="m-0 mt-1 text-[11px] leading-snug text-[var(--color-text-secondary)]">
+                  Los que tocan <span className="font-medium text-[var(--color-text-primary)]">hoy</span>, ordenados por la hora o el momento que indicaste en cada hábito.{" "}
                   <Link href="/habitos" className="font-medium text-[var(--color-accent-primary)] underline">
-                    Configurar
+                    Editar hábitos
                   </Link>
                 </p>
-              ) : null}
-              {hoyDaypartAsideOrder().map((blockId) => {
-                const list = habitsByDaypart.get(blockId) ?? []
-                if (list.length === 0) return null
-                const pending = list.filter((h) => !h.metrics.completed_today)
-                const done = list.filter((h) => h.metrics.completed_today)
-                const meta = HOY_DAYPART_META[blockId]
-                const surface = HOY_DAYPART_SURFACE[blockId]
-                const Icon = meta.Icon
-                const plainBlock = blockId === "sin_hora"
-                const renderRow = (habit: HabitWithMetrics) => {
-                  const progress = habitTodayProgressUi(habit)
-                  return (
-                    <div
-                      key={habit.id}
-                      className={`min-w-0 border-b border-[color-mix(in_srgb,var(--color-border)_45%,transparent)] py-2 last:border-b-0 ${
-                        habit.metrics.completed_today ? "opacity-[0.92]" : ""
-                      }`}
-                    >
-                      <div className="flex min-w-0 items-center justify-between gap-2">
-                        <span
-                          className={`min-w-0 flex-1 truncate text-sm font-medium leading-snug ${
-                            habit.metrics.completed_today
-                              ? "text-[color-mix(in_srgb,var(--color-text-primary)_78%,var(--color-text-secondary))]"
-                              : "text-[var(--color-text-primary)]"
-                          }`}
-                        >
-                          {habit.name}
-                        </span>
-                        <button
-                          type="button"
-                          disabled={(!persistenceEnabled && !mock) || togglingId === habit.id}
-                          aria-label={
-                            habit.metrics.completed_today
-                              ? `Desmarcar «${habit.name}» para hoy`
-                              : `Marcar «${habit.name}» como hecho hoy`
-                          }
-                          title={habit.metrics.completed_today ? "Desmarcar hoy" : "Hecho hoy"}
-                          onClick={async () => {
-                            const r = await toggleCompleteToday(habit.id)
-                            if (!r.ok) return
-                            if (r.streakCelebration) enqueueStreakCelebrations([r.streakCelebration])
-                            void refetchCtx()
-                          }}
-                          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-[color-mix(in_srgb,var(--color-border)_65%,transparent)] bg-transparent text-[var(--color-text-secondary)] shadow-none transition-[border-color,background-color,color] motion-safe:duration-200 disabled:opacity-45 hover:border-[color-mix(in_srgb,var(--color-accent-health)_35%,var(--color-border))]"
-                          style={
-                            habit.metrics.completed_today
-                              ? {
-                                  borderColor: "color-mix(in srgb, var(--color-accent-health) 42%, var(--color-border))",
-                                  background:
-                                    "color-mix(in srgb, var(--color-accent-health) 11%, transparent)",
-                                  color: "var(--color-accent-health)",
-                                }
-                              : undefined
-                          }
-                        >
-                          {togglingId === habit.id ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
-                          ) : habit.metrics.completed_today ? (
-                            <Check className="h-3.5 w-3.5" strokeWidth={2.75} aria-hidden />
-                          ) : (
-                            <span className="block h-2 w-2 rounded-full bg-[color-mix(in_srgb,var(--color-border)_90%,transparent)]" aria-hidden />
-                          )}
-                        </button>
-                      </div>
-                      {habitShowsTodayProgressBar(progress) ? (
-                        <HabitTodayProgressBar
-                          pct={progress.pct}
-                          kind={progress.kind}
-                          ariaLabel={progress.ariaLabel}
-                          caption={progress.caption}
-                        />
-                      ) : null}
-                    </div>
-                  )
-                }
-                return (
-                  <div
-                    key={blockId}
-                    className={
-                      plainBlock
-                        ? "rounded-xl border border-[color-mix(in_srgb,var(--color-border)_65%,transparent)] bg-transparent"
-                        : "overflow-hidden rounded-xl border"
-                    }
-                    style={plainBlock ? undefined : surface.section}
-                  >
-                    <div
-                      className={`flex items-center gap-2 px-2.5 py-2 ${
-                        plainBlock
-                          ? ""
-                          : "border-b border-[color-mix(in_srgb,var(--color-border)_55%,transparent)]"
-                      }`}
-                    >
-                      <span
-                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
-                          plainBlock ? "" : surface.iconWrap
-                        }`}
-                      >
-                        <Icon className={`h-4 w-4 ${surface.iconClass}`} aria-hidden />
-                      </span>
-                      <div className="min-w-0">
-                        <p className="m-0 text-[11px] font-semibold text-[var(--color-text-primary)]">
-                          {meta.title}
-                        </p>
-                        <p className="m-0 text-[10px] leading-snug text-[var(--color-text-secondary)]">
-                          {meta.subtitle}
-                        </p>
-                      </div>
-                    </div>
-                    <div className={`space-y-3 ${plainBlock ? "px-2 pb-2 pt-1" : "p-2.5"}`}>
-                      {pending.length > 0 ? (
-                        <div>
-                          <p className="m-0 mb-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
-                            Pendientes
-                          </p>
-                          <div className="flex flex-col gap-0">{pending.map(renderRow)}</div>
-                        </div>
-                      ) : null}
-                      {done.length > 0 ? (
-                        <div>
-                          <p className="m-0 mb-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--color-accent-health)]">
-                            Hechas
-                          </p>
-                          <div className="flex flex-col gap-0">{done.map(renderRow)}</div>
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-                )
-              })}
+              </div>
             </div>
+            {habitHookList.length === 0 ? (
+              <p className="m-0 mt-3 text-xs text-[var(--color-text-secondary)]">
+                Sin hábitos cargados.{" "}
+                <Link href="/habitos" className="font-medium text-[var(--color-accent-primary)] underline">
+                  Configurar
+                </Link>
+              </p>
+            ) : habitsScheduledToday.length === 0 ? (
+              <p className="m-0 mt-3 text-xs text-[var(--color-text-secondary)]">
+                Hoy no hay hábitos activos según tu configuración. Abre un hábito y revisa{" "}
+                <span className="font-medium text-[var(--color-text-primary)]">Días activos</span> y la frecuencia en el editor.
+              </p>
+            ) : null}
+            {habitsScheduledToday.length === 0
+              ? null
+              : (() => {
+                  const segments = hoyDaypartAsideOrder()
+                    .map((blockId) => {
+                      const list = habitsByDaypartAside.get(blockId) ?? []
+                      if (list.length === 0) return null
+                      return { blockId, list }
+                    })
+                    .filter((s): s is { blockId: HabitTimeBlockId; list: HabitWithMetrics[] } => s != null)
+
+                  return segments.map(({ blockId, list }, segIdx) => {
+                    const pending = list.filter((h) => !h.metrics.completed_today)
+                    const done = list.filter((h) => h.metrics.completed_today)
+                    const meta = HOY_DAYPART_META[blockId]
+                    const surface = HOY_DAYPART_SURFACE[blockId]
+                    const segmentShell = HOY_DAYPART_SEGMENT_SHELL[blockId]
+                    const Icon = meta.Icon
+                    return (
+                      <div
+                        key={blockId}
+                        className={`min-w-0 -mx-4 px-4 sm:-mx-5 sm:px-5 ${segIdx === 0 ? "pt-2 pb-3" : "py-3"}`}
+                        style={segmentShell}
+                      >
+                        <div className="flex items-center gap-2 pb-2">
+                          <span
+                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${surface.iconWrap}`}
+                          >
+                            <Icon className={`h-4 w-4 ${surface.iconClass}`} aria-hidden />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="m-0 text-[11px] font-semibold text-[var(--color-text-primary)]">
+                              {meta.title}
+                            </p>
+                            <p className="m-0 text-[10px] leading-snug text-[var(--color-text-secondary)]">
+                              {meta.subtitle}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="space-y-3">
+                          {pending.length > 0 ? (
+                            <div>
+                              <p className="m-0 mb-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
+                                Pendientes
+                              </p>
+                              <div className="flex flex-col gap-0">{pending.map(renderAsideHabitRow)}</div>
+                            </div>
+                          ) : null}
+                          {done.length > 0 ? (
+                            <div>
+                              <p className="m-0 mb-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--color-accent-health)]">
+                                Hechas
+                              </p>
+                              <div className="flex flex-col gap-0">{done.map(renderAsideHabitRow)}</div>
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+                    )
+                  })
+                })()}
             {habitHookList.length > 0 ? (
-              <p className="m-0 mt-3 text-center text-[10px] text-[var(--color-text-secondary)]">
+              <p className="m-0 mt-4 text-center text-[10px] text-[var(--color-text-secondary)]">
                 <Link
                   href="/habitos#habitos-consistency-insight-headline"
                   className="font-medium text-[var(--color-accent-primary)] underline"

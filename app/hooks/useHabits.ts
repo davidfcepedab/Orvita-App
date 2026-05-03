@@ -61,23 +61,34 @@ type MockHabitRow = {
 }
 
 function mockHabitRows(): MockHabitRow[] {
+  /** Horas parseables para demo del stack Mañana / Tarde / Noche / Sin hora (solo modo mock). */
   const m1: HabitMetadata = {
     frequency: "diario",
     weekdays: [1, 2, 3, 4, 5],
     display_days: ["L", "M", "X", "J", "V"],
     is_superhabit: true,
+    success_metric_type: "si_no",
+    trigger_or_time: "23:00",
   }
   const m2: HabitMetadata = {
     frequency: "diario",
     weekdays: [1, 2, 3, 4, 5, 6],
     display_days: ["L", "M", "X", "J", "V", "S"],
     is_superhabit: false,
+    success_metric_type: "duracion",
+    success_metric_target: "15 minutos",
+    estimated_session_minutes: 15,
+    trigger_or_time: "09:15",
   }
   const m3: HabitMetadata = {
     frequency: "semanal",
     weekdays: [1, 4],
     display_days: ["L", "J"],
-    is_superhabit: true,
+    is_superhabit: false,
+    success_metric_type: "duracion",
+    success_metric_target: "10 minutos",
+    estimated_session_minutes: 10,
+    trigger_or_time: "14:30",
   }
   const m4: HabitMetadata = {
     habit_type: "water-tracking",
@@ -92,11 +103,30 @@ function mockHabitRows(): MockHabitRow[] {
     water_glass_ml: 250,
     is_superhabit: false,
   }
+  const m5: HabitMetadata = {
+    frequency: "diario",
+    weekdays: [0, 1, 2, 3, 4, 5, 6],
+    display_days: ["L", "M", "X", "J", "V", "S", "D"],
+    success_metric_type: "duracion",
+    success_metric_target: "10 minutos",
+    estimated_session_minutes: 10,
+    trigger_or_time: "07:45",
+  }
+  const m6: HabitMetadata = {
+    frequency: "diario",
+    weekdays: [0, 1, 2, 3, 4, 5, 6],
+    display_days: ["L", "M", "X", "J", "V", "S", "D"],
+    success_metric_type: "si_no",
+    trigger_or_time: "A lo largo del día · vista previa UI",
+    intention: "Demo del bloque sin hora fija reconocible.",
+  }
   return [
     { id: "mock-1", name: "Dormir antes de las 11", domain: "fisico", metadata: m1 },
     { id: "mock-2", name: "Movilidad y respiración", domain: "salud", metadata: m2 },
     { id: "mock-3", name: "Revisión financiera de 10 minutos", domain: "profesional", metadata: m3 },
     { id: "mock-4", name: "Hidratación", domain: "salud", metadata: m4 },
+    { id: "mock-5", name: "Activación matutina (demo)", domain: "fisico", metadata: m5 },
+    { id: "mock-6", name: "Micro-pausa consciente (demo)", domain: "salud", metadata: m6 },
   ]
 }
 
@@ -107,6 +137,8 @@ function initialMockDatesById(t: string): Record<string, string[]> {
     [rows[1].id]: mockCompletionSeeds(t, rows[1].metadata, [-1, -2, -4]),
     [rows[2].id]: mockCompletionSeeds(t, rows[2].metadata, [-7, -14, -21]),
     [rows[3].id]: [],
+    [rows[4].id]: mockCompletionSeeds(t, rows[4].metadata, [-1, -3]),
+    [rows[5].id]: mockCompletionSeeds(t, rows[5].metadata, [-2]),
   }
 }
 

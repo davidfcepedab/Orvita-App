@@ -2,9 +2,9 @@ import type { HabitWeekDayMark } from "@/lib/habits/habitMetrics"
 import type { HabitWithMetrics } from "@/lib/operational/types"
 
 /**
- * Mock de «Rutina de bienestar matutina»: varios hábitos sí/no agrupados (2 hechos, 1 pendiente).
- * Reservado para la vista `/hoy` cuando implementemos bloque de rutina / misión del día.
- * No usar en producción como datos reales.
+ * Mock opcional para demos / tests de UI con varios hábitos agrupados.
+ * En producción, el aside de `/hoy` lista hábitos que aplican hoy según metadata (días activos,
+ * frecuencia); este mock sigue sirviendo solo para demos o tests aislados.
  */
 const weekOk: HabitWeekDayMark[] = ["done", "done", "done", "missed", "upcoming", "off", "off"]
 

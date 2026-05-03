@@ -497,10 +497,10 @@ export function HabitFormModal({
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="habit-trigger">Trigger / hora</Label>
+                      <Label htmlFor="habit-trigger">Hora o momento del día</Label>
                       <Input
                         id="habit-trigger"
-                        placeholder="ej. Tras el café · 07:15 · Antes de abrir el inbox"
+                        placeholder="Ej.: 07:15, tras el café, antes de abrir el correo"
                         value={form.triggerOrTime}
                         onChange={(e) => setForm((p) => ({ ...p, triggerOrTime: e.target.value }))}
                       />
@@ -521,8 +521,8 @@ export function HabitFormModal({
                             Progreso durante el día (varios chequeos)
                           </Label>
                           <p className="m-0 text-[11px] leading-snug text-[var(--color-text-secondary)]">
-                            Definí cuántas veces querés registrar Sí/No hoy; el stack los muestra arriba (no en «sin hora»).
-                            El botón hecho del día sigue siendo la base hasta activar checkpoints finos.
+                            Definí cuántas veces querés marcar sí o no hoy; esos chequeos aparecen arriba en Hábitos, no junto a los que no tienen hora.
+                            El botón de hecho del día sigue siendo la referencia principal hasta que actives los chequeos.
                           </p>
                         </div>
                       </div>
