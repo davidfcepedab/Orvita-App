@@ -6,7 +6,7 @@ import { AlertTriangle, Landmark, RefreshCw, Unlink } from "lucide-react"
 import { Card } from "@/src/components/ui/Card"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import { buildBelvoBankingSyncChip } from "@/lib/finanzas/bankingBelvoSyncChip"
-import { financeApiDelete, financeApiGet } from "@/lib/finanzas/financeClientFetch"
+import { financeApiGet, financeApiJson } from "@/lib/finanzas/financeClientFetch"
 import { useFinance } from "@/app/finanzas/FinanceContext"
 import { financeCardMicroLabelClass } from "@/app/finanzas/_components/financeChrome"
 import { cn } from "@/lib/utils"
@@ -131,21 +131,32 @@ export function ConnectedBankAccountsCard({ embedded = false }: { embedded?: boo
   }
 
   const unlinkAccount = async (accountId: string) => {
-    const ok = window.confirm(
-      "¿Desvincular esta cuenta? Se borrarán en Órvita los movimientos importados desde esta conexión.",
+    const proceed = window.confirm(
+      "¿Desvincular esta cuenta del banco? No se importarán movimientos nuevos desde esta conexión.",
     )
-    if (!ok) return
+    if (!proceed) return
+
+    const purgeBelvoLedger = window.confirm(
+      "¿Borrar también el historial en Movimientos y Capital que vino de Belvo para esta cuenta (y quitar la fila del catálogo si ya no tiene movimientos)?\n\nAceptar = limpiar importaciones (recomendado en pruebas).\n\nCancelar = conservar esos movimientos en el hogar; seguirán visibles aunque el banco ya no esté enlazado.",
+    )
 
     setUnlinkingId(accountId)
     setNotice(null)
     setError(null)
     try {
-      const res = await financeApiDelete(`/api/integrations/banking/accounts/${encodeURIComponent(accountId)}`)
+      const res = await financeApiJson(`/api/integrations/banking/accounts/${encodeURIComponent(accountId)}`, {
+        method: "DELETE",
+        body: { purgeBelvoLedger },
+      })
       const payload = (await res.json()) as { success?: boolean; error?: string }
       if (!res.ok || !payload.success) {
         throw new Error(payload.error ?? "No se pudo desvincular la cuenta.")
       }
-      setNotice("Cuenta desvinculada.")
+      setNotice(
+        purgeBelvoLedger
+          ? "Cuenta desvinculada; se eliminó el historial Belvo del hogar y se actualizaron resúmenes del mes."
+          : "Cuenta desvinculada; se conservó el historial Belvo ya importado.",
+      )
       touchCapitalData?.()
       await load()
     } catch (e) {

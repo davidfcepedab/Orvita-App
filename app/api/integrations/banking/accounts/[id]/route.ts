@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
 import { requestBelvoDeleteLink } from "@/lib/integrations/banking-colombia"
+import { purgeBelvoLedgerForUnlinkedBankAccount } from "@/lib/integrations/purgeBelvoLedgerForUnlinkedBankAccount"
+import { getHouseholdId } from "@/lib/households/getHouseholdId"
 
 export const runtime = "nodejs"
 
@@ -10,11 +12,23 @@ function isBankProvider(p: string): p is BankProviderCol {
   return p === "bancolombia" || p === "davivienda" || p === "nequi"
 }
 
-export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+async function readDeleteJson(req: NextRequest): Promise<{ purgeBelvoLedger: boolean }> {
   try {
-    const auth = await requireUser(_req)
+    const ct = req.headers.get("content-type") ?? ""
+    if (!ct.includes("application/json")) return { purgeBelvoLedger: false }
+    const raw = (await req.json()) as { purgeBelvoLedger?: unknown }
+    return { purgeBelvoLedger: raw?.purgeBelvoLedger === true }
+  } catch {
+    return { purgeBelvoLedger: false }
+  }
+}
+
+export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  try {
+    const auth = await requireUser(req)
     if (auth instanceof NextResponse) return auth
     const { userId, supabase } = auth
+    const { purgeBelvoLedger } = await readDeleteJson(req)
 
     const { id: rawId } = await ctx.params
     const accountId = rawId?.trim()
@@ -24,7 +38,7 @@ export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: str
 
     const { data: row, error: fetchError } = await supabase
       .from("bank_accounts")
-      .select("id, provider, metadata")
+      .select("id, provider, metadata, account_name, account_mask")
       .eq("id", accountId)
       .eq("user_id", userId)
       .maybeSingle()
@@ -50,6 +64,21 @@ export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: str
       .maybeSingle()
 
     const connLinkId = typeof connRow?.access_token === "string" ? connRow.access_token.trim() : ""
+
+    if (purgeBelvoLedger) {
+      const householdId = await getHouseholdId(supabase, userId)
+      if (householdId) {
+        await purgeBelvoLedgerForUnlinkedBankAccount({
+          supabase,
+          householdId,
+          bankAccount: {
+            account_name: String(row.account_name ?? ""),
+            account_mask: String(row.account_mask ?? ""),
+            metadata: row.metadata,
+          },
+        })
+      }
+    }
 
     const { error: delError } = await supabase.from("bank_accounts").delete().eq("id", accountId).eq("user_id", userId)
     if (delError) throw new Error(delError.message)
