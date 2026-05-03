@@ -220,7 +220,7 @@ export default function HealthOperationsV3({
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="rounded-[28px] border p-7 backdrop-blur-2xl sm:p-9"
+        className="rounded-[28px] border px-4 py-6 backdrop-blur-2xl sm:px-7 sm:py-8 md:px-9 md:py-9"
         style={saludPanelStyle(theme, 0.88)}
       >
         <p className="text-[11px] font-semibold uppercase tracking-[0.22em]" style={{ color: theme.textMuted }}>
@@ -522,7 +522,11 @@ export default function HealthOperationsV3({
       </motion.div>
 
       <div
-        className={compact ? "rounded-2xl border p-5 sm:p-6" : "rounded-[26px] border p-6 backdrop-blur-2xl sm:p-7"}
+        className={
+          compact
+            ? "rounded-2xl border p-5 sm:p-6"
+            : "rounded-[26px] border px-3 py-6 backdrop-blur-2xl sm:px-7 sm:py-7"
+        }
         style={saludPanelStyle(theme, 0.82)}
       >
         <p className="text-[11px] font-semibold uppercase tracking-[0.2em]" style={{ color: theme.textMuted }}>
@@ -555,9 +559,22 @@ export default function HealthOperationsV3({
             Recuperación (área)
           </span>
         </div>
-        <div className="mt-6 h-[260px]">
+        <div
+          className={
+            compact
+              ? "mt-6 h-[260px] min-h-0 w-full min-w-0"
+              : "-mx-3 mt-5 h-[228px] min-h-0 w-[calc(100%+1.5rem)] min-w-0 sm:mx-0 sm:mt-6 sm:h-[260px] sm:w-full"
+          }
+        >
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={weeklyChartData}>
+            <ComposedChart
+              data={weeklyChartData}
+              margin={
+                compact
+                  ? { top: 6, right: 8, left: 4, bottom: 8 }
+                  : { top: 4, right: 8, left: 0, bottom: 12 }
+              }
+            >
               {!compact ? (
               <defs>
                 <linearGradient id={energyChartGradientId} x1="0" y1="0" x2="0" y2="1">
@@ -567,9 +584,23 @@ export default function HealthOperationsV3({
               </defs>
               ) : null}
               <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} vertical={false} />
-              <XAxis dataKey="hour" stroke={theme.textMuted} style={{ fontSize: "11px" }} />
+              <XAxis
+                dataKey="hour"
+                stroke={theme.textMuted}
+                tick={{ fontSize: compact ? 11 : 10 }}
+                tickMargin={compact ? 8 : 6}
+                interval={0}
+                height={compact ? 36 : 32}
+              />
               <YAxis yAxisId="left" domain={[0, 100]} hide />
-              <YAxis yAxisId="right" orientation="right" domain={[0, 100]} stroke={theme.textMuted} style={{ fontSize: "11px" }} />
+              <YAxis
+                yAxisId="right"
+                orientation="right"
+                domain={[0, 100]}
+                stroke={theme.textMuted}
+                tick={{ fontSize: compact ? 11 : 10 }}
+                width={compact ? 36 : 32}
+              />
               <Tooltip
                 content={(tipProps) => (
                   <VitalityRecoveryTooltipContent

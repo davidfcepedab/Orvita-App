@@ -83,7 +83,7 @@ export default function SaludDashboardV3() {
 
       <SaludInsightSection brief={brief} />
 
-      <section className="space-y-4 px-0.5 sm:px-0">
+      <section className="space-y-4 px-0">
         <HealthOperationsV3
           salud={salud}
           latest={autoHealth.latest}

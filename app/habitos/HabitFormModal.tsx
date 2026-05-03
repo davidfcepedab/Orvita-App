@@ -53,6 +53,8 @@ export type HabitModalFormValues = {
   bodyWeightKg: string
   /** Varias respuestas Sí/No en el día (roadmap: push + checkpoints). */
   intradaySiNoProgress: boolean
+  /** Meta de chequeos Sí/No en el día (1–24) cuando `intradaySiNoProgress`. */
+  intradaySiNoTargetChecks: string
 }
 
 export const HABIT_MODAL_DEFAULT_VALUES: HabitModalFormValues = {
@@ -72,6 +74,7 @@ export const HABIT_MODAL_DEFAULT_VALUES: HabitModalFormValues = {
   waterGlassMl: String(DEFAULT_WATER_GLASS_ML),
   bodyWeightKg: "",
   intradaySiNoProgress: false,
+  intradaySiNoTargetChecks: "3",
 }
 
 export function emptyHabitModalForm(domain: OperationalDomain = "salud"): HabitModalFormValues {
@@ -103,6 +106,10 @@ export function habitToModalValues(habit: HabitWithMetrics): HabitModalFormValue
     waterGlassMl: m?.water_glass_ml != null ? String(m.water_glass_ml) : String(DEFAULT_WATER_GLASS_ML),
     bodyWeightKg: m?.body_weight_kg != null ? String(m.body_weight_kg) : "",
     intradaySiNoProgress: Boolean(m?.intraday_si_no_progress),
+    intradaySiNoTargetChecks:
+      m?.intraday_si_no_target_checks != null && Number.isFinite(m.intraday_si_no_target_checks)
+        ? String(Math.min(24, Math.max(1, Math.round(m.intraday_si_no_target_checks))))
+        : "3",
   }
 }
 
@@ -500,21 +507,43 @@ export function HabitFormModal({
                     </div>
                   </div>
                   {form.successMetricType === "si_no" ? (
-                    <div className="flex items-start gap-3 rounded-xl border border-[color-mix(in_srgb,var(--color-accent-primary)_35%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-primary)_5%,var(--color-surface))] p-3">
-                      <Checkbox
-                        id="habit-intraday-si-no"
-                        checked={form.intradaySiNoProgress}
-                        onCheckedChange={(v) => setForm((p) => ({ ...p, intradaySiNoProgress: v === true }))}
-                      />
-                      <div className="min-w-0 space-y-1">
-                        <Label htmlFor="habit-intraday-si-no" className="cursor-pointer text-sm font-medium leading-snug">
-                          Progreso durante el día (varios chequeos)
-                        </Label>
-                        <p className="m-0 text-[11px] leading-snug text-[var(--color-text-secondary)]">
-                          Para hábitos con impulsos repetidos (p. ej. fumar): más adelante, varios Sí/No en el día y avisos;
-                          el marcado único en Órvita sigue siendo la base hasta activar esa capa.
-                        </p>
+                    <div className="space-y-3 rounded-xl border border-[color-mix(in_srgb,var(--color-accent-primary)_35%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-primary)_5%,var(--color-surface))] p-3">
+                      <div className="flex items-start gap-3">
+                        <Checkbox
+                          id="habit-intraday-si-no"
+                          checked={form.intradaySiNoProgress}
+                          onCheckedChange={(v) =>
+                            setForm((p) => ({ ...p, intradaySiNoProgress: v === true }))
+                          }
+                        />
+                        <div className="min-w-0 space-y-1">
+                          <Label htmlFor="habit-intraday-si-no" className="cursor-pointer text-sm font-medium leading-snug">
+                            Progreso durante el día (varios chequeos)
+                          </Label>
+                          <p className="m-0 text-[11px] leading-snug text-[var(--color-text-secondary)]">
+                            Definí cuántas veces querés registrar Sí/No hoy; el stack los muestra arriba (no en «sin hora»).
+                            El botón hecho del día sigue siendo la base hasta activar checkpoints finos.
+                          </p>
+                        </div>
                       </div>
+                      {form.intradaySiNoProgress ? (
+                        <div className="ml-7 space-y-1.5 border-t border-[color-mix(in_srgb,var(--color-accent-primary)_18%,var(--color-border))] pt-3">
+                          <Label htmlFor="habit-intraday-target" className="text-[12px] font-medium">
+                            Chequeos objetivo por día
+                          </Label>
+                          <Input
+                            id="habit-intraday-target"
+                            type="number"
+                            inputMode="numeric"
+                            min={1}
+                            max={24}
+                            value={form.intradaySiNoTargetChecks}
+                            onChange={(e) => setForm((p) => ({ ...p, intradaySiNoTargetChecks: e.target.value }))}
+                            className="max-w-[8rem]"
+                          />
+                          <p className="m-0 text-[10px] text-[var(--color-text-secondary)]">Entre 1 y 24 (se guarda en la nube con el hábito).</p>
+                        </div>
+                      ) : null}
                     </div>
                   ) : null}
                   <div className="grid gap-4 sm:grid-cols-2 sm:items-end">

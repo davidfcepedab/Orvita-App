@@ -32,6 +32,7 @@ import {
 } from "lucide-react"
 import { UI_HABITS_MUTATIONS_OFF, UI_HABITS_SAVE_OFF } from "@/lib/checkins/flags"
 import { groupHabitsByDaypart, orderedDaypartBlocks, type HabitTimeBlockId } from "@/lib/habits/habitStackGroups"
+import { isFlexibleStackHabit, sortFlexibleStackHabits } from "@/lib/habits/flexibleStackHabits"
 import {
   DEFAULT_WATER_BOTTLE_ML,
   DEFAULT_WATER_GLASS_ML,
@@ -48,6 +49,7 @@ import type {
   OperationalDomain,
 } from "@/lib/operational/types"
 import { emptyHabitModalForm, habitToModalValues, HabitFormModal } from "@/app/habitos/HabitFormModal"
+import { FlexibleDayStackSection } from "@/app/habitos/FlexibleDayStackSection"
 import { WaterHabitMissionBlock } from "@/app/habitos/WaterHabitMissionBlock"
 import { HabitSparkline14 } from "@/app/habitos/HabitSparkline14"
 import { StreakCelebrationOverlay } from "@/app/habitos/StreakCelebrationOverlay"
@@ -140,8 +142,14 @@ function habitMetricLine(meta: HabitMetadata | undefined): string | null {
   const type = meta?.success_metric_type ?? "duracion"
   const target = meta?.success_metric_target?.trim()
   if (type === "si_no") {
-    if (target) return `${METRIC_LABELS.si_no} · ${target}`
-    return "Éxito: marcar hecho en el día"
+    const parts: string[] = []
+    if (meta?.intraday_si_no_progress) {
+      const n = meta.intraday_si_no_target_checks
+      parts.push(n != null && n >= 1 ? `${n} chequeos/día (meta)` : "Varios chequeos en el día")
+    }
+    if (target) parts.push(target)
+    if (parts.length) return `${METRIC_LABELS.si_no} · ${parts.join(" · ")}`
+    return meta?.intraday_si_no_progress ? "Éxito: varios chequeos en el día" : "Éxito: marcar hecho en el día"
   }
   const base = METRIC_LABELS[type]
   return target ? `${base} · ${target}` : base
@@ -302,8 +310,16 @@ export default function HabitosPage() {
     [habits]
   )
 
+  const flexibleStackHabits = useMemo(
+    () => sortFlexibleStackHabits(habits.filter(isFlexibleStackHabit)),
+    [habits],
+  )
+
   const habitsForDaypartStack = useMemo(
-    () => habits.filter((h) => h.metadata?.habit_type !== "water-tracking"),
+    () =>
+      habits.filter(
+        (h) => h.metadata?.habit_type !== "water-tracking" && !isFlexibleStackHabit(h),
+      ),
     [habits],
   )
   const waterHabitsForMission = useMemo(
@@ -313,15 +329,16 @@ export default function HabitosPage() {
   const habitsByDaypart = useMemo(() => groupHabitsByDaypart(habitsForDaypartStack), [habitsForDaypartStack])
 
   const stackBlocksWithOffsets = useMemo(() => {
+    const flexN = flexibleStackHabits.length
     const out: { blockId: HabitTimeBlockId; habits: HabitWithMetrics[]; animStart: number }[] = []
-    let animStart = 0
+    let animStart = flexN
     for (const blockId of orderedDaypartBlocks()) {
       const list = habitsByDaypart.get(blockId) ?? []
       out.push({ blockId, habits: list, animStart })
       animStart += list.length
     }
     return out
-  }, [habitsByDaypart])
+  }, [habitsByDaypart, flexibleStackHabits.length])
 
   const consistencyInsight = useMemo(
     () => buildHabitConsistencyInsight(habits, summary),
@@ -441,8 +458,16 @@ export default function HabitosPage() {
     if (trigger) metadata.trigger_or_time = trigger
     if (form.successMetricType === "si_no" && form.intradaySiNoProgress) {
       metadata.intraday_si_no_progress = true
+      const rawChecks = parseInt(form.intradaySiNoTargetChecks, 10)
+      if (Number.isFinite(rawChecks)) {
+        const checks = Math.min(24, Math.max(1, Math.round(rawChecks)))
+        metadata.intraday_si_no_target_checks = checks
+      } else {
+        metadata.intraday_si_no_target_checks = 3
+      }
     } else {
       delete metadata.intraday_si_no_progress
+      delete metadata.intraday_si_no_target_checks
     }
 
     if (editing) {
@@ -1046,6 +1071,25 @@ export default function HabitosPage() {
             setForm(habitToModalValues(habit))
             setFormOpen(true)
           }}
+        />
+
+        <FlexibleDayStackSection
+          habits={flexibleStackHabits}
+          domainLabels={DOMAIN_LABELS}
+          persistenceEnabled={persistenceEnabled}
+          mock={mock}
+          loading={loading}
+          togglingId={togglingId}
+          backfillingId={backfillingId}
+          backfillingAll={backfillingAll}
+          formatMetricLine={habitMetricLine}
+          onEdit={(habit) => {
+            setEditing(habit)
+            setForm(habitToModalValues(habit))
+            setFormOpen(true)
+          }}
+          onToggle={toggleCompleteToday}
+          onStreakCelebration={(payload) => enqueueStreakCelebrations([payload])}
         />
 
         {stackBlocksWithOffsets

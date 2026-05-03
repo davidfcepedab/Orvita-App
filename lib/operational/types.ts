@@ -55,6 +55,8 @@ export type HabitMetadata = {
    * La UI de checkpoints / push queda enlazada en siguientes iteraciones.
    */
   intraday_si_no_progress?: boolean
+  /** Objetivo de respuestas Sí/No en el día cuando `intraday_si_no_progress` es true. */
+  intraday_si_no_target_checks?: number
 }
 
 export interface OperationalTask {

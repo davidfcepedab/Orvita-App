@@ -72,6 +72,13 @@ function coerceHabitMetadataPayload(raw: unknown): HabitMetadata {
   if (typeof o.trigger_or_time === "string") {
     out.trigger_or_time = o.trigger_or_time.trim().slice(0, 120)
   }
+  if (typeof o.intraday_si_no_progress === "boolean") {
+    out.intraday_si_no_progress = o.intraday_si_no_progress
+  }
+  if (typeof o.intraday_si_no_target_checks === "number" && Number.isFinite(o.intraday_si_no_target_checks)) {
+    const n = Math.round(o.intraday_si_no_target_checks)
+    if (n >= 1 && n <= 24) out.intraday_si_no_target_checks = n
+  }
   return out
 }
 

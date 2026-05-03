@@ -44,7 +44,7 @@ function WaterRing({ pct, gradId }: { pct: number; gradId: string }) {
   const c = 2 * Math.PI * r
   const dash = Math.min(1, Math.max(0, pct / 100)) * c
   return (
-    <div className="relative mx-auto aspect-square w-full max-w-[min(11.5rem,calc(100vw-6rem))] shrink-0">
+    <div className="relative mx-auto aspect-square w-full max-w-[min(9.5rem,calc(100vw-5rem))] shrink-0 sm:max-w-[min(10.5rem,calc(100vw-6rem))]">
       <svg
         viewBox="0 0 100 100"
         className="h-full w-full -rotate-90 drop-shadow-[0_6px_22px_color-mix(in_srgb,#0891b2_22%,transparent)]"
@@ -116,7 +116,7 @@ export function WaterHabitMissionBlock({
     <section
       aria-labelledby="water-mission-heading"
       className={cn(
-        "relative isolate overflow-visible rounded-[14px] border-2 p-4 sm:p-5",
+        "relative isolate overflow-visible rounded-[14px] border-2 p-3 sm:p-4",
         "border-[color-mix(in_srgb,#22d3ee_38%,var(--color-border))]",
       )}
       style={shellStyle}
@@ -130,21 +130,21 @@ export function WaterHabitMissionBlock({
         aria-hidden
       />
 
-      <header className="relative flex gap-3 border-b border-[color-mix(in_srgb,#22d3ee_28%,var(--color-border))] pb-3">
+      <header className="relative flex gap-2.5 border-b border-[color-mix(in_srgb,#22d3ee_28%,var(--color-border))] pb-2.5 sm:gap-3 sm:pb-3">
         <div
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-[color-mix(in_srgb,#22d3ee_22%,transparent)] ring-1 ring-[color-mix(in_srgb,#22d3ee_30%,transparent)]"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[color-mix(in_srgb,#22d3ee_22%,transparent)] ring-1 ring-[color-mix(in_srgb,#22d3ee_30%,transparent)] sm:h-10 sm:w-10"
           aria-hidden
         >
-          <Droplets className="h-[22px] w-[22px] text-[#0891b2] dark:text-[#67e8f9]" strokeWidth={2} />
+          <Droplets className="h-[20px] w-[20px] text-[#0891b2] dark:text-[#67e8f9] sm:h-[22px] sm:w-[22px]" strokeWidth={2} />
         </div>
-        <div className="min-w-0 flex-1 space-y-1">
+        <div className="min-w-0 flex-1 space-y-0.5">
           <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
             <p
               id="water-mission-heading"
-              className="m-0 flex min-w-0 flex-wrap items-center gap-2 text-[15px] font-semibold leading-tight tracking-[-0.02em] text-[var(--color-text-primary)]"
+              className="m-0 flex min-w-0 flex-wrap items-center gap-2 text-[14px] font-semibold leading-tight tracking-[-0.02em] text-[var(--color-text-primary)] sm:text-[15px]"
             >
               Hidratación
-              <Sparkles className="h-4 w-4 shrink-0 text-amber-500" strokeWidth={2} aria-hidden />
+              <Sparkles className="h-3.5 w-3.5 shrink-0 text-amber-500 sm:h-4 sm:w-4" strokeWidth={2} aria-hidden />
             </p>
             {singleWater ? (
               <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
@@ -162,12 +162,12 @@ export function WaterHabitMissionBlock({
               </div>
             ) : null}
           </div>
-          <p className="m-0 max-w-prose text-[13px] leading-[1.45] text-[color-mix(in_srgb,var(--color-text-secondary)_95%,#0c4a6e)] dark:text-cyan-100/85">
-            Agrega vasos o botellas y ve cómo avanza tu meta del día. Puedes cambiar la cantidad objetivo cuando quieras.
+          <p className="m-0 max-w-prose text-[12px] leading-[1.4] text-[color-mix(in_srgb,var(--color-text-secondary)_95%,#0c4a6e)] dark:text-cyan-100/85 sm:text-[13px] sm:leading-[1.45]">
+            Vasos, botellas y meta del día. Ajustá ml cuando quieras.
           </p>
           {singleWater ? (
-            <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-[color-mix(in_srgb,#22d3ee_18%,transparent)] pt-1.5">
-              <p className="m-0 min-w-0 flex-1 text-[12px] leading-snug text-[var(--color-text-secondary)]">
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-[color-mix(in_srgb,#22d3ee_18%,transparent)] pt-1">
+              <p className="m-0 min-w-0 flex-1 text-[11px] leading-snug text-[var(--color-text-secondary)] sm:text-[12px]">
                 {headerDomain} · diario ·{" "}
                 <span className="font-medium text-[var(--color-text-primary)]">{headerStreak}</span>{" "}
                 {headerStreak === 1 ? "día de racha" : "días de racha"}
@@ -247,8 +247,8 @@ export function WaterHabitMissionBlock({
               {/* 1) Pie: anillo, semana, solo botones de ml */}
               <div
                 className={cn(
-                  "flex flex-col items-stretch gap-4 border-t border-[color-mix(in_srgb,#22d3ee_24%,var(--color-border))] pt-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6",
-                  showMetaRow ? "mt-2" : habitIndex === 0 && singleWater ? "mt-0 border-t-0 pt-0" : "mt-2",
+                  "flex flex-col items-stretch gap-3 border-t border-[color-mix(in_srgb,#22d3ee_24%,var(--color-border))] pt-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-5 sm:pt-3",
+                  showMetaRow ? "mt-1.5" : habitIndex === 0 && singleWater ? "mt-0 border-t-0 pt-0" : "mt-1.5",
                 )}
               >
                 <div className="flex shrink-0 justify-center sm:justify-start sm:pl-0.5">
