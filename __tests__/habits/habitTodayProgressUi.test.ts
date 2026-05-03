@@ -1,5 +1,19 @@
+import type { HabitCompletionMetrics } from "@/lib/habits/habitMetrics"
 import { habitShowsTodayProgressBar, habitTodayProgressUi } from "@/lib/habits/habitTodayProgressUi"
 import type { HabitWithMetrics } from "@/lib/operational/types"
+
+function minimalMetrics(over: Partial<HabitCompletionMetrics> = {}): HabitCompletionMetrics {
+  return {
+    current_streak: 1,
+    best_streak: 1,
+    completion_rate_30d: 0.5,
+    completed_today: false,
+    at_risk: false,
+    week_marks: [],
+    sparkline14: Array.from({ length: 14 }, () => null),
+    ...over,
+  }
+}
 
 function baseHabit(over: Partial<HabitWithMetrics> = {}): HabitWithMetrics {
   return {
@@ -7,13 +21,11 @@ function baseHabit(over: Partial<HabitWithMetrics> = {}): HabitWithMetrics {
     name: "Test",
     domain: "salud",
     metadata: {},
-    metrics: {
-      completed_today: false,
-      current_streak: 1,
-      completion_rate_30d: 0.5,
-    },
+    completed: false,
+    created_at: new Date().toISOString(),
+    metrics: minimalMetrics(),
     ...over,
-  } as HabitWithMetrics
+  }
 }
 
 describe("habitTodayProgressUi", () => {
@@ -34,11 +46,11 @@ describe("habitTodayProgressUi", () => {
 
   it("marca 100% intraday cuando completed_today", () => {
     const h = baseHabit({
-      metrics: {
+      metrics: minimalMetrics({
         completed_today: true,
         current_streak: 2,
         completion_rate_30d: 0.6,
-      },
+      }),
       metadata: {
         intraday_si_no_progress: true,
         intraday_si_no_target_checks: 5,
