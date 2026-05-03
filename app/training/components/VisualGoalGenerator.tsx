@@ -165,35 +165,39 @@ export function VisualGoalGenerator({
             Guía la imagen y el plan; una sola fuente aquí.
           </p>
         </div>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:items-start sm:gap-x-4 sm:gap-y-2">
-          <div className="min-w-0">
-            <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Prioridad</p>
-            <div className="mt-1 flex flex-wrap gap-1.5">
-              {priorityOptions.map((o) => (
-                <button
-                  key={o.id}
-                  type="button"
-                  onClick={() => onVisualPrefsChange({ visualGoalPriority: o.id })}
-                  className={`rounded-full border px-2.5 py-1 text-[11px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-1 max-sm:min-h-8 max-sm:border-slate-200/90 max-sm:bg-white/80 ${
-                    visualGoalPriority === o.id
-                      ? "border-slate-600 bg-slate-800 text-white shadow-sm max-sm:border-slate-700 max-sm:bg-slate-800"
-                      : "border-slate-200/90 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50/90"
-                  }`}
-                >
-                  {o.label}
-                </button>
-              ))}
+        <div className="space-y-1.5">
+          <div className="flex flex-col gap-2.5 sm:gap-3 lg:flex-row lg:flex-nowrap lg:items-end lg:gap-x-3 xl:gap-x-4">
+            <div className="min-w-0 shrink-0 lg:max-w-[min(100%,14rem)]">
+              <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 lg:text-[9px] lg:tracking-[0.12em]">
+                Prioridad
+              </p>
+              <div className="mt-1 flex flex-wrap gap-1 lg:gap-1">
+                {priorityOptions.map((o) => (
+                  <button
+                    key={o.id}
+                    type="button"
+                    onClick={() => onVisualPrefsChange({ visualGoalPriority: o.id })}
+                    className={`rounded-full border px-2 py-0.5 text-[11px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-1 max-sm:min-h-8 max-sm:border-slate-200/90 max-sm:bg-white/80 lg:px-2 lg:text-[10px] ${
+                      visualGoalPriority === o.id
+                        ? "border-slate-600 bg-slate-800 text-white shadow-sm max-sm:border-slate-700 max-sm:bg-slate-800"
+                        : "border-slate-200/90 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50/90"
+                    }`}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="mt-2 min-w-0">
+            <div className="min-w-0 flex-1">
               <label htmlFor={selectId} className="block min-w-0">
-                <span className="mb-0.5 block text-[10px] font-medium leading-tight text-slate-500 sm:text-[11px]">
+                <span className="mb-0.5 block text-[10px] font-medium leading-tight text-slate-500 sm:text-[11px] lg:text-[9px]">
                   Tipo de objetivo
                 </span>
                 <select
                   id={selectId}
                   value={visualGoalMode}
                   onChange={(e) => onVisualPrefsChange({ visualGoalMode: e.target.value as VisualGoalMode })}
-                  className="w-full min-w-0 rounded-md border border-slate-200/90 bg-slate-50/60 py-1 pl-2.5 pr-7 text-xs font-medium text-slate-700 shadow-none transition-colors hover:bg-slate-50 hover:border-slate-300/90 focus:border-slate-300 focus:bg-white focus:outline-none focus:ring-1 focus:ring-slate-200/80"
+                  className="w-full min-w-0 rounded-md border border-slate-200/90 bg-slate-50/60 py-1 pl-2 pr-6 text-xs font-medium text-slate-700 shadow-none transition-colors hover:bg-slate-50 hover:border-slate-300/90 focus:border-slate-300 focus:bg-white focus:outline-none focus:ring-1 focus:ring-slate-200/80 lg:py-0.5 lg:text-[11px]"
                 >
                   {VISUAL_GOAL_MODE_OPTIONS.map((o) => (
                     <option key={o.id} value={o.id}>
@@ -203,26 +207,30 @@ export function VisualGoalGenerator({
                 </select>
               </label>
             </div>
-            {modeMeta ? <p className="m-0 mt-1 text-[10px] leading-snug text-slate-500 sm:text-[11px]">{modeMeta.short}</p> : null}
-          </div>
-          <div className="min-w-0">
-            <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Meta temporal</p>
-            <input
-              type="month"
-              value={deadlineYm ?? ""}
-              onChange={(e) => onVisualPrefsChange({ visualGoalDeadlineYm: e.target.value })}
-              className="mt-1 w-full max-w-[14rem] rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
-            />
-            {deadlineYm ? (
-              <p className="m-0 mt-1 text-[10px] leading-snug text-slate-600 sm:text-[11px]">
-                <span className="font-semibold text-slate-800">{_deadline ?? deadlineYm}</span>
-                <span className="text-slate-500"> · </span>
-                <span className="tabular-nums text-slate-500">{deadlineYm}</span>
+            <div className="min-w-0 shrink-0 lg:w-[11.5rem]">
+              <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 lg:text-[9px] lg:tracking-[0.12em]">
+                Meta temporal
               </p>
-            ) : (
-              <p className="m-0 mt-1 text-[10px] text-slate-500 sm:text-[11px]">Elige mes/año.</p>
-            )}
+              <input
+                type="month"
+                value={deadlineYm ?? ""}
+                onChange={(e) => onVisualPrefsChange({ visualGoalDeadlineYm: e.target.value })}
+                className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200 lg:mt-0.5 lg:px-2 lg:py-1 lg:text-xs"
+              />
+              {deadlineYm ? (
+                <p className="m-0 mt-0.5 truncate text-[10px] leading-snug text-slate-600 lg:text-[9px]">
+                  <span className="font-semibold text-slate-800">{_deadline ?? deadlineYm}</span>
+                  <span className="text-slate-500"> · </span>
+                  <span className="tabular-nums text-slate-500">{deadlineYm}</span>
+                </p>
+              ) : (
+                <p className="m-0 mt-0.5 text-[10px] text-slate-500 lg:text-[9px]">Elige mes/año.</p>
+              )}
+            </div>
           </div>
+          {modeMeta ? (
+            <p className="m-0 text-[10px] leading-snug text-slate-500 sm:text-[11px] lg:pl-0.5 lg:text-[10px]">{modeMeta.short}</p>
+          ) : null}
         </div>
       </>
     )

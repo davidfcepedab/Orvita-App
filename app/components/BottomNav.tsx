@@ -19,8 +19,8 @@ type TabDef = {
 }
 
 /**
- * 5 accesos: día + Capital en el pulgar (Salud / Entrenamiento / Decisión / Config por barra superior).
- * Izquierda (de afuera hacia el centro): Agenda → Hoy. Centro: Inicio. Derecha (desde el centro): Capital → Hábitos.
+ * 5 accesos: día + Finanzas en el pulgar (Salud / Entrenamiento / Decisión / Config por barra superior).
+ * Izquierda (de afuera hacia el centro): Agenda → Hoy. Centro: Inicio. Derecha (desde el centro): Finanzas → Hábitos.
  */
 const TABS: TabDef[] = [
   {
@@ -48,7 +48,7 @@ const TABS: TabDef[] = [
     placement: "center",
   },
   {
-    name: "Capital",
+    name: "Finanzas",
     route: "/finanzas/overview",
     icon: DollarSign,
     accent: "var(--accent-finance-strong)",

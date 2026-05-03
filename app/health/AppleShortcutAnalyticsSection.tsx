@@ -341,7 +341,7 @@ export function AppleShortcutAnalyticsPanels({ latest, analytics, loading, layou
     <div
       className={
         luxury
-          ? "grid gap-5 lg:grid-cols-2 lg:items-start lg:gap-6"
+          ? "grid grid-cols-1 gap-5 lg:gap-6"
           : "grid gap-3 lg:grid-cols-3"
       }
     >

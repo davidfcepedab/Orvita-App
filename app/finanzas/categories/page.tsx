@@ -2,7 +2,7 @@
 
 import type { CSSProperties } from "react"
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react"
-import { ChevronDown } from "lucide-react"
+import { AlertTriangle, ChevronDown } from "lucide-react"
 import { motion, useReducedMotion } from "framer-motion"
 import { useFinance } from "../FinanceContext"
 import {
@@ -884,6 +884,19 @@ export default function FinanzasCategories() {
     [structuralCategoriesUi, storedMonthBudgets],
   )
 
+  const sortedBudgetCategoriesForOperativa = useMemo(
+    () =>
+      [...structuralWithBudgets]
+        .filter((c) => Math.abs(c.total) > 0)
+        .sort((a, b) => {
+          const ta = a.type === "fixed" ? 0 : 1
+          const tb = b.type === "fixed" ? 0 : 1
+          if (ta !== tb) return ta - tb
+          return Math.abs(b.total) - Math.abs(a.total)
+        }),
+    [structuralWithBudgets],
+  )
+
   const budgetStoreSnapshot = useMemo(() => loadBudgetStore(), [budgetRevision])
 
   const rollingSixMonthByBudgetKey = data?.rollingSixMonthByBudgetKey ?? {}
@@ -1166,19 +1179,27 @@ export default function FinanzasCategories() {
 
           {!noExpenses && unknownSubcategories.length > 0 && (
             <div
-              className="rounded-xl border px-4 py-3 text-sm"
+              className="flex gap-2.5 rounded-xl border px-3 py-2.5 text-[13px] leading-snug"
               style={{
                 borderColor: "color-mix(in srgb, var(--color-accent-finance) 35%, var(--color-border))",
                 background: "color-mix(in srgb, var(--color-accent-finance) 8%, var(--color-surface))",
               }}
             >
-              <p className="font-medium text-orbita-primary">
-                Subcategorías sin fila en el catálogo (hoja Categorías / Supabase)
-              </p>
-              <p className="mt-1 text-xs leading-relaxed text-orbita-secondary">
-                {unknownSubcategories.slice(0, 12).join(" · ")}
-                {unknownSubcategories.length > 12 ? ` · +${unknownSubcategories.length - 12} más` : ""}
-              </p>
+              <AlertTriangle
+                className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-300"
+                strokeWidth={2}
+                aria-hidden
+              />
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-orbita-primary">Subcategorías sin fila en catálogo</p>
+                <p className="mt-0.5 text-[11px] leading-snug text-orbita-secondary">
+                  Asignales categoría en la hoja Categorías (Supabase).{" "}
+                  <span className="text-orbita-muted">
+                    {unknownSubcategories.slice(0, 10).join(" · ")}
+                    {unknownSubcategories.length > 10 ? ` · +${unknownSubcategories.length - 10}` : ""}
+                  </span>
+                </p>
+              </div>
             </div>
           )}
           {!noExpenses && (
@@ -1361,7 +1382,37 @@ export default function FinanzasCategories() {
                 </p>
 
                 {householdCatalogRows.length > 0 ? (
-                  <div className="touch-pan-x overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
+                  <>
+                  <div className="space-y-2 md:hidden">
+                    {householdCatalogRows.map((row) => (
+                      <div
+                        key={`mob-cat-${row.id}`}
+                        className="rounded-lg border border-orbita-border/55 bg-orbita-surface-alt/30 px-3 py-2.5"
+                      >
+                        <p className="text-[12px] font-semibold text-orbita-primary">{row.subcategory}</p>
+                        <p className="mt-0.5 text-[11px] text-orbita-secondary">{row.category}</p>
+                        <label className="mt-2 block text-[10px] text-orbita-muted">
+                          Tipo
+                          <select
+                            value={row.expense_type}
+                            disabled={savingCatalogId === row.id}
+                            onChange={(e) => {
+                              const v = e.target.value as FinanceSubcategoryCatalogRow["expense_type"]
+                              if (v === row.expense_type) return
+                              void saveCatalogExpenseType(row.id, v)
+                            }}
+                            className="mt-0.5 w-full rounded border border-orbita-border/60 bg-orbita-surface px-2 py-1.5 text-[12px] text-orbita-primary"
+                            aria-label={`Tipo de gasto para ${row.subcategory}`}
+                          >
+                            <option value="fijo">Fijo</option>
+                            <option value="variable">Variable</option>
+                            <option value="modulo_finanzas">Módulo finanzas</option>
+                          </select>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="hidden touch-pan-x overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch] md:block">
                     <table className="w-full min-w-[520px] border-collapse text-left text-xs">
                       <thead>
                         <tr className="border-b border-orbita-border/55 bg-orbita-surface-alt/50 text-[10px] uppercase tracking-[0.06em] text-orbita-secondary">
@@ -1397,6 +1448,7 @@ export default function FinanzasCategories() {
                       </tbody>
                     </table>
                   </div>
+                  </>
                 ) : null}
 
                 <form
@@ -1515,7 +1567,123 @@ export default function FinanzasCategories() {
                   ) : null}
                 </div>
                 <div className="rounded-xl bg-gradient-to-br from-[color-mix(in_srgb,var(--color-accent-finance)_14%,transparent)] via-[color-mix(in_srgb,var(--color-surface-alt)_35%,transparent)] to-[color-mix(in_srgb,var(--color-accent-health)_10%,transparent)] p-px shadow-[0_10px_36px_-14px_color-mix(in_srgb,var(--color-accent-finance)_28%,transparent)] dark:shadow-[0_12px_40px_-12px_rgba(0,0,0,0.35)]">
-                  <div className="touch-pan-x overflow-x-auto overscroll-x-contain rounded-[11px] border border-orbita-border/45 bg-orbita-surface [-webkit-overflow-scrolling:touch] [scrollbar-gutter:stable] shadow-[inset_0_1px_0_0_color-mix(in_srgb,var(--color-text-primary)_7%,transparent)]">
+                  <div className="md:hidden space-y-3 rounded-[11px] border border-orbita-border/45 bg-orbita-surface p-3 shadow-[inset_0_1px_0_0_color-mix(in_srgb,var(--color-text-primary)_7%,transparent)]">
+                    {sortedBudgetCategoriesForOperativa.map((cat, catIdx) => {
+                      const ck = categoryBudgetKey(cat.type, cat.name)
+                      const prevCat = catIdx > 0 ? sortedBudgetCategoriesForOperativa[catIdx - 1]! : null
+                      const sectionGap =
+                        prevCat != null && prevCat.type !== cat.type
+                          ? "mt-4 border-t-2 border-orbita-border/55 pt-4"
+                          : ""
+                      return (
+                        <div key={`mob-budget-${ck}`} className={cn("min-w-0", sectionGap)}>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span
+                              className="inline-flex min-w-[4.25rem] shrink-0 justify-center rounded-full px-2 py-px text-[8px] font-bold uppercase tracking-wide shadow-sm sm:min-w-[4.75rem] sm:text-[9px]"
+                              style={sheetTipoPillHexStyle(cat.type === "fixed" ? "fijo" : "variable")}
+                            >
+                              {cat.type === "fixed" ? "Fijo" : "Variable"}
+                            </span>
+                            <span className="min-w-0 text-[13px] font-semibold leading-snug text-orbita-primary">
+                              {cat.name}
+                            </span>
+                          </div>
+                          <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <div className="rounded-lg border border-orbita-border/45 bg-orbita-surface-alt/25 px-2.5 py-2">
+                              <p className="text-[9px] font-semibold uppercase tracking-wide text-orbita-secondary">
+                                Hecho (mes)
+                              </p>
+                              <p className="mt-0.5 tabular-nums text-sm font-semibold text-orbita-primary">
+                                ${Math.abs(cat.total).toLocaleString("es-CO", { maximumFractionDigits: 0 })}
+                              </p>
+                              <BudgetUseMeter
+                                type={cat.type}
+                                pct={cat.budgetUsedPercent}
+                                status={cat.budgetStatus}
+                              />
+                            </div>
+                            <div className="rounded-lg border border-orbita-border/45 bg-orbita-surface-alt/25 px-2.5 py-2">
+                              <p className="text-[9px] font-semibold uppercase tracking-wide text-orbita-secondary">
+                                Prom. 6m
+                              </p>
+                              <div className="mt-0.5">
+                                <BudgetRollingSixMonthCell
+                                  stat={rollingSixMonthByBudgetKey[ck]}
+                                  assignedCap={budgetDraft.category[ck]}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                          <label className="mt-2 grid gap-1">
+                            <span className="text-[9px] font-medium text-orbita-muted">Tope categoría (COP)</span>
+                            <input
+                              key={`cat-inp-mob-${ck}-${budgetRevision}`}
+                              type="text"
+                              inputMode="numeric"
+                              placeholder="Estimación auto"
+                              defaultValue={
+                                budgetDraft.category[ck] != null ? String(budgetDraft.category[ck]) : ""
+                              }
+                              onBlur={(e) => commitCategoryBudget(cat, e.target.value)}
+                              className="w-full min-w-0 rounded-md border border-[color-mix(in_srgb,var(--color-accent-finance)_42%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-surface)_92%,transparent)] px-2 py-2 text-[12px] font-medium tabular-nums text-orbita-primary shadow-sm outline-none transition placeholder:text-orbita-muted/70 focus:border-[color-mix(in_srgb,var(--color-accent-finance)_58%,var(--color-border))] focus:ring-1 focus:ring-[color-mix(in_srgb,var(--color-accent-finance)_30%,transparent)]"
+                              aria-label={`Presupuesto categoría ${cat.name}`}
+                            />
+                          </label>
+                          {(cat.subcategories ?? []).map((sub) => {
+                            const sk = subcategoryBudgetKey(cat.type, cat.name, sub.name)
+                            return (
+                              <div
+                                key={`mob-sub-${sk}`}
+                                className="mt-3 border-t border-orbita-border/45 pt-3"
+                              >
+                                <p className="text-[10px] font-semibold text-orbita-primary">
+                                  <span className="text-orbita-secondary">Sub · </span>
+                                  {sub.name}
+                                </p>
+                                <div className="mt-1.5 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                  <div>
+                                    <p className="text-[9px] text-orbita-secondary">Hecho (mes)</p>
+                                    <p className="tabular-nums text-[12px] text-orbita-secondary">
+                                      ${Math.abs(sub.total).toLocaleString("es-CO", { maximumFractionDigits: 0 })}
+                                    </p>
+                                    <SubBudgetMonthLedger
+                                      spentAbs={Math.abs(sub.total)}
+                                      capCop={budgetDraft.subcategory[sk]}
+                                    />
+                                  </div>
+                                  <div>
+                                    <p className="text-[9px] text-orbita-secondary">Prom. 6m</p>
+                                    <BudgetRollingSixMonthCell
+                                      stat={rollingSixMonthByBudgetKey[sk]}
+                                      assignedCap={budgetDraft.subcategory[sk]}
+                                    />
+                                  </div>
+                                </div>
+                                <label className="mt-2 grid gap-1">
+                                  <span className="text-[9px] font-medium text-orbita-muted">Tope sub (COP)</span>
+                                  <input
+                                    key={`sub-inp-mob-${sk}-${budgetRevision}`}
+                                    type="text"
+                                    inputMode="numeric"
+                                    placeholder="Opcional"
+                                    defaultValue={
+                                      budgetDraft.subcategory[sk] != null
+                                        ? String(budgetDraft.subcategory[sk])
+                                        : ""
+                                    }
+                                    onBlur={(e) => commitSubcategoryBudget(cat, sub.name, e.target.value)}
+                                    className="w-full min-w-0 rounded border border-dashed border-[color-mix(in_srgb,var(--color-border)_65%,transparent)] bg-[color-mix(in_srgb,var(--color-text-primary)_3%,transparent)] px-2 py-1.5 text-[11px] tabular-nums text-orbita-primary outline-none transition focus:border-[color-mix(in_srgb,var(--color-accent-finance)_48%,var(--color-border))] focus:ring-1 focus:ring-[color-mix(in_srgb,var(--color-accent-finance)_24%,transparent)]"
+                                    aria-label={`Presupuesto subcategoría ${sub.name}`}
+                                  />
+                                </label>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div className="hidden touch-pan-x overflow-x-auto overscroll-x-contain rounded-[11px] border border-orbita-border/45 bg-orbita-surface [-webkit-overflow-scrolling:touch] [scrollbar-gutter:stable] shadow-[inset_0_1px_0_0_color-mix(in_srgb,var(--color-text-primary)_7%,transparent)] md:block md:touch-pan-x">
                   <table className="table-fixed w-full min-w-[700px] border-collapse text-left text-[9px] leading-tight sm:min-w-[820px] sm:text-[10px]">
                     <caption className="sr-only">
                       Presupuestos por categoría y subcategoría: gasto del mes, promedio mensual últimos seis meses en COP,
@@ -1558,18 +1726,9 @@ export default function FinanzasCategories() {
                       </tr>
                     </thead>
                     <tbody>
-                      {(() => {
-                        const sortedBudgetCategories = [...structuralWithBudgets]
-                          .filter((c) => Math.abs(c.total) > 0)
-                          .sort((a, b) => {
-                            const ta = a.type === "fixed" ? 0 : 1
-                            const tb = b.type === "fixed" ? 0 : 1
-                            if (ta !== tb) return ta - tb
-                            return Math.abs(b.total) - Math.abs(a.total)
-                          })
-                        return sortedBudgetCategories.flatMap((cat, catIdx) => {
+                      {sortedBudgetCategoriesForOperativa.flatMap((cat, catIdx) => {
                           const ck = categoryBudgetKey(cat.type, cat.name)
-                          const prevCat = catIdx > 0 ? sortedBudgetCategories[catIdx - 1] : null
+                          const prevCat = catIdx > 0 ? sortedBudgetCategoriesForOperativa[catIdx - 1] : null
                           const tipoSectionBreak =
                             prevCat != null && prevCat.type !== cat.type ? "border-t-2 border-orbita-border/55" : ""
                           const blockSeparator = catIdx > 0 && !tipoSectionBreak ? "border-t border-orbita-border/45" : ""
@@ -1679,8 +1838,7 @@ export default function FinanzasCategories() {
                             )
                           })
                           return [catRow, ...subRows]
-                        })
-                      })()}
+                        })}
                     </tbody>
                   </table>
                   </div>

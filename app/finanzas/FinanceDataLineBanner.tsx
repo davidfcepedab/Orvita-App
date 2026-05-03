@@ -1,7 +1,6 @@
 "use client"
 
 import { Activity } from "lucide-react"
-import { Card } from "@/src/components/ui/Card"
 import {
   formatInstantInAgendaTz,
   formatLocalDateFullShortEsCo,
@@ -34,43 +33,52 @@ export function FinanceLedgerAlerts({ embedded = false }: { embedded?: boolean }
 
   if (!financeMetaNotice && (kpiHasSignal || !meta.reference)) return null
 
-  return (
-    <div className={cn("min-w-0 space-y-2", embedded && "mx-3 mb-1.5 mt-2 sm:mx-4")}>
-      {financeMetaNotice ? (
-        <p className="m-0 rounded-lg border border-[color-mix(in_srgb,var(--color-border)_42%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_28%,transparent)] px-3 py-1.5 text-[11px] leading-snug text-orbita-secondary">
-          {financeMetaNotice}
-        </p>
-      ) : null}
+  const ref = meta.reference
+  const showFallback = !kpiHasSignal && ref != null
 
-      {!kpiHasSignal && meta.reference ? (
-        <Card className="min-w-0 border border-dashed border-[color-mix(in_srgb,var(--color-accent-finance)_36%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-finance)_5%,var(--color-surface))] p-3 sm:p-4">
-          <p className="m-0 text-sm font-semibold text-orbita-primary">Sin cifras para {formatYmLongMonthYearEsCo(month)}</p>
-          <p className="mt-1 text-[11px] leading-relaxed text-orbita-secondary">Último mes con resumen guardado:</p>
-          <div className="mt-2 grid gap-2 rounded-xl border border-orbita-border bg-orbita-surface px-3 py-2.5 text-sm sm:grid-cols-3">
-            <div>
-              <p className="text-[10px] uppercase tracking-[0.12em] text-orbita-secondary">Mes</p>
-              <p className="font-medium text-orbita-primary">{formatYmLongMonthYearEsCo(meta.reference.month)}</p>
-            </div>
-            <div>
-              <p className="text-[10px] uppercase tracking-[0.12em] text-orbita-secondary">Ingresos / Gastos</p>
-              <p className="tabular-nums text-orbita-primary">
-                ${formatMoney(meta.reference.income)} / ${formatMoney(meta.reference.expense)}
+  return (
+    <div className={cn("min-w-0", embedded && "mx-3 mb-1 mt-1.5 sm:mx-4")}>
+      <div
+        className={cn(
+          "min-w-0 rounded-xl border border-dashed border-[color-mix(in_srgb,var(--color-accent-finance)_40%,var(--color-border))]",
+          "bg-[color-mix(in_srgb,var(--color-accent-finance)_8%,var(--color-surface))]",
+          "px-2.5 py-2 shadow-[0_1px_3px_rgba(15,23,42,0.04)] sm:px-3 sm:py-2",
+        )}
+      >
+        <div className="flex flex-col gap-1 sm:gap-1.5">
+          {showFallback ? (
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+              <p className="m-0 min-w-0 flex-1 text-[11px] font-semibold leading-tight text-orbita-primary">
+                Sin cifras · {formatYmLongMonthYearEsCo(month)}
               </p>
+              <button
+                type="button"
+                onClick={() => setMonth(ref.month)}
+                className="inline-flex min-h-[32px] shrink-0 items-center justify-center rounded-lg border border-[color-mix(in_srgb,var(--color-accent-finance)_42%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-surface)_94%,transparent)] px-2.5 py-1 text-[10px] font-semibold tabular-nums text-orbita-primary shadow-sm transition hover:bg-orbita-surface-alt"
+              >
+                Ir a {ref.month}
+              </button>
             </div>
-            <div>
-              <p className="text-[10px] uppercase tracking-[0.12em] text-orbita-secondary">Balance</p>
-              <p className="tabular-nums font-medium text-orbita-primary">${formatMoney(meta.reference.balance)}</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setMonth(meta.reference!.month)}
-            className="mt-2 min-h-[44px] w-full rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-orbita-primary transition hover:bg-orbita-surface-alt sm:mt-3 sm:w-auto"
-          >
-            Abrir {meta.reference.month}
-          </button>
-        </Card>
-      ) : null}
+          ) : null}
+
+          {financeMetaNotice ? (
+            <p className="m-0 text-[10px] leading-snug text-orbita-secondary [overflow-wrap:anywhere]">{financeMetaNotice}</p>
+          ) : null}
+
+          {showFallback ? (
+            <p className="m-0 text-[10px] leading-snug text-orbita-primary [overflow-wrap:anywhere]">
+              <span className="text-orbita-secondary">Último resumen </span>
+              <span className="font-medium tabular-nums">{formatYmLongMonthYearEsCo(ref.month)}</span>
+              <span className="text-orbita-secondary"> · ing. </span>
+              <span className="tabular-nums">${formatMoney(ref.income)}</span>
+              <span className="text-orbita-secondary"> · gast. </span>
+              <span className="tabular-nums">${formatMoney(ref.expense)}</span>
+              <span className="text-orbita-secondary"> · bal. </span>
+              <span className="font-medium tabular-nums">${formatMoney(ref.balance)}</span>
+            </p>
+          ) : null}
+        </div>
+      </div>
     </div>
   )
 }

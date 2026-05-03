@@ -301,7 +301,7 @@ const CHECKIN_DAY_SEGMENTS = [
     iconClass: "text-[var(--color-accent-warning)]",
     glow: "bg-[color-mix(in_srgb,var(--color-accent-warning)_28%,transparent)]",
     fillClass:
-      "border-[color-mix(in_srgb,var(--color-accent-warning)_55%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-warning)_82%,#0f172a)] shadow-[0_0_28px_color-mix(in_srgb,var(--color-accent-warning)_42%,transparent)]",
+      "border-amber-400/75 bg-gradient-to-br from-amber-200 via-amber-400 to-amber-700 shadow-[0_0_34px_rgb(251_191_36_/_0.55)\\,inset_0_1px_0_rgb(255_255_255_/_0.38)] ring-2 ring-white/60 dark:from-amber-400 dark:via-amber-600 dark:to-amber-950 dark:shadow-[0_0_40px_rgb(251_191_36_/_0.42)\\,inset_0_1px_0_rgb(255_255_255_/_0.14)] dark:ring-white/45",
   },
   {
     id: "dia" as CheckinSegmentKey,
@@ -313,7 +313,7 @@ const CHECKIN_DAY_SEGMENTS = [
     iconClass: "text-[var(--color-accent-health)]",
     glow: "bg-[color-mix(in_srgb,var(--color-accent-health)_25%,transparent)]",
     fillClass:
-      "border-[color-mix(in_srgb,var(--color-accent-health)_50%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_78%,#0f172a)] shadow-[0_0_28px_color-mix(in_srgb,var(--color-accent-health)_38%,transparent)]",
+      "border-emerald-400/75 bg-gradient-to-br from-emerald-200 via-teal-500 to-emerald-800 shadow-[0_0_34px_rgb(52_211_153_/_0.5)\\,inset_0_1px_0_rgb(255_255_255_/_0.36)] ring-2 ring-white/60 dark:from-emerald-400 dark:via-teal-600 dark:to-emerald-950 dark:shadow-[0_0_40px_rgb(45_212_191_/_0.4)\\,inset_0_1px_0_rgb(255_255_255_/_0.12)] dark:ring-white/45",
   },
   {
     id: "noche" as CheckinSegmentKey,
@@ -325,7 +325,7 @@ const CHECKIN_DAY_SEGMENTS = [
     iconClass: "text-[var(--color-accent-agenda)]",
     glow: "bg-[color-mix(in_srgb,var(--color-accent-agenda)_22%,transparent)]",
     fillClass:
-      "border-[color-mix(in_srgb,var(--color-accent-agenda)_50%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-agenda)_72%,#0f172a)] shadow-[0_0_28px_color-mix(in_srgb,var(--color-accent-agenda)_35%,transparent)]",
+      "border-violet-400/75 bg-gradient-to-br from-violet-300 via-violet-500 to-indigo-900 shadow-[0_0_34px_rgb(167_139_250_/_0.48)\\,inset_0_1px_0_rgb(255_255_255_/_0.34)] ring-2 ring-white/60 dark:from-violet-500 dark:via-indigo-600 dark:to-indigo-950 dark:shadow-[0_0_40px_rgb(139_92_246_/_0.42)\\,inset_0_1px_0_rgb(255_255_255_/_0.12)] dark:ring-white/45",
   },
 ] as const
 
@@ -760,27 +760,36 @@ export default function HoyCommandCenter() {
                 >
                   <Link href={href} className="group flex w-full flex-col items-center gap-1.5 no-underline" style={{ textDecoration: "none" }}>
                     <span className="relative flex h-[3.75rem] w-[3.75rem] shrink-0 items-center justify-center">
-                      {!done ? (
-                        <motion.span
-                          className={`pointer-events-none absolute inset-[-6px] rounded-full opacity-50 blur-md ${glow}`}
-                          animate={{ opacity: [0.28, 0.5, 0.28], scale: [0.92, 1, 0.92] }}
-                          transition={{ duration: 2.6, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
-                          aria-hidden
-                        />
-                      ) : (
+                      <motion.span
+                        className={`pointer-events-none absolute inset-[-6px] rounded-full blur-md ${glow}`}
+                        animate={
+                          done
+                            ? { opacity: [0.42, 0.72, 0.42], scale: [0.94, 1.05, 0.94] }
+                            : { opacity: [0.28, 0.5, 0.28], scale: [0.92, 1, 0.92] }
+                        }
+                        transition={{ duration: done ? 2.2 : 2.6, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
+                        aria-hidden
+                      />
+                      {done ? (
                         <span
-                          className={`pointer-events-none absolute inset-[-8px] rounded-full bg-[radial-gradient(circle_at_50%_30%,rgba(255,255,255,0.55)_0%,transparent_62%)] opacity-90 blur-md motion-safe:animate-pulse`}
+                          className="pointer-events-none absolute inset-[-8px] rounded-full bg-[radial-gradient(circle_at_50%_28%,rgba(255,255,255,0.65)_0%,transparent_55%)] opacity-80 blur-md motion-safe:animate-pulse"
                           aria-hidden
                         />
-                      )}
+                      ) : null}
                       <motion.span
                         className={`relative flex h-[3.25rem] w-[3.25rem] items-center justify-center rounded-full shadow-md ring-2 ring-offset-2 ring-offset-[var(--color-surface)] motion-safe:transition-transform motion-safe:duration-200 group-hover:scale-[1.04] group-active:scale-[0.98] ${
-                          done ? `${fillClass} ring-white/35` : `bg-[var(--color-surface)] ${ring}`
+                          done
+                            ? `${fillClass} ring-white/55 contrast-[1.02] saturate-[1.08]`
+                            : `bg-[var(--color-surface)] ${ring}`
                         }`}
                         whileTap={{ scale: 0.96 }}
                       >
                         <Icon
-                          className={`h-5 w-5 shrink-0 ${done ? "text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]" : iconClass}`}
+                          className={`h-5 w-5 shrink-0 ${
+                            done
+                              ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.5)] [filter:drop-shadow(0_0_6px_rgba(255,255,255,0.35))]"
+                              : iconClass
+                          }`}
                           strokeWidth={2.25}
                           aria-hidden
                         />
@@ -1154,9 +1163,9 @@ export default function HoyCommandCenter() {
                         habit.metrics.completed_today ? "opacity-[0.92]" : ""
                       }`}
                     >
-                      <div className="flex min-w-0 items-start justify-between gap-2">
+                      <div className="flex min-w-0 items-center justify-between gap-2">
                         <span
-                          className={`min-w-0 flex-1 truncate text-sm font-medium ${
+                          className={`min-w-0 flex-1 truncate text-sm font-medium leading-snug ${
                             habit.metrics.completed_today
                               ? "text-[color-mix(in_srgb,var(--color-text-primary)_78%,var(--color-text-secondary))]"
                               : "text-[var(--color-text-primary)]"

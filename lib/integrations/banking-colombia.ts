@@ -274,6 +274,24 @@ export function isBelvoBankingConfigured(): boolean {
   return Boolean(base && clientId && clientSecret && redirectUri)
 }
 
+/**
+ * Revoca un link en Belvo. No hace nada en modo mock, links sandbox-fallback o tokens de prueba.
+ */
+export async function requestBelvoDeleteLink(input: {
+  linkId: string
+  provider: "bancolombia" | "davivienda" | "nequi"
+}): Promise<void> {
+  const id = input.linkId.trim()
+  if (!id) return
+  if (id.startsWith("sandbox-fallback-")) return
+  if (id === "fallback-mock-token") return
+  const env = getEnv(input.provider)
+  if (env.fallback) return
+  await belvoRequestJson<unknown>(env.base, `/api/links/${encodeURIComponent(id)}/`, env.clientId, env.clientSecret, {
+    method: "DELETE",
+  })
+}
+
 function getEnv(provider: BankProvider) {
   const allowMock = process.env.ORVITA_INTEGRATIONS_ALLOW_MOCK === "1"
   if (!isBelvoBankingConfigured()) {

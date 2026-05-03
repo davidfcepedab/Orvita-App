@@ -2,14 +2,15 @@
 
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
-import { AlertTriangle, Landmark, RefreshCw } from "lucide-react"
+import { AlertTriangle, Landmark, RefreshCw, Unlink } from "lucide-react"
 import { Card } from "@/src/components/ui/Card"
 import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
-import { formatRelativeSyncAgo } from "@/lib/time/formatRelativeSyncAgo"
-import { financeApiGet } from "@/lib/finanzas/financeClientFetch"
+import { buildBelvoBankingSyncChip } from "@/lib/finanzas/bankingBelvoSyncChip"
+import { financeApiDelete, financeApiGet } from "@/lib/finanzas/financeClientFetch"
 import { useFinance } from "@/app/finanzas/FinanceContext"
 import { financeCardMicroLabelClass } from "@/app/finanzas/_components/financeChrome"
 import { cn } from "@/lib/utils"
+import { saludHexToRgba } from "@/lib/salud/saludThemeStyles"
 
 type ConnectedAccount = {
   id: string
@@ -33,6 +34,7 @@ export function ConnectedBankAccountsCard({ embedded = false }: { embedded?: boo
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [monthlyNet, setMonthlyNet] = useState<number | null>(null)
+  const [unlinkingId, setUnlinkingId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -128,6 +130,31 @@ export function ConnectedBankAccountsCard({ embedded = false }: { embedded?: boo
     }
   }
 
+  const unlinkAccount = async (accountId: string) => {
+    const ok = window.confirm(
+      "¿Desvincular esta cuenta? Se borrarán en Órvita los movimientos importados desde esta conexión.",
+    )
+    if (!ok) return
+
+    setUnlinkingId(accountId)
+    setNotice(null)
+    setError(null)
+    try {
+      const res = await financeApiDelete(`/api/integrations/banking/accounts/${encodeURIComponent(accountId)}`)
+      const payload = (await res.json()) as { success?: boolean; error?: string }
+      if (!res.ok || !payload.success) {
+        throw new Error(payload.error ?? "No se pudo desvincular la cuenta.")
+      }
+      setNotice("Cuenta desvinculada.")
+      touchCapitalData?.()
+      await load()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error al desvincular.")
+    } finally {
+      setUnlinkingId(null)
+    }
+  }
+
   const syncNow = async () => {
     setBusy(true)
     setNotice(null)
@@ -178,6 +205,7 @@ export function ConnectedBankAccountsCard({ embedded = false }: { embedded?: boo
 
   const belvoConnected = accounts.length > 0 && openBankingVendor === "belvo_sandbox"
   const pressureActive = typeof monthlyNet === "number" && monthlyNet < 0
+  const belvoSyncChip = buildBelvoBankingSyncChip(lastSync)
 
   const body = (
     <>
@@ -217,21 +245,29 @@ export function ConnectedBankAccountsCard({ embedded = false }: { embedded?: boo
       </div>
 
       {belvoConnected ? (
-        <p
-          className={cn(
-            "rounded-lg border border-orbita-border/55 bg-orbita-surface-alt/35 px-3 py-2 text-[11px] font-medium text-orbita-primary sm:text-xs",
-            embedded ? "mt-2 py-1.5" : "mt-3",
-          )}
+        <div
+          className={cn("flex flex-wrap items-center gap-2", embedded ? "mt-2" : "mt-3")}
+          role="status"
+          aria-label={`Belvo: ${belvoSyncChip.label}. Ambiente de prueba.`}
         >
-          Conectado (ambiente de prueba Belvo)
-          {lastSync ? (
-            <span className="mt-0.5 block text-[11px] font-normal text-orbita-secondary">
-              Última sincronización: {formatRelativeSyncAgo(lastSync)}
-            </span>
-          ) : (
-            <span className="mt-0.5 block text-[11px] font-normal text-orbita-secondary">Aún sin fecha de sync registrada.</span>
-          )}
-        </p>
+          <span className="shrink-0 text-[9px] font-semibold uppercase tracking-[0.16em] text-orbita-secondary">
+            Belvo
+          </span>
+          <span
+            className="inline-flex min-w-0 max-w-[min(100%,22rem)] flex-1 items-center gap-1.5 rounded-md border px-2 py-0.5 text-[9px] font-medium leading-tight sm:max-w-[24rem] sm:text-[10px]"
+            style={{
+              borderColor: saludHexToRgba(belvoSyncChip.fg, 0.22),
+              backgroundColor: belvoSyncChip.bg,
+              color: belvoSyncChip.fg,
+            }}
+          >
+            <span className="h-1 w-1 shrink-0 rounded-full bg-current opacity-80" aria-hidden />
+            <span className="min-w-0 truncate">{belvoSyncChip.label}</span>
+          </span>
+          <span className="text-[9px] font-medium uppercase tracking-[0.12em] text-orbita-muted sm:text-[10px]">
+            Prueba
+          </span>
+        </div>
       ) : (
         <p className={cn("text-[11px] text-orbita-secondary sm:text-xs", embedded ? "mt-2" : "mt-3")}>
           {loading
@@ -320,13 +356,27 @@ export function ConnectedBankAccountsCard({ embedded = false }: { embedded?: boo
                 embedded && "py-1.5",
               )}
             >
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-semibold text-orbita-primary">{account.account_name}</span>
-                <span className="capitalize text-orbita-secondary">{account.provider}</span>
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold text-orbita-primary">{account.account_name}</span>
+                    <span className="shrink-0 capitalize text-orbita-secondary">{account.provider}</span>
+                  </div>
+                  <p className="mt-1 text-orbita-secondary">
+                    {account.account_mask || "****"} · {formatCOP(account.balance_current)}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void unlinkAccount(account.id)}
+                  disabled={busy || unlinkingId === account.id}
+                  className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-orbita-border/70 bg-orbita-surface/40 px-2 py-1 text-[10px] font-semibold text-orbita-secondary transition hover:border-[color-mix(in_srgb,var(--color-accent-danger)_45%,var(--color-border))] hover:text-[var(--color-accent-danger)] disabled:pointer-events-none disabled:opacity-40 sm:text-[11px]"
+                  title="Desvincular cuenta"
+                >
+                  <Unlink className="h-3 w-3" aria-hidden />
+                  {unlinkingId === account.id ? "…" : "Desvincular"}
+                </button>
               </div>
-              <p className="mt-1 text-orbita-secondary">
-                {account.account_mask || "****"} · {formatCOP(account.balance_current)}
-              </p>
             </li>
           ))}
         </ul>

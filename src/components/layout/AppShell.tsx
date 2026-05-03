@@ -234,7 +234,7 @@ export function AppShell({
       { path: "/", label: "Inicio", icon: LayoutDashboard },
       { path: "/hoy", label: "Hoy", icon: Target },
       { path: "/agenda", label: "Agenda", icon: Calendar },
-      { path: "/finanzas/overview", label: "Capital", icon: DollarSign },
+      { path: "/finanzas/overview", label: "Finanzas", icon: DollarSign },
       { path: "/habitos", label: "Hábitos", icon: Activity },
       { path: "/health", label: "Salud", icon: HeartPulse },
       { path: "/training", label: "Entrenamiento", icon: Dumbbell },

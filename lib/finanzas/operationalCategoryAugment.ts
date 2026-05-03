@@ -18,6 +18,8 @@ export type EnrichedStrategicInsight = StrategicInsight & {
   rootCauseOperational?: string
   agendaAction?: string
   energyOrTimeNote?: string
+  /** Magnitud mensual modelada para priorizar la tarjeta (COP). */
+  impactMonthlyCop: number
 }
 
 export type GrowthRowOperational = CategoryGrowthRow & {
@@ -205,8 +207,13 @@ export function enrichStrategicInsights(
       habits.length > 0
         ? correlateHabitsWithLabel(ins.title, habits).line
         : "Conecta hábitos en Órbita para ver ecos con este insight."
+    const impactMonthlyCop =
+      ins.savingsMonthly ??
+      (ins.savingsAnnual != null && Number.isFinite(ins.savingsAnnual) ? ins.savingsAnnual / 12 : 0)
+
     return {
       ...ins,
+      impactMonthlyCop: Number.isFinite(impactMonthlyCop) ? impactMonthlyCop : 0,
       rootCauseOperational: `${rootCauseOperational} ${corr}`,
       agendaAction,
       energyOrTimeNote,

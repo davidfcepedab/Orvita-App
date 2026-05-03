@@ -308,6 +308,41 @@ function alertSeverityRowClass(s: StrategicAlertRow["severity"]) {
   return ""
 }
 
+function PieBalanceLegend({
+  slices,
+  dotColor,
+}: {
+  slices: { name: string; value: number; pct: number }[]
+  dotColor: (i: number) => string
+}) {
+  const totalShown = slices.reduce((acc, s) => acc + (Number.isFinite(s.value) ? s.value : 0), 0)
+  return (
+    <div className="mt-2 w-full min-w-0 px-0.5">
+      <p className="mb-1.5 text-center text-[10px] font-semibold tabular-nums text-orbita-secondary">
+        Suma mostrada (hasta {slices.length} categorías): ${formatCop(totalShown)}
+      </p>
+      <ul className="m-0 grid max-h-[11rem] list-none gap-1 overflow-y-auto overscroll-y-contain sm:max-h-none sm:grid-cols-2">
+        {slices.map((s, i) => (
+          <li key={`${s.name}-${i}`} className="flex min-w-0 items-start gap-2 text-[10px] leading-snug">
+            <span
+              className="mt-0.5 h-2 w-2 shrink-0 rounded-full"
+              style={{ backgroundColor: dotColor(i) }}
+              aria-hidden
+            />
+            <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
+              <span className="font-medium text-orbita-primary">{s.name}</span>
+              <span className="tabular-nums text-orbita-muted">
+                {" "}
+                · ${formatCop(s.value)} ({s.pct.toFixed(1)}%)
+              </span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 /** Umbral MoM enviado al motor de analíticas (sin UI en esta vista). */
 const CATEGORY_ANALYTICS_MOM_ALERT_PCT = 15
 
@@ -424,6 +459,30 @@ export function CategoryAnalysisPanels({
     () => (data ? enrichStrategicInsights(data.insights, data, habits) : []),
     [data, habits],
   )
+
+  const insightImpactFootprint = useMemo(() => {
+    let impactMonthlySum = 0
+    let savingsMonthlySum = 0
+    let savingsAnnualSum = 0
+    for (const i of enrichedInsights) {
+      impactMonthlySum += Number.isFinite(i.impactMonthlyCop) ? i.impactMonthlyCop : 0
+      if (i.savingsMonthly != null && Number.isFinite(i.savingsMonthly)) savingsMonthlySum += i.savingsMonthly
+      if (i.savingsAnnual != null && Number.isFinite(i.savingsAnnual)) savingsAnnualSum += i.savingsAnnual
+    }
+    return { impactMonthlySum, savingsMonthlySum, savingsAnnualSum }
+  }, [enrichedInsights])
+
+  const [pieCompact, setPieCompact] = useState(false)
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const mq = window.matchMedia("(max-width: 639px)")
+    const apply = () => setPieCompact(mq.matches)
+    apply()
+    mq.addEventListener("change", apply)
+    return () => mq.removeEventListener("change", apply)
+  }, [])
+
+  const pieRadii = pieCompact ? { inner: 28, outer: 54 } : { inner: 40, outer: 68 }
 
   const originScenario = useMemo(() => (data ? scenarioOriginAdjustment(data) : null), [data])
 
@@ -688,80 +747,115 @@ export function CategoryAnalysisPanels({
                 />
               </div>
             </summary>
-            <div className="overflow-x-auto px-3 pb-3 pt-0 sm:px-5">
-              <table className="w-full min-w-[560px] border-collapse text-left text-[11px]">
-                <thead>
-                  <tr className={variableMissionTableHeadRowClass}>
-                    <th className="px-2 py-2 font-semibold sm:px-3">Categoría</th>
-                    <th
-                      className="max-w-[7rem] px-2 py-2 text-right text-[10px] font-semibold leading-tight sm:max-w-none sm:px-3 sm:text-[11px]"
-                      title="Porcentaje del gasto operativo total del mes seleccionado en el selector (el mismo mes que ves en el resto de la vista)."
-                    >
-                      <span className="block sm:inline">% gasto</span>
-                      <span className="block text-[9px] font-normal normal-case tracking-normal text-orbita-secondary sm:inline sm:text-[10px]">
-                        {" "}
-                        · mes en foco
-                      </span>
-                    </th>
-                    <th
-                      className="max-w-[7rem] px-2 py-2 text-right text-[10px] font-semibold leading-tight sm:max-w-none sm:px-3 sm:text-[11px]"
-                      title="Menor participación % de esta categoría en los meses incluidos en el gráfico de arriba."
-                    >
-                      <span className="block sm:inline">Mín. %</span>
-                      <span className="block text-[9px] font-normal normal-case tracking-normal text-orbita-secondary sm:inline sm:text-[10px]">
-                        {" "}
-                        en el periodo
-                      </span>
-                    </th>
-                    <th
-                      className="max-w-[7rem] px-2 py-2 text-right text-[10px] font-semibold leading-tight sm:max-w-none sm:px-3 sm:text-[11px]"
-                      title="Mayor participación % de esta categoría en los mismos meses del gráfico."
-                    >
-                      <span className="block sm:inline">Máx. %</span>
-                      <span className="block text-[9px] font-normal normal-case tracking-normal text-orbita-secondary sm:inline sm:text-[10px]">
-                        {" "}
-                        en el periodo
-                      </span>
-                    </th>
-                    <th
-                      className="max-w-[6.5rem] px-2 py-2 text-right text-[10px] font-semibold leading-tight sm:max-w-none sm:px-3 sm:text-[11px]"
-                      title="Diferencia entre máximo y mínimo en puntos porcentuales (p.p.): cuánto ‘baila’ el peso de la categoría."
-                    >
-                      <span className="block sm:inline">Oscilación</span>
-                      <span className="block text-[9px] font-normal normal-case tracking-normal text-orbita-secondary sm:inline sm:text-[10px]">
-                        {" "}
-                        (p. p.)
-                      </span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.topOperativeCategoryTrend.trendShareSummary.map((row, idx) => (
-                    <tr key={row.label} className="border-b border-orbita-border/40">
-                      <td className="flex items-center gap-2 px-2 py-1.5 font-medium text-orbita-primary sm:px-3">
-                        <span
-                          className="inline-block h-2 w-2 shrink-0 rounded-full"
-                          style={{ backgroundColor: PIE_COLORS[idx % PIE_COLORS.length] }}
-                          aria-hidden
-                        />
-                        {row.label}
-                      </td>
-                      <td className="px-2 py-1.5 text-right tabular-nums text-orbita-primary sm:px-3">
-                        {row.shareAnchorPct.toFixed(1)}%
-                      </td>
-                      <td className="px-2 py-1.5 text-right tabular-nums text-orbita-secondary sm:px-3">
-                        {row.minPct.toFixed(1)}%
-                      </td>
-                      <td className="px-2 py-1.5 text-right tabular-nums text-orbita-secondary sm:px-3">
-                        {row.maxPct.toFixed(1)}%
-                      </td>
-                      <td className="px-2 py-1.5 text-right tabular-nums text-orbita-secondary sm:px-3">
-                        {row.rangePp.toFixed(1)}
-                      </td>
+            <div className="px-3 pb-3 pt-0 sm:px-5">
+              <div className="md:hidden space-y-2">
+                {data.topOperativeCategoryTrend.trendShareSummary.map((row, idx) => (
+                  <div
+                    key={row.label}
+                    className="rounded-xl border border-[color-mix(in_srgb,var(--color-border)_42%,transparent)] bg-orbita-surface/90 p-2.5"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: PIE_COLORS[idx % PIE_COLORS.length] }}
+                        aria-hidden
+                      />
+                      <span className="min-w-0 text-[12px] font-semibold leading-snug text-orbita-primary">{row.label}</span>
+                    </div>
+                    <dl className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] tabular-nums">
+                      <div>
+                        <dt className="text-orbita-secondary">% gasto (mes)</dt>
+                        <dd className="font-medium text-orbita-primary">{row.shareAnchorPct.toFixed(1)}%</dd>
+                      </div>
+                      <div>
+                        <dt className="text-orbita-secondary">Oscilación (p.p.)</dt>
+                        <dd className="text-orbita-secondary">{row.rangePp.toFixed(1)}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-orbita-secondary">Mín. / Máx.</dt>
+                        <dd className="text-orbita-secondary">
+                          {row.minPct.toFixed(1)}% · {row.maxPct.toFixed(1)}%
+                        </dd>
+                      </div>
+                    </dl>
+                  </div>
+                ))}
+              </div>
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full min-w-[560px] border-collapse text-left text-[11px]">
+                  <thead>
+                    <tr className={variableMissionTableHeadRowClass}>
+                      <th className="px-2 py-2 font-semibold sm:px-3">Categoría</th>
+                      <th
+                        className="max-w-[7rem] px-2 py-2 text-right text-[10px] font-semibold leading-tight sm:max-w-none sm:px-3 sm:text-[11px]"
+                        title="Porcentaje del gasto operativo total del mes seleccionado en el selector (el mismo mes que ves en el resto de la vista)."
+                      >
+                        <span className="block sm:inline">% gasto</span>
+                        <span className="block text-[9px] font-normal normal-case tracking-normal text-orbita-secondary sm:inline sm:text-[10px]">
+                          {" "}
+                          · mes en foco
+                        </span>
+                      </th>
+                      <th
+                        className="max-w-[7rem] px-2 py-2 text-right text-[10px] font-semibold leading-tight sm:max-w-none sm:px-3 sm:text-[11px]"
+                        title="Menor participación % de esta categoría en los meses incluidos en el gráfico de arriba."
+                      >
+                        <span className="block sm:inline">Mín. %</span>
+                        <span className="block text-[9px] font-normal normal-case tracking-normal text-orbita-secondary sm:inline sm:text-[10px]">
+                          {" "}
+                          en el periodo
+                        </span>
+                      </th>
+                      <th
+                        className="max-w-[7rem] px-2 py-2 text-right text-[10px] font-semibold leading-tight sm:max-w-none sm:px-3 sm:text-[11px]"
+                        title="Mayor participación % de esta categoría en los mismos meses del gráfico."
+                      >
+                        <span className="block sm:inline">Máx. %</span>
+                        <span className="block text-[9px] font-normal normal-case tracking-normal text-orbita-secondary sm:inline sm:text-[10px]">
+                          {" "}
+                          en el periodo
+                        </span>
+                      </th>
+                      <th
+                        className="max-w-[6.5rem] px-2 py-2 text-right text-[10px] font-semibold leading-tight sm:max-w-none sm:px-3 sm:text-[11px]"
+                        title="Diferencia entre máximo y mínimo en puntos porcentuales (p.p.): cuánto ‘baila’ el peso de la categoría."
+                      >
+                        <span className="block sm:inline">Oscilación</span>
+                        <span className="block text-[9px] font-normal normal-case tracking-normal text-orbita-secondary sm:inline sm:text-[10px]">
+                          {" "}
+                          (p. p.)
+                        </span>
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {data.topOperativeCategoryTrend.trendShareSummary.map((row, idx) => (
+                      <tr key={row.label} className="border-b border-orbita-border/40">
+                        <td className="flex items-center gap-2 px-2 py-1.5 font-medium text-orbita-primary sm:px-3">
+                          <span
+                            className="inline-block h-2 w-2 shrink-0 rounded-full"
+                            style={{ backgroundColor: PIE_COLORS[idx % PIE_COLORS.length] }}
+                            aria-hidden
+                          />
+                          {row.label}
+                        </td>
+                        <td className="px-2 py-1.5 text-right tabular-nums text-orbita-primary sm:px-3">
+                          {row.shareAnchorPct.toFixed(1)}%
+                        </td>
+                        <td className="px-2 py-1.5 text-right tabular-nums text-orbita-secondary sm:px-3">
+                          {row.minPct.toFixed(1)}%
+                        </td>
+                        <td className="px-2 py-1.5 text-right tabular-nums text-orbita-secondary sm:px-3">
+                          {row.maxPct.toFixed(1)}%
+                        </td>
+                        <td className="px-2 py-1.5 text-right tabular-nums text-orbita-secondary sm:px-3">
+                          {row.rangePp.toFixed(1)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </details>
         </Card>
@@ -1022,7 +1116,96 @@ export function CategoryAnalysisPanels({
                     (prioridad · radar · estable).
                   </p>
                 </div>
-                <div className="overflow-x-auto px-2 pb-3 sm:px-4 sm:pb-4">
+                <div className="md:hidden space-y-2 px-3 pb-3">
+                  {growthRows.length === 0 ? (
+                    <p className="rounded-xl border border-dashed border-[color-mix(in_srgb,var(--color-accent-finance)_28%,transparent)] bg-[color-mix(in_srgb,var(--color-text-primary)_3%,var(--color-surface))] px-4 py-8 text-center text-[11px] leading-relaxed text-orbita-secondary">
+                      No hay categorías variables con gasto este mes para comparar con el mes anterior. Cuando haya
+                      movimiento, verás aquí el tablero con niveles y lecturas.
+                    </p>
+                  ) : (
+                    growthRows.slice(0, 18).map((r) => {
+                      const sev = growthMissionSeverityUi(r.severity)
+                      const SevIcon = sev.Icon
+                      return (
+                        <div
+                          key={r.category}
+                          className={cn(
+                            "rounded-xl border border-[color-mix(in_srgb,var(--color-border)_42%,transparent)] p-3 shadow-sm",
+                            sev.rowClass,
+                          )}
+                        >
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <span
+                              className={cn(
+                                "inline-flex min-w-0 items-center justify-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide",
+                                sev.chipClass,
+                              )}
+                            >
+                              <SevIcon className="h-3 w-3 shrink-0 opacity-90" aria-hidden />
+                              {sev.label}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => drillTx({ category: r.category })}
+                              className="shrink-0 rounded-md px-2 py-1 text-[10px] font-medium text-orbita-secondary underline-offset-2 hover:bg-orbita-surface-alt/80 hover:text-[var(--color-accent-finance)] hover:underline"
+                            >
+                              Movimientos
+                            </button>
+                          </div>
+                          <p className="mt-2 text-[13px] font-semibold leading-snug text-orbita-primary">{r.category}</p>
+                          <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[10px] tabular-nums">
+                            <div>
+                              <dt className="text-orbita-secondary">Gasto mes</dt>
+                              <dd className="font-medium text-orbita-primary">${formatCop(r.expenseCurrent)}</dd>
+                            </div>
+                            <div>
+                              <dt className="text-orbita-secondary">Δ mes</dt>
+                              <dd className={momTone(r.momPct, alertPct)}>
+                                {r.momPct == null ? "—" : `${r.momPct >= 0 ? "+" : ""}${r.momPct.toFixed(1)}%`}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-orbita-secondary">Δ año</dt>
+                              <dd className="text-orbita-secondary">
+                                {r.yoyPct == null ? "—" : `${r.yoyPct >= 0 ? "+" : ""}${r.yoyPct.toFixed(1)}%`}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-orbita-secondary">~3 meses</dt>
+                              <dd className="text-orbita-secondary">${formatCop(r.forecastNext3[2] ?? 0)}</dd>
+                            </div>
+                          </dl>
+                          <div className="mt-2 space-y-2 rounded-lg border border-[color-mix(in_srgb,var(--color-border)_45%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_35%,var(--color-surface))] p-2.5">
+                            {r.operationalLine ? (
+                              <div className="flex gap-2">
+                                <Activity
+                                  className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--color-accent-finance)]"
+                                  strokeWidth={2}
+                                  aria-hidden
+                                />
+                                <p className="text-[11px] leading-snug text-orbita-primary">{r.operationalLine}</p>
+                              </div>
+                            ) : null}
+                            {r.habitEcho ? (
+                              <div className="flex gap-2 border-t border-orbita-border/40 pt-2">
+                                <Sparkles
+                                  className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--color-accent-health)]"
+                                  strokeWidth={2}
+                                  aria-hidden
+                                />
+                                <p className="text-[11px] leading-snug text-orbita-secondary">{r.habitEcho}</p>
+                              </div>
+                            ) : null}
+                            {!r.operationalLine && !r.habitEcho ? (
+                              <p className="text-[11px] leading-snug text-orbita-muted">Sin lectura automática aún.</p>
+                            ) : null}
+                          </div>
+                        </div>
+                      )
+                    })
+                  )}
+                </div>
+                <div className="hidden md:block overflow-x-auto px-2 pb-3 sm:px-4 sm:pb-4">
                 <table className="w-full min-w-[760px] border-collapse text-left text-[11px]">
                   <thead>
                     <tr className={variableMissionTableHeadRowClass}>
@@ -1314,7 +1497,66 @@ export function CategoryAnalysisPanels({
                 </div>
               </div>
               <div className="border-t border-[color-mix(in_srgb,var(--color-border)_38%,transparent)] bg-[color-mix(in_srgb,var(--color-text-primary)_2%,var(--color-surface))] px-3 pb-3 pt-3 sm:px-4">
-                <div className="overflow-x-auto rounded-xl border border-[color-mix(in_srgb,var(--color-border)_38%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_96%,var(--color-surface-alt))] shadow-[inset_0_1px_0_0_color-mix(in_srgb,var(--color-text-primary)_4%,transparent)]">
+                <div className="md:hidden space-y-2">
+                  {strategicAlerts.length === 0 ? (
+                    <p className="rounded-xl border border-dashed border-[color-mix(in_srgb,var(--color-accent-danger)_22%,transparent)] bg-[color-mix(in_srgb,var(--color-text-primary)_3%,var(--color-surface))] px-4 py-6 text-center text-[11px] leading-relaxed text-orbita-secondary">
+                      Por ahora no hay alertas con estos datos. Define topes en Presupuestos (vista Operativa) para ver avisos
+                      de desvío.
+                    </p>
+                  ) : (
+                    strategicAlerts.slice(0, 24).map((a) => (
+                      <div
+                        key={a.id}
+                        className={cn(
+                          "rounded-xl border border-[color-mix(in_srgb,var(--color-border)_42%,transparent)] p-3 shadow-sm",
+                          alertSeverityRowClass(a.severity),
+                        )}
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="text-[10px] font-semibold uppercase tracking-wide text-orbita-secondary">
+                            {alertKindLabel(a.kind)}
+                          </span>
+                          <span className="tabular-nums text-[11px] font-semibold text-orbita-primary">
+                            Impacto ~${formatCop(a.impactMonthlyCop)}/mes
+                          </span>
+                        </div>
+                        <p className="mt-2 text-[13px] font-semibold leading-snug text-orbita-primary">{a.title}</p>
+                        {a.subtitle ? <p className="mt-0.5 text-[10px] text-orbita-secondary">{a.subtitle}</p> : null}
+                        <dl className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] tabular-nums">
+                          <div>
+                            <dt className="text-orbita-secondary">Monto</dt>
+                            <dd className="font-medium text-orbita-primary">${formatCop(a.amountCop)}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-orbita-secondary">% total</dt>
+                            <dd className="text-orbita-secondary">{a.sharePct != null ? `${a.sharePct.toFixed(1)}%` : "—"}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-orbita-secondary">Frec.</dt>
+                            <dd className="text-orbita-secondary">{a.frequency ?? "—"}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-orbita-secondary">Tend.</dt>
+                            <dd className="text-orbita-secondary">{a.trend ?? "—"}</dd>
+                          </div>
+                        </dl>
+                        <p className="mt-2 border-t border-orbita-border/40 pt-2 text-[10px] leading-snug text-orbita-secondary">
+                          <span className="font-medium text-orbita-primary">Causa: </span>
+                          {a.operationalCause}
+                        </p>
+                        {a.ctaHref ? (
+                          <Link
+                            href={a.ctaHref}
+                            className="mt-2 inline-flex text-[10px] font-semibold text-[var(--color-accent-finance)] underline-offset-4 hover:underline"
+                          >
+                            {a.ctaLabel ?? "Ver movimientos"}
+                          </Link>
+                        ) : null}
+                      </div>
+                    ))
+                  )}
+                </div>
+                <div className="hidden md:block overflow-x-auto rounded-xl border border-[color-mix(in_srgb,var(--color-border)_38%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_96%,var(--color-surface-alt))] shadow-[inset_0_1px_0_0_color-mix(in_srgb,var(--color-text-primary)_4%,transparent)]">
                   <table className="w-full min-w-[880px] border-collapse text-left text-[11px]">
                     <thead>
                       <tr className={alertMissionTableHeadRowClass}>
@@ -1503,32 +1745,40 @@ export function CategoryAnalysisPanels({
                           Salidas
                         </span>
                       </p>
-                      <div className="h-52 min-h-[13rem] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie
-                              data={pieExpenseOp.slice(0, 10)}
-                              dataKey="value"
-                              nameKey="name"
-                              cx="50%"
-                              cy="50%"
-                              innerRadius={40}
-                              outerRadius={68}
-                            >
-                              {pieExpenseOp.slice(0, 10).map((_, i) => (
-                                <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]!} />
-                              ))}
-                            </Pie>
-                            <Tooltip
-                              contentStyle={rechartsTooltipContentStyle}
-                              formatter={(v, _n, props) => {
-                                const p = props?.payload as { pct?: number; driverHint?: string; name?: string }
-                                const hint = p?.driverHint ? ` — ${p.driverHint}` : ""
-                                return [`$${formatCop(Number(v))} (${(p?.pct ?? 0).toFixed(1)}%)${hint}`, p?.name]
-                              }}
-                            />
-                          </PieChart>
-                        </ResponsiveContainer>
+                      <div className="min-h-0 w-full">
+                        <div className="h-44 min-h-[11rem] w-full sm:h-52 sm:min-h-[13rem]">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={pieExpenseOp.slice(0, 10)}
+                                dataKey="value"
+                                nameKey="name"
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={pieRadii.inner}
+                                outerRadius={pieRadii.outer}
+                              >
+                                {pieExpenseOp.slice(0, 10).map((_, i) => (
+                                  <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]!} />
+                                ))}
+                              </Pie>
+                              <Tooltip
+                                contentStyle={rechartsTooltipContentStyle}
+                                formatter={(v, _n, props) => {
+                                  const p = props?.payload as { pct?: number; driverHint?: string; name?: string }
+                                  const hint = p?.driverHint ? ` — ${p.driverHint}` : ""
+                                  return [`$${formatCop(Number(v))} (${(p?.pct ?? 0).toFixed(1)}%)${hint}`, p?.name]
+                                }}
+                              />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                        {pieExpenseOp.length > 0 ? (
+                          <PieBalanceLegend
+                            slices={pieExpenseOp.slice(0, 10)}
+                            dotColor={(i) => PIE_COLORS[i % PIE_COLORS.length]!}
+                          />
+                        ) : null}
                       </div>
                     </div>
                     <div className="flex min-h-0 flex-col">
@@ -1538,32 +1788,40 @@ export function CategoryAnalysisPanels({
                           Entradas
                         </span>
                       </p>
-                      <div className="h-52 min-h-[13rem] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie
-                              data={pieIncomeOp.slice(0, 10)}
-                              dataKey="value"
-                              nameKey="name"
-                              cx="50%"
-                              cy="50%"
-                              innerRadius={40}
-                              outerRadius={68}
-                            >
-                              {pieIncomeOp.slice(0, 10).map((_, i) => (
-                                <Cell key={i} fill={PIE_COLORS[(i + 2) % PIE_COLORS.length]!} />
-                              ))}
-                            </Pie>
-                            <Tooltip
-                              contentStyle={rechartsTooltipContentStyle}
-                              formatter={(v, _n, props) => {
-                                const p = props?.payload as { pct?: number; driverHint?: string; name?: string }
-                                const hint = p?.driverHint ? ` — ${p.driverHint}` : ""
-                                return [`$${formatCop(Number(v))} (${(p?.pct ?? 0).toFixed(1)}%)${hint}`, p?.name]
-                              }}
-                            />
-                          </PieChart>
-                        </ResponsiveContainer>
+                      <div className="min-h-0 w-full">
+                        <div className="h-44 min-h-[11rem] w-full sm:h-52 sm:min-h-[13rem]">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={pieIncomeOp.slice(0, 10)}
+                                dataKey="value"
+                                nameKey="name"
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={pieRadii.inner}
+                                outerRadius={pieRadii.outer}
+                              >
+                                {pieIncomeOp.slice(0, 10).map((_, i) => (
+                                  <Cell key={i} fill={PIE_COLORS[(i + 2) % PIE_COLORS.length]!} />
+                                ))}
+                              </Pie>
+                              <Tooltip
+                                contentStyle={rechartsTooltipContentStyle}
+                                formatter={(v, _n, props) => {
+                                  const p = props?.payload as { pct?: number; driverHint?: string; name?: string }
+                                  const hint = p?.driverHint ? ` — ${p.driverHint}` : ""
+                                  return [`$${formatCop(Number(v))} (${(p?.pct ?? 0).toFixed(1)}%)${hint}`, p?.name]
+                                }}
+                              />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                        {pieIncomeOp.length > 0 ? (
+                          <PieBalanceLegend
+                            slices={pieIncomeOp.slice(0, 10)}
+                            dotColor={(i) => PIE_COLORS[(i + 2) % PIE_COLORS.length]!}
+                          />
+                        ) : null}
                       </div>
                     </div>
                   </div>
@@ -1580,6 +1838,33 @@ export function CategoryAnalysisPanels({
               <p id="finanzas-categorias-ideas-actuar" className={financeSectionEyebrowClass}>
                 Ideas para actuar
               </p>
+              {(insightImpactFootprint.impactMonthlySum > 0 ||
+                insightImpactFootprint.savingsMonthlySum > 0 ||
+                insightImpactFootprint.savingsAnnualSum > 0) && (
+                <div className="mt-3 rounded-xl border border-[color-mix(in_srgb,var(--color-accent-health)_32%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent-health)_8%,var(--color-surface))] px-3 py-2.5 text-[11px] leading-snug text-orbita-secondary shadow-sm">
+                  <p className="m-0 font-semibold text-orbita-primary">Suma orientativa de estas tarjetas</p>
+                  <p className="mt-1 tabular-nums">
+                    {insightImpactFootprint.impactMonthlySum > 0 ? (
+                      <span>
+                        Impacto modelado combinado: ~${formatCop(insightImpactFootprint.impactMonthlySum)} COP/mes
+                      </span>
+                    ) : null}
+                    {insightImpactFootprint.impactMonthlySum > 0 &&
+                    (insightImpactFootprint.savingsMonthlySum > 0 || insightImpactFootprint.savingsAnnualSum > 0) ? (
+                      <span className="text-orbita-muted"> · </span>
+                    ) : null}
+                    {insightImpactFootprint.savingsMonthlySum > 0 ? (
+                      <span>Ahorro declarado ~${formatCop(insightImpactFootprint.savingsMonthlySum)} COP/mes</span>
+                    ) : null}
+                    {insightImpactFootprint.savingsMonthlySum > 0 && insightImpactFootprint.savingsAnnualSum > 0 ? (
+                      <span className="text-orbita-muted"> · </span>
+                    ) : null}
+                    {insightImpactFootprint.savingsAnnualSum > 0 ? (
+                      <span>~${formatCop(insightImpactFootprint.savingsAnnualSum)} COP/año</span>
+                    ) : null}
+                  </p>
+                </div>
+              )}
               <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {enrichedInsights.map((ins) => (
                   <InsightCard key={ins.id} insight={ins} />
