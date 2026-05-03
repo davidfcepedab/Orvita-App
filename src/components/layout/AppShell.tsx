@@ -228,13 +228,14 @@ export function AppShell({
     [],
   )
 
+  /** Orden por uso: día (Inicio → Hoy → Agenda) → economía → bienestar → estrategia → ajustes. */
   const navItems = useMemo(
     () => [
       { path: "/", label: "Inicio", icon: LayoutDashboard },
       { path: "/hoy", label: "Hoy", icon: Target },
       { path: "/agenda", label: "Agenda", icon: Calendar },
-      { path: "/habitos", label: "Hábitos", icon: Activity },
       { path: "/finanzas/overview", label: "Capital", icon: DollarSign },
+      { path: "/habitos", label: "Hábitos", icon: Activity },
       { path: "/health", label: "Salud", icon: HeartPulse },
       { path: "/training", label: "Entrenamiento", icon: Dumbbell },
       { path: "/decision", label: "Decisión", icon: SlidersHorizontal },

@@ -2,7 +2,7 @@
 
 import clsx from "clsx"
 import type { LucideIcon } from "lucide-react"
-import { Activity, Calendar, Dumbbell, Home, Target } from "lucide-react"
+import { Activity, Calendar, DollarSign, Home, Target } from "lucide-react"
 import type { ReactNode } from "react"
 import { usePathname, useRouter } from "next/navigation"
 
@@ -18,28 +18,25 @@ type TabDef = {
   placement: "left" | "center" | "right"
 }
 
+/**
+ * 5 accesos: día + Capital en el pulgar (Salud / Entrenamiento / Decisión / Config por barra superior).
+ * Izquierda (de afuera hacia el centro): Agenda → Hoy. Centro: Inicio. Derecha (desde el centro): Capital → Hábitos.
+ */
 const TABS: TabDef[] = [
   {
-    name: "Hábitos",
-    route: "/habitos",
-    icon: Activity,
-    accent: "var(--accent-health-strong)",
-    match: (p) => p === "/habitos" || p.startsWith("/habitos/"),
+    name: "Agenda",
+    route: "/agenda",
+    icon: Calendar,
+    accent: "var(--accent-agenda-strong)",
+    match: (p) => p === "/agenda" || p.startsWith("/agenda/"),
     placement: "left",
   },
   {
-    name: "Entrenamiento",
-    label: (
-      <>
-        Entren
-        <wbr />
-        miento
-      </>
-    ),
-    route: "/training",
-    icon: Dumbbell,
+    name: "Hoy",
+    route: "/hoy",
+    icon: Target,
     accent: "var(--color-accent-primary)",
-    match: (p) => p === "/training" || p.startsWith("/training/"),
+    match: (p) => p === "/hoy" || p.startsWith("/hoy/"),
     placement: "left",
   },
   {
@@ -51,19 +48,19 @@ const TABS: TabDef[] = [
     placement: "center",
   },
   {
-    name: "Hoy",
-    route: "/hoy",
-    icon: Target,
-    accent: "var(--color-accent-primary)",
-    match: (p) => p === "/hoy" || p.startsWith("/hoy/"),
+    name: "Capital",
+    route: "/finanzas/overview",
+    icon: DollarSign,
+    accent: "var(--accent-finance-strong)",
+    match: (p) => p.startsWith("/finanzas"),
     placement: "right",
   },
   {
-    name: "Agenda",
-    route: "/agenda",
-    icon: Calendar,
-    accent: "var(--accent-agenda-strong)",
-    match: (p) => p === "/agenda" || p.startsWith("/agenda/"),
+    name: "Hábitos",
+    route: "/habitos",
+    icon: Activity,
+    accent: "var(--accent-health-strong)",
+    match: (p) => p === "/habitos" || p.startsWith("/habitos/"),
     placement: "right",
   },
 ]
