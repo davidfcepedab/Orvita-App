@@ -1,8 +1,9 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useRef } from "react"
 import { CalendarDays } from "lucide-react"
 import { formatYmShortMonthYearEsCo } from "@/lib/agenda/localDateKey"
+import { currentMonthYm } from "@/app/finanzas/FinanceContext"
 import { cn } from "@/lib/utils"
 
 function formatMonthBadge(ym: string) {
@@ -15,9 +16,29 @@ type FinanceHeroMonthControlProps = {
   onChange: (ym: string) => void
 }
 
-/** Selector de mes compacto: pill con icono + fecha; `input type="month"` captura toques en toda el área. */
+/**
+ * Selector de mes: `showPicker()` cuando existe (mejor en Safari / móvil que input invisible);
+ * el `input type="month"` sigue siendo la fuente de verdad.
+ */
 export function FinanceHeroMonthControl({ month, onChange }: FinanceHeroMonthControlProps) {
-  const badge = useMemo(() => formatMonthBadge(month), [month])
+  const inputRef = useRef<HTMLInputElement>(null)
+  const safeValue = /^\d{4}-\d{2}$/.test(month.trim()) ? month.trim() : currentMonthYm()
+  const badge = useMemo(() => formatMonthBadge(safeValue), [safeValue])
+
+  const openPicker = () => {
+    const el = inputRef.current
+    if (!el) return
+    if (typeof el.showPicker === "function") {
+      try {
+        el.showPicker()
+        return
+      } catch {
+        /* continuar con focus */
+      }
+    }
+    el.focus()
+    el.click()
+  }
 
   return (
     <label
@@ -26,6 +47,11 @@ export function FinanceHeroMonthControl({ month, onChange }: FinanceHeroMonthCon
         "max-sm:max-w-[min(11rem,calc(100dvw-2rem-env(safe-area-inset-left,0px)-env(safe-area-inset-right,0px)))]",
         "focus-within:ring-2 focus-within:ring-[color-mix(in_srgb,var(--color-accent-finance)_28%,transparent)] focus-within:ring-offset-1 focus-within:ring-offset-[var(--color-surface)]",
       )}
+      onClick={(e) => {
+        if (e.target === inputRef.current) return
+        e.preventDefault()
+        openPicker()
+      }}
     >
       <span className="sr-only">Seleccionar mes del periodo</span>
       <CalendarDays className="pointer-events-none mr-1.5 h-3.5 w-3.5 shrink-0 text-orbita-secondary opacity-80 sm:h-4 sm:w-4" aria-hidden strokeWidth={2} />
@@ -33,9 +59,13 @@ export function FinanceHeroMonthControl({ month, onChange }: FinanceHeroMonthCon
         {badge}
       </span>
       <input
+        ref={inputRef}
         type="month"
-        value={month}
-        onChange={(e) => onChange(e.target.value)}
+        value={safeValue}
+        onChange={(e) => {
+          const v = e.target.value.trim()
+          if (v && /^\d{4}-\d{2}$/.test(v)) onChange(v)
+        }}
         aria-label="Seleccionar mes del periodo"
         className="absolute inset-0 z-[1] cursor-pointer opacity-0 focus-visible:outline-none"
       />

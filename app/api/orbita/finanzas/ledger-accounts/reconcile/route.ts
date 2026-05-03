@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Cuenta no encontrada" }, { status: 404 })
     }
 
-    const txRows = await getTransactionsByRange(auth.supabase, "2000-01-01", reconcileDate)
+    const txRows = await getTransactionsByRange(auth.supabase, "2000-01-01", reconcileDate, { householdId })
     const calculated = computeAccountCalculatedBalanceFromSnapshot(txRows, reconcileDate, account)
     const realRawInput = Number(body.realBalance)
     let inputAdapter: ReturnType<typeof normalizeRealBalanceForReconciliation>

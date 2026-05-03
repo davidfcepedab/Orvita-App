@@ -1,7 +1,7 @@
 "use client"
 
 import type { CSSProperties } from "react"
-import { CheckCircle2, Circle, Crown, Flame, Loader2, Sparkles, Target, Zap } from "lucide-react"
+import { CheckCircle2, Circle, Flame, Loader2, Sparkles, Target, Zap } from "lucide-react"
 import type { HabitsToggleTodayResult } from "@/app/hooks/useHabits"
 import { HabitTodayProgressBar } from "@/app/components/habits/HabitTodayProgressBar"
 import type { StreakCelebrationPayload } from "@/lib/habits/streakMilestones"
@@ -12,6 +12,17 @@ import {
 } from "@/lib/habits/habitTodayProgressUi"
 import type { HabitMetadata, HabitWithMetrics, OperationalDomain } from "@/lib/operational/types"
 import { cn } from "@/lib/utils"
+import { FlexibleDayStackMissionPresentation } from "@/app/habitos/flexibleDayStackMissionPresentation"
+import { SuperHabitEmblem, type SuperHabitMark } from "@/app/habitos/SuperHabitEmblem"
+import {
+  SUPER_LUXURY_HEX,
+  superHeroRingClass,
+  superHeroShellStyle,
+  superRingClass,
+} from "@/lib/habits/superHabitLuxuryTheme"
+
+/** `orbita` = tarjeta actual. Las otras dos son prototipos tipo Figma (ver laboratorio `?flexLab=1`). */
+export type FlexibleMissionCardVariant = "orbita" | "mission-compact" | "mission-spacious"
 
 type Props = {
   habits: HabitWithMetrics[]
@@ -26,6 +37,9 @@ type Props = {
   onEdit: (habit: HabitWithMetrics) => void
   onToggle: (habitId: string) => Promise<HabitsToggleTodayResult>
   onStreakCelebration: (payload: StreakCelebrationPayload) => void
+  missionCardVariant?: FlexibleMissionCardVariant
+  /** Marca visual del súper hábito (por defecto corona). */
+  superHabitMark?: SuperHabitMark
 }
 
 export function FlexibleDayStackSection({
@@ -41,9 +55,12 @@ export function FlexibleDayStackSection({
   onEdit,
   onToggle,
   onStreakCelebration,
+  missionCardVariant = "orbita",
+  superHabitMark,
 }: Props) {
   if (habits.length === 0) return null
 
+  const emblemMark: SuperHabitMark = superHabitMark ?? "crown"
   const doneTodayCount = habits.filter((h) => h.metrics.completed_today).length
   const single = habits.length === 1
   const primary = habits[0]!
@@ -61,31 +78,48 @@ export function FlexibleDayStackSection({
       "0 1px 0 color-mix(in srgb, #a855f7 28%, transparent), 0 20px 50px color-mix(in srgb, #7c3aed 16%, transparent), 0 10px 30px color-mix(in srgb, #22c55e 8%, transparent), inset 0 1px 0 color-mix(in srgb, white 12%, transparent)",
   }
 
-  const superShell: CSSProperties = {
-    background:
-      "linear-gradient(146deg, color-mix(in srgb, #fbbf24 13%, color-mix(in srgb, #7c3aed 16%, var(--color-surface))) 0%, var(--color-surface) 40%, color-mix(in srgb, #15803d 14%, color-mix(in srgb, #f59e0b 9%, var(--color-surface))) 100%)",
-    borderColor: "color-mix(in srgb, #fbbf24 44%, #a855f7)",
-    boxShadow:
-      "0 0 0 1px color-mix(in srgb, #fbbf24 32%, transparent), 0 22px 56px color-mix(in srgb, #7c3aed 18%, transparent), 0 12px 36px color-mix(in srgb, #f59e0b 14%, transparent), inset 0 1px 0 color-mix(in srgb, white 14%, transparent)",
-  }
-
   const shellStyle: CSSProperties = superHero
-    ? superShell
+    ? superHeroShellStyle()
     : hasSuperHabit
       ? {
           ...baseShell,
-          borderColor: "color-mix(in srgb, #fbbf24 30%, #a855f7)",
-          boxShadow: `${baseShell.boxShadow ?? ""}, 0 0 32px color-mix(in srgb, #f59e0b 11%, transparent)`,
+          borderColor: `color-mix(in srgb, ${SUPER_LUXURY_HEX.gold} 26%, #a855f7)`,
+          boxShadow: `${baseShell.boxShadow ?? ""}, 0 0 28px color-mix(in srgb, ${SUPER_LUXURY_HEX.goldDeep} 9%, transparent)`,
         }
       : baseShell
 
-  const sectionRing = cn(
-    superHero &&
-      "ring-2 ring-[color-mix(in_srgb,#fbbf24_42%,transparent)] motion-safe:transition-[box-shadow] motion-safe:duration-300",
-    hasSuperHabit &&
-      !superHero &&
-      "ring-1 ring-[color-mix(in_srgb,#fbbf24_28%,transparent)]",
-  )
+  const sectionRing = cn(superHero && superHeroRingClass, hasSuperHabit && !superHero && superRingClass)
+
+  if (missionCardVariant === "mission-compact" || missionCardVariant === "mission-spacious") {
+    return (
+      <FlexibleDayStackMissionPresentation
+        variant={missionCardVariant}
+        habits={habits}
+        domainLabels={domainLabels}
+        persistenceEnabled={persistenceEnabled}
+        mock={mock}
+        loading={loading}
+        togglingId={togglingId}
+        backfillingId={backfillingId}
+        backfillingAll={backfillingAll}
+        formatMetricLine={formatMetricLine}
+        onEdit={onEdit}
+        onToggle={onToggle}
+        onStreakCelebration={onStreakCelebration}
+        shellStyle={shellStyle}
+        sectionRing={sectionRing}
+        superHero={superHero}
+        hasSuperHabit={hasSuperHabit}
+        doneTodayCount={doneTodayCount}
+        single={single}
+        primary={primary}
+        primaryDomain={primaryDomain}
+        primaryIntention={primaryIntention}
+        primaryFreq={primaryFreq}
+        superHabitMark={emblemMark}
+      />
+    )
+  }
 
   return (
     <section
@@ -94,7 +128,7 @@ export function FlexibleDayStackSection({
         "relative isolate overflow-visible rounded-[18px] border-2 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] sm:p-5",
         "border-[color-mix(in_srgb,#a855f7_38%,var(--color-border))]",
         superHero &&
-          "before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:p-px before:opacity-[0.92] before:[background:linear-gradient(145deg,color-mix(in_srgb,#fbbf24_38%,transparent)_0%,transparent_38%,color-mix(in_srgb,#a855f7_24%,transparent)_62%,color-mix(in_srgb,#22c55e_22%,transparent)_100%)] before:[mask:linear-gradient(#fff_0_0)_content-box,linear-gradient(#fff_0_0)] before:[mask-composite:xor] before:[-webkit-mask-composite:xor]",
+          "before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:p-px before:opacity-[0.88] before:[background:linear-gradient(145deg,color-mix(in_srgb,#c9a962_30%,transparent)_0%,transparent_38%,color-mix(in_srgb,#a855f7_22%,transparent)_62%,color-mix(in_srgb,#22c55e_18%,transparent)_100%)] before:[mask:linear-gradient(#fff_0_0)_content-box,linear-gradient(#fff_0_0)] before:[mask-composite:xor] before:[-webkit-mask-composite:xor]",
         sectionRing,
       )}
       style={shellStyle}
@@ -110,11 +144,11 @@ export function FlexibleDayStackSection({
       {superHero ? (
         <>
           <div
-            className="orbita-flex-super-aura pointer-events-none absolute -right-6 top-1/2 h-44 w-44 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,color-mix(in_srgb,#fbbf24_28%,transparent)_0%,transparent_68%)] blur-[2px]"
+            className="orbita-flex-super-aura pointer-events-none absolute -right-6 top-1/2 h-44 w-44 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,color-mix(in_srgb,#c9a962_22%,transparent)_0%,transparent_68%)] blur-[2px]"
             aria-hidden
           />
           <div
-            className="pointer-events-none absolute left-[18%] top-3 h-2 w-2 rounded-full bg-amber-400/90 shadow-[0_0_12px_rgba(251,191,36,0.85)]"
+            className="pointer-events-none absolute left-[18%] top-3 h-2 w-2 rounded-full bg-[color-mix(in_srgb,#c9a962_75%,#78716c)] shadow-[0_0_10px_color-mix(in_srgb,#c9a962_45%,transparent)]"
             aria-hidden
           />
           <div
@@ -129,13 +163,18 @@ export function FlexibleDayStackSection({
           className={cn(
             "flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] sm:h-11 sm:w-11",
             superHero
-              ? "bg-gradient-to-br from-stone-200 via-amber-900/85 to-stone-600 shadow-[0_4px_14px_rgba(28,25,23,0.12)] ring-1 ring-stone-400/45 dark:from-stone-700 dark:via-amber-950/90 dark:to-stone-800 dark:ring-stone-600/50"
+              ? "bg-gradient-to-br from-[#f4ead8] via-[#d9c9a8] to-[#8b7340] shadow-[0_6px_20px_color-mix(in_srgb,#8b7340_22%,transparent)] ring-2 ring-[color-mix(in_srgb,#c9a962_45%,transparent)] dark:from-[#3f3a33] dark:via-[#5c5346] dark:to-[#c9a962] dark:ring-[color-mix(in_srgb,#c9a962_35%,transparent)]"
               : "bg-[color-mix(in_srgb,#a855f7_22%,transparent)] ring-1 ring-[color-mix(in_srgb,#a855f7_32%,transparent)]",
           )}
           aria-hidden
         >
           {superHero ? (
-            <Crown className="h-[20px] w-[20px] text-stone-950 sm:h-[22px] sm:w-[22px] dark:text-amber-100" strokeWidth={2.1} fill="currentColor" fillOpacity={0.2} />
+            <SuperHabitEmblem
+              mark={emblemMark}
+              size="hero"
+              withCrownFill={emblemMark === "crown"}
+              className="text-[#3f2f1b] dark:text-[#f4ead8]"
+            />
           ) : (
             <Zap className="h-[20px] w-[20px] text-violet-700 dark:text-violet-300 sm:h-[22px] sm:w-[22px]" strokeWidth={2} />
           )}
@@ -147,9 +186,9 @@ export function FlexibleDayStackSection({
                 <>
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
                     {superHero ? (
-                      <span className="inline-flex items-center gap-1 rounded-md border border-[color-mix(in_srgb,#57534e_35%,#a16207_40%)] bg-[color-mix(in_srgb,var(--color-surface-alt)_88%,#ca8a04_12%)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-[color-mix(in_srgb,var(--color-text-primary)_75%,#44403c)] shadow-sm dark:border-[color-mix(in_srgb,#a8a29e_25%,#ca8a04_35%)] dark:bg-[color-mix(in_srgb,var(--color-surface-alt)_70%,#422006_30%)] dark:text-stone-100">
-                        <Crown className="h-3 w-3 shrink-0 text-amber-900/80 dark:text-amber-200/90" strokeWidth={2.2} aria-hidden />
-                        Súper hábito
+                      <span className="inline-flex items-center gap-1 rounded-md bg-gradient-to-r from-[#ebe4d4] via-[#c9a962] to-[#7a6239] px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.18em] text-[#2a2418] shadow-[0_2px_12px_color-mix(in_srgb,#8b7340_28%,transparent)] ring-1 ring-[color-mix(in_srgb,#c9a962_50%,transparent)] dark:from-[#44403c] dark:via-[#8b7340] dark:to-[#c9a962] dark:text-[#faf8f5] dark:ring-[color-mix(in_srgb,#c9a962_40%,transparent)]">
+                        <SuperHabitEmblem mark={emblemMark} size="xs" className="shrink-0 text-[#2a2418] dark:text-[#faf8f5]" />
+                        Super hábito
                       </span>
                     ) : null}
                     <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-[color-mix(in_srgb,var(--color-text-secondary)_88%,#7c3aed)] dark:text-violet-200/90">
@@ -164,19 +203,18 @@ export function FlexibleDayStackSection({
                       className={cn(
                         "min-w-0",
                         superHero &&
-                          "bg-gradient-to-r from-violet-950 via-violet-800 to-emerald-900 bg-clip-text text-[16px] text-transparent sm:text-[17px] dark:from-violet-100 dark:via-violet-200 dark:to-emerald-100/95",
+                          "bg-gradient-to-r from-violet-700 via-fuchsia-600 to-emerald-600 bg-clip-text text-[16px] text-transparent sm:text-[17px] dark:from-violet-200 dark:via-fuchsia-300 dark:to-emerald-300",
                         !superHero && "text-[var(--color-text-primary)]",
                       )}
                     >
                       {primary.name}
                     </span>
                     {superHero ? (
-                      <Crown
-                        className="h-4 w-4 shrink-0 text-amber-800/85 sm:h-[18px] sm:w-[18px] dark:text-amber-200/80"
-                        strokeWidth={2.1}
-                        fill="currentColor"
-                        fillOpacity={0.14}
-                        aria-hidden
+                      <SuperHabitEmblem
+                        mark={emblemMark}
+                        size="md"
+                        withCrownFill={emblemMark === "crown"}
+                        className="shrink-0 text-[#8b6914] drop-shadow-[0_0_8px_color-mix(in_srgb,#c9a962_40%,transparent)] dark:text-[#e8dcc8]"
                       />
                     ) : (
                       <Sparkles className="h-3.5 w-3.5 shrink-0 text-amber-500 sm:h-4 sm:w-4" strokeWidth={2} aria-hidden />
@@ -199,12 +237,12 @@ export function FlexibleDayStackSection({
                   className={cn(
                     "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide",
                     superHero
-                      ? "bg-[color-mix(in_srgb,var(--color-surface-alt)_92%,#166534_8%)] text-emerald-900 ring-1 ring-[color-mix(in_srgb,#78716c_22%,#15803d_25%)] dark:bg-[color-mix(in_srgb,var(--color-surface-alt)_88%,#14532d_14%)] dark:text-emerald-100 dark:ring-[color-mix(in_srgb,#57534e_35%,#22c55e_22%)]"
+                      ? "bg-gradient-to-r from-emerald-500/22 to-[color-mix(in_srgb,#c9a962_22%,transparent)] text-emerald-900 ring-2 ring-[color-mix(in_srgb,#c9a962_38%,transparent)] dark:from-emerald-500/18 dark:to-[color-mix(in_srgb,#c9a962_14%,transparent)] dark:text-emerald-100"
                       : "bg-[color-mix(in_srgb,var(--color-accent-health)_14%,var(--color-surface))] text-[var(--color-accent-health)] ring-1 ring-[color-mix(in_srgb,var(--color-accent-health)_25%,transparent)]",
                   )}
                 >
                   {superHero ? (
-                    <Crown className="h-3 w-3 shrink-0 text-emerald-800 dark:text-emerald-200" strokeWidth={2.35} aria-hidden />
+                    <SuperHabitEmblem mark={emblemMark} size="xs" className="shrink-0 text-emerald-900 dark:text-emerald-100" />
                   ) : (
                     <CheckCircle2 className="h-3 w-3 shrink-0" strokeWidth={2} aria-hidden />
                   )}
@@ -218,14 +256,7 @@ export function FlexibleDayStackSection({
               ) : null}
             </div>
           </div>
-          <p
-            className={cn(
-              "m-0 max-w-prose text-[12px] leading-[1.4] sm:text-[13px] sm:leading-[1.45]",
-              superHero
-                ? "text-[color-mix(in_srgb,var(--color-text-secondary)_94%,#57534e)] dark:text-stone-400/95"
-                : "text-[color-mix(in_srgb,var(--color-text-secondary)_92%,#5b21b6)] dark:text-violet-100/85",
-            )}
-          >
+          <p className="m-0 max-w-prose text-[12px] leading-[1.4] text-[color-mix(in_srgb,var(--color-text-secondary)_92%,#5b21b6)] dark:text-violet-100/85 sm:text-[13px] sm:leading-[1.45]">
             {single ? (
               <>
                 {primaryIntention ||
@@ -241,22 +272,8 @@ export function FlexibleDayStackSection({
           </p>
           {single ? (
             <div className="flex flex-wrap gap-2 pt-1">
-              <span
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-[10px] px-2.5 py-1 text-[11px] font-semibold tabular-nums ring-1",
-                  superHero
-                    ? "border border-stone-400/25 bg-[color-mix(in_srgb,var(--color-surface-alt)_94%,#57534e_6%)] text-[var(--color-text-primary)] ring-stone-400/25 dark:border-stone-600/30 dark:bg-[color-mix(in_srgb,var(--color-surface-alt)_90%,#292524_10%)] dark:ring-stone-600/35"
-                    : "border-transparent bg-[color-mix(in_srgb,#f97316_12%,color-mix(in_srgb,#a855f7_8%,transparent))] text-[var(--color-text-primary)] ring-[color-mix(in_srgb,#fb923c_35%,transparent)]",
-                )}
-              >
-                <Flame
-                  className={cn(
-                    "h-3.5 w-3.5 shrink-0",
-                    superHero ? "text-amber-800/70 dark:text-amber-300/75" : "text-orange-500",
-                  )}
-                  strokeWidth={2.25}
-                  aria-hidden
-                />
+              <span className="inline-flex items-center gap-1.5 rounded-[10px] bg-[color-mix(in_srgb,#f97316_12%,color-mix(in_srgb,#a855f7_8%,transparent))] px-2.5 py-1 text-[11px] font-semibold tabular-nums text-[var(--color-text-primary)] ring-1 ring-[color-mix(in_srgb,#fb923c_35%,transparent)]">
+                <Flame className="h-3.5 w-3.5 shrink-0 text-orange-500" strokeWidth={2.25} aria-hidden />
                 Racha {primary.metrics.current_streak} {primary.metrics.current_streak === 1 ? "día" : "días"}
               </span>
               {Boolean(primary.metadata?.intraday_si_no_progress) &&
@@ -287,22 +304,21 @@ export function FlexibleDayStackSection({
 
       {superHero ? (
         <div
-          className="relative z-[1] mt-2 flex flex-col gap-1.5 rounded-xl border border-[color-mix(in_srgb,#78716c_28%,#6d28d9_22%)] bg-[linear-gradient(102deg,color-mix(in_srgb,var(--color-surface-alt)_96%,#e7e5e4_4%)_0%,color-mix(in_srgb,var(--color-surface)_98%,#ddd6fe_5%)_48%,color-mix(in_srgb,var(--color-surface-alt)_95%,#d1fae5_6%)_100%)] px-3 py-2.5 shadow-[0_6px_20px_-10px_rgba(15,23,42,0.08)] sm:flex-row sm:items-center sm:justify-between sm:px-4 dark:border-[color-mix(in_srgb,#57534e_35%,#5b21b6_28%)] dark:bg-[linear-gradient(102deg,color-mix(in_srgb,var(--color-surface-alt)_94%,#292524_8%)_0%,color-mix(in_srgb,var(--color-surface)_92%,#4c1d95_10%)_50%,color-mix(in_srgb,var(--color-surface-alt)_93%,#14532d_8%)_100%)]"
+          className="relative z-[1] mt-2 flex flex-col gap-1.5 rounded-xl border border-[color-mix(in_srgb,#c9a962_38%,transparent)] bg-[linear-gradient(100deg,color-mix(in_srgb,#f4f1ea_55%,transparent)_0%,color-mix(in_srgb,#a855f7_10%,transparent)_45%,color-mix(in_srgb,#bbf7d0_18%,transparent)_100%)] px-3 py-2.5 shadow-[0_8px_26px_-12px_color-mix(in_srgb,#8b7340_22%,transparent)] sm:flex-row sm:items-center sm:justify-between sm:px-4"
           role="status"
           aria-label="Súper hábito activo con bonificación visual de progreso"
         >
-          <span className="inline-flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-stone-800 dark:text-stone-200">
-            <Crown
-              className="h-3.5 w-3.5 shrink-0 text-amber-900/75 dark:text-amber-200/80"
-              strokeWidth={2.1}
-              fill="currentColor"
-              fillOpacity={0.1}
-              aria-hidden
+          <span className="inline-flex flex-wrap items-center gap-2 text-[11px] font-black uppercase tracking-[0.14em] text-[#3f3428] dark:text-[#f4ead8]">
+            <SuperHabitEmblem
+              mark={emblemMark}
+              size="sm"
+              withCrownFill={emblemMark === "crown"}
+              className="shrink-0 text-[#6b5a3a] dark:text-[#e8dcc8]"
             />
             Odisea oro · súper hábito
-            <Sparkles className="h-3 w-3 shrink-0 text-violet-700/55 dark:text-violet-300/50" strokeWidth={2} aria-hidden />
+            <Sparkles className="h-3.5 w-3.5 shrink-0 text-violet-600 dark:text-violet-300" strokeWidth={2.25} aria-hidden />
           </span>
-          <span className="text-[10px] font-medium leading-snug text-[color-mix(in_srgb,var(--color-text-secondary)_95%,#57534e)] dark:text-stone-400/95">
+          <span className="text-[10px] font-semibold leading-snug text-[color-mix(in_srgb,var(--color-text-secondary)_88%,#5c4d3a)] dark:text-[color-mix(in_srgb,#e8dcc8_85%,transparent)]">
             Cada cierre aquí prioriza tu racha al máximo.
           </span>
         </div>
@@ -331,9 +347,9 @@ export function FlexibleDayStackSection({
           const toggleClassName = cn(
             "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border shadow-md transition-[transform,box-shadow,opacity] active:scale-[0.97] motion-safe:hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-45 sm:h-11 sm:w-11",
             isSuper && doneToday
-              ? "border-[color-mix(in_srgb,#78716c_35%,#a16207)] bg-[linear-gradient(145deg,color-mix(in_srgb,#ca8a04_12%,var(--color-surface)),var(--color-surface-alt))] shadow-[0_4px_14px_rgba(28,25,23,0.1)]"
+              ? "border-[color-mix(in_srgb,#c9a962_48%,var(--color-border))] bg-[linear-gradient(145deg,color-mix(in_srgb,#c9a962_14%,var(--color-surface)),var(--color-surface-alt))] shadow-[0_0_18px_color-mix(in_srgb,#8b7340_22%,transparent)]"
               : isSuper
-                ? "border-[color-mix(in_srgb,#57534e_30%,#6d28d9)] bg-[color-mix(in_srgb,var(--color-surface-alt)_55%,var(--color-surface))] shadow-sm"
+                ? "border-[color-mix(in_srgb,#c9a962_34%,#a855f7)] bg-[color-mix(in_srgb,var(--color-surface-alt)_50%,var(--color-surface))] shadow-[0_4px_16px_color-mix(in_srgb,#7c3aed_12%,transparent)]"
                 : "border-[color-mix(in_srgb,#a855f7_32%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-surface-alt)_55%,var(--color-surface))] shadow-sm",
           )
           const markTodayButton = (
@@ -376,9 +392,9 @@ export function FlexibleDayStackSection({
                         {habit.name}
                       </h3>
                       {isSuper ? (
-                        <span className="inline-flex items-center gap-1.5 rounded-md border border-[color-mix(in_srgb,#57534e_35%,#a16207_40%)] bg-[color-mix(in_srgb,var(--color-surface-alt)_88%,#ca8a04_12%)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-[color-mix(in_srgb,var(--color-text-primary)_75%,#44403c)] shadow-sm dark:border-[color-mix(in_srgb,#a8a29e_25%,#ca8a04_35%)] dark:bg-[color-mix(in_srgb,var(--color-surface-alt)_70%,#422006_30%)] dark:text-stone-100">
-                          <Crown className="h-3.5 w-3.5 shrink-0 text-amber-900/80 dark:text-amber-200/90" strokeWidth={2.2} aria-hidden />
-                          Súper hábito
+                        <span className="inline-flex items-center gap-1.5 rounded-[10px] border-2 border-[color-mix(in_srgb,#c9a962_48%,transparent)] bg-gradient-to-br from-[#f0ebe3] via-[#d4c4a8] to-[#7a6239] px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-[#2a2418] shadow-[0_3px_14px_color-mix(in_srgb,#8b7340_26%,transparent)] ring-1 ring-[color-mix(in_srgb,#c9a962_45%,transparent)] dark:from-[#3a3632] dark:via-[#6b5a3a] dark:to-[#c9a962] dark:text-[#faf8f5] dark:ring-[color-mix(in_srgb,#c9a962_35%,transparent)]">
+                          <SuperHabitEmblem mark={emblemMark} size="sm" className="shrink-0 text-[#2a2418] dark:text-[#faf8f5]" />
+                          Super hábito
                         </span>
                       ) : null}
                       {intraday && checks != null ? (
@@ -445,7 +461,7 @@ export function FlexibleDayStackSection({
                         "col-span-2 m-0 min-w-0 truncate leading-tight text-[var(--color-text-secondary)]",
                         "text-[10px] font-semibold tabular-nums tracking-tight",
                         isSuper
-                          ? "text-[color-mix(in_srgb,var(--color-text-secondary)_88%,#44403c)] dark:text-stone-400/95"
+                          ? "bg-gradient-to-r from-[#5c4d32] via-violet-700/90 to-emerald-700/90 bg-clip-text text-transparent dark:from-[#e8dcc8] dark:via-violet-200/90 dark:to-emerald-200/90"
                           : "text-[color-mix(in_srgb,var(--color-text-secondary)_88%,#7c3aed)] dark:text-violet-200/90",
                       )}
                     >

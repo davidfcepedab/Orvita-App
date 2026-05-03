@@ -95,6 +95,9 @@ const txSelectMobileDense =
 const txFilterBarSelect =
   "min-h-7 h-7 min-w-0 cursor-pointer rounded-md border border-orbita-border/40 bg-[color-mix(in_srgb,var(--color-surface-alt)_40%,var(--color-surface))] px-2 py-0 pr-7 text-[11px] font-medium leading-none text-orbita-primary shadow-none outline-none transition-[border-color,background-color] hover:border-orbita-border/60 hover:bg-orbita-surface focus-visible:border-orbita-border/75 focus-visible:ring-1 focus-visible:ring-[color-mix(in_srgb,var(--color-accent-finance)_28%,transparent)] disabled:cursor-not-allowed disabled:opacity-50"
 
+const txConceptInputClass =
+  "w-full min-w-0 rounded-md border border-orbita-border/40 bg-[color-mix(in_srgb,var(--color-surface-alt)_35%,var(--color-surface))] px-1.5 py-1 text-[10px] font-medium text-orbita-primary outline-none transition placeholder:text-orbita-muted focus-visible:border-[color-mix(in_srgb,var(--color-accent-finance)_45%,var(--color-border))] sm:text-[11px]"
+
 /** Pie KPI Movimientos: móvil en rejilla (icono | etiqueta | métrica a la derecha); sm+ fila flex */
 const txStatCellShell =
   "min-w-0 py-2 motion-safe:transition-[transform] motion-safe:duration-200 sm:px-4 sm:py-1.5 motion-safe:hover:-translate-y-px motion-reduce:transform-none max-sm:grid max-sm:grid-cols-[2rem_minmax(0,1fr)_auto] max-sm:gap-x-2 max-sm:items-center sm:flex sm:items-start sm:gap-2.5"
@@ -287,7 +290,12 @@ export default function TransactionsPageClient() {
   const schedulePatch = useCallback(
     (
       id: string,
-      body: { category?: string; subcategory?: string | null; type?: "income" | "expense" },
+      body: {
+        category?: string
+        subcategory?: string | null
+        type?: "income" | "expense"
+        description?: string
+      },
     ) => {
       const prev = patchTimers.current.get(id)
       if (prev) clearTimeout(prev)
@@ -296,14 +304,15 @@ export default function TransactionsPageClient() {
         void (async () => {
           setPatchErr(null)
           try {
+            const payload: Record<string, unknown> = { id }
+            if (body.category !== undefined) payload.category = body.category
+            if (body.subcategory !== undefined) payload.subcategory = body.subcategory
+            if (body.type !== undefined) payload.type = body.type
+            if (body.description !== undefined) payload.description = body.description
+
             const res = await financeApiJson("/api/orbita/finanzas/transactions", {
               method: "PATCH",
-              body: {
-                id,
-                category: body.category,
-                subcategory: body.subcategory,
-                type: body.type,
-              },
+              body: payload,
             })
             const json = (await res.json()) as PatchTxResponse
             if (!res.ok || !json.success || !json.data?.transaction) {
@@ -328,12 +337,11 @@ export default function TransactionsPageClient() {
     }
   }, [])
 
-  const deleteReconciliationTx = useCallback(
+  const deleteTransaction = useCallback(
     async (tx: Transaction) => {
       if (!tx.id) return
       if (!supabaseEnabled) return
-      if (!isReconciliationAdjustmentDescription(tx.descripcion)) return
-      if (!window.confirm("¿Eliminar este ajuste de conciliación? No se puede deshacer.")) return
+      if (!window.confirm("¿Eliminar este movimiento? No se puede deshacer.")) return
 
       const id = tx.id
       const amount = Number(tx.monto ?? 0)
@@ -1204,19 +1212,38 @@ export default function TransactionsPageClient() {
                           ) : (
                             <p className="truncate text-[10px] leading-tight text-orbita-primary">{catLine}</p>
                           )}
-                          <p className="line-clamp-1 text-[10px] leading-tight text-orbita-secondary [overflow-wrap:anywhere]">
-                            {tx.descripcion}
-                          </p>
-                          {supabaseEnabled && tx.id && isReconciliationAdjustment ? (
+                          {editable && tx.id ? (
+                            <input
+                              key={`${tx.id}-desc`}
+                              type="text"
+                              defaultValue={tx.descripcion}
+                              maxLength={500}
+                              aria-label="Concepto del movimiento"
+                              className={cn(txConceptInputClass, "line-clamp-1")}
+                              onBlur={(e) => {
+                                const v = e.target.value.trim()
+                                if (v === (tx.descripcion ?? "").trim()) return
+                                setTxRows((rs) =>
+                                  rs.map((r) => (r.id === tx.id ? { ...r, descripcion: v || "—" } : r)),
+                                )
+                                schedulePatch(tx.id!, { description: v || "—" })
+                              }}
+                            />
+                          ) : (
+                            <p className="line-clamp-1 text-[10px] leading-tight text-orbita-secondary [overflow-wrap:anywhere]">
+                              {tx.descripcion}
+                            </p>
+                          )}
+                          {supabaseEnabled && tx.id ? (
                             <div className="flex justify-end pt-0.5">
                               <button
                                 type="button"
                                 disabled={deletingId === tx.id}
                                 aria-busy={deletingId === tx.id}
-                                onClick={() => void deleteReconciliationTx(tx)}
+                                onClick={() => void deleteTransaction(tx)}
                                 className="text-[10px] font-semibold text-rose-600 transition-opacity enabled:hover:opacity-80 disabled:cursor-wait disabled:opacity-50"
                               >
-                                {deletingId === tx.id ? "…" : "Eliminar ajuste"}
+                                {deletingId === tx.id ? "…" : "Eliminar"}
                               </button>
                             </div>
                           ) : null}
@@ -1408,22 +1435,40 @@ export default function TransactionsPageClient() {
                           >
                             {tx.cuenta || "—"}
                           </td>
-                          <td
-                            className="truncate px-1.5 py-1 align-middle text-orbita-secondary sm:px-2 sm:py-1.5"
-                            title={tx.descripcion}
-                          >
-                            {tx.descripcion}
+                          <td className="min-w-0 px-1.5 py-1 align-middle sm:px-2 sm:py-1.5">
+                            {editable && tx.id ? (
+                              <input
+                                key={`${tx.id}-desc-desk`}
+                                type="text"
+                                defaultValue={tx.descripcion}
+                                maxLength={500}
+                                aria-label="Concepto del movimiento"
+                                className={cn(txConceptInputClass, "w-full")}
+                                onBlur={(e) => {
+                                  const v = e.target.value.trim()
+                                  if (v === (tx.descripcion ?? "").trim()) return
+                                  setTxRows((rs) =>
+                                    rs.map((r) => (r.id === tx.id ? { ...r, descripcion: v || "—" } : r)),
+                                  )
+                                  schedulePatch(tx.id!, { description: v || "—" })
+                                }}
+                              />
+                            ) : (
+                              <span className="block truncate text-orbita-secondary" title={tx.descripcion}>
+                                {tx.descripcion}
+                              </span>
+                            )}
                           </td>
                           <td className="whitespace-nowrap px-1.5 py-1 align-middle text-right tabular-nums font-semibold text-orbita-primary sm:px-2 sm:py-1.5">
                             {montoStr}
                           </td>
                           <td className="whitespace-nowrap px-1.5 py-1 align-middle text-right text-[10px] sm:px-2 sm:py-1.5 sm:text-[11px]">
-                            {supabaseEnabled && tx.id && isReconciliationAdjustment ? (
+                            {supabaseEnabled && tx.id ? (
                               <button
                                 type="button"
                                 disabled={deletingId === tx.id}
                                 aria-busy={deletingId === tx.id}
-                                onClick={() => void deleteReconciliationTx(tx)}
+                                onClick={() => void deleteTransaction(tx)}
                                 className="font-semibold text-rose-600 transition-opacity enabled:hover:opacity-80 disabled:cursor-wait disabled:opacity-50"
                               >
                                 {deletingId === tx.id ? "…" : "Eliminar"}

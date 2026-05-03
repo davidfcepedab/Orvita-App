@@ -4,7 +4,12 @@ import { isSupabaseEnabled, UI_SYNC_OFF_SHORT } from "@/lib/checkins/flags"
 import { monthBounds } from "@/lib/finanzas/monthRange"
 import { sortLedgerAccountsForDisplay } from "@/lib/finanzas/sortLedgerAccounts"
 import { getHouseholdId } from "@/lib/households/getHouseholdId"
-import { getTransactionsByRange } from "@/lib/services/finanzasService"
+import {
+  buildNonBelvoFinanceAccountIdsFromTransactions,
+  fetchLiveBelvoAnchors,
+  filterLedgerRowsWithDeadBelvoLinks,
+} from "@/lib/integrations/belvoLiveAnchors"
+import { fetchTransactionsByRangeRaw, getTransactionsByRange } from "@/lib/services/finanzasService"
 
 export const runtime = "nodejs"
 
@@ -48,11 +53,16 @@ export async function GET(req: NextRequest) {
     }
 
     const rows = data ?? []
+    const belvoAnchors = await fetchLiveBelvoAnchors(auth.supabase, householdId)
     const monthQ = req.nextUrl.searchParams.get("month")
     const b = monthQ ? monthBounds(monthQ) : null
+    const txOpts = { householdId, belvoAnchors } as const
     const monthRows =
-      b != null ? await getTransactionsByRange(auth.supabase, b.startStr, b.endStr) : []
-    const accounts = sortLedgerAccountsForDisplay(rows, monthRows)
+      b != null ? await getTransactionsByRange(auth.supabase, b.startStr, b.endStr, txOpts) : []
+    const rawMonth = b != null ? await fetchTransactionsByRangeRaw(auth.supabase, b.startStr, b.endStr) : []
+    const nonBelvoIds = buildNonBelvoFinanceAccountIdsFromTransactions(rawMonth)
+    const ledgerFiltered = filterLedgerRowsWithDeadBelvoLinks(rows, belvoAnchors, nonBelvoIds)
+    const accounts = sortLedgerAccountsForDisplay(ledgerFiltered, monthRows)
 
     return NextResponse.json({ success: true, data: { accounts } })
   } catch (error: unknown) {

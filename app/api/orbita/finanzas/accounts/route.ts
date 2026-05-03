@@ -9,7 +9,12 @@ import { sortLedgerAccountsForDisplay } from "@/lib/finanzas/sortLedgerAccounts"
 import { buildSyntheticAccounts } from "@/lib/finanzas/syntheticAccounts"
 import { getHouseholdId } from "@/lib/households/getHouseholdId"
 import { summarizeTcMovementLinks } from "@/lib/finanzas/ledgerTcLinkSummaries"
-import { getTransactionsByRange } from "@/lib/services/finanzasService"
+import {
+  buildNonBelvoFinanceAccountIdsFromTransactions,
+  fetchLiveBelvoAnchors,
+  filterLedgerRowsWithDeadBelvoLinks,
+} from "@/lib/integrations/belvoLiveAnchors"
+import { fetchTransactionsByRangeRaw, getTransactionsByRange } from "@/lib/services/finanzasService"
 
 export const runtime = "nodejs"
 
@@ -70,11 +75,15 @@ export async function GET(req: NextRequest) {
       .eq("month", mo)
       .maybeSingle()
 
-    const [rows, prevRows, ledgerRollupRows] = await Promise.all([
-      getTransactionsByRange(auth.supabase, b.startStr, b.endStr),
-      getTransactionsByRange(auth.supabase, b.prevStartStr, b.prevEndStr),
-      getTransactionsByRange(auth.supabase, ledgerRollupRangeStart(month), b.endStr),
+    const belvoAnchors = await fetchLiveBelvoAnchors(auth.supabase, householdId)
+    const txOpts = { householdId, belvoAnchors } as const
+    const [rows, prevRows, ledgerRollupRows, rawRollupForLedger] = await Promise.all([
+      getTransactionsByRange(auth.supabase, b.startStr, b.endStr, txOpts),
+      getTransactionsByRange(auth.supabase, b.prevStartStr, b.prevEndStr, txOpts),
+      getTransactionsByRange(auth.supabase, ledgerRollupRangeStart(month), b.endStr, txOpts),
+      fetchTransactionsByRangeRaw(auth.supabase, ledgerRollupRangeStart(month), b.endStr),
     ])
+    const nonBelvoFinanceAccountIds = buildNonBelvoFinanceAccountIdsFromTransactions(rawRollupForLedger)
     const balance = snapshot?.balance != null ? Number(snapshot.balance) : null
     const accounts = buildSyntheticAccounts(month, balance, rows)
     const dashboardBase = buildCuentasDashboard(month, balance, rows, prevRows, false)
@@ -93,7 +102,8 @@ export async function GET(req: NextRequest) {
     let dashboard = dashboardBase
     let tcMovementLinks: ReturnType<typeof summarizeTcMovementLinks> = []
     if (!ledgerErr) {
-      const sortedLedger = sortLedgerAccountsForDisplay(ledgerRows ?? [], rows)
+      const ledgerFiltered = filterLedgerRowsWithDeadBelvoLinks(ledgerRows ?? [], belvoAnchors, nonBelvoFinanceAccountIds)
+      const sortedLedger = sortLedgerAccountsForDisplay(ledgerFiltered, rows)
       ledgerAccounts = sortedLedger
       dashboard = mergeLiveDashboardWithLedger(dashboardBase, month, sortedLedger, rows, ledgerRollupRows)
       tcMovementLinks = summarizeTcMovementLinks(sortedLedger, ledgerRollupRows, b.endStr)

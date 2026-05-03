@@ -1,4 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
+import type { LiveBelvoAnchors } from "@/lib/integrations/belvoLiveAnchors"
+import { fetchLiveBelvoAnchors, filterBelvoOrphanTransactions } from "@/lib/integrations/belvoLiveAnchors"
 import type { FinanceTransaction } from "@/lib/finanzas/types"
 import { normalizeTransactionDateIsoDay } from "@/lib/finanzas/transactionDate"
 
@@ -9,7 +11,21 @@ import { normalizeTransactionDateIsoDay } from "@/lib/finanzas/transactionDate"
 const RANGE_PAGE_SIZE = 1000
 const RANGE_HARD_CAP = 400_000
 
-export async function getTransactionsByRange(
+export type GetTransactionsByRangeOpts = {
+  householdId?: string
+  /** Si viene definido (p. ej. prefetch), evita repetir el RPC en la misma petición. */
+  belvoAnchors?: LiveBelvoAnchors | null
+}
+
+function normalizeTxDates(rows: FinanceTransaction[]): FinanceTransaction[] {
+  return rows.map((row) => ({
+    ...row,
+    date: normalizeTransactionDateIsoDay(row.date),
+  }))
+}
+
+/** Rango crudo sin filtrar huérfanos Belvo (p. ej. para detectar cuentas con actividad no Belvo). */
+export async function fetchTransactionsByRangeRaw(
   supabase: SupabaseClient,
   startDate: string,
   endDate: string,
@@ -42,8 +58,22 @@ export async function getTransactionsByRange(
     from += batch.length
   }
 
-  return acc.map((row) => ({
-    ...row,
-    date: normalizeTransactionDateIsoDay(row.date),
-  }))
+  return normalizeTxDates(acc)
+}
+
+export async function getTransactionsByRange(
+  supabase: SupabaseClient,
+  startDate: string,
+  endDate: string,
+  opts?: GetTransactionsByRangeOpts,
+): Promise<FinanceTransaction[]> {
+  const raw = await fetchTransactionsByRangeRaw(supabase, startDate, endDate)
+  if (!opts?.householdId) {
+    return raw
+  }
+  let anchors: LiveBelvoAnchors | null | undefined = opts.belvoAnchors
+  if (anchors === undefined) {
+    anchors = await fetchLiveBelvoAnchors(supabase, opts.householdId)
+  }
+  return filterBelvoOrphanTransactions(raw, anchors ?? null)
 }

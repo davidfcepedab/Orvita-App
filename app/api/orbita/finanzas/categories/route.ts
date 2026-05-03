@@ -87,7 +87,7 @@ export async function GET(req: NextRequest) {
 
     const monthsWin = lastNMonthsInclusive(month, 6)
     const rangeStartRolling = monthBounds(monthsWin[0])!.startStr
-    const rangeRows = await getTransactionsByRange(auth.supabase, rangeStartRolling, endStr)
+    const rangeRows = await getTransactionsByRange(auth.supabase, rangeStartRolling, endStr, { householdId })
     const current = rangeRows.filter((r) => r.date >= startStr && r.date <= endStr)
     const previous = rangeRows.filter((r) => r.date >= prevStartStr && r.date <= prevEndStr)
 

@@ -155,7 +155,7 @@ export async function POST(req: NextRequest) {
       /* empty */
     }
 
-    const rangeRows = await getTransactionsByRange(auth.supabase, prevStartStr, endStr)
+    const rangeRows = await getTransactionsByRange(auth.supabase, prevStartStr, endStr, { householdId })
     const currentRows = rangeRows.filter((r) => r.date >= startStr && r.date <= endStr)
     const previousRows = rangeRows.filter((r) => r.date >= prevStartStr && r.date <= prevEndStr)
 

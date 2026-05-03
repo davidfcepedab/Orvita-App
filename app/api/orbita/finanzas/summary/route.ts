@@ -39,7 +39,7 @@ async function monthOverviewForSummary(
   if (!b) {
     throw new Error("Mes inválido")
   }
-  const rows = await getTransactionsByRange(supabase, b.prevStartStr, b.endStr)
+  const rows = await getTransactionsByRange(supabase, b.prevStartStr, b.endStr, { householdId })
   const currentRows = rows.filter((r) => r.date >= b.startStr && r.date <= b.endStr)
   const previousRows = rows.filter((r) => r.date >= b.prevStartStr && r.date <= b.prevEndStr)
   const state = await computeFinanceMonthState(supabase, householdId, key, currentRows, previousRows)

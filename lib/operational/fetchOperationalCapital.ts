@@ -49,7 +49,7 @@ export async function fetchOperationalCapitalSnapshot(
       .eq("user_id", userId)
       .eq("connected", true),
     householdId
-      ? getTransactionsByRange(supabase, bounds.prevStartStr, bounds.endStr)
+      ? getTransactionsByRange(supabase, bounds.prevStartStr, bounds.endStr, { householdId })
       : Promise.resolve([]),
   ])
 

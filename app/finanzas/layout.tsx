@@ -11,7 +11,7 @@ import {
   ListTree,
 } from "lucide-react"
 import { ReactNode } from "react"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { FinanceProvider, useFinance } from "./FinanceContext"
 import {
   financeModuleHeroTaglineClass,
@@ -42,6 +42,7 @@ function FinanzasLayoutContent({
 }) {
   const pathname = usePathname()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const finance = useFinance()
 
   if (!finance) {
@@ -53,6 +54,15 @@ function FinanzasLayoutContent({
   }
 
   const { month, setMonth } = finance
+
+  const navigateFinanceTab = (path: string) => {
+    const p = new URLSearchParams(searchParams.toString())
+    if (month && /^\d{4}-\d{2}$/.test(month)) {
+      p.set("month", month)
+    }
+    const q = p.toString()
+    router.push(q ? `${path}?${q}` : path)
+  }
 
   return (
     <div className="orbita-page-stack mx-auto min-w-0 w-full max-w-[min(76rem,calc(100vw-1.5rem))] space-y-2 sm:space-y-3">
@@ -96,7 +106,7 @@ function FinanzasLayoutContent({
               <button
                 key={tab.path}
                 type="button"
-                onClick={() => router.push(tab.path)}
+                onClick={() => navigateFinanceTab(tab.path)}
                 className={financeSubnavTabClass(active, { subtle: true })}
                 aria-current={active ? "page" : undefined}
                 role="tab"

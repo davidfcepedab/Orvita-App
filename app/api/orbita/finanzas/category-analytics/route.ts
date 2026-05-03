@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Usuario sin hogar asignado" }, { status: 403 })
     }
 
-    txs = await getTransactionsByRange(auth.supabase, startBounds.startStr, anchorBounds.endStr)
+    txs = await getTransactionsByRange(auth.supabase, startBounds.startStr, anchorBounds.endStr, { householdId })
 
     const catalog = await fetchSubcategoryCatalogMerged(auth.supabase, householdId)
     txs = filterTransactionsForOperationalAnalytics(txs, catalog)

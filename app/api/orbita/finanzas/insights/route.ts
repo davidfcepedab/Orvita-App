@@ -8,6 +8,7 @@ import { monthBounds } from "@/lib/finanzas/monthRange"
 import { createOperativoExpenseFn } from "@/lib/finanzas/operativoExpense"
 import { fetchSubcategoryCatalogMerged } from "@/lib/finanzas/subcategoryCatalog"
 import type { FinanceTransaction } from "@/lib/finanzas/types"
+import { fetchLiveBelvoAnchors } from "@/lib/integrations/belvoLiveAnchors"
 import { getHouseholdId } from "@/lib/households/getHouseholdId"
 import { getTransactionsByRange } from "@/lib/services/finanzasService"
 
@@ -74,11 +75,13 @@ export async function GET(req: NextRequest) {
       console.warn("FINANCE INSIGHTS: catálogo no disponible", e)
     }
     const opex = createOperativoExpenseFn(catalogRows)
+    const belvoAnchors = await fetchLiveBelvoAnchors(auth.supabase, householdId)
+    const txOpts = { householdId, belvoAnchors } as const
 
     for (const mk of months) {
       const b = monthBounds(mk)
       if (!b) continue
-      const rows = await getTransactionsByRange(auth.supabase, b.startStr, b.endStr)
+      const rows = await getTransactionsByRange(auth.supabase, b.startStr, b.endStr, txOpts)
       slices.push({ month: mk, rows })
     }
 

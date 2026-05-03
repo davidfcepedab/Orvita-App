@@ -50,6 +50,7 @@ import type {
 } from "@/lib/operational/types"
 import { emptyHabitModalForm, habitToModalValues, HabitFormModal } from "@/app/habitos/HabitFormModal"
 import { FlexibleDayStackSection } from "@/app/habitos/FlexibleDayStackSection"
+import { FlexibleMissionVariantsLab } from "@/app/habitos/flexibleMissionVariantsLab"
 import { WaterHabitMissionBlock } from "@/app/habitos/WaterHabitMissionBlock"
 import { HabitSparkline14 } from "@/app/habitos/HabitSparkline14"
 import { StreakCelebrationOverlay } from "@/app/habitos/StreakCelebrationOverlay"
@@ -261,6 +262,7 @@ export default function HabitosPage() {
   const [editing, setEditing] = useState<HabitWithMetrics | null>(null)
   const [form, setForm] = useState(() => emptyHabitModalForm())
   const [waterBusyId, setWaterBusyId] = useState<string | null>(null)
+  const [flexMissionLab, setFlexMissionLab] = useState(false)
   const { activeStreak, streakOpen, enqueueStreakCelebrations, dismissFront } = useStreakCelebrationQueue()
 
   useEffect(() => {
@@ -276,6 +278,20 @@ export default function HabitosPage() {
       /* private mode / SSR */
     }
     setPrefsHydrated(true)
+  }, [])
+
+  useEffect(() => {
+    const read = () => {
+      try {
+        const q = new URLSearchParams(window.location.search).get("flexLab")
+        setFlexMissionLab(q === "1")
+      } catch {
+        setFlexMissionLab(false)
+      }
+    }
+    read()
+    window.addEventListener("popstate", read)
+    return () => window.removeEventListener("popstate", read)
   }, [])
 
   useEffect(() => {
@@ -1091,6 +1107,10 @@ export default function HabitosPage() {
           onToggle={toggleCompleteToday}
           onStreakCelebration={(payload) => enqueueStreakCelebrations([payload])}
         />
+
+        {flexMissionLab || mock ? (
+          <FlexibleMissionVariantsLab domainLabels={DOMAIN_LABELS} formatMetricLine={habitMetricLine} />
+        ) : null}
 
         {stackBlocksWithOffsets
           .filter(({ blockId, habits }) => blockId !== "sin_hora" || habits.length > 0)

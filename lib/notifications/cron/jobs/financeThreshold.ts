@@ -58,7 +58,7 @@ export async function runFinanceThresholdScan(
   if (!bounds) return { sent: false, reason: "bad_month" }
 
   const { startStr, endStr, prevStartStr, prevEndStr } = bounds
-  const rangeRows = await getTransactionsByRange(supabase, prevStartStr, endStr)
+  const rangeRows = await getTransactionsByRange(supabase, prevStartStr, endStr, { householdId })
   const currentRows = rangeRows.filter((r) => r.date >= startStr && r.date <= endStr)
   const previousRows = rangeRows.filter((r) => r.date >= prevStartStr && r.date <= prevEndStr)
 

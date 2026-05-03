@@ -33,19 +33,19 @@ function fillForKind(
     if (kind === "water") {
       return {
         background: superLux
-          ? "linear-gradient(90deg, #fde047 0%, #22d3ee 35%, #c4b5fd 62%, #34d399 100%)"
+          ? "linear-gradient(90deg, #d4c4a8 0%, #22d3ee 34%, #c4b5fd 58%, #34d399 100%)"
           : "linear-gradient(90deg, #22d3ee 0%, #a78bfa 48%, #34d399 100%)",
         boxShadow: superLux
-          ? "0 0 20px color-mix(in srgb, #fbbf24 42%, transparent), 0 0 18px color-mix(in srgb, #22d3ee 32%, transparent), 0 0 10px color-mix(in srgb, #a855f7 22%, transparent)"
+          ? "0 0 18px color-mix(in srgb, #c9a962 32%, transparent), 0 0 16px color-mix(in srgb, #22d3ee 28%, transparent), 0 0 10px color-mix(in srgb, #a855f7 20%, transparent)"
           : "0 0 16px color-mix(in srgb, #22d3ee 35%, transparent), 0 0 8px color-mix(in srgb, #a855f7 25%, transparent)",
       }
     }
     return {
       background: superLux
-        ? "linear-gradient(90deg, #fde68a 0%, #f59e0b 20%, #a855f7 48%, #10b981 100%)"
+        ? "linear-gradient(90deg, #e8dcc8 0%, #b8973e 22%, #a855f7 48%, #10b981 100%)"
         : "linear-gradient(90deg, #8b5cf6 0%, #d946ef 38%, #22c55e 100%)",
       boxShadow: superLux
-        ? "0 0 22px color-mix(in srgb, #fbbf24 48%, transparent), 0 0 18px color-mix(in srgb, #a855f7 38%, transparent), 0 0 12px color-mix(in srgb, #22c55e 30%, transparent)"
+        ? "0 0 20px color-mix(in srgb, #c9a962 28%, transparent), 0 0 16px color-mix(in srgb, #a855f7 32%, transparent), 0 0 12px color-mix(in srgb, #22c55e 26%, transparent)"
         : "0 0 18px color-mix(in srgb, #a855f7 40%, transparent), 0 0 12px color-mix(in srgb, #22c55e 28%, transparent)",
     }
   }
@@ -86,7 +86,7 @@ export function HabitTodayProgressBar({
             ? cn(
                 "relative bg-[linear-gradient(90deg,color-mix(in_srgb,#7c3aed_18%,transparent),color-mix(in_srgb,var(--color-border)_36%,transparent),color-mix(in_srgb,#15803d_14%,transparent))] p-[2px] shadow-[inset_0_1px_3px_rgba(0,0,0,0.1)]",
                 superLux
-                  ? "h-3 ring-2 ring-[color-mix(in_srgb,#fbbf24_42%,transparent)] ring-offset-1 ring-offset-[color-mix(in_srgb,var(--color-surface)_80%,transparent)]"
+                  ? "h-3 ring-2 ring-[color-mix(in_srgb,#c9a962_36%,transparent)] ring-offset-1 ring-offset-[color-mix(in_srgb,var(--color-surface)_80%,transparent)]"
                   : "h-2.5 ring-1 ring-[color-mix(in_srgb,#a855f7_26%,transparent)]",
                 questPulse && (superLux ? "orbita-flex-track-quest-super" : "orbita-flex-track-quest"),
               )

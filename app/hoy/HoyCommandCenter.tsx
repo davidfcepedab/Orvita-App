@@ -1,5 +1,9 @@
 "use client"
 
+/**
+ * Rutina de bienestar (varios hábitos agrupados): mock listo en
+ * `app/hoy/wellnessRoutinePreviewMock.ts` → `WELLNESS_ROUTINE_PREVIEW_HABITS_FOR_HOY` para cuando integremos ese bloque en /hoy.
+ */
 import Link from "next/link"
 import {
   Fragment,

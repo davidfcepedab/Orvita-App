@@ -198,7 +198,7 @@ async function loadNetMonthlyCOP(
     const month = agendaTodayYmd().slice(0, 7)
     const b = monthBounds(month)
     if (!b) return null
-    const rows = await getTransactionsByRange(supabase, b.prevStartStr, b.endStr)
+    const rows = await getTransactionsByRange(supabase, b.prevStartStr, b.endStr, { householdId })
     const currentRows = rows.filter((r) => r.date >= b.startStr && r.date <= b.endStr)
     const previousRows = rows.filter((r) => r.date >= b.prevStartStr && r.date <= b.prevEndStr)
     const state = await computeFinanceMonthState(supabase, householdId, month, currentRows, previousRows)

@@ -167,7 +167,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Usuario sin hogar asignado" }, { status: 403 })
     }
 
-    const rows = await getTransactionsByRange(auth.supabase, extendedStartStr, endStr)
+    const rows = await getTransactionsByRange(auth.supabase, extendedStartStr, endStr, { householdId })
     const currentRows = rows.filter((r) => r.date >= startStr && r.date <= endStr)
     const previousRows = rows.filter((r) => r.date >= prevStartStr && r.date <= prevEndStr)
 

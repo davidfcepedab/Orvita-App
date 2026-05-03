@@ -160,8 +160,13 @@ export async function GET(req: NextRequest) {
     const auth = await requireUser(req)
     if (auth instanceof NextResponse) return auth
 
-    const monthRows = await getTransactionsByRange(auth.supabase, startStr, endStr)
-    const prevRows = await getTransactionsByRange(auth.supabase, prevStartStr, prevEndStr)
+    const householdId = await getHouseholdId(auth.supabase, auth.userId)
+    if (!householdId) {
+      return NextResponse.json({ success: false, error: "Usuario sin hogar asignado" }, { status: 403 })
+    }
+
+    const monthRows = await getTransactionsByRange(auth.supabase, startStr, endStr, { householdId })
+    const prevRows = await getTransactionsByRange(auth.supabase, prevStartStr, prevEndStr, { householdId })
 
     const filteredRows = filterRows(monthRows)
     const prevFiltered = filterRows(prevRows)
@@ -208,6 +213,7 @@ export async function PATCH(req: NextRequest) {
       category?: string
       subcategory?: string | null
       type?: string
+      description?: string
     }
 
     const id = String(body.id ?? "").trim()
@@ -236,6 +242,10 @@ export async function PATCH(req: NextRequest) {
     }
     if (body.type === "income" || body.type === "expense") {
       patch.type = body.type
+    }
+    if (body.description !== undefined) {
+      const d = String(body.description).trim().slice(0, 500)
+      patch.description = d.length > 0 ? d : "—"
     }
 
     const patchKeys = Object.keys(patch).filter((k) => k !== "updated_at")
@@ -300,13 +310,6 @@ export async function DELETE(req: NextRequest) {
     if (fetchErr) throw fetchErr
     if (!existing || String(existing.household_id) !== String(householdId)) {
       return NextResponse.json({ success: false, error: "Movimiento no encontrado" }, { status: 404 })
-    }
-
-    if (!/reconciliation_adjustment/i.test(String(existing.description ?? ""))) {
-      return NextResponse.json(
-        { success: false, error: "Solo se pueden eliminar ajustes de conciliación" },
-        { status: 400 },
-      )
     }
 
     const now = new Date().toISOString()
