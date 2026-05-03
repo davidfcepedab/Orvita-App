@@ -26,6 +26,10 @@ export type OrbitaNotificationPreferences = {
   mute_until_presion_critica: string | null
   mute_until_energia: string | null
   mute_until_habitos: string | null
+  /** 1–4 toques diarios repartidos entre digest_hour_local y reminder_hour_local. */
+  habit_reminder_slots: number
+  /** Si true, baja toques efectivos cada 7 días de mejor racha (mínimo 1). */
+  habit_reminder_auto_ease_on_streak: boolean
   updated_at?: string
 }
 
@@ -54,6 +58,8 @@ export const DEFAULT_NOTIFICATION_PREFS: Omit<OrbitaNotificationPreferences, "us
   mute_until_presion_critica: null,
   mute_until_energia: null,
   mute_until_habitos: null,
+  habit_reminder_slots: 1,
+  habit_reminder_auto_ease_on_streak: true,
 }
 
 export function mergePrefs(

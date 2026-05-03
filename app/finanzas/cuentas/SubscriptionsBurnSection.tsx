@@ -1,7 +1,8 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
-import { Ban, ChevronDown, Pause, Pencil, Plus } from "lucide-react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useSearchParams } from "next/navigation"
+import { Ban, ChevronDown, Pause, Pencil, Plus, Trash2 } from "lucide-react"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { UI_SUBSCRIPTIONS_LOCAL_STORAGE } from "@/lib/checkins/flags"
 import { financeApiDelete, financeApiGet, financeApiJson } from "@/lib/finanzas/financeClientFetch"
@@ -26,8 +27,20 @@ import {
   subscriptionPotentialSaving,
 } from "@/lib/finanzas/userSubscriptionsTypes"
 import { normalizeUserSubscription } from "@/lib/finanzas/userSubscriptionsNormalize"
+import { financeCardMicroLabelClass, financeSectionEyebrowClass } from "../_components/financeChrome"
 import { CuentasModalShell } from "./CuentasModalShell"
 import { arcticPanel, formatMoney } from "./cuentasFormat"
+import { cn } from "@/lib/utils"
+
+export type SubscriptionsBurnSectionProps = {
+  supabaseEnabled: boolean
+  baselineMonthlyIncome: number
+  onSubscriptionSimulatorMonthlyChange: (monthlyCOP: number) => void
+  bridgeHost?: boolean
+  accessDeepLinkEditor?: boolean
+  openManageSignal?: number
+  onSubscriptionsPersisted?: () => void
+}
 
 function newLocalId() {
   if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID()
@@ -122,11 +135,11 @@ export function SubscriptionsBurnSection({
   supabaseEnabled,
   baselineMonthlyIncome,
   onSubscriptionSimulatorMonthlyChange,
-}: {
-  supabaseEnabled: boolean
-  baselineMonthlyIncome: number
-  onSubscriptionSimulatorMonthlyChange: (monthlyCOP: number) => void
-}) {
+  bridgeHost = false,
+  accessDeepLinkEditor = true,
+  openManageSignal = 0,
+  onSubscriptionsPersisted,
+}: SubscriptionsBurnSectionProps) {
   const [rows, setRows] = useState<UserSubscription[]>([])
   const [loading, setLoading] = useState(true)
   const [saveErr, setSaveErr] = useState<string | null>(null)
@@ -136,6 +149,10 @@ export function SubscriptionsBurnSection({
   const [manageRows, setManageRows] = useState<SubManageRow[]>([])
   const [manageInitialIds, setManageInitialIds] = useState<Set<string>>(new Set())
   const [manageErr, setManageErr] = useState<string | null>(null)
+
+  const searchParams = useSearchParams()
+  const editorSubsConsumedRef = useRef(false)
+  const lastOpenManageSignalRef = useRef(0)
 
   const reload = useCallback(async () => {
     setLoading(true)
@@ -198,6 +215,30 @@ export function SubscriptionsBurnSection({
     setManageInitialIds(new Set(rows.map((r) => r.id)))
     setManageOpen(true)
   }
+
+  useEffect(() => {
+    if (!accessDeepLinkEditor) return
+    if (searchParams.get("editor") !== "suscripciones") {
+      editorSubsConsumedRef.current = false
+      return
+    }
+    if (loading || editorSubsConsumedRef.current) return
+    editorSubsConsumedRef.current = true
+    setManageErr(null)
+    setManageRows(rows.map(toManageRow))
+    setManageInitialIds(new Set(rows.map((r) => r.id)))
+    setManageOpen(true)
+  }, [accessDeepLinkEditor, loading, rows, searchParams])
+
+  useEffect(() => {
+    if (!openManageSignal || openManageSignal <= lastOpenManageSignalRef.current) return
+    if (loading) return
+    lastOpenManageSignalRef.current = openManageSignal
+    setManageErr(null)
+    setManageRows(rows.map(toManageRow))
+    setManageInitialIds(new Set(rows.map((r) => r.id)))
+    setManageOpen(true)
+  }, [openManageSignal, loading, rows])
 
   const openManageWithNewRow = () => {
     setManageErr(null)
@@ -300,6 +341,7 @@ export function SubscriptionsBurnSection({
         }
         await reload()
         setManageOpen(false)
+        onSubscriptionsPersisted?.()
       } catch (e) {
         setManageErr(e instanceof Error ? e.message : "No se pudieron guardar suscripciones")
       }
@@ -321,6 +363,7 @@ export function SubscriptionsBurnSection({
     }
     setRows(next.map((s) => normalizeUserSubscription(s)))
     setManageOpen(false)
+    onSubscriptionsPersisted?.()
   }
 
   const setStatus = async (s: UserSubscription, status: UserSubscription["status"]) => {
@@ -362,56 +405,78 @@ export function SubscriptionsBurnSection({
 
   const moreActiveThanTop = Math.max(0, activeSubscriptions.length - topBurnSubscriptions.length)
 
+  /** Una línea para vista colapsada: prioriza mayor gasto mensual. */
+  const collapsedSummaryText = useMemo(() => {
+    if (activeSubscriptions.length === 0) {
+      const anyRow = rows.length > 0
+      return anyRow
+        ? "Sin activas este mes: revisá pausadas/canceladas o reactivá desde la tabla."
+        : "Sin servicios registrados: agregá streaming, apps o membresías."
+    }
+    const sorted = [...activeSubscriptions].sort((a, b) => b.amount_monthly - a.amount_monthly)
+    const top = sorted.slice(0, 3).map((s) => s.name.trim()).filter(Boolean)
+    const rest = activeSubscriptions.length - top.length
+    const head = top.join(" · ")
+    return rest > 0 ? `${head} · +${rest} más` : head
+  }, [activeSubscriptions, rows.length])
+
   const freqLabel = (f: BillingFrequency) => BILLING_FREQUENCY_OPTIONS.find((o) => o.value === f)?.label ?? f
 
   return (
-    <section id="capital-suscripciones" className="scroll-mt-24 space-y-4">
+    <>
+    <section
+      id="capital-suscripciones"
+      className={cn("scroll-mt-24 space-y-4", bridgeHost && "hidden")}
+      aria-hidden={bridgeHost}
+    >
       <div className={arcticPanel}>
-        <div className="flex w-full items-start">
+        <div className="flex w-full items-stretch">
           <button
             type="button"
             onClick={() => setSubscriptionsExpanded((v) => !v)}
-            className="min-w-0 flex-1 touch-manipulation px-3 py-2.5 text-left sm:px-3.5 sm:py-3"
+            className="min-w-0 flex-1 touch-manipulation px-2 py-2 text-left sm:px-2.5 sm:py-2"
             aria-expanded={subscriptionsExpanded}
           >
             <div className="min-w-0">
-              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-orbita-secondary sm:text-sm">
-                  Suscripciones recurrentes
-                </h2>
+              <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5">
+                <h2 className={financeSectionEyebrowClass}>Suscripciones recurrentes</h2>
                 {!subscriptionsExpanded ? (
-                  <span className="text-[10px] text-orbita-secondary sm:text-[11px]">
-                    Pausar o cancelar reduce el gasto fijo.
+                  <span className="text-[10px] leading-tight text-orbita-muted sm:text-[11px]">
+                    Pausar o cancelar reduce lo fijo.
                   </span>
                 ) : (
-                  <span className="text-[10px] text-orbita-secondary sm:text-[11px]">Toca para colapsar.</span>
+                  <span className="text-[10px] leading-tight text-orbita-muted sm:text-[11px]">Toca para colapsar.</span>
                 )}
               </div>
 
               {!subscriptionsExpanded ? (
-                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 sm:justify-between">
-                  <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5">
-                    <p className="text-xl font-bold tabular-nums text-orbita-primary sm:text-2xl">
-                      ${formatMoney(monthlyBurn)}
+                <div className="mt-1.5 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto] sm:items-center sm:gap-3">
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0">
+                      <p className="text-lg font-bold tabular-nums leading-none text-orbita-primary sm:text-xl">
+                        ${formatMoney(monthlyBurn)}
+                      </p>
+                      <span className={cn(financeCardMicroLabelClass, "text-orbita-muted")}>/ mes</span>
+                      <span className="text-[11px] tabular-nums text-orbita-secondary">
+                        {activeSubscriptions.length === 0
+                          ? "Sin activas"
+                          : `${activeSubscriptions.length} activa${activeSubscriptions.length === 1 ? "" : "s"}`}
+                      </span>
+                    </div>
+                    <p className="line-clamp-2 text-[11px] leading-snug text-orbita-secondary [text-wrap:pretty]">
+                      <span className={cn(financeCardMicroLabelClass, "text-orbita-muted")}>Resumen · </span>
+                      {collapsedSummaryText}
                     </p>
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">
-                      / mes
-                    </span>
-                    <span className="text-[11px] text-orbita-secondary">
-                      {activeSubscriptions.length === 0
-                        ? "Sin activas"
-                        : `${activeSubscriptions.length} activa${activeSubscriptions.length === 1 ? "" : "s"}`}
-                    </span>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:flex-nowrap sm:justify-end">
                     {topBurnSubscriptions.length > 0 ? (
                       <div className="flex items-center" aria-hidden>
-                        <div className="flex shrink-0 -space-x-2 pl-0.5">
+                        <div className="flex shrink-0 -space-x-1.5 pl-0.5">
                           {topBurnSubscriptions.map((s) => (
                             <div
                               key={s.id}
-                              className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-white text-[10px] font-bold text-white shadow-sm ring-1 ring-orbita-border/40"
+                              className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-[color-mix(in_srgb,var(--color-surface)_88%,transparent)] text-[9px] font-bold text-white shadow-sm ring-1 ring-orbita-border/35 sm:h-8 sm:w-8 sm:text-[10px]"
                               style={{ background: avatarGradientForLabel(s.name) }}
                               title={s.name}
                             >
@@ -421,7 +486,7 @@ export function SubscriptionsBurnSection({
                         </div>
                         {moreActiveThanTop > 0 ? (
                           <span
-                            className="-ml-0.5 flex h-9 min-w-[2.25rem] items-center justify-center rounded-full border-2 border-white bg-orbita-surface-alt px-1.5 text-[10px] font-bold tabular-nums text-orbita-primary shadow-sm ring-1 ring-orbita-border/40"
+                            className="-ml-0.5 flex h-7 min-w-[1.75rem] items-center justify-center rounded-full border-2 border-[color-mix(in_srgb,var(--color-surface)_88%,transparent)] bg-orbita-surface-alt px-1 text-[9px] font-bold tabular-nums text-orbita-primary shadow-sm ring-1 ring-orbita-border/35 sm:h-8 sm:min-w-[2rem] sm:text-[10px]"
                             title={`${moreActiveThanTop} más`}
                           >
                             +{moreActiveThanTop}
@@ -429,15 +494,15 @@ export function SubscriptionsBurnSection({
                         ) : null}
                       </div>
                     ) : (
-                      <span className="rounded-full border border-dashed border-orbita-border/80 bg-orbita-surface-alt px-2.5 py-1 text-[10px] text-orbita-secondary">
+                      <span className="rounded-full border border-dashed border-orbita-border/70 bg-orbita-surface-alt/80 px-2 py-0.5 text-[10px] text-orbita-secondary">
                         Sin recurrentes
                       </span>
                     )}
 
                     {potentialSaving > 0 ? (
-                      <p className="text-xs font-semibold text-emerald-700 sm:text-sm">
+                      <p className="text-[10px] font-semibold text-emerald-700 sm:text-[11px]">
                         +${formatMoney(potentialSaving)}{" "}
-                        <span className="font-normal text-emerald-600/90">ahorro</span>
+                        <span className="font-normal text-emerald-700/85">ahorro</span>
                       </p>
                     ) : null}
                   </div>
@@ -445,25 +510,25 @@ export function SubscriptionsBurnSection({
               ) : null}
             </div>
           </button>
-          <div className="flex shrink-0 flex-col items-end gap-0.5 py-2 pr-2 sm:py-3 sm:pr-3">
+          <div className="flex shrink-0 flex-col items-end justify-between gap-0.5 border-l border-orbita-border/30 py-1.5 pl-1.5 pr-1.5 sm:py-2 sm:pl-2 sm:pr-2">
             <button
               type="button"
               onClick={() => {
                 setSubscriptionsExpanded(true)
                 openManage()
               }}
-              className="text-[11px] font-medium text-orbita-secondary underline decoration-orbita-border/80 underline-offset-4 hover:text-orbita-primary"
+              className="text-[10px] font-semibold text-orbita-secondary underline decoration-orbita-border/80 underline-offset-2 hover:text-orbita-primary sm:text-[11px]"
             >
               Editar
             </button>
             <button
               type="button"
               onClick={() => setSubscriptionsExpanded((v) => !v)}
-              className="rounded-lg p-1 text-orbita-secondary hover:bg-orbita-surface-alt"
+              className="rounded-md p-0.5 text-orbita-secondary hover:bg-orbita-surface-alt"
               aria-label={subscriptionsExpanded ? "Colapsar" : "Expandir"}
             >
               <ChevronDown
-                className={`h-5 w-5 transition-transform duration-200 ${subscriptionsExpanded ? "rotate-180" : ""}`}
+                className={`h-4 w-4 transition-transform duration-200 sm:h-[18px] sm:w-[18px] ${subscriptionsExpanded ? "rotate-180" : ""}`}
                 aria-hidden
               />
             </button>
@@ -651,51 +716,53 @@ export function SubscriptionsBurnSection({
       </div>
 
       {saveErr ? <p className="text-sm text-rose-600">{saveErr}</p> : null}
+    </section>
 
       <CuentasModalShell
         open={manageOpen}
         onClose={() => setManageOpen(false)}
-        title="Gestionar suscripciones"
-        subtitle="Tabla editable: costo según frecuencia, día de renovación (1–28) y categoría. Guarda para aplicar."
+        title="Suscripciones"
+        subtitle="Costo por frecuencia, día de renovación (1–28) y categoría. Guardá para aplicar."
         wide
+        compact
       >
-        <div className="max-h-[min(72vh,560px)] overflow-auto">
-          <table className="w-full min-w-[960px] border-collapse text-left text-[11px] sm:text-xs">
-            <thead className="sticky top-0 z-[1] border-b border-orbita-border bg-orbita-surface-alt">
-              <tr className="text-[9px] font-semibold uppercase tracking-wide text-orbita-secondary">
-                <th className="px-2 py-2">Nombre</th>
-                <th className="px-2 py-2">Categoría</th>
-                <th className="px-2 py-2">Frecuencia</th>
-                <th className="px-2 py-2">Costo</th>
-                <th className="px-2 py-2">Día ren.</th>
-                <th className="px-2 py-2">Días</th>
-                <th className="px-2 py-2">Renovación</th>
-                <th className="px-2 py-2">Impacto</th>
-                <th className="px-2 py-2">Sim.</th>
-                <th className="px-2 py-2">Estado</th>
-                <th className="px-2 py-2" />
-              </tr>
-            </thead>
-            <tbody>
-              {manageRows.map((row) => {
-                const monthlyEq = chargeToMonthly(row.chargeAtFrequency, row.billing_frequency)
-                const imp = impactLabel(monthlyEq, baselineMonthlyIncome)
-                const daysLeft = daysUntilRenewalFromDay(row.renewal_day)
-                const nextIso = nextRenewalIsoFromDay(row.renewal_day)
-                return (
-                  <tr key={row.id} className="border-b border-orbita-border/60 align-top">
-                    <td className="px-2 py-1.5">
-                      <input
-                        className="min-h-8 w-full min-w-[6rem] rounded-lg border border-orbita-border px-2 py-1"
-                        value={row.name}
-                        onChange={(e) =>
-                          setManageRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, name: e.target.value } : r)))
-                        }
-                      />
-                    </td>
-                    <td className="px-2 py-1.5">
+        <div className="max-h-[min(70vh,480px)] overflow-y-auto overflow-x-hidden md:max-h-[min(78vh,540px)]">
+          {/* Móvil: tarjetas apiladas, sin scroll horizontal */}
+          <div className="space-y-2 md:hidden">
+            {manageRows.map((row) => {
+              const monthlyEq = chargeToMonthly(row.chargeAtFrequency, row.billing_frequency)
+              const imp = impactLabel(monthlyEq, baselineMonthlyIncome)
+              const daysLeft = daysUntilRenewalFromDay(row.renewal_day)
+              const nextIso = nextRenewalIsoFromDay(row.renewal_day)
+              const nextShort = nextIso.slice(5).replace("-", "/")
+              return (
+                <div
+                  key={row.id}
+                  className="rounded-lg border border-orbita-border/70 bg-orbita-surface p-2.5 shadow-sm"
+                >
+                  <div className="flex min-w-0 items-start gap-2">
+                    <input
+                      className="h-8 min-h-8 min-w-0 flex-1 rounded-md border border-orbita-border/80 bg-orbita-surface px-2 text-[12px] text-orbita-primary placeholder:text-orbita-muted"
+                      placeholder="Nombre"
+                      value={row.name}
+                      onChange={(e) =>
+                        setManageRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, name: e.target.value } : r)))
+                      }
+                    />
+                    <button
+                      type="button"
+                      className="shrink-0 rounded-md p-1.5 text-orbita-muted hover:bg-orbita-surface-alt hover:text-rose-600"
+                      aria-label="Quitar suscripción"
+                      onClick={() => setManageRows((rs) => rs.filter((r) => r.id !== row.id))}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" strokeWidth={2} />
+                    </button>
+                  </div>
+                  <div className="mt-2 grid grid-cols-2 gap-x-2 gap-y-2">
+                    <div className="min-w-0">
+                      <span className={cn(financeCardMicroLabelClass, "text-orbita-muted")}>Categoría</span>
                       <select
-                        className="min-h-8 w-full min-w-[5.5rem] rounded-lg border border-orbita-border px-1 py-1"
+                        className="mt-0.5 h-8 w-full rounded-md border border-orbita-border/80 bg-orbita-surface px-1 text-[11px] text-orbita-primary"
                         value={row.category}
                         onChange={(e) =>
                           setManageRows((rs) =>
@@ -709,10 +776,11 @@ export function SubscriptionsBurnSection({
                           </option>
                         ))}
                       </select>
-                    </td>
-                    <td className="px-2 py-1.5">
+                    </div>
+                    <div className="min-w-0">
+                      <span className={cn(financeCardMicroLabelClass, "text-orbita-muted")}>Frecuencia</span>
                       <select
-                        className="min-h-8 w-full min-w-[5rem] rounded-lg border border-orbita-border px-1 py-1"
+                        className="mt-0.5 h-8 w-full rounded-md border border-orbita-border/80 bg-orbita-surface px-1 text-[11px] text-orbita-primary"
                         value={row.billing_frequency}
                         onChange={(e) =>
                           setManageRows((rs) =>
@@ -730,11 +798,13 @@ export function SubscriptionsBurnSection({
                           </option>
                         ))}
                       </select>
-                    </td>
-                    <td className="px-2 py-1.5">
+                    </div>
+                    <div className="min-w-0">
+                      <span className={cn(financeCardMicroLabelClass, "text-orbita-muted")}>Costo</span>
                       <input
                         type="number"
-                        className="min-h-8 w-full min-w-[4.5rem] rounded-lg border border-orbita-border px-2 py-1 tabular-nums"
+                        inputMode="numeric"
+                        className="mt-0.5 h-8 w-full rounded-md border border-orbita-border/80 bg-orbita-surface px-2 text-[11px] tabular-nums text-orbita-primary"
                         value={row.chargeAtFrequency || ""}
                         onChange={(e) =>
                           setManageRows((rs) =>
@@ -746,10 +816,11 @@ export function SubscriptionsBurnSection({
                           )
                         }
                       />
-                    </td>
-                    <td className="px-2 py-1.5">
+                    </div>
+                    <div className="min-w-0">
+                      <span className={cn(financeCardMicroLabelClass, "text-orbita-muted")}>Día ren.</span>
                       <select
-                        className="min-h-8 w-full rounded-lg border border-orbita-border px-1 py-1"
+                        className="mt-0.5 h-8 w-full rounded-md border border-orbita-border/80 bg-orbita-surface px-1 text-[11px] text-orbita-primary"
                         value={row.renewal_day}
                         onChange={(e) =>
                           setManageRows((rs) =>
@@ -765,19 +836,29 @@ export function SubscriptionsBurnSection({
                           </option>
                         ))}
                       </select>
-                    </td>
-                    <td className="px-2 py-1.5 text-right tabular-nums text-orbita-secondary">{daysLeft}</td>
-                    <td className="px-2 py-1.5 whitespace-nowrap text-orbita-secondary">
-                      {nextIso.slice(5).replace("-", "/")}
-                    </td>
-                    <td className="px-2 py-1.5">
-                      <span
-                        className={`inline-flex rounded-full border-[0.5px] px-1.5 py-0.5 text-[9px] font-semibold uppercase ${impactTone(imp)}`}
-                      >
-                        {imp}
-                      </span>
-                    </td>
-                    <td className="px-2 py-1.5 text-center">
+                    </div>
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-orbita-border/40 pt-2 text-[10px] tabular-nums text-orbita-secondary">
+                    <span>
+                      <span className="text-orbita-muted">Días: </span>
+                      {daysLeft}
+                    </span>
+                    <span className="text-orbita-border">·</span>
+                    <span>
+                      <span className="text-orbita-muted">Próx.: </span>
+                      {nextShort}
+                    </span>
+                    <span
+                      className={cn(
+                        "ml-auto inline-flex rounded-full border-[0.5px] px-1.5 py-0.5 text-[8px] font-semibold uppercase",
+                        impactTone(imp),
+                      )}
+                    >
+                      {imp}
+                    </span>
+                  </div>
+                  <div className="mt-2 space-y-1.5">
+                    <label className="flex cursor-pointer items-center gap-1.5 text-[10px] text-orbita-secondary">
                       <input
                         type="checkbox"
                         checked={row.include_in_simulator}
@@ -788,67 +869,233 @@ export function SubscriptionsBurnSection({
                             ),
                           )
                         }
-                        className="h-4 w-4 rounded border-orbita-border"
+                        className="h-3.5 w-3.5 shrink-0 rounded border-orbita-border"
                       />
-                    </td>
-                    <td className="px-2 py-1.5">
-                      <select
-                        className="min-h-8 w-full min-w-[4.5rem] rounded-lg border border-orbita-border px-1 py-1"
-                        value={row.status}
-                        onChange={(e) =>
-                          setManageRows((rs) =>
-                            rs.map((r) =>
-                              r.id === row.id ? { ...r, status: e.target.value as SubscriptionStatus } : r,
-                            ),
-                          )
-                        }
+                      Incl. en simulador
+                    </label>
+                    <select
+                      className="h-8 w-full rounded-md border border-orbita-border/80 bg-orbita-surface px-2 text-[11px] text-orbita-primary"
+                      value={row.status}
+                      onChange={(e) =>
+                        setManageRows((rs) =>
+                          rs.map((r) =>
+                            r.id === row.id ? { ...r, status: e.target.value as SubscriptionStatus } : r,
+                          ),
+                        )
+                      }
+                    >
+                      <option value="active">Activa</option>
+                      <option value="paused">Pausada</option>
+                      <option value="cancelled">Cancelada</option>
+                    </select>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* md+: tabla densa; scroll vertical solo */}
+          <div className="hidden md:block md:overflow-x-hidden">
+            <table className="w-full table-fixed border-collapse text-left text-[10px] sm:text-[11px]">
+              <thead className="sticky top-0 z-[1] border-b border-orbita-border/70 bg-[color-mix(in_srgb,var(--color-surface-alt)_92%,var(--color-surface))]">
+                <tr className="text-[8px] font-medium uppercase tracking-[0.06em] text-orbita-muted sm:text-[9px]">
+                  <th className="w-[14%] px-1 py-1.5 font-medium">Nombre</th>
+                  <th className="w-[11%] px-1 py-1.5 font-medium">Cat.</th>
+                  <th className="w-[11%] px-1 py-1.5 font-medium">Frec.</th>
+                  <th className="w-[10%] px-1 py-1.5 font-medium">Costo</th>
+                  <th className="w-[6%] px-1 py-1.5 font-medium">Día</th>
+                  <th className="w-[5%] px-1 py-1.5 text-right font-medium">D.</th>
+                  <th className="w-[9%] px-1 py-1.5 font-medium">Próx.</th>
+                  <th className="w-[9%] px-1 py-1.5 font-medium">Imp.</th>
+                  <th className="w-[5%] px-1 py-1.5 text-center font-medium">Sim</th>
+                  <th className="w-[12%] px-1 py-1.5 font-medium">Estado</th>
+                  <th className="w-7 px-0 py-1.5 sm:w-8" aria-hidden />
+                </tr>
+              </thead>
+              <tbody>
+                {manageRows.map((row) => {
+                  const monthlyEq = chargeToMonthly(row.chargeAtFrequency, row.billing_frequency)
+                  const imp = impactLabel(monthlyEq, baselineMonthlyIncome)
+                  const daysLeft = daysUntilRenewalFromDay(row.renewal_day)
+                  const nextIso = nextRenewalIsoFromDay(row.renewal_day)
+                  return (
+                    <tr key={row.id} className="border-b border-orbita-border/40 align-top last:border-0">
+                      <td className="px-1 py-1">
+                        <input
+                          className="h-8 w-full min-w-0 truncate rounded-md border border-orbita-border/80 bg-orbita-surface px-1.5 text-[10px] text-orbita-primary sm:text-[11px]"
+                          value={row.name}
+                          title={row.name}
+                          onChange={(e) =>
+                            setManageRows((rs) =>
+                              rs.map((r) => (r.id === row.id ? { ...r, name: e.target.value } : r)),
+                            )
+                          }
+                        />
+                      </td>
+                      <td className="px-1 py-1">
+                        <select
+                          className="h-8 w-full min-w-0 rounded-md border border-orbita-border/80 bg-orbita-surface px-0.5 text-[10px] text-orbita-primary sm:text-[11px]"
+                          value={row.category}
+                          onChange={(e) =>
+                            setManageRows((rs) =>
+                              rs.map((r) => (r.id === row.id ? { ...r, category: e.target.value } : r)),
+                            )
+                          }
+                        >
+                          {SUBSCRIPTION_CATEGORIES.map((c) => (
+                            <option key={c} value={c}>
+                              {c}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-1 py-1">
+                        <select
+                          className="h-8 w-full min-w-0 rounded-md border border-orbita-border/80 bg-orbita-surface px-0.5 text-[10px] text-orbita-primary sm:text-[11px]"
+                          value={row.billing_frequency}
+                          onChange={(e) =>
+                            setManageRows((rs) =>
+                              rs.map((r) =>
+                                r.id === row.id
+                                  ? { ...r, billing_frequency: e.target.value as BillingFrequency }
+                                  : r,
+                              ),
+                            )
+                          }
+                        >
+                          {BILLING_FREQUENCY_OPTIONS.map((o) => (
+                            <option key={o.value} value={o.value}>
+                              {o.label}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-1 py-1">
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          className="h-8 w-full min-w-0 rounded-md border border-orbita-border/80 bg-orbita-surface px-1 text-[10px] tabular-nums text-orbita-primary sm:text-[11px]"
+                          value={row.chargeAtFrequency || ""}
+                          onChange={(e) =>
+                            setManageRows((rs) =>
+                              rs.map((r) =>
+                                r.id === row.id
+                                  ? { ...r, chargeAtFrequency: Math.max(0, Number(e.target.value)) }
+                                  : r,
+                              ),
+                            )
+                          }
+                        />
+                      </td>
+                      <td className="px-1 py-1">
+                        <select
+                          className="h-8 w-full min-w-0 rounded-md border border-orbita-border/80 bg-orbita-surface px-0.5 text-[10px] text-orbita-primary sm:text-[11px]"
+                          value={row.renewal_day}
+                          onChange={(e) =>
+                            setManageRows((rs) =>
+                              rs.map((r) =>
+                                r.id === row.id ? { ...r, renewal_day: Number(e.target.value) } : r,
+                              ),
+                            )
+                          }
+                        >
+                          {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
+                            <option key={d} value={d}>
+                              {d}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-1 py-1 text-right tabular-nums text-[10px] text-orbita-secondary sm:text-[11px]">
+                        {daysLeft}
+                      </td>
+                      <td
+                        className="max-w-0 overflow-hidden truncate px-1 py-1 text-[10px] text-orbita-secondary sm:text-[11px]"
+                        title={nextIso}
                       >
-                        <option value="active">Activa</option>
-                        <option value="paused">Pausada</option>
-                        <option value="cancelled">Cancelada</option>
-                      </select>
-                    </td>
-                    <td className="px-2 py-1.5">
-                      <button
-                        type="button"
-                        className="text-[10px] text-rose-600 underline"
-                        onClick={() => setManageRows((rs) => rs.filter((r) => r.id !== row.id))}
-                      >
-                        Quitar
-                      </button>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                        {nextIso.slice(5).replace("-", "/")}
+                      </td>
+                      <td className="px-1 py-1">
+                        <span
+                          className={`inline-flex max-w-full truncate rounded-full border-[0.5px] px-1 py-0.5 text-[7px] font-semibold uppercase sm:text-[8px] ${impactTone(imp)}`}
+                        >
+                          {imp}
+                        </span>
+                      </td>
+                      <td className="px-1 py-1 text-center">
+                        <input
+                          type="checkbox"
+                          checked={row.include_in_simulator}
+                          onChange={(e) =>
+                            setManageRows((rs) =>
+                              rs.map((r) =>
+                                r.id === row.id ? { ...r, include_in_simulator: e.target.checked } : r,
+                              ),
+                            )
+                          }
+                          className="h-3.5 w-3.5 rounded border-orbita-border"
+                        />
+                      </td>
+                      <td className="px-1 py-1">
+                        <select
+                          className="h-8 w-full min-w-0 rounded-md border border-orbita-border/80 bg-orbita-surface px-0.5 text-[10px] text-orbita-primary sm:text-[11px]"
+                          value={row.status}
+                          onChange={(e) =>
+                            setManageRows((rs) =>
+                              rs.map((r) =>
+                                r.id === row.id ? { ...r, status: e.target.value as SubscriptionStatus } : r,
+                              ),
+                            )
+                          }
+                        >
+                          <option value="active">Activa</option>
+                          <option value="paused">Pausada</option>
+                          <option value="cancelled">Cancelada</option>
+                        </select>
+                      </td>
+                      <td className="px-0 py-1 text-center">
+                        <button
+                          type="button"
+                          className="inline-flex rounded-md p-1 text-orbita-muted hover:bg-orbita-surface-alt hover:text-rose-600"
+                          aria-label="Quitar fila"
+                          onClick={() => setManageRows((rs) => rs.filter((r) => r.id !== row.id))}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" strokeWidth={2} />
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
-        {manageErr ? <p className="mt-2 text-sm text-rose-600">{manageErr}</p> : null}
-        <p className="mt-2 text-[10px] text-orbita-secondary">
-          Equiv. mensual total (activas en esta tabla): $
+        {manageErr ? <p className="mt-2 text-[11px] leading-snug text-rose-600 sm:text-xs">{manageErr}</p> : null}
+        <p className="mt-1.5 text-[10px] leading-snug text-orbita-muted sm:text-[11px]">
+          Equiv. mensual activas: $
           {formatMoney(
             manageRows
               .filter((r) => r.status === "active")
               .reduce((a, r) => a + chargeToMonthly(r.chargeAtFrequency, r.billing_frequency), 0),
           )}
         </p>
-        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-between">
+        <div className="mt-3 flex flex-col gap-2 border-t border-orbita-border/50 pt-3 sm:flex-row sm:items-center sm:justify-between">
           <button
             type="button"
             onClick={addManageRow}
-            className="min-h-[44px] touch-manipulation rounded-xl border border-orbita-border bg-orbita-surface px-4 py-2.5 text-sm font-medium hover:bg-orbita-surface-alt"
+            className="h-9 touch-manipulation rounded-md border border-orbita-border/80 bg-orbita-surface px-3 text-xs font-medium text-orbita-primary hover:bg-orbita-surface-alt"
           >
-            + Agregar fila
+            + Fila
           </button>
           <button
             type="button"
             onClick={() => void saveManage()}
-            className="min-h-[44px] touch-manipulation rounded-xl bg-[var(--color-text-primary)] px-5 py-2.5 text-sm font-semibold text-[var(--color-surface)] active:opacity-90"
+            className="h-9 touch-manipulation rounded-md bg-[var(--color-text-primary)] px-4 text-xs font-semibold text-[var(--color-surface)] active:opacity-90"
           >
-            Guardar cambios
+            Guardar
           </button>
         </div>
       </CuentasModalShell>
-    </section>
+    </>
   )
 }

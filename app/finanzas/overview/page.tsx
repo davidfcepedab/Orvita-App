@@ -1,6 +1,5 @@
 "use client"
 
-import Link from "next/link"
 import type { CSSProperties } from "react"
 import { useEffect, useRef, useState } from "react"
 import { useFinance } from "../FinanceContext"
@@ -16,6 +15,7 @@ import {
   Zap,
 } from "lucide-react"
 import { CapitalOverviewStrategicDeck } from "../_components/CapitalOverviewStrategicDeck"
+import { OverviewCuentasEditorsBridge } from "../_components/OverviewCuentasEditorsBridge"
 import {
   financeCardMicroLabelClass,
   financeHeroChipBaseClass,
@@ -31,7 +31,7 @@ import { rechartsTooltipContentStyle } from "@/lib/charts/rechartsShared"
 import { UI_FINANCE_DEMO_MONTH } from "@/lib/checkins/flags"
 import { financeApiGet } from "@/lib/finanzas/financeClientFetch"
 import { dayFromIso, isoDateInMonth } from "@/lib/finanzas/commitmentAnchorDate"
-import { formatLocalDateWeekdayShortDayMonthEsCo, localDateKeyFromIso } from "@/lib/agenda/localDateKey"
+import { localDateKeyFromIso } from "@/lib/agenda/localDateKey"
 import type { FlowCommitment } from "@/lib/finanzas/flowCommitmentsTypes"
 import { readFlowCommitmentsFromLocalStorage } from "@/lib/finanzas/flowCommitmentsLocal"
 import { subscriptionActiveBurn, type UserSubscription } from "@/lib/finanzas/userSubscriptionsTypes"
@@ -133,10 +133,21 @@ interface OverviewResponse {
   source?: string
 }
 
-function formatCommitmentDayEs(isoDate: string) {
+/** Día del mes va aparte; aquí solo mescla semana + mes en UTC (mismo ancla que Cuentas) sin repetir el día. */
+function formatCommitmentAnchorHintEs(isoDate: string) {
   const key = localDateKeyFromIso(isoDate) ?? (isoDate.length >= 10 ? isoDate.slice(0, 10) : "")
   if (key.length < 10) return "—"
-  return formatLocalDateWeekdayShortDayMonthEsCo(key)
+  const [ys, ms, ds] = key.split("-").map(Number)
+  if (!ys || !ms || !ds) return "—"
+  const civilNoon = new Date(Date.UTC(ys, ms - 1, ds, 12, 0, 0))
+  if (Number.isNaN(civilNoon.getTime())) return "—"
+  const wd = new Intl.DateTimeFormat("es-CO", { timeZone: "UTC", weekday: "short" })
+    .format(civilNoon)
+    .replace(/\.$/, "")
+  const mo = new Intl.DateTimeFormat("es-CO", { timeZone: "UTC", month: "short" })
+    .format(civilNoon)
+    .replace(/\.$/, "")
+  return `${wd} · ${mo}`
 }
 
 function isIncomeCommitmentRow(c: FlowCommitment) {
@@ -387,6 +398,8 @@ export default function FinanzasOverview() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [flowChartCompact, setFlowChartCompact] = useState(false)
+  const [overviewSubsEditorTick, setOverviewSubsEditorTick] = useState(0)
+  const [overviewCommitmentsEditorTick, setOverviewCommitmentsEditorTick] = useState(0)
   const [lsCommitments, setLsCommitments] = useState<FlowCommitment[]>([])
   const fetchSeq = useRef(0)
   const capitalEpoch = finance?.capitalDataEpoch ?? 0
@@ -1113,37 +1126,67 @@ export default function FinanzasOverview() {
         </div>
       </Card>
 
-      <div className="grid min-w-0 max-w-full grid-cols-1 gap-4 md:grid-cols-2 md:gap-5 lg:gap-6">
-        <Card className={cn(financeRaisedPanelClass, "min-w-0 overflow-hidden p-0")}>
-          <div className="grid min-w-0 max-w-full gap-3 p-4 sm:gap-3.5 sm:p-5">
-            <div className="flex min-w-0 items-start justify-between gap-3">
-              <div className="min-w-0 flex-1 pr-1">
+      <div className="min-w-0 max-w-full space-y-4 md:space-y-5">
+        <div className="grid min-w-0 max-w-full grid-cols-1 gap-4 md:grid-cols-2 md:gap-5 lg:gap-6">
+          <details className="group min-w-0 max-w-full" open>
+            <summary
+              className={cn(
+                "flex cursor-pointer list-none items-start gap-2 rounded-lg border border-orbita-border/45 bg-orbita-surface-alt/25 px-3 py-2.5 sm:gap-3 sm:px-3.5 sm:py-3",
+                "[&::-webkit-details-marker]:hidden",
+              )}
+            >
+              <ChevronDown
+                className="mt-0.5 h-4 w-4 shrink-0 text-orbita-secondary transition-transform duration-200 group-open:rotate-180"
+                aria-hidden
+              />
+              <div className="min-w-0 flex-1 text-left">
                 <p className={financeCardMicroLabelClass}>Suscripciones</p>
-                <p className={cn(financeSectionIntroClass, "mt-0.5 text-orbita-secondary")}>
-                  Lista recurrente (Capital → Cuentas).
+                <p className="mt-0.5 text-xs font-semibold tabular-nums tracking-tight text-orbita-primary sm:text-sm">
+                  ${formatMoney(managedTotal)} / mes
+                  <span className="font-normal text-orbita-secondary">
+                    {" · "}
+                    {managedActive.length === 0 ? "0 activas" : `${managedActive.length} activa${managedActive.length === 1 ? "" : "s"}`}
+                    {subscriptionBurnPct != null ? ` · ${subscriptionBurnPct}% del ingreso` : ""}
+                  </span>
+                </p>
+                <p className={cn(financeSectionIntroClass, "mt-1 line-clamp-2 text-orbita-secondary")}>
+                  {subscriptionPulse.hint}
                 </p>
               </div>
-              <div className="flex shrink-0 flex-col items-end gap-1">
+              <div className="flex shrink-0 flex-col items-end gap-1.5">
                 {(() => {
                   const Icon = subscriptionPulse.Icon
                   return (
-                    <span className={cn(subscriptionPulse.chipClass, "inline-flex items-center gap-1.5")}>
+                    <span
+                      className={cn(
+                        subscriptionPulse.chipClass,
+                        "inline-flex max-w-[9.5rem] items-center gap-1 truncate sm:max-w-[11rem]",
+                      )}
+                    >
                       <Icon className="h-3 w-3 shrink-0 opacity-90" aria-hidden strokeWidth={2.25} />
-                      {subscriptionPulse.chip}
+                      <span className="truncate">{subscriptionPulse.chip}</span>
                     </span>
                   )
                 })()}
-                <Link
-                  href="/finanzas/cuentas#capital-suscripciones"
-                  className="inline-flex items-center gap-1 text-[10px] font-semibold text-[var(--color-accent-finance)] underline-offset-4 transition hover:underline"
-                  prefetch={false}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    setOverviewSubsEditorTick((n) => n + 1)
+                  }}
+                  className="inline-flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0 text-[10px] font-semibold text-[var(--color-accent-finance)] underline-offset-4 transition hover:underline"
                 >
                   Editar
                   <ArrowRight className="h-3 w-3 opacity-80" aria-hidden />
-                </Link>
+                </button>
               </div>
-            </div>
-            <p className="text-[11px] leading-snug text-orbita-secondary [text-wrap:pretty]">{subscriptionPulse.hint}</p>
+            </summary>
+
+            <Card className={cn(financeRaisedPanelClass, "mt-2 min-w-0 overflow-hidden p-0")}>
+              <div className="grid min-w-0 max-w-full gap-3 p-4 sm:gap-3.5 sm:p-5">
+                <p className={cn(financeSectionIntroClass, "text-orbita-muted")}>
+                  Lista en Cuentas (Capital). Desplegá para ver totales, tabla y patrones.
+                </p>
 
             <div className="space-y-2 border-b border-orbita-border/45 pb-2">
               <div className="flex items-baseline justify-between gap-3">
@@ -1185,14 +1228,14 @@ export default function FinanzasOverview() {
                       <p className="mt-1 text-[11px] leading-snug text-orbita-secondary">
                         Hay ~{formatMoney(subsTotal)} COP en movimientos tipo suscripción. Pasa la lista a Cuentas y el total mensual queda cerrado.
                       </p>
-                      <Link
-                        href="/finanzas/cuentas#capital-suscripciones"
-                        className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-amber-800 underline-offset-4 hover:underline dark:text-amber-200"
-                        prefetch={false}
+                      <button
+                        type="button"
+                        onClick={() => setOverviewSubsEditorTick((n) => n + 1)}
+                        className="mt-2 inline-flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0 text-left text-[11px] font-semibold text-amber-800 underline-offset-4 hover:underline dark:text-amber-200"
                       >
                         Registrar ahora
                         <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-                      </Link>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1207,14 +1250,14 @@ export default function FinanzasOverview() {
                       <p className="mt-1 text-[11px] leading-snug text-orbita-secondary">
                         Aún no hay ítems registrados. Agrega streaming, apps y membresías para medir cuánto pesa lo fijo sobre tu mes.
                       </p>
-                      <Link
-                        href="/finanzas/cuentas#capital-suscripciones"
-                        className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--color-accent-finance)] underline-offset-4 hover:underline"
-                        prefetch={false}
+                      <button
+                        type="button"
+                        onClick={() => setOverviewSubsEditorTick((n) => n + 1)}
+                        className="mt-2 inline-flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0 text-left text-[11px] font-semibold text-[var(--color-accent-finance)] underline-offset-4 hover:underline"
                       >
                         Ir a suscripciones
                         <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-                      </Link>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1297,37 +1340,84 @@ export default function FinanzasOverview() {
             </details>
           </div>
         </Card>
+          </details>
 
-        <Card className={cn(financeRaisedPanelClass, "min-w-0 overflow-hidden p-0")}>
-          <div className="grid min-w-0 max-w-full gap-3 p-4 sm:gap-3.5 sm:p-5">
-            <div className="flex min-w-0 items-start justify-between gap-3">
-              <div className="min-w-0 flex-1 pr-1">
+          <details className="group min-w-0 max-w-full" open>
+            <summary
+              className={cn(
+                "flex cursor-pointer list-none items-start gap-2 rounded-lg border border-orbita-border/45 bg-orbita-surface-alt/25 px-3 py-2.5 sm:gap-3 sm:px-3.5 sm:py-3",
+                "[&::-webkit-details-marker]:hidden",
+              )}
+            >
+              <ChevronDown
+                className="mt-0.5 h-4 w-4 shrink-0 text-orbita-secondary transition-transform duration-200 group-open:rotate-180"
+                aria-hidden
+              />
+              <div className="min-w-0 flex-1 text-left">
                 <p className={financeCardMicroLabelClass}>Compromisos</p>
-                <p className={cn(financeSectionIntroClass, "mt-0.5 text-orbita-secondary")}>
-                  {supabaseEnabled ? "Simulador en Cuentas (hogar)." : "Simulador en Cuentas (este dispositivo)."}
+                <p className="mt-0.5 text-xs font-semibold tabular-nums tracking-tight sm:text-sm">
+                  {commitmentsSorted.length === 0 ? (
+                    <span className="text-orbita-secondary">
+                      Sin ítems en lista
+                      {obls.length > 0 ? ` · ${obls.length} sugerencia${obls.length === 1 ? "" : "s"}` : ""}
+                    </span>
+                  ) : (
+                    <>
+                      <span
+                        className={
+                          commitmentsNetMonthly >= 0
+                            ? "text-[var(--color-accent-health)]"
+                            : "text-[var(--color-accent-danger)]"
+                        }
+                      >
+                        {commitmentsNetMonthly >= 0 ? "+" : ""}${formatMoney(commitmentsNetMonthly)}
+                      </span>
+                      <span className="font-normal text-orbita-secondary">
+                        {" · neto del mes · "}
+                        {commitmentsSorted.length} compromiso{commitmentsSorted.length === 1 ? "" : "s"}
+                      </span>
+                    </>
+                  )}
+                </p>
+                <p className={cn(financeSectionIntroClass, "mt-1 line-clamp-2 text-orbita-secondary")}>
+                  {commitmentPulse.hint}
                 </p>
               </div>
-              <div className="flex shrink-0 flex-col items-end gap-1">
+              <div className="flex shrink-0 flex-col items-end gap-1.5">
                 {(() => {
                   const Icon = commitmentPulse.Icon
                   return (
-                    <span className={cn(commitmentPulse.chipClass, "inline-flex items-center gap-1.5")}>
+                    <span
+                      className={cn(
+                        commitmentPulse.chipClass,
+                        "inline-flex max-w-[9.5rem] items-center gap-1 truncate sm:max-w-[11rem]",
+                      )}
+                    >
                       <Icon className="h-3 w-3 shrink-0 opacity-90" aria-hidden strokeWidth={2.25} />
-                      {commitmentPulse.chip}
+                      <span className="truncate">{commitmentPulse.chip}</span>
                     </span>
                   )
                 })()}
-                <Link
-                  href="/finanzas/cuentas#capital-compromisos"
-                  className="inline-flex items-center gap-1 text-[10px] font-semibold text-[var(--color-accent-finance)] underline-offset-4 transition hover:underline"
-                  prefetch={false}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    setOverviewCommitmentsEditorTick((n) => n + 1)
+                  }}
+                  className="inline-flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0 text-[10px] font-semibold text-[var(--color-accent-finance)] underline-offset-4 transition hover:underline"
                 >
                   Editar
                   <ArrowRight className="h-3 w-3 opacity-80" aria-hidden />
-                </Link>
+                </button>
               </div>
-            </div>
-            <p className="text-[11px] leading-snug text-orbita-secondary [text-wrap:pretty]">{commitmentPulse.hint}</p>
+            </summary>
+
+            <Card className={cn(financeRaisedPanelClass, "mt-2 min-w-0 overflow-hidden p-0")}>
+              <div className="grid min-w-0 max-w-full gap-3 p-4 sm:gap-3.5 sm:p-5">
+                <p className={cn(financeSectionIntroClass, "text-orbita-muted")}>
+                  {supabaseEnabled ? "Simulador en Cuentas (hogar)." : "Simulador en Cuentas (este dispositivo)."} Desplegá
+                  para ver impacto, tabla y sugerencias.
+                </p>
 
             <div className="space-y-2 border-b border-orbita-border/45 pb-2">
               <div className="flex items-baseline justify-between gap-3">
@@ -1382,14 +1472,14 @@ export default function FinanzasOverview() {
                       <p className="mt-1 text-[11px] leading-snug text-orbita-secondary">
                         Movimientos marcan gastos fijos que aún no están en tu simulador. Cópialos y sumas previsión sin adivinar.
                       </p>
-                      <Link
-                        href="/finanzas/cuentas#capital-compromisos"
-                        className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-amber-800 underline-offset-4 hover:underline dark:text-amber-200"
-                        prefetch={false}
+                      <button
+                        type="button"
+                        onClick={() => setOverviewCommitmentsEditorTick((n) => n + 1)}
+                        className="mt-2 inline-flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0 text-left text-[11px] font-semibold text-amber-800 underline-offset-4 hover:underline dark:text-amber-200"
                       >
                         Abrir simulador
                         <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-                      </Link>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1404,14 +1494,14 @@ export default function FinanzasOverview() {
                       <p className="mt-1 text-[11px] leading-snug text-orbita-secondary">
                         Carga arriendo, cuotas, colegiatura o cobros esperados: verás el impacto neto del mes antes de que pase.
                       </p>
-                      <Link
-                        href="/finanzas/cuentas#capital-compromisos"
-                        className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--color-accent-finance)] underline-offset-4 hover:underline"
-                        prefetch={false}
+                      <button
+                        type="button"
+                        onClick={() => setOverviewCommitmentsEditorTick((n) => n + 1)}
+                        className="mt-2 inline-flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0 text-left text-[11px] font-semibold text-[var(--color-accent-finance)] underline-offset-4 hover:underline"
                       >
                         Configurar compromisos
                         <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-                      </Link>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1455,9 +1545,11 @@ export default function FinanzasOverview() {
                             <span className="line-clamp-2 font-medium text-orbita-primary">{label}</span>
                             {sub ? <span className="mt-0.5 block line-clamp-1 text-[10px] text-orbita-muted">{sub}</span> : null}
                           </td>
-                          <td className="whitespace-nowrap px-2 py-1.5 align-top tabular-nums text-orbita-secondary sm:px-2.5">
-                            <span className="block">{c.dueDay ?? "—"}</span>
-                            <span className="block text-[10px] text-orbita-muted">{formatCommitmentDayEs(c.date)}</span>
+                          <td className="min-w-0 max-w-[7.5rem] px-2 py-1.5 align-top text-orbita-secondary sm:max-w-[10rem] sm:px-2.5">
+                            <span className="block tabular-nums">{c.dueDay ?? "—"}</span>
+                            <span className="mt-0.5 block text-[10px] leading-snug text-orbita-muted [text-wrap:balance]">
+                              {formatCommitmentAnchorHintEs(c.date)}
+                            </span>
                           </td>
                           <td
                             className={cn(
@@ -1517,7 +1609,19 @@ export default function FinanzasOverview() {
             </details>
           </div>
         </Card>
+          </details>
+        </div>
       </div>
+
+      <OverviewCuentasEditorsBridge
+        month={month}
+        supabaseEnabled={supabaseEnabled}
+        baselineMonthlyIncome={Math.max(1, Math.round(income * 0.04))}
+        subscriptionFixedMonthly={managedTotal}
+        subscriptionsOpenSignal={overviewSubsEditorTick}
+        commitmentsOpenSignal={overviewCommitmentsEditorTick}
+        onPersist={() => finance?.touchCapitalData()}
+      />
     </div>
   )
 }

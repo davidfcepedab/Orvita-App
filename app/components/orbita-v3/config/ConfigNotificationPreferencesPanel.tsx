@@ -244,6 +244,8 @@ export function ConfigNotificationPreferencesPanel({
         mute_until_presion_critica: draft.mute_until_presion_critica,
         mute_until_energia: draft.mute_until_energia,
         mute_until_habitos: draft.mute_until_habitos,
+        habit_reminder_slots: draft.habit_reminder_slots,
+        habit_reminder_auto_ease_on_streak: draft.habit_reminder_auto_ease_on_streak,
       }
       const res = await fetch("/api/notifications/preferences", {
         method: "PATCH",
@@ -324,11 +326,52 @@ export function ConfigNotificationPreferencesPanel({
           <ToggleRow
             theme={theme}
             label="Hábitos pendientes"
-            description="Por la mañana, si te faltan hábitos previstos para hoy."
+            description="Toques repartidos entre la hora del resumen y la del recordatorio del día. Con 2+ toques, el agua solo avisa si vas rezagado respecto al % esperado en cada franja (en el último toque, si falta meta)."
             checked={draft.push_habit_reminder}
             disabled={disabled || !draft.push_enabled_global}
             onChange={(v) => update({ push_habit_reminder: v })}
           />
+          {draft.push_habit_reminder && draft.push_enabled_global ? (
+            <div
+              className="rounded-lg border p-2.5 sm:p-3"
+              style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt }}
+            >
+              <p className="text-[11px] font-semibold leading-snug" style={{ color: theme.text }}>
+                Toques de hábitos por día
+              </p>
+              <p className="mt-0.5 text-[10px] leading-snug sm:text-[11px]" style={{ color: theme.textMuted }}>
+                Elegí cuántas veces al día (máx. 4). Con racha fuerte podés bajar toques automáticamente abajo.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {([1, 2, 3, 4] as const).map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => update({ habit_reminder_slots: n })}
+                    className="min-w-[2.5rem] rounded-lg border px-2.5 py-1 text-[12px] font-semibold transition-opacity hover:opacity-90 disabled:opacity-50"
+                    style={{
+                      borderColor: theme.border,
+                      backgroundColor: draft.habit_reminder_slots === n ? theme.accent.health : theme.surface,
+                      color: draft.habit_reminder_slots === n ? "#fff" : theme.text,
+                    }}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-3">
+                <ToggleRow
+                  theme={theme}
+                  label="Bajar toques con la racha"
+                  description="Cada 7 días de tu mejor racha entre hábitos de hoy, bajamos un toque (sin bajar de 1). Podés apagarlo si preferís siempre el número elegido."
+                  checked={draft.habit_reminder_auto_ease_on_streak}
+                  disabled={disabled}
+                  onChange={(v) => update({ habit_reminder_auto_ease_on_streak: v })}
+                />
+              </div>
+            </div>
+          ) : null}
           <ToggleRow
             theme={theme}
             label="Compromisos en casa"
@@ -401,7 +444,7 @@ export function ConfigNotificationPreferencesPanel({
 
       <div className="grid gap-2 sm:grid-cols-2">
         <div>
-          <FieldLabel theme={theme}>Hora del recordatorio del día</FieldLabel>
+          <FieldLabel theme={theme}>Hora fin de hábitos (último toque)</FieldLabel>
           <select
             className="mt-1 w-full rounded-lg border px-2 py-1.5 text-[13px]"
             style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt, color: theme.text }}
@@ -417,7 +460,7 @@ export function ConfigNotificationPreferencesPanel({
           </select>
         </div>
         <div>
-          <FieldLabel theme={theme}>Hora del resumen de la mañana y hábitos</FieldLabel>
+          <FieldLabel theme={theme}>Hora inicio de hábitos (primer toque)</FieldLabel>
           <select
             className="mt-1 w-full rounded-lg border px-2 py-1.5 text-[13px]"
             style={{ borderColor: theme.border, backgroundColor: theme.surfaceAlt, color: theme.text }}

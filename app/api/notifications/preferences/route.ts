@@ -30,6 +30,8 @@ const PATCH_KEYS = new Set([
   "mute_until_presion_critica",
   "mute_until_energia",
   "mute_until_habitos",
+  "habit_reminder_slots",
+  "habit_reminder_auto_ease_on_streak",
 ] as const)
 
 type PatchKey = (typeof PATCH_KEYS extends Set<infer U> ? U : never) & string
@@ -166,6 +168,18 @@ function parsePrefsPatch(
         if (typeof v !== "number" || !Number.isInteger(v) || v < 0 || v > 23) {
           return { error: `${k} debe ser null o entero 0–23` }
         }
+        out[k] = v
+        break
+      }
+      case "habit_reminder_slots": {
+        if (typeof v !== "number" || !Number.isInteger(v) || v < 1 || v > 4) {
+          return { error: "habit_reminder_slots debe ser entero 1–4" }
+        }
+        out[k] = v
+        break
+      }
+      case "habit_reminder_auto_ease_on_streak": {
+        if (typeof v !== "boolean") return { error: "habit_reminder_auto_ease_on_streak debe ser booleano" }
         out[k] = v
         break
       }

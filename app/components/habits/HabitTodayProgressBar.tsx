@@ -17,6 +17,8 @@ type Props = {
   visualVariant?: VisualVariant
   /** En mega tarjeta: barra oro–violeta–verde para súper hábitos (solo con `orbitaFlex`). */
   orbitaTone?: OrbitaTone
+  /** Oculta el pie de texto; útil si el caption va fuera (p. ej. alinear barra + botón en una fila). */
+  omitCaption?: boolean
 }
 
 function fillForKind(
@@ -67,6 +69,7 @@ export function HabitTodayProgressBar({
   className,
   visualVariant = "default",
   orbitaTone = "standard",
+  omitCaption = false,
 }: Props) {
   const orbita = visualVariant === "orbitaFlex"
   const superLux = orbita && orbitaTone === "super"
@@ -126,7 +129,7 @@ export function HabitTodayProgressBar({
           />
         )}
       </div>
-      {caption ? (
+      {caption && !omitCaption ? (
         <p
           className={cn(
             "m-0 mt-1 truncate leading-tight text-[var(--color-text-secondary)]",

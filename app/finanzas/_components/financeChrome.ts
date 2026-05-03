@@ -43,6 +43,18 @@ export const financeSectionIntroClass =
 export const financeCardHintClass =
   "mt-0.5 w-full min-w-0 max-w-full text-pretty text-[11px] leading-relaxed text-orbita-muted [overflow-wrap:anywhere] sm:text-xs"
 
+/** Valor numérico principal en tarjetas KPI (Cuentas, Resumen). */
+export const financeKpiValueClass =
+  "mt-3 text-xl font-semibold tabular-nums tracking-tight text-orbita-primary sm:text-2xl"
+
+/** Texto secundario bajo el valor KPI (misma escala que intros de sección). */
+export const financeKpiSubtextClass =
+  "mt-2 w-full min-w-0 max-w-full text-pretty text-[11px] leading-relaxed text-orbita-secondary [overflow-wrap:anywhere] sm:text-xs"
+
+/** Listas y filas compactas (ledger Cuentas, celdas secundarias). */
+export const financeDenseBodyClass =
+  "text-[11px] leading-snug text-orbita-primary [overflow-wrap:anywhere] sm:text-xs"
+
 /** Rótulos compactos dentro de tarjetas KPI / métricas (una línea). */
 export const financeCardMicroLabelClass =
   "text-[10px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary"

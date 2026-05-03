@@ -1,20 +1,7 @@
 "use client"
 
 import type { CSSProperties } from "react"
-import {
-  Award,
-  CheckCircle2,
-  Circle,
-  Crown,
-  Flame,
-  Loader2,
-  Medal,
-  Sparkles,
-  Star,
-  Target,
-  Trophy,
-  Zap,
-} from "lucide-react"
+import { CheckCircle2, Circle, Crown, Flame, Loader2, Sparkles, Target, Zap } from "lucide-react"
 import type { HabitsToggleTodayResult } from "@/app/hooks/useHabits"
 import { HabitTodayProgressBar } from "@/app/components/habits/HabitTodayProgressBar"
 import type { StreakCelebrationPayload } from "@/lib/habits/streakMilestones"
@@ -142,13 +129,13 @@ export function FlexibleDayStackSection({
           className={cn(
             "flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] sm:h-11 sm:w-11",
             superHero
-              ? "bg-gradient-to-br from-amber-300/95 via-amber-400 to-amber-600 shadow-[0_6px_18px_color-mix(in_srgb,#f59e0b_35%,transparent)] ring-2 ring-amber-200/70 dark:from-amber-400/90 dark:via-amber-500 dark:to-amber-700 dark:ring-amber-500/40"
+              ? "bg-gradient-to-br from-stone-200 via-amber-900/85 to-stone-600 shadow-[0_4px_14px_rgba(28,25,23,0.12)] ring-1 ring-stone-400/45 dark:from-stone-700 dark:via-amber-950/90 dark:to-stone-800 dark:ring-stone-600/50"
               : "bg-[color-mix(in_srgb,#a855f7_22%,transparent)] ring-1 ring-[color-mix(in_srgb,#a855f7_32%,transparent)]",
           )}
           aria-hidden
         >
           {superHero ? (
-            <Crown className="h-[20px] w-[20px] text-amber-950 sm:h-[22px] sm:w-[22px]" strokeWidth={2.25} fill="currentColor" fillOpacity={0.15} />
+            <Crown className="h-[20px] w-[20px] text-stone-950 sm:h-[22px] sm:w-[22px] dark:text-amber-100" strokeWidth={2.1} fill="currentColor" fillOpacity={0.2} />
           ) : (
             <Zap className="h-[20px] w-[20px] text-violet-700 dark:text-violet-300 sm:h-[22px] sm:w-[22px]" strokeWidth={2} />
           )}
@@ -160,9 +147,9 @@ export function FlexibleDayStackSection({
                 <>
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
                     {superHero ? (
-                      <span className="inline-flex items-center gap-1 rounded-md bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.2em] text-amber-950 shadow-[0_2px_10px_rgba(245,158,11,0.45)] ring-1 ring-amber-200/80 dark:from-amber-500 dark:via-amber-600 dark:to-amber-700 dark:text-amber-50 dark:ring-amber-400/50">
-                        <Crown className="h-3 w-3 shrink-0" strokeWidth={2.5} aria-hidden />
-                        Super hábito
+                      <span className="inline-flex items-center gap-1 rounded-md border border-[color-mix(in_srgb,#57534e_35%,#a16207_40%)] bg-[color-mix(in_srgb,var(--color-surface-alt)_88%,#ca8a04_12%)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-[color-mix(in_srgb,var(--color-text-primary)_75%,#44403c)] shadow-sm dark:border-[color-mix(in_srgb,#a8a29e_25%,#ca8a04_35%)] dark:bg-[color-mix(in_srgb,var(--color-surface-alt)_70%,#422006_30%)] dark:text-stone-100">
+                        <Crown className="h-3 w-3 shrink-0 text-amber-900/80 dark:text-amber-200/90" strokeWidth={2.2} aria-hidden />
+                        Súper hábito
                       </span>
                     ) : null}
                     <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-[color-mix(in_srgb,var(--color-text-secondary)_88%,#7c3aed)] dark:text-violet-200/90">
@@ -177,14 +164,20 @@ export function FlexibleDayStackSection({
                       className={cn(
                         "min-w-0",
                         superHero &&
-                          "bg-gradient-to-r from-violet-700 via-fuchsia-600 to-emerald-600 bg-clip-text text-[16px] text-transparent sm:text-[17px] dark:from-violet-200 dark:via-fuchsia-300 dark:to-emerald-300",
+                          "bg-gradient-to-r from-violet-950 via-violet-800 to-emerald-900 bg-clip-text text-[16px] text-transparent sm:text-[17px] dark:from-violet-100 dark:via-violet-200 dark:to-emerald-100/95",
                         !superHero && "text-[var(--color-text-primary)]",
                       )}
                     >
                       {primary.name}
                     </span>
                     {superHero ? (
-                      <Star className="h-4 w-4 shrink-0 fill-amber-400 text-amber-500 drop-shadow-[0_0_8px_rgba(251,191,36,0.75)] sm:h-[18px] sm:w-[18px]" aria-hidden />
+                      <Crown
+                        className="h-4 w-4 shrink-0 text-amber-800/85 sm:h-[18px] sm:w-[18px] dark:text-amber-200/80"
+                        strokeWidth={2.1}
+                        fill="currentColor"
+                        fillOpacity={0.14}
+                        aria-hidden
+                      />
                     ) : (
                       <Sparkles className="h-3.5 w-3.5 shrink-0 text-amber-500 sm:h-4 sm:w-4" strokeWidth={2} aria-hidden />
                     )}
@@ -206,11 +199,15 @@ export function FlexibleDayStackSection({
                   className={cn(
                     "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide",
                     superHero
-                      ? "bg-gradient-to-r from-emerald-500/25 to-amber-400/20 text-emerald-800 ring-2 ring-amber-400/50 dark:from-emerald-500/20 dark:to-amber-500/15 dark:text-emerald-200"
+                      ? "bg-[color-mix(in_srgb,var(--color-surface-alt)_92%,#166534_8%)] text-emerald-900 ring-1 ring-[color-mix(in_srgb,#78716c_22%,#15803d_25%)] dark:bg-[color-mix(in_srgb,var(--color-surface-alt)_88%,#14532d_14%)] dark:text-emerald-100 dark:ring-[color-mix(in_srgb,#57534e_35%,#22c55e_22%)]"
                       : "bg-[color-mix(in_srgb,var(--color-accent-health)_14%,var(--color-surface))] text-[var(--color-accent-health)] ring-1 ring-[color-mix(in_srgb,var(--color-accent-health)_25%,transparent)]",
                   )}
                 >
-                  <Trophy className="h-3 w-3" aria-hidden />
+                  {superHero ? (
+                    <Crown className="h-3 w-3 shrink-0 text-emerald-800 dark:text-emerald-200" strokeWidth={2.35} aria-hidden />
+                  ) : (
+                    <CheckCircle2 className="h-3 w-3 shrink-0" strokeWidth={2} aria-hidden />
+                  )}
                   {superHero ? "Victoria hoy" : "Hecho hoy"}
                 </span>
               ) : null}
@@ -221,7 +218,14 @@ export function FlexibleDayStackSection({
               ) : null}
             </div>
           </div>
-          <p className="m-0 max-w-prose text-[12px] leading-[1.4] text-[color-mix(in_srgb,var(--color-text-secondary)_92%,#5b21b6)] dark:text-violet-100/85 sm:text-[13px] sm:leading-[1.45]">
+          <p
+            className={cn(
+              "m-0 max-w-prose text-[12px] leading-[1.4] sm:text-[13px] sm:leading-[1.45]",
+              superHero
+                ? "text-[color-mix(in_srgb,var(--color-text-secondary)_94%,#57534e)] dark:text-stone-400/95"
+                : "text-[color-mix(in_srgb,var(--color-text-secondary)_92%,#5b21b6)] dark:text-violet-100/85",
+            )}
+          >
             {single ? (
               <>
                 {primaryIntention ||
@@ -237,8 +241,22 @@ export function FlexibleDayStackSection({
           </p>
           {single ? (
             <div className="flex flex-wrap gap-2 pt-1">
-              <span className="inline-flex items-center gap-1.5 rounded-[10px] bg-[color-mix(in_srgb,#f97316_12%,color-mix(in_srgb,#a855f7_8%,transparent))] px-2.5 py-1 text-[11px] font-semibold tabular-nums text-[var(--color-text-primary)] ring-1 ring-[color-mix(in_srgb,#fb923c_35%,transparent)]">
-                <Flame className="h-3.5 w-3.5 shrink-0 text-orange-500" strokeWidth={2.25} aria-hidden />
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-[10px] px-2.5 py-1 text-[11px] font-semibold tabular-nums ring-1",
+                  superHero
+                    ? "border border-stone-400/25 bg-[color-mix(in_srgb,var(--color-surface-alt)_94%,#57534e_6%)] text-[var(--color-text-primary)] ring-stone-400/25 dark:border-stone-600/30 dark:bg-[color-mix(in_srgb,var(--color-surface-alt)_90%,#292524_10%)] dark:ring-stone-600/35"
+                    : "border-transparent bg-[color-mix(in_srgb,#f97316_12%,color-mix(in_srgb,#a855f7_8%,transparent))] text-[var(--color-text-primary)] ring-[color-mix(in_srgb,#fb923c_35%,transparent)]",
+                )}
+              >
+                <Flame
+                  className={cn(
+                    "h-3.5 w-3.5 shrink-0",
+                    superHero ? "text-amber-800/70 dark:text-amber-300/75" : "text-orange-500",
+                  )}
+                  strokeWidth={2.25}
+                  aria-hidden
+                />
                 Racha {primary.metrics.current_streak} {primary.metrics.current_streak === 1 ? "día" : "días"}
               </span>
               {Boolean(primary.metadata?.intraday_si_no_progress) &&
@@ -269,17 +287,23 @@ export function FlexibleDayStackSection({
 
       {superHero ? (
         <div
-          className="relative z-[1] mt-2 flex flex-col gap-1.5 rounded-xl border border-[color-mix(in_srgb,#fbbf24_42%,transparent)] bg-[linear-gradient(100deg,color-mix(in_srgb,#fef3c7_35%,transparent)_0%,color-mix(in_srgb,#a855f7_12%,transparent)_45%,color-mix(in_srgb,#bbf7d0_22%,transparent)_100%)] px-3 py-2.5 shadow-[0_8px_28px_-12px_color-mix(in_srgb,#f59e0b_35%,transparent)] sm:flex-row sm:items-center sm:justify-between sm:px-4"
+          className="relative z-[1] mt-2 flex flex-col gap-1.5 rounded-xl border border-[color-mix(in_srgb,#78716c_28%,#6d28d9_22%)] bg-[linear-gradient(102deg,color-mix(in_srgb,var(--color-surface-alt)_96%,#e7e5e4_4%)_0%,color-mix(in_srgb,var(--color-surface)_98%,#ddd6fe_5%)_48%,color-mix(in_srgb,var(--color-surface-alt)_95%,#d1fae5_6%)_100%)] px-3 py-2.5 shadow-[0_6px_20px_-10px_rgba(15,23,42,0.08)] sm:flex-row sm:items-center sm:justify-between sm:px-4 dark:border-[color-mix(in_srgb,#57534e_35%,#5b21b6_28%)] dark:bg-[linear-gradient(102deg,color-mix(in_srgb,var(--color-surface-alt)_94%,#292524_8%)_0%,color-mix(in_srgb,var(--color-surface)_92%,#4c1d95_10%)_50%,color-mix(in_srgb,var(--color-surface-alt)_93%,#14532d_8%)_100%)]"
           role="status"
           aria-label="Súper hábito activo con bonificación visual de progreso"
         >
-          <span className="inline-flex flex-wrap items-center gap-2 text-[11px] font-black uppercase tracking-[0.16em] text-amber-950 dark:text-amber-50">
-            <Medal className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-300" strokeWidth={2.25} aria-hidden />
+          <span className="inline-flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-stone-800 dark:text-stone-200">
+            <Crown
+              className="h-3.5 w-3.5 shrink-0 text-amber-900/75 dark:text-amber-200/80"
+              strokeWidth={2.1}
+              fill="currentColor"
+              fillOpacity={0.1}
+              aria-hidden
+            />
             Odisea oro · súper hábito
-            <Award className="h-3.5 w-3.5 shrink-0 text-violet-600 dark:text-violet-300" aria-hidden />
+            <Sparkles className="h-3 w-3 shrink-0 text-violet-700/55 dark:text-violet-300/50" strokeWidth={2} aria-hidden />
           </span>
-          <span className="text-[10px] font-semibold leading-snug text-[color-mix(in_srgb,var(--color-text-secondary)_92%,#92400e)] dark:text-amber-100/85">
-            Cada cierre del día refuerza tu racha con prioridad máxima en Órvita.
+          <span className="text-[10px] font-medium leading-snug text-[color-mix(in_srgb,var(--color-text-secondary)_95%,#57534e)] dark:text-stone-400/95">
+            Cada cierre aquí prioriza tu racha al máximo.
           </span>
         </div>
       ) : null}
@@ -297,6 +321,43 @@ export function FlexibleDayStackSection({
           const streakDays = habit.metrics.current_streak
           const reward = isSuper ? superhabitStreakRewardMessage(streakDays) : null
           const domain = domainLabels[habit.domain] ?? habit.domain
+          const showProgressBar = habitShowsTodayProgressBar(progressUi)
+          const toggleDisabled =
+            (!persistenceEnabled && !mock) ||
+            loading ||
+            togglingId === habit.id ||
+            backfillingId === habit.id ||
+            backfillingAll
+          const toggleClassName = cn(
+            "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border shadow-md transition-[transform,box-shadow,opacity] active:scale-[0.97] motion-safe:hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-45 sm:h-11 sm:w-11",
+            isSuper && doneToday
+              ? "border-[color-mix(in_srgb,#78716c_35%,#a16207)] bg-[linear-gradient(145deg,color-mix(in_srgb,#ca8a04_12%,var(--color-surface)),var(--color-surface-alt))] shadow-[0_4px_14px_rgba(28,25,23,0.1)]"
+              : isSuper
+                ? "border-[color-mix(in_srgb,#57534e_30%,#6d28d9)] bg-[color-mix(in_srgb,var(--color-surface-alt)_55%,var(--color-surface))] shadow-sm"
+                : "border-[color-mix(in_srgb,#a855f7_32%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-surface-alt)_55%,var(--color-surface))] shadow-sm",
+          )
+          const markTodayButton = (
+            <button
+              type="button"
+              disabled={toggleDisabled}
+              aria-label={doneToday ? "Deshacer completado de hoy" : "Marcar hecho hoy"}
+              title={doneToday ? "Deshacer hoy" : "Hecho hoy"}
+              onClick={async () => {
+                const r = await onToggle(habit.id)
+                if (!r.ok) alert(r.error || "No se pudo actualizar")
+                else if (r.streakCelebration) onStreakCelebration(r.streakCelebration)
+              }}
+              className={toggleClassName}
+            >
+              {togglingId === habit.id ? (
+                <Loader2 className="h-[18px] w-[18px] animate-spin text-violet-600 dark:text-violet-400" aria-hidden />
+              ) : doneToday ? (
+                <CheckCircle2 className="h-[18px] w-[18px] text-emerald-600 dark:text-emerald-400" strokeWidth={1.75} aria-hidden />
+              ) : (
+                <Circle className="h-[18px] w-[18px] text-[var(--color-text-secondary)]" strokeWidth={1.75} aria-hidden />
+              )}
+            </button>
+          )
 
           return (
             <div
@@ -309,24 +370,24 @@ export function FlexibleDayStackSection({
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                 <div className="min-w-0 flex-1 space-y-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    {!single ? (
+                  {!single ? (
+                    <div className="flex flex-wrap items-center gap-2">
                       <h3 className="m-0 text-[14px] font-semibold leading-snug text-[var(--color-text-primary)] sm:text-[15px]">
                         {habit.name}
                       </h3>
-                    ) : null}
-                    {isSuper ? (
-                      <span className="inline-flex items-center gap-1.5 rounded-[10px] border-2 border-[color-mix(in_srgb,#fbbf24_55%,transparent)] bg-gradient-to-br from-amber-200/95 via-amber-300/85 to-amber-500/90 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-amber-950 shadow-[0_3px_14px_rgba(245,158,11,0.42)] ring-1 ring-amber-100/90 dark:from-amber-500/35 dark:via-amber-600/30 dark:to-amber-800/40 dark:text-amber-50 dark:ring-amber-400/35">
-                        <Crown className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
-                        Super hábito
-                      </span>
-                    ) : null}
-                    {intraday && checks != null ? (
-                      <span className="inline-flex items-center rounded-full bg-[color-mix(in_srgb,#22c55e_12%,var(--color-surface-alt))] px-2 py-0.5 text-[10px] font-semibold tabular-nums text-emerald-800 dark:text-emerald-200">
-                        Meta {checks} chequeos
-                      </span>
-                    ) : null}
-                  </div>
+                      {isSuper ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-md border border-[color-mix(in_srgb,#57534e_35%,#a16207_40%)] bg-[color-mix(in_srgb,var(--color-surface-alt)_88%,#ca8a04_12%)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-[color-mix(in_srgb,var(--color-text-primary)_75%,#44403c)] shadow-sm dark:border-[color-mix(in_srgb,#a8a29e_25%,#ca8a04_35%)] dark:bg-[color-mix(in_srgb,var(--color-surface-alt)_70%,#422006_30%)] dark:text-stone-100">
+                          <Crown className="h-3.5 w-3.5 shrink-0 text-amber-900/80 dark:text-amber-200/90" strokeWidth={2.2} aria-hidden />
+                          Súper hábito
+                        </span>
+                      ) : null}
+                      {intraday && checks != null ? (
+                        <span className="inline-flex items-center rounded-full bg-[color-mix(in_srgb,#22c55e_12%,var(--color-surface-alt))] px-2 py-0.5 text-[10px] font-semibold tabular-nums text-emerald-800 dark:text-emerald-200">
+                          Meta {checks} chequeos
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : null}
                   {!single ? (
                     <p className="m-0 text-[11px] text-[var(--color-text-secondary)] sm:text-[12px]">
                       {domain} · {freq} ·{" "}
@@ -345,36 +406,6 @@ export function FlexibleDayStackSection({
                       <span>{metricLine}</span>
                     </p>
                   ) : null}
-                  {habitShowsTodayProgressBar(progressUi) ? (
-                    <div
-                      className={cn(
-                        "mt-2 min-w-0 w-full sm:max-w-lg",
-                        isSuper &&
-                          "rounded-xl border border-[color-mix(in_srgb,#fbbf24_38%,transparent)] bg-[color-mix(in_srgb,#fbbf24_7%,color-mix(in_srgb,#a855f7_5%,transparent))] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]",
-                      )}
-                    >
-                      <div className="mb-1 flex items-center justify-between gap-2">
-                        <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--color-text-secondary)_85%,#7c3aed)] dark:text-violet-200/80">
-                          {isSuper ? "Progreso con bonificación" : "Progreso del día"}
-                        </span>
-                        {isSuper ? (
-                          <span className="inline-flex items-center gap-1 rounded-md bg-gradient-to-r from-amber-400/90 to-amber-600 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-amber-950 shadow-sm dark:from-amber-500 dark:to-amber-700 dark:text-amber-50">
-                            <Star className="h-3 w-3 fill-current" aria-hidden />
-                            Modo élite
-                          </span>
-                        ) : null}
-                      </div>
-                      <HabitTodayProgressBar
-                        className="min-w-0 w-full"
-                        pct={progressUi.pct}
-                        kind={progressUi.kind}
-                        ariaLabel={progressUi.ariaLabel}
-                        caption={progressUi.caption}
-                        visualVariant="orbitaFlex"
-                        orbitaTone={isSuper ? "super" : "standard"}
-                      />
-                    </div>
-                  ) : null}
                   {reward ? (
                     <p className="m-0 text-[11px] text-[var(--color-accent-health)] sm:text-[12px]">{reward}</p>
                   ) : null}
@@ -389,41 +420,40 @@ export function FlexibleDayStackSection({
                   >
                     Editar
                   </button>
-                  <button
-                    type="button"
-                    disabled={
-                      (!persistenceEnabled && !mock) ||
-                      loading ||
-                      togglingId === habit.id ||
-                      backfillingId === habit.id ||
-                      backfillingAll
-                    }
-                    aria-label={doneToday ? "Deshacer completado de hoy" : "Marcar hecho hoy"}
-                    title={doneToday ? "Deshacer hoy" : "Hecho hoy"}
-                    onClick={async () => {
-                      const r = await onToggle(habit.id)
-                      if (!r.ok) alert(r.error || "No se pudo actualizar")
-                      else if (r.streakCelebration) onStreakCelebration(r.streakCelebration)
-                    }}
-                    className={cn(
-                      "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border shadow-md transition-[transform,box-shadow,opacity] active:scale-[0.97] motion-safe:hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-45 sm:h-11 sm:w-11",
-                      isSuper && doneToday
-                        ? "border-[color-mix(in_srgb,#fbbf24_55%,var(--color-border))] bg-[linear-gradient(145deg,color-mix(in_srgb,#fbbf24_18%,var(--color-surface)),var(--color-surface-alt))] shadow-[0_0_20px_color-mix(in_srgb,#f59e0b_28%,transparent)]"
-                        : isSuper
-                          ? "border-[color-mix(in_srgb,#fbbf24_38%,#a855f7)] bg-[color-mix(in_srgb,var(--color-surface-alt)_50%,var(--color-surface))] shadow-[0_4px_16px_color-mix(in_srgb,#7c3aed_12%,transparent)]"
-                          : "border-[color-mix(in_srgb,#a855f7_32%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-surface-alt)_55%,var(--color-surface))] shadow-sm",
-                    )}
-                  >
-                    {togglingId === habit.id ? (
-                      <Loader2 className="h-[18px] w-[18px] animate-spin text-violet-600 dark:text-violet-400" aria-hidden />
-                    ) : doneToday ? (
-                      <CheckCircle2 className="h-[18px] w-[18px] text-emerald-600 dark:text-emerald-400" strokeWidth={1.75} aria-hidden />
-                    ) : (
-                      <Circle className="h-[18px] w-[18px] text-[var(--color-text-secondary)]" strokeWidth={1.75} aria-hidden />
-                    )}
-                  </button>
+                  {!showProgressBar ? markTodayButton : null}
                 </div>
               </div>
+
+              {showProgressBar ? (
+                <div className="mt-2 grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1">
+                  <div className="min-w-0 flex items-center">
+                    <HabitTodayProgressBar
+                      className="min-w-0 w-full"
+                      pct={progressUi.pct}
+                      kind={progressUi.kind}
+                      ariaLabel={progressUi.ariaLabel}
+                      caption={progressUi.caption}
+                      omitCaption
+                      visualVariant="orbitaFlex"
+                      orbitaTone={isSuper ? "super" : "standard"}
+                    />
+                  </div>
+                  <div className="flex shrink-0 items-center justify-center">{markTodayButton}</div>
+                  {progressUi.caption ? (
+                    <p
+                      className={cn(
+                        "col-span-2 m-0 min-w-0 truncate leading-tight text-[var(--color-text-secondary)]",
+                        "text-[10px] font-semibold tabular-nums tracking-tight",
+                        isSuper
+                          ? "text-[color-mix(in_srgb,var(--color-text-secondary)_88%,#44403c)] dark:text-stone-400/95"
+                          : "text-[color-mix(in_srgb,var(--color-text-secondary)_88%,#7c3aed)] dark:text-violet-200/90",
+                      )}
+                    >
+                      {progressUi.caption}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           )
         })}

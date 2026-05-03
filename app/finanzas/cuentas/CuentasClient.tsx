@@ -22,8 +22,15 @@ import { ConnectedBankAccountsCard } from "../_components/ConnectedBankAccountsC
 import {
   financeAuxDisclosureBodyClass,
   financeAuxDisclosureSummaryClass,
+  financeBridgeMicroLabelClass,
+  financeCardHintClass,
   financeCardMicroLabelClass,
+  financeDenseBodyClass,
+  financeHeroChipBaseClass,
+  financeKpiSubtextClass,
+  financeKpiValueClass,
   financeModuleSectionHeadingClass,
+  financeNeutralChipClass,
   financeSectionEyebrowClass,
   financeSectionIntroClass,
 } from "../_components/financeChrome"
@@ -272,7 +279,10 @@ function CuentasSectionReorderChrome({
           onDragStart(sectionIndex)
         }}
         onDragEnd={onDragEnd}
-        className="mb-3 flex cursor-grab touch-none select-none items-center gap-2 rounded-lg border border-orbita-border/50 bg-orbita-surface/90 px-2.5 py-2 text-[11px] font-semibold text-orbita-secondary shadow-sm active:cursor-grabbing"
+        className={cn(
+          financeDenseBodyClass,
+          "mb-3 flex cursor-grab touch-none select-none items-center gap-2 rounded-lg border border-orbita-border/50 bg-orbita-surface/90 px-2.5 py-2 font-semibold text-orbita-secondary shadow-sm active:cursor-grabbing",
+        )}
         aria-label={`Reordenar bloque: ${sectionLabel}`}
       >
         <GripVertical className="h-4 w-4 shrink-0 text-orbita-secondary" aria-hidden />
@@ -365,8 +375,8 @@ function StatKpiCard({
     <Card className={`relative overflow-hidden p-6 sm:p-8 ${arcticPanel}`}>
       <div className="absolute right-4 top-4 text-orbita-secondary">{icon}</div>
       <p className={financeCardMicroLabelClass}>{title}</p>
-      <p className="mt-3 text-xl font-semibold tabular-nums tracking-tight text-orbita-primary sm:text-2xl">{value}</p>
-      <div className={cn("mt-2 text-[11px] leading-relaxed text-orbita-secondary sm:text-xs")}>{sub}</div>
+      <p className={financeKpiValueClass}>{value}</p>
+      <div className={financeKpiSubtextClass}>{sub}</div>
       {warning ? (
         <div className="absolute bottom-4 right-4 rounded-full bg-[color-mix(in_srgb,var(--color-accent-warning)_18%,var(--color-surface-alt))] p-1.5 text-[var(--color-accent-warning)]">
           <TrendingDown className="h-4 w-4" aria-hidden />
@@ -407,8 +417,8 @@ function SavingsPlasticCard({ item, onEdit }: { item: CuentasSavingsCard; onEdit
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-[11px] font-medium uppercase tracking-wider text-white/75">{item.institution}</p>
-          <p className="mt-1 line-clamp-2 text-sm font-semibold leading-snug">{item.label}</p>
+          <p className={cn(financeSectionEyebrowClass, "normal-case text-white/85")}>{item.institution}</p>
+          <p className={cn(financeModuleSectionHeadingClass, "mt-1 line-clamp-2 text-white")}>{item.label}</p>
         </div>
         <div
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/35 bg-white/15 text-sm font-bold backdrop-blur-sm"
@@ -418,15 +428,15 @@ function SavingsPlasticCard({ item, onEdit }: { item: CuentasSavingsCard; onEdit
         </div>
       </div>
       <div className="mt-4 flex-1">
-        <p className="text-[11px] uppercase tracking-[0.14em] text-white/70">Disponible</p>
+        <p className={cn(financeCardMicroLabelClass, "text-white/80")}>Disponible</p>
         {hasAmount ? (
-          <p className="mt-1 text-2xl font-semibold tracking-tight sm:text-[26px]">
+          <p className={cn(financeKpiValueClass, "mt-1 text-white sm:text-[26px]")}>
             ${formatMoney(Math.round(Number(item.disponibleOperativoLine ?? item.amount)))} COP
           </p>
         ) : (
-          <div className="mt-2 grid gap-1.5 text-[11px] leading-snug text-white/90">
-            <p className="font-semibold">Sin saldo registrado</p>
-            <p className="text-white/80">
+          <div className={cn(financeKpiSubtextClass, "mt-2 grid gap-1.5 text-white/90")}>
+            <p className="font-semibold text-white">Sin saldo registrado</p>
+            <p className="text-white/85">
               {fromManual
                 ? "Edita la tarjeta para fijar el monto manual."
                 : fromLedgerCatalog
@@ -435,7 +445,7 @@ function SavingsPlasticCard({ item, onEdit }: { item: CuentasSavingsCard; onEdit
             </p>
           </div>
         )}
-        <p className="mt-2 flex items-center gap-1 text-[10px] font-medium text-white/85">
+        <p className={cn(financeKpiSubtextClass, "mt-2 flex items-center gap-1 text-white/90")}>
           {item.trendUp ? <ArrowUpRight className="h-3 w-3 shrink-0" aria-hidden /> : null}
           <span>{item.trendUp ? "Tendencia positiva" : "Tendencia a la baja"}</span>
         </p>
@@ -444,7 +454,7 @@ function SavingsPlasticCard({ item, onEdit }: { item: CuentasSavingsCard; onEdit
         <div className={`h-1.5 w-full overflow-hidden rounded-full ${th.barTrack}`}>
           <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: healthW }} />
         </div>
-        <div className="flex justify-between text-[10px] uppercase tracking-wide text-white/75">
+        <div className={cn(financeBridgeMicroLabelClass, "flex justify-between text-white/80")}>
           <span>Salud {item.healthPct}%</span>
           <span>Ahorro</span>
         </div>
@@ -453,7 +463,7 @@ function SavingsPlasticCard({ item, onEdit }: { item: CuentasSavingsCard; onEdit
         <button
           type="button"
           onClick={onEdit}
-          className="absolute bottom-4 left-4 rounded-full border border-white/40 bg-white/15 px-3 py-1.5 text-[10px] font-semibold text-white backdrop-blur-sm hover:bg-white/25"
+          className="absolute bottom-4 left-4 rounded-full border border-white/40 bg-white/15 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-white backdrop-blur-sm hover:bg-white/25"
         >
           Editar
         </button>
@@ -540,13 +550,13 @@ function CreditPlasticCard({
     >
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="text-[11px] font-medium uppercase tracking-wider text-white/75">{card.bankLabel}</p>
-          <p className="mt-1 text-sm font-semibold">
+          <p className={cn(financeSectionEyebrowClass, "normal-case text-white/85")}>{card.bankLabel}</p>
+          <p className={cn(financeModuleSectionHeadingClass, "mt-1 text-white")}>
             {card.network} ···· {card.last4}
           </p>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <p className="text-[11px] text-white/80">{card.paymentDueLabel}</p>
+          <p className={cn(financeDenseBodyClass, "text-right text-white/85")}>{card.paymentDueLabel}</p>
           <div
             className="flex h-10 w-10 items-center justify-center rounded-full border border-white/35 bg-white/15 text-sm font-bold backdrop-blur-sm"
             title={scoreTitle}
@@ -556,13 +566,15 @@ function CreditPlasticCard({
         </div>
       </div>
       <div className="mt-4 flex-1">
-        <p className="text-[11px] uppercase tracking-[0.14em] text-white/70">Disponible</p>
-        <p className="mt-1 text-2xl font-semibold tracking-tight sm:text-[26px]">${formatMoney(disponible)} COP</p>
+        <p className={cn(financeCardMicroLabelClass, "text-white/80")}>Disponible</p>
+        <p className={cn(financeKpiValueClass, "mt-1 text-white sm:text-[26px]")}>${formatMoney(disponible)} COP</p>
         {showLinkRow ? (
           <p
-            className={`mt-2 max-w-[95%] text-[10px] font-medium leading-snug text-white/85 ${
-              linkSummary!.matchedCount === 0 ? "text-amber-100/95" : ""
-            }`}
+            className={cn(
+              financeKpiSubtextClass,
+              "mt-2 max-w-[95%] text-white/90",
+              linkSummary!.matchedCount === 0 ? "text-amber-100/95" : "",
+            )}
             title="Cómo se atribuyen movimientos a esta tarjeta: FK en BD, columna Cuenta igual al catálogo, o últimos 4 del catálogo en la descripción."
           >
             {linkSummary!.matchedCount === 0
@@ -572,7 +584,10 @@ function CreditPlasticCard({
         ) : null}
         {card.conciliacionPendiente ? (
           <p
-            className="mt-2 max-w-[95%] rounded-lg border border-amber-300/35 bg-black/25 px-2 py-1.5 text-[10px] font-medium leading-snug text-amber-50/95"
+            className={cn(
+              financeKpiSubtextClass,
+              "mt-2 max-w-[95%] rounded-lg border border-amber-300/35 bg-black/25 px-2 py-1.5 text-amber-50/95",
+            )}
             title="En el registro manual de saldos podés anotar el disponible o el saldo que ves en la app (sin conexión con el banco)."
           >
             Hay una diferencia notable con los movimientos. Usá{" "}
@@ -584,7 +599,7 @@ function CreditPlasticCard({
         <div className={`h-1.5 w-full overflow-hidden rounded-full ${th.barTrack}`}>
           <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: usageWidth }} />
         </div>
-        <div className="flex justify-between text-[10px] uppercase tracking-wide text-white/75">
+        <div className={cn(financeBridgeMicroLabelClass, "flex justify-between text-white/80")}>
           <span>Utilización {utilPct.toFixed(1)}%</span>
           <span>Cupo ${formatMoney(card.limit)}</span>
         </div>
@@ -593,7 +608,7 @@ function CreditPlasticCard({
         <button
           type="button"
           onClick={onEdit}
-          className="absolute bottom-4 left-4 rounded-full border border-white/40 bg-white/15 px-3 py-1.5 text-[10px] font-semibold text-white backdrop-blur-sm hover:bg-white/25"
+          className="absolute bottom-4 left-4 rounded-full border border-white/40 bg-white/15 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-white backdrop-blur-sm hover:bg-white/25"
         >
           Editar
         </button>
@@ -622,8 +637,8 @@ function LoanStructuralCard({
             <Icon className="h-4 w-4 sm:h-[18px] sm:w-[18px]" aria-hidden />
           </div>
           <div>
-            <h3 className="text-[15px] font-semibold leading-tight text-orbita-primary">{loan.title}</h3>
-            <p className="text-[11px] text-orbita-secondary">Crédito estructural</p>
+            <h3 className={financeModuleSectionHeadingClass}>{loan.title}</h3>
+            <p className={cn(financeSectionIntroClass, "!mt-0.5 text-orbita-secondary")}>Crédito estructural</p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -631,13 +646,13 @@ function LoanStructuralCard({
             <button
               type="button"
               onClick={onEdit}
-              className="rounded-full border border-orbita-border bg-orbita-surface px-3 py-1 text-[11px] font-semibold text-orbita-primary hover:bg-orbita-surface-alt"
+              className="rounded-full border border-orbita-border bg-orbita-surface px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-orbita-primary hover:bg-orbita-surface-alt"
             >
               Editar
             </button>
           ) : null}
           <span
-            className="rounded-full border-[0.5px] border-violet-200 bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700"
+            className="rounded-full border-[0.5px] border-violet-200 bg-violet-50 px-3 py-1 text-[11px] font-semibold text-violet-700"
             title="Porcentaje del préstamo original ya abonado en capital. Debes cargar el monto original del crédito en credit_limit (catálogo Supabase)."
           >
             {loan.pctPagado}% abonado
@@ -657,21 +672,33 @@ function LoanStructuralCard({
           { label: "Próximo pago", value: loan.proximoPagoLabel },
         ].map((c) => (
           <div key={c.label}>
-            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">{c.label}</p>
-            <p className="mt-0.5 text-sm font-semibold text-orbita-primary">{c.value}</p>
+            <p className={financeCardMicroLabelClass}>{c.label}</p>
+            <p className="mt-0.5 text-sm font-semibold tabular-nums tracking-tight text-orbita-primary sm:text-base">
+              {c.value}
+            </p>
           </div>
         ))}
       </div>
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-orbita-border pt-3 text-[11px] text-orbita-secondary">
+      <div
+        className={cn(
+          financeDenseBodyClass,
+          "mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-orbita-border pt-3 text-orbita-secondary",
+        )}
+      >
         <span title="Capital inicial del crédito (campo credit_limit en catálogo).">
           Préstamo original ${formatMoney(loan.montoOriginal)}
         </span>
-        <span className="rounded-full bg-violet-100/80 px-2 py-0.5 text-[11px] font-semibold text-violet-800">
+        <span className="rounded-full bg-violet-100/80 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-violet-800">
           ${formatShortMillions(loan.abonadoMonto)} capital abonado
         </span>
       </div>
       {onPayDate || onPlan ? (
-        <div className="mt-3 flex flex-wrap gap-2 border-t border-orbita-border pt-3 text-[10px] font-semibold text-violet-800">
+        <div
+          className={cn(
+            financeBridgeMicroLabelClass,
+            "mt-3 flex flex-wrap gap-2 border-t border-orbita-border pt-3 font-semibold normal-case text-violet-800",
+          )}
+        >
           {onPayDate ? (
             <button type="button" onClick={onPayDate} className="hover:underline">
               Fecha de pago
@@ -721,7 +748,7 @@ function isManualOnlyLoan(l: CuentasLoanCard) {
 
 function AutoFieldHint({ ledgerLinked }: { ledgerLinked?: boolean }) {
   return (
-    <p className="mt-1 text-[10px] leading-snug text-orbita-secondary">
+    <p className={cn(financeSectionIntroClass, "!mt-1 text-orbita-secondary")}>
       {ledgerLinked
         ? "Viene del catálogo y movimientos. Para ajustar el saldo usá Cargar cifra en el registro manual de saldos."
         : "Automático a partir de movimientos del mes y del listado de cuentas."}
@@ -736,7 +763,7 @@ function FieldMetaTag({ kind }: { kind: "manual" | "automatico" | "derivado" }) 
     derivado: "Derivado",
   } as const
   return (
-    <span className="ml-1 rounded-full border border-orbita-border/70 bg-orbita-surface-alt px-2 py-0.5 text-[10px] font-medium text-orbita-secondary">
+    <span className={cn(financeNeutralChipClass, "ml-1 normal-case")}>
       {map[kind]}
     </span>
   )
@@ -744,7 +771,12 @@ function FieldMetaTag({ kind }: { kind: "manual" | "automatico" | "derivado" }) 
 
 function ReadonlyField({ value }: { value: ReactNode }) {
   return (
-    <div className="mt-1 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt px-3 py-2 text-sm font-medium text-orbita-primary">
+    <div
+      className={cn(
+        financeDenseBodyClass,
+        "mt-1 rounded-xl border border-orbita-border/80 bg-orbita-surface-alt px-3 py-2 font-semibold text-orbita-primary sm:text-sm",
+      )}
+    >
       {value}
     </div>
   )
@@ -757,7 +789,7 @@ function LedgerRowReconcileMeta({ a }: { a: LedgerAccountRow }) {
   const hasAnch = dateOk && Number.isFinite(mb)
 
   return (
-    <div className="mt-1 space-y-1 text-[10px] leading-snug">
+    <div className={cn("mt-1 space-y-1", financeCardHintClass, "!mt-1 !leading-snug")}>
       {a.account_class === "ahorro" && a.balance_available != null && Number(a.balance_available) > 0 ? (
         <p className="tabular-nums text-orbita-muted">
           Catálogo / extracto · Disp. ${formatMoney(Math.round(Number(a.balance_available)))}
@@ -1652,21 +1684,23 @@ export default function CuentasClient() {
 
   if (!finance) {
     return (
-      <div className="p-6 text-center text-orbita-secondary">
+      <div className={cn("p-6 text-center", financeSectionIntroClass, "text-orbita-secondary")}>
         <p>Inicializando...</p>
       </div>
     )
   }
 
   if (loading) {
-    return <div className="p-6 text-center text-orbita-secondary">Cargando cuentas…</div>
+    return (
+      <div className={cn("p-6 text-center", financeSectionIntroClass, "text-orbita-secondary")}>Cargando cuentas…</div>
+    )
   }
 
   if (loadError) {
     return (
       <div className="rounded-[16px] border-[0.5px] border-red-200 bg-red-50/50 p-4 text-red-800">
-        <p className="font-semibold">Error</p>
-        <p className="mt-1 text-sm">{loadError}</p>
+        <p className={cn(financeModuleSectionHeadingClass, "text-red-900")}>Error</p>
+        <p className={cn(financeSectionIntroClass, "!mt-1 text-red-800")}>{loadError}</p>
       </div>
     )
   }
@@ -1677,7 +1711,10 @@ export default function CuentasClient() {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-end">
         {cuentasReorderMode ? (
           <div
-            className="rounded-lg border border-orbita-border/70 bg-orbita-surface-alt/50 px-3 py-2 text-[11px] leading-relaxed text-orbita-secondary sm:min-w-0 sm:flex-1"
+            className={cn(
+              financeSectionIntroClass,
+              "rounded-lg border border-orbita-border/70 bg-orbita-surface-alt/50 px-3 py-2 sm:min-w-0 sm:flex-1",
+            )}
             role="region"
             aria-label="Modo reordenar bloques"
           >
@@ -1695,7 +1732,7 @@ export default function CuentasClient() {
             })
           }}
           className={cn(
-            "shrink-0 rounded-lg border px-2.5 py-1.5 text-[11px] font-medium transition",
+            "shrink-0 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] transition",
             cuentasReorderMode
               ? "border-orbita-primary bg-orbita-primary text-white"
               : "border-orbita-border/70 text-orbita-secondary hover:border-orbita-primary/35 hover:text-orbita-primary",
@@ -1709,7 +1746,10 @@ export default function CuentasClient() {
 
       {notice && notice !== AUTH_REQUIRED_MESSAGE ? (
         <p
-          className="mt-3 rounded-lg border border-orbita-border/55 bg-orbita-surface-alt/45 px-3 py-2 text-[11px] leading-snug text-orbita-secondary"
+          className={cn(
+            financeSectionIntroClass,
+            "mt-3 rounded-lg border border-orbita-border/55 bg-orbita-surface-alt/45 px-3 py-2",
+          )}
           role="status"
         >
           {notice}
@@ -1733,9 +1773,7 @@ export default function CuentasClient() {
             />
             <div className="min-w-0 flex-1 space-y-0 text-left">
               <p className={financeCardMicroLabelClass}>Cuentas · banco y extracto</p>
-              <p className={cn(financeModuleSectionHeadingClass, "!mt-0.5 !text-[13px] !leading-tight sm:!text-[0.95rem]")}>
-                Conexión y saldos
-              </p>
+              <p className={cn(financeModuleSectionHeadingClass, "!mt-0.5")}>Conexión y saldos</p>
             </div>
           </summary>
           <div className={cn(financeAuxDisclosureBodyClass, "px-0 pt-0")}>
@@ -1752,20 +1790,23 @@ export default function CuentasClient() {
                   </p>
             {ledgerReorderMessage ? (
               <p
-                className="mt-2 rounded-lg border border-emerald-200/80 bg-emerald-50/90 px-3 py-2 text-xs font-medium text-emerald-900"
+                className={cn(
+                  financeDenseBodyClass,
+                  "mt-2 rounded-lg border border-emerald-200/80 bg-emerald-50/90 px-3 py-2 font-medium text-emerald-900",
+                )}
                 role="status"
               >
                 {ledgerReorderMessage}
               </p>
             ) : null}
             {ledgerError ? (
-              <p className="mt-2 text-xs text-amber-800 dark:text-amber-300">{ledgerError}</p>
+              <p className={cn(financeDenseBodyClass, "mt-2 text-amber-800 dark:text-amber-300")}>{ledgerError}</p>
             ) : null}
             {ledgerLoading && ledgerAccounts.length === 0 ? (
-              <p className="mt-3 text-sm text-orbita-secondary">Cargando lista de cuentas…</p>
+              <p className={cn(financeSectionIntroClass, "mt-3 text-orbita-secondary")}>Cargando lista de cuentas…</p>
             ) : null}
             {!ledgerLoading && ledgerAccounts.length === 0 && !ledgerError ? (
-              <p className="mt-3 text-[11px] text-orbita-secondary sm:text-sm">
+              <p className={cn(financeSectionIntroClass, "mt-3 text-orbita-secondary")}>
                 Todavía no hay cuentas: aparecen cuando importás movimientos y elegís columna «Cuenta».
               </p>
             ) : null}
@@ -1777,11 +1818,16 @@ export default function CuentasClient() {
                     className={ledgerSectionShellClass(run.accountClass)}
                   >
                     <h3
-                      className={`mb-2.5 pb-2 text-[11px] font-semibold uppercase tracking-[0.14em] ${ledgerSectionHeadDividerClass(run.accountClass)} ${ledgerSectionHeadingClass(run.accountClass)}`}
+                      className={cn(
+                        "mb-2.5 pb-2",
+                        financeSectionEyebrowClass,
+                        ledgerSectionHeadDividerClass(run.accountClass),
+                        ledgerSectionHeadingClass(run.accountClass),
+                      )}
                     >
                       {ledgerHeadingForAccountClass(run.accountClass)}
                     </h3>
-                    <ul className="grid gap-2 text-xs sm:grid-cols-2 sm:gap-2.5 sm:text-sm">
+                    <ul className={cn("grid gap-2 sm:grid-cols-2 sm:gap-2.5", financeDenseBodyClass)}>
                       {run.entries.map(({ account: a, index: idx }) => (
                         <li
                           key={a.id}
@@ -1816,8 +1862,15 @@ export default function CuentasClient() {
                             <GripVertical className="h-4 w-4 shrink-0 sm:h-[18px] sm:w-[18px]" aria-hidden />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="font-medium leading-snug text-orbita-primary">{a.label}</p>
-                            <p className="mt-0.5 text-[10px] uppercase tracking-wide text-orbita-secondary sm:text-[11px]">
+                            <p className="text-sm font-semibold leading-snug text-orbita-primary sm:text-[15px] sm:leading-tight">
+                              {a.label}
+                            </p>
+                            <p
+                              className={cn(
+                                financeBridgeMicroLabelClass,
+                                "mt-0.5 normal-case text-orbita-secondary sm:text-[11px]",
+                              )}
+                            >
                               {a.account_class.replace(/_/g, " ")} · {a.nature.replace(/_/g, " ")}
                             </p>
                             <LedgerRowReconcileMeta a={a} />
@@ -1827,7 +1880,7 @@ export default function CuentasClient() {
                                 onClick={() => void reconcileLedgerAccount(a)}
                                 disabled={ledgerReconcileBusyId === a.id}
                                 title="Disponible (tarjeta) o saldo (ahorro) según veas en tu app o extracto. Sin conexión con el banco."
-                                className="inline-flex min-h-[28px] items-center rounded-md border border-orbita-border/65 px-2 py-1 text-[11px] font-medium text-orbita-primary transition hover:bg-orbita-surface-alt/80 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="inline-flex min-h-[28px] items-center rounded-md border border-orbita-border/65 px-2 py-1 text-[11px] font-semibold text-orbita-primary transition hover:bg-orbita-surface-alt/80 disabled:cursor-not-allowed disabled:opacity-50"
                               >
                                 {ledgerReconcileBusyId === a.id ? "Guardando…" : "Cargar cifra"}
                               </button>
@@ -1848,7 +1901,7 @@ export default function CuentasClient() {
       </section>
 
       {!kpis ? (
-        <div className={`rounded-[20px] p-4 text-center text-sm text-orbita-secondary sm:p-8 ${arcticPanel}`}>
+        <div className={cn("rounded-[20px] p-4 text-center sm:p-8", financeSectionIntroClass, arcticPanel)}>
           Sin panel de cuentas (activa Supabase o modo mock para datos).
         </div>
       ) : (
@@ -1891,7 +1944,7 @@ export default function CuentasClient() {
                             {kpis.liquidezTrendPct >= 0 ? "+" : ""}
                             {kpis.liquidezTrendPct}% vs mes anterior
                           </span>
-                          <p className="mt-2 text-[10px] leading-snug text-orbita-secondary [text-wrap:pretty]">
+                          <p className={cn(financeCardHintClass, "mt-2 text-orbita-secondary")}>
                             Ingresos − gastos del mes (misma base que Movimientos). Abajo, saldos por cuenta; no suman
                             este total.
                           </p>
@@ -1905,7 +1958,7 @@ export default function CuentasClient() {
                       sub={
                         <span className="block space-y-1">
                           <span>{kpis.creditoUsoPromedioPct}% uso promedio (tarjetas)</span>
-                          <span className="block text-[10px] font-normal leading-snug text-orbita-muted">
+                          <span className={cn(financeCardHintClass, "block text-orbita-muted")}>
                             Por tarjeta: movimientos del mes más el disponible que anotaste en el registro manual de saldos.
                           </span>
                         </span>
@@ -1929,7 +1982,10 @@ export default function CuentasClient() {
                       <button
                         type="button"
                         onClick={openAddSavings}
-                        className="inline-flex items-center gap-1 rounded-full border border-teal-200 bg-teal-50 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-teal-800 hover:bg-teal-100"
+                        className={cn(
+                          financeHeroChipBaseClass,
+                          "border-teal-200 bg-teal-50 text-teal-800 hover:bg-teal-100",
+                        )}
                       >
                         <Plus className="h-3.5 w-3.5" aria-hidden />
                         Agregar cuenta
@@ -1950,7 +2006,10 @@ export default function CuentasClient() {
                       <button
                         type="button"
                         onClick={openAddCredit}
-                        className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-sky-800 hover:bg-sky-100"
+                        className={cn(
+                          financeHeroChipBaseClass,
+                          "border-sky-200 bg-sky-50 text-sky-800 hover:bg-sky-100",
+                        )}
                       >
                         <Plus className="h-3.5 w-3.5" aria-hidden />
                         Agregar tarjeta
@@ -2000,7 +2059,10 @@ export default function CuentasClient() {
                       <button
                         type="button"
                         onClick={openAddLoan}
-                        className="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-violet-800 hover:bg-violet-100"
+                        className={cn(
+                          financeHeroChipBaseClass,
+                          "border-violet-200 bg-violet-50 text-violet-800 hover:bg-violet-100",
+                        )}
                       >
                         <Plus className="h-3.5 w-3.5" aria-hidden />
                         Agregar crédito
