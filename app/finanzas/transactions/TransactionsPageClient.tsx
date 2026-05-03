@@ -1,6 +1,7 @@
 "use client"
 
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { motion, useReducedMotion } from "framer-motion"
 import { useFinance } from "../FinanceContext"
@@ -30,6 +31,18 @@ import { browserBearerHeaders } from "@/lib/api/browserBearerHeaders"
 import { buildTransactionsExportCsv } from "@/lib/finanzas/transactionsCsv"
 
 const supabaseEnabled = process.env.NEXT_PUBLIC_SUPABASE_ENABLED === "true"
+
+const FIN_TX_INVITE_STORAGE = "orbita.finanzas.txInvite.v1"
+
+function shouldClearInviteGate(status: number, message: string): boolean {
+  if (status !== 403) return false
+  const s = message.toLowerCase()
+  return (
+    s.includes("código del hogar") ||
+    s.includes("codigo del hogar") ||
+    s.includes("se requiere el código")
+  )
+}
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -159,6 +172,17 @@ export default function TransactionsPageClient() {
   const csvFileInputRef = useRef<HTMLInputElement>(null)
   const patchTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
   const selectAllRef = useRef<HTMLInputElement>(null)
+  const inviteCodeRef = useRef<string | null>(null)
+
+  const [inviteCodeStored, setInviteCodeStored] = useState<string | null>(null)
+  const [editingRowId, setEditingRowId] = useState<string | null>(null)
+  const [unlockModalOpen, setUnlockModalOpen] = useState(false)
+  const [unlockInput, setUnlockInput] = useState("")
+  const [unlockErr, setUnlockErr] = useState<string | null>(null)
+  const [unlockBusy, setUnlockBusy] = useState(false)
+  const [pendingEditRowId, setPendingEditRowId] = useState<string | null>(null)
+
+  const mutationsUnlocked = Boolean(inviteCodeStored && inviteCodeStored.trim().length > 0)
 
   const month = finance?.month ?? searchParams.get("month") ?? ""
   const capitalEpoch = finance?.capitalDataEpoch ?? 0
@@ -262,6 +286,90 @@ export default function TransactionsPageClient() {
   }, [month, category, subcategoryParam, financeAccountId, tipoFilterUrl])
 
   useEffect(() => {
+    inviteCodeRef.current = inviteCodeStored
+  }, [inviteCodeStored])
+
+  useEffect(() => {
+    try {
+      const s = sessionStorage.getItem(FIN_TX_INVITE_STORAGE)
+      if (s && s.trim()) setInviteCodeStored(s.trim())
+    } catch {
+      /* private mode */
+    }
+  }, [])
+
+  const lockMutations = useCallback(() => {
+    patchTimers.current.forEach((t) => clearTimeout(t))
+    patchTimers.current.clear()
+    try {
+      sessionStorage.removeItem(FIN_TX_INVITE_STORAGE)
+    } catch {
+      /* */
+    }
+    setInviteCodeStored(null)
+    setEditingRowId(null)
+    setPendingEditRowId(null)
+  }, [])
+
+  const submitUnlock = useCallback(async () => {
+    setUnlockBusy(true)
+    setUnlockErr(null)
+    try {
+      const res = await financeApiGet("/api/household/invite")
+      const json = (await res.json()) as {
+        success?: boolean
+        data?: { inviteCode?: string | null }
+        error?: string
+      }
+      if (!res.ok || !json.success) {
+        throw new Error(messageForHttpError(res.status, json.error, res.statusText))
+      }
+      const expected = String(json.data?.inviteCode ?? "").trim()
+      if (!expected) {
+        setUnlockErr("Tu hogar no tiene código de invitación. Configúralo en Invitaciones.")
+        return
+      }
+      const submitted = unlockInput.trim()
+      if (submitted.toLowerCase() !== expected.toLowerCase()) {
+        setUnlockErr("Código incorrecto. Cópialo tal cual desde Invitaciones.")
+        return
+      }
+      try {
+        sessionStorage.setItem(FIN_TX_INVITE_STORAGE, submitted)
+      } catch {
+        /* */
+      }
+      setInviteCodeStored(submitted)
+      setUnlockModalOpen(false)
+      setUnlockInput("")
+      setUnlockErr(null)
+      const pending = pendingEditRowId
+      setPendingEditRowId(null)
+      if (pending) setEditingRowId(pending)
+    } catch (e) {
+      setUnlockErr(e instanceof Error ? e.message : "No se pudo verificar")
+    } finally {
+      setUnlockBusy(false)
+    }
+  }, [unlockInput, pendingEditRowId])
+
+  const onClickListoRow = useCallback(() => {
+    setEditingRowId(null)
+  }, [])
+
+  const onClickEditarRow = useCallback(
+    (txId: string) => {
+      if (!mutationsUnlocked) {
+        setPendingEditRowId(txId)
+        setUnlockModalOpen(true)
+        return
+      }
+      setEditingRowId((cur) => (cur === txId ? null : txId))
+    },
+    [mutationsUnlocked],
+  )
+
+  useEffect(() => {
     if (!supabaseEnabled) {
       setCatalogRows([])
       return
@@ -304,7 +412,12 @@ export default function TransactionsPageClient() {
         void (async () => {
           setPatchErr(null)
           try {
-            const payload: Record<string, unknown> = { id }
+            const code = (inviteCodeRef.current ?? "").trim()
+            if (!code) {
+              setPatchErr("Introduce el código del hogar (Invitaciones) para guardar cambios.")
+              return
+            }
+            const payload: Record<string, unknown> = { id, inviteCode: code }
             if (body.category !== undefined) payload.category = body.category
             if (body.subcategory !== undefined) payload.subcategory = body.subcategory
             if (body.type !== undefined) payload.type = body.type
@@ -316,7 +429,9 @@ export default function TransactionsPageClient() {
             })
             const json = (await res.json()) as PatchTxResponse
             if (!res.ok || !json.success || !json.data?.transaction) {
-              throw new Error(messageForHttpError(res.status, json.error, res.statusText))
+              const msg = messageForHttpError(res.status, json.error, res.statusText)
+              if (shouldClearInviteGate(res.status, msg)) lockMutations()
+              throw new Error(msg)
             }
             const u = json.data.transaction
             setTxRows((rows) => rows.map((r) => (r.id === id ? { ...r, ...u } : r)))
@@ -327,7 +442,7 @@ export default function TransactionsPageClient() {
       }, 450)
       patchTimers.current.set(id, t)
     },
-    [],
+    [lockMutations],
   )
 
   useEffect(() => {
@@ -341,6 +456,13 @@ export default function TransactionsPageClient() {
     async (tx: Transaction) => {
       if (!tx.id) return
       if (!supabaseEnabled) return
+      const code = (inviteCodeRef.current ?? "").trim()
+      if (!code) {
+        setPatchErr("Introduce el código del hogar para eliminar movimientos.")
+        setPendingEditRowId(tx.id)
+        setUnlockModalOpen(true)
+        return
+      }
       if (!window.confirm("¿Eliminar este movimiento? No se puede deshacer.")) return
 
       const id = tx.id
@@ -366,11 +488,13 @@ export default function TransactionsPageClient() {
       try {
         setPatchErr(null)
         const res = await financeApiDelete(
-          `/api/orbita/finanzas/transactions?id=${encodeURIComponent(id)}`,
+          `/api/orbita/finanzas/transactions?id=${encodeURIComponent(id)}&inviteCode=${encodeURIComponent(code)}`,
         )
         const json = (await res.json()) as { success?: boolean; error?: string }
         if (!res.ok || !json.success) {
-          throw new Error(messageForHttpError(res.status, json.error, res.statusText))
+          const msg = messageForHttpError(res.status, json.error, res.statusText)
+          if (shouldClearInviteGate(res.status, msg)) lockMutations()
+          throw new Error(msg)
         }
         touchCapitalData?.()
         fetchTransactionsSilent()
@@ -381,11 +505,17 @@ export default function TransactionsPageClient() {
         setDeletingId(null)
       }
     },
-    [fetchTransactionsSilent, supabaseEnabled, touchCapitalData],
+    [fetchTransactionsSilent, lockMutations, supabaseEnabled, touchCapitalData],
   )
 
   const bulkDeleteReconciliation = useCallback(async () => {
     if (!supabaseEnabled || selectedIds.size === 0) return
+    const code = (inviteCodeRef.current ?? "").trim()
+    if (!code) {
+      setPatchErr("Introduce el código del hogar para borrar ajustes de conciliación.")
+      setUnlockModalOpen(true)
+      return
+    }
     const ids = [...selectedIds]
     if (
       !window.confirm(
@@ -400,7 +530,7 @@ export default function TransactionsPageClient() {
     try {
       const res = await financeApiJson("/api/orbita/finanzas/transactions", {
         method: "POST",
-        body: { deleteReconciliationAdjustmentIds: ids },
+        body: { inviteCode: code, deleteReconciliationAdjustmentIds: ids },
       })
       const json = (await res.json()) as {
         success?: boolean
@@ -408,7 +538,9 @@ export default function TransactionsPageClient() {
         data?: { deleted?: string[]; skipped?: string[] }
       }
       if (!res.ok || !json.success) {
-        throw new Error(messageForHttpError(res.status, json.error, res.statusText))
+        const msg = messageForHttpError(res.status, json.error, res.statusText)
+        if (shouldClearInviteGate(res.status, msg)) lockMutations()
+        throw new Error(msg)
       }
       const deleted = json.data?.deleted ?? []
       const skipped = json.data?.skipped ?? []
@@ -426,7 +558,7 @@ export default function TransactionsPageClient() {
     } finally {
       setBulkDeleting(false)
     }
-  }, [fetchTransactionsSilent, selectedIds, supabaseEnabled, touchCapitalData])
+  }, [fetchTransactionsSilent, lockMutations, selectedIds, supabaseEnabled, touchCapitalData])
 
   const setFinanceAccountId = (id: string) => {
     const p = new URLSearchParams(searchParams.toString())
@@ -1054,6 +1186,83 @@ export default function TransactionsPageClient() {
         </DialogContent>
       </Dialog>
 
+      <Dialog
+        open={unlockModalOpen}
+        onOpenChange={(open) => {
+          setUnlockModalOpen(open)
+          if (!open) {
+            setUnlockErr(null)
+            setUnlockInput("")
+            setPendingEditRowId(null)
+          }
+        }}
+      >
+        <DialogContent className="max-w-md" showClose>
+          <DialogHeader>
+            <DialogTitle>Código del hogar</DialogTitle>
+            <DialogDescription asChild>
+              <div className="space-y-2 pt-1 text-[11px] leading-relaxed text-orbita-secondary [text-wrap:pretty]">
+                <p className="m-0">
+                  Pega el código de invitación de tu hogar para poder editar o borrar movimientos. Así queda claro quién autorizó el cambio en esta
+                  sesión.
+                </p>
+                <p className="m-0">
+                  Lo encuentras en{" "}
+                  <Link href="/household/invite" className="font-semibold text-orbita-primary underline underline-offset-2">
+                    Invitaciones
+                  </Link>
+                  .
+                </p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 px-1 pb-1">
+            <label className="block text-[10px] font-semibold uppercase tracking-wide text-orbita-secondary" htmlFor="fin-tx-invite-code">
+              Código
+            </label>
+            <input
+              id="fin-tx-invite-code"
+              type="text"
+              autoComplete="off"
+              value={unlockInput}
+              onChange={(e) => setUnlockInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault()
+                  void submitUnlock()
+                }
+              }}
+              className={cn(txConceptInputClass, "w-full")}
+              placeholder="Pega el código aquí"
+              disabled={unlockBusy}
+            />
+            {unlockErr ? (
+              <p className="m-0 text-[11px] text-rose-600" role="alert">
+                {unlockErr}
+              </p>
+            ) : null}
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <DialogClose asChild>
+              <button
+                type="button"
+                className="inline-flex min-h-9 items-center justify-center rounded-[var(--radius-button)] border border-orbita-border bg-orbita-surface px-4 py-2 text-sm font-semibold text-orbita-primary transition hover:bg-orbita-surface-alt"
+              >
+                Cancelar
+              </button>
+            </DialogClose>
+            <button
+              type="button"
+              disabled={unlockBusy || !unlockInput.trim()}
+              onClick={() => void submitUnlock()}
+              className="inline-flex min-h-9 items-center justify-center rounded-[var(--radius-button)] border border-emerald-600/45 bg-emerald-500/12 px-4 py-2 text-sm font-semibold text-emerald-900 transition enabled:hover:bg-emerald-500/18 disabled:cursor-not-allowed disabled:opacity-50 dark:text-emerald-100"
+            >
+              {unlockBusy ? "Comprobando…" : "Desbloquear"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {!periodReady ? (
         <div className="p-6 text-center text-orbita-secondary">
           <p>No hay movimientos disponibles</p>
@@ -1066,16 +1275,60 @@ export default function TransactionsPageClient() {
             </div>
           ) : (
             <div className="min-w-0 max-w-full overflow-hidden rounded-[var(--radius-card)] border border-orbita-border/80 bg-[color-mix(in_srgb,var(--color-surface-alt)_22%,var(--color-surface))] shadow-[0_2px_12px_rgba(15,23,42,0.06)]">
+              {supabaseEnabled ? (
+                <div className="flex flex-col gap-2 border-b border-orbita-border/80 bg-orbita-surface-alt/40 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-4">
+                  {mutationsUnlocked ? (
+                    <>
+                      <p className="m-0 min-w-0 text-[11px] leading-snug text-emerald-800 [text-wrap:pretty] dark:text-emerald-200">
+                        Edición desbloqueada con el código del hogar. Los cambios se registran en el servidor.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={lockMutations}
+                        className="shrink-0 self-start rounded-full border border-orbita-border/70 bg-orbita-surface px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-orbita-primary transition-colors hover:bg-orbita-surface-alt sm:self-auto"
+                      >
+                        Bloquear edición
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="m-0 min-w-0 text-[11px] leading-snug text-orbita-secondary [text-wrap:pretty]">
+                        Para editar tipo, clasificación, concepto o eliminar movimientos, introduce el código de invitación del hogar.
+                      </p>
+                      <div className="flex shrink-0 flex-wrap items-center gap-2 self-start sm:self-auto">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPendingEditRowId(null)
+                            setUnlockModalOpen(true)
+                          }}
+                          className="rounded-full border border-emerald-600/40 bg-emerald-500/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-emerald-800 transition-colors hover:bg-emerald-500/16 dark:text-emerald-200"
+                        >
+                          Introducir código
+                        </button>
+                        <Link
+                          href="/household/invite"
+                          className="text-[10px] font-semibold text-orbita-primary underline decoration-orbita-border underline-offset-2"
+                        >
+                          Ver en Invitaciones
+                        </Link>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ) : null}
               {supabaseEnabled && reconciliationRowIds.length > 0 ? (
                 <div className="flex flex-col gap-2 border-b border-orbita-border/80 bg-orbita-surface-alt/45 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-4">
                   <p className="min-w-0 text-[11px] leading-snug text-orbita-secondary [text-wrap:pretty]">
-                    {selectedIds.size > 0
-                      ? `${selectedIds.size} ajuste(s) de conciliación seleccionado(s)`
-                      : "Selecciona ajustes de conciliación para borrar varios a la vez"}
+                    {!mutationsUnlocked
+                      ? "Introduce el código del hogar (banda superior) para seleccionar y borrar ajustes de conciliación."
+                      : selectedIds.size > 0
+                        ? `${selectedIds.size} ajuste(s) de conciliación seleccionado(s)`
+                        : "Selecciona ajustes de conciliación para borrar varios a la vez"}
                   </p>
                   <button
                     type="button"
-                    disabled={selectedIds.size === 0 || bulkDeleting}
+                    disabled={selectedIds.size === 0 || bulkDeleting || !mutationsUnlocked}
                     onClick={() => void bulkDeleteReconciliation()}
                     className="shrink-0 self-start rounded-full border border-rose-500/50 bg-rose-500/10 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-rose-700 transition-colors hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-50 sm:self-auto dark:text-rose-300"
                   >
@@ -1101,7 +1354,9 @@ export default function TransactionsPageClient() {
                   const mobileTint = isIngreso
                     ? "shadow-[inset_0_1px_0_0_color-mix(in_srgb,var(--color-accent-health)_55%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_5%,var(--color-surface))]"
                     : "shadow-[inset_0_1px_0_0_color-mix(in_srgb,var(--color-accent-danger)_50%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-danger)_4%,var(--color-surface))]"
-                  const editable = Boolean(supabaseEnabled && tx.id)
+                  const hasRowId = Boolean(supabaseEnabled && tx.id)
+                  const rowEditing = Boolean(hasRowId && mutationsUnlocked && editingRowId === tx.id)
+                  const showTipoBadge = !hasRowId || !rowEditing
                   const pairOpts = pairsForRow(catalogPairs, tx.categoria, tx.subcategoria)
                   const currentPairKey = pairKey(tx.categoria, tx.subcategoria)
 
@@ -1116,7 +1371,8 @@ export default function TransactionsPageClient() {
                             type="checkbox"
                             checked={selectedIds.has(tx.id)}
                             onChange={() => toggleSelect(tx.id!)}
-                            className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-orbita-border"
+                            disabled={!mutationsUnlocked}
+                            className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-orbita-border disabled:cursor-not-allowed disabled:opacity-45"
                             aria-label={`Seleccionar ajuste ${tx.descripcion?.slice(0, 40) ?? ""}`}
                           />
                         ) : null}
@@ -1127,7 +1383,7 @@ export default function TransactionsPageClient() {
                                 <span className="shrink-0 text-[10px] font-semibold tabular-nums text-orbita-primary">
                                   {tx.fecha}
                                 </span>
-                                {!editable ? (
+                                {showTipoBadge ? (
                                   <span
                                     className={cn(
                                       "inline-flex shrink-0 rounded px-1 py-px text-[9px] font-semibold uppercase tracking-wide",
@@ -1149,7 +1405,7 @@ export default function TransactionsPageClient() {
                               {montoStr}
                             </p>
                           </div>
-                          {editable ? (
+                          {rowEditing ? (
                             <div className="grid min-w-0 grid-cols-2 gap-1">
                               <select
                                 aria-label="Tipo de movimiento"
@@ -1212,7 +1468,7 @@ export default function TransactionsPageClient() {
                           ) : (
                             <p className="truncate text-[10px] leading-tight text-orbita-primary">{catLine}</p>
                           )}
-                          {editable && tx.id ? (
+                          {rowEditing && tx.id ? (
                             <input
                               key={`${tx.id}-desc`}
                               type="text"
@@ -1234,17 +1490,36 @@ export default function TransactionsPageClient() {
                               {tx.descripcion}
                             </p>
                           )}
-                          {supabaseEnabled && tx.id ? (
-                            <div className="flex justify-end pt-0.5">
-                              <button
-                                type="button"
-                                disabled={deletingId === tx.id}
-                                aria-busy={deletingId === tx.id}
-                                onClick={() => void deleteTransaction(tx)}
-                                className="text-[10px] font-semibold text-rose-600 transition-opacity enabled:hover:opacity-80 disabled:cursor-wait disabled:opacity-50"
-                              >
-                                {deletingId === tx.id ? "…" : "Eliminar"}
-                              </button>
+                          {hasRowId ? (
+                            <div className="flex justify-end gap-2 pt-0.5">
+                              {rowEditing ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={onClickListoRow}
+                                    className="text-[10px] font-semibold text-orbita-secondary underline decoration-orbita-border underline-offset-2 transition-opacity hover:opacity-80"
+                                  >
+                                    Listo
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={deletingId === tx.id}
+                                    aria-busy={deletingId === tx.id}
+                                    onClick={() => void deleteTransaction(tx)}
+                                    className="text-[10px] font-semibold text-rose-600 transition-opacity enabled:hover:opacity-80 disabled:cursor-wait disabled:opacity-50"
+                                  >
+                                    {deletingId === tx.id ? "…" : "Eliminar"}
+                                  </button>
+                                </>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => onClickEditarRow(tx.id!)}
+                                  className="text-[10px] font-semibold text-orbita-primary underline decoration-orbita-border underline-offset-2 transition-opacity hover:opacity-80"
+                                >
+                                  Editar
+                                </button>
+                              )}
                             </div>
                           ) : null}
                         </div>
@@ -1274,8 +1549,8 @@ export default function TransactionsPageClient() {
                             type="checkbox"
                             checked={allReconciliationSelected}
                             onChange={toggleSelectAllReconciliation}
-                            disabled={reconciliationRowIds.length === 0}
-                            className="h-3.5 w-3.5 rounded border-orbita-border"
+                            disabled={reconciliationRowIds.length === 0 || !mutationsUnlocked}
+                            className="h-3.5 w-3.5 rounded border-orbita-border disabled:cursor-not-allowed disabled:opacity-45"
                             title="Seleccionar todos los ajustes de conciliación"
                             aria-label="Seleccionar todos los ajustes de conciliación visibles"
                           />
@@ -1322,7 +1597,8 @@ export default function TransactionsPageClient() {
                       const rowTint = isIngreso
                         ? "shadow-[inset_0_2px_0_0_color-mix(in_srgb,var(--color-accent-health)_55%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-health)_6%,var(--color-surface))] hover:bg-[color-mix(in_srgb,var(--color-accent-health)_9%,var(--color-surface))]"
                         : "shadow-[inset_0_2px_0_0_color-mix(in_srgb,var(--color-accent-danger)_50%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-danger)_5%,var(--color-surface))] hover:bg-[color-mix(in_srgb,var(--color-accent-danger)_8%,var(--color-surface))]"
-                      const editable = Boolean(supabaseEnabled && tx.id)
+                      const hasRowId = Boolean(supabaseEnabled && tx.id)
+                      const rowEditing = Boolean(hasRowId && mutationsUnlocked && editingRowId === tx.id)
                       const pairOpts = pairsForRow(catalogPairs, tx.categoria, tx.subcategoria)
                       const currentPairKey = pairKey(tx.categoria, tx.subcategoria)
 
@@ -1338,7 +1614,8 @@ export default function TransactionsPageClient() {
                                   type="checkbox"
                                   checked={selectedIds.has(tx.id)}
                                   onChange={() => toggleSelect(tx.id!)}
-                                  className="h-3.5 w-3.5 rounded border-orbita-border"
+                                  disabled={!mutationsUnlocked}
+                                  className="h-3.5 w-3.5 rounded border-orbita-border disabled:cursor-not-allowed disabled:opacity-45"
                                   aria-label={`Seleccionar ajuste ${tx.descripcion?.slice(0, 40) ?? ""}`}
                                 />
                               ) : (
@@ -1357,7 +1634,7 @@ export default function TransactionsPageClient() {
                             }`}
                             title={tipoLabel}
                           >
-                            {editable ? (
+                            {rowEditing ? (
                               <select
                                 aria-label="Tipo de movimiento"
                                 className={txSelectTipo}
@@ -1385,7 +1662,7 @@ export default function TransactionsPageClient() {
                             )}
                           </td>
                           <td className="min-w-0 px-1.5 py-1 align-middle text-orbita-primary sm:px-2 sm:py-1.5">
-                            {editable ? (
+                            {rowEditing ? (
                               pairOpts.length === 0 ? (
                                 <span className="text-[10px] text-orbita-secondary">Sin catálogo</span>
                               ) : (
@@ -1436,7 +1713,7 @@ export default function TransactionsPageClient() {
                             {tx.cuenta || "—"}
                           </td>
                           <td className="min-w-0 px-1.5 py-1 align-middle sm:px-2 sm:py-1.5">
-                            {editable && tx.id ? (
+                            {rowEditing && tx.id ? (
                               <input
                                 key={`${tx.id}-desc-desk`}
                                 type="text"
@@ -1463,16 +1740,35 @@ export default function TransactionsPageClient() {
                             {montoStr}
                           </td>
                           <td className="whitespace-nowrap px-1.5 py-1 align-middle text-right text-[10px] sm:px-2 sm:py-1.5 sm:text-[11px]">
-                            {supabaseEnabled && tx.id ? (
-                              <button
-                                type="button"
-                                disabled={deletingId === tx.id}
-                                aria-busy={deletingId === tx.id}
-                                onClick={() => void deleteTransaction(tx)}
-                                className="font-semibold text-rose-600 transition-opacity enabled:hover:opacity-80 disabled:cursor-wait disabled:opacity-50"
-                              >
-                                {deletingId === tx.id ? "…" : "Eliminar"}
-                              </button>
+                            {hasRowId ? (
+                              rowEditing ? (
+                                <div className="flex flex-wrap justify-end gap-x-2 gap-y-1">
+                                  <button
+                                    type="button"
+                                    onClick={onClickListoRow}
+                                    className="font-semibold text-orbita-secondary underline decoration-orbita-border underline-offset-2 transition-opacity hover:opacity-80"
+                                  >
+                                    Listo
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={deletingId === tx.id}
+                                    aria-busy={deletingId === tx.id}
+                                    onClick={() => void deleteTransaction(tx)}
+                                    className="font-semibold text-rose-600 transition-opacity enabled:hover:opacity-80 disabled:cursor-wait disabled:opacity-50"
+                                  >
+                                    {deletingId === tx.id ? "…" : "Eliminar"}
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => onClickEditarRow(tx.id!)}
+                                  className="font-semibold text-orbita-primary underline decoration-orbita-border underline-offset-2 transition-opacity hover:opacity-80"
+                                >
+                                  Editar
+                                </button>
+                              )
                             ) : (
                               <span className="text-orbita-secondary">—</span>
                             )}

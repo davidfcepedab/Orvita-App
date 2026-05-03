@@ -7,6 +7,7 @@ import { incomeAmount, signedDisplayAmount } from "@/lib/finanzas/calculations/t
 import { mockTransactionsForMonth } from "@/lib/finanzas/mockFinancePayloads"
 import { monthBounds } from "@/lib/finanzas/monthRange"
 import type { FinanceTransaction, FinanceTxType } from "@/lib/finanzas/types"
+import { assertHouseholdInviteCodeForUser } from "@/lib/households/assertHouseholdInviteCode"
 import { getHouseholdId } from "@/lib/households/getHouseholdId"
 import { formatPostgrestError } from "@/lib/finanzas/subcategoryCatalog"
 import { getTransactionsByRange } from "@/lib/services/finanzasService"
@@ -210,11 +211,19 @@ export async function PATCH(req: NextRequest) {
 
     const body = (await req.json()) as {
       id?: string
+      inviteCode?: string
       category?: string
       subcategory?: string | null
       type?: string
       description?: string
     }
+
+    const inviteDenied = await assertHouseholdInviteCodeForUser(
+      auth.supabase,
+      householdId,
+      body.inviteCode,
+    )
+    if (inviteDenied) return inviteDenied
 
     const id = String(body.id ?? "").trim()
     if (!UUID_RE.test(id)) {
@@ -300,6 +309,13 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ success: false, error: "id inválido" }, { status: 400 })
     }
 
+    const inviteDenied = await assertHouseholdInviteCodeForUser(
+      auth.supabase,
+      householdId,
+      req.nextUrl.searchParams.get("inviteCode"),
+    )
+    if (inviteDenied) return inviteDenied
+
     const { data: existing, error: fetchErr } = await auth.supabase
       .from("orbita_finance_transactions")
       .select("id, household_id, description")
@@ -354,7 +370,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Usuario sin hogar asignado" }, { status: 403 })
     }
 
-    const body = (await req.json()) as { deleteReconciliationAdjustmentIds?: unknown }
+    const body = (await req.json()) as {
+      inviteCode?: string
+      deleteReconciliationAdjustmentIds?: unknown
+    }
+
+    const inviteDenied = await assertHouseholdInviteCodeForUser(
+      auth.supabase,
+      householdId,
+      body.inviteCode,
+    )
+    if (inviteDenied) return inviteDenied
+
     const raw = body.deleteReconciliationAdjustmentIds
     if (!Array.isArray(raw) || raw.length === 0) {
       return NextResponse.json(
