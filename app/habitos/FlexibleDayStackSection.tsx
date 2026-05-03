@@ -11,8 +11,13 @@ import {
   Zap,
 } from "lucide-react"
 import type { HabitsToggleTodayResult } from "@/app/hooks/useHabits"
+import { HabitTodayProgressBar } from "@/app/components/habits/HabitTodayProgressBar"
 import type { StreakCelebrationPayload } from "@/lib/habits/streakMilestones"
 import { superhabitStreakRewardMessage } from "@/lib/habits/streakMilestones"
+import {
+  habitShowsTodayProgressBar,
+  habitTodayProgressUi,
+} from "@/lib/habits/habitTodayProgressUi"
 import type { HabitMetadata, HabitWithMetrics, OperationalDomain } from "@/lib/operational/types"
 import { cn } from "@/lib/utils"
 
@@ -50,6 +55,9 @@ export function FlexibleDayStackSection({
   const doneTodayCount = habits.filter((h) => h.metrics.completed_today).length
   const single = habits.length === 1
   const primary = habits[0]!
+  const primaryDomain = domainLabels[primary.domain] ?? primary.domain
+  const primaryIntention = primary.metadata?.intention?.trim()
+  const primaryFreq = primary.metadata?.frequency ?? "diario"
 
   const shellStyle: CSSProperties = {
     background:
@@ -86,13 +94,30 @@ export function FlexibleDayStackSection({
         </div>
         <div className="min-w-0 flex-1 space-y-0.5">
           <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
-            <p
-              id="flex-stack-heading"
-              className="m-0 flex min-w-0 flex-wrap items-center gap-2 text-[14px] font-semibold leading-tight tracking-[-0.02em] text-[var(--color-text-primary)] sm:text-[15px]"
-            >
-              Durante el día
-              <Sparkles className="h-3.5 w-3.5 shrink-0 text-amber-500 sm:h-4 sm:w-4" strokeWidth={2} aria-hidden />
-            </p>
+            <div className="min-w-0 flex-1 space-y-1">
+              {single ? (
+                <>
+                  <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-[color-mix(in_srgb,var(--color-text-secondary)_88%,#7c3aed)] dark:text-violet-200/90">
+                    Durante el día
+                  </p>
+                  <h2
+                    id="flex-stack-heading"
+                    className="m-0 flex min-w-0 flex-wrap items-center gap-2 text-[15px] font-semibold leading-tight tracking-[-0.02em] text-[var(--color-text-primary)] sm:text-[16px]"
+                  >
+                    <span className="min-w-0">{primary.name}</span>
+                    <Sparkles className="h-3.5 w-3.5 shrink-0 text-amber-500 sm:h-4 sm:w-4" strokeWidth={2} aria-hidden />
+                  </h2>
+                </>
+              ) : (
+                <p
+                  id="flex-stack-heading"
+                  className="m-0 flex min-w-0 flex-wrap items-center gap-2 text-[14px] font-semibold leading-tight tracking-[-0.02em] text-[var(--color-text-primary)] sm:text-[15px]"
+                >
+                  Durante el día
+                  <Sparkles className="h-3.5 w-3.5 shrink-0 text-amber-500 sm:h-4 sm:w-4" strokeWidth={2} aria-hidden />
+                </p>
+              )}
+            </div>
             <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
               {single && primary.metrics.completed_today ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--color-accent-health)_14%,var(--color-surface))] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-accent-health)] ring-1 ring-[color-mix(in_srgb,var(--color-accent-health)_25%,transparent)]">
@@ -108,13 +133,24 @@ export function FlexibleDayStackSection({
             </div>
           </div>
           <p className="m-0 max-w-prose text-[12px] leading-[1.4] text-[color-mix(in_srgb,var(--color-text-secondary)_92%,#5b21b6)] dark:text-violet-100/85 sm:text-[13px] sm:leading-[1.45]">
-            Una mega tarjeta como hidratación: prioridad sobre el reloj del día (chequeos flex · supers sin hora fija).
+            {single ? (
+              <>
+                {primaryIntention ||
+                  `${primaryDomain} · ${primaryFreq}. Chequeos flexibles sin ancla horaria; marca hecho cuando cierres tu rutina del día en Órvita.`}
+              </>
+            ) : (
+              <>
+                Prioridad sobre el reloj del día: chequeos flex y supers sin hora fija.{" "}
+                <span className="font-medium text-[var(--color-text-primary)]">{habits.length}</span> hábitos en esta
+                misión.
+              </>
+            )}
           </p>
           <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-[color-mix(in_srgb,#a855f7_18%,transparent)] pt-1">
             <p className="m-0 min-w-0 flex-1 text-[11px] leading-snug text-[var(--color-text-secondary)] sm:text-[12px]">
               {single ? (
                 <>
-                  {domainLabels[primary.domain] ?? primary.domain} · {primary.metadata?.frequency ?? "diario"} ·{" "}
+                  {primaryDomain} · {primaryFreq} ·{" "}
                   <span className="font-medium text-[var(--color-text-primary)]">{primary.metrics.current_streak}</span>{" "}
                   {primary.metrics.current_streak === 1 ? "día de racha" : "días de racha"}
                 </>
@@ -131,6 +167,7 @@ export function FlexibleDayStackSection({
 
       <div className="mt-0 flex flex-col gap-0">
         {habits.map((habit, habitIndex) => {
+          const progressUi = habitTodayProgressUi(habit)
           const isSuper = Boolean(habit.metadata?.is_superhabit)
           const intraday = Boolean(habit.metadata?.intraday_si_no_progress)
           const checks = habit.metadata?.intraday_si_no_target_checks
@@ -154,9 +191,11 @@ export function FlexibleDayStackSection({
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                 <div className="min-w-0 flex-1 space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="m-0 text-[14px] font-semibold leading-snug text-[var(--color-text-primary)] sm:text-[15px]">
-                      {habit.name}
-                    </h3>
+                    {!single ? (
+                      <h3 className="m-0 text-[14px] font-semibold leading-snug text-[var(--color-text-primary)] sm:text-[15px]">
+                        {habit.name}
+                      </h3>
+                    ) : null}
                     {isSuper ? (
                       <span className="inline-flex items-center gap-1 rounded-full border border-[color-mix(in_srgb,var(--color-accent-warning)_45%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-warning)_12%,var(--color-surface))] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-[color-mix(in_srgb,var(--color-accent-warning)_95%,#713f12)]">
                         <Trophy className="h-3 w-3" aria-hidden />
@@ -169,12 +208,14 @@ export function FlexibleDayStackSection({
                       </span>
                     ) : null}
                   </div>
-                  <p className="m-0 text-[11px] text-[var(--color-text-secondary)] sm:text-[12px]">
-                    {domain} · {freq} ·{" "}
-                    <span className="font-medium text-[var(--color-text-primary)]">{streakDays}</span>{" "}
-                    {streakDays === 1 ? "día de racha" : "días de racha"}
-                  </p>
-                  {intention ? (
+                  {!single ? (
+                    <p className="m-0 text-[11px] text-[var(--color-text-secondary)] sm:text-[12px]">
+                      {domain} · {freq} ·{" "}
+                      <span className="font-medium text-[var(--color-text-primary)]">{streakDays}</span>{" "}
+                      {streakDays === 1 ? "día de racha" : "días de racha"}
+                    </p>
+                  ) : null}
+                  {intention && !single ? (
                     <p className="m-0 line-clamp-2 text-[11px] leading-snug text-[var(--color-text-secondary)] sm:text-[12px]">
                       {intention}
                     </p>
@@ -184,6 +225,15 @@ export function FlexibleDayStackSection({
                       <Target className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--color-accent-health)] opacity-90" aria-hidden />
                       <span>{metricLine}</span>
                     </p>
+                  ) : null}
+                  {habitShowsTodayProgressBar(progressUi) ? (
+                    <HabitTodayProgressBar
+                      className="mt-1.5 min-w-0 w-full sm:max-w-md"
+                      pct={progressUi.pct}
+                      kind={progressUi.kind}
+                      ariaLabel={progressUi.ariaLabel}
+                      caption={progressUi.caption}
+                    />
                   ) : null}
                   {reward ? (
                     <p className="m-0 text-[11px] text-[var(--color-accent-health)] sm:text-[12px]">{reward}</p>

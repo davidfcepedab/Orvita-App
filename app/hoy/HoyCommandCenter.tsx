@@ -1,7 +1,14 @@
 "use client"
 
 import Link from "next/link"
-import { Fragment, useCallback, useEffect, useMemo, useState, type CSSProperties } from "react"
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+} from "react"
 import { motion } from "framer-motion"
 import {
   ArrowRight,
@@ -55,11 +62,11 @@ import {
   groupHabitsByDaypart,
   type HabitTimeBlockId,
 } from "@/lib/habits/habitStackGroups"
+import { HabitTodayProgressBar } from "@/app/components/habits/HabitTodayProgressBar"
 import {
-  formatWaterMlEs,
-  goalMlFromHabitMetadata,
-  isWaterTrackingHabit,
-} from "@/lib/habits/waterTrackingHelpers"
+  habitShowsTodayProgressBar,
+  habitTodayProgressUi,
+} from "@/lib/habits/habitTodayProgressUi"
 import { StrategicDayHero } from "@/app/components/orbita-v3/strategic/StrategicDayCapitalHero"
 import type {
   HabitWithMetrics,
@@ -123,80 +130,6 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
     <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-text-secondary)]">
       {children}
     </p>
-  )
-}
-
-/** Progreso de hoy alineado con `/habitos`: agua = ml/meta; resto = binario según `completed_today`. */
-function habitTodayProgressUi(habit: HabitWithMetrics): {
-  pct: number
-  isWater: boolean
-  ariaLabel: string
-  caption?: string
-} {
-  const meta = habit.metadata
-  if (isWaterTrackingHabit(meta)) {
-    const goalMl = goalMlFromHabitMetadata(meta)
-    const todayMl = habit.water_today_ml ?? 0
-    const pct = goalMl > 0 ? Math.min(100, Math.round((todayMl / goalMl) * 100)) : 0
-    return {
-      pct,
-      isWater: true,
-      ariaLabel: `Progreso de hidratación hoy: ${formatWaterMlEs(todayMl)} de ${formatWaterMlEs(goalMl)}, ${pct} por ciento`,
-      caption: `${formatWaterMlEs(todayMl)} / ${formatWaterMlEs(goalMl)} ml`,
-    }
-  }
-  const pct = habit.metrics.completed_today ? 100 : 0
-  return {
-    pct,
-    isWater: false,
-    ariaLabel: habit.metrics.completed_today
-      ? `${habit.name}: completado hoy`
-      : `${habit.name}: pendiente hoy`,
-  }
-}
-
-function HoyHabitProgressBar({
-  pct,
-  isWater,
-  ariaLabel,
-  caption,
-}: {
-  pct: number
-  isWater: boolean
-  ariaLabel: string
-  caption?: string
-}) {
-  const fillStyle: CSSProperties =
-    pct <= 0
-      ? { background: "transparent" }
-      : isWater
-        ? {
-            background:
-              "linear-gradient(90deg, color-mix(in srgb, #22d3ee 88%, var(--color-accent-health)), #0891b2)",
-          }
-        : { background: "var(--color-accent-health)" }
-
-  return (
-    <div className="mt-1.5 min-w-0 w-full">
-      <div
-        className="h-1.5 w-full overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--color-border)_52%,transparent)]"
-        role="progressbar"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={pct}
-        aria-label={ariaLabel}
-      >
-        <div
-          className="h-full max-w-full rounded-full motion-safe:transition-[width] motion-safe:duration-300 motion-reduce:transition-none"
-          style={{ width: `${pct}%`, ...fillStyle }}
-        />
-      </div>
-      {caption ? (
-        <p className="m-0 mt-1 truncate text-[9px] tabular-nums leading-tight text-[var(--color-text-secondary)]">
-          {caption}
-        </p>
-      ) : null}
-    </div>
   )
 }
 
@@ -1209,10 +1142,10 @@ export default function HoyCommandCenter() {
                           )}
                         </button>
                       </div>
-                      {progress.isWater ? (
-                        <HoyHabitProgressBar
+                      {habitShowsTodayProgressBar(progress) ? (
+                        <HabitTodayProgressBar
                           pct={progress.pct}
-                          isWater
+                          kind={progress.kind}
                           ariaLabel={progress.ariaLabel}
                           caption={progress.caption}
                         />
