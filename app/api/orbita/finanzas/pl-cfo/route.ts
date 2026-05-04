@@ -89,7 +89,7 @@ export async function GET(req: NextRequest) {
       currentRows,
       previousRows,
     )
-    const { overview, opex, catalogRows, hasOperativoCatalog } = monthState
+    const { overview, opex, incomeForMetrics, catalogRows, hasOperativoCatalog } = monthState
 
     const operativoCurrent = excludeReconciliationFromOperativoAnalysis(currentRows)
     const operativoPrevious = excludeReconciliationFromOperativoAnalysis(previousRows)
@@ -102,6 +102,7 @@ export async function GET(req: NextRequest) {
       rows,
       opex,
       hasOperativoCatalog,
+      incomeForMetrics,
     )
 
     return NextResponse.json({

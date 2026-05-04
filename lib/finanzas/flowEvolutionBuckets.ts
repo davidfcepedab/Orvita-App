@@ -91,11 +91,12 @@ export function buildMonthlyFlowBuckets(
   months: string[],
   rows: FinanceTransaction[],
   expenseFn: (tx: FinanceTransaction) => number = expenseAmount,
+  incomeFn: (tx: FinanceTransaction) => number = incomeAmount,
 ): FlowEvolutionRow[] {
   const rowsOp = excludeReconciliationFromOperativoAnalysis(rows)
   return months.map((mm) => {
     const inM = filterMonth(rowsOp, mm)
-    const ing = inM.reduce((a, t) => a + incomeAmount(t), 0)
+    const ing = inM.reduce((a, t) => a + incomeFn(t), 0)
     const exp = inM.reduce((a, t) => a + expenseFn(t), 0)
     return {
       month: labelMonth(mm),

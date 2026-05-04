@@ -88,6 +88,8 @@ export type BuildWeeklyBucketsOptions = {
    * Necesario cuando las 4 semanas corridas cruzan el inicio del mes seleccionado.
    */
   allRowsForWeekWindow?: FinanceTransaction[]
+  /** Por defecto {@link incomeAmount}; alinear con KPI overview cuando se excluyen ingresos en TC. */
+  incomeAmount?: (tx: FinanceTransaction) => number
 }
 
 /**
@@ -108,6 +110,8 @@ export function buildWeeklyBuckets(
   const pool = options?.allRowsForWeekWindow
     ? excludeReconciliationFromOperativoAnalysis(options.allRowsForWeekWindow)
     : rowsOp
+
+  const incFn = options?.incomeAmount ?? incomeAmount
 
   const inMonth = filterMonth(rowsOp, month)
   let refDateStr = bounds.endStr
@@ -133,7 +137,7 @@ export function buildWeeklyBuckets(
     let exp = 0
     for (const tx of pool) {
       if (tx.date >= wsStr && tx.date <= weStr) {
-        ing += incomeAmount(tx)
+        ing += incFn(tx)
         exp += expenseFn(tx)
       }
     }

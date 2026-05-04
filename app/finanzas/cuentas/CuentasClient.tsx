@@ -1820,7 +1820,6 @@ export default function CuentasClient() {
         ) : null}
         <details
           className="group overflow-hidden rounded-xl border border-[color-mix(in_srgb,var(--color-border)_50%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_28%,var(--color-surface))] shadow-sm"
-          open
         >
           <summary
             className={cn(

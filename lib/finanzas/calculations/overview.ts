@@ -4,6 +4,8 @@ import { expenseAmount, incomeAmount } from "./txMath"
 export type OverviewExpenseMode = {
   /** Por defecto: todo gasto marcado como expense en TX. */
   expenseAmount?: (tx: FinanceTransaction) => number
+  /** Por defecto {@link incomeAmount}; opcional para excluir ingresos contabilizados en cuentas TC (`incomeCashEconomy`). */
+  incomeAmount?: (tx: FinanceTransaction) => number
 }
 
 export function calculateOverview(
@@ -12,13 +14,14 @@ export function calculateOverview(
   options?: OverviewExpenseMode,
 ) {
   const expFn = options?.expenseAmount ?? expenseAmount
-  const income = currentRows.reduce((a, b) => a + incomeAmount(b), 0)
+  const incFn = options?.incomeAmount ?? incomeAmount
+  const income = currentRows.reduce((a, b) => a + incFn(b), 0)
   const expense = currentRows.reduce((a, b) => a + expFn(b), 0)
   const net = income - expense
 
   const previousNet =
     previousRows.length > 0
-      ? previousRows.reduce((a, b) => a + incomeAmount(b), 0) -
+      ? previousRows.reduce((a, b) => a + incFn(b), 0) -
         previousRows.reduce((a, b) => a + expFn(b), 0)
       : null
 

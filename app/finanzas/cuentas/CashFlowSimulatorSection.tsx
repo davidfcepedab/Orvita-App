@@ -35,6 +35,18 @@ export type CashFlowSimulatorSectionProps = {
 
 type FlowRow = { month: string; ingresos: number; gasto_operativo: number; flujo: number }
 
+type PipelineMonthOverride = { ing?: number; egr?: number }
+
+type PipelineMonthRow = {
+  ym: string
+  label: string
+  ing: number
+  egr: number
+  net: number
+  ingAuto: number
+  egrAuto: number
+}
+
 type Commitment = FlowCommitment
 type CommitmentFlowType = FlowCommitmentFlowType
 type CommitmentModalRow = FlowCommitment & { _isNew?: boolean }
@@ -378,6 +390,8 @@ export function CashFlowSimulatorSection({
   const [simulatorExpanded, setSimulatorExpanded] = useState(false)
   const [commitmentsListExpanded, setCommitmentsListExpanded] = useState(false)
   const [flowViz, setFlowViz] = useState<"table" | "bars">("table")
+  /** Por mes (YYYY-MM): sustituye entradas/salidas automáticas del pipeline de 7 meses. */
+  const [pipelineMonthOverrides, setPipelineMonthOverrides] = useState<Record<string, PipelineMonthOverride>>({})
 
   const [ingresosAdjustPct, setIngresosAdjustPct] = useState(0)
   const [gastosFijos, setGastosFijos] = useState(0)
@@ -541,6 +555,10 @@ export function CashFlowSimulatorSection({
     void load()
   }, [load])
 
+  useEffect(() => {
+    setPipelineMonthOverrides({})
+  }, [month])
+
   const trendFromHistory = useMemo(() => {
     if (rolling.length < 2) return 0
     const first = rolling[0]!.ingresos
@@ -595,23 +613,48 @@ export function CashFlowSimulatorSection({
     [commitments],
   )
 
-  const pipelineMonths = useMemo(() => {
-    const out: { ym: string; label: string; ing: number; egr: number; net: number }[] = []
+  const patchPipelineMonthOverride = useCallback((ym: string, patch: Partial<{ ing: number | null; egr: number | null }>) => {
+    setPipelineMonthOverrides((prev) => {
+      const next: Record<string, PipelineMonthOverride> = { ...prev }
+      const cur: PipelineMonthOverride = { ...(next[ym] ?? {}) }
+      if ("ing" in patch) {
+        if (patch.ing === null) delete cur.ing
+        else if (patch.ing !== undefined) cur.ing = Math.max(0, Math.round(patch.ing))
+      }
+      if ("egr" in patch) {
+        if (patch.egr === null) delete cur.egr
+        else if (patch.egr !== undefined) cur.egr = Math.max(0, Math.round(patch.egr))
+      }
+      if (cur.ing === undefined && cur.egr === undefined) delete next[ym]
+      else next[ym] = cur
+      return next
+    })
+  }, [])
+
+  const clearAllPipelineOverrides = useCallback(() => setPipelineMonthOverrides({}), [])
+
+  const pipelineMonths = useMemo((): PipelineMonthRow[] => {
+    const out: PipelineMonthRow[] = []
     for (let i = 0; i < 7; i += 1) {
       const ym = addMonthsYm(month, i)
       const drift = 1 + (trendFromHistory / 100) * (i / 8)
-      const ing = Math.max(0, Math.round(ingresosEstimados * drift))
-      const egr = Math.round(totalGastosMes * (1 + i * 0.008))
+      const ingAuto = Math.max(0, Math.round(ingresosEstimados * drift))
+      const egrAuto = Math.round(totalGastosMes * (1 + i * 0.008))
+      const ov = pipelineMonthOverrides[ym]
+      const ing = ov?.ing !== undefined ? ov.ing : ingAuto
+      const egr = ov?.egr !== undefined ? ov.egr : egrAuto
       out.push({
         ym,
         label: ymLabel(ym),
         ing,
         egr,
         net: ing - egr,
+        ingAuto,
+        egrAuto,
       })
     }
     return out
-  }, [month, ingresosEstimados, totalGastosMes, trendFromHistory])
+  }, [month, ingresosEstimados, totalGastosMes, trendFromHistory, pipelineMonthOverrides])
 
   const maxBar = useMemo(() => {
     let m = 1
@@ -1053,7 +1096,7 @@ export function CashFlowSimulatorSection({
             className="p-3 sm:p-4"
           >
             <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
-        <div className="order-2 space-y-3 touch-manipulation sm:space-y-4 lg:order-1">
+        <div className="order-1 space-y-3 touch-manipulation sm:space-y-4">
           <div className={cashFlowScenarioStackClass}>
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
               Ingresos del escenario
@@ -1145,10 +1188,20 @@ export function CashFlowSimulatorSection({
           </div>
         </div>
 
-        <div className="order-1 space-y-2.5 lg:order-2 sm:space-y-3">
+        <div className="order-2 space-y-2.5 sm:space-y-3">
           <div className="flex flex-nowrap items-center justify-between gap-2 sm:gap-3">
             <p className={cn(financeSectionEyebrowClass, "min-w-0 flex-1 truncate")}>Vista por mes · 7 meses</p>
-            <div className="flex shrink-0 rounded-full border border-orbita-border bg-orbita-surface-alt/80 p-0.5 text-[10px] font-semibold uppercase tracking-wide text-orbita-secondary">
+            <div className="flex shrink-0 items-center gap-2">
+              {Object.keys(pipelineMonthOverrides).length > 0 ? (
+              <button
+                type="button"
+                onClick={clearAllPipelineOverrides}
+                className="whitespace-nowrap text-[9px] font-semibold uppercase tracking-wide text-orbita-secondary underline decoration-orbita-border/70 underline-offset-2 hover:text-orbita-primary"
+              >
+                Limpiar ajustes
+              </button>
+              ) : null}
+              <div className="flex shrink-0 rounded-full border border-orbita-border bg-orbita-surface-alt/80 p-0.5 text-[10px] font-semibold uppercase tracking-wide text-orbita-secondary">
               <button
                 type="button"
                 onClick={() => setFlowViz("table")}
@@ -1163,8 +1216,13 @@ export function CashFlowSimulatorSection({
               >
                 Barras comparadas
               </button>
+              </div>
             </div>
           </div>
+          <p className="text-[10px] leading-snug text-orbita-secondary sm:text-[11px]">
+            Editá entradas o salidas por mes; el neto y la vista de barras se recalculan al instante. «Limpiar ajustes»
+            vuelve a la proyección automática en los 7 meses.
+          </p>
 
           <div className={cashFlowProjectionWellClass}>
             {flowViz === "table" ? (
@@ -1187,14 +1245,83 @@ export function CashFlowSimulatorSection({
                       </div>
                       <dl className="mt-3 grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
                         <div className="rounded-lg border border-[color-mix(in_srgb,var(--color-border)_45%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_52%,var(--color-background))] px-2.5 py-2 shadow-inner">
-                          <dt className="font-medium text-orbita-secondary">Entradas estimadas</dt>
-                          <dd className="mt-0.5 font-bold tabular-nums text-orbita-primary">${formatMoney(row.ing)}</dd>
+                          <dt className="flex items-center justify-between gap-1 font-medium text-orbita-secondary">
+                            <span>Entradas estimadas</span>
+                            {pipelineMonthOverrides[row.ym]?.ing !== undefined ? (
+                              <span className="text-[8px] font-bold uppercase tracking-wide text-amber-800 dark:text-amber-200">
+                                manual
+                              </span>
+                            ) : null}
+                          </dt>
+                          <dd className="mt-1.5 space-y-1">
+                            <input
+                              type="number"
+                              inputMode="numeric"
+                              aria-label={`Entradas ${row.label}`}
+                              className="w-full rounded-md border border-orbita-border/85 bg-orbita-surface px-2 py-1.5 text-sm font-bold tabular-nums text-orbita-primary"
+                              value={Number.isFinite(row.ing) ? row.ing : ""}
+                              onChange={(e) => {
+                                const v = Number(e.target.value)
+                                if (!Number.isFinite(v)) return
+                                patchPipelineMonthOverride(row.ym, { ing: Math.max(0, Math.round(v)) })
+                              }}
+                              onBlur={() => {
+                                if (Math.round(row.ing) === Math.round(row.ingAuto)) {
+                                  patchPipelineMonthOverride(row.ym, { ing: null })
+                                }
+                              }}
+                            />
+                            <p className="text-[9px] leading-tight text-orbita-muted">
+                              Auto ${formatMoney(row.ingAuto)}
+                            </p>
+                          </dd>
                         </div>
                         <div className="rounded-lg border border-[color-mix(in_srgb,var(--color-border)_45%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_52%,var(--color-background))] px-2.5 py-2 shadow-inner">
-                          <dt className="font-medium text-orbita-secondary">Salidas estimadas</dt>
-                          <dd className="mt-0.5 font-bold tabular-nums text-orbita-primary">${formatMoney(row.egr)}</dd>
+                          <dt className="flex items-center justify-between gap-1 font-medium text-orbita-secondary">
+                            <span>Salidas estimadas</span>
+                            {pipelineMonthOverrides[row.ym]?.egr !== undefined ? (
+                              <span className="text-[8px] font-bold uppercase tracking-wide text-amber-800 dark:text-amber-200">
+                                manual
+                              </span>
+                            ) : null}
+                          </dt>
+                          <dd className="mt-1.5 space-y-1">
+                            <input
+                              type="number"
+                              inputMode="numeric"
+                              aria-label={`Salidas ${row.label}`}
+                              className="w-full rounded-md border border-orbita-border/85 bg-orbita-surface px-2 py-1.5 text-sm font-bold tabular-nums text-orbita-primary"
+                              value={Number.isFinite(row.egr) ? row.egr : ""}
+                              onChange={(e) => {
+                                const v = Number(e.target.value)
+                                if (!Number.isFinite(v)) return
+                                patchPipelineMonthOverride(row.ym, { egr: Math.max(0, Math.round(v)) })
+                              }}
+                              onBlur={() => {
+                                if (Math.round(row.egr) === Math.round(row.egrAuto)) {
+                                  patchPipelineMonthOverride(row.ym, { egr: null })
+                                }
+                              }}
+                            />
+                            <p className="text-[9px] leading-tight text-orbita-muted">
+                              Auto ${formatMoney(row.egrAuto)}
+                            </p>
+                          </dd>
                         </div>
                       </dl>
+                      {pipelineMonthOverrides[row.ym] &&
+                      (pipelineMonthOverrides[row.ym]?.ing !== undefined ||
+                        pipelineMonthOverrides[row.ym]?.egr !== undefined) ? (
+                        <div className="mt-2 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => patchPipelineMonthOverride(row.ym, { ing: null, egr: null })}
+                            className="text-[10px] font-medium text-orbita-secondary underline decoration-orbita-border/70 underline-offset-2 hover:text-orbita-primary"
+                          >
+                            Usar solo fórmula este mes
+                          </button>
+                        </div>
+                      ) : null}
                       <div className="mt-3">
                         <p className="text-[10px] font-medium uppercase tracking-wide text-orbita-secondary">
                           Proporción del mes (entradas vs salidas)
@@ -1262,6 +1389,46 @@ export function CashFlowSimulatorSection({
                         <div className="flex justify-between gap-2 text-[10px] font-medium text-orbita-secondary">
                           <span className="text-orbita-secondary">Entradas ${formatMoney(row.ing)}</span>
                           <span className="text-orbita-secondary">Salidas ${formatMoney(row.egr)}</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 border-t border-orbita-border/40 pt-2">
+                          <label className="min-w-0 text-[9px] font-medium text-orbita-secondary">
+                            Ajuste entradas
+                            <input
+                              type="number"
+                              inputMode="numeric"
+                              className="mt-0.5 w-full rounded-md border border-orbita-border/80 bg-orbita-surface px-1.5 py-1 text-[11px] font-semibold tabular-nums text-orbita-primary"
+                              value={Number.isFinite(row.ing) ? row.ing : ""}
+                              onChange={(e) => {
+                                const v = Number(e.target.value)
+                                if (!Number.isFinite(v)) return
+                                patchPipelineMonthOverride(row.ym, { ing: Math.max(0, Math.round(v)) })
+                              }}
+                              onBlur={() => {
+                                if (Math.round(row.ing) === Math.round(row.ingAuto)) {
+                                  patchPipelineMonthOverride(row.ym, { ing: null })
+                                }
+                              }}
+                            />
+                          </label>
+                          <label className="min-w-0 text-[9px] font-medium text-orbita-secondary">
+                            Ajuste salidas
+                            <input
+                              type="number"
+                              inputMode="numeric"
+                              className="mt-0.5 w-full rounded-md border border-orbita-border/80 bg-orbita-surface px-1.5 py-1 text-[11px] font-semibold tabular-nums text-orbita-primary"
+                              value={Number.isFinite(row.egr) ? row.egr : ""}
+                              onChange={(e) => {
+                                const v = Number(e.target.value)
+                                if (!Number.isFinite(v)) return
+                                patchPipelineMonthOverride(row.ym, { egr: Math.max(0, Math.round(v)) })
+                              }}
+                              onBlur={() => {
+                                if (Math.round(row.egr) === Math.round(row.egrAuto)) {
+                                  patchPipelineMonthOverride(row.ym, { egr: null })
+                                }
+                              }}
+                            />
+                          </label>
                         </div>
                       </div>
                     )

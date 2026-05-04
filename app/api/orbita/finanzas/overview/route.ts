@@ -178,9 +178,12 @@ export async function GET(req: NextRequest) {
       currentRows,
       previousRows,
     )
-    const { overview, opex, snapshotKpiNotice, meta, hasOperativoCatalog } = monthState
+    const { overview, opex, incomeForMetrics, snapshotKpiNotice, meta, hasOperativoCatalog } = monthState
 
-    const weeklySeries = buildWeeklyBuckets(month, currentRows, opex, { allRowsForWeekWindow: rows })
+    const weeklySeries = buildWeeklyBuckets(month, currentRows, opex, {
+      allRowsForWeekWindow: rows,
+      incomeAmount: incomeForMetrics,
+    })
 
     const quarterMonths = rollingQuarterMonths(month)
     const semesterMonths = rollingSemesterMonths(month)
@@ -189,9 +192,30 @@ export async function GET(req: NextRequest) {
     const snapByYm = await fetchSnapshotMapForMonths(auth.supabase, householdId, flowMonthsUnion)
     const flowEvolution = {
       weeks: weeklySeries,
-      quarter: buildFlowSeriesWithSnapshots(quarterMonths, rows, opex, hasOperativoCatalog, snapByYm),
-      semester: buildFlowSeriesWithSnapshots(semesterMonths, rows, opex, hasOperativoCatalog, snapByYm),
-      rollingYear: buildFlowSeriesWithSnapshots(rollingMonths, rows, opex, hasOperativoCatalog, snapByYm),
+      quarter: buildFlowSeriesWithSnapshots(
+        quarterMonths,
+        rows,
+        opex,
+        hasOperativoCatalog,
+        snapByYm,
+        incomeForMetrics,
+      ),
+      semester: buildFlowSeriesWithSnapshots(
+        semesterMonths,
+        rows,
+        opex,
+        hasOperativoCatalog,
+        snapByYm,
+        incomeForMetrics,
+      ),
+      rollingYear: buildFlowSeriesWithSnapshots(
+        rollingMonths,
+        rows,
+        opex,
+        hasOperativoCatalog,
+        snapByYm,
+        incomeForMetrics,
+      ),
     }
     const subs = pickSubscriptionExpenses(currentRows, opex)
     const obls = pickObligationExpenses(currentRows, opex)

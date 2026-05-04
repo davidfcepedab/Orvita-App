@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { FinanceTransaction } from "@/lib/finanzas/types"
+import { incomeAmount } from "@/lib/finanzas/calculations/txMath"
 import type { FlowEvolutionRow } from "@/lib/finanzas/flowEvolutionBuckets"
 import {
   buildMonthlyFlowBuckets,
@@ -52,11 +53,12 @@ export function buildFlowSeriesWithSnapshots(
   opex: (tx: FinanceTransaction) => number,
   hasOperativoCatalog: boolean,
   snapByYm: ReadonlyMap<string, SnapshotIncomeExpense>,
+  incomeForMetrics: (tx: FinanceTransaction) => number = incomeAmount,
 ): FlowEvolutionRow[] {
   const snapFillOpts = { fillExpenseFromSnapshots: !hasOperativoCatalog } as const
   return fillMonthlyFlowFromSnapshots(
     months,
-    buildMonthlyFlowBuckets(months, rowsThroughEnd, opex),
+    buildMonthlyFlowBuckets(months, rowsThroughEnd, opex, incomeForMetrics),
     snapByYm,
     snapFillOpts,
   )
@@ -72,9 +74,17 @@ export async function fetchRollingYearFlowSeriesForHousehold(
   rowsThroughEnd: FinanceTransaction[],
   opex: (tx: FinanceTransaction) => number,
   hasOperativoCatalog: boolean,
+  incomeForMetrics: (tx: FinanceTransaction) => number = incomeAmount,
 ): Promise<FlowEvolutionRow[]> {
   const rollingMonths = rollingYearMonths(anchorMonthYm)
   if (rollingMonths.length === 0) return []
   const snapByYm = await fetchSnapshotMapForMonths(supabase, householdId, rollingMonths)
-  return buildFlowSeriesWithSnapshots(rollingMonths, rowsThroughEnd, opex, hasOperativoCatalog, snapByYm)
+  return buildFlowSeriesWithSnapshots(
+    rollingMonths,
+    rowsThroughEnd,
+    opex,
+    hasOperativoCatalog,
+    snapByYm,
+    incomeForMetrics,
+  )
 }

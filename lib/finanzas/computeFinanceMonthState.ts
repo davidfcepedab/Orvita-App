@@ -12,12 +12,18 @@ import {
 } from "@/lib/finanzas/reconciliationHints"
 import { excludeReconciliationFromOperativoAnalysis } from "@/lib/finanzas/reconciliationTxFilter"
 import type { FinanceSubcategoryCatalogRow } from "@/lib/finanzas/subcategoryCatalog"
+import {
+  createIncomeForMetricsFn,
+  type LedgerTcRef,
+} from "@/lib/finanzas/incomeCashEconomy"
 
 export type FinanceMonthOpex = (tx: FinanceTransaction) => number
 
 export type ComputedFinanceMonthState = {
   overview: ReturnType<typeof calculateOverview>
   opex: FinanceMonthOpex
+  /** Ingreso para KPI/resúmenes: excluye líneas de ingreso enlazadas a TC cuando hay cuentas `tarjeta_credito`. */
+  incomeForMetrics: (tx: FinanceTransaction) => number
   snapshotKpiNotice?: string
   usedSnapshotForKpi: boolean
   txMagBeforeMerge: number
@@ -51,13 +57,35 @@ export async function computeFinanceMonthState(
   } catch (e) {
     console.warn("FINANCE_MONTH_STATE: catálogo no disponible", e)
   }
+
+  let tcRefs: LedgerTcRef[] = []
+  try {
+    const { data: tcRows } = await supabase
+      .from("orbita_finance_accounts")
+      .select("id, label")
+      .eq("household_id", householdId)
+      .eq("account_class", "tarjeta_credito")
+    tcRefs = (tcRows ?? [])
+      .map((r) => ({
+        id: String((r as { id?: unknown }).id ?? "").trim(),
+        label: String((r as { label?: unknown }).label ?? "").trim(),
+      }))
+      .filter((r) => r.id.length > 0)
+  } catch (e) {
+    console.warn("FINANCE_MONTH_STATE: cuentas tarjeta_credito no disponibles", e)
+  }
+
   const opex = createOperativoExpenseFn(catalogRows)
   const hasOperativoCatalog = catalogRows.length > 0
+  const incomeForMetrics = createIncomeForMetricsFn(tcRefs)
 
   const operativoCurrent = excludeReconciliationFromOperativoAnalysis(currentRows)
   const operativoPrevious = excludeReconciliationFromOperativoAnalysis(previousRows)
 
-  let overview = calculateOverview(operativoCurrent, operativoPrevious, { expenseAmount: opex })
+  let overview = calculateOverview(operativoCurrent, operativoPrevious, {
+    expenseAmount: opex,
+    incomeAmount: incomeForMetrics,
+  })
   const txMagBeforeMerge = overview.income + overview.expense
 
   const [yStr, mStr] = month.split("-")
@@ -216,6 +244,7 @@ export async function computeFinanceMonthState(
   return {
     overview,
     opex,
+    incomeForMetrics,
     snapshotKpiNotice,
     usedSnapshotForKpi,
     txMagBeforeMerge,
