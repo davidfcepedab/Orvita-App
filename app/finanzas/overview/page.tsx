@@ -81,6 +81,13 @@ const PULSE_EMPTY_CARD_STYLE: CSSProperties = {
 const OVERVIEW_CAPITAL_PULSE_SUMMARY_CLASS =
   "flex cursor-pointer list-none items-start gap-2 rounded-[var(--radius-card)] border border-[color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[linear-gradient(180deg,var(--color-surface)_0%,color-mix(in_srgb,var(--color-surface-alt)_42%,var(--color-surface))_100%)] px-3 py-2.5 shadow-[var(--shadow-hover)] sm:gap-3 sm:px-3.5 sm:py-3 md:min-h-[7.75rem] [&::-webkit-details-marker]:hidden"
 
+/** Misma leyenda en ambos paneles expandibles (Suscripciones / Compromisos). */
+const OVERVIEW_CAPITAL_PANEL_INTRO =
+  "Suscripciones y compromisos se gestionan en Cuentas (Capital). Desplegá la tarjeta para ver totales, tabla y editar."
+
+/** Sub-sección “movimientos”: mismo título en ambas tarjetas. */
+const OVERVIEW_MOVEMENTS_SIGNALS_LABEL = "Señales desde movimientos"
+
 function financeTooltipNumber(value: unknown): number {
   if (typeof value === "number" && Number.isFinite(value)) return value
   if (Array.isArray(value)) return financeTooltipNumber(value[0])
@@ -1141,7 +1148,7 @@ export default function FinanzasOverview() {
 
       <div className="min-w-0 max-w-full space-y-4 md:space-y-5">
         <div className="grid min-w-0 max-w-full grid-cols-1 gap-4 md:grid-cols-2 md:items-stretch md:gap-5 lg:gap-6">
-          <details className="group flex h-full min-h-0 max-w-full flex-col" open>
+          <details className="group flex h-full min-h-0 max-w-full flex-col">
             <summary className={OVERVIEW_CAPITAL_PULSE_SUMMARY_CLASS}>
               <ChevronDown
                 className="mt-0.5 h-4 w-4 shrink-0 text-orbita-secondary transition-transform duration-200 group-open:rotate-180"
@@ -1193,9 +1200,7 @@ export default function FinanzasOverview() {
             <div className="mt-2 flex min-h-0 flex-1 flex-col">
             <Card className={cn(financeRaisedPanelClass, "min-h-0 flex-1 overflow-hidden p-0")}>
               <div className="grid min-w-0 max-w-full gap-3 p-4 sm:gap-3.5 sm:p-5">
-                <p className={cn(financeSectionIntroClass, "text-orbita-muted")}>
-                  Lista en Cuentas (Capital). Desplegá para ver totales, tabla y patrones.
-                </p>
+                <p className={cn(financeSectionIntroClass, "text-orbita-muted")}>{OVERVIEW_CAPITAL_PANEL_INTRO}</p>
 
             <div className="space-y-2 border-b border-orbita-border/45 pb-2">
               <div className="flex items-baseline justify-between gap-3">
@@ -1316,7 +1321,7 @@ export default function FinanzasOverview() {
                     className="h-3 w-3 shrink-0 transition-transform duration-200 group-open:rotate-180"
                     aria-hidden
                   />
-                  Patrones en movimientos
+                  {OVERVIEW_MOVEMENTS_SIGNALS_LABEL}
                 </span>
                 {subs.length > 0 ? (
                   <span className="shrink-0 rounded-full border border-orbita-border/55 bg-orbita-surface-alt/90 px-1.5 py-0.5 text-[9px] font-bold tabular-nums text-orbita-primary">
@@ -1324,7 +1329,9 @@ export default function FinanzasOverview() {
                   </span>
                 ) : null}
               </summary>
-              <p className={cn(financeSectionIntroClass, "mt-1.5 text-orbita-muted")}>Heurística del mes (no sustituye tu lista).</p>
+              <p className={cn(financeSectionIntroClass, "mt-1.5 text-orbita-muted")}>
+                Heurística del mes; complementa tu lista en Cuentas (no la sustituye).
+              </p>
               {subs.length === 0 ? (
                 <p className="mt-1.5 text-[11px] text-orbita-muted">Sin coincidencias tipo suscripción.</p>
               ) : (
@@ -1352,7 +1359,7 @@ export default function FinanzasOverview() {
             </div>
           </details>
 
-          <details className="group flex h-full min-h-0 max-w-full flex-col" open>
+          <details className="group flex h-full min-h-0 max-w-full flex-col">
             <summary className={OVERVIEW_CAPITAL_PULSE_SUMMARY_CLASS}>
               <ChevronDown
                 className="mt-0.5 h-4 w-4 shrink-0 text-orbita-secondary transition-transform duration-200 group-open:rotate-180"
@@ -1420,10 +1427,7 @@ export default function FinanzasOverview() {
             <div className="mt-2 flex min-h-0 flex-1 flex-col">
             <Card className={cn(financeRaisedPanelClass, "min-h-0 flex-1 overflow-hidden p-0")}>
               <div className="grid min-w-0 max-w-full gap-3 p-4 sm:gap-3.5 sm:p-5">
-                <p className={cn(financeSectionIntroClass, "text-orbita-muted")}>
-                  {supabaseEnabled ? "Simulador en Cuentas (hogar)." : "Simulador en Cuentas (este dispositivo)."} Desplegá
-                  para ver impacto, tabla y sugerencias.
-                </p>
+                <p className={cn(financeSectionIntroClass, "text-orbita-muted")}>{OVERVIEW_CAPITAL_PANEL_INTRO}</p>
 
             <div className="space-y-2 border-b border-orbita-border/45 pb-2">
               <div className="flex items-baseline justify-between gap-3">
@@ -1580,7 +1584,7 @@ export default function FinanzasOverview() {
                     className="h-3 w-3 shrink-0 transition-transform duration-200 group-open:rotate-180"
                     aria-hidden
                   />
-                  Sugerencias desde movimientos
+                  {OVERVIEW_MOVEMENTS_SIGNALS_LABEL}
                 </span>
                 {obls.length > 0 ? (
                   <span className="shrink-0 rounded-full border border-orbita-border/55 bg-orbita-surface-alt/90 px-1.5 py-0.5 text-[9px] font-bold tabular-nums text-orbita-primary">
@@ -1589,7 +1593,7 @@ export default function FinanzasOverview() {
                 ) : null}
               </summary>
               <p className={cn(financeSectionIntroClass, "mt-1.5 text-orbita-muted")}>
-                Cargos fijos detectados; útil antes de copiar a la lista.
+                Heurística del mes; complementa tu lista en Cuentas (no la sustituye).
               </p>
               {obls.length === 0 ? (
                 <p className="mt-1.5 text-[11px] text-orbita-muted">Sin sugerencias este mes.</p>

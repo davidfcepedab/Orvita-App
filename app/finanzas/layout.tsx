@@ -66,11 +66,9 @@ function FinanzasLayoutContent({
 
   return (
     <div className="orbita-page-stack mx-auto min-w-0 w-full max-w-[min(76rem,calc(100vw-1.5rem))] space-y-2 sm:space-y-3">
+      {/* Safe area horizontal: `.orbita-shell-inline` del AppShell; evitar `pr` extra solo en este Card (desalineaba). */}
       <Card
-        className={cn(
-          "min-w-0 overflow-hidden rounded-2xl border-[color-mix(in_srgb,var(--color-border)_34%,transparent)] sm:rounded-[22px]",
-          "max-sm:pr-[max(0.75rem,env(safe-area-inset-right,0px))]",
-        )}
+        className="min-w-0 overflow-hidden rounded-2xl border-[color-mix(in_srgb,var(--color-border)_34%,transparent)] sm:rounded-[22px]"
         style={{
           background: "color-mix(in srgb, var(--color-surface) 96%, var(--color-surface-alt))",
           borderColor: "color-mix(in srgb, var(--color-border) 42%, transparent)",

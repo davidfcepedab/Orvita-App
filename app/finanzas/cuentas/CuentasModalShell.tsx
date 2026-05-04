@@ -20,7 +20,7 @@ export function CuentasModalShell({
   subtitle?: string
   onClose: () => void
   children: ReactNode
-  /** Acciones fijas abajo (p. ej. Guardar): siempre visibles en móvil con área segura. */
+  /** Acciones fijas abajo (p. ej. Guardar). El shell va por encima del BottomNav en móvil (z-index). */
   footer?: ReactNode
   wide?: boolean
   headerTint?: string
@@ -40,7 +40,7 @@ export function CuentasModalShell({
   return (
     <div
       className={cn(
-        "fixed inset-0 z-[80] flex items-end justify-center sm:items-center",
+        "fixed inset-0 z-[110] flex items-end justify-center sm:items-center",
         "pb-[env(safe-area-inset-bottom,0px)] pt-[max(0.5rem,env(safe-area-inset-top,0px))]",
         compact ? "sm:p-4" : "sm:p-6",
       )}
@@ -56,7 +56,7 @@ export function CuentasModalShell({
       />
       <div
         className={cn(
-          "relative z-[81] flex min-h-0 min-w-0 w-full flex-col overflow-hidden rounded-t-[var(--radius-card)] border-[0.5px] border-orbita-border/90 bg-orbita-surface shadow-card sm:rounded-[var(--radius-card)]",
+          "relative z-[111] flex min-h-0 min-w-0 w-full flex-col overflow-hidden rounded-t-[var(--radius-card)] border-[0.5px] border-orbita-border/90 bg-orbita-surface shadow-card sm:rounded-[var(--radius-card)]",
           "max-h-[min(88dvh,calc(100dvh-env(safe-area-inset-bottom)-env(safe-area-inset-top)-1rem))] sm:max-h-[92vh]",
           wide ? "max-w-5xl" : "max-w-lg",
         )}
