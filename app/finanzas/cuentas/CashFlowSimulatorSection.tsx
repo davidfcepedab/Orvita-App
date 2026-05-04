@@ -154,11 +154,17 @@ const cashFlowKpiTileClass =
 const cashFlowProjectionWellClass =
   "rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_62%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_46%,var(--color-background))] p-3 shadow-inner sm:p-4"
 
+/** Píldoras planas (misma familia que el chip «Ingreso»), alineadas a los tintes de Gasto fijo / variable del simulador. */
 function flowTypeBadgeClass(t: CommitmentFlowType) {
-  if (t === "income") return "border-emerald-200 bg-emerald-50 text-emerald-800"
-  if (t === "recurring") return "border-sky-200 bg-sky-50 text-sky-900"
-  if (t === "one-time") return "border-amber-200 bg-amber-50 text-amber-900"
-  return "border-orbita-border bg-orbita-surface text-orbita-primary"
+  if (t === "income") return "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/35 dark:bg-emerald-950/40 dark:text-emerald-100"
+  // Gasto variable (cuotas que cambian): naranja
+  if (t === "recurring")
+    return "border-orange-200 bg-orange-50 text-orange-950 dark:border-orange-500/35 dark:bg-orange-950/45 dark:text-orange-100"
+  // Única vez: violeta (distinto de fijo/variable)
+  if (t === "one-time")
+    return "border-violet-200 bg-violet-50 text-violet-950 dark:border-violet-500/30 dark:bg-violet-950/45 dark:text-violet-100"
+  // Gasto fijo: ámbar
+  return "border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-500/35 dark:bg-amber-950/40 dark:text-amber-100"
 }
 
 function CommitmentModalMobileCard({
@@ -402,9 +408,12 @@ export function CashFlowSimulatorSection({
       const d = json.data
       const inc = Number(d.income) || 0
       const exp = Number(d.expense) || 0
-      setIncomeBase(inc)
       const yr = d.flowEvolution?.rollingYear ?? []
       setRolling(yr)
+      const rollingIncomeAvg =
+        yr.length > 0 ? Math.round(yr.reduce((a, r) => a + (Number(r.ingresos) || 0), 0) / yr.length) : 0
+      // Mes sin ingresos etiquetados en TX puede devolver income=0; el simulador usa entonces el promedio 12m (misma lógica que «Hist.»).
+      setIncomeBase(inc > 0 ? inc : rollingIncomeAvg)
       const seeded: Commitment[] = (d.obligations ?? []).map((o) => {
         const title = o.name
         const cat = obligationCategoryLabel(o.name)
@@ -891,10 +900,10 @@ export function CashFlowSimulatorSection({
               <table className="w-full min-w-[520px] table-fixed border-collapse text-left text-[11px] sm:text-sm">
                 <thead>
                   <tr className="border-b border-orbita-border text-[9px] font-semibold uppercase tracking-wide text-orbita-secondary sm:text-[10px]">
-                    <th className="w-[12%] py-1.5 pr-2 font-medium">Día</th>
-                    <th className="w-[50%] py-1.5 pr-3 font-medium">Concepto</th>
-                    <th className="w-[18%] py-1.5 pr-2 font-medium">Tipo</th>
-                    <th className="w-[20%] py-1.5 pl-2 text-right font-medium">Monto</th>
+                    <th className="w-[12%] align-middle py-2 pr-2 font-medium">Día</th>
+                    <th className="w-[50%] align-middle py-2 pr-3 font-medium">Concepto</th>
+                    <th className="w-[18%] align-middle py-2 pr-2 font-medium">Tipo</th>
+                    <th className="w-[20%] align-middle py-2 pl-2 text-right font-medium">Monto</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -906,13 +915,15 @@ export function CashFlowSimulatorSection({
                     const titleDiffers = c.title.trim().toLowerCase() !== cat.toLowerCase()
                     return (
                       <tr key={c.id} className="border-b border-orbita-border/70 last:border-0">
-                        <td className="py-1.5 pr-2 align-top tabular-nums text-orbita-primary">
-                          <span className="font-semibold">{c.dueDay ?? dayFromIso(c.date)}</span>
-                          <span className="ml-1 block text-[10px] font-normal text-orbita-secondary sm:inline">
-                            ({formatCommitmentDayEn(c.date)})
+                        <td className="py-2 pr-2 align-middle tabular-nums text-orbita-primary">
+                          <span className="inline-flex flex-col gap-0.5 sm:inline-flex sm:flex-row sm:items-center sm:gap-1">
+                            <span className="font-semibold leading-none">{c.dueDay ?? dayFromIso(c.date)}</span>
+                            <span className="text-[10px] font-normal leading-none text-orbita-secondary">
+                              ({formatCommitmentDayEn(c.date)})
+                            </span>
                           </span>
                         </td>
-                        <td className="max-w-0 py-1.5 pr-3 align-top" title={showCat ? `${cat} ${sub}` : c.title}>
+                        <td className="max-w-0 py-2 pr-3 align-middle" title={showCat ? `${cat} ${sub}` : c.title}>
                           {showCat ? (
                             <>
                               <p className="break-words font-semibold leading-snug text-orbita-primary">
@@ -929,7 +940,7 @@ export function CashFlowSimulatorSection({
                             <p className="break-words font-semibold leading-snug text-orbita-primary">{c.title}</p>
                           )}
                         </td>
-                        <td className="py-1.5 pr-2 align-top">
+                        <td className="py-2 pr-2 align-middle">
                           <span
                             className={`inline-flex max-w-full rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${flowTypeBadgeClass(c.flowType)}`}
                           >
@@ -939,7 +950,7 @@ export function CashFlowSimulatorSection({
                           </span>
                         </td>
                         <td
-                          className={`whitespace-nowrap py-1.5 pl-2 text-right align-top text-[11px] font-bold tabular-nums sm:text-sm ${inc ? "text-emerald-600" : "text-orbita-primary"}`}
+                          className={`whitespace-nowrap py-2 pl-2 text-right align-middle text-[11px] font-bold tabular-nums sm:text-sm ${inc ? "text-emerald-600" : "text-orbita-primary"}`}
                         >
                           {inc ? "+" : "-"}${formatMoney(c.amount)}
                         </td>
@@ -1268,20 +1279,43 @@ export function CashFlowSimulatorSection({
         subtitle="Día fijo cada mes, categoría y monto. Una fila por ítem."
         wide
         compact
+        footer={
+          <>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <button
+                type="button"
+                onClick={addCommitModalRow}
+                className="h-10 min-h-10 touch-manipulation rounded-md border border-orbita-border/80 bg-orbita-surface px-3 text-xs font-medium text-orbita-primary hover:bg-orbita-surface-alt sm:h-9 sm:px-3.5"
+              >
+                + Fila
+              </button>
+              <button
+                type="button"
+                onClick={() => void saveCommitModal()}
+                className="h-11 min-h-11 touch-manipulation rounded-md bg-orbita-primary px-5 text-xs font-semibold text-white hover:opacity-95 sm:h-9 sm:px-5"
+              >
+                Guardar
+              </button>
+            </div>
+            <p className="mt-2 text-[10px] leading-snug text-orbita-muted sm:text-[11px]">
+              Impacto lista: {netImpact30 >= 0 ? "+" : "-"}${formatMoney(Math.abs(netImpact30))} / mes.
+            </p>
+          </>
+        }
       >
-        <div className="max-h-[min(70vh,480px)] overflow-y-auto overflow-x-hidden md:max-h-[min(78vh,520px)]">
-          <div className="space-y-2 md:hidden">
-            {commitModalRows.map((row) => (
-              <CommitmentModalMobileCard
-                key={row.id}
-                row={row}
-                month={month}
-                supabaseEnabled={supabaseEnabled}
-                catalogSelectOpts={commitmentCatalogSelectOpts}
-                setCommitModalRows={setCommitModalRows}
-              />
-            ))}
-          </div>
+        <>
+        <div className="space-y-2 md:hidden">
+          {commitModalRows.map((row) => (
+            <CommitmentModalMobileCard
+              key={row.id}
+              row={row}
+              month={month}
+              supabaseEnabled={supabaseEnabled}
+              catalogSelectOpts={commitmentCatalogSelectOpts}
+              setCommitModalRows={setCommitModalRows}
+            />
+          ))}
+        </div>
 
           <div className="hidden md:block md:overflow-x-hidden">
             <table className="w-full table-fixed border-collapse text-left text-[10px] sm:text-[11px]">
@@ -1445,30 +1479,11 @@ export function CashFlowSimulatorSection({
             </tbody>
           </table>
           </div>
-        </div>
-        {commitSaveErr ? <p className="mt-2 text-[11px] leading-snug text-rose-600 sm:text-xs">{commitSaveErr}</p> : null}
+        {commitSaveErr ? <p className="mt-3 text-[11px] leading-snug text-rose-600 sm:text-xs">{commitSaveErr}</p> : null}
         {supabaseEnabled ? (
-          <p className="mt-1.5 text-[10px] text-orbita-muted sm:text-[11px]">Supabase · hogar.</p>
+          <p className="mt-2 text-[10px] text-orbita-muted sm:mt-3 sm:text-[11px]">Supabase · hogar.</p>
         ) : null}
-        <div className="mt-3 flex flex-col gap-2 border-t border-orbita-border/50 pt-3 sm:flex-row sm:items-center sm:justify-between">
-          <button
-            type="button"
-            onClick={addCommitModalRow}
-            className="h-9 touch-manipulation rounded-md border border-orbita-border/80 bg-orbita-surface px-3 text-xs font-medium text-orbita-primary hover:bg-orbita-surface-alt sm:h-9 sm:px-3.5"
-          >
-            + Fila
-          </button>
-          <button
-            type="button"
-            onClick={() => void saveCommitModal()}
-            className="h-9 touch-manipulation rounded-md bg-orbita-primary px-4 text-xs font-semibold text-white hover:opacity-95 sm:px-5"
-          >
-            Guardar
-          </button>
-        </div>
-        <p className="mt-2 text-[10px] leading-snug text-orbita-muted sm:text-[11px]">
-          Impacto lista: {netImpact30 >= 0 ? "+" : "-"}${formatMoney(Math.abs(netImpact30))} / mes.
-        </p>
+        </>
       </CuentasModalShell>
     </>
   )

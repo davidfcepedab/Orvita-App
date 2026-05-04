@@ -921,10 +921,10 @@ export function SubscriptionsBurnSection({
             </div>
 
             <div
-              className={`flex flex-col gap-3 rounded-2xl border-[0.5px] p-5 sm:flex-row sm:items-center sm:justify-between ${
+              className={`flex flex-col gap-3 rounded-2xl p-5 sm:flex-row sm:items-center sm:justify-between ${
                 significantSaving
-                  ? "border-emerald-200/90 bg-gradient-to-br from-emerald-50/90 to-white"
-                  : "border-orbita-border/80 bg-orbita-surface-alt/50"
+                  ? "bg-gradient-to-br from-emerald-50/90 to-white"
+                  : "bg-orbita-surface-alt/50"
               }`}
               aria-live="polite"
               aria-atomic="true"

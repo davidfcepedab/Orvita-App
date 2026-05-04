@@ -349,18 +349,24 @@ const creditThemes: Record<
 /** Acentos suaves por KPI (brillo + pedestal del icono), sin bandas de borde fuertes. */
 const STAT_KPI_ACCENTS = {
   liquidity: {
+    cardTint:
+      "!bg-[linear-gradient(168deg,color-mix(in_srgb,var(--color-accent-health)_11%,var(--color-surface))_0%,color-mix(in_srgb,var(--color-surface-alt)_44%,var(--color-surface))_100%)]",
     glow:
       "before:bg-[radial-gradient(140%_95%_at_92%_-8%,color-mix(in_srgb,var(--color-accent-health)_22%,transparent)_0%,transparent_58%)]",
     iconShell:
       "bg-gradient-to-br from-emerald-500/[0.2] to-teal-700/[0.12] text-emerald-800 shadow-[0_8px_24px_-12px_color-mix(in_srgb,var(--color-accent-health)_35%,transparent)] ring-1 ring-emerald-600/20 dark:from-emerald-400/25 dark:to-teal-950/40 dark:text-emerald-50 dark:ring-emerald-400/25",
   },
   credit: {
+    cardTint:
+      "!bg-[linear-gradient(168deg,color-mix(in_srgb,#0ea5e9_10%,var(--color-surface))_0%,color-mix(in_srgb,var(--color-surface-alt)_42%,var(--color-surface))_100%)]",
     glow:
       "before:bg-[radial-gradient(140%_95%_at_92%_-8%,color-mix(in_srgb,#0ea5e9_18%,transparent)_0%,transparent_58%)]",
     iconShell:
       "bg-gradient-to-br from-sky-500/[0.22] to-indigo-700/[0.14] text-sky-900 shadow-[0_8px_24px_-12px_color-mix(in_srgb,#0ea5e9_28%,transparent)] ring-1 ring-sky-500/25 dark:from-sky-400/28 dark:to-indigo-950/45 dark:text-sky-50 dark:ring-sky-400/22",
   },
   debt: {
+    cardTint:
+      "!bg-[linear-gradient(168deg,color-mix(in_srgb,var(--color-accent-danger)_9%,var(--color-surface))_0%,color-mix(in_srgb,var(--color-surface-alt)_40%,var(--color-surface))_100%)]",
     glow:
       "before:bg-[radial-gradient(140%_95%_at_92%_-8%,color-mix(in_srgb,var(--color-accent-danger)_14%,transparent)_0%,transparent_58%)]",
     iconShell:
@@ -402,23 +408,24 @@ function StatKpiCard({
     <Card
       className={cn(
         `relative isolate overflow-hidden p-6 sm:p-8 ${arcticPanel}`,
+        a.cardTint,
         "shadow-[var(--shadow-card)] transition-[box-shadow,transform] duration-300",
         "before:pointer-events-none before:absolute before:inset-0 before:z-0 before:content-['']",
         a.glow,
         "motion-safe:hover:-translate-y-[3px] motion-safe:hover:shadow-[var(--shadow-hover)] motion-reduce:hover:translate-y-0",
       )}
     >
-      <div className="relative z-[1]">
+      <div className="relative z-[1] min-w-0 pr-[3.25rem] sm:pr-[4.25rem]">
         <div
           className={cn(
-            "absolute right-4 top-4 z-[2] flex h-11 w-11 items-center justify-center rounded-2xl [&>svg]:h-5 [&>svg]:w-5",
+            "absolute right-0 top-0 z-[2] flex h-11 w-11 items-center justify-center rounded-2xl [&>svg]:h-5 [&>svg]:w-5",
             a.iconShell,
           )}
           aria-hidden
         >
           {icon}
         </div>
-        <p className={financeCardMicroLabelClass}>{title}</p>
+        <p className={cn(financeCardMicroLabelClass, "pr-1")}>{title}</p>
         <div className="mt-3 min-w-0">
           <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
             <p className={cn(financeKpiValueClass, "!mt-0 min-w-0 bg-gradient-to-br from-orbita-primary to-orbita-secondary bg-clip-text text-left text-transparent")}>

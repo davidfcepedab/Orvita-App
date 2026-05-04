@@ -220,39 +220,41 @@ export function ConnectedBankAccountsCard({ embedded = false }: { embedded?: boo
 
   const body = (
     <>
-      <div className={cn("flex flex-wrap items-start justify-between gap-2 sm:gap-3", embedded && "gap-2")}>
-        <div className="min-w-0">
-          {!embedded ? (
-            <p className={financeCardMicroLabelClass}>Conexión</p>
-          ) : null}
-          <h3
+      <div className="min-w-0">
+        {!embedded ? (
+          <p className={financeCardMicroLabelClass}>Conexión</p>
+        ) : null}
+        <div className={cn("flex items-start gap-2.5 sm:gap-3", !embedded && "mt-0.5")}>
+          <Landmark
             className={cn(
-              "font-semibold tracking-tight text-orbita-primary",
-              embedded ? "mt-0 text-sm leading-snug sm:text-base" : "mt-0.5 text-base sm:text-lg",
+              "mt-0.5 shrink-0 text-[var(--color-accent-finance)]",
+              embedded ? "h-4 w-4 sm:h-[18px] sm:w-[18px]" : "h-5 w-5 sm:h-[22px] sm:w-[22px]",
             )}
-          >
-            Banco por internet
-          </h3>
-          <p
-            className={cn(
-              "leading-snug text-orbita-secondary",
-              embedded
-                ? "mt-0.5 max-w-[62ch] text-[10px] sm:text-[11px]"
-                : "mt-1 text-[11px] leading-relaxed sm:text-xs",
-            )}
-          >
-            {embedded
-              ? "Belvo enlace seguro; Órvita no guarda tu clave. Sync abajo."
-              : "Enlace seguro (Belvo); nosotros no guardamos tu clave del banco. La última sincronización aparece abajo."}
-          </p>
+            aria-hidden
+          />
+          <div className="min-w-0 flex-1">
+            <h3
+              className={cn(
+                "font-semibold tracking-tight text-orbita-primary",
+                embedded ? "mt-0 text-sm leading-snug sm:text-base" : "mt-0 text-base sm:text-lg",
+              )}
+            >
+              Banco por internet
+            </h3>
+            <p
+              className={cn(
+                "leading-snug text-orbita-secondary",
+                embedded
+                  ? "mt-0.5 max-w-[62ch] text-[10px] sm:text-[11px]"
+                  : "mt-1 text-[11px] leading-relaxed sm:text-xs",
+              )}
+            >
+              {embedded
+                ? "Belvo enlace seguro; Órvita no guarda tu clave. Sync abajo."
+                : "Enlace seguro (Belvo); nosotros no guardamos tu clave del banco. La última sincronización aparece abajo."}
+            </p>
+          </div>
         </div>
-        <Landmark
-          className={cn(
-            "shrink-0 text-[var(--color-accent-finance)]",
-            embedded ? "h-4 w-4 sm:h-[18px] sm:w-[18px]" : "h-5 w-5",
-          )}
-          aria-hidden
-        />
       </div>
 
       {belvoConnected ? (
