@@ -1,3 +1,4 @@
+import { incomeAmount } from "@/lib/finanzas/calculations/txMath"
 import {
   buildCompleteMonthFinanceCoherence,
   computeMonthFinanceCoherence,
@@ -35,6 +36,7 @@ describe("computeMonthFinanceCoherence", () => {
     ]
     const c = computeMonthFinanceCoherence(rows, [])
     expect(c.incomeTotal).toBe(2_000_000)
+    expect(c.incomeOperativoTotal).toBe(2_000_000)
     expect(c.expenseTotalAll).toBe(800_000)
     expect(c.netCashFlow).toBe(1_200_000)
     expect(c.expenseOperativoKpi).toBe(800_000)
@@ -66,6 +68,17 @@ describe("computeMonthFinanceCoherence", () => {
     expect(full.previousMonthNetCashFlow).toBe(1_500_000)
     const continuity = full.plLayers.find((L) => L.id === "continuity_prev")
     expect(continuity?.amount).toBe(1_500_000)
+  })
+
+  test("incomeOperativoTotal puede diferir del extracto cuando se pasa incomeOperativoFn", () => {
+    const rows = [
+      tx({ id: "1", date: "2026-04-01", amount: 3_000_000, type: "income" }),
+      tx({ id: "2", date: "2026-04-02", amount: 400_000, type: "expense", subcategory: "Comida" }),
+    ]
+    const halfIncome = (t: (typeof rows)[0]) => incomeAmount(t) * 0.5
+    const c = computeMonthFinanceCoherence(rows, [], { incomeOperativoFn: halfIncome })
+    expect(c.incomeTotal).toBe(3_000_000)
+    expect(c.incomeOperativoTotal).toBe(1_500_000)
   })
 
   test("gasto módulo finanzas: fuera de operativo KPI pero en gasto total; residual ~0", () => {

@@ -44,9 +44,9 @@ import { CuentasModalShell } from "./CuentasModalShell"
 import { formatMoney } from "./cuentasFormat"
 import { cn } from "@/lib/utils"
 
-/** Misma familia visual que el simulador de cash flow: tarjeta clara elevada sobre el fondo grouped. */
+/** Tarjeta elevada con más contraste respecto al fondo de página que el bloque grouped. */
 const subscriptionsElevatedShellClass =
-  "rounded-[var(--radius-card)] border border-[color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[linear-gradient(180deg,var(--color-surface)_0%,color-mix(in_srgb,var(--color-surface-alt)_40%,var(--color-surface))_100%)] shadow-[var(--shadow-hover)]"
+  "rounded-[var(--radius-card)] border border-[color-mix(in_srgb,var(--color-border)_46%,transparent)] bg-[linear-gradient(175deg,var(--color-surface)_0%,color-mix(in_srgb,var(--color-surface-alt)_58%,var(--color-surface))_100%)] shadow-[0_14px_42px_-16px_rgba(15,23,42,0.16)] ring-1 ring-[color-mix(in_srgb,var(--color-border)_28%,transparent)] dark:border-[color-mix(in_srgb,var(--color-border)_36%,transparent)] dark:bg-[linear-gradient(175deg,var(--color-surface)_0%,color-mix(in_srgb,var(--color-surface-alt)_48%,var(--color-surface))_100%)] dark:shadow-[0_16px_48px_-18px_rgba(0,0,0,0.55)] dark:ring-[color-mix(in_srgb,var(--color-border)_22%,transparent)]"
 
 export type SubscriptionsBurnSectionProps = {
   supabaseEnabled: boolean

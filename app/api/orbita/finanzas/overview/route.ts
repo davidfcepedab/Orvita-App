@@ -121,6 +121,7 @@ export async function GET(req: NextRequest) {
           lastTransactionUpdatedAt: new Date().toISOString(),
           transactionsInSelectedMonth: curOp.length,
           kpiSource: "transactions" as const,
+          kpiIncomeBasis: "operativo_transactions" as const,
           kpiHasSignal: overview.income > 0.5 || overview.expense > 0.5,
           reference: undefined as
             | { month: string; income: number; expense: number; balance: number }

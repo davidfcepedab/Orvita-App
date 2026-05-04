@@ -114,7 +114,7 @@ export function buildMonthlyFlowBuckets(
 export function fillMonthlyFlowFromSnapshots(
   monthsYm: string[],
   buckets: FlowEvolutionRow[],
-  snapByYm: ReadonlyMap<string, { income: number; expense: number }>,
+  snapByYm: ReadonlyMap<string, { income: number; expense: number; incomeOperativo?: number }>,
   options?: { fillExpenseFromSnapshots?: boolean },
 ): FlowEvolutionRow[] {
   const fillExpense = options?.fillExpenseFromSnapshots !== false
@@ -125,7 +125,8 @@ export function fillMonthlyFlowFromSnapshots(
     if (hasTx) return row
     const s = snapByYm.get(ym)
     if (!s) return row
-    const ing = s.income
+    const ing =
+      s.incomeOperativo !== undefined && Number.isFinite(s.incomeOperativo) ? s.incomeOperativo : s.income
     const exp = fillExpense ? s.expense : 0
     if (ing < 1e-6 && exp < 1e-6) return row
     return {

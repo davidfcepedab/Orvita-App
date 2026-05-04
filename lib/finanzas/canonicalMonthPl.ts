@@ -33,10 +33,13 @@ export function buildCanonicalPlLayers(
     },
     {
       id: "income",
-      label: "Ingresos del mes en curso",
-      amount: c.incomeTotal,
+      label: "Ingreso operativo real (mes en curso)",
+      amount: c.incomeOperativoTotal,
       indent: 0,
-      hint: "Entradas de efectivo del periodo seleccionado (misma base que Movimientos).",
+      hint:
+        Math.abs(c.incomeOperativoTotal - c.incomeTotal) > 0.5
+          ? "Alineado al Overview/P&L: excluye ingresos vinculados a tarjeta de crédito. El extracto bruto (Movimientos) puede ser mayor."
+          : "Misma regla que el KPI de ingreso del Overview (sin abonos TC en cuenta tarjeta).",
     },
     {
       id: "expense_all",

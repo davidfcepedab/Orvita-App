@@ -12,10 +12,7 @@ import {
 } from "@/lib/finanzas/reconciliationHints"
 import { excludeReconciliationFromOperativoAnalysis } from "@/lib/finanzas/reconciliationTxFilter"
 import type { FinanceSubcategoryCatalogRow } from "@/lib/finanzas/subcategoryCatalog"
-import {
-  createIncomeForMetricsFn,
-  type LedgerTcRef,
-} from "@/lib/finanzas/incomeCashEconomy"
+import { createIncomeForMetricsFn, fetchLedgerTcRefs } from "@/lib/finanzas/incomeCashEconomy"
 
 export type FinanceMonthOpex = (tx: FinanceTransaction) => number
 
@@ -58,19 +55,9 @@ export async function computeFinanceMonthState(
     console.warn("FINANCE_MONTH_STATE: catálogo no disponible", e)
   }
 
-  let tcRefs: LedgerTcRef[] = []
+  let tcRefs: Awaited<ReturnType<typeof fetchLedgerTcRefs>> = []
   try {
-    const { data: tcRows } = await supabase
-      .from("orbita_finance_accounts")
-      .select("id, label")
-      .eq("household_id", householdId)
-      .eq("account_class", "tarjeta_credito")
-    tcRefs = (tcRows ?? [])
-      .map((r) => ({
-        id: String((r as { id?: unknown }).id ?? "").trim(),
-        label: String((r as { label?: unknown }).label ?? "").trim(),
-      }))
-      .filter((r) => r.id.length > 0)
+    tcRefs = await fetchLedgerTcRefs(supabase, householdId)
   } catch (e) {
     console.warn("FINANCE_MONTH_STATE: cuentas tarjeta_credito no disponibles", e)
   }
@@ -99,14 +86,14 @@ export async function computeFinanceMonthState(
   const [{ data: snapCur }, { data: snapPrev }] = await Promise.all([
     supabase
       .from("finance_monthly_snapshots")
-      .select("total_income,total_expense,balance")
+      .select("total_income,total_expense,balance,total_income_operativo")
       .eq("household_id", householdId)
       .eq("year", y)
       .eq("month", mo)
       .maybeSingle(),
     supabase
       .from("finance_monthly_snapshots")
-      .select("total_income,total_expense,balance")
+      .select("total_income,total_expense,balance,total_income_operativo")
       .eq("household_id", householdId)
       .eq("year", prevYm.year)
       .eq("month", prevYm.month)
@@ -114,35 +101,54 @@ export async function computeFinanceMonthState(
   ])
 
   const snapIn = Number(snapCur?.total_income ?? 0)
+  const snapInOpRaw = snapCur && "total_income_operativo" in snapCur ? snapCur.total_income_operativo : undefined
+  const snapInOp =
+    snapInOpRaw !== undefined && snapInOpRaw !== null ? Number(snapInOpRaw) : Number.NaN
   const snapEx = Number(snapCur?.total_expense ?? 0)
   const snapMag = snapIn + snapEx
   let snapshotKpiNotice: string | undefined
 
   if (txMagBeforeMerge < 1 && snapMag > 1) {
-    const prevIn = Number(snapPrev?.total_income ?? 0)
+    const prevInExtracto = Number(snapPrev?.total_income ?? 0)
+    const prevInOpRaw =
+      snapPrev && "total_income_operativo" in snapPrev ? snapPrev.total_income_operativo : undefined
+    const prevInOp =
+      prevInOpRaw !== undefined && prevInOpRaw !== null ? Number(prevInOpRaw) : Number.NaN
     const prevEx = Number(snapPrev?.total_expense ?? 0)
-    const prevNet = prevIn - prevEx
-    const net = snapIn - snapEx
+    const useOperativoSnap = Number.isFinite(snapInOp)
+    const incomeKpi = useOperativoSnap ? snapInOp : snapIn
+    const prevInForNet = useOperativoSnap && Number.isFinite(prevInOp) ? prevInOp : prevInExtracto
+    const prevNet = prevInForNet - prevEx
+    const net = incomeKpi - snapEx
     const deltaNet =
       Math.abs(prevNet) > 1e-6 ? ((net - prevNet) / Math.abs(prevNet)) * 100 : null
     overview = {
-      income: snapIn,
+      income: incomeKpi,
       expense: snapEx,
       net,
-      savingsRate: snapIn !== 0 ? (net / snapIn) * 100 : 0,
+      savingsRate: incomeKpi !== 0 ? (net / incomeKpi) * 100 : 0,
       previousNet: prevNet,
       deltaNet,
       runway: snapEx > 0 && net > 0 ? net / snapEx : 0,
     }
-    snapshotKpiNotice = hasOperativoCatalog
-      ? "KPI del mes desde finance_monthly_snapshots (no hay movimientos del mes en transacciones). Gráficos semanales y listas dependen de TX importadas: pueden verse vacíos hasta registrar movimientos."
-      : "KPI del mes desde finance_monthly_snapshots: la suma de movimientos del mes en transacciones fue 0."
+    snapshotKpiNotice = useOperativoSnap
+      ? hasOperativoCatalog
+        ? "KPI del mes desde finance_monthly_snapshots (no hay movimientos importados para este mes). Ingreso del KPI = total_income_operativo del cierre (misma regla que Overview con TC). Gráficos semanales pueden verse vacíos hasta registrar movimientos."
+        : "KPI del mes desde finance_monthly_snapshots: sin movimientos del mes en la vista actual; ingreso operativo desde el cierre mensual guardado."
+      : hasOperativoCatalog
+        ? "KPI del mes desde finance_monthly_snapshots (no hay movimientos del mes en transacciones). Ingreso del KPI es extracto del cierre (aplica migración total_income_operativo para ingreso operativo almacenado). Gráficos semanales y listas dependen de TX importadas."
+        : "KPI del mes desde finance_monthly_snapshots: sin movimientos del mes; ingreso desde extracto del cierre hasta aplicar migración operativo."
   } else if (txMagBeforeMerge < 1 && snapMag < 1) {
     snapshotKpiNotice =
       "Sin movimientos ni resumen almacenado para este mes en la base; las cifras pueden ser 0 hasta importar datos o generar el cierre mensual."
   }
 
   const usedSnapshotForKpi = txMagBeforeMerge < 1 && snapMag > 1
+  const kpiIncomeBasis: FinanceModuleMeta["kpiIncomeBasis"] = usedSnapshotForKpi
+    ? Number.isFinite(snapInOp)
+      ? "operativo_snapshot"
+      : "extracto_snapshot"
+    : "operativo_transactions"
   const kpiHasSignal = overview.income > 0.5 || overview.expense > 0.5
   const kpiSource: FinanceModuleMeta["kpiSource"] =
     txMagBeforeMerge >= 1 ? "transactions" : usedSnapshotForKpi || kpiHasSignal ? "snapshot" : "empty"
@@ -165,7 +171,7 @@ export async function computeFinanceMonthState(
   if (!kpiHasSignal) {
     const { data: snapLatest } = await supabase
       .from("finance_monthly_snapshots")
-      .select("year,month,total_income,total_expense,balance")
+      .select("year,month,total_income,total_expense,balance,total_income_operativo")
       .eq("household_id", householdId)
       .order("year", { ascending: false })
       .order("month", { ascending: false })
@@ -173,6 +179,8 @@ export async function computeFinanceMonthState(
 
     for (const r of snapLatest ?? []) {
       const ti = Number((r as { total_income?: unknown }).total_income ?? 0)
+      const tiOpRaw = (r as { total_income_operativo?: unknown }).total_income_operativo
+      const tiOp = tiOpRaw !== undefined && tiOpRaw !== null ? Number(tiOpRaw) : Number.NaN
       const te = Number((r as { total_expense?: unknown }).total_expense ?? 0)
       if (ti + te > 1) {
         const yy = Number((r as { year?: unknown }).year)
@@ -180,7 +188,7 @@ export async function computeFinanceMonthState(
         if (yy && mm >= 1 && mm <= 12) {
           reference = {
             month: `${yy}-${String(mm).padStart(2, "0")}`,
-            income: ti,
+            income: Number.isFinite(tiOp) ? tiOp : ti,
             expense: te,
             balance: Number((r as { balance?: unknown }).balance ?? ti - te),
           }
@@ -227,6 +235,7 @@ export async function computeFinanceMonthState(
       catalogRows,
       bridgeEntries,
       hintEma,
+      { incomeOperativoFn: incomeForMetrics },
     )
   }
 
@@ -236,6 +245,7 @@ export async function computeFinanceMonthState(
     lastTransactionUpdatedAt,
     transactionsInSelectedMonth: operativoCurrent.length,
     kpiSource,
+    kpiIncomeBasis,
     kpiHasSignal,
     reference,
     coherence,

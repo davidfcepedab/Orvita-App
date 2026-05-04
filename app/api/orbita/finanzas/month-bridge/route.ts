@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/api/requireUser"
 import { isAppMockMode, isSupabaseEnabled, UI_SYNC_OFF_SHORT } from "@/lib/checkins/flags"
 import { buildCompleteMonthFinanceCoherence } from "@/lib/finanzas/monthFinanceCoherence"
 import type { MonthBridgeEntryLite } from "@/lib/finanzas/monthFinanceCoherence"
+import { createIncomeForMetricsForHousehold } from "@/lib/finanzas/incomeEngine"
 import {
   fetchReconciliationHintEma,
   HINT_KEY_KPI_STRUCTURAL_UNEXPLAINED_EMA,
@@ -170,9 +171,13 @@ export async function POST(req: NextRequest) {
 
     const hintEma = await fetchReconciliationHintEma(auth.supabase, householdId, HINT_KEY_KPI_STRUCTURAL_UNEXPLAINED_EMA)
 
+    const incomeForMetrics = await createIncomeForMetricsForHousehold(auth.supabase, householdId)
+
     const coherence =
       currentRows.length > 0
-        ? buildCompleteMonthFinanceCoherence(currentRows, previousRows, catalogRows, entries, hintEma)
+        ? buildCompleteMonthFinanceCoherence(currentRows, previousRows, catalogRows, entries, hintEma, {
+            incomeOperativoFn: incomeForMetrics,
+          })
         : null
 
     if (coherence) {

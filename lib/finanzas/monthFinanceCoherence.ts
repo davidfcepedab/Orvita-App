@@ -9,7 +9,10 @@ import type { FinanceSubcategoryCatalogEntry } from "@/lib/finanzas/subcategoryC
  * Núcleo contable desde TX + catálogo (sin mapa estructural ni puentes).
  */
 export type MonthFinanceCoherenceCore = {
+  /** Ingreso según extracto (todos los ingresos contabilizados). */
   incomeTotal: number
+  /** Misma regla que Overview / KPI de salud: excluye ingresos vinculados a TC si se pasa `incomeOperativoFn`. */
+  incomeOperativoTotal: number
   expenseTotalAll: number
   netCashFlow: number
   expenseOperativoKpi: number
@@ -27,6 +30,10 @@ export type MonthBridgeEntryLite = {
 /**
  * Coherencia ampliada: núcleo + mapa operativo (misma regla que Categorías) + puentes + capas P&L.
  */
+export type ComputeMonthFinanceCoherenceOpts = {
+  incomeOperativoFn?: (tx: FinanceTransaction) => number
+}
+
 export type MonthFinanceCoherence = MonthFinanceCoherenceCore & {
   /** Flujo neto (ingresos − gastos) del mes calendario anterior; lectura de continuidad (no es saldo bancario). */
   previousMonthNetCashFlow: number
@@ -43,8 +50,12 @@ export type MonthFinanceCoherence = MonthFinanceCoherenceCore & {
 export function computeMonthFinanceCoherence(
   monthRows: FinanceTransaction[],
   catalog: FinanceSubcategoryCatalogEntry[],
+  opts?: ComputeMonthFinanceCoherenceOpts,
 ): MonthFinanceCoherenceCore {
   const incomeTotal = monthRows.reduce((a, t) => a + incomeAmount(t), 0)
+  const incomeOperativoTotal = opts?.incomeOperativoFn
+    ? monthRows.reduce((a, t) => a + opts.incomeOperativoFn!(t), 0)
+    : incomeTotal
   const expenseTotalAll = monthRows.reduce((a, t) => a + expenseAmount(t), 0)
   const net = netCashFlow(monthRows)
 
@@ -60,6 +71,7 @@ export function computeMonthFinanceCoherence(
 
   return {
     incomeTotal,
+    incomeOperativoTotal,
     expenseTotalAll,
     netCashFlow: net,
     expenseOperativoKpi,
@@ -74,8 +86,9 @@ export function buildCompleteMonthFinanceCoherence(
   catalog: FinanceSubcategoryCatalogEntry[],
   bridgeEntries: MonthBridgeEntryLite[],
   hintEmaAbsGap: number | null,
+  coherenceOpts?: ComputeMonthFinanceCoherenceOpts,
 ): MonthFinanceCoherence {
-  const core = computeMonthFinanceCoherence(monthRows, catalog)
+  const core = computeMonthFinanceCoherence(monthRows, catalog, coherenceOpts)
   const previousMonthNetCashFlow = netCashFlow(previousRows)
   const { totals } = computeStructuralOperativoFromRows(monthRows, previousRows, catalog)
 

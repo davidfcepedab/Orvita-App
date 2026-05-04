@@ -207,10 +207,10 @@ function FlowChartLegend() {
   const items = [
     {
       key: "ingresos",
-      label: "Ingresos",
+      label: "Ingreso operativo",
       swatch: "line" as const,
       color: FLOW_SERIES_COLORS.ingresos,
-      hint: "Línea · eje izquierdo (COP)",
+      hint: "Línea · eje izquierdo (COP); excluye abonos TC en cuenta tarjeta.",
     },
     {
       key: "gasto",
@@ -310,7 +310,7 @@ function FlowEvolutionTable({
                 background: "color-mix(in srgb, var(--color-surface) 72%, var(--color-accent-health) 28%)",
               }}
             >
-              Ingresos
+              Ingreso op.
             </th>
             <th
               scope="col"
@@ -743,6 +743,7 @@ export default function FinanzasOverview() {
         }}
         formatMoney={formatMoney}
         strategicInsights={strategicInsights}
+        kpiIncomeBasis={finance?.financeMeta?.kpiIncomeBasis}
       />
 
       {/* Pulso del mes · tres lecturas con tinte y micro-motion */}
@@ -755,9 +756,17 @@ export default function FinanzasOverview() {
             [
               {
                 key: "income" as const,
-                label: "Ingresos operativos",
+                label:
+                  finance?.financeMeta?.kpiIncomeBasis === "extracto_snapshot"
+                    ? "Ingreso (extracto guardado)"
+                    : "Ingreso operativo real",
                 value: kpiHasSignal ? formatMoney(income) : "—",
-                hint: "Sumatoria catalogada como ingreso.",
+                hint:
+                  finance?.financeMeta?.kpiIncomeBasis === "extracto_snapshot"
+                    ? "Desde cierre mensual guardado; puede incluir abonos TC. Importa movimientos o aplica migración total_income_operativo."
+                    : finance?.financeMeta?.kpiIncomeBasis === "operativo_snapshot"
+                      ? "Desde total_income_operativo del cierre mensual (misma exclusión TC que con movimientos)."
+                      : "Excluye ingresos vinculados a tarjetas de crédito en el ledger (no capital operativo nuevo).",
                 cardStyle: kpiHasSignal ? PULSE_INCOME_CARD_STYLE : PULSE_EMPTY_CARD_STYLE,
                 valueColor: "text-[color-mix(in_srgb,var(--color-accent-health)_88%,var(--color-text-primary))]",
                 hintColor: "text-[color-mix(in_srgb,var(--color-text-secondary)_92%,var(--color-accent-health))]",
@@ -886,10 +895,10 @@ export default function FinanzasOverview() {
                 {flowSubtitle}
               </span>
               <span className="hidden text-[11px] leading-snug text-orbita-secondary/90 md:inline">
-                <span style={{ color: FLOW_SERIES_COLORS.ingresos }}>Ingresos</span> y{" "}
+                <span style={{ color: FLOW_SERIES_COLORS.ingresos }}>Ingreso operativo</span> y{" "}
                 <span style={{ color: FLOW_SERIES_COLORS.gasto_operativo }}>gasto operativo</span> como líneas (eje
-                izquierdo, COP).                 <span style={{ color: FLOW_SERIES_COLORS.flujo }}>Flujo neto</span> solo como área sombreada, sin
-                contorno (eje derecho, escala propia; misma lógica que el KPI).
+                izquierdo, COP). <span style={{ color: FLOW_SERIES_COLORS.flujo }}>Flujo neto</span> solo como área
+                sombreada, sin contorno (eje derecho, escala propia; alineado al KPI cuando hay TX).
               </span>
             </div>
             <div
@@ -965,7 +974,7 @@ export default function FinanzasOverview() {
                             formatter={(value, name) => [
                               formatMoney(financeTooltipNumber(value)),
                               name === "ingresos"
-                                ? "Ingresos"
+                                ? "Ingreso operativo"
                                 : name === "gasto_operativo"
                                   ? "Gasto operativo"
                                   : name === "flujo"
@@ -1036,7 +1045,7 @@ export default function FinanzasOverview() {
                             formatter={(value, name) => [
                               formatMoney(financeTooltipNumber(value)),
                               name === "ingresos"
-                                ? "Ingresos"
+                                ? "Ingreso operativo"
                                 : name === "gasto_operativo"
                                   ? "Gasto operativo"
                                   : name === "flujo"

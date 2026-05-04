@@ -8,7 +8,12 @@ import {
   rollingYearMonths,
 } from "@/lib/finanzas/flowEvolutionBuckets"
 
-type SnapshotIncomeExpense = { income: number; expense: number }
+type SnapshotIncomeExpense = {
+  income: number
+  expense: number
+  /** Ingreso operativo persistido en snapshot; si falta, el relleno usa `income`. */
+  incomeOperativo?: number
+}
 
 function yearsFromMonths(months: string[]): { minYear: number; maxYear: number } {
   const yearsInFlow = months.map((ym) => Number(ym.split("-")[0])).filter(Number.isFinite)
@@ -28,7 +33,7 @@ export async function fetchSnapshotMapForMonths(
   const { minYear, maxYear } = yearsFromMonths(months)
   const { data: flowSnapRows } = await supabase
     .from("finance_monthly_snapshots")
-    .select("year, month, total_income, total_expense")
+    .select("year, month, total_income, total_expense, total_income_operativo")
     .eq("household_id", householdId)
     .gte("year", minYear)
     .lte("year", maxYear)
@@ -39,9 +44,13 @@ export async function fetchSnapshotMapForMonths(
     const mm = Number((r as { month?: number }).month)
     if (!yy || !mm || mm < 1 || mm > 12) continue
     const key = `${yy}-${String(mm).padStart(2, "0")}`
+    const ti = Number((r as { total_income?: unknown }).total_income ?? 0)
+    const tiOpRaw = (r as { total_income_operativo?: unknown }).total_income_operativo
+    const tiOp = tiOpRaw !== undefined && tiOpRaw !== null ? Number(tiOpRaw) : undefined
     snapByYm.set(key, {
-      income: Number((r as { total_income?: unknown }).total_income ?? 0),
+      income: ti,
       expense: Number((r as { total_expense?: unknown }).total_expense ?? 0),
+      ...(tiOp !== undefined && Number.isFinite(tiOp) ? { incomeOperativo: tiOp } : {}),
     })
   }
   return snapByYm

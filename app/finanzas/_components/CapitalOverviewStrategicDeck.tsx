@@ -35,6 +35,8 @@ type Props = {
   snapshot: CapitalGameSnapshot
   formatMoney: (value: number) => string
   strategicInsights: string[]
+  /** Ver `FinanceModuleMeta.kpiIncomeBasis`. */
+  kpiIncomeBasis?: "operativo_transactions" | "operativo_snapshot" | "extracto_snapshot"
 }
 
 function pressureTone(pct: number): string {
@@ -43,7 +45,13 @@ function pressureTone(pct: number): string {
   return "var(--color-accent-finance)"
 }
 
-export function CapitalOverviewStrategicDeck({ monthDisplay, snapshot, formatMoney, strategicInsights }: Props) {
+export function CapitalOverviewStrategicDeck({
+  monthDisplay,
+  snapshot,
+  formatMoney,
+  strategicInsights,
+  kpiIncomeBasis,
+}: Props) {
   const { kpiHasSignal, income, expense, net, savingsRate, deltaNet, runway, pressurePct } = snapshot
 
   const netPositive = net > 0.5
@@ -222,8 +230,17 @@ export function CapitalOverviewStrategicDeck({ monthDisplay, snapshot, formatMon
               />
             </div>
             <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-[10px] tabular-nums text-[var(--color-text-secondary)] sm:text-[11px]">
-              <span>
-                Ingresos <span className="font-semibold text-[var(--color-accent-health)]">{formatMoney(income)}</span>
+              <span
+                title={
+                  kpiIncomeBasis === "extracto_snapshot"
+                    ? "Total del extracto en el cierre mensual guardado; puede incluir abonos a TC. Ejecuta migración total_income_operativo o importa movimientos."
+                    : kpiIncomeBasis === "operativo_snapshot"
+                      ? "Ingreso operativo desde el cierre mensual (total_income_operativo); misma regla TC que con movimientos importados."
+                      : "Ingreso operativo real: excluye ingresos vinculados a tarjetas de crédito en el ledger (no suman capital operativo nuevo)."
+                }
+              >
+                {kpiIncomeBasis === "extracto_snapshot" ? "Ingreso (extracto guardado)" : "Ingreso operativo real"}{" "}
+                <span className="font-semibold text-[var(--color-accent-health)]">{formatMoney(income)}</span>
               </span>
               <span>
                 Gasto op. <span className="font-semibold text-[var(--color-accent-danger)]">{formatMoney(expense)}</span>

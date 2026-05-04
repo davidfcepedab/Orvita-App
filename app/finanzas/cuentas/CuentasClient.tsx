@@ -2029,7 +2029,8 @@ export default function CuentasClient() {
                       }
                       subFooter={
                         <p className={cn(financeCardHintClass, "!leading-snug text-orbita-secondary")}>
-                          Mismo criterio que Movimientos; no es la suma de cuentas abajo.
+                          Tendencia vs mes anterior según flujo neto del extracto (movimientos). El ingreso operativo real
+                          (salud / P&L) excluye abonos vinculados a TC; ver Overview.
                         </p>
                       }
                       icon={<Wallet className="h-5 w-5" strokeWidth={2.25} />}

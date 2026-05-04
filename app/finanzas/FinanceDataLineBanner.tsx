@@ -135,11 +135,23 @@ export function FinanceDataLineBanner({ embedded = false, footerRail = false }: 
     meta.kpiSource === "transactions"
       ? "Movimientos del mes"
       : meta.kpiSource === "snapshot"
-        ? "Resumen guardado"
+        ? meta.kpiIncomeBasis === "extracto_snapshot"
+          ? "Resumen guardado (KPI de ingreso = extracto del cierre)"
+          : meta.kpiIncomeBasis === "operativo_snapshot"
+            ? "Resumen guardado (ingreso operativo desde cierre)"
+            : "Resumen guardado"
         : "Sin fuente"
 
   const origenCorto =
-    meta.kpiSource === "transactions" ? null : meta.kpiSource === "snapshot" ? "resumen guardado" : "sin fuente"
+    meta.kpiSource === "transactions"
+      ? null
+      : meta.kpiSource === "snapshot"
+        ? meta.kpiIncomeBasis === "extracto_snapshot"
+          ? "resumen · ingreso extracto"
+          : meta.kpiIncomeBasis === "operativo_snapshot"
+            ? "resumen · ingreso operativo"
+            : "resumen guardado"
+        : "sin fuente"
 
   const updatedShort = meta.lastTransactionUpdatedAt ? formatInstantInAgendaTz(meta.lastTransactionUpdatedAt) : null
 

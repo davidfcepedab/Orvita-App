@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireUser } from "@/lib/api/requireUser"
 import { isAppMockMode, isSupabaseEnabled, UI_SYNC_OFF_SHORT } from "@/lib/checkins/flags"
 import { buildCuentasDashboard } from "@/lib/finanzas/cuentasDashboard"
+import { createIncomeForMetricsForHousehold } from "@/lib/finanzas/incomeEngine"
 import { mergeLiveDashboardWithLedger } from "@/lib/finanzas/dashboardFromLedgerAccounts"
 import { mockTransactionsForMonth } from "@/lib/finanzas/mockFinancePayloads"
 import { ledgerRollupRangeStart, monthBounds } from "@/lib/finanzas/monthRange"
@@ -86,7 +87,10 @@ export async function GET(req: NextRequest) {
     const nonBelvoFinanceAccountIds = buildNonBelvoFinanceAccountIdsFromTransactions(rawRollupForLedger)
     const balance = snapshot?.balance != null ? Number(snapshot.balance) : null
     const accounts = buildSyntheticAccounts(month, balance, rows)
-    const dashboardBase = buildCuentasDashboard(month, balance, rows, prevRows, false)
+    const incomeForMetrics = await createIncomeForMetricsForHousehold(auth.supabase, householdId)
+    const dashboardBase = buildCuentasDashboard(month, balance, rows, prevRows, false, {
+      incomeForMetrics,
+    })
 
     let ledgerAccounts: unknown[] = []
     const { data: ledgerRows, error: ledgerErr } = await auth.supabase

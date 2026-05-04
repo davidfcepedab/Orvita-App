@@ -455,7 +455,11 @@ export function FinanzasPlDashboard({ omitStrategicHero = false }: { omitStrateg
     financeMeta?.kpiSource === "transactions"
       ? "Movimientos (automático)"
       : financeMeta?.kpiSource === "snapshot"
-        ? "Snapshot mensual"
+        ? financeMeta?.kpiIncomeBasis === "operativo_snapshot"
+          ? "Snapshot mensual (ingreso operativo)"
+          : financeMeta?.kpiIncomeBasis === "extracto_snapshot"
+            ? "Snapshot mensual (ingreso extracto)"
+            : "Snapshot mensual"
         : "Sin fuente"
 
   const plMainGroups = PL_GROUPS.filter((g) => !g.collapsed)

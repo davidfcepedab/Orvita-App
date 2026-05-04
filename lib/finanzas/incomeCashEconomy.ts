@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js"
 import type { FinanceTransaction } from "@/lib/finanzas/types"
 import { incomeAmount } from "@/lib/finanzas/calculations/txMath"
 import { transactionMatchesLedgerAccount } from "@/lib/finanzas/ledgerAccountTxRollup"
@@ -22,4 +23,18 @@ export function incomeAmountCashEconomy(tx: FinanceTransaction, tcRefs: readonly
 export function createIncomeForMetricsFn(tcRefs: readonly LedgerTcRef[]): (tx: FinanceTransaction) => number {
   if (tcRefs.length === 0) return incomeAmount
   return (tx) => incomeAmountCashEconomy(tx, tcRefs)
+}
+
+export async function fetchLedgerTcRefs(supabase: SupabaseClient, householdId: string): Promise<LedgerTcRef[]> {
+  const { data: tcRows } = await supabase
+    .from("orbita_finance_accounts")
+    .select("id, label")
+    .eq("household_id", householdId)
+    .eq("account_class", "tarjeta_credito")
+  return (tcRows ?? [])
+    .map((r) => ({
+      id: String((r as { id?: unknown }).id ?? "").trim(),
+      label: String((r as { label?: unknown }).label ?? "").trim(),
+    }))
+    .filter((r) => r.id.length > 0)
 }

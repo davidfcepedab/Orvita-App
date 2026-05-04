@@ -118,6 +118,11 @@ export type CuentasDashboardPayload = {
   loans: CuentasLoanCard[]
 }
 
+/** Opciones para alinear KPI de «salud» con Overview (ingreso operativo vs extracto). */
+export type BuildCuentasDashboardOpts = {
+  incomeForMetrics?: (tx: FinanceTransaction) => number
+}
+
 const MONTH_SHORT = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
 
 export function payLabelForMonth(month: string, day: number): string {
@@ -247,9 +252,11 @@ function liveDashboard(
   snapshotBalance: number | null,
   rows: FinanceTransaction[],
   previousRows: FinanceTransaction[],
+  opts?: BuildCuentasDashboardOpts,
 ): CuentasDashboardPayload {
   const cur = filterMonth(rows, month)
-  const income = cur.reduce((a, t) => a + incomeAmount(t), 0)
+  const incomeFn = opts?.incomeForMetrics ?? incomeAmount
+  const income = cur.reduce((a, t) => a + incomeFn(t), 0)
   const expense = cur.reduce((a, t) => a + expenseAmount(t), 0)
   const net = netCashFlow(cur)
   const balance = householdLiquidityRawFromSnapshot(snapshotBalance, cur)
@@ -420,7 +427,8 @@ export function buildCuentasDashboard(
   rows: FinanceTransaction[],
   previousRows: FinanceTransaction[],
   isMock: boolean,
+  opts?: BuildCuentasDashboardOpts,
 ): CuentasDashboardPayload {
   if (isMock) return mockDashboard(month)
-  return liveDashboard(month, snapshotBalance, rows, previousRows)
+  return liveDashboard(month, snapshotBalance, rows, previousRows, opts)
 }
