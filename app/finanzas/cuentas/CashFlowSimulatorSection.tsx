@@ -167,6 +167,14 @@ function flowTypeBadgeClass(t: CommitmentFlowType) {
   return "border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-500/35 dark:bg-amber-950/40 dark:text-amber-100"
 }
 
+/** Color del importe alineado al chip de tipo (misma familia que ingreso → verde). */
+function flowTypeAmountTextClass(t: CommitmentFlowType): string {
+  if (t === "income") return "text-emerald-600 dark:text-emerald-400"
+  if (t === "recurring") return "text-orange-700 dark:text-orange-300"
+  if (t === "one-time") return "text-violet-700 dark:text-violet-300"
+  return "text-amber-800 dark:text-amber-200"
+}
+
 function CommitmentModalMobileCard({
   row,
   month,
@@ -860,20 +868,20 @@ export function CashFlowSimulatorSection({
                 const sub = (c.subcategory ?? "").trim()
                 const titleDiffers = c.title.trim().toLowerCase() !== cat.toLowerCase()
                 return (
-                  <li key={c.id} className="flex gap-2 py-2.5 first:pt-0 last:pb-0">
+                  <li key={c.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-2">
+                      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5">
                         <p className="min-w-0 shrink text-[10px] font-semibold tabular-nums leading-tight text-orbita-secondary">
                           <span className="text-orbita-primary">Día {c.dueDay ?? dayFromIso(c.date)}</span>
                           <span className="text-orbita-secondary"> · {formatCommitmentDayEn(c.date)}</span>
                         </p>
-                        <p
-                          className={`shrink-0 text-right text-[13px] font-bold leading-none tabular-nums ${inc ? "text-emerald-600" : "text-orbita-primary"}`}
+                        <span
+                          className={`inline-flex shrink-0 rounded-full border px-1.5 py-0.5 text-[8px] font-semibold uppercase leading-none tracking-wide ${flowTypeBadgeClass(c.flowType)}`}
                         >
-                          {inc ? "+" : "-"}${formatMoney(c.amount)}
-                        </p>
+                          {FLOW_TYPE_OPTIONS.find((o) => o.value === c.flowType)?.label ?? c.flowType}
+                        </span>
                       </div>
-                      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <div className="mt-1 min-w-0">
                         {showCat ? (
                           <p className="min-w-0 text-[12px] font-semibold leading-snug text-orbita-primary">
                             {cat}
@@ -882,16 +890,19 @@ export function CashFlowSimulatorSection({
                         ) : (
                           <p className="min-w-0 text-[12px] font-semibold leading-snug text-orbita-primary">{c.title}</p>
                         )}
-                        <span
-                          className={`inline-flex shrink-0 rounded-full border px-1.5 py-0 text-[8px] font-semibold uppercase leading-none tracking-wide ${flowTypeBadgeClass(c.flowType)}`}
-                        >
-                          {FLOW_TYPE_OPTIONS.find((o) => o.value === c.flowType)?.label ?? c.flowType}
-                        </span>
                       </div>
                       {showCat && titleDiffers ? (
                         <p className="mt-0.5 truncate text-[10px] leading-snug text-orbita-secondary">{c.title}</p>
                       ) : null}
                     </div>
+                    <p
+                      className={cn(
+                        "shrink-0 min-w-[5.25rem] text-center text-[13px] font-bold leading-tight tabular-nums sm:min-w-[5.5rem]",
+                        flowTypeAmountTextClass(c.flowType),
+                      )}
+                    >
+                      {inc ? "+" : "-"}${formatMoney(c.amount)}
+                    </p>
                   </li>
                 )
               })}
@@ -950,7 +961,10 @@ export function CashFlowSimulatorSection({
                           </span>
                         </td>
                         <td
-                          className={`whitespace-nowrap py-2 pl-2 text-right align-middle text-[11px] font-bold tabular-nums sm:text-sm ${inc ? "text-emerald-600" : "text-orbita-primary"}`}
+                          className={cn(
+                            "whitespace-nowrap py-2 pl-2 text-right align-middle text-[11px] font-bold tabular-nums sm:text-sm",
+                            flowTypeAmountTextClass(c.flowType),
+                          )}
                         >
                           {inc ? "+" : "-"}${formatMoney(c.amount)}
                         </td>
