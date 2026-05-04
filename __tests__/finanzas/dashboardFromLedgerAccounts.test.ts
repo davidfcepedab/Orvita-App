@@ -219,6 +219,48 @@ describe("mergeLiveDashboardWithLedger", () => {
     expect(out.savings[0]!.amount).toBe(1_000_000)
   })
 
+  test("ahorro: tras conciliación, movimientos posteriores a la fecha de ancla actualizan el saldo", () => {
+    const ledger: LedgerAccountSortable[] = [
+      {
+        id: "a1",
+        label: "Ahorros | Davivienda | David",
+        account_class: "ahorro",
+        nature: "activo_liquido",
+        manual_balance: 430_427,
+        manual_balance_on: "2026-04-14",
+        balance_available: null,
+        sort_order: 0,
+      },
+    ]
+    const rollup: FinanceTransaction[] = [
+      {
+        id: "t0",
+        date: "2026-04-10",
+        description: "Gasto antes del ancla",
+        amount: 50_000,
+        type: "expense",
+        category: "Otros",
+        created_at: "2026-04-10T00:00:00Z",
+        updated_at: "2026-04-10T00:00:00Z",
+        finance_account_id: "a1",
+      },
+      {
+        id: "t1",
+        date: "2026-04-20",
+        description: "Gasto después del ancla",
+        amount: 100_000,
+        type: "expense",
+        category: "Otros",
+        created_at: "2026-04-20T00:00:00Z",
+        updated_at: "2026-04-20T00:00:00Z",
+        finance_account_id: "a1",
+      },
+    ]
+    const monthOnlyApril = rollup.filter((r) => r.date.startsWith("2026-04"))
+    const out = mergeLiveDashboardWithLedger(live, "2026-04", ledger, monthOnlyApril, rollup)
+    expect(out.savings[0]!.amount).toBe(330_427)
+  })
+
   test("crédito estructural: saldo solo en balance_available si balance_used vacío", () => {
     const ledger: LedgerAccountSortable[] = [
       {

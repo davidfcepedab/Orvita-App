@@ -77,6 +77,10 @@ const PULSE_EMPTY_CARD_STYLE: CSSProperties = {
   borderColor: "color-mix(in srgb, var(--color-border) 72%, transparent)",
 }
 
+/** Summary de las tarjetas Suscripciones / Compromisos: superficie elevada + misma altura mínima en desktop. */
+const OVERVIEW_CAPITAL_PULSE_SUMMARY_CLASS =
+  "flex cursor-pointer list-none items-start gap-2 rounded-[var(--radius-card)] border border-[color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[linear-gradient(180deg,var(--color-surface)_0%,color-mix(in_srgb,var(--color-surface-alt)_42%,var(--color-surface))_100%)] px-3 py-2.5 shadow-[var(--shadow-hover)] sm:gap-3 sm:px-3.5 sm:py-3 md:min-h-[7.75rem] [&::-webkit-details-marker]:hidden"
+
 function financeTooltipNumber(value: unknown): number {
   if (typeof value === "number" && Number.isFinite(value)) return value
   if (Array.isArray(value)) return financeTooltipNumber(value[0])
@@ -582,7 +586,7 @@ export default function FinanzasOverview() {
         chipClass: driftOk
           ? cn(
               financeHeroChipBaseClass,
-              "border-emerald-500/35 bg-emerald-500/12 text-emerald-950 dark:border-emerald-500/30 dark:bg-emerald-950/35 dark:text-emerald-100",
+              "border-emerald-500/45 bg-emerald-500/18 text-emerald-950 shadow-sm ring-1 ring-emerald-500/15 dark:border-emerald-500/45 dark:bg-emerald-950/50 dark:text-emerald-50 dark:ring-emerald-500/25",
             )
           : cn(financeNoticeChipClass, "normal-case tracking-normal"),
         hint: driftOk
@@ -617,11 +621,11 @@ export default function FinanzasOverview() {
         chipClass: netPositive
           ? cn(
               financeHeroChipBaseClass,
-              "border-emerald-500/35 bg-emerald-500/12 text-emerald-950 dark:border-emerald-500/30 dark:bg-emerald-950/35 dark:text-emerald-100",
+              "border-emerald-500/45 bg-emerald-500/18 text-emerald-950 shadow-sm ring-1 ring-emerald-500/15 dark:border-emerald-500/45 dark:bg-emerald-950/50 dark:text-emerald-50 dark:ring-emerald-500/25",
             )
           : cn(
               financeHeroChipBaseClass,
-              "border-amber-500/35 bg-amber-500/12 text-amber-950 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-50",
+              "border-amber-500/45 bg-amber-500/18 text-amber-950 shadow-sm ring-1 ring-amber-500/15 dark:border-amber-500/45 dark:bg-amber-950/45 dark:text-amber-50 dark:ring-amber-500/25",
             ),
         hint: netPositive
           ? "Tus entradas programadas cubren o superan las salidas en este mes."
@@ -1127,14 +1131,9 @@ export default function FinanzasOverview() {
       </Card>
 
       <div className="min-w-0 max-w-full space-y-4 md:space-y-5">
-        <div className="grid min-w-0 max-w-full grid-cols-1 gap-4 md:grid-cols-2 md:gap-5 lg:gap-6">
-          <details className="group min-w-0 max-w-full" open>
-            <summary
-              className={cn(
-                "flex cursor-pointer list-none items-start gap-2 rounded-lg border border-orbita-border/45 bg-orbita-surface-alt/25 px-3 py-2.5 sm:gap-3 sm:px-3.5 sm:py-3",
-                "[&::-webkit-details-marker]:hidden",
-              )}
-            >
+        <div className="grid min-w-0 max-w-full grid-cols-1 gap-4 md:grid-cols-2 md:items-stretch md:gap-5 lg:gap-6">
+          <details className="group flex h-full min-h-0 max-w-full flex-col" open>
+            <summary className={OVERVIEW_CAPITAL_PULSE_SUMMARY_CLASS}>
               <ChevronDown
                 className="mt-0.5 h-4 w-4 shrink-0 text-orbita-secondary transition-transform duration-200 group-open:rotate-180"
                 aria-hidden
@@ -1182,7 +1181,8 @@ export default function FinanzasOverview() {
               </div>
             </summary>
 
-            <Card className={cn(financeRaisedPanelClass, "mt-2 min-w-0 overflow-hidden p-0")}>
+            <div className="mt-2 flex min-h-0 flex-1 flex-col">
+            <Card className={cn(financeRaisedPanelClass, "min-h-0 flex-1 overflow-hidden p-0")}>
               <div className="grid min-w-0 max-w-full gap-3 p-4 sm:gap-3.5 sm:p-5">
                 <p className={cn(financeSectionIntroClass, "text-orbita-muted")}>
                   Lista en Cuentas (Capital). Desplegá para ver totales, tabla y patrones.
@@ -1340,15 +1340,11 @@ export default function FinanzasOverview() {
             </details>
           </div>
         </Card>
+            </div>
           </details>
 
-          <details className="group min-w-0 max-w-full" open>
-            <summary
-              className={cn(
-                "flex cursor-pointer list-none items-start gap-2 rounded-lg border border-orbita-border/45 bg-orbita-surface-alt/25 px-3 py-2.5 sm:gap-3 sm:px-3.5 sm:py-3",
-                "[&::-webkit-details-marker]:hidden",
-              )}
-            >
+          <details className="group flex h-full min-h-0 max-w-full flex-col" open>
+            <summary className={OVERVIEW_CAPITAL_PULSE_SUMMARY_CLASS}>
               <ChevronDown
                 className="mt-0.5 h-4 w-4 shrink-0 text-orbita-secondary transition-transform duration-200 group-open:rotate-180"
                 aria-hidden
@@ -1412,7 +1408,8 @@ export default function FinanzasOverview() {
               </div>
             </summary>
 
-            <Card className={cn(financeRaisedPanelClass, "mt-2 min-w-0 overflow-hidden p-0")}>
+            <div className="mt-2 flex min-h-0 flex-1 flex-col">
+            <Card className={cn(financeRaisedPanelClass, "min-h-0 flex-1 overflow-hidden p-0")}>
               <div className="grid min-w-0 max-w-full gap-3 p-4 sm:gap-3.5 sm:p-5">
                 <p className={cn(financeSectionIntroClass, "text-orbita-muted")}>
                   {supabaseEnabled ? "Simulador en Cuentas (hogar)." : "Simulador en Cuentas (este dispositivo)."} Desplegá
@@ -1609,6 +1606,7 @@ export default function FinanzasOverview() {
             </details>
           </div>
         </Card>
+            </div>
           </details>
         </div>
       </div>

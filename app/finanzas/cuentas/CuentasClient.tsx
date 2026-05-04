@@ -346,6 +346,30 @@ const creditThemes: Record<
   },
 }
 
+/** Acentos suaves por KPI (brillo + pedestal del icono), sin bandas de borde fuertes. */
+const STAT_KPI_ACCENTS = {
+  liquidity: {
+    glow:
+      "before:bg-[radial-gradient(140%_95%_at_92%_-8%,color-mix(in_srgb,var(--color-accent-health)_22%,transparent)_0%,transparent_58%)]",
+    iconShell:
+      "bg-gradient-to-br from-emerald-500/[0.2] to-teal-700/[0.12] text-emerald-800 shadow-[0_8px_24px_-12px_color-mix(in_srgb,var(--color-accent-health)_35%,transparent)] ring-1 ring-emerald-600/20 dark:from-emerald-400/25 dark:to-teal-950/40 dark:text-emerald-50 dark:ring-emerald-400/25",
+  },
+  credit: {
+    glow:
+      "before:bg-[radial-gradient(140%_95%_at_92%_-8%,color-mix(in_srgb,#0ea5e9_18%,transparent)_0%,transparent_58%)]",
+    iconShell:
+      "bg-gradient-to-br from-sky-500/[0.22] to-indigo-700/[0.14] text-sky-900 shadow-[0_8px_24px_-12px_color-mix(in_srgb,#0ea5e9_28%,transparent)] ring-1 ring-sky-500/25 dark:from-sky-400/28 dark:to-indigo-950/45 dark:text-sky-50 dark:ring-sky-400/22",
+  },
+  debt: {
+    glow:
+      "before:bg-[radial-gradient(140%_95%_at_92%_-8%,color-mix(in_srgb,var(--color-accent-danger)_14%,transparent)_0%,transparent_58%)]",
+    iconShell:
+      "bg-gradient-to-br from-rose-500/[0.18] to-slate-700/[0.14] text-rose-900 shadow-[0_8px_24px_-12px_color-mix(in_srgb,var(--color-accent-danger)_26%,transparent)] ring-1 ring-rose-500/22 dark:from-rose-400/22 dark:to-slate-950/50 dark:text-rose-50 dark:ring-rose-400/22",
+  },
+} as const
+
+type StatKpiAccent = keyof typeof STAT_KPI_ACCENTS
+
 /** Nombres solo visuales (sin banco) para evitar duplicados tipo “rosa” y mezclar marcas con colores. */
 const CREDIT_THEME_LABELS: Record<CuentasCreditCard["theme"], string> = {
   itau: "Coral",
@@ -362,26 +386,60 @@ function StatKpiCard({
   title,
   value,
   sub,
+  subFooter,
   icon,
-  warning,
+  accent = "liquidity",
 }: {
   title: string
   value: string
   sub: ReactNode
+  subFooter?: ReactNode
   icon: ReactNode
-  warning?: boolean
+  accent?: StatKpiAccent
 }) {
+  const a = STAT_KPI_ACCENTS[accent]
   return (
-    <Card className={`relative overflow-hidden p-6 sm:p-8 ${arcticPanel}`}>
-      <div className="absolute right-4 top-4 text-orbita-secondary">{icon}</div>
-      <p className={financeCardMicroLabelClass}>{title}</p>
-      <p className={financeKpiValueClass}>{value}</p>
-      <div className={financeKpiSubtextClass}>{sub}</div>
-      {warning ? (
-        <div className="absolute bottom-4 right-4 rounded-full bg-[color-mix(in_srgb,var(--color-accent-warning)_18%,var(--color-surface-alt))] p-1.5 text-[var(--color-accent-warning)]">
-          <TrendingDown className="h-4 w-4" aria-hidden />
+    <Card
+      className={cn(
+        `relative isolate overflow-hidden p-6 sm:p-8 ${arcticPanel}`,
+        "shadow-[var(--shadow-card)] transition-[box-shadow,transform] duration-300",
+        "before:pointer-events-none before:absolute before:inset-0 before:z-0 before:content-['']",
+        a.glow,
+        "motion-safe:hover:-translate-y-[3px] motion-safe:hover:shadow-[var(--shadow-hover)] motion-reduce:hover:translate-y-0",
+      )}
+    >
+      <div className="relative z-[1]">
+        <div
+          className={cn(
+            "absolute right-4 top-4 z-[2] flex h-11 w-11 items-center justify-center rounded-2xl [&>svg]:h-5 [&>svg]:w-5",
+            a.iconShell,
+          )}
+          aria-hidden
+        >
+          {icon}
         </div>
-      ) : null}
+        <p className={financeCardMicroLabelClass}>{title}</p>
+        <div className="mt-3 min-w-0">
+          <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+            <p className={cn(financeKpiValueClass, "!mt-0 min-w-0 bg-gradient-to-br from-orbita-primary to-orbita-secondary bg-clip-text text-left text-transparent")}>
+              {value}
+            </p>
+            <div
+              className={cn(
+                financeKpiSubtextClass,
+                "!mt-0 !w-auto min-w-0 max-w-full text-left [text-wrap:pretty]",
+              )}
+            >
+              {sub}
+            </div>
+          </div>
+          {subFooter ? (
+            <div className="mt-2 min-w-0 border-t border-[color-mix(in_srgb,var(--color-border)_38%,transparent)] pt-2 sm:mt-2.5">
+              {subFooter}
+            </div>
+          ) : null}
+        </div>
+      </div>
     </Card>
   )
 }
@@ -665,15 +723,34 @@ function LoanStructuralCard({
           style={{ width: `${Math.min(100, loan.pctPagado)}%` }}
         />
       </div>
-      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="mt-4 grid min-w-0 grid-cols-3 gap-x-1.5 gap-y-2 sm:gap-x-4 sm:gap-y-3">
         {[
           { label: "Deuda a la fecha", value: `$${formatMoney(loan.saldoPendiente)}` },
           { label: "Cuota mensual", value: `$${formatMoney(loan.cuotaMensual)}` },
           { label: "Próximo pago", value: loan.proximoPagoLabel },
-        ].map((c) => (
-          <div key={c.label}>
-            <p className={financeCardMicroLabelClass}>{c.label}</p>
-            <p className="mt-0.5 text-sm font-semibold tabular-nums tracking-tight text-orbita-primary sm:text-base">
+        ].map((c, idx) => (
+          <div
+            key={c.label}
+            className={cn(
+              "min-w-0 text-center sm:text-left",
+              idx > 0 &&
+                "border-l border-[color-mix(in_srgb,var(--color-border)_48%,transparent)] pl-1.5 sm:border-l-0 sm:pl-0",
+            )}
+          >
+            <p
+              className={cn(
+                financeCardMicroLabelClass,
+                "text-[8px] leading-tight sm:text-[10px]",
+              )}
+            >
+              {c.label}
+            </p>
+            <p
+              className={cn(
+                "mt-1 text-[11px] font-semibold tabular-nums leading-snug tracking-tight text-orbita-primary [overflow-wrap:anywhere] sm:mt-0.5 sm:text-base sm:leading-tight",
+                c.label === "Próximo pago" && "font-bold",
+              )}
+            >
               {c.value}
             </p>
           </div>
@@ -1708,42 +1785,6 @@ export default function CuentasClient() {
   return (
     <>
     <div className="w-full min-w-0 max-w-full space-y-4 pb-6 sm:space-y-5 lg:space-y-6 sm:pb-8">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-end">
-        {cuentasReorderMode ? (
-          <div
-            className={cn(
-              financeSectionIntroClass,
-              "rounded-lg border border-orbita-border/70 bg-orbita-surface-alt/50 px-3 py-2 sm:min-w-0 sm:flex-1",
-            )}
-            role="region"
-            aria-label="Modo reordenar bloques"
-          >
-            Mes <span className="tabular-nums font-medium text-orbita-primary">{month ?? "—"}</span>: arrastrá los bloques
-            con ⋮⋮; el orden se guarda solo en este equipo.
-          </div>
-        ) : null}
-        <button
-          type="button"
-          onClick={() => {
-            setCuentasReorderMode((v) => {
-              const next = !v
-              if (!next) setDraggingCuentasSectionIdx(null)
-              return next
-            })
-          }}
-          className={cn(
-            "shrink-0 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] transition",
-            cuentasReorderMode
-              ? "border-orbita-primary bg-orbita-primary text-white"
-              : "border-orbita-border/70 text-orbita-secondary hover:border-orbita-primary/35 hover:text-orbita-primary",
-          )}
-          aria-pressed={cuentasReorderMode}
-          title="Cambiar el orden de los bloques de abajo"
-        >
-          {cuentasReorderMode ? "Listo" : "Orden"}
-        </button>
-      </div>
-
       {notice && notice !== AUTH_REQUIRED_MESSAGE ? (
         <p
           className={cn(
@@ -1757,6 +1798,19 @@ export default function CuentasClient() {
       ) : null}
 
       <section className="mt-3 sm:mt-4" aria-label="Conexión y saldos">
+        {cuentasReorderMode ? (
+          <div
+            className={cn(
+              financeSectionIntroClass,
+              "mb-2 rounded-lg border border-orbita-border/70 bg-orbita-surface-alt/50 px-3 py-2",
+            )}
+            role="region"
+            aria-label="Modo reordenar bloques"
+          >
+            Mes <span className="tabular-nums font-medium text-orbita-primary">{month ?? "—"}</span>: arrastrá los bloques
+            con ⋮⋮; el orden se guarda solo en este equipo.
+          </div>
+        ) : null}
         <details
           className="group overflow-hidden rounded-xl border border-[color-mix(in_srgb,var(--color-border)_50%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_28%,var(--color-surface))] shadow-sm"
           open
@@ -1764,7 +1818,7 @@ export default function CuentasClient() {
           <summary
             className={cn(
               financeAuxDisclosureSummaryClass,
-              "items-center gap-2 px-3 py-2 sm:gap-2.5 sm:px-3.5 sm:py-2",
+              "items-center justify-start gap-2 px-3 py-2 sm:gap-2.5 sm:px-3.5 sm:py-2",
             )}
           >
             <ChevronDown
@@ -1775,6 +1829,28 @@ export default function CuentasClient() {
               <p className={financeCardMicroLabelClass}>Cuentas · banco y extracto</p>
               <p className={cn(financeModuleSectionHeadingClass, "!mt-0.5")}>Conexión y saldos</p>
             </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setCuentasReorderMode((v) => {
+                  const next = !v
+                  if (!next) setDraggingCuentasSectionIdx(null)
+                  return next
+                })
+              }}
+              className={cn(
+                "ml-auto shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.06em] transition-colors",
+                cuentasReorderMode
+                  ? "text-orbita-primary"
+                  : "text-orbita-muted hover:bg-orbita-surface-alt/70 hover:text-orbita-primary",
+              )}
+              aria-pressed={cuentasReorderMode}
+              title="Cambiar el orden de los bloques de abajo"
+            >
+              {cuentasReorderMode ? "Listo" : "Orden"}
+            </button>
           </summary>
           <div className={cn(financeAuxDisclosureBodyClass, "px-0 pt-0")}>
             <div className="space-y-0 px-3 pb-3 pt-0.5 sm:px-3.5">
@@ -1925,52 +2001,55 @@ export default function CuentasClient() {
             switch (sectionId) {
               case "kpis":
                 return chrome(
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
                     <StatKpiCard
+                      accent="liquidity"
                       title="Total liquidez"
                       value={`$${formatMoney(kpis.totalLiquidez)}`}
                       sub={
-                        <>
-                          <span
-                            className={`inline-flex items-center gap-1 font-medium ${
-                              kpis.liquidezTrendPct >= 0 ? "text-emerald-600" : "text-rose-600"
-                            }`}
-                          >
-                            {kpis.liquidezTrendPct >= 0 ? (
-                              <ArrowUpRight className="h-4 w-4" aria-hidden />
-                            ) : (
-                              <ArrowDownRight className="h-4 w-4" aria-hidden />
-                            )}
-                            {kpis.liquidezTrendPct >= 0 ? "+" : ""}
-                            {kpis.liquidezTrendPct}% vs mes anterior
-                          </span>
-                          <p className={cn(financeCardHintClass, "mt-2 text-orbita-secondary")}>
-                            Ingresos − gastos del mes (misma base que Movimientos). Abajo, saldos por cuenta; no suman
-                            este total.
-                          </p>
-                        </>
-                      }
-                      icon={<Wallet className="h-5 w-5" />}
-                    />
-                    <StatKpiCard
-                      title="Crédito disponible"
-                      value={`$${formatMoney(kpis.creditoDisponible)}`}
-                      sub={
-                        <span className="block space-y-1">
-                          <span>{kpis.creditoUsoPromedioPct}% uso promedio (tarjetas)</span>
-                          <span className={cn(financeCardHintClass, "block text-orbita-muted")}>
-                            Por tarjeta: movimientos del mes más el disponible que anotaste en el registro manual de saldos.
-                          </span>
+                        <span
+                          className={`inline-flex items-center gap-1 font-semibold ${
+                            kpis.liquidezTrendPct >= 0 ? "text-emerald-600" : "text-rose-600"
+                          }`}
+                        >
+                          {kpis.liquidezTrendPct >= 0 ? (
+                            <ArrowUpRight className="h-4 w-4 shrink-0" aria-hidden />
+                          ) : (
+                            <ArrowDownRight className="h-4 w-4 shrink-0" aria-hidden />
+                          )}
+                          {kpis.liquidezTrendPct >= 0 ? "+" : ""}
+                          {kpis.liquidezTrendPct}% vs mes anterior
                         </span>
                       }
-                      icon={<CreditCard className="h-5 w-5" />}
+                      subFooter={
+                        <p className={cn(financeCardHintClass, "!leading-snug text-orbita-secondary")}>
+                          Mismo criterio que Movimientos; no es la suma de cuentas abajo.
+                        </p>
+                      }
+                      icon={<Wallet className="h-5 w-5" strokeWidth={2.25} />}
                     />
                     <StatKpiCard
+                      accent="credit"
+                      title="Crédito disponible"
+                      value={`$${formatMoney(kpis.creditoDisponible)}`}
+                      sub={<span className="font-medium">{kpis.creditoUsoPromedioPct}% uso promedio (tarjetas)</span>}
+                      subFooter={
+                        <span className={cn(financeCardHintClass, "!leading-snug text-orbita-muted")}>
+                          Movimientos del mes + manual al cargar saldos por tarjeta.
+                        </span>
+                      }
+                      icon={<CreditCard className="h-5 w-5" strokeWidth={2.25} />}
+                    />
+                    <StatKpiCard
+                      accent="debt"
                       title="Deuda total"
                       value={`$${formatMoney(kpis.deudaTotal)}`}
-                      sub={<span>${formatMoney(kpis.deudaCuotaMensual)}/mes en obligaciones estimadas</span>}
-                      icon={<TrendingDown className="h-5 w-5" />}
-                      warning
+                      sub={
+                        <span className="font-medium">
+                          ${formatMoney(kpis.deudaCuotaMensual)}/mes en obligaciones estimadas
+                        </span>
+                      }
+                      icon={<TrendingDown className="h-5 w-5" strokeWidth={2.25} />}
                     />
                   </div>,
                 )
@@ -2000,7 +2079,7 @@ export default function CuentasClient() {
                 )
               case "credit":
                 return chrome(
-                  <section className="space-y-4">
+                  <section className="space-y-4 pb-6 sm:pb-8">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <h2 className={financeModuleSectionHeadingClass}>Tarjetas de crédito</h2>
                       <button

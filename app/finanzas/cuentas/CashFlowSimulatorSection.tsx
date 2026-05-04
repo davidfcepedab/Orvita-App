@@ -12,9 +12,13 @@ import {
   readFlowCommitmentsFromLocalStorage,
   writeFlowCommitmentsToLocalStorage,
 } from "@/lib/finanzas/flowCommitmentsLocal"
-import { financeCardMicroLabelClass } from "../_components/financeChrome"
+import {
+  financeCardMicroLabelClass,
+  financeModuleHeroTaglineClass,
+  financeSectionEyebrowClass,
+} from "../_components/financeChrome"
 import { CuentasModalShell } from "./CuentasModalShell"
-import { arcticPanel, formatMoney } from "./cuentasFormat"
+import { formatMoney } from "./cuentasFormat"
 import { cn } from "@/lib/utils"
 
 export type CashFlowSimulatorSectionProps = {
@@ -134,6 +138,21 @@ const FLOW_TYPE_OPTIONS: { value: CommitmentFlowType; label: string }[] = [
   { value: "recurring", label: "Recurrente" },
   { value: "income", label: "Ingreso" },
 ]
+
+/** Shell principal: superficie clara + sombra fuerte vs el fondo grouped (`--color-background`). */
+const cashFlowMajorShellClass =
+  "rounded-[var(--radius-card)] border border-[color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[linear-gradient(180deg,var(--color-surface)_0%,color-mix(in_srgb,var(--color-surface-alt)_40%,var(--color-surface))_100%)] shadow-[var(--shadow-hover)]"
+
+/** Bloques ingresos/gastos: agrupación ligera, sin caja inset (contenido “flota” sobre el shell). */
+const cashFlowScenarioStackClass = "min-w-0 space-y-4 px-0 py-1 sm:py-2"
+
+/** KPI del panel compromisos: capa intermedia entre shell y texto. */
+const cashFlowKpiTileClass =
+  "rounded-xl border border-[color-mix(in_srgb,var(--color-border)_68%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_48%,var(--color-background))] p-3 shadow-sm sm:rounded-2xl sm:p-4"
+
+/** Pozos tabla/barras (7 meses): mismo familia inset, borde explícito. */
+const cashFlowProjectionWellClass =
+  "rounded-2xl border border-[color-mix(in_srgb,var(--color-border)_62%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_46%,var(--color-background))] p-3 shadow-inner sm:p-4"
 
 function flowTypeBadgeClass(t: CommitmentFlowType) {
   if (t === "income") return "border-emerald-200 bg-emerald-50 text-emerald-800"
@@ -746,23 +765,13 @@ export function CashFlowSimulatorSection({
 
   return (
     <>
-    <section className={cn("space-y-5", bridgeHost && "hidden")} aria-hidden={bridgeHost}>
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
-            Simulador de cash flow
-          </h2>
-          <p className="mt-1 max-w-xl text-xs text-orbita-secondary sm:text-sm">
-            Proyección 7 meses: ingresos vs salidas según tus palancas.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={onApplyPaymentPlan}
-          className="min-h-9 w-full shrink-0 touch-manipulation rounded-full border-[0.5px] border-rose-200 bg-rose-50 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-rose-700 hover:bg-rose-100 active:bg-rose-200 sm:w-auto sm:min-h-0"
-        >
-          Aplicar plan de pago
-        </button>
+    <section className={cn("space-y-5 sm:space-y-6", bridgeHost && "hidden")} aria-hidden={bridgeHost}>
+      <div className="min-w-0">
+        <h2 className={financeSectionEyebrowClass}>Simulador de cash flow</h2>
+        <p className={cn(financeModuleHeroTaglineClass, "mt-1 max-w-xl")}>
+          Compromisos y métricas del escenario van en el mismo bloque; después parámetros y 7 meses. «Aplicar plan de pago»
+          cierra el flujo para llevar el escenario a tus tarjetas.
+        </p>
       </div>
 
       {loading ? (
@@ -770,21 +779,226 @@ export function CashFlowSimulatorSection({
       ) : null}
       {err ? <p className="text-sm text-amber-800">Vista limitada: {err}</p> : null}
 
-      <div className={arcticPanel}>
+      <div id="capital-compromisos" className={cn(cashFlowMajorShellClass, "scroll-mt-24 overflow-hidden")}>
+        <div className="flex w-full min-w-0 items-start justify-between gap-3 px-3 pt-3 sm:gap-4 sm:px-4 sm:pt-3.5">
+          <button
+            type="button"
+            onClick={() => setCommitmentsListExpanded((v) => !v)}
+            className="min-w-0 flex-1 touch-manipulation pb-3 text-left sm:pb-4"
+            aria-expanded={commitmentsListExpanded}
+            aria-controls="capital-compromisos-lista"
+            aria-labelledby="capital-compromisos-heading"
+          >
+            <div className="flex items-center gap-1.5 text-orbita-primary">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" aria-hidden />
+              <span id="capital-compromisos-heading" className={financeSectionEyebrowClass}>
+                Compromisos del mes (por día fijo)
+              </span>
+            </div>
+            <p className="mt-1 text-xs text-orbita-secondary">
+              {commitmentsListExpanded ? "Ocultar lista detallada." : "Desplegá para ver cada ítem por día."}
+            </p>
+            {!commitmentsListExpanded ? (
+              <p className="mt-2 text-sm text-orbita-primary">
+                <span className="font-semibold tabular-nums">{commitmentsSorted.length}</span> compromiso
+                {commitmentsSorted.length === 1 ? "" : "s"}
+                {" · "}
+                Impacto neto lista:{" "}
+                <span
+                  className={`font-semibold tabular-nums ${netImpact30 >= 0 ? "text-emerald-600" : "text-rose-600"}`}
+                >
+                  {netImpact30 >= 0 ? "+" : "-"}${formatMoney(Math.abs(netImpact30))}
+                </span>
+              </p>
+            ) : null}
+          </button>
+          <div className="flex shrink-0 items-center gap-1 pb-3 pt-0.5 sm:gap-2 sm:pb-4">
+            <button
+              type="button"
+              onClick={openCommitModal}
+              className="whitespace-nowrap text-[10px] font-semibold text-orbita-secondary underline decoration-orbita-border/80 underline-offset-2 hover:text-orbita-primary sm:text-[11px]"
+            >
+              Editar
+            </button>
+            <button
+              type="button"
+              onClick={() => setCommitmentsListExpanded((v) => !v)}
+              className="rounded-lg p-1 text-orbita-secondary hover:bg-orbita-surface-alt"
+              aria-expanded={commitmentsListExpanded}
+              aria-controls="capital-compromisos-lista"
+              aria-label={commitmentsListExpanded ? "Colapsar lista de compromisos" : "Expandir lista de compromisos"}
+            >
+              <ChevronDown
+                className={`h-4 w-4 shrink-0 transition-transform duration-200 sm:h-[18px] sm:w-[18px] ${commitmentsListExpanded ? "rotate-180" : ""}`}
+                aria-hidden
+              />
+            </button>
+          </div>
+        </div>
+
+        {commitmentsListExpanded ? (
+          <div
+            id="capital-compromisos-lista"
+            role="region"
+            aria-labelledby="capital-compromisos-heading"
+            className="border-t border-orbita-border px-2 pb-2 pt-2 sm:px-4 sm:pb-3 sm:pt-3"
+          >
+            <ul className="divide-y divide-orbita-border/70 lg:hidden">
+              {commitmentsSorted.map((c) => {
+                const inc = isIncomeCommitment(c)
+                const cat = c.category.trim()
+                const showCat = Boolean(cat)
+                const sub = (c.subcategory ?? "").trim()
+                const titleDiffers = c.title.trim().toLowerCase() !== cat.toLowerCase()
+                return (
+                  <li key={c.id} className="flex gap-2 py-2.5 first:pt-0 last:pb-0">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="min-w-0 shrink text-[10px] font-semibold tabular-nums leading-tight text-orbita-secondary">
+                          <span className="text-orbita-primary">Día {c.dueDay ?? dayFromIso(c.date)}</span>
+                          <span className="text-orbita-secondary"> · {formatCommitmentDayEn(c.date)}</span>
+                        </p>
+                        <p
+                          className={`shrink-0 text-right text-[13px] font-bold leading-none tabular-nums ${inc ? "text-emerald-600" : "text-orbita-primary"}`}
+                        >
+                          {inc ? "+" : "-"}${formatMoney(c.amount)}
+                        </p>
+                      </div>
+                      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                        {showCat ? (
+                          <p className="min-w-0 text-[12px] font-semibold leading-snug text-orbita-primary">
+                            {cat}
+                            {sub ? <span className="font-normal text-orbita-secondary"> › {sub}</span> : null}
+                          </p>
+                        ) : (
+                          <p className="min-w-0 text-[12px] font-semibold leading-snug text-orbita-primary">{c.title}</p>
+                        )}
+                        <span
+                          className={`inline-flex shrink-0 rounded-full border px-1.5 py-0 text-[8px] font-semibold uppercase leading-none tracking-wide ${flowTypeBadgeClass(c.flowType)}`}
+                        >
+                          {FLOW_TYPE_OPTIONS.find((o) => o.value === c.flowType)?.label ?? c.flowType}
+                        </span>
+                      </div>
+                      {showCat && titleDiffers ? (
+                        <p className="mt-0.5 truncate text-[10px] leading-snug text-orbita-secondary">{c.title}</p>
+                      ) : null}
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+            <div className="hidden overflow-x-auto pt-2 lg:block">
+              <table className="w-full min-w-[520px] table-fixed border-collapse text-left text-[11px] sm:text-sm">
+                <thead>
+                  <tr className="border-b border-orbita-border text-[9px] font-semibold uppercase tracking-wide text-orbita-secondary sm:text-[10px]">
+                    <th className="w-[12%] py-1.5 pr-2 font-medium">Día</th>
+                    <th className="w-[50%] py-1.5 pr-3 font-medium">Concepto</th>
+                    <th className="w-[18%] py-1.5 pr-2 font-medium">Tipo</th>
+                    <th className="w-[20%] py-1.5 pl-2 text-right font-medium">Monto</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {commitmentsSorted.map((c) => {
+                    const inc = isIncomeCommitment(c)
+                    const cat = c.category.trim()
+                    const showCat = Boolean(cat)
+                    const sub = (c.subcategory ?? "").trim()
+                    const titleDiffers = c.title.trim().toLowerCase() !== cat.toLowerCase()
+                    return (
+                      <tr key={c.id} className="border-b border-orbita-border/70 last:border-0">
+                        <td className="py-1.5 pr-2 align-top tabular-nums text-orbita-primary">
+                          <span className="font-semibold">{c.dueDay ?? dayFromIso(c.date)}</span>
+                          <span className="ml-1 block text-[10px] font-normal text-orbita-secondary sm:inline">
+                            ({formatCommitmentDayEn(c.date)})
+                          </span>
+                        </td>
+                        <td className="max-w-0 py-1.5 pr-3 align-top" title={showCat ? `${cat} ${sub}` : c.title}>
+                          {showCat ? (
+                            <>
+                              <p className="break-words font-semibold leading-snug text-orbita-primary">
+                                {cat}
+                                {sub ? <span className="font-normal text-orbita-secondary"> › {sub}</span> : null}
+                              </p>
+                              {titleDiffers ? (
+                                <p className="mt-0.5 break-words text-[10px] leading-snug text-orbita-secondary">
+                                  {c.title}
+                                </p>
+                              ) : null}
+                            </>
+                          ) : (
+                            <p className="break-words font-semibold leading-snug text-orbita-primary">{c.title}</p>
+                          )}
+                        </td>
+                        <td className="py-1.5 pr-2 align-top">
+                          <span
+                            className={`inline-flex max-w-full rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${flowTypeBadgeClass(c.flowType)}`}
+                          >
+                            <span className="truncate">
+                              {FLOW_TYPE_OPTIONS.find((o) => o.value === c.flowType)?.label ?? c.flowType}
+                            </span>
+                          </span>
+                        </td>
+                        <td
+                          className={`whitespace-nowrap py-1.5 pl-2 text-right align-top text-[11px] font-bold tabular-nums sm:text-sm ${inc ? "text-emerald-600" : "text-orbita-primary"}`}
+                        >
+                          {inc ? "+" : "-"}${formatMoney(c.amount)}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : null}
+
+        <div className="border-t border-orbita-border px-3 pb-3 pt-4 sm:px-4 sm:pb-4">
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
+            {[
+              { k: "Obligaciones mensuales", v: formatMoney(fixedWithSubs), sub: "Fijos + suscripciones (sim.)" },
+              { k: "Total gastos", v: formatMoney(totalGastosMes), sub: "Variables y ahorro incl." },
+              {
+                k: "Disponible",
+                v: `${disponible < 0 ? "-" : ""}${formatMoney(Math.abs(disponible))}`,
+                sub: "Tras escenario",
+                tone: disponible >= 0 ? "text-emerald-700" : "text-rose-600",
+              },
+              {
+                k: "Impacto mensual",
+                v: `${netImpact30 >= 0 ? "+" : "-"}${formatMoney(Math.abs(netImpact30))}`,
+                sub: "Lista de compromisos",
+                tone: netImpact30 >= 0 ? "text-emerald-700" : "text-rose-600",
+              },
+            ].map((c) => (
+              <div key={c.k} className={cashFlowKpiTileClass}>
+                <p className="text-[9px] font-semibold uppercase tracking-[0.1em] text-orbita-secondary sm:text-[10px] sm:tracking-[0.12em]">
+                  {c.k}
+                </p>
+                <p className={`mt-1.5 text-base font-bold tabular-nums sm:mt-2 sm:text-lg ${c.tone ?? "text-orbita-primary"}`}>
+                  ${c.v}
+                </p>
+                <p className="mt-1 text-[10px] leading-snug text-orbita-secondary sm:text-[11px]">{c.sub}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className={cn(cashFlowMajorShellClass, "overflow-hidden")}>
         <button
           type="button"
           onClick={() => setSimulatorExpanded((v) => !v)}
-          className="flex w-full touch-manipulation items-start justify-between gap-3 p-4 text-left sm:p-5"
+          className="flex w-full touch-manipulation items-start justify-between gap-3 p-3.5 text-left sm:p-5"
           aria-expanded={simulatorExpanded}
+          aria-controls="capital-flujo-simulador-panel"
+          aria-labelledby="capital-flujo-simulador-heading"
         >
           <div className="min-w-0">
-            <p className="text-sm font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
+            <p id="capital-flujo-simulador-heading" className={financeSectionEyebrowClass}>
               Parámetros y proyección de flujo
             </p>
-            <p className="mt-1 text-xs text-orbita-secondary">
-              {simulatorExpanded
-                ? "Toca para ocultar ajustes y la vista por mes."
-                : "Ingresos estimados, gastos del escenario y horizonte de 7 meses."}
+            <p className={cn(financeModuleHeroTaglineClass, "mt-1 max-w-[min(100%,40rem)]")}>
+              Ajustá ingresos y gastos del escenario y revisá siete meses adelante (tabla o barras).
             </p>
             {!simulatorExpanded ? (
               <p className="mt-2 text-sm text-orbita-primary">
@@ -807,97 +1021,109 @@ export function CashFlowSimulatorSection({
         </button>
 
         {simulatorExpanded ? (
-          <div className="border-t border-orbita-border p-4 sm:p-6">
-            <div className="grid gap-5 lg:grid-cols-2">
-        <div className="order-2 space-y-4 touch-manipulation lg:order-1">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">Parámetros</p>
-          <div className="rounded-2xl border-[0.5px] border-emerald-100 bg-emerald-50/40 p-4">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <div>
-                <p className="text-[10px] font-semibold uppercase text-emerald-800">Ingresos base (mes)</p>
-                <p className="text-xl font-bold text-orbita-primary">${formatMoney(incomeBase)}</p>
-              </div>
-              <div className="text-right text-xs text-orbita-secondary">
-                <p>Prom. histórico (12m)</p>
-                <p className="font-semibold text-orbita-primary">${formatMoney(incomeHistoricalAvg)}</p>
-              </div>
-            </div>
-            <p className="mt-2 text-xs text-orbita-secondary">
-              Tendencia histórica ~{trendFromHistory >= 0 ? "+" : ""}
-              {Math.round(trendFromHistory * 10) / 10}% en ventana
+          <div
+            id="capital-flujo-simulador-panel"
+            role="region"
+            aria-labelledby="capital-flujo-simulador-heading"
+            className="p-3 sm:p-4"
+          >
+            <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
+        <div className="order-2 space-y-3 touch-manipulation sm:space-y-4 lg:order-1">
+          <div className={cashFlowScenarioStackClass}>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
+              Ingresos del escenario
             </p>
-          </div>
-          <div className="py-1">
-            <div className="flex justify-between text-sm font-medium text-orbita-primary">
-              <span>Ajuste escenario ingresos</span>
-              <span className="tabular-nums text-emerald-700">
-                {ingresosAdjustPct >= 0 ? "+" : ""}
-                {ingresosAdjustPct}%
-              </span>
+            <div>
+              <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
+                <div className="min-w-0">
+                  <p className="text-[9px] font-semibold uppercase tracking-wide text-orbita-secondary">Base mensual</p>
+                  <p className="text-lg font-bold tabular-nums text-orbita-primary sm:text-xl">${formatMoney(incomeBase)}</p>
+                </div>
+                <div className="text-right text-[10px] text-orbita-secondary sm:text-[11px]">
+                  <p className="leading-tight">Hist. 12m</p>
+                  <p className="font-semibold tabular-nums text-orbita-primary">${formatMoney(incomeHistoricalAvg)}</p>
+                </div>
+              </div>
+              <p className="mt-1.5 text-[10px] leading-snug text-orbita-secondary sm:text-[11px]">
+                Tendencia ~{trendFromHistory >= 0 ? "+" : ""}
+                {Math.round(trendFromHistory * 10) / 10}%
+              </p>
             </div>
-            <input
-              type="range"
-              min={-12}
-              max={22}
-              value={ingresosAdjustPct}
-              onChange={(e) => setIngresosAdjustPct(Number(e.target.value))}
-              className="mt-3 h-11 w-full cursor-pointer accent-emerald-600 sm:h-auto sm:mt-2"
-            />
+            <div>
+              <div className="flex justify-between text-[11px] font-medium text-orbita-primary sm:text-xs">
+                <span>Ajuste ingresos</span>
+                <span className="tabular-nums text-orbita-primary">
+                  {ingresosAdjustPct >= 0 ? "+" : ""}
+                  {ingresosAdjustPct}%
+                </span>
+              </div>
+              <input
+                type="range"
+                min={-12}
+                max={22}
+                value={ingresosAdjustPct}
+                onChange={(e) => setIngresosAdjustPct(Number(e.target.value))}
+                className="mt-1.5 h-9 w-full cursor-pointer accent-[var(--color-accent-primary)] sm:h-8"
+              />
+            </div>
+            <div>
+              <p className="text-[9px] font-semibold uppercase tracking-wide text-orbita-secondary">Ingresos estimados</p>
+              <p className="mt-0.5 text-xl font-bold tabular-nums text-orbita-primary sm:text-2xl">
+                ${formatMoney(ingresosEstimados)}
+              </p>
+              <p className="mt-0.5 text-[10px] text-orbita-secondary sm:text-[11px]">
+                vs base {variacionVsBasePct >= 0 ? "+" : ""}
+                {variacionVsBasePct}%
+              </p>
+            </div>
           </div>
-          <div className="rounded-2xl border-[0.5px] border-sky-100 bg-sky-50/50 p-4">
-            <p className="text-[10px] font-semibold uppercase text-sky-800">Ingresos estimados</p>
-            <p className="mt-1 text-2xl font-bold text-orbita-primary">${formatMoney(ingresosEstimados)}</p>
-            <p className="mt-1 text-xs text-orbita-secondary">
-              vs base {variacionVsBasePct >= 0 ? "+" : ""}
-              {variacionVsBasePct}% (tendencia + slider)
+
+          <div className={cashFlowScenarioStackClass}>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
+              Gastos del escenario
             </p>
+            <div className="space-y-3 sm:space-y-3.5">
+              <label className="block text-[11px] font-medium text-orbita-primary sm:text-xs">
+                Gastos fijos
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  className="mt-1 min-h-11 w-full rounded-lg border border-orbita-border bg-orbita-surface px-2.5 py-2 text-sm tabular-nums shadow-inner sm:min-h-10 sm:py-1.5 sm:text-sm"
+                  value={gastosFijos || ""}
+                  onChange={(e) => setGastosFijos(Number(e.target.value))}
+                />
+                <span className="mt-0.5 block text-[10px] text-orbita-secondary">
+                  + Suscripciones (sim.): ${formatMoney(subscriptionFixedMonthly)}
+                </span>
+              </label>
+              <label className="block text-[11px] font-medium text-orbita-primary sm:text-xs">
+                Variables
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  className="mt-1 min-h-11 w-full rounded-lg border border-orbita-border bg-orbita-surface px-2.5 py-2 text-sm tabular-nums shadow-inner sm:min-h-10 sm:py-1.5 sm:text-sm"
+                  value={gastosVariables || ""}
+                  onChange={(e) => setGastosVariables(Number(e.target.value))}
+                />
+              </label>
+              <label className="block text-[11px] font-medium text-orbita-primary sm:text-xs">
+                Ahorro mensual
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  className="mt-1 min-h-11 w-full rounded-lg border border-orbita-border bg-orbita-surface px-2.5 py-2 text-sm tabular-nums shadow-inner sm:min-h-10 sm:py-1.5 sm:text-sm"
+                  value={ahorroObjetivo || ""}
+                  onChange={(e) => setAhorroObjetivo(Number(e.target.value))}
+                />
+              </label>
+            </div>
           </div>
-          <label className="block text-sm text-orbita-primary">
-            Gastos fijos (sin contar suscripciones del simulador duplicadas)
-            <input
-              type="number"
-              inputMode="numeric"
-              className="mt-1 min-h-[44px] w-full rounded-xl border border-orbita-border px-3 py-2 text-base sm:text-sm"
-              value={gastosFijos || ""}
-              onChange={(e) => setGastosFijos(Number(e.target.value))}
-            />
-            <span className="mt-1 block text-[11px] text-orbita-secondary">
-              + Suscripciones en simulador: ${formatMoney(subscriptionFixedMonthly)}
-            </span>
-          </label>
-          <label className="block text-sm text-orbita-primary">
-            Gastos variables
-            <input
-              type="number"
-              inputMode="numeric"
-              className="mt-1 min-h-[44px] w-full rounded-xl border border-orbita-border px-3 py-2 text-base sm:text-sm"
-              value={gastosVariables || ""}
-              onChange={(e) => setGastosVariables(Number(e.target.value))}
-            />
-          </label>
-          <label className="block text-sm text-orbita-primary">
-            Ahorro objetivo
-            <input
-              type="number"
-              inputMode="numeric"
-              className="mt-1 min-h-[44px] w-full rounded-xl border border-orbita-border px-3 py-2 text-base sm:text-sm"
-              value={ahorroObjetivo || ""}
-              onChange={(e) => setAhorroObjetivo(Number(e.target.value))}
-            />
-          </label>
         </div>
 
-        <div className="order-1 space-y-3 lg:order-2">
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-orbita-secondary">
-                Vista por mes (7 meses)
-              </p>
-              <p className="mt-0.5 text-xs text-orbita-secondary">
-                Números del escenario: entradas estimadas vs salidas (fijas + variables + ahorro + suscripciones en simulador).
-              </p>
-            </div>
-            <div className="flex rounded-full border border-orbita-border bg-orbita-surface-alt/80 p-0.5 text-[10px] font-semibold uppercase tracking-wide text-orbita-secondary">
+        <div className="order-1 space-y-2.5 lg:order-2 sm:space-y-3">
+          <div className="flex flex-nowrap items-center justify-between gap-2 sm:gap-3">
+            <p className={cn(financeSectionEyebrowClass, "min-w-0 flex-1 truncate")}>Vista por mes · 7 meses</p>
+            <div className="flex shrink-0 rounded-full border border-orbita-border bg-orbita-surface-alt/80 p-0.5 text-[10px] font-semibold uppercase tracking-wide text-orbita-secondary">
               <button
                 type="button"
                 onClick={() => setFlowViz("table")}
@@ -915,12 +1141,7 @@ export function CashFlowSimulatorSection({
             </div>
           </div>
 
-          <div
-            className="rounded-2xl border-[0.5px] border-orbita-border/90 p-3 shadow-inner sm:p-4"
-            style={{
-              background: `linear-gradient(to bottom, var(--color-surface), color-mix(in srgb, var(--color-surface-alt) 88%, var(--color-border)))`,
-            }}
-          >
+          <div className={cashFlowProjectionWellClass}>
             {flowViz === "table" ? (
               <div className="max-h-[min(72vh,560px)] space-y-3 overflow-y-auto overscroll-contain pr-1 sm:max-h-none sm:overflow-visible sm:pr-0">
                 {pipelineMonths.map((row) => {
@@ -931,10 +1152,7 @@ export function CashFlowSimulatorSection({
                   return (
                     <div
                       key={row.ym}
-                      className="rounded-xl border border-orbita-border px-3 py-3 shadow-sm sm:px-4"
-                      style={{
-                        background: "color-mix(in srgb, var(--color-surface) 90%, transparent)",
-                      }}
+                      className="rounded-xl border border-[color-mix(in_srgb,var(--color-border)_52%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_72%,var(--color-background))] px-3 py-3 shadow-sm sm:px-4"
                     >
                       <div className="flex flex-wrap items-baseline justify-between gap-2">
                         <span className="text-sm font-bold text-orbita-primary">{row.label}</span>
@@ -943,18 +1161,18 @@ export function CashFlowSimulatorSection({
                         </span>
                       </div>
                       <dl className="mt-3 grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
-                        <div className="rounded-lg bg-emerald-50/80 px-2.5 py-2">
-                          <dt className="font-medium text-emerald-800/90">Entradas estimadas</dt>
-                          <dd className="mt-0.5 font-bold tabular-nums text-emerald-700">${formatMoney(row.ing)}</dd>
+                        <div className="rounded-lg border border-[color-mix(in_srgb,var(--color-border)_45%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_52%,var(--color-background))] px-2.5 py-2 shadow-inner">
+                          <dt className="font-medium text-orbita-secondary">Entradas estimadas</dt>
+                          <dd className="mt-0.5 font-bold tabular-nums text-orbita-primary">${formatMoney(row.ing)}</dd>
                         </div>
-                        <div className="rounded-lg bg-rose-50/80 px-2.5 py-2">
-                          <dt className="font-medium text-rose-800/90">Salidas estimadas</dt>
-                          <dd className="mt-0.5 font-bold tabular-nums text-rose-700">${formatMoney(row.egr)}</dd>
+                        <div className="rounded-lg border border-[color-mix(in_srgb,var(--color-border)_45%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_52%,var(--color-background))] px-2.5 py-2 shadow-inner">
+                          <dt className="font-medium text-orbita-secondary">Salidas estimadas</dt>
+                          <dd className="mt-0.5 font-bold tabular-nums text-orbita-primary">${formatMoney(row.egr)}</dd>
                         </div>
                       </dl>
                       <div className="mt-3">
                         <p className="text-[10px] font-medium uppercase tracking-wide text-orbita-secondary">
-                          Reparto del mes (solo proporción, no escala de pesos)
+                          Proporción del mes (entradas vs salidas)
                         </p>
                         <div className="mt-1 flex h-2.5 w-full overflow-hidden rounded-full bg-orbita-surface-alt">
                           <div
@@ -974,11 +1192,6 @@ export function CashFlowSimulatorSection({
                 })}
               </div>
             ) : (
-              <>
-                <p className="mb-3 text-xs leading-relaxed text-orbita-secondary">
-                  Cada barra verde y roja mide el mes frente al <strong>mes más alto</strong> del período (para comparar meses entre sí).
-                  El recuadro central es el <strong>neto</strong> (entradas − salidas).
-                </p>
                 <div className="max-h-[min(70vh,520px)] space-y-4 overflow-y-auto overscroll-contain pr-1 sm:max-h-none sm:space-y-5 sm:overflow-visible sm:pr-0">
                   {pipelineMonths.map((row) => {
                     const wIng = Math.round((row.ing / maxBar) * 100)
@@ -994,7 +1207,7 @@ export function CashFlowSimulatorSection({
                         </div>
                         <div className="relative flex h-14 items-center gap-1.5 sm:h-12 sm:gap-2">
                           <div
-                            className="flex h-11 min-w-0 flex-1 items-center overflow-hidden rounded-full border border-emerald-200/60 bg-emerald-50/80 sm:h-10"
+                            className="flex h-11 min-w-0 flex-1 items-center overflow-hidden rounded-full border border-[color-mix(in_srgb,var(--color-border)_48%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_42%,var(--color-background))] sm:h-10"
                             title={`Entradas ${formatMoney(row.ing)}`}
                           >
                             <div
@@ -1012,7 +1225,7 @@ export function CashFlowSimulatorSection({
                             {netPos ? "↑" : "↓"}
                           </div>
                           <div
-                            className="flex h-11 min-w-0 flex-1 items-center justify-end overflow-hidden rounded-full border border-rose-200/60 bg-rose-50/80 sm:h-10"
+                            className="flex h-11 min-w-0 flex-1 items-center justify-end overflow-hidden rounded-full border border-[color-mix(in_srgb,var(--color-border)_48%,transparent)] bg-[color-mix(in_srgb,var(--color-surface-alt)_42%,var(--color-background))] sm:h-10"
                             title={`Salidas ${formatMoney(row.egr)}`}
                           >
                             <div
@@ -1022,14 +1235,13 @@ export function CashFlowSimulatorSection({
                           </div>
                         </div>
                         <div className="flex justify-between gap-2 text-[10px] font-medium text-orbita-secondary">
-                          <span className="text-emerald-700">Entradas ${formatMoney(row.ing)}</span>
-                          <span className="text-rose-600">Salidas ${formatMoney(row.egr)}</span>
+                          <span className="text-orbita-secondary">Entradas ${formatMoney(row.ing)}</span>
+                          <span className="text-orbita-secondary">Salidas ${formatMoney(row.egr)}</span>
                         </div>
                       </div>
                     )
                   })}
                 </div>
-              </>
             )}
           </div>
         </div>
@@ -1038,148 +1250,14 @@ export function CashFlowSimulatorSection({
         ) : null}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {[
-          { k: "Obligaciones mensuales", v: formatMoney(fixedWithSubs), sub: "Fijos + suscripciones (sim.)" },
-          { k: "Total gastos", v: formatMoney(totalGastosMes), sub: "Incluye variables y ahorro" },
-          {
-            k: "Disponible",
-            v: `${disponible < 0 ? "-" : ""}${formatMoney(Math.abs(disponible))}`,
-            sub: "Tras escenario",
-            tone: disponible >= 0 ? "text-emerald-700" : "text-rose-600",
-          },
-          {
-            k: "Impacto mensual",
-            v: `${netImpact30 >= 0 ? "+" : "-"}${formatMoney(Math.abs(netImpact30))}`,
-            sub: "Compromisos recurrentes (lista)",
-            tone: netImpact30 >= 0 ? "text-emerald-700" : "text-rose-600",
-          },
-        ].map((c) => (
-          <div key={c.k} className={`rounded-2xl border-[0.5px] border-orbita-border/90 bg-orbita-surface p-4 shadow-sm ${arcticPanel}`}>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">{c.k}</p>
-            <p className={`mt-2 text-lg font-bold ${c.tone ?? "text-orbita-primary"}`}>${c.v}</p>
-            <p className="mt-1 text-[11px] text-orbita-secondary">{c.sub}</p>
-          </div>
-        ))}
-      </div>
-
-      <div id="capital-compromisos" className={`${arcticPanel} scroll-mt-24`}>
-        <div className="flex w-full items-start">
-          <button
-            type="button"
-            onClick={() => setCommitmentsListExpanded((v) => !v)}
-            className="min-w-0 flex-1 touch-manipulation p-3 text-left sm:p-4"
-            aria-expanded={commitmentsListExpanded}
-          >
-            <div className="flex items-center gap-1.5 text-orbita-primary">
-              <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" aria-hidden />
-              <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-orbita-secondary">
-                Compromisos del mes (por día fijo)
-              </span>
-            </div>
-            <p className="mt-1 text-xs text-orbita-secondary">
-              {commitmentsListExpanded
-                ? "Toca para ocultar la tabla de vista previa."
-                : "Resumen del mes; despliega para ver día, concepto, tipo y monto."}
-            </p>
-            {!commitmentsListExpanded ? (
-              <p className="mt-2 text-sm text-orbita-primary">
-                <span className="font-semibold tabular-nums">{commitmentsSorted.length}</span> compromiso
-                {commitmentsSorted.length === 1 ? "" : "s"}
-                {" · "}
-                Impacto neto lista:{" "}
-                <span
-                  className={`font-semibold tabular-nums ${netImpact30 >= 0 ? "text-emerald-600" : "text-rose-600"}`}
-                >
-                  {netImpact30 >= 0 ? "+" : "-"}${formatMoney(Math.abs(netImpact30))}
-                </span>
-              </p>
-            ) : null}
-          </button>
-          <div className="flex shrink-0 flex-col items-end gap-0.5 py-3 pr-2 sm:py-4 sm:pr-3">
-            <button
-              type="button"
-              onClick={openCommitModal}
-              className="text-[11px] font-medium text-orbita-secondary underline decoration-orbita-border/80 underline-offset-4 hover:text-orbita-primary"
-            >
-              Editar
-            </button>
-            <button
-              type="button"
-              onClick={() => setCommitmentsListExpanded((v) => !v)}
-              className="rounded-lg p-1 text-orbita-secondary hover:bg-orbita-surface-alt"
-              aria-label={commitmentsListExpanded ? "Colapsar lista" : "Expandir lista"}
-            >
-              <ChevronDown
-                className={`h-5 w-5 transition-transform duration-200 ${commitmentsListExpanded ? "rotate-180" : ""}`}
-                aria-hidden
-              />
-            </button>
-          </div>
-        </div>
-
-        {commitmentsListExpanded ? (
-          <div className="border-t border-orbita-border px-3 pb-3 sm:px-4 sm:pb-4">
-            <div className="overflow-x-auto pt-3">
-              <table className="w-full min-w-[520px] border-collapse text-left text-[11px] sm:text-sm">
-                <thead>
-                  <tr className="border-b border-orbita-border text-[9px] font-semibold uppercase tracking-wide text-orbita-secondary sm:text-[10px]">
-                    <th className="py-2 pr-2 font-medium">Día</th>
-                    <th className="py-2 pr-2 font-medium">Concepto</th>
-                    <th className="py-2 pr-2 font-medium">Tipo</th>
-                    <th className="py-2 pr-0 text-right font-medium">Monto</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {commitmentsSorted.map((c) => {
-                    const inc = isIncomeCommitment(c)
-                    const cat = c.category.trim()
-                    const showCat = Boolean(cat)
-                    const sub = (c.subcategory ?? "").trim()
-                    const titleDiffers = c.title.trim().toLowerCase() !== cat.toLowerCase()
-                    return (
-                      <tr key={c.id} className="border-b border-orbita-border/70 last:border-0">
-                        <td className="whitespace-nowrap py-2 pr-2 align-top tabular-nums text-orbita-primary">
-                          <span className="font-semibold">{c.dueDay ?? dayFromIso(c.date)}</span>
-                          <span className="ml-1 text-[10px] text-orbita-secondary">
-                            ({formatCommitmentDayEn(c.date)})
-                          </span>
-                        </td>
-                        <td className="max-w-[200px] py-2 pr-2 align-top sm:max-w-none">
-                          {showCat ? (
-                            <>
-                              <p className="font-semibold leading-snug text-orbita-primary">
-                                {cat}
-                                {sub ? <span className="font-normal text-orbita-secondary"> › {sub}</span> : null}
-                              </p>
-                              {titleDiffers ? (
-                                <p className="mt-0.5 text-[10px] leading-snug text-orbita-secondary">{c.title}</p>
-                              ) : null}
-                            </>
-                          ) : (
-                            <p className="font-semibold leading-snug text-orbita-primary">{c.title}</p>
-                          )}
-                        </td>
-                        <td className="py-2 pr-2 align-top">
-                          <span
-                            className={`inline-flex rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${flowTypeBadgeClass(c.flowType)}`}
-                          >
-                            {FLOW_TYPE_OPTIONS.find((o) => o.value === c.flowType)?.label ?? c.flowType}
-                          </span>
-                        </td>
-                        <td
-                          className={`whitespace-nowrap py-2 pl-2 text-right font-bold tabular-nums ${inc ? "text-emerald-600" : "text-orbita-primary"}`}
-                        >
-                          {inc ? "+" : "-"}${formatMoney(c.amount)}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        ) : null}
+      <div className="flex w-full justify-stretch pt-2 sm:justify-end sm:pt-4">
+        <button
+          type="button"
+          onClick={onApplyPaymentPlan}
+          className="min-h-9 w-full touch-manipulation rounded-full border-[0.5px] border-rose-200 bg-rose-50 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-rose-700 hover:bg-rose-100 active:bg-rose-200 sm:w-auto sm:min-h-0"
+        >
+          Aplicar plan de pago
+        </button>
       </div>
     </section>
 

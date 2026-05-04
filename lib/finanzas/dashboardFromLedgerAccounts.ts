@@ -70,17 +70,35 @@ function ledgerRowToSaving(
   month: string,
   monthRows: FinanceTransaction[],
   cumNetByAhorroId: Map<string, number>,
+  rollupRows: FinanceTransaction[],
+  monthEndInclusive: string,
 ): CuentasSavingsCard {
-  const fromCatalog = ahorroSaldoOperativoFromCatalog(row)
+  const snapD = String(row.manual_balance_on ?? "").trim()
+  const hasReconcileSnapshot =
+    /^\d{4}-\d{2}-\d{2}$/.test(snapD) && Number.isFinite(Number(row.manual_balance))
+
   /**
-   * Sin saldo en catálogo: acumulado ingresos − gastos hasta fin de mes (mapa precalculado, una pasada).
+   * Con fecha de conciliación: mismo criterio que TC — saldo ancla + movimientos posteriores hasta la fecha vista.
+   * (Sin esto, `ahorroSaldoOperativoFromCatalog` devolvía solo el monto anclado y “congelaba” el saldo.)
    */
-  let usoFromMovements = 0
-  if (fromCatalog == null) {
-    const cumNet = Math.round(cumNetByAhorroId.get(row.id) ?? 0)
-    usoFromMovements = cumNet > 0 ? cumNet : 0
+  let uso: number
+  if (hasReconcileSnapshot) {
+    uso = Math.max(
+      0,
+      computeAccountCalculatedBalanceFromSnapshot(rollupRows, monthEndInclusive, row),
+    )
+  } else {
+    const fromCatalog = ahorroSaldoOperativoFromCatalog(row)
+    /**
+     * Sin saldo en catálogo: acumulado ingresos − gastos hasta fin de mes (mapa precalculado, una pasada).
+     */
+    let usoFromMovements = 0
+    if (fromCatalog == null) {
+      const cumNet = Math.round(cumNetByAhorroId.get(row.id) ?? 0)
+      usoFromMovements = cumNet > 0 ? cumNet : 0
+    }
+    uso = fromCatalog != null ? fromCatalog : usoFromMovements
   }
-  const uso = fromCatalog != null ? fromCatalog : usoFromMovements
 
   const parts = row.label.split("|").map((p) => p.trim()).filter(Boolean)
   const institution = parts[1] ?? parts[0] ?? "Ahorros"
@@ -340,7 +358,9 @@ export function mergeLiveDashboardWithLedger(
 
   for (const row of ledgerSorted) {
     if (row.account_class === "ahorro")
-      savings.push(ledgerRowToSaving(row, month, monthRows, cumNetByAhorroId))
+      savings.push(
+        ledgerRowToSaving(row, month, monthRows, cumNetByAhorroId, rollupRows, monthEndInclusive),
+      )
     else if (row.account_class === "tarjeta_credito")
       creditCards.push(ledgerRowToCreditCard(row, month, rollupRows, monthEndInclusive))
     else if (row.account_class === "credito") loans.push(ledgerRowToLoan(row, rollupRows, monthEndInclusive))

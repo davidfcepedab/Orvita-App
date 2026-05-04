@@ -2,7 +2,19 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useSearchParams } from "next/navigation"
-import { Ban, ChevronDown, Pause, Pencil, Plus, Trash2 } from "lucide-react"
+import {
+  Ban,
+  ChevronDown,
+  Flame,
+  Pause,
+  Pencil,
+  Plus,
+  Shield,
+  Sparkles,
+  Star,
+  Target,
+  Trash2,
+} from "lucide-react"
 import { messageForHttpError } from "@/lib/api/friendlyHttpError"
 import { UI_SUBSCRIPTIONS_LOCAL_STORAGE } from "@/lib/checkins/flags"
 import { financeApiDelete, financeApiGet, financeApiJson } from "@/lib/finanzas/financeClientFetch"
@@ -29,8 +41,12 @@ import {
 import { normalizeUserSubscription } from "@/lib/finanzas/userSubscriptionsNormalize"
 import { financeCardMicroLabelClass, financeSectionEyebrowClass } from "../_components/financeChrome"
 import { CuentasModalShell } from "./CuentasModalShell"
-import { arcticPanel, formatMoney } from "./cuentasFormat"
+import { formatMoney } from "./cuentasFormat"
 import { cn } from "@/lib/utils"
+
+/** Misma familia visual que el simulador de cash flow: tarjeta clara elevada sobre el fondo grouped. */
+const subscriptionsElevatedShellClass =
+  "rounded-[var(--radius-card)] border border-[color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[linear-gradient(180deg,var(--color-surface)_0%,color-mix(in_srgb,var(--color-surface-alt)_40%,var(--color-surface))_100%)] shadow-[var(--shadow-hover)]"
 
 export type SubscriptionsBurnSectionProps = {
   supabaseEnabled: boolean
@@ -86,6 +102,55 @@ function avatarGradientForLabel(label: string) {
   }
   const h2 = (h + 48) % 360
   return `linear-gradient(135deg, hsl(${h} 62% 42%), hsl(${h2} 58% 32%))`
+}
+
+type SubsTierKey = "optimal" | "balanced" | "hot" | "unknown"
+
+function tierFromBurnPct(pct: number | null): {
+  key: SubsTierKey
+  label: string
+  stroke: string
+  chipClass: string
+  Icon: typeof Shield
+} {
+  if (pct === null) {
+    return {
+      key: "unknown",
+      label: "Activá tu medidor",
+      stroke: "var(--color-border)",
+      chipClass:
+        "border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] bg-orbita-surface-alt/90 text-orbita-secondary",
+      Icon: Sparkles,
+    }
+  }
+  if (pct <= 3) {
+    return {
+      key: "optimal",
+      label: "Racha de control",
+      stroke: "var(--color-accent-health)",
+      chipClass:
+        "border-emerald-200/90 bg-emerald-50/95 text-emerald-950 dark:border-emerald-500/35 dark:bg-emerald-950/45 dark:text-emerald-100",
+      Icon: Shield,
+    }
+  }
+  if (pct <= 8) {
+    return {
+      key: "balanced",
+      label: "En el radar",
+      stroke: "var(--color-accent-warning)",
+      chipClass:
+        "border-amber-200/90 bg-amber-50/95 text-amber-950 dark:border-amber-500/30 dark:bg-amber-950/40 dark:text-amber-50",
+      Icon: Target,
+    }
+  }
+  return {
+    key: "hot",
+    label: "Priorizá recorte",
+    stroke: "var(--color-accent-danger)",
+    chipClass:
+      "border-rose-200/90 bg-rose-50/95 text-rose-950 dark:border-rose-500/35 dark:bg-rose-950/45 dark:text-rose-100",
+    Icon: Flame,
+  }
 }
 
 type SubManageRow = {
@@ -420,119 +485,185 @@ export function SubscriptionsBurnSection({
     return rest > 0 ? `${head} · +${rest} más` : head
   }, [activeSubscriptions, rows.length])
 
+  const burnPctOfIncome = useMemo(() => {
+    if (baselineMonthlyIncome <= 0) return null
+    return Math.min(999, Math.round((monthlyBurn / baselineMonthlyIncome) * 1000) / 10)
+  }, [baselineMonthlyIncome, monthlyBurn])
+
+  const subsTier = useMemo(() => tierFromBurnPct(burnPctOfIncome), [burnPctOfIncome])
+
   const freqLabel = (f: BillingFrequency) => BILLING_FREQUENCY_OPTIONS.find((o) => o.value === f)?.label ?? f
+
+  const TierIcon = subsTier.Icon
 
   return (
     <>
     <section
       id="capital-suscripciones"
-      className={cn("scroll-mt-24 space-y-4", bridgeHost && "hidden")}
+      className={cn("scroll-mt-24 space-y-4 mb-8 sm:mb-10", bridgeHost && "hidden")}
       aria-hidden={bridgeHost}
     >
-      <div className={arcticPanel}>
-        <div className="flex w-full items-stretch">
-          <button
-            type="button"
-            onClick={() => setSubscriptionsExpanded((v) => !v)}
-            className="min-w-0 flex-1 touch-manipulation px-2 py-2 text-left sm:px-2.5 sm:py-2"
-            aria-expanded={subscriptionsExpanded}
-          >
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5">
-                <h2 className={financeSectionEyebrowClass}>Suscripciones recurrentes</h2>
-                {!subscriptionsExpanded ? (
-                  <span className="text-[10px] leading-tight text-orbita-muted sm:text-[11px]">
-                    Pausar o cancelar reduce lo fijo.
-                  </span>
-                ) : (
-                  <span className="text-[10px] leading-tight text-orbita-muted sm:text-[11px]">Toca para colapsar.</span>
-                )}
-              </div>
-
-              {!subscriptionsExpanded ? (
-                <div className="mt-1.5 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto] sm:items-center sm:gap-3">
-                  <div className="min-w-0 space-y-1">
-                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0">
-                      <p className="text-lg font-bold tabular-nums leading-none text-orbita-primary sm:text-xl">
-                        ${formatMoney(monthlyBurn)}
-                      </p>
-                      <span className={cn(financeCardMicroLabelClass, "text-orbita-muted")}>/ mes</span>
-                      <span className="text-[11px] tabular-nums text-orbita-secondary">
-                        {activeSubscriptions.length === 0
-                          ? "Sin activas"
-                          : `${activeSubscriptions.length} activa${activeSubscriptions.length === 1 ? "" : "s"}`}
-                      </span>
-                    </div>
-                    <p className="line-clamp-2 text-[11px] leading-snug text-orbita-secondary [text-wrap:pretty]">
-                      <span className={cn(financeCardMicroLabelClass, "text-orbita-muted")}>Resumen · </span>
-                      {collapsedSummaryText}
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-1.5 sm:flex-nowrap sm:justify-end">
-                    {topBurnSubscriptions.length > 0 ? (
-                      <div className="flex items-center" aria-hidden>
-                        <div className="flex shrink-0 -space-x-1.5 pl-0.5">
-                          {topBurnSubscriptions.map((s) => (
-                            <div
-                              key={s.id}
-                              className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-[color-mix(in_srgb,var(--color-surface)_88%,transparent)] text-[9px] font-bold text-white shadow-sm ring-1 ring-orbita-border/35 sm:h-8 sm:w-8 sm:text-[10px]"
-                              style={{ background: avatarGradientForLabel(s.name) }}
-                              title={s.name}
-                            >
-                              {subscriptionInitials(s.name)}
-                            </div>
-                          ))}
-                        </div>
-                        {moreActiveThanTop > 0 ? (
-                          <span
-                            className="-ml-0.5 flex h-7 min-w-[1.75rem] items-center justify-center rounded-full border-2 border-[color-mix(in_srgb,var(--color-surface)_88%,transparent)] bg-orbita-surface-alt px-1 text-[9px] font-bold tabular-nums text-orbita-primary shadow-sm ring-1 ring-orbita-border/35 sm:h-8 sm:min-w-[2rem] sm:text-[10px]"
-                            title={`${moreActiveThanTop} más`}
-                          >
-                            +{moreActiveThanTop}
-                          </span>
-                        ) : null}
-                      </div>
-                    ) : (
-                      <span className="rounded-full border border-dashed border-orbita-border/70 bg-orbita-surface-alt/80 px-2 py-0.5 text-[10px] text-orbita-secondary">
-                        Sin recurrentes
-                      </span>
-                    )}
-
-                    {potentialSaving > 0 ? (
-                      <p className="text-[10px] font-semibold text-emerald-700 sm:text-[11px]">
-                        +${formatMoney(potentialSaving)}{" "}
-                        <span className="font-normal text-emerald-700/85">ahorro</span>
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          </button>
-          <div className="flex shrink-0 flex-col items-end justify-between gap-0.5 border-l border-orbita-border/30 py-1.5 pl-1.5 pr-1.5 sm:py-2 sm:pl-2 sm:pr-2">
-            <button
-              type="button"
-              onClick={() => {
-                setSubscriptionsExpanded(true)
-                openManage()
-              }}
-              className="text-[10px] font-semibold text-orbita-secondary underline decoration-orbita-border/80 underline-offset-2 hover:text-orbita-primary sm:text-[11px]"
-            >
-              Editar
-            </button>
+      <div className={cn(subscriptionsElevatedShellClass, "min-w-0 overflow-x-hidden")}>
+        <div className="min-w-0">
+          <div className="flex w-full min-w-0 items-start justify-between gap-3 px-3 pt-3 sm:gap-4 sm:px-4 sm:pt-3.5">
             <button
               type="button"
               onClick={() => setSubscriptionsExpanded((v) => !v)}
-              className="rounded-md p-0.5 text-orbita-secondary hover:bg-orbita-surface-alt"
-              aria-label={subscriptionsExpanded ? "Colapsar" : "Expandir"}
+              className="min-w-0 flex-1 touch-manipulation text-left"
+              aria-expanded={subscriptionsExpanded}
             >
-              <ChevronDown
-                className={`h-4 w-4 transition-transform duration-200 sm:h-[18px] sm:w-[18px] ${subscriptionsExpanded ? "rotate-180" : ""}`}
-                aria-hidden
-              />
+              <h2 className={financeSectionEyebrowClass}>Suscripciones recurrentes</h2>
+              {!subscriptionsExpanded ? (
+                <p className="mt-1 max-w-full text-[10px] leading-snug text-orbita-muted [text-wrap:pretty] sm:text-[11px]">
+                  Paúsar o cancelar desde la tabla muestra el impacto en tu gasto fijo mensual.
+                </p>
+              ) : null}
             </button>
+            <div className="flex shrink-0 items-center gap-1 pt-0.5 sm:gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setSubscriptionsExpanded(true)
+                  openManage()
+                }}
+                className="whitespace-nowrap text-[10px] font-semibold text-orbita-secondary underline decoration-orbita-border/80 underline-offset-2 hover:text-orbita-primary sm:text-[11px]"
+              >
+                Editar
+              </button>
+              <button
+                type="button"
+                onClick={() => setSubscriptionsExpanded((v) => !v)}
+                className="rounded-lg p-1 text-orbita-secondary hover:bg-[color-mix(in_srgb,var(--color-surface-alt)_65%,var(--color-surface))]"
+                aria-label={subscriptionsExpanded ? "Colapsar" : "Expandir"}
+              >
+                <ChevronDown
+                  className={`h-4 w-4 shrink-0 transition-transform duration-200 sm:h-[18px] sm:w-[18px] ${subscriptionsExpanded ? "rotate-180" : ""}`}
+                  aria-hidden
+                />
+              </button>
+            </div>
           </div>
+
+          {!subscriptionsExpanded ? (
+              <button
+                type="button"
+                onClick={() => setSubscriptionsExpanded(true)}
+                className="w-full touch-manipulation border-t border-orbita-border/45 px-3 pb-3 pt-3 text-left sm:px-4 sm:pb-4 sm:pt-3.5"
+              >
+                <div className="relative overflow-hidden rounded-xl">
+                  <div
+                    className="pointer-events-none absolute -right-6 -top-10 h-28 w-40 rounded-full bg-[radial-gradient(ellipse_at_center,color-mix(in_srgb,var(--color-accent-health)_20%,transparent)_0%,transparent_70%)] blur-2xl"
+                    aria-hidden
+                  />
+                  <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-5">
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+                        <span
+                          className={cn(
+                            "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.06em]",
+                            subsTier.chipClass,
+                          )}
+                        >
+                          <TierIcon className="h-3 w-3 shrink-0" aria-hidden />
+                          {subsTier.label}
+                        </span>
+                        {burnPctOfIncome !== null ? (
+                          <span className="text-[10px] font-medium tabular-nums text-orbita-muted">
+                            vs ingreso referencia · {Math.round(Math.min(100, burnPctOfIncome))}%
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-orbita-muted">
+                            Definí ingreso en Capital para ver tu %
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                        <p className="text-[1.65rem] font-black tabular-nums leading-none tracking-tight text-orbita-primary sm:text-[2rem]">
+                          ${formatMoney(monthlyBurn)}
+                        </p>
+                        <span className={cn(financeCardMicroLabelClass, "text-orbita-muted")}>/ mes</span>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--color-surface-alt)_72%,var(--color-surface))] px-2 py-0.5 text-[11px] font-semibold tabular-nums text-orbita-secondary ring-1 ring-[color-mix(in_srgb,var(--color-border)_42%,transparent)]">
+                          <Star className="h-3 w-3 shrink-0 text-amber-500" aria-hidden />
+                          {activeSubscriptions.length === 0
+                            ? "Sin activas"
+                            : activeSubscriptions.length === 1
+                              ? "1 activa"
+                              : `${activeSubscriptions.length} activas`}
+                        </span>
+                      </div>
+
+                      {burnPctOfIncome !== null ? (
+                        <div
+                          className="relative h-2 w-full overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--color-surface-alt)_78%,var(--color-background))] ring-1 ring-[color-mix(in_srgb,var(--color-border)_32%,transparent)]"
+                          role="progressbar"
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-valuenow={Math.round(Math.min(100, burnPctOfIncome))}
+                          aria-label={`${Math.round(Math.min(100, burnPctOfIncome))}% del ingreso referencia en suscripciones activas`}
+                        >
+                          <div
+                            className={cn(
+                              "h-full rounded-full bg-gradient-to-r transition-all duration-700 ease-out",
+                              subsTier.key === "optimal" && "from-emerald-500 to-teal-400",
+                              subsTier.key === "balanced" && "from-amber-400 to-amber-600",
+                              subsTier.key === "hot" && "from-rose-500 to-orange-400",
+                              subsTier.key === "unknown" && "from-orbita-secondary to-orbita-primary",
+                            )}
+                            style={{ width: `${Math.min(100, burnPctOfIncome)}%` }}
+                          />
+                        </div>
+                      ) : null}
+
+                      {activeSubscriptions.length === 0 ? (
+                        <p className="text-[11px] leading-snug text-orbita-muted [text-wrap:pretty]">
+                          {collapsedSummaryText}
+                        </p>
+                      ) : null}
+                    </div>
+
+                    <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                        {topBurnSubscriptions.length > 0 ? (
+                          <div className="flex items-center" aria-hidden>
+                            <div className="flex shrink-0 -space-x-1.5 pl-0.5">
+                              {topBurnSubscriptions.map((s) => (
+                                <div
+                                  key={s.id}
+                                  className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-[color-mix(in_srgb,var(--color-surface)_88%,transparent)] text-[10px] font-bold text-white shadow-md ring-2 ring-[color-mix(in_srgb,var(--color-border)_35%,transparent)]"
+                                  style={{ background: avatarGradientForLabel(s.name) }}
+                                  title={s.name}
+                                >
+                                  {subscriptionInitials(s.name)}
+                                </div>
+                              ))}
+                            </div>
+                            {moreActiveThanTop > 0 ? (
+                              <span
+                                className="-ml-0.5 flex h-8 min-w-[2rem] items-center justify-center rounded-full border-2 border-[color-mix(in_srgb,var(--color-surface)_88%,transparent)] bg-orbita-surface-alt px-1 text-[10px] font-black tabular-nums text-orbita-primary shadow-sm ring-2 ring-[color-mix(in_srgb,var(--color-border)_35%,transparent)]"
+                                title={`${moreActiveThanTop} más`}
+                              >
+                                +{moreActiveThanTop}
+                              </span>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <span className="rounded-full border border-dashed border-orbita-border/70 bg-orbita-surface-alt/80 px-2 py-0.5 text-[10px] text-orbita-secondary">
+                            Sin recurrentes
+                          </span>
+                        )}
+
+                        {potentialSaving > 0 ? (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200/80 bg-emerald-50/95 px-2 py-0.5 text-[10px] font-bold text-emerald-800 shadow-sm dark:border-emerald-500/25 dark:bg-emerald-950/40 dark:text-emerald-100">
+                            <Sparkles className="h-3 w-3 shrink-0 text-emerald-600 dark:text-emerald-300" aria-hidden />+
+                            {formatMoney(potentialSaving)}{" "}
+                            <span className="font-semibold text-emerald-800/90 dark:text-emerald-100/90">ahorro</span>
+                          </span>
+                        ) : null}
+                    </div>
+                  </div>
+                </div>
+              </button>
+          ) : null}
         </div>
 
         {subscriptionsExpanded ? (
@@ -558,26 +689,12 @@ export function SubscriptionsBurnSection({
               </div>
             ) : null}
 
-            <div className="overflow-x-auto rounded-2xl border-[0.5px] border-orbita-border/80 bg-orbita-surface shadow-sm">
+            <div className="overflow-hidden rounded-2xl border-[0.5px] border-orbita-border/70 bg-[color-mix(in_srgb,var(--color-surface)_94%,transparent)] shadow-sm">
               {loading ? (
                 <p className="p-6 text-center text-sm text-orbita-secondary">Cargando suscripciones…</p>
               ) : (
-                <table className="w-full min-w-[1100px] border-collapse text-left text-[11px] sm:text-xs">
-                  <thead>
-                    <tr className="border-b border-orbita-border bg-orbita-surface-alt text-[9px] font-semibold uppercase tracking-wide text-orbita-secondary sm:text-[10px]">
-                      <th className="px-2 py-2 font-medium">Nombre</th>
-                      <th className="px-2 py-2 font-medium">Categoría</th>
-                      <th className="px-2 py-2 font-medium">Frecuencia</th>
-                      <th className="px-2 py-2 text-right font-medium">Costo (COP)</th>
-                      <th className="px-2 py-2 font-medium">Día renov.</th>
-                      <th className="px-2 py-2 text-right font-medium">Días</th>
-                      <th className="px-2 py-2 font-medium">Renovación</th>
-                      <th className="px-2 py-2 font-medium">Impacto</th>
-                      <th className="px-2 py-2 font-medium">Simulador</th>
-                      <th className="px-2 py-2 text-right font-medium">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <>
+                  <div className="space-y-2 p-2 lg:hidden">
                     {rows.map((s) => {
                       const active = subscriptionActiveBurn(s)
                       const imp = impactLabel(s.amount_monthly, baselineMonthlyIncome)
@@ -585,86 +702,208 @@ export function SubscriptionsBurnSection({
                       const daysLeft = daysUntilRenewalFromDay(s.renewal_day)
                       const nextIso = nextRenewalIsoFromDay(s.renewal_day)
                       return (
-                        <tr
+                        <div
                           key={s.id}
-                          className={`border-b border-orbita-border/70 ${!active ? "bg-orbita-surface-alt/40" : ""}`}
+                          className={cn(
+                            "rounded-xl border border-[color-mix(in_srgb,var(--color-border)_55%,transparent)] bg-orbita-surface px-3 py-2.5 shadow-sm",
+                            !active && "bg-orbita-surface-alt/50",
+                          )}
                         >
-                          <td className="px-2 py-2 align-middle">
-                            <p className="font-semibold text-orbita-primary">{s.name}</p>
-                            {!active ? (
-                              <p className="mt-0.5 text-[10px] text-orbita-secondary">
-                                {s.status === "paused" ? "Pausada" : "Cancelada"}
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-[13px] font-semibold leading-tight text-orbita-primary">
+                                {s.name}
                               </p>
-                            ) : null}
-                          </td>
-                          <td className="max-w-[100px] px-2 py-2 align-middle text-orbita-secondary">{s.category}</td>
-                          <td className="whitespace-nowrap px-2 py-2 align-middle">{freqLabel(s.billing_frequency)}</td>
-                          <td className="whitespace-nowrap px-2 py-2 text-right align-middle font-semibold tabular-nums">
-                            ${formatMoney(charge)}
-                          </td>
-                          <td className="whitespace-nowrap px-2 py-2 align-middle tabular-nums">{s.renewal_day}</td>
-                          <td className="whitespace-nowrap px-2 py-2 text-right align-middle tabular-nums">{daysLeft}</td>
-                          <td className="whitespace-nowrap px-2 py-2 align-middle text-orbita-secondary">
-                            {renewalShortLabel(s.renewal_day)} · {nextIso.slice(5).replace("-", "/")}
-                          </td>
-                          <td className="px-2 py-2 align-middle">
+                              {!active ? (
+                                <p className="mt-0.5 text-[10px] text-orbita-secondary">
+                                  {s.status === "paused" ? "Pausada" : "Cancelada"}
+                                </p>
+                              ) : null}
+                            </div>
                             <span
-                              className={`inline-flex rounded-full border-[0.5px] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${impactTone(imp)}`}
+                              className={`shrink-0 rounded-full border-[0.5px] px-2 py-0.5 text-[8px] font-semibold uppercase tracking-wide ${impactTone(imp)}`}
                             >
                               {imp}
                             </span>
-                          </td>
-                          <td className="px-2 py-2 align-middle text-orbita-secondary">
-                            {s.include_in_simulator ? "Sí" : "No"}
-                          </td>
-                          <td className="px-2 py-2 align-middle">
-                            <div className="flex flex-wrap justify-end gap-1">
+                          </div>
+                          <dl className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] text-orbita-secondary">
+                            <div>
+                              <dt className="text-orbita-muted">Costo</dt>
+                              <dd className="font-semibold tabular-nums text-orbita-primary">${formatMoney(charge)}</dd>
+                            </div>
+                            <div>
+                              <dt className="text-orbita-muted">Frec.</dt>
+                              <dd className="text-orbita-primary">{freqLabel(s.billing_frequency)}</dd>
+                            </div>
+                            <div className="col-span-2 truncate">
+                              <dt className="text-orbita-muted">Renovación</dt>
+                              <dd>
+                                Día {s.renewal_day} · {daysLeft} d · {nextIso.slice(5).replace("-", "/")}
+                              </dd>
+                            </div>
+                            <div className="col-span-2 truncate text-[10px]">{s.category}</div>
+                          </dl>
+                          <div className="mt-2 flex flex-wrap gap-1.5 border-t border-orbita-border/35 pt-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSubscriptionsExpanded(true)
+                                openManage()
+                              }}
+                              className="inline-flex min-h-8 flex-1 items-center justify-center rounded-lg border border-orbita-border bg-orbita-surface px-2 py-1 text-[10px] font-medium text-orbita-primary sm:flex-none"
+                            >
+                              <Pencil className="mr-1 h-3 w-3 shrink-0" aria-hidden />
+                              Editar
+                            </button>
+                            {active ? (
                               <button
                                 type="button"
-                                onClick={() => {
-                                  setSubscriptionsExpanded(true)
-                                  openManage()
-                                }}
-                                className="inline-flex min-h-8 items-center rounded-lg border border-orbita-border bg-orbita-surface px-2 py-1 text-[10px] font-medium text-orbita-primary hover:bg-orbita-surface-alt"
+                                onClick={() => void setStatus(s, "paused")}
+                                className="inline-flex min-h-8 flex-1 items-center justify-center rounded-lg border border-orbita-border px-2 py-1 text-[10px] font-medium sm:flex-none"
                               >
-                                <Pencil className="mr-1 h-3 w-3" aria-hidden />
-                                Tabla
+                                <Pause className="mr-1 h-3 w-3 shrink-0" aria-hidden />
+                                Pausar
                               </button>
-                              {active ? (
-                                <button
-                                  type="button"
-                                  onClick={() => void setStatus(s, "paused")}
-                                  className="inline-flex min-h-8 items-center rounded-lg border border-orbita-border px-2 py-1 text-[10px] font-medium hover:bg-orbita-surface-alt"
-                                >
-                                  <Pause className="mr-1 h-3 w-3" aria-hidden />
-                                  Pausar
-                                </button>
-                              ) : s.status === "paused" ? (
-                                <button
-                                  type="button"
-                                  onClick={() => void setStatus(s, "active")}
-                                  className="inline-flex min-h-8 items-center rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-medium text-emerald-800"
-                                >
-                                  Reactivar
-                                </button>
-                              ) : null}
-                              {active || s.status === "paused" ? (
-                                <button
-                                  type="button"
-                                  onClick={() => void setStatus(s, "cancelled")}
-                                  className="inline-flex min-h-8 items-center rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-[10px] font-medium text-rose-800"
-                                >
-                                  <Ban className="mr-1 h-3 w-3" aria-hidden />
-                                  Cancelar
-                                </button>
-                              ) : null}
-                            </div>
-                          </td>
-                        </tr>
+                            ) : s.status === "paused" ? (
+                              <button
+                                type="button"
+                                onClick={() => void setStatus(s, "active")}
+                                className="inline-flex min-h-8 flex-1 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-medium text-emerald-800 sm:flex-none"
+                              >
+                                Reactivar
+                              </button>
+                            ) : null}
+                            {active || s.status === "paused" ? (
+                              <button
+                                type="button"
+                                onClick={() => void setStatus(s, "cancelled")}
+                                className="inline-flex min-h-8 flex-1 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-[10px] font-medium text-rose-800 sm:flex-none"
+                              >
+                                <Ban className="mr-1 h-3 w-3 shrink-0" aria-hidden />
+                                Cancelar
+                              </button>
+                            ) : null}
+                          </div>
+                          <p className="mt-1.5 text-[9px] text-orbita-muted">
+                            Simulador: {s.include_in_simulator ? "Sí" : "No"}
+                          </p>
+                        </div>
                       )
                     })}
-                  </tbody>
-                </table>
+                  </div>
+
+                  <div className="hidden overflow-x-hidden lg:block">
+                    <table className="w-full table-fixed border-collapse text-left text-[10px] sm:text-[11px]">
+                      <thead>
+                        <tr className="border-b border-orbita-border bg-orbita-surface-alt text-[8px] font-semibold uppercase tracking-wide text-orbita-secondary sm:text-[9px]">
+                          <th className="w-[14%] px-1.5 py-2 font-medium">Nombre</th>
+                          <th className="w-[11%] px-1.5 py-2 font-medium">Cat.</th>
+                          <th className="w-[9%] px-1.5 py-2 font-medium">Frec.</th>
+                          <th className="w-[10%] px-1.5 py-2 text-right font-medium">Costo</th>
+                          <th className="w-[6%] px-1.5 py-2 font-medium">Día</th>
+                          <th className="w-[5%] px-1.5 py-2 text-right font-medium">Días</th>
+                          <th className="w-[12%] px-1.5 py-2 font-medium">Renov.</th>
+                          <th className="w-[8%] px-1.5 py-2 font-medium">Imp.</th>
+                          <th className="w-[6%] px-1.5 py-2 font-medium">Sim.</th>
+                          <th className="w-[19%] px-1.5 py-2 text-right font-medium">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rows.map((s) => {
+                          const active = subscriptionActiveBurn(s)
+                          const imp = impactLabel(s.amount_monthly, baselineMonthlyIncome)
+                          const charge = monthlyToChargeInput(s.amount_monthly, s.billing_frequency)
+                          const daysLeft = daysUntilRenewalFromDay(s.renewal_day)
+                          const nextIso = nextRenewalIsoFromDay(s.renewal_day)
+                          return (
+                            <tr
+                              key={s.id}
+                              className={`border-b border-orbita-border/70 ${!active ? "bg-orbita-surface-alt/40" : ""}`}
+                            >
+                              <td className="px-1.5 py-2 align-middle">
+                                <p className="truncate font-semibold text-orbita-primary" title={s.name}>
+                                  {s.name}
+                                </p>
+                                {!active ? (
+                                  <p className="mt-0.5 text-[9px] text-orbita-secondary">
+                                    {s.status === "paused" ? "Pausada" : "Cancelada"}
+                                  </p>
+                                ) : null}
+                              </td>
+                              <td className="truncate px-1.5 py-2 align-middle text-orbita-secondary" title={s.category}>
+                                {s.category}
+                              </td>
+                              <td className="truncate px-1.5 py-2 align-middle">{freqLabel(s.billing_frequency)}</td>
+                              <td className="whitespace-nowrap px-1.5 py-2 text-right align-middle font-semibold tabular-nums">
+                                ${formatMoney(charge)}
+                              </td>
+                              <td className="whitespace-nowrap px-1.5 py-2 align-middle tabular-nums">{s.renewal_day}</td>
+                              <td className="whitespace-nowrap px-1.5 py-2 text-right align-middle tabular-nums">
+                                {daysLeft}
+                              </td>
+                              <td className="truncate px-1.5 py-2 align-middle text-orbita-secondary" title={`${renewalShortLabel(s.renewal_day)} · ${nextIso.slice(5).replace("-", "/")}`}>
+                                {renewalShortLabel(s.renewal_day)} · {nextIso.slice(5).replace("-", "/")}
+                              </td>
+                              <td className="px-1.5 py-2 align-middle">
+                                <span
+                                  className={`inline-flex rounded-full border-[0.5px] px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wide ${impactTone(imp)}`}
+                                >
+                                  {imp}
+                                </span>
+                              </td>
+                              <td className="px-1.5 py-2 align-middle text-orbita-secondary">
+                                {s.include_in_simulator ? "Sí" : "No"}
+                              </td>
+                              <td className="px-1.5 py-2 align-middle">
+                                <div className="flex flex-wrap justify-end gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSubscriptionsExpanded(true)
+                                      openManage()
+                                    }}
+                                    className="inline-flex min-h-7 items-center rounded-md border border-orbita-border bg-orbita-surface px-1.5 py-0.5 text-[9px] font-medium text-orbita-primary hover:bg-orbita-surface-alt"
+                                  >
+                                    <Pencil className="mr-0.5 h-2.5 w-2.5" aria-hidden />
+                                    Tabla
+                                  </button>
+                                  {active ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => void setStatus(s, "paused")}
+                                      className="inline-flex min-h-7 items-center rounded-md border border-orbita-border px-1.5 py-0.5 text-[9px] font-medium hover:bg-orbita-surface-alt"
+                                    >
+                                      <Pause className="mr-0.5 h-2.5 w-2.5" aria-hidden />
+                                      Pausar
+                                    </button>
+                                  ) : s.status === "paused" ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => void setStatus(s, "active")}
+                                      className="inline-flex min-h-7 items-center rounded-md border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[9px] font-medium text-emerald-800"
+                                    >
+                                      Reactivar
+                                    </button>
+                                  ) : null}
+                                  {active || s.status === "paused" ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => void setStatus(s, "cancelled")}
+                                      className="inline-flex min-h-7 items-center rounded-md border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-[9px] font-medium text-rose-800"
+                                    >
+                                      <Ban className="mr-0.5 h-2.5 w-2.5" aria-hidden />
+                                      Cancelar
+                                    </button>
+                                  ) : null}
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
               <div className="border-t border-orbita-border p-3 sm:p-4">
                 <button
